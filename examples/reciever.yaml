@@ -15,19 +15,17 @@
 #
 
 #
-# Example configuration for a Game server receiver
+# Example configuration for Game server receivers
 #
 
-reciever_config:
+receiver_config:
   endpoints:
     - name: Game Server No. 1
-      address: 127.0.0.1:72500
-        connection_ids:
-          - 1x7ijy6
-          - 8gj3v2i
+      address: 127.0.0.1:26000
+      connection_ids:
+        - 1x7ijy6
+        - 8gj3v2i
     - name: Game Server No. 2
-      address: 127.0.0.1:72501
-        connection_ids:
-          - nkuy70x
-          - p08bz6s
-
+      address: 127.0.0.1:26001
+      connection_ids:
+        - nkuy70x

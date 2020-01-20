@@ -7,8 +7,8 @@ It is designed to be used behind game clients as well as in front of dedicated g
 
 ## Planned Roadmap
 
-- [ ] Sender: Configuration with a connection token
-- [ ] Receiver: Configuration of endpoints with multiple connection token attached, that provide routing 
+- [x] Sender: Configuration with a connection token
+- [x] Receiver: Configuration of endpoints with multiple connection token attached, that provide routing 
 - [ ] Basic non-transparent UDP forwarding from Sender to Reciever
 - [ ] Simple UDP routing via an appended connection ID to UDP packet (sender and receiver implementation)
 - [ ] QUIC based security and UDP routing (sender and reciever implementation)

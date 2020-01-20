@@ -14,6 +14,35 @@
  * limitations under the License.
  */
 
+mod config;
+
+use crate::config::{from_reader, ConnectionConfig};
+use clap::App;
+use std::fs::File;
+
 fn main() {
-    println!("Hello, world!");
+    let matches = App::new("Quilkin Proxy")
+        .version("0.1.0")
+        .about("Quilkin is a non-transparent UDP proxy specifically designed for use with large scale multiplayer dedicated game servers")
+        .arg(clap::Arg::with_name("filename")
+            .short("f")
+            .long("filename")
+            .value_name("FILE")
+            .help("The yaml configuration file")
+            .required(true)
+            .takes_value(true))
+        .get_matches();
+
+    let filename = matches.value_of("filename").unwrap();
+    println!("Configuration file loading: {}", filename);
+    let config = from_reader(File::open(filename).unwrap()).unwrap();
+
+    match config.connections {
+        ConnectionConfig::Sender { address, .. } => {
+            println!("Sender configuration pointed at: {}", address)
+        }
+        ConnectionConfig::Receiver { endpoints } => {
+            println!("Receiver configuration, with {} endpoints", endpoints.len())
+        }
+    }
 }
