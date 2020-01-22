@@ -14,13 +14,23 @@
  * limitations under the License.
  */
 
-mod config;
+#[macro_use]
+extern crate slog;
 
-use crate::config::{from_reader, ConnectionConfig};
-use clap::App;
 use std::fs::File;
 
+use clap::App;
+use slog::{Drain, Logger};
+
+use crate::config::{from_reader, ConnectionConfig};
+
+mod config;
+
+const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+
 fn main() {
+    let log = logger();
+
     let matches = App::new("Quilkin Proxy")
         .version("0.1.0")
         .about("Quilkin is a non-transparent UDP proxy specifically designed for use with large scale multiplayer dedicated game servers")
@@ -34,15 +44,27 @@ fn main() {
         .get_matches();
 
     let filename = matches.value_of("filename").unwrap();
-    println!("Configuration file loading: {}", filename);
+    info!(log, "Starting Quilkin"; "version" => VERSION);
+
     let config = from_reader(File::open(filename).unwrap()).unwrap();
 
     match config.connections {
         ConnectionConfig::Sender { address, .. } => {
-            println!("Sender configuration pointed at: {}", address)
+            info!(log, "Sender configuration"; "address" => address)
         }
         ConnectionConfig::Receiver { endpoints } => {
-            println!("Receiver configuration, with {} endpoints", endpoints.len())
+            info!(log, "Receiver configuration"; "endpoints" => endpoints.len())
         }
     }
+}
+
+fn logger() -> Logger {
+    let drain = slog_json::Json::new(std::io::stdout())
+        .set_pretty(false)
+        .add_default_keys()
+        .build()
+        .fuse();
+    let drain = slog_async::Async::new(drain).build().fuse();
+    let log = slog::Logger::root(drain, o!());
+    return log;
 }
