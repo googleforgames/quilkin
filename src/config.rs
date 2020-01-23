@@ -23,8 +23,15 @@ use serde_yaml::Error;
 /// Config is the configuration for either a sender or a receiver
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Config {
+    pub local: Local,
     #[serde(flatten)]
     pub connections: ConnectionConfig,
+}
+
+/// Local is the local host configuration options
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Local {
+    pub port: u16,
 }
 
 /// ConnectionConfig is the configuration for either a sender or receivers
@@ -59,11 +66,12 @@ pub fn from_reader<R: io::Read>(input: R) -> Result<Config, Error> {
 
 #[cfg(test)]
 mod tests {
-    use crate::config::{from_reader, Config, ConnectionConfig, EndPoint};
+    use crate::config::{from_reader, Config, ConnectionConfig, EndPoint, Local};
 
     #[test]
     fn deserialise_sender() {
         let config = Config {
+            local: Local { port: 7000 },
             connections: ConnectionConfig::Sender {
                 address: "127.0.0.1:25999".parse().unwrap(),
                 connection_id: String::from("1234"),
@@ -76,6 +84,7 @@ mod tests {
     #[test]
     fn deserialise_reciever() {
         let config = Config {
+            local: Local { port: 7000 },
             connections: ConnectionConfig::Receiver {
                 endpoints: vec![
                     EndPoint {
@@ -98,10 +107,13 @@ mod tests {
     #[test]
     fn parse_sender() {
         let yaml = "
+local:
+  port: 7000
 sender_config:
   address: 127.0.0.1:25999
   connection_id: 1x7ijy6";
         let config = from_reader(yaml.as_bytes()).unwrap();
+        assert_eq!(7000, config.local.port);
         match config.connections {
             ConnectionConfig::Sender {
                 address,
@@ -118,6 +130,8 @@ sender_config:
     fn parse_receiver() {
         let yaml = "
 ---
+local:
+  port: 7000
 receiver_config:
   endpoints:
     - name: Game Server No. 1
@@ -130,6 +144,7 @@ receiver_config:
       connection_ids:
         - nkuy70x";
         let config = from_reader(yaml.as_bytes()).unwrap();
+        assert_eq!(7000, config.local.port);
         match config.connections {
             ConnectionConfig::Sender { .. } => panic!("Should not be a sender"),
             ConnectionConfig::Receiver { endpoints } => {

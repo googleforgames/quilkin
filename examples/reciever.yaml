@@ -18,12 +18,14 @@
 # Example configuration for Game server receivers
 #
 
+local:
+  port: 7000 # the port to receive traffic to locally
 receiver_config:
-  endpoints:
+  endpoints: # array of potential endpoints to send on traffic to
     - name: Game Server No. 1
       address: 127.0.0.1:26000
       connection_ids:
-        - 1x7ijy6
+        - 1x7ijy6 # connection ids to route on
         - 8gj3v2i
     - name: Game Server No. 2
       address: 127.0.0.1:26001
