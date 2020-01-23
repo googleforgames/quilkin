@@ -82,7 +82,7 @@ mod tests {
     }
 
     #[test]
-    fn deserialise_reciever() {
+    fn deserialise_receiver() {
         let config = Config {
             local: Local { port: 7000 },
             connections: ConnectionConfig::Receiver {
