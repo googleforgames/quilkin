@@ -39,8 +39,8 @@ impl Server {
         let Server { log } = self;
         info!(log, "Starting on port {}", config.local.port);
 
-        let addr = SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), config.local.port);
-        UdpSocket::bind(addr).await?;
+        // TOXO: work from here. Probably need a loop at this point?
+        let _socket = Server::bind(&config).await?;
 
         match &config.connections {
             ConnectionConfig::Sender { address, .. } => {
@@ -52,5 +52,11 @@ impl Server {
         };
 
         return Ok(());
+    }
+
+    /// bind binds the local configured port
+    async fn bind(config: &Arc<Config>) -> Result<UdpSocket> {
+        let addr = SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), config.local.port);
+        return UdpSocket::bind(addr).await;
     }
 }
