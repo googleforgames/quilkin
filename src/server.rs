@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-use std::net::{Ipv4Addr, SocketAddrV4};
+use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
+use std::str::from_utf8;
 use std::sync::Arc;
 
-use slog::{info, o, Logger};
+use slog::{debug, info, o, Logger};
 use tokio::io::Result;
 use tokio::net::UdpSocket;
 
@@ -36,28 +37,36 @@ impl Server {
 
     /// start the async processing of UDP packets
     pub async fn run(self, config: Arc<Config>) -> Result<()> {
-        let Server { log } = self;
-        info!(log, "Starting on port {}", config.local.port);
-
-        // TOXO: work from here. Probably need a loop at this point?
-        let _socket = Server::bind(&config).await?;
-
+        info!(self.log, "Starting on port {}", config.local.port);
         match &config.connections {
             ConnectionConfig::Sender { address, .. } => {
-                info!(log, "Sender configuration"; "address" => address)
+                info!(self.log, "Sender configuration"; "address" => address)
             }
             ConnectionConfig::Receiver { endpoints } => {
-                info!(log, "Receiver configuration"; "endpoints" => endpoints.len())
+                info!(self.log, "Receiver configuration"; "endpoints" => endpoints.len())
             }
         };
 
-        return Ok(());
+        let mut socket = Server::bind(&config).await?;
+        let mut buf: Vec<u8> = vec![0; 65535];
+        loop {
+            debug!(self.log, "awaiting packet");
+            let (size, addr) = socket.recv_from(&mut buf).await?;
+            // TOXO: make this async
+            self.receive_packet(&buf[..size], addr);
+        }
     }
 
     /// bind binds the local configured port
     async fn bind(config: &Config) -> Result<UdpSocket> {
-        let addr = SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), config.local.port);
+        let addr = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), config.local.port);
         return UdpSocket::bind(addr).await;
+    }
+
+    /// receive_packet provides the logic for what to do when a packet comes in!
+    fn receive_packet(&self, buf: &[u8], addr: SocketAddr) {
+        let s = from_utf8(buf).unwrap();
+        info!(self.log, "Packet Received from {}: {}", addr, s);
     }
 }
 
