@@ -38,6 +38,8 @@ impl Server {
         let Server { log } = self;
         info!(log, "Starting on port {}", config.local.port);
 
+        let _socket = bind(&config).await?;
+
         match &config.connections {
             ConnectionConfig::Sender { address, .. } => {
                 info!(log, "Sender configuration"; "address" => address)
@@ -49,9 +51,10 @@ impl Server {
 
         return Ok(());
     }
+}
 
-    async fn bind(self, config: &Config) -> Result<UdpSocket, Error> {
-        let addr = SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), config.local.port);
-        return UdpSocket::bind(addr);
-    }
+/// bind binds to the local socket provided in config.local.port
+async fn bind(config: &Config) -> Result<UdpSocket, Error> {
+    let addr = SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), config.local.port);
+    return UdpSocket::bind(addr);
 }
