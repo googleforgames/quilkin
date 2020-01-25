@@ -14,6 +14,7 @@ It is designed to be used behind game clients as well as in front of dedicated g
 - [ ] Simple UDP routing via an appended connection ID to UDP packet (sender and receiver implementation)
 - [ ] QUIC based security and UDP routing (sender and receiver implementation)
 - [ ] gRPC configuration management control plane API
+- [ ] Add Open Telemetry metrics
 
 ## Project State
 
