@@ -19,7 +19,7 @@ use std::fs::File;
 use clap::App;
 use slog::{info, o, Drain, Logger};
 
-use crate::config::{from_reader, ConnectionConfig};
+use crate::config::from_reader;
 use crate::server::Server;
 
 mod config;
@@ -27,7 +27,8 @@ mod server;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let base_logger = logger();
     let log = base_logger.new(o!("source" => "main"));
 
@@ -47,16 +48,8 @@ fn main() {
     info!(log, "Starting Quilkin"; "version" => VERSION);
 
     let config = from_reader(File::open(filename).unwrap()).unwrap();
-    match config.connections {
-        ConnectionConfig::Sender { address, .. } => {
-            info!(log, "Sender configuration"; "address" => address)
-        }
-        ConnectionConfig::Receiver { endpoints } => {
-            info!(log, "Receiver configuration"; "endpoints" => endpoints.len())
-        }
-    }
-
-    let _server = Server::new(base_logger);
+    let server = Server::new(base_logger);
+    server.run(config).await.unwrap();
 }
 
 fn logger() -> Logger {

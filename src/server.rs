@@ -14,8 +14,11 @@
  * limitations under the License.
  */
 
-use slog::{debug, o, Logger};
-use std::any::type_name;
+use std::io::Error;
+
+use slog::{info, o, Logger};
+
+use crate::config::{Config, ConnectionConfig};
 
 /// Server is the UDP server main implementation
 pub struct Server {
@@ -23,10 +26,23 @@ pub struct Server {
 }
 
 impl Server {
-    pub fn new(log: Logger) -> Self {
-        let log = log.new(o!("source" => "server::Server"));
-
-        debug!(log, "Started");
+    pub fn new(base: Logger) -> Self {
+        let log = base.new(o!("source" => "server::Server"));
         return Server { log };
+    }
+
+    pub async fn run(self, config: Config) -> Result<(), Error> {
+        let Server { log } = self;
+        info!(log, "Starting!");
+        match config.connections {
+            ConnectionConfig::Sender { address, .. } => {
+                info!(log, "Sender configuration"; "address" => address)
+            }
+            ConnectionConfig::Receiver { endpoints } => {
+                info!(log, "Receiver configuration"; "endpoints" => endpoints.len())
+            }
+        };
+
+        return Ok(());
     }
 }
