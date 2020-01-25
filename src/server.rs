@@ -18,7 +18,7 @@ use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::str::from_utf8;
 use std::sync::Arc;
 
-use slog::{debug, error, info, o, Logger};
+use slog::{error, info, o, Logger};
 use tokio::io::Result;
 use tokio::net::UdpSocket;
 
@@ -50,13 +50,15 @@ impl Server {
         let mut socket = Server::bind(&config).await?;
         let mut buf: Vec<u8> = vec![0; 65535];
         loop {
-            debug!(self.log, "awaiting packet");
             let (size, addr) = socket.recv_from(&mut buf).await?;
             let result = buf.clone();
-            let async_log = self.log.clone();
-            tokio::spawn(
-                async move { Server::receive_packet(async_log, &result[..size], addr).await },
-            );
+            let receive_log = self.log.clone();
+            let err_log = self.log.clone();
+            tokio::spawn(async move {
+                Server::receive_packet(receive_log, &result[..size], addr)
+                    .await
+                    .map_err(|err| error!(err_log, "Error processing packet: {}", err))
+            });
         }
     }
 
@@ -92,7 +94,7 @@ mod tests {
         let socket = Server::bind(&config).await.unwrap();
         let addr = socket.local_addr().unwrap();
 
-        let expected = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 12345);
+        let expected = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12345);
         assert_eq!(expected, addr)
     }
 }
