@@ -18,7 +18,7 @@ use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::str::from_utf8;
 use std::sync::Arc;
 
-use slog::{debug, info, o, Logger};
+use slog::{debug, error, info, o, Logger};
 use tokio::io::Result;
 use tokio::net::UdpSocket;
 
@@ -52,8 +52,11 @@ impl Server {
         loop {
             debug!(self.log, "awaiting packet");
             let (size, addr) = socket.recv_from(&mut buf).await?;
-            // TOXO: make this async
-            self.receive_packet(&buf[..size], addr);
+            let result = buf.clone();
+            let async_log = self.log.clone();
+            tokio::spawn(
+                async move { Server::receive_packet(async_log, &result[..size], addr).await },
+            );
         }
     }
 
@@ -64,9 +67,10 @@ impl Server {
     }
 
     /// receive_packet provides the logic for what to do when a packet comes in!
-    fn receive_packet(&self, buf: &[u8], addr: SocketAddr) {
+    async fn receive_packet(log: Logger, buf: &[u8], addr: SocketAddr) -> Result<()> {
         let s = from_utf8(buf).unwrap();
-        info!(self.log, "Packet Received from {}: {}", addr, s);
+        info!(log, "Packet Received from {}: {}", addr, s);
+        return Ok(());
     }
 }
 
