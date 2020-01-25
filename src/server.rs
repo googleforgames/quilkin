@@ -55,8 +55,31 @@ impl Server {
     }
 
     /// bind binds the local configured port
-    async fn bind(config: &Arc<Config>) -> Result<UdpSocket> {
+    async fn bind(config: &Config) -> Result<UdpSocket> {
         let addr = SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), config.local.port);
         return UdpSocket::bind(addr).await;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+
+    use crate::config::{Config, ConnectionConfig, Local};
+    use crate::server::Server;
+
+    #[tokio::test]
+    async fn bind() {
+        let config = Config {
+            local: Local { port: 12345 },
+            connections: ConnectionConfig::Receiver {
+                endpoints: Vec::new(),
+            },
+        };
+        let socket = Server::bind(&config).await.unwrap();
+        let addr = socket.local_addr().unwrap();
+
+        let expected = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 12345);
+        assert_eq!(expected, addr)
     }
 }
