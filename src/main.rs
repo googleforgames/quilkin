@@ -14,13 +14,10 @@
  * limitations under the License.
  */
 
-#[macro_use]
-extern crate slog;
-
 use std::fs::File;
 
 use clap::App;
-use slog::{Drain, Logger};
+use slog::{info, o, Drain, Logger};
 
 use crate::config::{from_reader, ConnectionConfig};
 
