@@ -14,25 +14,18 @@
  * limitations under the License.
  */
 
-use crate::config::{Config, ConnectionConfig};
-use slog::{info, Logger};
+use slog::{debug, o, Logger};
 
 /// Server is the UDP server main implementation
 pub struct Server {
     log: Logger,
-    config: Config,
 }
 
 impl Server {
-    pub fn new(log: Logger, config: Config) -> Self {
-        match config.connections {
-            ConnectionConfig::Sender { address, .. } => {
-                info!(log, "Sender configuration"; "address" => address)
-            }
-            ConnectionConfig::Receiver { endpoints } => {
-                info!(log, "Receiver configuration"; "endpoints" => endpoints.len())
-            }
-        }
-        return Server { log, config };
+    pub fn new(log: Logger) -> Self {
+        let log = log.new(o!("source" => "Server"));
+
+        debug!(log, "Started");
+        return Server { log };
     }
 }
