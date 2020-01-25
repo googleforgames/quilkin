@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-use std::io::Error;
-use std::net::{Ipv4Addr, SocketAddrV4, UdpSocket};
+use std::net::{Ipv4Addr, SocketAddrV4};
 use std::sync::Arc;
 
 use slog::{info, o, Logger};
+use tokio::io::Result;
+use tokio::net::UdpSocket;
 
 use crate::config::{Config, ConnectionConfig};
 
@@ -34,11 +35,12 @@ impl Server {
     }
 
     /// start the async processing of UDP packets
-    pub async fn run(self, config: Arc<Config>) -> Result<(), Error> {
+    pub async fn run(self, config: Arc<Config>) -> Result<()> {
         let Server { log } = self;
         info!(log, "Starting on port {}", config.local.port);
 
-        let _socket = bind(&config).await?;
+        let addr = SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), config.local.port);
+        UdpSocket::bind(addr).await?;
 
         match &config.connections {
             ConnectionConfig::Sender { address, .. } => {
@@ -51,10 +53,4 @@ impl Server {
 
         return Ok(());
     }
-}
-
-/// bind binds to the local socket provided in config.local.port
-async fn bind(config: &Config) -> Result<UdpSocket, Error> {
-    let addr = SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), config.local.port);
-    return UdpSocket::bind(addr);
 }
