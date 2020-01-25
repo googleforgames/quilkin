@@ -15,6 +15,7 @@
  */
 
 use slog::{debug, o, Logger};
+use std::any::type_name;
 
 /// Server is the UDP server main implementation
 pub struct Server {
@@ -23,7 +24,7 @@ pub struct Server {
 
 impl Server {
     pub fn new(log: Logger) -> Self {
-        let log = log.new(o!("source" => "Server"));
+        let log = log.new(o!("source" => "server::Server"));
 
         debug!(log, "Started");
         return Server { log };
