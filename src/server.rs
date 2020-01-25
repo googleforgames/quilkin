@@ -15,6 +15,8 @@
  */
 
 use std::io::Error;
+use std::net::{Ipv4Addr, SocketAddrV4, UdpSocket};
+use std::sync::Arc;
 
 use slog::{info, o, Logger};
 
@@ -31,10 +33,12 @@ impl Server {
         return Server { log };
     }
 
-    pub async fn run(self, config: Config) -> Result<(), Error> {
+    /// start the async processing of UDP packets
+    pub async fn run(self, config: Arc<Config>) -> Result<(), Error> {
         let Server { log } = self;
-        info!(log, "Starting!");
-        match config.connections {
+        info!(log, "Starting on port {}", config.local.port);
+
+        match &config.connections {
             ConnectionConfig::Sender { address, .. } => {
                 info!(log, "Sender configuration"; "address" => address)
             }
@@ -44,5 +48,10 @@ impl Server {
         };
 
         return Ok(());
+    }
+
+    async fn bind(self, config: &Config) -> Result<UdpSocket, Error> {
+        let addr = SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), config.local.port);
+        return UdpSocket::bind(addr);
     }
 }

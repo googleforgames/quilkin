@@ -21,6 +21,7 @@ use slog::{info, o, Drain, Logger};
 
 use crate::config::from_reader;
 use crate::server::Server;
+use std::sync::Arc;
 
 mod config;
 mod server;
@@ -47,9 +48,9 @@ async fn main() {
     let filename = matches.value_of("filename").unwrap();
     info!(log, "Starting Quilkin"; "version" => VERSION);
 
-    let config = from_reader(File::open(filename).unwrap()).unwrap();
+    let config = Arc::new(from_reader(File::open(filename).unwrap()).unwrap());
     let server = Server::new(base_logger);
-    server.run(config).await.unwrap();
+    server.run(config.clone()).await.unwrap();
 }
 
 fn logger() -> Logger {
