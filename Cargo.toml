@@ -27,3 +27,4 @@ serde_yaml = "0.8.11"
 slog = "2.5.2"
 slog-async = "2.3.0"
 slog-json = "2.3.0"
+tokio = { version = "0.2.10", features = ["full"] }
