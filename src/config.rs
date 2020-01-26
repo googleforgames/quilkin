@@ -19,6 +19,10 @@ use std::net::SocketAddr;
 
 use serde::{Deserialize, Serialize};
 use serde_yaml::Error;
+use std::collections::HashMap;
+
+// SENDER_ENDPOINT is because we need a name for the sender config
+const SENDER_ENDPOINT: &str = "address";
 
 /// Config is the configuration for either a sender or a receiver
 #[derive(Debug, Deserialize, Serialize)]
@@ -26,6 +30,29 @@ pub struct Config {
     pub local: Local,
     #[serde(flatten)]
     pub connections: ConnectionConfig,
+}
+
+impl Config {
+    /// get_endpoints get a list of all endpoints as a HashMap. For a Sender,
+    /// the key is "address", for the Receiver the key is the name provided.
+    pub fn get_endpoints(&self) -> HashMap<String, SocketAddr> {
+        return match &self.connections {
+            ConnectionConfig::Sender {
+                address,
+                connection_id: _,
+            } => {
+                let mut map: HashMap<String, SocketAddr> = HashMap::new();
+                map.insert(String::from(SENDER_ENDPOINT), *address);
+                return map;
+            }
+            ConnectionConfig::Receiver { endpoints } => {
+                endpoints.iter().fold(HashMap::new(), |mut m, entrypoint| {
+                    m.insert(entrypoint.name.clone(), entrypoint.address);
+                    return m;
+                })
+            }
+        };
+    }
 }
 
 /// Local is the local host configuration options
@@ -66,7 +93,8 @@ pub fn from_reader<R: io::Read>(input: R) -> Result<Config, Error> {
 
 #[cfg(test)]
 mod tests {
-    use crate::config::{from_reader, Config, ConnectionConfig, EndPoint, Local};
+    use crate::config::{from_reader, Config, ConnectionConfig, EndPoint, Local, SENDER_ENDPOINT};
+    use std::collections::HashMap;
 
     #[test]
     fn deserialise_sender() {
@@ -163,5 +191,52 @@ receiver_config:
                 assert_eq!(expected, endpoints);
             }
         }
+    }
+
+    #[test]
+    fn get_endpoints_sender() {
+        let expected_addr = "127.0.0.1:8080".parse().unwrap();
+        let config = Config {
+            local: Local { port: 0 },
+            connections: ConnectionConfig::Sender {
+                address: expected_addr,
+                connection_id: "".to_string(),
+            },
+        };
+
+        let mut expected = HashMap::new();
+        expected.insert(String::from(SENDER_ENDPOINT), expected_addr);
+        assert_eq!(expected, config.get_endpoints());
+    }
+
+    #[test]
+    fn get_endpoints_receiver() {
+        let yaml = "
+---
+local:
+  port: 7000
+receiver_config:
+  endpoints:
+    - name: Game Server No. 1
+      address: 127.0.0.1:26000
+      connection_ids:
+        - 1x7ijy6
+        - 8gj3v2i
+    - name: Game Server No. 2
+      address: 127.0.0.1:26001
+      connection_ids:
+        - nkuy70x";
+        let config = from_reader(yaml.as_bytes()).unwrap();
+        let mut expected = HashMap::new();
+        expected.insert(
+            String::from("Game Server No. 1"),
+            "127.0.0.1:26000".parse().unwrap(),
+        );
+        expected.insert(
+            String::from("Game Server No. 2"),
+            "127.0.0.1:26001".parse().unwrap(),
+        );
+
+        assert_eq!(expected, config.get_endpoints());
     }
 }
