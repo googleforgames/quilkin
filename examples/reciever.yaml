@@ -19,7 +19,7 @@
 #
 
 local:
-  port: 7000 # the port to receive traffic to locally
+  port: 7001 # the port to receive traffic to locally
 receiver_config:
   endpoints: # array of potential endpoints to send on traffic to
     - name: Game Server No. 1

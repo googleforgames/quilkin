@@ -9,8 +9,8 @@ It is designed to be used behind game clients as well as in front of dedicated g
 
 - [x] Sender: Configuration with a connection token
 - [x] Receiver: Configuration of endpoints with multiple connection token attached, that provide routing 
-- [ ] Basic non-transparent UDP forwarding from Sender to Receiver
-- [ ] Basic non-transparent UDP forwarding from Receiver to all endpoints
+- [ ] 👷 Basic non-transparent UDP forwarding from Sender to Receiver
+- [ ] 👷 Basic non-transparent UDP forwarding from Receiver to all endpoints
 - [ ] Simple UDP routing via an appended connection ID to UDP packet (sender and receiver implementation)
 - [ ] QUIC based security and UDP routing (sender and receiver implementation)
 - [ ] gRPC configuration management control plane API

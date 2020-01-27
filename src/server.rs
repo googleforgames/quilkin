@@ -16,15 +16,19 @@
 
 use std::collections::HashMap;
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
+use std::str::from_utf8;
 use std::sync::Arc;
 
 use slog::{debug, error, info, o, Logger};
 use tokio::io::Result;
+use tokio::net::udp::{RecvHalf, SendHalf};
 use tokio::net::UdpSocket;
+use tokio::sync::mpsc::{channel, Sender};
 use tokio::sync::{Mutex, RwLock};
 
 use crate::config::{Config, ConnectionConfig};
-use std::str::from_utf8;
+
+type SessionMap = Arc<RwLock<HashMap<(SocketAddr, SocketAddr), Mutex<Session>>>>;
 
 /// Server is the UDP server main implementation
 pub struct Server {
@@ -40,26 +44,44 @@ impl Server {
     // TODO: write tests for this
     /// start the async processing of incoming UDP packets
     pub async fn run(self, config: Arc<Config>) -> Result<()> {
-        info!(self.log, "Starting on port {}", config.local.port);
-        match &config.connections {
-            ConnectionConfig::Sender { address, .. } => {
-                info!(self.log, "Sender configuration"; "address" => address)
-            }
-            ConnectionConfig::Receiver { endpoints } => {
-                info!(self.log, "Receiver configuration"; "endpoints" => endpoints.len())
-            }
-        };
+        self.log_config(&config);
 
-        let mut socket = Server::bind(&config).await?;
+        let (mut recieve_socket, mut send_socket) = Server::bind(&config).await?.split();
         let mut buf: Vec<u8> = vec![0; 65535];
-        let sessions: Arc<RwLock<HashMap<String, Mutex<Session>>>> =
-            Arc::new(RwLock::new(HashMap::new()));
+        // HashMap key is from,destination addresses as a tuple.
+        let sessions: SessionMap = Arc::new(RwLock::new(HashMap::new()));
+        let (send_packets, mut receive_packets) = channel::<Packet>(1024);
+
+        let log = self.log.clone();
+        tokio::spawn(async move {
+            while let Some(packet) = receive_packets.recv().await {
+                // TODO: wrap this in tokio::spawn?
+                debug!(
+                    log,
+                    "Sending packet back to origin {}, {}",
+                    packet.dest,
+                    String::from_utf8(packet.contents.clone()).unwrap()
+                );
+
+                if let Err(err) = send_socket
+                    .send_to(packet.contents.as_slice(), &packet.dest)
+                    .await
+                {
+                    error!(log, "Error sending packet to {}, {}", packet.dest, err);
+                }
+            }
+
+            debug!(log, "Reciever closed");
+        });
+
+        // TODO: turn this whole block into a function, and write tests.
         loop {
-            let (size, recv_addr) = socket.recv_from(&mut buf).await?;
+            let (size, recv_addr) = recieve_socket.recv_from(&mut buf).await?;
             let packet = buf.clone();
             let log = self.log.clone();
             let config = config.clone();
             let local_sessions = sessions.clone();
+            let local_sender = send_packets.clone();
             tokio::spawn(async move {
                 let endpoints = config.get_endpoints();
                 let packet = &packet[..size];
@@ -71,13 +93,21 @@ impl Server {
                     from_utf8(packet).unwrap()
                 );
 
-                for (name, dest) in endpoints.iter() {
-                    let _ = Server::ensure_session(&log, local_sessions.clone(), name, *dest)
-                        .await
-                        .map_err(|err| error!(log, "Error ensuring session exists: {}", err));
+                for (_, dest) in endpoints.iter() {
+                    // TODO: convert to if let Err() deconstruct
+                    let _ = Server::ensure_session(
+                        &log,
+                        local_sessions.clone(),
+                        recv_addr,
+                        *dest,
+                        local_sender.clone(),
+                    )
+                    .await
+                    .map_err(|err| error!(log, "Error ensuring session exists: {}", err));
 
                     let map = local_sessions.read().await;
-                    let mut session = map.get(name).unwrap().lock().await;
+                    let mut session = map.get(&(recv_addr, *dest)).unwrap().lock().await;
+                    // TODO: convert to if let Err() deconstruct
                     let _ = session
                         .send_to(packet)
                         .await
@@ -85,6 +115,19 @@ impl Server {
                 }
             });
         }
+    }
+
+    /// log_config outputs a log of what is configured
+    fn log_config(&self, config: &Arc<Config>) {
+        info!(self.log, "Starting on port {}", config.local.port);
+        match &config.connections {
+            ConnectionConfig::Sender { address, .. } => {
+                info!(self.log, "Sender configuration"; "address" => address)
+            }
+            ConnectionConfig::Receiver { endpoints } => {
+                info!(self.log, "Receiver configuration"; "endpoints" => endpoints.len())
+            }
+        };
     }
 
     /// bind binds the local configured port
@@ -97,44 +140,99 @@ impl Server {
     /// ensure_session makes sure there is a value session for the name in the sessions map
     async fn ensure_session(
         log: &Logger,
-        sessions: Arc<RwLock<HashMap<String, Mutex<Session>>>>,
-        name: &String,
+        sessions: SessionMap,
+        from: SocketAddr,
         dest: SocketAddr,
+        sender: Sender<Packet>,
     ) -> Result<()> {
         {
             let map = sessions.read().await;
-            if map.contains_key(name) {
+            if map.contains_key(&(from, dest)) {
                 return Ok(());
             }
         }
-        let s = Session::new(log, name.clone(), dest).await?;
+        let s = Session::new(log, from, dest, sender).await?;
         {
             let mut map = sessions.write().await;
-            map.insert(name.clone(), Mutex::new(s));
+            map.insert((from, dest), Mutex::new(s));
         }
         return Ok(());
     }
 }
 
+/// Packet represents a packet that needs to go somewhere
+struct Packet {
+    dest: SocketAddr,
+    contents: Vec<u8>,
+}
+
 /// Session encapsulates a UDP stream session
 struct Session {
     log: Logger,
-    socket: UdpSocket,
+    send: SendHalf,
+    /// dest is where to send data to
     dest: SocketAddr,
+    /// from is the original sender
+    from: SocketAddr,
     // TODO: store a session expiry, and update when you send data
 }
 
 impl Session {
     // TODO: write some tests
-    async fn new(base: &Logger, name: String, dest: SocketAddr) -> Result<Self> {
+    async fn new(
+        base: &Logger,
+        from: SocketAddr,
+        dest: SocketAddr,
+        sender: Sender<Packet>,
+    ) -> Result<Self> {
         let addr = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 0);
-        let s = Session {
-            log: base.new(o!("source" => "server::Session", "name" => name, "dest" => dest)),
-            socket: UdpSocket::bind(addr).await?,
+        let (recv, send) = UdpSocket::bind(addr).await?.split();
+        let mut s = Session {
+            log: base.new(o!("source" => "server::Session", "from" => from, "dest" => dest)),
+            send,
+            from,
             dest,
         };
         debug!(s.log, "Session created");
+
+        s.run(recv, sender);
+
         return Ok(s);
+    }
+
+    // TODO: write some tests
+    /// run starts processing receiving udp packets on its UdpSocket
+    fn run(&mut self, mut recv: RecvHalf, mut sender: Sender<Packet>) {
+        let log = self.log.clone();
+        let from = self.from;
+        tokio::spawn(async move {
+            let mut buf: Vec<u8> = vec![0; 65535];
+            // TODO: work out how to shut this down once this session expires
+            loop {
+                debug!(log, "awaiting incoming packet");
+                match recv.recv_from(&mut buf).await {
+                    Err(err) => error!(log, "Error receiving packet: {}", err),
+                    Ok((size, recv_addr)) => {
+                        let packet = &buf[..size];
+                        debug!(
+                            log,
+                            "Received packet from {}, {}",
+                            recv_addr,
+                            from_utf8(packet).unwrap()
+                        );
+                        if let Err(err) = sender
+                            .send(Packet {
+                                contents: packet.to_vec(),
+                                dest: from,
+                            })
+                            .await
+                        {
+                            println!("Error sending packet to channel: {}", err);
+                        }
+                    }
+                }
+            }
+        });
     }
 
     // TODO: write some tests
@@ -146,7 +244,7 @@ impl Session {
             self.dest,
             from_utf8(buf).unwrap()
         );
-        return self.socket.send_to(buf, self.dest).await;
+        return self.send.send_to(buf, &self.dest).await;
     }
 }
 
