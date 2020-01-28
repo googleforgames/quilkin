@@ -37,7 +37,7 @@ Participation in this project comes under the [Contributor Covenant Code of Cond
 
 When submitting pull requests, make sure to do the following:
 
-- Format all Go code with [rustfmt](https://github.com/rust-lang/rustfmt).
+- Format all Rust code with [rustfmt](https://github.com/rust-lang/rustfmt).
 - Remove trailing whitespace. Many editors will do this automatically.
 - Ensure any new files have [a trailing newline](https://stackoverflow.com/questions/5813311/no-newline-at-end-of-file)
 

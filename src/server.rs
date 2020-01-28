@@ -23,7 +23,7 @@ use slog::{debug, error, info, o, Logger};
 use tokio::io::Result;
 use tokio::net::udp::{RecvHalf, SendHalf};
 use tokio::net::UdpSocket;
-use tokio::sync::mpsc::{channel, Sender};
+use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tokio::sync::{Mutex, RwLock};
 
 use crate::config::{Config, ConnectionConfig};
@@ -46,74 +46,101 @@ impl Server {
     pub async fn run(self, config: Arc<Config>) -> Result<()> {
         self.log_config(&config);
 
-        let (mut recieve_socket, mut send_socket) = Server::bind(&config).await?.split();
-        let mut buf: Vec<u8> = vec![0; 65535];
+        let (mut receive_socket, send_socket) = Server::bind(&config).await?.split();
         // HashMap key is from,destination addresses as a tuple.
         let sessions: SessionMap = Arc::new(RwLock::new(HashMap::new()));
-        let (send_packets, mut receive_packets) = channel::<Packet>(1024);
+        let (send_packets, receive_packets) = channel::<Packet>(1024);
 
         let log = self.log.clone();
         tokio::spawn(async move {
-            while let Some(packet) = receive_packets.recv().await {
-                // TODO: wrap this in tokio::spawn?
-                debug!(
-                    log,
-                    "Sending packet back to origin {}, {}",
-                    packet.dest,
-                    String::from_utf8(packet.contents.clone()).unwrap()
-                );
-
-                if let Err(err) = send_socket
-                    .send_to(packet.contents.as_slice(), &packet.dest)
-                    .await
-                {
-                    error!(log, "Error sending packet to {}, {}", packet.dest, err);
-                }
-            }
-
-            debug!(log, "Reciever closed");
+            Server::process_receive_packet_channel(&log, send_socket, receive_packets).await;
+            debug!(log, "Receiver closed");
         });
 
-        // TODO: turn this whole block into a function, and write tests.
         loop {
-            let (size, recv_addr) = recieve_socket.recv_from(&mut buf).await?;
-            let packet = buf.clone();
-            let log = self.log.clone();
-            let config = config.clone();
-            let local_sessions = sessions.clone();
-            let local_sender = send_packets.clone();
-            tokio::spawn(async move {
-                let endpoints = config.get_endpoints();
-                let packet = &packet[..size];
+            if let Err(err) = Server::process_receive_socket(
+                self.log.clone(),
+                config.clone(),
+                &mut receive_socket,
+                sessions.clone(),
+                send_packets.clone(),
+            )
+            .await
+            {
+                error!(self.log, "Error processing reeive socket: {}", err);
+            }
+        }
+    }
 
-                debug!(
-                    log,
-                    "Packet Received from: {}, {}",
+    // TODO: write tests
+    /// process_receive_socket takes packets from the local socket and asynchronously
+    /// processes them to send them out to endpoints.
+    async fn process_receive_socket(
+        log: Logger,
+        config: Arc<Config>,
+        receive_socket: &mut RecvHalf,
+        sessions: SessionMap,
+        send_packets: Sender<Packet>,
+    ) -> Result<()> {
+        let mut buf: Vec<u8> = vec![0; 65535];
+        let (size, recv_addr) = receive_socket.recv_from(&mut buf).await?;
+        tokio::spawn(async move {
+            let endpoints = config.get_endpoints();
+            let packet = &buf[..size];
+
+            debug!(
+                log,
+                "Packet Received from: {}, {}",
+                recv_addr,
+                from_utf8(packet).unwrap()
+            );
+
+            for (_, dest) in endpoints.iter() {
+                if let Err(err) = Server::ensure_session(
+                    &log,
+                    sessions.clone(),
                     recv_addr,
-                    from_utf8(packet).unwrap()
-                );
-
-                for (_, dest) in endpoints.iter() {
-                    // TODO: convert to if let Err() deconstruct
-                    let _ = Server::ensure_session(
-                        &log,
-                        local_sessions.clone(),
-                        recv_addr,
-                        *dest,
-                        local_sender.clone(),
-                    )
-                    .await
-                    .map_err(|err| error!(log, "Error ensuring session exists: {}", err));
-
-                    let map = local_sessions.read().await;
-                    let mut session = map.get(&(recv_addr, *dest)).unwrap().lock().await;
-                    // TODO: convert to if let Err() deconstruct
-                    let _ = session
-                        .send_to(packet)
-                        .await
-                        .map_err(|err| error!(log, "Error ensuring sending packet: {}", err));
+                    *dest,
+                    send_packets.clone(),
+                )
+                .await
+                {
+                    error!(log, "Error ensuring session exists: {}", err);
                 }
-            });
+
+                let map = sessions.read().await;
+                let mut session = map.get(&(recv_addr, *dest)).unwrap().lock().await;
+                if let Err(err) = session.send_to(packet).await {
+                    error!(log, "Error ensuring sending packet: {}", err)
+                }
+            }
+        });
+        return Ok(());
+    }
+
+    // TODO: write tests for this
+    /// process_receive_packet_channel blocks on receive_packets.recv() channel
+    /// and sends each packet on to the Packet.dest
+    async fn process_receive_packet_channel(
+        log: &Logger,
+        mut send_socket: SendHalf,
+        mut receive_packets: Receiver<Packet>,
+    ) {
+        while let Some(packet) = receive_packets.recv().await {
+            // TODO: wrap this in tokio::spawn?
+            debug!(
+                log,
+                "Sending packet back to origin {}, {}",
+                packet.dest,
+                String::from_utf8(packet.contents.clone()).unwrap()
+            );
+
+            if let Err(err) = send_socket
+                .send_to(packet.contents.as_slice(), &packet.dest)
+                .await
+            {
+                error!(log, "Error sending packet to {}, {}", packet.dest, err);
+            }
         }
     }
 
