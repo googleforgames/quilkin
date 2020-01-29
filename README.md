@@ -22,6 +22,32 @@ Project is currently in *alpha* status, and is being actively developed. Expect 
 
 Not to be used in production systems.
 
+## Proposed Architecture
+```
+                                    +                          +
+                                    |                          |
+                                 Internet                   Private
+                                    |                       Network
+                                    |      +-------------+     |          +----------------+
+                                    |      |Quilkin Proxy|     |          | Dedicated Game |
+                                    |  +-->+(Receiver)   +---------+------> Server         |
++---------+       +-------------+   |  |   |             |     |   |      |                |
+|  Game   |       |Quilkin Proxy+------+   --------------+     |   |      +----------------+
+|  Client +------>+(Sender)     |   |  |                       |   |
++---------+       +-------------+   |  |   +-------------+     |   |      +----------------+
+                                    |  |   |Quilkin Proxy|     |   |      | Dedicated Game |
+                                    |  +-->+(Receiver)   +---------+      | Server         |
+                                    |      |             |     |          |                |
+                                    |      +-------------+     |          +----------------+
+                                    |                          |
+                                    |      +-------------+     |          +----------------+
+                                    |      |Quilkin Proxy|     |          | Dedicated Game |
+                                    |      |(Receiver)   |     |          | Server         |
+                                    |      |             |     |          |                |
+                                    |      +-------------+     |          +----------------+
+                                    +                          +
+```
+
 ## Usage
 
 `quilkin --filename="configuration.yaml"`
