@@ -262,7 +262,6 @@ impl Session {
         });
     }
 
-    // TODO: write some tests
     /// Both sends a packet to the Session's dest.
     async fn send_to(&mut self, buf: &[u8]) -> Result<usize> {
         debug!(
@@ -277,13 +276,18 @@ impl Session {
 
 #[cfg(test)]
 mod tests {
-    use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+    use std::net::{IpAddr, Ipv4Addr, SocketAddr, SocketAddrV4};
 
     use crate::config::{Config, ConnectionConfig, Local};
-    use crate::server::Server;
+    use crate::logger;
+    use crate::server::{Packet, Server, Session};
+    use std::str::from_utf8;
+    use tokio::net::UdpSocket;
+    use tokio::sync::mpsc::channel;
+    use tokio::sync::oneshot;
 
     #[tokio::test]
-    async fn bind() {
+    async fn server_bind() {
         let config = Config {
             local: Local { port: 12345 },
             connections: ConnectionConfig::Receiver {
@@ -295,5 +299,31 @@ mod tests {
 
         let expected = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12345);
         assert_eq!(expected, addr)
+    }
+
+    #[tokio::test]
+    async fn session_send_to() {
+        let log = logger();
+
+        let addr = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 0);
+        let socket = UdpSocket::bind(addr).await.unwrap();
+        let local_addr = socket.local_addr().unwrap();
+        let (mut recv, _) = socket.split();
+        let (sender, _) = channel::<Packet>(1);
+
+        let (done, wait) = oneshot::channel::<()>();
+
+        tokio::spawn(async move {
+            let mut buf = vec![0; 1024];
+            let size = recv.recv(&mut buf).await.unwrap();
+            assert_eq!("hello", from_utf8(&buf[..size]).unwrap());
+            done.send(()).unwrap();
+        });
+
+        let mut session = Session::new(&log, local_addr, local_addr, sender)
+            .await
+            .unwrap();
+        session.send_to("hello".as_bytes()).await.unwrap();
+        wait.await.unwrap();
     }
 }
