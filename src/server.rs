@@ -72,7 +72,6 @@ impl Server {
         }
     }
 
-    // TODO: write tests
     /// process_receive_socket takes packets from the local socket and asynchronously
     /// processes them to send them out to endpoints.
     async fn process_receive_socket(
@@ -127,7 +126,6 @@ impl Server {
         mut receive_packets: Receiver<Packet>,
     ) {
         while let Some(packet) = receive_packets.recv().await {
-            // TODO: wrap this in tokio::spawn?
             debug!(
                 log,
                 "Sending packet back to origin {}, {}",
@@ -276,15 +274,18 @@ impl Session {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
     use std::net::{IpAddr, Ipv4Addr, SocketAddr, SocketAddrV4};
+    use std::str::from_utf8;
+    use std::sync::Arc;
+
+    use tokio::net::UdpSocket;
+    use tokio::sync::mpsc::channel;
+    use tokio::sync::{oneshot, RwLock};
 
     use crate::config::{Config, ConnectionConfig, Local};
     use crate::logger;
-    use crate::server::{Packet, Server, Session};
-    use std::str::from_utf8;
-    use tokio::net::UdpSocket;
-    use tokio::sync::mpsc::channel;
-    use tokio::sync::oneshot;
+    use crate::server::{Packet, Server, Session, SessionMap};
 
     #[tokio::test]
     async fn server_bind() {
@@ -302,28 +303,71 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn session_send_to() {
+    async fn server_process_receive_socket() {
         let log = logger();
+        let (local_addr, wait) = assert_recv_udp().await;
 
+        let config = Arc::new(Config {
+            local: Local { port: 0 },
+            connections: ConnectionConfig::Sender {
+                address: local_addr,
+                connection_id: String::from(""),
+            },
+        });
         let addr = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 0);
-        let socket = UdpSocket::bind(addr).await.unwrap();
-        let local_addr = socket.local_addr().unwrap();
-        let (mut recv, _) = socket.split();
-        let (sender, _) = channel::<Packet>(1);
-
-        let (done, wait) = oneshot::channel::<()>();
+        let receive_socket = UdpSocket::bind(addr).await.unwrap();
+        let receive_addr = receive_socket.local_addr().unwrap();
+        let (mut recv, mut send) = receive_socket.split();
+        let sessions: SessionMap = Arc::new(RwLock::new(HashMap::new()));
+        let (send_packets, mut recv_packets) = channel::<Packet>(1);
 
         tokio::spawn(async move {
-            let mut buf = vec![0; 1024];
-            let size = recv.recv(&mut buf).await.unwrap();
-            assert_eq!("hello", from_utf8(&buf[..size]).unwrap());
-            done.send(()).unwrap();
+            Server::process_receive_socket(
+                log,
+                config,
+                &mut recv,
+                sessions.clone(),
+                send_packets.clone(),
+            )
+            .await
         });
+
+        send.send_to("hello".as_bytes(), &receive_addr)
+            .await
+            .unwrap();
+
+        wait.await.unwrap();
+        recv_packets.close();
+    }
+
+    #[tokio::test]
+    async fn session_send_to() {
+        let log = logger();
+        let (sender, _) = channel::<Packet>(1);
+        let (local_addr, wait) = assert_recv_udp().await;
 
         let mut session = Session::new(&log, local_addr, local_addr, sender)
             .await
             .unwrap();
         session.send_to("hello".as_bytes()).await.unwrap();
         wait.await.unwrap();
+    }
+
+    /// assert_recv_udp asserts that the returned SockerAddr recieved a UDP packet
+    /// with the contents of "hello"
+    /// call wait.await.unwrap() to see if the message was received
+    async fn assert_recv_udp() -> (SocketAddr, oneshot::Receiver<()>) {
+        let addr = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 0);
+        let socket = UdpSocket::bind(addr).await.unwrap();
+        let local_addr = socket.local_addr().unwrap();
+        let (mut recv, _) = socket.split();
+        let (done, wait) = oneshot::channel::<()>();
+        tokio::spawn(async move {
+            let mut buf = vec![0; 1024];
+            let size = recv.recv(&mut buf).await.unwrap();
+            assert_eq!("hello", from_utf8(&buf[..size]).unwrap());
+            done.send(()).unwrap();
+        });
+        return (local_addr, wait);
     }
 }
