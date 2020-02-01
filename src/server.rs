@@ -161,7 +161,6 @@ impl Server {
         return UdpSocket::bind(addr).await;
     }
 
-    // TODO: write tests for this
     /// ensure_session makes sure there is a value session for the name in the sessions map
     async fn ensure_session(
         log: &Logger,
@@ -338,6 +337,34 @@ mod tests {
 
         wait.await.unwrap();
         recv_packets.close();
+    }
+
+    #[tokio::test]
+    async fn server_ensure_session() {
+        let log = logger();
+        let map: SessionMap = Arc::new(RwLock::new(HashMap::new()));
+        let from: SocketAddr = "127.0.0.1:27890".parse().unwrap();
+        let dest: SocketAddr = "127.0.0.1:27891".parse().unwrap();
+        let (sender, mut recv) = channel::<Packet>(1);
+
+        // gate
+        {
+            assert!(map.read().await.is_empty());
+        }
+        Server::ensure_session(&log, map.clone(), from, dest, sender)
+            .await
+            .unwrap();
+
+        let rmap = map.read().await;
+        let key = (from, dest);
+        assert!(rmap.contains_key(&key));
+
+        let sess = rmap.get(&key).unwrap().lock().await;
+        assert_eq!(from, sess.from);
+        assert_eq!(dest, sess.dest);
+        assert_eq!(1, rmap.keys().len());
+
+        recv.close();
     }
 
     #[tokio::test]
