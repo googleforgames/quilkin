@@ -15,12 +15,12 @@
 #
 
 #
-# Example configuration for Game server receivers
+# Example configuration for a Quilkin Proxy that sits in front of dedicated game servers
 #
 
 local:
   port: 7001 # the port to receive traffic to locally
-receiver_config:
+server:
   endpoints: # array of potential endpoints to send on traffic to
     - name: Game Server No. 1
       address: 127.0.0.1:26000

@@ -145,11 +145,11 @@ impl Server {
     fn log_config(&self, config: &Arc<Config>) {
         info!(self.log, "Starting on port {}", config.local.port);
         match &config.connections {
-            ConnectionConfig::Sender { address, .. } => {
-                info!(self.log, "Sender configuration"; "address" => address)
+            ConnectionConfig::Client { address, .. } => {
+                info!(self.log, "Client proxy configuration"; "address" => address)
             }
-            ConnectionConfig::Receiver { endpoints } => {
-                info!(self.log, "Receiver configuration"; "endpoints" => endpoints.len())
+            ConnectionConfig::Server { endpoints } => {
+                info!(self.log, "Server proxy configuration"; "endpoints" => endpoints.len())
             }
         };
     }
@@ -288,7 +288,7 @@ mod tests {
     async fn server_bind() {
         let config = Config {
             local: Local { port: 12345 },
-            connections: ConnectionConfig::Receiver {
+            connections: ConnectionConfig::Server {
                 endpoints: Vec::new(),
             },
         };
@@ -306,7 +306,7 @@ mod tests {
 
         let config = Arc::new(Config {
             local: Local { port: 0 },
-            connections: ConnectionConfig::Sender {
+            connections: ConnectionConfig::Client {
                 address: local_addr,
                 connection_id: String::from(""),
             },
