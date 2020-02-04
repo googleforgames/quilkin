@@ -7,12 +7,12 @@ It is designed to be used behind game clients as well as in front of dedicated g
 
 ## Planned Roadmap
 
-- [x] Sender: Configuration with a connection token
-- [x] Receiver: Configuration of endpoints with multiple connection token attached, that provide routing 
-- [ ] 👷 Basic non-transparent UDP forwarding from Sender to Receiver
-- [ ] 👷 Basic non-transparent UDP forwarding from Receiver to all endpoints
-- [ ] Simple UDP routing via an appended connection ID to UDP packet (sender and receiver implementation)
-- [ ] QUIC based security and UDP routing (sender and receiver implementation)
+- [x] Client Proxy: Configuration with a connection token
+- [x] Server Proxy: Configuration of endpoints with multiple connection token attached, that provide routing 
+- [ ] 👷 Basic non-transparent UDP forwarding from Client Proxy to Server Proxy
+- [ ] 👷 Basic non-transparent UDP forwarding from Server Proxy to all Endpoints
+- [ ] Simple UDP routing via an appended connection ID to UDP packet (Client and Server Proxy implementation)
+- [ ] QUIC based security and UDP routing (Client and Server Proxy implementation)
 - [ ] gRPC configuration management control plane API
 - [ ] Add Open Telemetry metrics
 
@@ -24,28 +24,28 @@ Not to be used in production systems.
 
 ## Proposed Architecture
 ```
-                                    +                          +
-                                    |                          |
-                                 Internet                   Private
-                                    |                       Network
-                                    |      +-------------+     |          +----------------+
-                                    |      |Quilkin Proxy|     |          | Dedicated Game |
-                                    |  +-->+(Receiver)   +---------+------> Server         |
-+---------+       +-------------+   |  |   |             |     |   |      |                |
-|  Game   |       |Quilkin Proxy+------+   --------------+     |   |      +----------------+
-|  Client +------>+(Sender)     |   |  |                       |   |
-+---------+       +-------------+   |  |   +-------------+     |   |      +----------------+
-                                    |  |   |Quilkin Proxy|     |   |      | Dedicated Game |
-                                    |  +-->+(Receiver)   +---------+      | Server         |
-                                    |      |             |     |          |                |
-                                    |      +-------------+     |          +----------------+
-                                    |                          |
-                                    |      +-------------+     |          +----------------+
-                                    |      |Quilkin Proxy|     |          | Dedicated Game |
-                                    |      |(Receiver)   |     |          | Server         |
-                                    |      |             |     |          |                |
-                                    |      +-------------+     |          +----------------+
-                                    +                          +
+                                       +                          +
+                                       +                          |
+                                    Internet                   Private
+                                       +                       Network
+                                       |     +----------------+   +          +----------------+
+                                       |     | Quilkin        |   |          | Dedicated      |
+                                       |  +--> (Server Proxy) +-------+------> Game Server    |
++---------+      +----------------+    |  |  |                |   |   |      |                |
+|  Game   |      | Quilkin        +-------+  +----------------+   |   |      +----------------+
+|  Client +------+ (Client Proxy) |    |  |                       |   |
++---------+      +----------------+    |  |  +----------------+   |   |      +----------------+
+                                       |  |  | Quilkin        |   |   |      | Dedicated      |
+                                       |  +--> (Server Proxy) +-------+      | Game Server    |
+                                       |     |                |   |          |                |
+                                       |     +----------------+   |          +----------------+
+                                       |                          |
+                                       |     +----------------+   |          +----------------+
+                                       |     | Quilkin        |   |          | Dedicated      |
+                                       |     | (Server Proxy) |   |          | Game Server    |
+                                       |     |                |   |          |                |
+                                       |     +----------------+   |          +----------------+
+                                       +                          +
 ```
 
 ## Usage

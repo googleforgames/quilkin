@@ -15,11 +15,11 @@
 #
 
 #
-# Example configuration for a game client sender
+# Example configuration for a Quilkin Proxy that sits behind a game clients
 #
 
 local:
   port: 7000 # the port to receive traffic to locally
-sender_config:
+client:
   address: 127.0.0.1:7001 # the address to send traffic to
   connection_id: 1x7ijy6 # the connection string to attach to the traffic
