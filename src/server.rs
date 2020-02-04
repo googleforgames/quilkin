@@ -201,7 +201,8 @@ struct Session {
 }
 
 impl Session {
-    // TODO: write some tests
+    /// new creates a new Session, and starts the process of receiving udp sockets
+    /// from its ephemeral port from endpoint(s)
     async fn new(
         base: &Logger,
         from: SocketAddr,
@@ -219,11 +220,9 @@ impl Session {
         debug!(s.log, "Session created");
 
         s.run(recv, sender);
-
-        return Ok(s);
+        Ok(s)
     }
 
-    // TODO: write some tests
     /// run starts processing receiving udp packets on its UdpSocket
     fn run(&mut self, mut recv: RecvHalf, mut sender: Sender<Packet>) {
         let log = self.log.clone();
@@ -258,7 +257,7 @@ impl Session {
         });
     }
 
-    /// Both sends a packet to the Session's dest.
+    /// Sends a packet to the Session's dest.
     async fn send_to(&mut self, buf: &[u8]) -> Result<usize> {
         debug!(
             self.log,
@@ -397,6 +396,32 @@ mod tests {
             Server::process_receive_packet_channel(&log, send_socket, recv_packet).await;
         });
         wait.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn session_new() {
+        let log = logger();
+        let mut socket = ephemeral_socket().await;
+        let local_addr = socket.local_addr().unwrap();
+        let (send_packet, mut recv_packet) = channel::<Packet>(5);
+
+        let mut sess = Session::new(&log, local_addr, local_addr, send_packet)
+            .await
+            .unwrap();
+
+        // echo the packet back again
+        tokio::spawn(async move {
+            let mut buf = vec![0; 1024];
+            let (size, recv_addr) = socket.recv_from(&mut buf).await.unwrap();
+            assert_eq!("hello", from_utf8(&buf[..size]).unwrap());
+            socket.send_to(&buf[..size], recv_addr).await.unwrap();
+        });
+
+        sess.send_to("hello".as_bytes()).await.unwrap();
+
+        let packet = recv_packet.recv().await.unwrap();
+        assert_eq!(String::from("hello").into_bytes(), packet.contents);
+        assert_eq!(local_addr, packet.dest);
     }
 
     #[tokio::test]
