@@ -41,7 +41,6 @@ impl Server {
         return Server { log };
     }
 
-    // TODO: write tests for this
     /// start the async processing of incoming UDP packets
     pub async fn run(self, config: Arc<Config>) -> Result<()> {
         self.log_config(&config);
@@ -67,7 +66,7 @@ impl Server {
             )
             .await
             {
-                error!(self.log, "Error processing reeive socket: {}", err);
+                error!(self.log, "Error processing receive socket"; "err" => err.to_string());
             }
         }
     }
@@ -280,9 +279,85 @@ mod tests {
     use tokio::sync::mpsc::channel;
     use tokio::sync::{oneshot, RwLock};
 
-    use crate::config::{Config, ConnectionConfig, Local};
+    use crate::config::{Config, ConnectionConfig, EndPoint, Local};
     use crate::logger;
     use crate::server::{Packet, Server, Session, SessionMap};
+    use tokio::net::udp::RecvHalf;
+
+    #[tokio::test]
+    async fn server_run_server() {
+        let log = logger();
+        let server = Server::new(log.clone());
+
+        let socket1 = ephemeral_socket().await;
+        let endpoint1 = socket1.local_addr().unwrap();
+        let socket2 = ephemeral_socket().await;
+        let endpoint2 = socket2.local_addr().unwrap();
+        let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12358);
+
+        let (recv1, mut send) = socket1.split();
+        let (recv2, _) = socket2.split();
+        let (done1, wait1) = oneshot::channel::<()>();
+        let (done2, wait2) = oneshot::channel::<()>();
+
+        let config = Arc::new(Config {
+            local: Local {
+                port: local_addr.port(),
+            },
+            connections: ConnectionConfig::Server {
+                endpoints: vec![
+                    EndPoint {
+                        name: String::from("e1"),
+                        address: endpoint1.clone(),
+                        connection_ids: vec![],
+                    },
+                    EndPoint {
+                        name: String::from("e2"),
+                        address: endpoint2.clone(),
+                        connection_ids: vec![],
+                    },
+                ],
+            },
+        });
+
+        tokio::spawn(async move {
+            server.run(config).await.unwrap();
+        });
+
+        recv_socket_done(recv1, done1);
+        recv_socket_done(recv2, done2);
+        send.send_to("hello".as_bytes(), &local_addr).await.unwrap();
+        wait1.await.unwrap();
+        wait2.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn server_run_client() {
+        let log = logger();
+        let server = Server::new(log.clone());
+        let socket = ephemeral_socket().await;
+        let endpoint_addr = socket.local_addr().unwrap();
+        let (recv, mut send) = socket.split();
+        let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12357);
+        let (done, wait) = oneshot::channel::<()>();
+        let config = Arc::new(Config {
+            local: Local {
+                port: local_addr.port(),
+            },
+            connections: ConnectionConfig::Client {
+                address: endpoint_addr,
+                connection_id: String::from(""),
+            },
+        });
+
+        tokio::spawn(async move {
+            server.run(config).await.unwrap();
+        });
+
+        recv_socket_done(recv, done);
+        send.send_to("hello".as_bytes(), &local_addr).await.unwrap();
+        wait.await.unwrap();
+    }
 
     #[tokio::test]
     async fn server_bind() {
@@ -371,16 +446,11 @@ mod tests {
         let socket = ephemeral_socket().await;
         let local_addr = socket.local_addr().unwrap();
 
-        let (mut recv_socket, send_socket) = socket.split();
+        let (recv_socket, send_socket) = socket.split();
         let (mut send_packet, recv_packet) = channel::<Packet>(5);
         let (done, wait) = oneshot::channel::<()>();
 
-        tokio::spawn(async move {
-            let mut buf = vec![0; 1024];
-            let size = recv_socket.recv(&mut buf).await.unwrap();
-            assert_eq!("hello", from_utf8(&buf[..size]).unwrap());
-            done.send(()).unwrap();
-        });
+        recv_socket_done(recv_socket, done);
 
         if let Err(err) = send_packet
             .send(Packet {
@@ -443,14 +513,9 @@ mod tests {
     async fn assert_recv_udp() -> (SocketAddr, oneshot::Receiver<()>) {
         let socket = ephemeral_socket().await;
         let local_addr = socket.local_addr().unwrap();
-        let (mut recv, _) = socket.split();
+        let (recv, _) = socket.split();
         let (done, wait) = oneshot::channel::<()>();
-        tokio::spawn(async move {
-            let mut buf = vec![0; 1024];
-            let size = recv.recv(&mut buf).await.unwrap();
-            assert_eq!("hello", from_utf8(&buf[..size]).unwrap());
-            done.send(()).unwrap();
-        });
+        recv_socket_done(recv, done);
         (local_addr, wait)
     }
 
@@ -458,5 +523,15 @@ mod tests {
     async fn ephemeral_socket() -> UdpSocket {
         let addr = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 0);
         UdpSocket::bind(addr).await.unwrap()
+    }
+
+    /// recv_socket_done will send a value to done when receiving the "hello" UDP packet.
+    fn recv_socket_done(mut recv: RecvHalf, done: oneshot::Sender<()>) {
+        tokio::spawn(async move {
+            let mut buf = vec![0; 1024];
+            let size = recv.recv(&mut buf).await.unwrap();
+            assert_eq!("hello", from_utf8(&buf[..size]).unwrap());
+            done.send(()).unwrap();
+        });
     }
 }
