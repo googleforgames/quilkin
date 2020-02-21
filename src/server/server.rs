@@ -23,20 +23,19 @@ use slog::{debug, error, info, o, warn, Logger};
 use tokio::io::Result;
 use tokio::net::udp::{RecvHalf, SendHalf};
 use tokio::net::UdpSocket;
-use tokio::select;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
-use tokio::sync::{watch, Mutex, RwLock};
+use tokio::sync::{Mutex, RwLock};
 use tokio::time::{delay_for, Duration, Instant};
 
 use crate::config::{Config, ConnectionConfig};
-use std::result;
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering::Relaxed;
-
-/// SESSION_TIMEOUT_SECONDS is the default session timeout - which is one minute.
-const SESSION_TIMEOUT_SECONDS: u64 = 60;
+use crate::server::sessions::{Packet, Session, SESSION_TIMEOUT_SECONDS};
 
 type SessionMap = Arc<RwLock<HashMap<(SocketAddr, SocketAddr), Mutex<Session>>>>;
+
+/// Server is the UDP server main implementation
+pub struct Server {
+    log: Logger,
+}
 
 impl Server {
     pub fn new(base: Logger) -> Self {
@@ -129,7 +128,7 @@ impl Server {
                         let mut session = mtx.lock().await;
                         match session.send_to(packet).await {
                             Ok(_) => {
-                                Session::increment_expiration(session.expiration.clone()).await;
+                                session.increment_expiration().await;
                             }
                             Err(err) => {
                                 error!(log, "Error sending packet from session"; "error" => %err)
@@ -159,15 +158,15 @@ impl Server {
             debug!(
                 log,
                 "Sending packet back to origin";
-                "origin" => packet.dest,
-                "contents" => String::from_utf8(packet.contents.clone()).unwrap(),
+                "origin" => packet.dest(),
+                "contents" => String::from_utf8(packet.contents().clone()).unwrap(),
             );
 
             if let Err(err) = send_socket
-                .send_to(packet.contents.as_slice(), &packet.dest)
+                .send_to(packet.contents().as_slice(), &packet.dest())
                 .await
             {
-                error!(log, "Error sending packet"; "dest" => %packet.dest, "error" => %err);
+                error!(log, "Error sending packet"; "dest" => %packet.dest(), "error" => %err);
             }
         }
     }
@@ -208,7 +207,7 @@ impl Server {
         let s = Session::new(log, from, dest, sender).await?;
         {
             let mut map = sessions.write().await;
-            map.insert((from, dest), Mutex::new(s));
+            map.insert(s.key(), Mutex::new(s));
         }
         return Ok(());
     }
@@ -223,7 +222,7 @@ impl Server {
             let map = sessions.read().await;
             for (k, v) in map.iter() {
                 let session = v.lock().await;
-                let expiration = session.expiration.read().await;
+                let expiration = session.expiration().await;
                 if expiration.lt(&now) {
                     let value = k.clone();
                     remove_keys.push(value);
@@ -246,163 +245,24 @@ impl Server {
     }
 }
 
-/// Server is the UDP server main implementation
-pub struct Server {
-    log: Logger,
-}
-
-/// Packet represents a packet that needs to go somewhere
-struct Packet {
-    dest: SocketAddr,
-    contents: Vec<u8>,
-}
-
-/// Session encapsulates a UDP stream session
-struct Session {
-    log: Logger,
-    send: SendHalf,
-    /// dest is where to send data to
-    dest: SocketAddr,
-    /// from is the original sender
-    from: SocketAddr,
-    /// session expiration timestamp
-    expiration: Arc<RwLock<Instant>>,
-    /// closer is a channel to broadcast on if we are shutting down this Session
-    closer: watch::Sender<bool>,
-    /// closed is if this Session has closed, and isn't receiving packets anymore
-    is_closed: Arc<AtomicBool>,
-}
-
-impl Session {
-    /// new creates a new Session, and starts the process of receiving udp sockets
-    /// from its ephemeral port from endpoint(s)
-    async fn new(
-        base: &Logger,
-        from: SocketAddr,
-        dest: SocketAddr,
-        sender: Sender<Packet>,
-    ) -> Result<Self> {
-        let addr = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 0);
-        let (recv, send) = UdpSocket::bind(addr).await?.split();
-        let (closer, closed) = watch::channel::<bool>(false);
-        let mut s = Session {
-            log: base.new(o!("source" => "server::Session", "from" => from, "dest" => dest)),
-            send,
-            from,
-            dest,
-            expiration: Arc::new(RwLock::new(
-                Instant::now() + Duration::from_secs(SESSION_TIMEOUT_SECONDS),
-            )),
-            closer,
-            is_closed: Arc::new(AtomicBool::new(false)),
-        };
-        debug!(s.log, "Session created");
-
-        s.run(recv, sender, closed);
-        Ok(s)
-    }
-
-    /// run starts processing receiving udp packets on its UdpSocket
-    fn run(&mut self, mut recv: RecvHalf, sender: Sender<Packet>, closed: watch::Receiver<bool>) {
-        let log = self.log.clone();
-        let from = self.from;
-        let expiration_mtx = self.expiration.clone();
-        let mut closed = Box::new(closed);
-        let is_closed = self.is_closed.clone();
-        tokio::spawn(async move {
-            let mut buf: Vec<u8> = vec![0; 65535];
-            loop {
-                debug!(log, "Awaiting incoming packet");
-                select! {
-                    received = recv.recv_from(&mut buf) => {
-                        match received {
-                            Err(err) => error!(log, "Error receiving packet"; "error" => %err),
-                            Ok((size, recv_addr)) => Session::process_recv_packet(
-                                &log,
-                                &buf[..size],
-                                recv_addr,
-                                from,
-                                sender.clone(),
-                                expiration_mtx.clone()).await,
-                        };
-                    }
-                    close_request = closed.recv() => {
-                        debug!(log, "Attempting to close session"; "result" => format!("{:?}", close_request));
-                        if let Some(true) = close_request {
-                            is_closed.store(true, Relaxed);
-                            debug!(log, "Closing Session");
-                            return;
-                        }
-                    }
-                };
-            }
-        });
-    }
-
-    async fn process_recv_packet(
-        log: &Logger,
-        packet: &[u8],
-        from: SocketAddr,
-        dest: SocketAddr,
-        mut sender: Sender<Packet>,
-        expiration: Arc<RwLock<Instant>>,
-    ) {
-        debug!(log, "Received packet"; "from" => %from, "contents" => from_utf8(packet).unwrap());
-        Session::increment_expiration(expiration).await;
-        if let Err(err) = sender
-            .send(Packet {
-                contents: packet.to_vec(),
-                dest,
-            })
-            .await
-        {
-            error!(log, "Error sending packet to channel"; "error" => %err);
-        }
-    }
-
-    /// increment_expiration increments the expiration value by the session timeout
-    async fn increment_expiration(expiration: Arc<RwLock<Instant>>) {
-        let mut expiration = expiration.write().await;
-        *expiration = Instant::now() + Duration::from_secs(SESSION_TIMEOUT_SECONDS);
-    }
-
-    /// Sends a packet to the Session's dest.
-    async fn send_to(&mut self, buf: &[u8]) -> Result<usize> {
-        debug!(self.log, "Sending packet"; "dest" => self.dest, "contents" => from_utf8(buf).unwrap());
-        return self.send.send_to(buf, &self.dest).await;
-    }
-
-    /// is_closed returns if the Session is closed or not.
-    #[allow(dead_code)]
-    fn is_closed(&self) -> bool {
-        return self.is_closed.load(Relaxed);
-    }
-
-    /// close closes this Session.
-    fn close(&self) -> result::Result<(), watch::error::SendError<bool>> {
-        debug!(self.log, "Session closed"; "from" => %self.from, "dest" => %self.dest);
-        self.closer.broadcast(true)
-    }
-}
-
 #[cfg(test)]
 mod tests {
+    use super::*;
     use std::collections::HashMap;
     use std::net::{IpAddr, Ipv4Addr, SocketAddr, SocketAddrV4};
-    use std::str::from_utf8;
     use std::sync::Arc;
 
     use slog::info;
-    use tokio::net::udp::RecvHalf;
     use tokio::net::UdpSocket;
     use tokio::sync::mpsc::channel;
     use tokio::sync::{oneshot, RwLock};
-    use tokio::time::{delay_for, Duration, Instant};
+    use tokio::time;
+    use tokio::time::{Duration, Instant};
 
     use crate::config::{Config, ConnectionConfig, EndPoint, Local};
     use crate::logger;
-    use crate::server::{Packet, Server, Session, SessionMap, SESSION_TIMEOUT_SECONDS};
-    use tokio::time;
+    use crate::server::sessions::{Packet, SESSION_TIMEOUT_SECONDS};
+    use crate::server::test_utils::test::{assert_recv_udp, ephemeral_socket, recv_socket_done};
 
     #[tokio::test]
     async fn server_run_server() {
@@ -549,10 +409,13 @@ mod tests {
         assert!(map.contains_key(&build_key));
 
         let session = map.get(&build_key).unwrap().lock().await;
-        let expiration = session.expiration.read().await;
         assert_eq!(
             SESSION_TIMEOUT_SECONDS,
-            expiration.duration_since(Instant::now()).as_secs()
+            session
+                .expiration()
+                .await
+                .duration_since(Instant::now())
+                .as_secs()
         );
 
         time::resume();
@@ -579,8 +442,7 @@ mod tests {
         assert!(rmap.contains_key(&key));
 
         let sess = rmap.get(&key).unwrap().lock().await;
-        assert_eq!(from, sess.from);
-        assert_eq!(dest, sess.dest);
+        assert_eq!(key, sess.key());
         assert_eq!(1, rmap.keys().len());
 
         recv.close();
@@ -599,10 +461,7 @@ mod tests {
         recv_socket_done(recv_socket, done);
 
         if let Err(err) = send_packet
-            .send(Packet {
-                dest: local_addr,
-                contents: String::from("hello").into_bytes(),
-            })
+            .send(Packet::new(local_addr, String::from("hello").into_bytes()))
             .await
         {
             assert!(false, err)
@@ -615,101 +474,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn session_new() {
-        time::pause();
-
-        let log = logger();
-        let mut socket = ephemeral_socket().await;
-        let local_addr = socket.local_addr().unwrap();
-        let (send_packet, mut recv_packet) = channel::<Packet>(5);
-
-        let mut sess = Session::new(&log, local_addr, local_addr, send_packet)
-            .await
-            .unwrap();
-
-        let initial_expiration: Instant;
-        {
-            initial_expiration = sess.expiration.read().await.clone();
-        }
-        let diff = initial_expiration.duration_since(Instant::now());
-        assert_eq!(diff.as_secs(), SESSION_TIMEOUT_SECONDS);
-
-        let time_increment = 10;
-        time::advance(Duration::from_secs(time_increment)).await;
-
-        // echo the packet back again
-        tokio::spawn(async move {
-            let mut buf = vec![0; 1024];
-            let (size, recv_addr) = socket.recv_from(&mut buf).await.unwrap();
-            assert_eq!("hello", from_utf8(&buf[..size]).unwrap());
-            socket.send_to(&buf[..size], recv_addr).await.unwrap();
-        });
-
-        sess.send_to("hello".as_bytes()).await.unwrap();
-
-        let packet = recv_packet
-            .recv()
-            .await
-            .expect("Should receive a packet 'hello'");
-        assert_eq!(String::from("hello").into_bytes(), packet.contents);
-        assert_eq!(local_addr, packet.dest);
-
-        let current_expiration = sess.expiration.read().await.clone();
-        assert!(Instant::now() < current_expiration);
-
-        let diff = current_expiration.duration_since(initial_expiration);
-        info!(log, "difference during test"; "duration" => format!("{:?}", diff));
-        assert!(diff.as_secs() >= time_increment);
-
-        sess.close().unwrap();
-        time::resume();
-    }
-
-    #[tokio::test]
-    async fn session_send_to() {
-        let log = logger();
-        let (sender, _) = channel::<Packet>(1);
-        let (local_addr, wait) = assert_recv_udp().await;
-
-        let mut session = Session::new(&log, local_addr, local_addr, sender)
-            .await
-            .unwrap();
-        session.send_to("hello".as_bytes()).await.unwrap();
-        wait.await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn session_close() {
-        let log = logger();
-        let socket = ephemeral_socket().await;
-        let local_addr = socket.local_addr().unwrap();
-        let (send_packet, _) = channel::<Packet>(5);
-
-        info!(log, ">> creating sessions");
-        let sess = Session::new(&log, local_addr, local_addr, send_packet)
-            .await
-            .unwrap();
-        info!(log, ">> session created and running");
-
-        assert!(!sess.is_closed(), "session should not be closed");
-        sess.close().unwrap();
-
-        // Poll the state to wait for the change, because everything is async
-        for _ in 1..10 {
-            let is_closed = sess.is_closed();
-            info!(log, "session closed?"; "closed" => is_closed);
-            if is_closed {
-                break;
-            }
-
-            delay_for(Duration::from_secs(1)).await;
-        }
-
-        assert!(sess.is_closed(), "session should be closed");
-    }
-
-    #[tokio::test]
-    async fn session_prune_sessions() {
+    async fn server_prune_sessions() {
         time::pause();
         let log = logger();
         let sessions: SessionMap = Arc::new(RwLock::new(HashMap::new()));
@@ -751,33 +516,5 @@ mod tests {
         }
         info!(log, "test complete");
         time::resume();
-    }
-
-    /// assert_recv_udp asserts that the returned SockerAddr received a UDP packet
-    /// with the contents of "hello"
-    /// call wait.await.unwrap() to see if the message was received
-    async fn assert_recv_udp() -> (SocketAddr, oneshot::Receiver<()>) {
-        let socket = ephemeral_socket().await;
-        let local_addr = socket.local_addr().unwrap();
-        let (recv, _) = socket.split();
-        let (done, wait) = oneshot::channel::<()>();
-        recv_socket_done(recv, done);
-        (local_addr, wait)
-    }
-
-    /// ephemeral_socket provides a socket bound to an ephemeral port
-    async fn ephemeral_socket() -> UdpSocket {
-        let addr = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 0);
-        UdpSocket::bind(addr).await.unwrap()
-    }
-
-    /// recv_socket_done will send a value to done when receiving the "hello" UDP packet.
-    fn recv_socket_done(mut recv: RecvHalf, done: oneshot::Sender<()>) {
-        tokio::spawn(async move {
-            let mut buf = vec![0; 1024];
-            let size = recv.recv(&mut buf).await.unwrap();
-            assert_eq!("hello", from_utf8(&buf[..size]).unwrap());
-            done.send(()).unwrap();
-        });
     }
 }
