@@ -284,6 +284,7 @@ mod tests {
             local: Local {
                 port: local_addr.port(),
             },
+            filters: vec![],
             connections: ConnectionConfig::Server {
                 endpoints: vec![
                     EndPoint {
@@ -324,6 +325,7 @@ mod tests {
             local: Local {
                 port: local_addr.port(),
             },
+            filters: vec![],
             connections: ConnectionConfig::Client {
                 address: endpoint_addr,
                 connection_id: String::from(""),
@@ -343,6 +345,7 @@ mod tests {
     async fn server_bind() {
         let config = Config {
             local: Local { port: 12345 },
+            filters: vec![],
             connections: ConnectionConfig::Server {
                 endpoints: Vec::new(),
             },
@@ -363,6 +366,7 @@ mod tests {
 
         let config = Arc::new(Config {
             local: Local { port: 0 },
+            filters: vec![],
             connections: ConnectionConfig::Client {
                 address: local_addr,
                 connection_id: String::from(""),

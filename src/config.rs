@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
+use std::collections::HashMap;
 use std::io;
 use std::net::SocketAddr;
 
 use serde::{Deserialize, Serialize};
 use serde_yaml::Error;
-use std::collections::HashMap;
 
 // CLIENT_ENDPOINT is because we need a name for the client endpoint configuration
 const CLIENT_ENDPOINT: &str = "address";
@@ -28,6 +28,8 @@ const CLIENT_ENDPOINT: &str = "address";
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Config {
     pub local: Local,
+    #[serde(default)]
+    pub filters: Vec<Filter>,
     #[serde(flatten)]
     pub connections: ConnectionConfig,
 }
@@ -61,6 +63,13 @@ pub struct Local {
     pub port: u16,
 }
 
+/// Filter is the configuration for a single filter
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Filter {
+    pub name: String,
+    pub config: serde_yaml::Value,
+}
+
 /// ConnectionConfig is the configuration for either a Client or Server proxy
 #[derive(Debug, Deserialize, Serialize)]
 pub enum ConnectionConfig {
@@ -92,13 +101,17 @@ pub fn from_reader<R: io::Read>(input: R) -> Result<Config, Error> {
 
 #[cfg(test)]
 mod tests {
-    use crate::config::{from_reader, Config, ConnectionConfig, EndPoint, Local, CLIENT_ENDPOINT};
     use std::collections::HashMap;
+
+    use serde_yaml::Value;
+
+    use crate::config::{from_reader, Config, ConnectionConfig, EndPoint, Local, CLIENT_ENDPOINT};
 
     #[test]
     fn deserialise_client() {
         let config = Config {
             local: Local { port: 7000 },
+            filters: vec![],
             connections: ConnectionConfig::Client {
                 address: "127.0.0.1:25999".parse().unwrap(),
                 connection_id: String::from("1234"),
@@ -112,6 +125,7 @@ mod tests {
     fn deserialise_server() {
         let config = Config {
             local: Local { port: 7000 },
+            filters: vec![],
             connections: ConnectionConfig::Server {
                 endpoints: vec![
                     EndPoint {
@@ -129,6 +143,44 @@ mod tests {
         };
         let yaml = serde_yaml::to_string(&config).unwrap();
         println!("{}", yaml);
+    }
+
+    #[test]
+    fn parse_filter_config() {
+        let yaml = "
+local:
+  port: 7000 # the port to receive traffic to locally
+filters: # new filters section
+  - name: quilkin.core.v1.rate-limiter
+    config:
+      map: of arbitrary key value pairs
+      could:
+        - also
+        - be
+        - 27
+        - true
+client:
+  address: 127.0.0.1:7001
+  connection_id: 1x7ijy6
+        ";
+        let config = from_reader(yaml.as_bytes()).unwrap();
+
+        let filter = config.filters.get(0).unwrap();
+        assert_eq!("quilkin.core.v1.rate-limiter", filter.name);
+        let filter_config = filter.config.as_mapping().unwrap();
+
+        let key = Value::from("map");
+        assert_eq!(
+            "of arbitrary key value pairs",
+            filter_config.get(&key).unwrap().as_str().unwrap()
+        );
+
+        let key = Value::from("could");
+        let could = filter_config.get(&key).unwrap().as_sequence().unwrap();
+        assert_eq!("also", could.get(0).unwrap().as_str().unwrap());
+        assert_eq!("be", could.get(1).unwrap().as_str().unwrap());
+        assert_eq!(27, could.get(2).unwrap().as_i64().unwrap());
+        assert_eq!(true, could.get(3).unwrap().as_bool().unwrap());
     }
 
     #[test]
@@ -172,6 +224,7 @@ server:
         - nkuy70x";
         let config = from_reader(yaml.as_bytes()).unwrap();
         assert_eq!(7000, config.local.port);
+        assert_eq!(0, config.filters.len());
         match config.connections {
             ConnectionConfig::Client { .. } => panic!("Should not be a Client"),
             ConnectionConfig::Server { endpoints } => {
@@ -196,6 +249,7 @@ server:
     fn get_endpoints_client() {
         let expected_addr = "127.0.0.1:8080".parse().unwrap();
         let config = Config {
+            filters: vec![],
             local: Local { port: 0 },
             connections: ConnectionConfig::Client {
                 address: expected_addr,
