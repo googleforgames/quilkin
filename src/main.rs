@@ -25,6 +25,7 @@ use std::sync::Arc;
 
 mod config;
 mod server;
+mod test_utils;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 

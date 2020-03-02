@@ -202,8 +202,7 @@ mod tests {
     use tokio::time;
     use tokio::time::delay_for;
 
-    use crate::logger;
-    use crate::server::test_utils::test::{assert_recv_udp, ephemeral_socket};
+    use crate::test_utils::test::{assert_recv_udp, ephemeral_socket, logger};
 
     use super::*;
 
