@@ -247,7 +247,6 @@ impl Server {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::collections::HashMap;
     use std::net::{IpAddr, Ipv4Addr, SocketAddr, SocketAddrV4};
     use std::sync::Arc;
@@ -260,9 +259,10 @@ mod tests {
     use tokio::time::{Duration, Instant};
 
     use crate::config::{Config, ConnectionConfig, EndPoint, Local};
-    use crate::logger;
     use crate::server::sessions::{Packet, SESSION_TIMEOUT_SECONDS};
-    use crate::server::test_utils::test::{assert_recv_udp, ephemeral_socket, recv_socket_done};
+    use crate::test_utils::test::{assert_recv_udp, ephemeral_socket, logger, recv_socket_done};
+
+    use super::*;
 
     #[tokio::test]
     async fn server_run_server() {

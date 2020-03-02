@@ -21,9 +21,19 @@ pub mod test {
     use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
     use std::str::from_utf8;
 
+    use slog::{o, Drain, Logger};
+    use slog_term::{FullFormat, PlainSyncDecorator};
     use tokio::net::udp::RecvHalf;
     use tokio::net::UdpSocket;
     use tokio::sync::oneshot;
+
+    // logger returns a standard out, non structured terminal logger, suitable for using in tests,
+    // since it's more human readable.
+    pub fn logger() -> Logger {
+        let plain = PlainSyncDecorator::new(std::io::stdout());
+        let drain = FullFormat::new(plain).build().fuse();
+        Logger::root(drain, o!())
+    }
 
     /// assert_recv_udp asserts that the returned SockerAddr received a UDP packet
     /// with the contents of "hello"
