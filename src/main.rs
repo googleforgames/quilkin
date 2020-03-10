@@ -15,15 +15,17 @@
  */
 
 use std::fs::File;
+use std::sync::Arc;
 
 use clap::App;
 use slog::{info, o, Drain, Logger};
 
 use crate::config::from_reader;
+use crate::extensions::FilterRegistry;
 use crate::server::Server;
-use std::sync::Arc;
 
 mod config;
+mod extensions;
 mod server;
 mod test_utils;
 
@@ -50,7 +52,7 @@ async fn main() {
     info!(log, "Starting Quilkin"; "version" => VERSION);
 
     let config = Arc::new(from_reader(File::open(filename).unwrap()).unwrap());
-    let server = Server::new(base_logger);
+    let server = Server::new(base_logger, FilterRegistry::new());
     server.run(config.clone()).await.unwrap();
 }
 

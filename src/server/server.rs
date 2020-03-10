@@ -28,6 +28,7 @@ use tokio::sync::{Mutex, RwLock};
 use tokio::time::{delay_for, Duration, Instant};
 
 use crate::config::{Config, ConnectionConfig};
+use crate::extensions::FilterRegistry;
 use crate::server::sessions::{Packet, Session, SESSION_TIMEOUT_SECONDS};
 
 type SessionMap = Arc<RwLock<HashMap<(SocketAddr, SocketAddr), Mutex<Session>>>>;
@@ -35,12 +36,20 @@ type SessionMap = Arc<RwLock<HashMap<(SocketAddr, SocketAddr), Mutex<Session>>>>
 /// Server is the UDP server main implementation
 pub struct Server {
     log: Logger,
+    /// registry for the set of available filters
+    /// TODO: remove this once we have a registry
+    #[allow(dead_code)]
+    filter_registry: FilterRegistry,
 }
 
 impl Server {
-    pub fn new(base: Logger) -> Self {
+    /// new Server. Takes a logger, and the registry of available Filters.
+    pub fn new(base: Logger, filter_registry: FilterRegistry) -> Self {
         let log = base.new(o!("source" => "server::Server"));
-        return Server { log };
+        return Server {
+            log,
+            filter_registry,
+        };
     }
 
     /// start the async processing of incoming UDP packets
@@ -267,7 +276,7 @@ mod tests {
     #[tokio::test]
     async fn server_run_server() {
         let log = logger();
-        let server = Server::new(log.clone());
+        let server = Server::new(log.clone(), FilterRegistry::new());
 
         let socket1 = ephemeral_socket().await;
         let endpoint1 = socket1.local_addr().unwrap();
@@ -315,7 +324,7 @@ mod tests {
     #[tokio::test]
     async fn server_run_client() {
         let log = logger();
-        let server = Server::new(log.clone());
+        let server = Server::new(log.clone(), FilterRegistry::new());
         let socket = ephemeral_socket().await;
         let endpoint_addr = socket.local_addr().unwrap();
         let (recv, mut send) = socket.split();
