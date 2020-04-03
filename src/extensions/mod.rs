@@ -14,5 +14,14 @@
  * limitations under the License.
  */
 
-mod filter_registry;
+use slog::Logger;
+
 pub use filter_registry::{Filter, FilterRegistry};
+
+mod filter_registry;
+
+/// default_filters returns a FilterRegistry with the default
+/// set of filters registered to it
+pub fn default_filters(_base: &Logger) -> FilterRegistry {
+    FilterRegistry::new()
+}
