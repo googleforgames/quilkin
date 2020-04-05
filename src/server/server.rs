@@ -269,7 +269,7 @@ mod tests {
 
     use crate::config::{Config, ConnectionConfig, EndPoint, Local};
     use crate::server::sessions::{Packet, SESSION_TIMEOUT_SECONDS};
-    use crate::test_utils::test::{assert_recv_udp, ephemeral_socket, logger, recv_socket_done};
+    use crate::test_utils::{assert_recv_udp, ephemeral_socket, logger, recv_socket_done};
 
     use super::*;
 
