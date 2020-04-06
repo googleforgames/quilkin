@@ -21,7 +21,7 @@ use clap::App;
 use slog::{info, o, Drain, Logger};
 
 use crate::config::from_reader;
-use crate::extensions::FilterRegistry;
+use crate::extensions::default_filters;
 use crate::server::Server;
 
 mod config;
@@ -35,6 +35,7 @@ const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 async fn main() {
     let base_logger = logger();
     let log = base_logger.new(o!("source" => "main"));
+    let filter_registry = default_filters(&log);
 
     let matches = App::new("Quilkin Proxy")
         .version("0.1.0")
@@ -52,7 +53,7 @@ async fn main() {
     info!(log, "Starting Quilkin"; "version" => VERSION);
 
     let config = Arc::new(from_reader(File::open(filename).unwrap()).unwrap());
-    let server = Server::new(base_logger, FilterRegistry::new());
+    let server = Server::new(base_logger, filter_registry);
     server.run(config.clone()).await.unwrap();
 }
 
