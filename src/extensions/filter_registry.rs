@@ -22,23 +22,39 @@ use std::net::SocketAddr;
 
 /// Filter is a trait for routing and manipulating packets.
 pub trait Filter: Send + Sync {
-    /// local_filter filters packets from the local port, and potentially sends them
+    /// local_receive_filter receives filters packets from the local port, and potentially sends them
     /// to configured endpoints.
     /// This function should return the array of endpoints that the packet should be sent to,
     /// and the packet that should be sent (which may be manipulated) as well.
     /// If the packet should be rejected, return None.
-    fn local_filter(
+    fn local_receive_filter(
         &self,
         endpoints: &Vec<EndPoint>,
         from: SocketAddr,
         contents: Vec<u8>,
     ) -> Option<(Vec<EndPoint>, Vec<u8>)>;
 
-    /// endpoint_filter filters packets received from an endpoint, that is going back to the
+    /// local_send_filter intercepts packets that are being sent back to the original local port sender
+    /// This function should return the packet to be sent (which may be manipulated).
+    /// If the packet should be rejected, return None.
+    fn local_send_filter(&self, to: SocketAddr, contents: Vec<u8>) -> Option<Vec<u8>>;
+
+    /// endpoint_receive_filter filters packets received from an endpoint, that is going back to the
     /// original sender.
     /// This function should return the packet to be sent (which may be manipulated).
     /// If the packet should be rejected, return None.
-    fn endpoint_filter(&self, endpoint: &EndPoint, contents: Vec<u8>) -> Option<Vec<u8>>;
+    fn endpoint_receive_filter(&self, endpoint: &EndPoint, contents: Vec<u8>) -> Option<Vec<u8>>;
+
+    /// endpoint_send_filter intercepts packets that are being sent back to the original
+    /// endpoint sender address
+    /// This function should return the packet to be sent (which may be manipulated).
+    /// If the packet should be rejected, return None.
+    fn endpoint_send_filter(
+        &self,
+        endpoint: &EndPoint,
+        from: SocketAddr,
+        contents: Vec<u8>,
+    ) -> Option<Vec<u8>>;
 }
 
 /// FilterRegistry is the registry of all Filters that can be applied in the system.
@@ -77,8 +93,9 @@ mod tests {
     use super::*;
 
     struct TestFilter {}
+
     impl Filter for TestFilter {
-        fn local_filter(
+        fn local_receive_filter(
             &self,
             _: &Vec<EndPoint>,
             _: SocketAddr,
@@ -86,7 +103,16 @@ mod tests {
         ) -> Option<(Vec<EndPoint>, Vec<u8>)> {
             None
         }
-        fn endpoint_filter(&self, _: &EndPoint, _: Vec<u8>) -> Option<Vec<u8>> {
+
+        fn local_send_filter(&self, _: SocketAddr, _: Vec<u8>) -> Option<Vec<u8>> {
+            None
+        }
+
+        fn endpoint_receive_filter(&self, _: &EndPoint, _: Vec<u8>) -> Option<Vec<u8>> {
+            None
+        }
+
+        fn endpoint_send_filter(&self, _: &EndPoint, _: SocketAddr, _: Vec<u8>) -> Option<Vec<u8>> {
             None
         }
     }
@@ -107,7 +133,7 @@ mod tests {
             connection_ids: vec![],
         };
 
-        assert!(filter.local_filter(&vec![], addr, vec![]).is_none());
-        assert!(filter.endpoint_filter(&endpoint, vec![]).is_none());
+        assert!(filter.local_receive_filter(&vec![], addr, vec![]).is_none());
+        assert!(filter.endpoint_receive_filter(&endpoint, vec![]).is_none());
     }
 }
