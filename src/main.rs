@@ -20,14 +20,9 @@ use std::sync::Arc;
 use clap::App;
 use slog::{info, o, Drain, Logger};
 
-use crate::config::from_reader;
-use crate::extensions::default_filters;
-use crate::server::Server;
-
-mod config;
-mod extensions;
-mod server;
-mod test_utils;
+use quilkin::config::from_reader;
+use quilkin::extensions::default_filters;
+use quilkin::server::Server;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
