@@ -23,7 +23,7 @@ use slog::{debug, error, info, o, warn, Logger};
 use tokio::io::Result;
 use tokio::net::udp::{RecvHalf, SendHalf};
 use tokio::net::UdpSocket;
-use tokio::sync::mpsc::{channel, Receiver, Sender};
+use tokio::sync::mpsc;
 use tokio::sync::{Mutex, RwLock};
 use tokio::time::{delay_for, Duration, Instant};
 
@@ -59,7 +59,7 @@ impl Server {
         let (mut receive_socket, send_socket) = Server::bind(&config).await?.split();
         // HashMap key is from,destination addresses as a tuple.
         let sessions: SessionMap = Arc::new(RwLock::new(HashMap::new()));
-        let (send_packets, receive_packets) = channel::<Packet>(1024);
+        let (send_packets, receive_packets) = mpsc::channel::<Packet>(1024);
 
         let log = self.log.clone();
         tokio::spawn(async move {
@@ -101,7 +101,7 @@ impl Server {
         config: Arc<Config>,
         receive_socket: &mut RecvHalf,
         sessions: SessionMap,
-        send_packets: Sender<Packet>,
+        send_packets: mpsc::Sender<Packet>,
     ) -> Result<()> {
         let mut buf: Vec<u8> = vec![0; 65535];
         let (size, recv_addr) = receive_socket.recv_from(&mut buf).await?;
@@ -161,7 +161,7 @@ impl Server {
     async fn process_receive_packet_channel(
         log: &Logger,
         mut send_socket: SendHalf,
-        mut receive_packets: Receiver<Packet>,
+        mut receive_packets: mpsc::Receiver<Packet>,
     ) {
         while let Some(packet) = receive_packets.recv().await {
             debug!(
@@ -205,7 +205,7 @@ impl Server {
         sessions: SessionMap,
         from: SocketAddr,
         dest: SocketAddr,
-        sender: Sender<Packet>,
+        sender: mpsc::Sender<Packet>,
     ) -> Result<()> {
         {
             let map = sessions.read().await;
@@ -261,9 +261,7 @@ mod tests {
     use std::sync::Arc;
 
     use slog::info;
-    use tokio::net::UdpSocket;
-    use tokio::sync::mpsc::channel;
-    use tokio::sync::{oneshot, RwLock};
+    use tokio::sync::{mpsc, oneshot, RwLock};
     use tokio::time;
     use tokio::time::{Duration, Instant};
 
@@ -386,7 +384,7 @@ mod tests {
         let receive_addr = receive_socket.local_addr().unwrap();
         let (mut recv, mut send) = receive_socket.split();
         let sessions: SessionMap = Arc::new(RwLock::new(HashMap::new()));
-        let (send_packets, mut recv_packets) = channel::<Packet>(1);
+        let (send_packets, mut recv_packets) = mpsc::channel::<Packet>(1);
 
         let sessions_clone = sessions.clone();
         let log_clone = log.clone();
@@ -440,7 +438,7 @@ mod tests {
         let map: SessionMap = Arc::new(RwLock::new(HashMap::new()));
         let from: SocketAddr = "127.0.0.1:27890".parse().unwrap();
         let dest: SocketAddr = "127.0.0.1:27891".parse().unwrap();
-        let (sender, mut recv) = channel::<Packet>(1);
+        let (sender, mut recv) = mpsc::channel::<Packet>(1);
 
         // gate
         {
@@ -468,7 +466,7 @@ mod tests {
         let local_addr = socket.local_addr().unwrap();
 
         let (recv_socket, send_socket) = socket.split();
-        let (mut send_packet, recv_packet) = channel::<Packet>(5);
+        let (mut send_packet, recv_packet) = mpsc::channel::<Packet>(5);
         let (done, wait) = oneshot::channel::<()>();
 
         recv_socket_done(recv_socket, done);
@@ -493,7 +491,7 @@ mod tests {
         let sessions: SessionMap = Arc::new(RwLock::new(HashMap::new()));
         let from: SocketAddr = "127.0.0.1:7000".parse().unwrap();
         let to: SocketAddr = "127.0.0.1:7001".parse().unwrap();
-        let (send, _recv) = channel::<Packet>(1);
+        let (send, _recv) = mpsc::channel::<Packet>(1);
 
         Server::ensure_session(&log, sessions.clone(), from, to, send)
             .await
