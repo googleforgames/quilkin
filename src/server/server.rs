@@ -61,11 +61,7 @@ impl Server {
         let sessions: SessionMap = Arc::new(RwLock::new(HashMap::new()));
         let (send_packets, receive_packets) = mpsc::channel::<Packet>(1024);
 
-        let log = self.log.clone();
-        tokio::spawn(async move {
-            Server::process_receive_packet_channel(&log, send_socket, receive_packets).await;
-            debug!(log, "Receiver closed");
-        });
+        self.run_receive_packet(send_socket, receive_packets).await;
 
         let log = self.log.clone();
         let prune_sessions = sessions.clone();
@@ -156,28 +152,32 @@ impl Server {
         return Ok(());
     }
 
-    /// process_receive_packet_channel blocks on receive_packets.recv() channel
+    /// receive_packet is a non-blocking loop on receive_packets.recv() channel
     /// and sends each packet on to the Packet.dest
-    async fn process_receive_packet_channel(
-        log: &Logger,
+    async fn run_receive_packet(
+        &self,
         mut send_socket: SendHalf,
         mut receive_packets: mpsc::Receiver<Packet>,
     ) {
-        while let Some(packet) = receive_packets.recv().await {
-            debug!(
-                log,
-                "Sending packet back to origin";
-                "origin" => packet.dest(),
-                "contents" => String::from_utf8(packet.contents().clone()).unwrap(),
-            );
+        let log = self.log.clone();
+        tokio::spawn(async move {
+            while let Some(packet) = receive_packets.recv().await {
+                debug!(
+                    log,
+                    "Sending packet back to origin";
+                    "origin" => packet.dest(),
+                    "contents" => String::from_utf8(packet.contents().clone()).unwrap(),
+                );
 
-            if let Err(err) = send_socket
-                .send_to(packet.contents().as_slice(), &packet.dest())
-                .await
-            {
-                error!(log, "Error sending packet"; "dest" => %packet.dest(), "error" => %err);
+                if let Err(err) = send_socket
+                    .send_to(packet.contents().as_slice(), &packet.dest())
+                    .await
+                {
+                    error!(log, "Error sending packet"; "dest" => %packet.dest(), "error" => %err);
+                }
             }
-        }
+            debug!(log, "Receiver closed");
+        });
     }
 
     /// log_config outputs a log of what is configured
@@ -460,8 +460,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn server_process_receive_packet_channel() {
-        let log = logger();
+    async fn run_receive_packet() {
+        let server = Server::new(logger(), FilterRegistry::new());
         let socket = ephemeral_socket().await;
         let local_addr = socket.local_addr().unwrap();
 
@@ -478,9 +478,7 @@ mod tests {
             assert!(false, err)
         }
 
-        tokio::spawn(async move {
-            Server::process_receive_packet_channel(&log, send_socket, recv_packet).await;
-        });
+        server.run_receive_packet(send_socket, recv_packet).await;
         wait.await.unwrap();
     }
 
