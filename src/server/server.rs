@@ -272,7 +272,7 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn server_run_server() {
+    async fn run_server() {
         let log = logger();
         let server = Server::new(log.clone(), FilterRegistry::new());
 
@@ -320,7 +320,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn server_run_client() {
+    async fn run_client() {
         let log = logger();
         let server = Server::new(log.clone(), FilterRegistry::new());
         let socket = ephemeral_socket().await;
@@ -349,7 +349,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn server_bind() {
+    async fn bind() {
         let config = Config {
             local: Local { port: 12345 },
             filters: vec![],
@@ -365,7 +365,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn server_process_receive_socket() {
+    async fn process_receive_socket() {
         time::pause();
 
         let log = logger();
@@ -433,7 +433,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn server_ensure_session() {
+    async fn ensure_session() {
         let log = logger();
         let map: SessionMap = Arc::new(RwLock::new(HashMap::new()));
         let from: SocketAddr = "127.0.0.1:27890".parse().unwrap();
@@ -483,7 +483,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn server_prune_sessions() {
+    async fn prune_sessions() {
         time::pause();
         let log = logger();
         let sessions: SessionMap = Arc::new(RwLock::new(HashMap::new()));
