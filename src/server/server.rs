@@ -15,6 +15,7 @@
  */
 
 use std::collections::HashMap;
+use std::io::{Error, ErrorKind};
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::str::from_utf8;
 use std::sync::Arc;
@@ -23,7 +24,7 @@ use slog::{debug, error, info, o, warn, Logger};
 use tokio::io::Result;
 use tokio::net::udp::{RecvHalf, SendHalf};
 use tokio::net::UdpSocket;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, oneshot};
 use tokio::sync::{Mutex, RwLock};
 use tokio::time::{delay_for, Duration, Instant};
 
@@ -52,31 +53,23 @@ impl Server {
         };
     }
 
-    /// start the async processing of incoming UDP packets
-    pub async fn run(self, config: Arc<Config>) -> Result<()> {
+    /// start the async processing of incoming UDP packets. Will block until an
+    /// event is sent through the stop Receiver.
+    pub async fn run(self, config: Arc<Config>, stop: oneshot::Receiver<()>) -> Result<()> {
         self.log_config(&config);
 
-        let (mut receive_socket, send_socket) = Server::bind(&config).await?.split();
+        let (receive_socket, send_socket) = Server::bind(&config).await?.split();
         // HashMap key is from,destination addresses as a tuple.
         let sessions: SessionMap = Arc::new(RwLock::new(HashMap::new()));
         let (send_packets, receive_packets) = mpsc::channel::<Packet>(1024);
 
         self.run_receive_packet(send_socket, receive_packets).await;
         self.run_prune_sessions(&sessions).await;
-
-        loop {
-            if let Err(err) = Server::process_receive_socket(
-                self.log.clone(),
-                config.clone(),
-                &mut receive_socket,
-                sessions.clone(),
-                send_packets.clone(),
-            )
-            .await
-            {
-                error!(self.log, "Error processing receive socket"; "err" => %err);
-            }
-        }
+        self.run_recv_from(config, receive_socket, &sessions, send_packets)
+            .await;
+        // convert to an IO error
+        stop.await
+            .map_err(|err| Error::new(ErrorKind::BrokenPipe, err))
     }
 
     /// run_prune_sessions starts the timer for pruning sessions and runs prune_sessions every
@@ -95,10 +88,38 @@ impl Server {
         });
     }
 
-    /// process_receive_socket takes packets from the local socket and asynchronously
+    // run_recv_from is a non blocking function that continually runs
+    // Server::recv_from() to process new incoming packets.
+    async fn run_recv_from(
+        &self,
+        config: Arc<Config>,
+        mut receive_socket: RecvHalf,
+        sessions: &SessionMap,
+        send_packets: mpsc::Sender<Packet>,
+    ) {
+        let sessions = sessions.clone();
+        let log = self.log.clone();
+        tokio::spawn(async move {
+            loop {
+                if let Err(err) = Server::recv_from(
+                    &log,
+                    config.clone(),
+                    &mut receive_socket,
+                    sessions.clone(),
+                    send_packets.clone(),
+                )
+                .await
+                {
+                    error!(log, "Error processing receive socket"; "err" => %err);
+                }
+            }
+        });
+    }
+
+    /// recv_from takes packets from the local socket and asynchronously
     /// processes them to send them out to endpoints.
-    async fn process_receive_socket(
-        log: Logger,
+    async fn recv_from(
+        log: &Logger,
         config: Arc<Config>,
         receive_socket: &mut RecvHalf,
         sessions: SessionMap,
@@ -106,6 +127,7 @@ impl Server {
     ) -> Result<()> {
         let mut buf: Vec<u8> = vec![0; 65535];
         let (size, recv_addr) = receive_socket.recv_from(&mut buf).await?;
+        let log = log.clone();
         tokio::spawn(async move {
             let endpoints = config.get_endpoints();
             let packet = &buf[..size];
@@ -262,7 +284,7 @@ impl Server {
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
-    use std::net::{IpAddr, Ipv4Addr, SocketAddr, SocketAddrV4};
+    use std::net::{IpAddr, Ipv4Addr, SocketAddr};
     use std::sync::Arc;
 
     use slog::info;
@@ -314,8 +336,9 @@ mod tests {
             },
         });
 
+        let (close, stop) = oneshot::channel::<()>();
         tokio::spawn(async move {
-            server.run(config).await.unwrap();
+            server.run(config, stop).await.unwrap();
         });
 
         recv_socket_done(recv1, done1);
@@ -323,6 +346,7 @@ mod tests {
         send.send_to("hello".as_bytes(), &local_addr).await.unwrap();
         wait1.await.unwrap();
         wait2.await.unwrap();
+        close.send(()).unwrap();
     }
 
     #[tokio::test]
@@ -345,13 +369,16 @@ mod tests {
             },
         });
 
+        let (close, stop) = oneshot::channel::<()>();
         tokio::spawn(async move {
-            server.run(config).await.unwrap();
+            server.run(config, stop).await.unwrap();
         });
 
         recv_socket_done(recv, done);
         send.send_to("hello".as_bytes(), &local_addr).await.unwrap();
         wait.await.unwrap();
+
+        close.send(()).unwrap();
     }
 
     #[tokio::test]
@@ -371,7 +398,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn process_receive_socket() {
+    async fn recv_from() {
         time::pause();
 
         let log = logger();
@@ -385,8 +412,7 @@ mod tests {
                 connection_id: String::from(""),
             },
         });
-        let addr = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 0);
-        let receive_socket = UdpSocket::bind(addr).await.unwrap();
+        let receive_socket = ephemeral_socket().await;
         let receive_addr = receive_socket.local_addr().unwrap();
         let (mut recv, mut send) = receive_socket.split();
         let sessions: SessionMap = Arc::new(RwLock::new(HashMap::new()));
@@ -399,8 +425,8 @@ mod tests {
         time::advance(Duration::from_secs(time_increment)).await;
 
         tokio::spawn(async move {
-            Server::process_receive_socket(
-                log_clone,
+            Server::recv_from(
+                &log_clone,
                 config,
                 &mut recv,
                 sessions_clone,
@@ -436,6 +462,35 @@ mod tests {
         );
 
         time::resume();
+    }
+
+    #[tokio::test]
+    async fn run_recv_from() {
+        let log = logger();
+        let server = Server::new(log.clone(), default_filters(&log));
+        let (local_addr, wait) = assert_recv_udp().await;
+        let config = Arc::new(Config {
+            local: Local { port: 0 },
+            filters: vec![],
+            connections: ConnectionConfig::Client {
+                address: local_addr,
+                connection_id: String::from(""),
+            },
+        });
+        let socket = ephemeral_socket().await;
+        let addr = socket.local_addr().unwrap();
+        let (recv, mut send) = socket.split();
+        let sessions: SessionMap = Arc::new(RwLock::new(HashMap::new()));
+        let (send_packets, mut recv_packets) = mpsc::channel::<Packet>(1);
+
+        server
+            .run_recv_from(config, recv, &sessions, send_packets)
+            .await;
+
+        send.send_to("hello".as_bytes(), &addr).await.unwrap();
+
+        wait.await.unwrap();
+        recv_packets.close();
     }
 
     #[tokio::test]

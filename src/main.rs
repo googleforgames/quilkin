@@ -23,6 +23,8 @@ use slog::{info, o, Drain, Logger};
 use quilkin::config::from_reader;
 use quilkin::extensions::default_filters;
 use quilkin::server::Server;
+use tokio::signal;
+use tokio::sync::oneshot;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
@@ -49,7 +51,15 @@ async fn main() {
 
     let config = Arc::new(from_reader(File::open(filename).unwrap()).unwrap());
     let server = Server::new(base_logger, filter_registry);
-    server.run(config.clone()).await.unwrap();
+
+    let (close, stop) = oneshot::channel::<()>();
+    tokio::spawn(async move {
+        signal::ctrl_c().await.unwrap();
+        close.send(()).unwrap();
+    });
+
+    server.run(config.clone(), stop).await.unwrap();
+    info!(log, "Shutting down");
 }
 
 fn logger() -> Logger {
