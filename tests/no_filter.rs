@@ -60,10 +60,14 @@ mod tests {
             },
         };
 
+        let (close_server, stop_server) = oneshot::channel::<()>();
         let server = Server::new(base_logger.clone(), default_filters(&base_logger));
         // run the server
         tokio::spawn(async move {
-            server.run(Arc::new(server_config)).await.unwrap();
+            server
+                .run(Arc::new(server_config), stop_server)
+                .await
+                .unwrap();
         });
 
         // create a local client
@@ -77,9 +81,13 @@ mod tests {
             },
         };
         let client = Server::new(base_logger.clone(), default_filters(&base_logger));
+        let (close_client, stop_client) = oneshot::channel::<()>();
         // run the client
         tokio::spawn(async move {
-            client.run(Arc::new(client_config)).await.unwrap();
+            client
+                .run(Arc::new(client_config), stop_client)
+                .await
+                .unwrap();
         });
 
         // let's send the packet
@@ -109,6 +117,8 @@ mod tests {
             }
             _ = delay_for(Duration::from_secs(2)) => {}
         };
+        close_server.send(()).unwrap();
+        close_client.send(()).unwrap();
     }
 
     #[tokio::test]
