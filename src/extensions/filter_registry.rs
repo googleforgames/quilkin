@@ -59,8 +59,6 @@ pub trait Filter: Send + Sync {
 
 /// FilterRegistry is the registry of all Filters that can be applied in the system.
 pub struct FilterRegistry {
-    // TODO: remove when used
-    #[allow(dead_code)]
     registry: HashMap<String, Arc<dyn Filter>>,
 }
 
@@ -72,8 +70,6 @@ impl FilterRegistry {
     }
 
     /// insert inserts a Filter into the registry.
-    // TODO: remove when used
-    #[allow(dead_code)]
     pub fn insert(&mut self, key: String, filter: impl Filter + 'static) {
         self.registry.insert(key, Arc::new(filter));
     }
