@@ -14,19 +14,6 @@
  * limitations under the License.
  */
 
-use slog::Logger;
+pub use debug_filter::DebugFilter;
 
-pub use filter_registry::{Filter, FilterRegistry};
-
-use crate::extensions::filters::DebugFilter;
-
-mod filter_registry;
-pub mod filters;
-
-/// default_filters returns a FilterRegistry with the default
-/// set of filters registered to it
-pub fn default_filters(base: &Logger) -> FilterRegistry {
-    let mut fr = FilterRegistry::new();
-    fr.insert(DebugFilter::name(), DebugFilter::new(base));
-    fr
-}
+mod debug_filter;

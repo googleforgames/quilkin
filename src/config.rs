@@ -86,7 +86,7 @@ pub enum ConnectionConfig {
 }
 
 /// A singular endpoint, to pass on UDP packets to.
-#[derive(Debug, Deserialize, Serialize, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub struct EndPoint {
     pub name: String,
     pub address: SocketAddr,
