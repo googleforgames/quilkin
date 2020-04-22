@@ -64,7 +64,7 @@ pub struct Local {
 }
 
 /// Filter is the configuration for a single filter
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Filter {
     pub name: String,
     pub config: serde_yaml::Value,

@@ -16,12 +16,15 @@
 
 use slog::Logger;
 
+pub use filter_chain::FilterChain;
 pub use filter_registry::{Filter, FilterRegistry};
 
 use crate::extensions::filters::DebugFilter;
 
 mod filter_registry;
 pub mod filters;
+
+mod filter_chain;
 
 /// default_filters returns a FilterRegistry with the default
 /// set of filters registered to it
