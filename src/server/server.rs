@@ -139,12 +139,12 @@ impl Server {
                 from_utf8(packet).unwrap()
             );
 
-            for (_, dest) in endpoints.iter() {
+            for endpoint in endpoints.iter() {
                 if let Err(err) = Server::ensure_session(
                     &log,
                     sessions.clone(),
                     recv_addr,
-                    *dest,
+                    endpoint.address,
                     send_packets.clone(),
                 )
                 .await
@@ -154,7 +154,7 @@ impl Server {
                 }
 
                 let map = sessions.read().await;
-                let key = (recv_addr, *dest);
+                let key = (recv_addr, endpoint.address);
                 match map.get(&key) {
                     Some(mtx) => {
                         let mut session = mtx.lock().await;
