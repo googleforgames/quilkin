@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-use std::collections::HashMap;
 use std::io;
 use std::net::SocketAddr;
 
@@ -37,22 +36,17 @@ pub struct Config {
 impl Config {
     /// get_endpoints get a list of all endpoints as a HashMap. For a Client proxy,
     /// the key is "address", for a Server proxy the key is the name provided.
-    pub fn get_endpoints(&self) -> HashMap<String, SocketAddr> {
+    pub fn get_endpoints(&self) -> Vec<EndPoint> {
         return match &self.connections {
             ConnectionConfig::Client {
                 address,
                 connection_id: _,
-            } => {
-                let mut map: HashMap<String, SocketAddr> = HashMap::new();
-                map.insert(String::from(CLIENT_ENDPOINT), *address);
-                return map;
-            }
-            ConnectionConfig::Server { endpoints } => {
-                endpoints.iter().fold(HashMap::new(), |mut m, entrypoint| {
-                    m.insert(entrypoint.name.clone(), entrypoint.address);
-                    return m;
-                })
-            }
+            } => vec![EndPoint {
+                name: String::from(CLIENT_ENDPOINT),
+                address: *address,
+                connection_ids: vec![],
+            }],
+            ConnectionConfig::Server { endpoints } => endpoints.clone(),
         };
     }
 }
@@ -101,8 +95,6 @@ pub fn from_reader<R: io::Read>(input: R) -> Result<Config, Error> {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
     use serde_yaml::Value;
 
     use crate::config::{from_reader, Config, ConnectionConfig, EndPoint, Local, CLIENT_ENDPOINT};
@@ -257,8 +249,11 @@ server:
             },
         };
 
-        let mut expected = HashMap::new();
-        expected.insert(String::from(CLIENT_ENDPOINT), expected_addr);
+        let expected = vec![EndPoint {
+            name: String::from(CLIENT_ENDPOINT),
+            address: expected_addr,
+            connection_ids: vec![],
+        }];
         assert_eq!(expected, config.get_endpoints());
     }
 
@@ -280,15 +275,19 @@ server:
       connection_ids:
         - nkuy70x";
         let config = from_reader(yaml.as_bytes()).unwrap();
-        let mut expected = HashMap::new();
-        expected.insert(
-            String::from("Game Server No. 1"),
-            "127.0.0.1:26000".parse().unwrap(),
-        );
-        expected.insert(
-            String::from("Game Server No. 2"),
-            "127.0.0.1:26001".parse().unwrap(),
-        );
+
+        let expected = vec![
+            EndPoint {
+                name: String::from("Game Server No. 1"),
+                address: "127.0.0.1:26000".parse().unwrap(),
+                connection_ids: vec!["1x7ijy6".to_string(), "8gj3v2i".to_string()],
+            },
+            EndPoint {
+                name: String::from("Game Server No. 2"),
+                address: "127.0.0.1:26001".parse().unwrap(),
+                connection_ids: vec!["nkuy70x".to_string()],
+            },
+        ];
 
         assert_eq!(expected, config.get_endpoints());
     }
