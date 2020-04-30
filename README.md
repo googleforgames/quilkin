@@ -11,10 +11,10 @@ It is designed to be used behind game clients as well as in front of dedicated g
 - [x] Server Proxy: Configuration of endpoints with multiple connection token attached, that provide routing 
 - [x] Basic non-transparent UDP forwarding from Client Proxy to Server Proxy
 - [x] Basic non-transparent UDP forwarding from Server Proxy to all Endpoints
-- [ ] Simple UDP routing via an appended connection ID to UDP packet (Client and Server Proxy implementation)
-- [ ] QUIC based security and UDP routing (Client and Server Proxy implementation)
+- [ ] UDP Filtering design and implementation
+- [ ] Simple UDP routing Filter (Client and Server Proxy implementation)
 - [ ] gRPC configuration management control plane API
-- [ ] Add Open Telemetry metrics
+- [ ] Open Telemetry metrics
 
 ## Project State
 
