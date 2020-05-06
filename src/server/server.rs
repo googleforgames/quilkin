@@ -63,10 +63,9 @@ impl Server {
         let sessions: SessionMap = Arc::new(RwLock::new(HashMap::new()));
         let (send_packets, receive_packets) = mpsc::channel::<Packet>(1024);
 
-        self.run_receive_packet(send_socket, receive_packets).await;
+        self.run_receive_packet(send_socket, receive_packets);
         self.run_prune_sessions(&sessions).await;
-        self.run_recv_from(config, receive_socket, &sessions, send_packets)
-            .await;
+        self.run_recv_from(config, receive_socket, &sessions, send_packets);
         // convert to an IO error
         stop.await
             .map_err(|err| Error::new(ErrorKind::BrokenPipe, err))
@@ -90,7 +89,7 @@ impl Server {
 
     // run_recv_from is a non blocking function that continually runs
     // Server::recv_from() to process new incoming packets.
-    async fn run_recv_from(
+    fn run_recv_from(
         &self,
         config: Arc<Config>,
         mut receive_socket: RecvHalf,
@@ -181,7 +180,7 @@ impl Server {
 
     /// receive_packet is a non-blocking loop on receive_packets.recv() channel
     /// and sends each packet on to the Packet.dest
-    async fn run_receive_packet(
+    fn run_receive_packet(
         &self,
         mut send_socket: SendHalf,
         mut receive_packets: mpsc::Receiver<Packet>,
@@ -483,9 +482,7 @@ mod tests {
         let sessions: SessionMap = Arc::new(RwLock::new(HashMap::new()));
         let (send_packets, mut recv_packets) = mpsc::channel::<Packet>(1);
 
-        server
-            .run_recv_from(config, recv, &sessions, send_packets)
-            .await;
+        server.run_recv_from(config, recv, &sessions, send_packets);
 
         send.send_to("hello".as_bytes(), &addr).await.unwrap();
 
@@ -539,7 +536,7 @@ mod tests {
             assert!(false, err)
         }
 
-        server.run_receive_packet(send_socket, recv_packet).await;
+        server.run_receive_packet(send_socket, recv_packet);
         wait.await.unwrap();
     }
 
