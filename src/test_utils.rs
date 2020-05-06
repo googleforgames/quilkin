@@ -32,15 +32,14 @@ pub fn logger() -> Logger {
     Logger::root(drain, o!())
 }
 
-/// assert_recv_udp asserts that the returned SockerAddr received a UDP packet
-/// with the contents of "hello"
-/// call wait.await.unwrap() to see if the message was received
-pub async fn assert_recv_udp() -> (SocketAddr, oneshot::Receiver<()>) {
+/// recv_udp waits for a UDP packet to be received on SocketAddr, and sends
+/// that value to the oneshot channel so it can be tested.
+pub async fn recv_udp() -> (SocketAddr, oneshot::Receiver<String>) {
     let socket = ephemeral_socket().await;
     let local_addr = socket.local_addr().unwrap();
     let (recv, _) = socket.split();
-    let (done, wait) = oneshot::channel::<()>();
-    recv_socket_done(recv, done);
+    let (done, wait) = oneshot::channel::<String>();
+    recv_udp_done(recv, done);
     (local_addr, wait)
 }
 
@@ -50,12 +49,12 @@ pub async fn ephemeral_socket() -> UdpSocket {
     UdpSocket::bind(addr).await.unwrap()
 }
 
-/// recv_socket_done will send a value to done when receiving the "hello" UDP packet.
-pub fn recv_socket_done(mut recv: RecvHalf, done: oneshot::Sender<()>) {
+/// recv_udp_done will send the String value of the receiving UDP packet to the passed in oneshot channel.
+pub fn recv_udp_done(mut recv: RecvHalf, done: oneshot::Sender<String>) {
     tokio::spawn(async move {
         let mut buf = vec![0; 1024];
         let size = recv.recv(&mut buf).await.unwrap();
-        assert_eq!("hello", from_utf8(&buf[..size]).unwrap());
-        done.send(()).unwrap();
+        done.send(from_utf8(&buf[..size]).unwrap().to_string())
+            .unwrap();
     });
 }

@@ -24,12 +24,12 @@ mod tests {
 
     use tokio::select;
     use tokio::sync::{mpsc, oneshot};
+    use tokio::time::{delay_for, Duration};
 
     use quilkin::config::{Config, ConnectionConfig, EndPoint, Local};
     use quilkin::extensions::default_filters;
     use quilkin::server::Server;
-    use quilkin::test_utils::{ephemeral_socket, logger, recv_socket_done};
-    use tokio::time::{delay_for, Duration};
+    use quilkin::test_utils::{ephemeral_socket, logger, recv_udp_done};
 
     #[tokio::test]
     async fn echo() {
@@ -126,10 +126,11 @@ mod tests {
     async fn test_echo_server() {
         let echo_addr = echo_server().await;
         let (recv, mut send) = ephemeral_socket().await.split();
-        let (done, wait) = oneshot::channel::<()>();
-        recv_socket_done(recv, done);
-        send.send_to("hello".as_bytes(), &echo_addr).await.unwrap();
-        wait.await.unwrap();
+        let (done, wait) = oneshot::channel::<String>();
+        let msg = "hello";
+        recv_udp_done(recv, done);
+        send.send_to(msg.as_bytes(), &echo_addr).await.unwrap();
+        assert_eq!(msg, wait.await.unwrap());
     }
 
     async fn echo_server() -> SocketAddr {

@@ -294,7 +294,7 @@ mod tests {
     use crate::config::{Config, ConnectionConfig, EndPoint, Local};
     use crate::extensions::default_filters;
     use crate::server::sessions::{Packet, SESSION_TIMEOUT_SECONDS};
-    use crate::test_utils::{assert_recv_udp, ephemeral_socket, logger, recv_socket_done};
+    use crate::test_utils::{ephemeral_socket, logger, recv_udp, recv_udp_done};
 
     use super::*;
 
@@ -311,8 +311,8 @@ mod tests {
 
         let (recv1, mut send) = socket1.split();
         let (recv2, _) = socket2.split();
-        let (done1, wait1) = oneshot::channel::<()>();
-        let (done2, wait2) = oneshot::channel::<()>();
+        let (done1, wait1) = oneshot::channel::<String>();
+        let (done2, wait2) = oneshot::channel::<String>();
 
         let config = Arc::new(Config {
             local: Local {
@@ -340,11 +340,12 @@ mod tests {
             server.run(config, stop).await.unwrap();
         });
 
-        recv_socket_done(recv1, done1);
-        recv_socket_done(recv2, done2);
-        send.send_to("hello".as_bytes(), &local_addr).await.unwrap();
-        wait1.await.unwrap();
-        wait2.await.unwrap();
+        let msg = "hello";
+        recv_udp_done(recv1, done1);
+        recv_udp_done(recv2, done2);
+        send.send_to(msg.as_bytes(), &local_addr).await.unwrap();
+        assert_eq!(msg, wait1.await.unwrap());
+        assert_eq!(msg, wait2.await.unwrap());
         close.send(()).unwrap();
     }
 
@@ -356,7 +357,7 @@ mod tests {
         let endpoint_addr = socket.local_addr().unwrap();
         let (recv, mut send) = socket.split();
         let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12357);
-        let (done, wait) = oneshot::channel::<()>();
+        let (done, wait) = oneshot::channel::<String>();
         let config = Arc::new(Config {
             local: Local {
                 port: local_addr.port(),
@@ -373,9 +374,10 @@ mod tests {
             server.run(config, stop).await.unwrap();
         });
 
-        recv_socket_done(recv, done);
-        send.send_to("hello".as_bytes(), &local_addr).await.unwrap();
-        wait.await.unwrap();
+        let msg = "hello";
+        recv_udp_done(recv, done);
+        send.send_to(msg.as_bytes(), &local_addr).await.unwrap();
+        assert_eq!(msg, wait.await.unwrap());
 
         close.send(()).unwrap();
     }
@@ -401,7 +403,8 @@ mod tests {
         time::pause();
 
         let log = logger();
-        let (local_addr, wait) = assert_recv_udp().await;
+        let msg = "hello";
+        let (local_addr, wait) = recv_udp().await;
 
         let config = Arc::new(Config {
             local: Local { port: 0 },
@@ -438,7 +441,7 @@ mod tests {
             .await
             .unwrap();
 
-        wait.await.unwrap();
+        assert_eq!(msg, wait.await.unwrap());
         recv_packets.close();
 
         let map = sessions.read().await;
@@ -466,8 +469,9 @@ mod tests {
     #[tokio::test]
     async fn run_recv_from() {
         let log = logger();
+        let msg = "hello";
         let server = Server::new(log.clone(), default_filters(&log));
-        let (local_addr, wait) = assert_recv_udp().await;
+        let (local_addr, wait) = recv_udp().await;
         let config = Arc::new(Config {
             local: Local { port: 0 },
             filters: vec![],
@@ -484,9 +488,8 @@ mod tests {
 
         server.run_recv_from(config, recv, &sessions, send_packets);
 
-        send.send_to("hello".as_bytes(), &addr).await.unwrap();
-
-        wait.await.unwrap();
+        send.send_to(msg.as_bytes(), &addr).await.unwrap();
+        assert_eq!(msg, wait.await.unwrap());
         recv_packets.close();
     }
 
@@ -522,22 +525,23 @@ mod tests {
         let server = Server::new(logger(), FilterRegistry::new());
         let socket = ephemeral_socket().await;
         let local_addr = socket.local_addr().unwrap();
+        let msg = "hello";
 
         let (recv_socket, send_socket) = socket.split();
         let (mut send_packet, recv_packet) = mpsc::channel::<Packet>(5);
-        let (done, wait) = oneshot::channel::<()>();
+        let (done, wait) = oneshot::channel::<String>();
 
-        recv_socket_done(recv_socket, done);
+        recv_udp_done(recv_socket, done);
 
         if let Err(err) = send_packet
-            .send(Packet::new(local_addr, String::from("hello").into_bytes()))
+            .send(Packet::new(local_addr, msg.as_bytes().to_vec()))
             .await
         {
             assert!(false, err)
         }
 
         server.run_receive_packet(send_socket, recv_packet);
-        wait.await.unwrap();
+        assert_eq!(msg, wait.await.unwrap());
     }
 
     #[tokio::test]

@@ -202,7 +202,7 @@ mod tests {
     use tokio::time;
     use tokio::time::delay_for;
 
-    use crate::test_utils::{assert_recv_udp, ephemeral_socket, logger};
+    use crate::test_utils::{ephemeral_socket, logger, recv_udp};
 
     use super::*;
 
@@ -260,14 +260,15 @@ mod tests {
     #[tokio::test]
     async fn session_send_to() {
         let log = logger();
+        let msg = "hello";
         let (sender, _) = mpsc::channel::<Packet>(1);
-        let (local_addr, wait) = assert_recv_udp().await;
+        let (local_addr, wait) = recv_udp().await;
 
         let mut session = Session::new(&log, local_addr, local_addr, sender)
             .await
             .unwrap();
-        session.send_to("hello".as_bytes()).await.unwrap();
-        wait.await.unwrap();
+        session.send_to(msg.as_bytes()).await.unwrap();
+        assert_eq!(msg, wait.await.unwrap());
     }
 
     #[tokio::test]
