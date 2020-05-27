@@ -94,10 +94,15 @@ impl Filter for FilterChain {
         Some(c)
     }
 
-    fn endpoint_receive_filter(&self, endpoint: &EndPoint, contents: Vec<u8>) -> Option<Vec<u8>> {
+    fn endpoint_receive_filter(
+        &self,
+        endpoint: &EndPoint,
+        recv_addr: SocketAddr,
+        contents: Vec<u8>,
+    ) -> Option<Vec<u8>> {
         let mut c = contents;
         for f in &self.filters {
-            match f.endpoint_receive_filter(&endpoint, c) {
+            match f.endpoint_receive_filter(&endpoint, recv_addr, c) {
                 None => return None,
                 Some(contents) => {
                     c = contents;
@@ -167,11 +172,11 @@ mod tests {
         fn endpoint_receive_filter(
             &self,
             endpoint: &EndPoint,
+            recv_addr: SocketAddr,
             contents: Vec<u8>,
         ) -> Option<Vec<u8>> {
             let mut c = contents;
-            c.append(&mut ":erf:".as_bytes().to_vec());
-            c.append(&mut endpoint.name.as_bytes().to_vec());
+            c.append(&mut format!(":erf:{}:{}", endpoint.name, recv_addr).into_bytes());
             Some(c)
         }
 
@@ -276,9 +281,16 @@ mod tests {
         );
 
         let content = chain
-            .endpoint_receive_filter(&endpoints_fixture[0], "hello".as_bytes().to_vec())
+            .endpoint_receive_filter(
+                &endpoints_fixture[0],
+                endpoints_fixture[0].address,
+                "hello".as_bytes().to_vec(),
+            )
             .unwrap();
-        assert_eq!("hello:erf:one", from_utf8(content.as_slice()).unwrap());
+        assert_eq!(
+            "hello:erf:one:127.0.0.1:80",
+            from_utf8(content.as_slice()).unwrap()
+        );
 
         let content = chain
             .endpoint_send_filter(
@@ -325,10 +337,14 @@ mod tests {
         );
 
         let content = chain
-            .endpoint_receive_filter(&endpoints_fixture[0], "hello".as_bytes().to_vec())
+            .endpoint_receive_filter(
+                &endpoints_fixture[0],
+                endpoints_fixture[0].address,
+                "hello".as_bytes().to_vec(),
+            )
             .unwrap();
         assert_eq!(
-            "hello:erf:one:erf:one",
+            "hello:erf:one:127.0.0.1:80:erf:one:127.0.0.1:80",
             from_utf8(content.as_slice()).unwrap()
         );
 
