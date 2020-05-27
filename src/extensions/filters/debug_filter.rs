@@ -55,8 +55,15 @@ impl Filter for DebugFilter {
         Some(contents)
     }
 
-    fn endpoint_receive_filter(&self, endpoint: &EndPoint, contents: Vec<u8>) -> Option<Vec<u8>> {
-        info!(self.log, "received endpoint packet"; "endpoint" => endpoint.name.clone(), "contents" => packet_to_string(contents.clone()));
+    fn endpoint_receive_filter(
+        &self,
+        endpoint: &EndPoint,
+        recv_addr: SocketAddr,
+        contents: Vec<u8>,
+    ) -> Option<Vec<u8>> {
+        info!(self.log, "received endpoint packet"; "endpoint" => endpoint.name.clone(),
+        "recv_addr" => recv_addr, 
+        "contents" => packet_to_string(contents.clone()));
         Some(contents)
     }
 
@@ -131,7 +138,7 @@ mod tests {
         };
         let contents = "hello".to_string().into_bytes();
 
-        match df.endpoint_receive_filter(&endpoint, contents.clone()) {
+        match df.endpoint_receive_filter(&endpoint, endpoint.address, contents.clone()) {
             None => assert!(false, "should return a result"),
             Some(result_contents) => assert_eq!(contents, result_contents),
         }

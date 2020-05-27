@@ -39,11 +39,16 @@ pub trait Filter: Send + Sync {
     /// If the packet should be rejected, return None.
     fn local_send_filter(&self, to: SocketAddr, contents: Vec<u8>) -> Option<Vec<u8>>;
 
-    /// endpoint_receive_filter filters packets received from an endpoint, that is going back to the
-    /// original sender.
+    /// endpoint_receive_filter filters packets received from recv_addr, but expected from the given endpoint,
+    /// that are going back to the original sender.
     /// This function should return the packet to be sent (which may be manipulated).
     /// If the packet should be rejected, return None.
-    fn endpoint_receive_filter(&self, endpoint: &EndPoint, contents: Vec<u8>) -> Option<Vec<u8>>;
+    fn endpoint_receive_filter(
+        &self,
+        endpoint: &EndPoint,
+        recv_addr: SocketAddr,
+        contents: Vec<u8>,
+    ) -> Option<Vec<u8>>;
 
     /// endpoint_send_filter intercepts packets that are being sent back to the original
     /// endpoint sender address
@@ -104,7 +109,12 @@ mod tests {
             None
         }
 
-        fn endpoint_receive_filter(&self, _: &EndPoint, _: Vec<u8>) -> Option<Vec<u8>> {
+        fn endpoint_receive_filter(
+            &self,
+            _: &EndPoint,
+            _: SocketAddr,
+            _: Vec<u8>,
+        ) -> Option<Vec<u8>> {
             None
         }
 
@@ -130,6 +140,8 @@ mod tests {
         };
 
         assert!(filter.local_receive_filter(&vec![], addr, vec![]).is_none());
-        assert!(filter.endpoint_receive_filter(&endpoint, vec![]).is_none());
+        assert!(filter
+            .endpoint_receive_filter(&endpoint, addr, vec![])
+            .is_none());
     }
 }
