@@ -24,6 +24,68 @@ use tokio::net::udp::RecvHalf;
 use tokio::net::UdpSocket;
 use tokio::sync::oneshot;
 
+use crate::config::EndPoint;
+use crate::extensions::Filter;
+
+// noop_endpoint returns an endpoint for data that should go nowhere.
+pub fn noop_endpoint() -> EndPoint {
+    EndPoint {
+        name: "noop".to_string(),
+        address: "127.0.0.1:10".parse().unwrap(),
+        connection_ids: vec![],
+    }
+}
+
+// TestFilter is useful for testing that commands are executing filters appropriately.
+pub struct TestFilter {}
+
+impl Filter for TestFilter {
+    fn local_receive_filter(
+        &self,
+        endpoints: &Vec<EndPoint>,
+        from: SocketAddr,
+        contents: Vec<u8>,
+    ) -> Option<(Vec<EndPoint>, Vec<u8>)> {
+        let mut e = endpoints.clone();
+        // we're going to add an extra endpoint, so we can test for the change,
+        // but also so we don't break any tests are expecting traffic at the supplied
+        // address and port
+        e.push(noop_endpoint());
+
+        let mut c = contents;
+        c.append(&mut format!(":lrf:{}", from).into_bytes());
+        Some((e, c))
+    }
+
+    fn local_send_filter(&self, to: SocketAddr, contents: Vec<u8>) -> Option<Vec<u8>> {
+        let mut c = contents;
+        c.append(&mut format!(":lsf:{}", to).into_bytes());
+        Some(c)
+    }
+
+    fn endpoint_receive_filter(
+        &self,
+        endpoint: &EndPoint,
+        recv_addr: SocketAddr,
+        contents: Vec<u8>,
+    ) -> Option<Vec<u8>> {
+        let mut c = contents;
+        c.append(&mut format!(":erf:{}:{}", endpoint.name, recv_addr).into_bytes());
+        Some(c)
+    }
+
+    fn endpoint_send_filter(
+        &self,
+        endpoint: &EndPoint,
+        from: SocketAddr,
+        contents: Vec<u8>,
+    ) -> Option<Vec<u8>> {
+        let mut c = contents;
+        c.append(&mut format!(":esf:{}:{}", endpoint.name, from).into_bytes());
+        Some(c)
+    }
+}
+
 // logger returns a standard out, non structured terminal logger, suitable for using in tests,
 // since it's more human readable.
 pub fn logger() -> Logger {

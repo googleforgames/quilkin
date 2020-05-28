@@ -137,67 +137,11 @@ mod tests {
 
     use crate::config;
     use crate::config::{ConnectionConfig, Local};
+    use crate::extensions::default_filters;
     use crate::extensions::filters::DebugFilter;
-    use crate::test_utils::logger;
+    use crate::test_utils::{logger, noop_endpoint, TestFilter};
 
     use super::*;
-    use crate::extensions::default_filters;
-
-    struct TestFilter {}
-
-    impl Filter for TestFilter {
-        fn local_receive_filter(
-            &self,
-            endpoints: &Vec<EndPoint>,
-            from: SocketAddr,
-            contents: Vec<u8>,
-        ) -> Option<(Vec<EndPoint>, Vec<u8>)> {
-            let mut e = endpoints.clone();
-            e.remove(0);
-
-            let mut c = contents;
-            c.append(&mut ":lcf:".as_bytes().to_vec());
-            c.append(&mut from.to_string().as_bytes().to_vec());
-
-            Some((e, c))
-        }
-
-        fn local_send_filter(&self, to: SocketAddr, contents: Vec<u8>) -> Option<Vec<u8>> {
-            let mut c = contents;
-            c.append(&mut ":lsf:".as_bytes().to_vec());
-            c.append(&mut to.to_string().as_bytes().to_vec());
-            Some(c)
-        }
-
-        fn endpoint_receive_filter(
-            &self,
-            endpoint: &EndPoint,
-            recv_addr: SocketAddr,
-            contents: Vec<u8>,
-        ) -> Option<Vec<u8>> {
-            let mut c = contents;
-            c.append(&mut format!(":erf:{}:{}", endpoint.name, recv_addr).into_bytes());
-            Some(c)
-        }
-
-        fn endpoint_send_filter(
-            &self,
-            endpoint: &EndPoint,
-            from: SocketAddr,
-            contents: Vec<u8>,
-        ) -> Option<Vec<u8>> {
-            let mut c = contents;
-            c.append(&mut ":esf:".as_bytes().to_vec());
-
-            let mut details = endpoint.name.clone();
-            details.push_str(":");
-            details.push_str(from.to_string().as_str());
-
-            c.append(&mut details.as_bytes().to_vec());
-
-            Some(c)
-        }
-    }
 
     #[test]
     fn from_config() {
@@ -265,9 +209,11 @@ mod tests {
             )
             .unwrap();
 
-        assert_eq!(vec![endpoints_fixture[1].clone()], eps);
+        let mut expected = endpoints_fixture.clone();
+        expected.push(noop_endpoint());
+        assert_eq!(expected, eps);
         assert_eq!(
-            "hello:lcf:127.0.0.1:70",
+            "hello:lrf:127.0.0.1:70",
             from_utf8(content.as_slice()).unwrap()
         );
 
@@ -320,10 +266,12 @@ mod tests {
             )
             .unwrap();
 
-        let empty: Vec<EndPoint> = Vec::new();
-        assert_eq!(empty, eps);
+        let mut expected = endpoints_fixture.clone();
+        expected.push(noop_endpoint());
+        expected.push(noop_endpoint());
+        assert_eq!(expected, eps);
         assert_eq!(
-            "hello:lcf:127.0.0.1:70:lcf:127.0.0.1:70",
+            "hello:lrf:127.0.0.1:70:lrf:127.0.0.1:70",
             from_utf8(content.as_slice()).unwrap()
         );
 
