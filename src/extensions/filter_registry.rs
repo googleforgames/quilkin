@@ -22,7 +22,7 @@ use std::net::SocketAddr;
 
 /// Filter is a trait for routing and manipulating packets.
 pub trait Filter: Send + Sync {
-    /// local_receive_filter receives filters packets from the local port, and potentially sends them
+    /// local_receive_filter filters packets received from the local port, and potentially sends them
     /// to configured endpoints.
     /// This function should return the array of endpoints that the packet should be sent to,
     /// and the packet that should be sent (which may be manipulated) as well.

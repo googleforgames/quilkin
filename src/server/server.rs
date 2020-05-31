@@ -64,7 +64,7 @@ impl Server {
         let (send_packets, receive_packets) = mpsc::channel::<Packet>(1024);
 
         self.run_receive_packet(send_socket, receive_packets);
-        self.run_prune_sessions(&sessions).await;
+        self.run_prune_sessions(&sessions);
         self.run_recv_from(config, receive_socket, &sessions, send_packets);
         // convert to an IO error
         stop.await
@@ -75,7 +75,7 @@ impl Server {
     /// SESSION_TIMEOUT_SECONDS, via a tokio::spawn, i.e. it's non-blocking.
     /// Pruning will occur ~ every interval period. So the timeout expiration may sometimes
     /// exceed the expected, but we don't have to write lock the SessionMap as often to clean up.
-    async fn run_prune_sessions(&self, sessions: &SessionMap) {
+    fn run_prune_sessions(&self, sessions: &SessionMap) {
         let log = self.log.clone();
         let sessions = sessions.clone();
         tokio::spawn(async move {
@@ -178,7 +178,7 @@ impl Server {
         return Ok(());
     }
 
-    /// receive_packet is a non-blocking loop on receive_packets.recv() channel
+    /// run_receive_packet is a non-blocking loop on receive_packets.recv() channel
     /// and sends each packet on to the Packet.dest
     fn run_receive_packet(
         &self,
@@ -600,7 +600,7 @@ mod tests {
         let (send, _recv) = mpsc::channel::<Packet>(1);
         let key = (from, to);
 
-        server.run_prune_sessions(&sessions).await;
+        server.run_prune_sessions(&sessions);
         Server::ensure_session(&log, sessions.clone(), from, to, send)
             .await
             .unwrap();

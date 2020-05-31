@@ -34,8 +34,7 @@ pub struct Config {
 }
 
 impl Config {
-    /// get_endpoints get a list of all endpoints as a HashMap. For a Client proxy,
-    /// the key is "address", for a Server proxy the key is the name provided.
+    /// get_endpoints returns a list of all endpoints.
     pub fn get_endpoints(&self) -> Vec<EndPoint> {
         return match &self.connections {
             ConnectionConfig::Client {
