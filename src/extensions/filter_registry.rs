@@ -80,8 +80,6 @@ impl FilterRegistry {
     }
 
     /// get returns the filter for a given Key. Returns None if not found.
-    // TODO: remove when used
-    #[allow(dead_code)]
     pub fn get(&self, key: &String) -> Option<&Arc<dyn Filter>> {
         self.registry.get(key)
     }
