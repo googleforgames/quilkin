@@ -97,7 +97,7 @@ impl Session {
         Ok(s)
     }
 
-    /// run starts processing receiving udp packets on its UdpSocket
+    /// run starts processing received udp packets on its UdpSocket
     fn run(
         &mut self,
         mut recv: RecvHalf,
@@ -149,7 +149,7 @@ impl Session {
         (self.from, self.dest)
     }
 
-    /// process_recv_packet processes a packet that is receiver by this session.
+    /// process_recv_packet processes a packet that is received by this session.
     async fn process_recv_packet(
         log: &Logger,
         packet: &[u8],
