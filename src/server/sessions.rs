@@ -132,6 +132,10 @@ impl Session {
                             is_closed.store(true, Relaxed);
                             debug!(log, "Closing Session");
                             return;
+                        } else if let None = close_request {
+                            is_closed.store(true, Relaxed);
+                            debug!(log, "Dropping Session");
+                            return;
                         }
                     }
                 };
