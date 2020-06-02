@@ -65,7 +65,7 @@ impl Server {
             &self.filter_registry,
         )?);
 
-        self.run_receive_packet(send_socket, receive_packets);
+        self.run_receive_packet(chain.clone(), send_socket, receive_packets);
         self.run_prune_sessions(&sessions);
         self.run_recv_from(config, chain, receive_socket, &sessions, send_packets);
         // convert to an IO error
@@ -191,6 +191,7 @@ impl Server {
     /// and sends each packet on to the Packet.dest
     fn run_receive_packet(
         &self,
+        chain: Arc<FilterChain>,
         mut send_socket: SendHalf,
         mut receive_packets: mpsc::Receiver<Packet>,
     ) {
@@ -204,11 +205,12 @@ impl Server {
                     "contents" => String::from_utf8(packet.contents().clone()).unwrap(),
                 );
 
-                if let Err(err) = send_socket
-                    .send_to(packet.contents().as_slice(), &packet.dest())
-                    .await
+                if let Some(data) =
+                    chain.local_send_filter(packet.dest(), packet.contents().to_vec())
                 {
-                    error!(log, "Error sending packet"; "dest" => %packet.dest(), "error" => %err);
+                    if let Err(err) = send_socket.send_to(data.as_slice(), &packet.dest()).await {
+                        error!(log, "Error sending packet"; "dest" => %packet.dest(), "error" => %err);
+                    }
                 }
             }
             debug!(log, "Receiver closed");
@@ -581,9 +583,11 @@ mod tests {
     #[tokio::test]
     async fn run_receive_packet() {
         let server = Server::new(logger(), FilterRegistry::new());
+        let msg = "hello";
+
+        // without a filter
         let socket = ephemeral_socket().await;
         let local_addr = socket.local_addr().unwrap();
-        let msg = "hello";
 
         let (recv_socket, send_socket) = socket.split();
         let (mut send_packet, recv_packet) = mpsc::channel::<Packet>(5);
@@ -598,8 +602,32 @@ mod tests {
             assert!(false, err)
         }
 
-        server.run_receive_packet(send_socket, recv_packet);
+        server.run_receive_packet(Arc::new(FilterChain::new(vec![])), send_socket, recv_packet);
         assert_eq!(msg, wait.await.unwrap());
+
+        // with a filter
+        let socket = ephemeral_socket().await;
+        let local_addr = socket.local_addr().unwrap();
+
+        let (recv_socket, send_socket) = socket.split();
+        let (mut send_packet, recv_packet) = mpsc::channel::<Packet>(5);
+        let (done, wait) = oneshot::channel::<String>();
+
+        recv_udp_done(recv_socket, done);
+
+        if let Err(err) = send_packet
+            .send(Packet::new(local_addr, msg.as_bytes().to_vec()))
+            .await
+        {
+            assert!(false, err)
+        }
+
+        server.run_receive_packet(
+            Arc::new(FilterChain::new(vec![Arc::new(TestFilter {})])),
+            send_socket,
+            recv_packet,
+        );
+        assert_eq!(format!("{}:lsf:{}", msg, local_addr), wait.await.unwrap());
     }
 
     #[tokio::test]
