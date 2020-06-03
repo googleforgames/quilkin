@@ -615,12 +615,11 @@ mod tests {
 
         recv_udp_done(recv_socket, done);
 
-        if let Err(err) = send_packet
+        send_packet
             .send(Packet::new(local_addr, msg.as_bytes().to_vec()))
             .await
-        {
-            assert!(false, err)
-        }
+            .map_err(|err| assert!(false, err))
+            .unwrap();
 
         server.run_receive_packet(
             Arc::new(FilterChain::new(vec![Arc::new(TestFilter {})])),
