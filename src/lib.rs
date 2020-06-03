@@ -16,5 +16,6 @@
 
 pub mod config;
 pub mod extensions;
+mod load_balancer_policy;
 pub mod server;
 pub mod test_utils;

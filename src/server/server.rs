@@ -30,6 +30,7 @@ use tokio::time::{delay_for, Duration, Instant};
 
 use crate::config::{Config, ConnectionConfig};
 use crate::extensions::{Filter, FilterChain, FilterRegistry};
+use crate::load_balancer_policy::LoadBalancerPolicy;
 use crate::server::sessions::{Packet, Session, SESSION_TIMEOUT_SECONDS};
 
 type SessionMap = Arc<RwLock<HashMap<(SocketAddr, SocketAddr), Mutex<Session>>>>;
@@ -67,7 +68,13 @@ impl Server {
 
         self.run_receive_packet(send_socket, receive_packets);
         self.run_prune_sessions(&sessions);
-        self.run_recv_from(config, chain, receive_socket, &sessions, send_packets);
+        self.run_recv_from(
+            Arc::new(LoadBalancerPolicy::new(&config.connections)),
+            chain,
+            receive_socket,
+            &sessions,
+            send_packets,
+        );
         // convert to an IO error
         stop.await
             .map_err(|err| Error::new(ErrorKind::BrokenPipe, err))
@@ -93,7 +100,7 @@ impl Server {
     // Server::recv_from() to process new incoming packets.
     fn run_recv_from(
         &self,
-        config: Arc<Config>,
+        lb_policy: Arc<LoadBalancerPolicy>,
         chain: Arc<FilterChain>,
         mut receive_socket: RecvHalf,
         sessions: &SessionMap,
@@ -105,7 +112,7 @@ impl Server {
             loop {
                 if let Err(err) = Server::recv_from(
                     &log,
-                    config.clone(),
+                    lb_policy.clone(),
                     chain.clone(),
                     &mut receive_socket,
                     sessions.clone(),
@@ -123,7 +130,7 @@ impl Server {
     /// processes them to send them out to endpoints.
     async fn recv_from(
         log: &Logger,
-        config: Arc<Config>,
+        lb_policy: Arc<LoadBalancerPolicy>,
         chain: Arc<FilterChain>,
         receive_socket: &mut RecvHalf,
         sessions: SessionMap,
@@ -133,7 +140,6 @@ impl Server {
         let (size, recv_addr) = receive_socket.recv_from(&mut buf).await?;
         let log = log.clone();
         tokio::spawn(async move {
-            let endpoints = config.get_endpoints();
             let packet = &buf[..size];
 
             debug!(
@@ -143,7 +149,11 @@ impl Server {
                 from_utf8(packet).unwrap()
             );
 
-            let result = chain.local_receive_filter(&endpoints, recv_addr, packet.to_vec());
+            let result = chain.local_receive_filter(
+                &lb_policy.choose_endpoints(),
+                recv_addr,
+                packet.to_vec(),
+            );
 
             if let Some((endpoints, packet)) = result {
                 for endpoint in endpoints.iter() {
@@ -219,8 +229,8 @@ impl Server {
     fn log_config(&self, config: &Arc<Config>) {
         info!(self.log, "Starting on port {}", config.local.port);
         match &config.connections {
-            ConnectionConfig::Client { address, .. } => {
-                info!(self.log, "Client proxy configuration"; "address" => address)
+            ConnectionConfig::Client { addresses, .. } => {
+                info!(self.log, "Client proxy configuration"; "address" => format!("{:?}", addresses))
             }
             ConnectionConfig::Server { endpoints } => {
                 info!(self.log, "Server proxy configuration"; "endpoints" => endpoints.len())
@@ -373,8 +383,9 @@ mod tests {
             },
             filters: vec![],
             connections: ConnectionConfig::Client {
-                address: endpoint_addr,
+                addresses: vec![endpoint_addr],
                 connection_id: String::from(""),
+                lb_policy: None,
             },
         });
 
@@ -428,14 +439,11 @@ mod tests {
             let msg = "hello".to_string();
             let (local_addr, wait) = recv_udp().await;
 
-            let config = Arc::new(Config {
-                local: Local { port: 0 },
-                filters: vec![],
-                connections: ConnectionConfig::Client {
-                    address: local_addr,
-                    connection_id: String::from(""),
-                },
-            });
+            let lb_policy = Arc::new(LoadBalancerPolicy::new(&ConnectionConfig::Client {
+                addresses: vec![local_addr],
+                connection_id: String::from(""),
+                lb_policy: None,
+            }));
             let receive_socket = ephemeral_socket().await;
             let receive_addr = receive_socket.local_addr().unwrap();
             let (mut recv, mut send) = receive_socket.split();
@@ -451,7 +459,7 @@ mod tests {
             tokio::spawn(async move {
                 Server::recv_from(
                     &log_clone,
-                    config,
+                    lb_policy,
                     chain,
                     &mut recv,
                     sessions_clone,
@@ -524,14 +532,11 @@ mod tests {
         let msg = "hello";
         let server = Server::new(log.clone(), default_filters(&log));
         let (local_addr, wait) = recv_udp().await;
-        let config = Arc::new(Config {
-            local: Local { port: 0 },
-            filters: vec![],
-            connections: ConnectionConfig::Client {
-                address: local_addr,
-                connection_id: String::from(""),
-            },
-        });
+        let lb_policy = Arc::new(LoadBalancerPolicy::new(&ConnectionConfig::Client {
+            addresses: vec![local_addr],
+            connection_id: String::from(""),
+            lb_policy: None,
+        }));
         let socket = ephemeral_socket().await;
         let addr = socket.local_addr().unwrap();
         let (recv, mut send) = socket.split();
@@ -539,7 +544,7 @@ mod tests {
         let (send_packets, mut recv_packets) = mpsc::channel::<Packet>(1);
 
         server.run_recv_from(
-            config,
+            lb_policy,
             Arc::new(FilterChain::new(vec![])),
             recv,
             &sessions,

@@ -76,8 +76,12 @@ mod tests {
             local: Local { port: client_port },
             filters: vec![],
             connections: ConnectionConfig::Client {
-                address: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port),
+                addresses: vec![SocketAddr::new(
+                    IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+                    server_port,
+                )],
                 connection_id: String::from(""),
+                lb_policy: None,
             },
         };
         let client = Server::new(base_logger.clone(), default_filters(&base_logger));
