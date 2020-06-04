@@ -87,7 +87,7 @@ impl EndpointChooser for RoundRobinEndpointChooser {
     }
 }
 
-/// RandomEndpointChooser chooses endpoints in round-robin order.
+/// RandomEndpointChooser chooses endpoints in random order.
 pub struct RandomEndpointChooser {
     endpoints: Vec<EndPoint>,
 }
@@ -130,7 +130,6 @@ mod tests {
     use crate::config::LoadBalancerPolicy::{Broadcast, Random, RoundRobin};
     use crate::load_balancer_policy::LoadBalancerPolicy;
     use std::collections::HashSet;
-    use std::iter;
 
     #[test]
     fn round_robin_load_balancer_policy() {
@@ -147,16 +146,14 @@ mod tests {
         });
 
         // Check that we repeat the same addresses in sequence forever.
-        let mut expected_sequence = iter::repeat(
-            addresses
-                .clone()
-                .iter()
-                .map(|&a| vec![a])
-                .collect::<Vec<_>>(),
-        );
+        let expected_sequence = addresses
+            .clone()
+            .iter()
+            .map(|&a| vec![a])
+            .collect::<Vec<_>>();
         for _ in 0..10 {
             assert_eq!(
-                expected_sequence.next().unwrap(),
+                expected_sequence,
                 (0..addresses.len())
                     .into_iter()
                     .map(|_| lb
@@ -235,10 +232,9 @@ mod tests {
             });
 
             // Check that we always return all addresses.
-            let mut expected_addresses = iter::repeat(addresses.clone());
             for _ in 0..10 {
                 assert_eq!(
-                    expected_addresses.next().unwrap(),
+                    addresses,
                     lb.choose_endpoints()
                         .iter()
                         .map(|e| e.address)
