@@ -21,5 +21,10 @@
 local:
   port: 7000 # the port to receive traffic to locally
 client:
-  address: 127.0.0.1:7001 # the address to send traffic to
+  addresses: # array of potential endpoints to send traffic to
+    - 127.0.0.1:7000
+    - 127.0.0.1:7001
   connection_id: 1x7ijy6 # the connection string to attach to the traffic
+  lb_policy: ROUND_ROBIN # (Optional) load balancing policy for selecting endpoints.
+                         # Possible values are: `ROUND_ROBIN` `RANDOM` `BROADCAST`
+                         # Defaults to `BROADCAST` if not set.

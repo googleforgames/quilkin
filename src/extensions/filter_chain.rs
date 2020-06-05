@@ -155,8 +155,9 @@ mod tests {
                 config: Default::default(),
             }],
             connections: ConnectionConfig::Client {
-                address: "127.0.0.1:2456".parse().unwrap(),
+                addresses: vec!["127.0.0.1:2456".parse().unwrap()],
                 connection_id: String::from(""),
+                lb_policy: None,
             },
         });
 
@@ -172,8 +173,9 @@ mod tests {
                 config: Default::default(),
             }],
             connections: ConnectionConfig::Client {
-                address: "127.0.0.1:2456".parse().unwrap(),
+                addresses: vec!["127.0.0.1:2456".parse().unwrap()],
                 connection_id: String::from(""),
+                lb_policy: None,
             },
         });
         let result = FilterChain::from_config(config, &registry);

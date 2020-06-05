@@ -20,9 +20,6 @@ use std::net::SocketAddr;
 use serde::{Deserialize, Serialize};
 use serde_yaml::Error;
 
-// CLIENT_ENDPOINT is because we need a name for the client endpoint configuration
-const CLIENT_ENDPOINT: &str = "address";
-
 /// Config is the configuration for either a Client or Server proxy
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Config {
@@ -33,27 +30,25 @@ pub struct Config {
     pub connections: ConnectionConfig,
 }
 
-impl Config {
-    /// get_endpoints returns a list of all endpoints.
-    pub fn get_endpoints(&self) -> Vec<EndPoint> {
-        return match &self.connections {
-            ConnectionConfig::Client {
-                address,
-                connection_id: _,
-            } => vec![EndPoint {
-                name: String::from(CLIENT_ENDPOINT),
-                address: *address,
-                connection_ids: vec![],
-            }],
-            ConnectionConfig::Server { endpoints } => endpoints.clone(),
-        };
-    }
-}
-
 /// Local is the local host configuration options
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Local {
     pub port: u16,
+}
+
+/// LoadBalancerPolicy represents how a proxy load-balances
+/// traffic between endpoints.
+#[derive(Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub enum LoadBalancerPolicy {
+    /// Send all traffic to all endpoints.
+    #[serde(rename = "BROADCAST")]
+    Broadcast,
+    /// Send traffic to endpoints in turns.
+    #[serde(rename = "ROUND_ROBIN")]
+    RoundRobin,
+    /// Send traffic to endpoints chosen at random.
+    #[serde(rename = "RANDOM")]
+    Random,
 }
 
 /// Filter is the configuration for a single filter
@@ -69,8 +64,9 @@ pub enum ConnectionConfig {
     /// Client is the configuration for a client proxy, for sitting behind a game client.
     #[serde(rename = "client")]
     Client {
-        address: SocketAddr,
+        addresses: Vec<SocketAddr>,
         connection_id: String,
+        lb_policy: Option<LoadBalancerPolicy>,
     },
 
     /// Server is the configuration for a Dedicated Game Server proxy
@@ -96,7 +92,10 @@ pub fn from_reader<R: io::Read>(input: R) -> Result<Config, Error> {
 mod tests {
     use serde_yaml::Value;
 
-    use crate::config::{from_reader, Config, ConnectionConfig, EndPoint, Local, CLIENT_ENDPOINT};
+    use crate::config::{
+        from_reader, Config, ConnectionConfig, EndPoint, LoadBalancerPolicy, Local,
+    };
+    use std::net::SocketAddr;
 
     #[test]
     fn deserialise_client() {
@@ -104,8 +103,9 @@ mod tests {
             local: Local { port: 7000 },
             filters: vec![],
             connections: ConnectionConfig::Client {
-                address: "127.0.0.1:25999".parse().unwrap(),
+                addresses: vec!["127.0.0.1:25999".parse().unwrap()],
                 connection_id: String::from("1234"),
+                lb_policy: Some(LoadBalancerPolicy::RoundRobin),
             },
         };
         let yaml = serde_yaml::to_string(&config).unwrap();
@@ -151,7 +151,8 @@ filters: # new filters section
         - 27
         - true
 client:
-  address: 127.0.0.1:7001
+  addresses:
+    - 127.0.0.1:7001
   connection_id: 1x7ijy6
         ";
         let config = from_reader(yaml.as_bytes()).unwrap();
@@ -180,17 +181,25 @@ client:
 local:
   port: 7000
 client:
-  address: 127.0.0.1:25999
-  connection_id: 1x7ijy6";
+  addresses:
+    - 127.0.0.1:25999
+  connection_id: 1x7ijy6
+  lb_policy: ROUND_ROBIN
+  ";
         let config = from_reader(yaml.as_bytes()).unwrap();
         assert_eq!(7000, config.local.port);
         match config.connections {
             ConnectionConfig::Client {
-                address,
+                addresses,
                 connection_id,
+                lb_policy,
             } => {
                 assert_eq!("1x7ijy6", connection_id);
-                assert_eq!("127.0.0.1:25999", address.to_string())
+                assert_eq!(
+                    vec!["127.0.0.1:25999".parse::<SocketAddr>().unwrap()],
+                    addresses
+                );
+                assert_eq!(Some(LoadBalancerPolicy::RoundRobin), lb_policy);
             }
             ConnectionConfig::Server { .. } => panic!("Should not be a receiver"),
         }
@@ -234,60 +243,5 @@ server:
                 assert_eq!(expected, endpoints);
             }
         }
-    }
-
-    #[test]
-    fn get_endpoints_client() {
-        let expected_addr = "127.0.0.1:8080".parse().unwrap();
-        let config = Config {
-            filters: vec![],
-            local: Local { port: 0 },
-            connections: ConnectionConfig::Client {
-                address: expected_addr,
-                connection_id: "".to_string(),
-            },
-        };
-
-        let expected = vec![EndPoint {
-            name: String::from(CLIENT_ENDPOINT),
-            address: expected_addr,
-            connection_ids: vec![],
-        }];
-        assert_eq!(expected, config.get_endpoints());
-    }
-
-    #[test]
-    fn get_endpoints_server() {
-        let yaml = "
----
-local:
-  port: 7000
-server:
-  endpoints:
-    - name: Game Server No. 1
-      address: 127.0.0.1:26000
-      connection_ids:
-        - 1x7ijy6
-        - 8gj3v2i
-    - name: Game Server No. 2
-      address: 127.0.0.1:26001
-      connection_ids:
-        - nkuy70x";
-        let config = from_reader(yaml.as_bytes()).unwrap();
-
-        let expected = vec![
-            EndPoint {
-                name: String::from("Game Server No. 1"),
-                address: "127.0.0.1:26000".parse().unwrap(),
-                connection_ids: vec!["1x7ijy6".to_string(), "8gj3v2i".to_string()],
-            },
-            EndPoint {
-                name: String::from("Game Server No. 2"),
-                address: "127.0.0.1:26001".parse().unwrap(),
-                connection_ids: vec!["nkuy70x".to_string()],
-            },
-        ];
-
-        assert_eq!(expected, config.get_endpoints());
     }
 }
