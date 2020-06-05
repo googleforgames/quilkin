@@ -28,7 +28,7 @@ use tokio::sync::{mpsc, oneshot};
 use tokio::sync::{Mutex, RwLock};
 use tokio::time::{delay_for, Duration, Instant};
 
-use crate::config::{Config, ConnectionConfig};
+use crate::config::{Config, ConnectionConfig, EndPoint};
 use crate::extensions::{Filter, FilterChain, FilterRegistry};
 use crate::load_balancer_policy::LoadBalancerPolicy;
 use crate::server::sessions::{Packet, Session, SESSION_TIMEOUT_SECONDS};
@@ -161,7 +161,7 @@ impl Server {
                         &log,
                         sessions.clone(),
                         recv_addr,
-                        endpoint.address,
+                        &endpoint,
                         send_packets.clone(),
                     )
                     .await
@@ -251,16 +251,16 @@ impl Server {
         log: &Logger,
         sessions: SessionMap,
         from: SocketAddr,
-        dest: SocketAddr,
+        dest: &EndPoint,
         sender: mpsc::Sender<Packet>,
     ) -> Result<()> {
         {
             let map = sessions.read().await;
-            if map.contains_key(&(from, dest)) {
+            if map.contains_key(&(from, dest.address)) {
                 return Ok(());
             }
         }
-        let s = Session::new(log, from, dest, sender).await?;
+        let s = Session::new(log, from, dest.clone(), sender).await?;
         {
             let mut map = sessions.write().await;
             map.insert(s.key(), Mutex::new(s));
@@ -565,12 +565,17 @@ mod tests {
         let from: SocketAddr = "127.0.0.1:27890".parse().unwrap();
         let dest: SocketAddr = "127.0.0.1:27891".parse().unwrap();
         let (sender, mut recv) = mpsc::channel::<Packet>(1);
+        let endpoint = EndPoint {
+            name: "endpoint".to_string(),
+            address: dest,
+            connection_ids: vec![],
+        };
 
         // gate
         {
             assert!(map.read().await.is_empty());
         }
-        Server::ensure_session(&log, map.clone(), from, dest, sender)
+        Server::ensure_session(&log, map.clone(), from, &endpoint, sender)
             .await
             .unwrap();
 
@@ -642,8 +647,13 @@ mod tests {
         let from: SocketAddr = "127.0.0.1:7000".parse().unwrap();
         let to: SocketAddr = "127.0.0.1:7001".parse().unwrap();
         let (send, _recv) = mpsc::channel::<Packet>(1);
+        let endpoint = EndPoint {
+            name: "endpoint".to_string(),
+            address: to,
+            connection_ids: vec![],
+        };
 
-        Server::ensure_session(&log, sessions.clone(), from, to, send)
+        Server::ensure_session(&log, sessions.clone(), from, &endpoint, send)
             .await
             .unwrap();
 
@@ -689,9 +699,14 @@ mod tests {
         let to: SocketAddr = "127.0.0.1:7001".parse().unwrap();
         let (send, _recv) = mpsc::channel::<Packet>(1);
         let key = (from, to);
+        let endpoint = EndPoint {
+            name: "endpoint".to_string(),
+            address: to,
+            connection_ids: vec![],
+        };
 
         server.run_prune_sessions(&sessions);
-        Server::ensure_session(&log, sessions.clone(), from, to, send)
+        Server::ensure_session(&log, sessions.clone(), from, &endpoint, send)
             .await
             .unwrap();
 
