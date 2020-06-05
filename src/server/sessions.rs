@@ -29,21 +29,17 @@ use tokio::select;
 use tokio::sync::{mpsc, watch, RwLock};
 use tokio::time::{Duration, Instant};
 
+use crate::config::EndPoint;
+
 /// SESSION_TIMEOUT_SECONDS is the default session timeout - which is one minute.
 pub const SESSION_TIMEOUT_SECONDS: u64 = 60;
-
-/// Packet represents a packet that needs to go somewhere
-pub struct Packet {
-    dest: SocketAddr,
-    contents: Vec<u8>,
-}
 
 /// Session encapsulates a UDP stream session
 pub struct Session {
     log: Logger,
     send: SendHalf,
     /// dest is where to send data to
-    dest: SocketAddr,
+    dest: EndPoint,
     /// from is the original sender
     from: SocketAddr,
     /// session expiration timestamp
@@ -52,6 +48,12 @@ pub struct Session {
     closer: watch::Sender<bool>,
     /// closed is if this Session has closed, and isn't receiving packets anymore
     is_closed: Arc<AtomicBool>,
+}
+
+/// Packet represents a packet that needs to go somewhere
+pub struct Packet {
+    dest: SocketAddr,
+    contents: Vec<u8>,
 }
 
 impl Packet {
@@ -74,14 +76,14 @@ impl Session {
     pub async fn new(
         base: &Logger,
         from: SocketAddr,
-        dest: SocketAddr,
+        dest: EndPoint,
         sender: mpsc::Sender<Packet>,
     ) -> Result<Self> {
         let addr = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 0);
         let (recv, send) = UdpSocket::bind(addr).await?.split();
         let (closer, closed) = watch::channel::<bool>(false);
         let mut s = Session {
-            log: base.new(o!("source" => "server::Session", "from" => from, "dest" => dest)),
+            log: base.new(o!("source" => "server::Session", "from" => from, "dest_name" => dest.name.clone(), "dest_address" => dest.address.clone())),
             send,
             from,
             dest,
@@ -150,7 +152,7 @@ impl Session {
 
     /// key returns the key to be used for this session in a SessionMap
     pub fn key(&self) -> (SocketAddr, SocketAddr) {
-        (self.from, self.dest)
+        (self.from, self.dest.address)
     }
 
     /// process_recv_packet processes a packet that is received by this session.
@@ -183,8 +185,8 @@ impl Session {
 
     /// Sends a packet to the Session's dest.
     pub async fn send_to(&mut self, buf: &[u8]) -> Result<usize> {
-        debug!(self.log, "Sending packet"; "dest" => self.dest, "contents" => from_utf8(buf).unwrap());
-        return self.send.send_to(buf, &self.dest).await;
+        debug!(self.log, "Sending packet"; "dest_name" => &self.dest.name, "dest_address" => &self.dest.address, "contents" => from_utf8(buf).unwrap());
+        return self.send.send_to(buf, &self.dest.address).await;
     }
 
     /// is_closed returns if the Session is closed or not.
@@ -195,7 +197,7 @@ impl Session {
 
     /// close closes this Session.
     pub fn close(&self) -> result::Result<(), watch::error::SendError<bool>> {
-        debug!(self.log, "Session closed"; "from" => %self.from, "dest" => %self.dest);
+        debug!(self.log, "Session closed"; "from" => self.from, "dest_name" => &self.dest.name, "dest_address" => &self.dest.address);
         self.closer.broadcast(true)
     }
 }
@@ -217,9 +219,14 @@ mod tests {
         let log = logger();
         let mut socket = ephemeral_socket().await;
         let local_addr = socket.local_addr().unwrap();
+        let endpoint = EndPoint {
+            name: "endpoint".to_string(),
+            address: local_addr,
+            connection_ids: vec![],
+        };
         let (send_packet, mut recv_packet) = mpsc::channel::<Packet>(5);
 
-        let mut sess = Session::new(&log, local_addr, local_addr, send_packet)
+        let mut sess = Session::new(&log, local_addr, endpoint, send_packet)
             .await
             .unwrap();
 
@@ -267,8 +274,13 @@ mod tests {
         let msg = "hello";
         let (sender, _) = mpsc::channel::<Packet>(1);
         let (local_addr, wait) = recv_udp().await;
+        let endpoint = EndPoint {
+            name: "endpoint".to_string(),
+            address: local_addr,
+            connection_ids: vec![],
+        };
 
-        let mut session = Session::new(&log, local_addr, local_addr, sender)
+        let mut session = Session::new(&log, local_addr, endpoint.clone(), sender)
             .await
             .unwrap();
         session.send_to(msg.as_bytes()).await.unwrap();
@@ -281,9 +293,14 @@ mod tests {
         let socket = ephemeral_socket().await;
         let local_addr = socket.local_addr().unwrap();
         let (send_packet, _) = mpsc::channel::<Packet>(5);
+        let endpoint = EndPoint {
+            name: "endpoint".to_string(),
+            address: local_addr,
+            connection_ids: vec![],
+        };
 
         info!(log, ">> creating sessions");
-        let sess = Session::new(&log, local_addr, local_addr, send_packet)
+        let sess = Session::new(&log, local_addr, endpoint, send_packet)
             .await
             .unwrap();
         info!(log, ">> session created and running");
