@@ -188,17 +188,20 @@ impl Session {
     }
 
     /// Sends a packet to the Session's dest.
-    pub async fn send_to(&mut self, buf: &[u8]) -> Result<usize> {
+    pub async fn send_to(&mut self, buf: &[u8]) -> Result<Option<usize>> {
         debug!(self.log, "Sending packet"; "dest_name" => &self.dest.name, "dest_address" => &self.dest.address, "contents" => from_utf8(buf).unwrap());
 
         if let Some(data) = self
             .chain
             .endpoint_send_filter(&self.dest, self.from, buf.to_vec())
         {
-            return self.send.send_to(data.as_slice(), &self.dest.address).await;
+            return match self.send.send_to(data.as_slice(), &self.dest.address).await {
+                Ok(size) => Ok(Some(size)),
+                Err(err) => Err(err),
+            };
         }
 
-        Ok(0)
+        Ok(None)
     }
 
     /// is_closed returns if the Session is closed or not.
@@ -312,7 +315,7 @@ mod tests {
         session.send_to(msg.as_bytes()).await.unwrap();
         assert_eq!(msg, wait.await.unwrap());
 
-        // with a filters
+        // with a filter
         let (sender, _) = mpsc::channel::<Packet>(1);
         let (local_addr, wait) = recv_udp().await;
         let endpoint = EndPoint {
