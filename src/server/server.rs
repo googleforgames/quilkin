@@ -159,6 +159,7 @@ impl Server {
                 for endpoint in endpoints.iter() {
                     if let Err(err) = Server::ensure_session(
                         &log,
+                        chain.clone(),
                         sessions.clone(),
                         recv_addr,
                         &endpoint,
@@ -249,6 +250,7 @@ impl Server {
     /// ensure_session makes sure there is a value session for the name in the sessions map
     async fn ensure_session(
         log: &Logger,
+        chain: Arc<FilterChain>,
         sessions: SessionMap,
         from: SocketAddr,
         dest: &EndPoint,
@@ -260,7 +262,7 @@ impl Server {
                 return Ok(());
             }
         }
-        let s = Session::new(log, from, dest.clone(), sender).await?;
+        let s = Session::new(log, chain, from, dest.clone(), sender).await?;
         {
             let mut map = sessions.write().await;
             map.insert(s.key(), Mutex::new(s));
@@ -523,7 +525,11 @@ mod tests {
         .await;
 
         assert_eq!(
-            format!("hello:lrf:127.0.0.1:{}", result.addr.port()),
+            format!(
+                "hello:lrf:127.0.0.1:{}:esf:address-0:127.0.0.1:{}",
+                result.addr.port(),
+                result.addr.port()
+            ),
             result.msg
         );
     }
@@ -575,9 +581,16 @@ mod tests {
         {
             assert!(map.read().await.is_empty());
         }
-        Server::ensure_session(&log, map.clone(), from, &endpoint, sender)
-            .await
-            .unwrap();
+        Server::ensure_session(
+            &log,
+            Arc::new(FilterChain::new(vec![])),
+            map.clone(),
+            from,
+            &endpoint,
+            sender,
+        )
+        .await
+        .unwrap();
 
         let rmap = map.read().await;
         let key = (from, dest);
@@ -653,9 +666,16 @@ mod tests {
             connection_ids: vec![],
         };
 
-        Server::ensure_session(&log, sessions.clone(), from, &endpoint, send)
-            .await
-            .unwrap();
+        Server::ensure_session(
+            &log,
+            Arc::new(FilterChain::new(vec![])),
+            sessions.clone(),
+            from,
+            &endpoint,
+            send,
+        )
+        .await
+        .unwrap();
 
         let key = (from, to);
         // gate, to ensure valid state
@@ -706,9 +726,16 @@ mod tests {
         };
 
         server.run_prune_sessions(&sessions);
-        Server::ensure_session(&log, sessions.clone(), from, &endpoint, send)
-            .await
-            .unwrap();
+        Server::ensure_session(
+            &log,
+            Arc::new(FilterChain::new(vec![])),
+            sessions.clone(),
+            from,
+            &endpoint,
+            send,
+        )
+        .await
+        .unwrap();
 
         // session map should be the same since, we haven't passed expiry
         time::advance(Duration::new(SESSION_TIMEOUT_SECONDS / 2, 0)).await;
