@@ -309,11 +309,13 @@ mod tests {
     use std::net::{IpAddr, Ipv4Addr, SocketAddr};
     use std::sync::Arc;
 
+    use serde_yaml::Value;
     use slog::info;
     use tokio::sync::{mpsc, oneshot, RwLock};
     use tokio::time;
     use tokio::time::{Duration, Instant};
 
+    use crate::config;
     use crate::config::{Config, ConnectionConfig, EndPoint, Local};
     use crate::extensions::default_filters;
     use crate::server::sessions::{Packet, SESSION_TIMEOUT_SECONDS};
@@ -402,6 +404,61 @@ mod tests {
         recv_udp_done(recv, done);
         send.send_to(msg.as_bytes(), &local_addr).await.unwrap();
         assert_eq!(msg, wait.await.unwrap());
+
+        close.send(()).unwrap();
+    }
+
+    #[tokio::test]
+    async fn run_with_filter() {
+        let log = logger();
+        let mut registry = FilterRegistry::new();
+        registry.insert("TestFilter".to_string(), TestFilter {});
+
+        let server = Server::new(log.clone(), registry);
+        let socket = ephemeral_socket().await;
+        let endpoint_addr = socket.local_addr().unwrap();
+        let (recv, mut send) = socket.split();
+        let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12367);
+        let (done, wait) = oneshot::channel::<String>();
+        let config = Arc::new(Config {
+            local: Local {
+                port: local_addr.port(),
+            },
+            filters: vec![config::Filter {
+                name: "TestFilter".to_string(),
+                config: Value::Null,
+            }],
+            connections: ConnectionConfig::Client {
+                addresses: vec![endpoint_addr],
+                connection_id: String::from(""),
+                lb_policy: None,
+            },
+        });
+
+        let (close, stop) = oneshot::channel::<()>();
+        tokio::spawn(async move {
+            server.run(config, stop).await.unwrap();
+        });
+
+        let msg = "hello";
+        recv_udp_done(recv, done);
+        send.send_to(msg.as_bytes(), &local_addr).await.unwrap();
+
+        // since we don't know what the session ephemeral port is, we'll just
+        // search for the filter strings.
+        let result = wait.await.unwrap();
+        assert!(
+            result.contains(msg),
+            format!("'{}' not found in '{}'", msg, result)
+        );
+        assert!(
+            result.contains(":lrf:"),
+            format!(":lrf: not found in '{}'", result)
+        );
+        assert!(
+            result.contains(":esf:"),
+            format!(":esf: not found in '{}'", result)
+        );
 
         close.send(()).unwrap();
     }
