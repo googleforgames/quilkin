@@ -115,6 +115,8 @@ impl Session {
         let expiration_mtx = self.expiration.clone();
         let mut closed = Box::new(closed);
         let is_closed = self.is_closed.clone();
+        let chain = self.chain.clone();
+        let endpoint = self.dest.clone();
         tokio::spawn(async move {
             let mut buf: Vec<u8> = vec![0; 65535];
             loop {
@@ -125,7 +127,9 @@ impl Session {
                             Err(err) => error!(log, "Error receiving packet"; "error" => %err),
                             Ok((size, recv_addr)) => Session::process_recv_packet(
                                 &log,
+                                chain.clone(),
                                 &buf[..size],
+                                &endpoint,
                                 recv_addr,
                                 from,
                                 sender.clone(),
@@ -162,16 +166,21 @@ impl Session {
     /// process_recv_packet processes a packet that is received by this session.
     async fn process_recv_packet(
         log: &Logger,
+        chain: Arc<FilterChain>,
         packet: &[u8],
-        from: SocketAddr,
+        from: &EndPoint,
+        recv_addr: SocketAddr,
         dest: SocketAddr,
         mut sender: mpsc::Sender<Packet>,
         expiration: Arc<RwLock<Instant>>,
     ) {
-        debug!(log, "Received packet"; "from" => %from, "contents" => from_utf8(packet).unwrap());
+        debug!(log, "Received packet"; "recv_address" => recv_addr, "from_name" => &from.name, "from_addr" => &from.address, "contents" => from_utf8(packet).unwrap());
         Session::inc_expiration(expiration).await;
-        if let Err(err) = sender.send(Packet::new(dest, packet.to_vec())).await {
-            error!(log, "Error sending packet to channel"; "error" => %err);
+
+        if let Some(data) = chain.endpoint_receive_filter(from, recv_addr, packet.to_vec()) {
+            if let Err(err) = sender.send(Packet::new(dest, data)).await {
+                error!(log, "Error sending packet to channel"; "error" => %err);
+            }
         }
     }
 
@@ -379,5 +388,67 @@ mod tests {
         }
 
         assert!(sess.is_closed(), "session should be closed");
+    }
+
+    #[tokio::test]
+    async fn process_recv_packet() {
+        let log = logger();
+        let chain = Arc::new(FilterChain::new(vec![]));
+        let endpoint = EndPoint {
+            name: "endpoint".to_string(),
+            address: "127.0.1.1:80".parse().unwrap(),
+            connection_ids: vec![],
+        };
+        let dest = "127.0.0.1:88".parse().unwrap();
+        let (sender, mut receiver) = mpsc::channel::<Packet>(10);
+        let expiration = Arc::new(RwLock::new(Instant::now()));
+        let mut initial_expiration: Instant;
+        {
+            initial_expiration = expiration.read().await.clone();
+        }
+
+        // first test with no filtering
+        let msg = "hello";
+        Session::process_recv_packet(
+            &log,
+            chain,
+            msg.as_bytes(),
+            &endpoint,
+            endpoint.address,
+            dest,
+            sender.clone(),
+            expiration.clone(),
+        )
+        .await;
+
+        assert!(initial_expiration < *expiration.read().await);
+        let p = receiver.try_recv().unwrap();
+        assert_eq!(msg, from_utf8(p.contents.as_slice()).unwrap());
+        assert_eq!(dest, p.dest);
+
+        {
+            initial_expiration = expiration.read().await.clone();
+        }
+        // add filter
+        let chain = Arc::new(FilterChain::new(vec![Arc::new(TestFilter {})]));
+        Session::process_recv_packet(
+            &log,
+            chain,
+            msg.as_bytes(),
+            &endpoint,
+            endpoint.address,
+            dest,
+            sender.clone(),
+            expiration.clone(),
+        )
+        .await;
+
+        assert!(initial_expiration < *expiration.read().await);
+        let p = receiver.try_recv().unwrap();
+        assert_eq!(
+            format!("{}:erf:endpoint:127.0.1.1:80", msg),
+            from_utf8(p.contents.as_slice()).unwrap()
+        );
+        assert_eq!(dest, p.dest);
     }
 }
