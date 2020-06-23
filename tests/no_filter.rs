@@ -19,17 +19,13 @@ extern crate quilkin;
 #[cfg(test)]
 mod tests {
     use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-    use std::str::from_utf8;
-    use std::sync::Arc;
 
     use tokio::select;
-    use tokio::sync::{mpsc, oneshot};
     use tokio::time::{delay_for, Duration};
 
     use quilkin::config::{Config, ConnectionConfig, EndPoint, Local};
     use quilkin::extensions::default_filters;
-    use quilkin::server::Server;
-    use quilkin::test_utils::{ephemeral_socket, logger, recv_udp_done};
+    use quilkin::test_utils::{echo_server, logger, recv_multiple_packets, run_proxy};
 
     #[tokio::test]
     async fn echo() {
@@ -60,15 +56,7 @@ mod tests {
             },
         };
 
-        let (close_server, stop_server) = oneshot::channel::<()>();
-        let server = Server::new(base_logger.clone(), default_filters(&base_logger));
-        // run the server
-        tokio::spawn(async move {
-            server
-                .run(Arc::new(server_config), stop_server)
-                .await
-                .unwrap();
-        });
+        let close_server = run_proxy(&base_logger, default_filters(&base_logger), server_config);
 
         // create a local client
         let client_port = 12344;
@@ -84,28 +72,11 @@ mod tests {
                 lb_policy: None,
             },
         };
-        let client = Server::new(base_logger.clone(), default_filters(&base_logger));
-        let (close_client, stop_client) = oneshot::channel::<()>();
-        // run the client
-        tokio::spawn(async move {
-            client
-                .run(Arc::new(client_config), stop_client)
-                .await
-                .unwrap();
-        });
+
+        let close_client = run_proxy(&base_logger, default_filters(&base_logger), client_config);
 
         // let's send the packet
-        let (mut send_chan, mut recv_chan) = mpsc::channel::<String>(10);
-        let (mut recv, mut send) = ephemeral_socket().await.split();
-        // a channel, so we can wait for packets coming back.
-        tokio::spawn(async move {
-            let mut buf = vec![0; 1024];
-            loop {
-                let (size, _) = recv.recv_from(&mut buf).await.unwrap();
-                let str = from_utf8(&buf[..size]).unwrap().to_string();
-                send_chan.send(str).await.unwrap();
-            }
-        });
+        let (mut recv_chan, mut send) = recv_multiple_packets().await;
 
         // game_client
         let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), client_port);
@@ -121,30 +92,7 @@ mod tests {
             }
             _ = delay_for(Duration::from_secs(2)) => {}
         };
-        close_server.send(()).unwrap();
-        close_client.send(()).unwrap();
-    }
-
-    #[tokio::test]
-    // gate to make sure our test functions do what we expect.
-    async fn test_echo_server() {
-        let echo_addr = echo_server().await;
-        let (recv, mut send) = ephemeral_socket().await.split();
-        let (done, wait) = oneshot::channel::<String>();
-        let msg = "hello";
-        recv_udp_done(recv, done);
-        send.send_to(msg.as_bytes(), &echo_addr).await.unwrap();
-        assert_eq!(msg, wait.await.unwrap());
-    }
-
-    async fn echo_server() -> SocketAddr {
-        let mut socket = ephemeral_socket().await;
-        let addr = socket.local_addr().unwrap();
-        tokio::spawn(async move {
-            let mut buf = vec![0; 1024];
-            let (size, sender) = socket.recv_from(&mut buf).await.unwrap();
-            socket.send_to(&buf[..size], sender).await.unwrap();
-        });
-        addr
+        close_server();
+        close_client();
     }
 }

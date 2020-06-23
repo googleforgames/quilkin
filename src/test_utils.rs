@@ -17,15 +17,17 @@
 /// Common utilities for testing
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::str::from_utf8;
+use std::sync::Arc;
 
 use slog::{o, Drain, Logger};
 use slog_term::{FullFormat, PlainSyncDecorator};
-use tokio::net::udp::RecvHalf;
+use tokio::net::udp::{RecvHalf, SendHalf};
 use tokio::net::UdpSocket;
-use tokio::sync::oneshot;
+use tokio::sync::{mpsc, oneshot};
 
-use crate::config::EndPoint;
-use crate::extensions::Filter;
+use crate::config::{Config, EndPoint};
+use crate::extensions::{Filter, FilterRegistry};
+use crate::server::Server;
 
 // noop_endpoint returns an endpoint for data that should go nowhere.
 pub fn noop_endpoint() -> EndPoint {
@@ -119,4 +121,62 @@ pub fn recv_udp_done(mut recv: RecvHalf, done: oneshot::Sender<String>) {
         done.send(from_utf8(&buf[..size]).unwrap().to_string())
             .unwrap();
     });
+}
+
+// recv_multiple_packets enables you to send multiple packets through SendHalf
+// and will return any received packets back to the Receiver.
+pub async fn recv_multiple_packets() -> (mpsc::Receiver<String>, SendHalf) {
+    let (mut send_chan, recv_chan) = mpsc::channel::<String>(10);
+    let (mut recv, send) = ephemeral_socket().await.split();
+    // a channel, so we can wait for packets coming back.
+    tokio::spawn(async move {
+        let mut buf = vec![0; 1024];
+        loop {
+            let (size, _) = recv.recv_from(&mut buf).await.unwrap();
+            let str = from_utf8(&buf[..size]).unwrap().to_string();
+            send_chan.send(str).await.unwrap();
+        }
+    });
+    (recv_chan, send)
+}
+
+// echo_server runs a udp echo server, and returns the ephemeral addr
+// that it is running on.
+pub async fn echo_server() -> SocketAddr {
+    let mut socket = ephemeral_socket().await;
+    let addr = socket.local_addr().unwrap();
+    tokio::spawn(async move {
+        let mut buf = vec![0; 1024];
+        let (size, sender) = socket.recv_from(&mut buf).await.unwrap();
+        socket.send_to(&buf[..size], sender).await.unwrap();
+    });
+    addr
+}
+
+// run_proxy creates a instance of the Server proxy and runs it, returning a cancel function
+pub fn run_proxy(logger: &Logger, registry: FilterRegistry, config: Config) -> Box<dyn FnOnce()> {
+    let (close, stop) = oneshot::channel::<()>();
+    let proxy = Server::new(logger.clone(), registry);
+    // run the proxy
+    tokio::spawn(async move {
+        proxy.run(Arc::new(config), stop).await.unwrap();
+    });
+
+    Box::new(|| close.send(()).unwrap())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_echo_server() {
+        let echo_addr = echo_server().await;
+        let (recv, mut send) = ephemeral_socket().await.split();
+        let (done, wait) = oneshot::channel::<String>();
+        let msg = "hello";
+        recv_udp_done(recv, done);
+        send.send_to(msg.as_bytes(), &echo_addr).await.unwrap();
+        assert_eq!(msg, wait.await.unwrap());
+    }
 }
