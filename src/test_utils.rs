@@ -19,7 +19,7 @@ use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::str::from_utf8;
 use std::sync::Arc;
 
-use slog::{o, Drain, Logger};
+use slog::{o, warn, Drain, Logger};
 use slog_term::{FullFormat, PlainSyncDecorator};
 use tokio::net::udp::{RecvHalf, SendHalf};
 use tokio::net::UdpSocket;
@@ -125,16 +125,23 @@ pub fn recv_udp_done(mut recv: RecvHalf, done: oneshot::Sender<String>) {
 
 // recv_multiple_packets enables you to send multiple packets through SendHalf
 // and will return any received packets back to the Receiver.
-pub async fn recv_multiple_packets() -> (mpsc::Receiver<String>, SendHalf) {
+pub async fn recv_multiple_packets(logger: &Logger) -> (mpsc::Receiver<String>, SendHalf) {
     let (mut send_chan, recv_chan) = mpsc::channel::<String>(10);
     let (mut recv, send) = ephemeral_socket().await.split();
     // a channel, so we can wait for packets coming back.
+    let logger = logger.clone();
     tokio::spawn(async move {
         let mut buf = vec![0; 1024];
         loop {
             let (size, _) = recv.recv_from(&mut buf).await.unwrap();
             let str = from_utf8(&buf[..size]).unwrap().to_string();
-            send_chan.send(str).await.unwrap();
+            match send_chan.send(str).await {
+                Ok(_) => {}
+                Err(err) => {
+                    warn!(logger, "recv_multiple_packets: recv_chan dropped"; "error" => %err);
+                    break;
+                }
+            };
         }
     });
     (recv_chan, send)

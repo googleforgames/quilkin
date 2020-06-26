@@ -76,7 +76,7 @@ mod tests {
         let close_client = run_proxy(&base_logger, default_filters(&base_logger), client_config);
 
         // let's send the packet
-        let (mut recv_chan, mut send) = recv_multiple_packets().await;
+        let (mut recv_chan, mut send) = recv_multiple_packets(&base_logger).await;
 
         // game_client
         let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), client_port);
