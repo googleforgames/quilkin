@@ -20,9 +20,10 @@ use std::sync::Arc;
 use clap::App;
 use slog::{info, o, Drain, Logger};
 
+use prometheus::Registry;
 use quilkin::config::from_reader;
 use quilkin::extensions::default_filters;
-use quilkin::server::Server;
+use quilkin::server::{Metrics, Server};
 use tokio::signal;
 use tokio::sync::oneshot;
 
@@ -50,7 +51,11 @@ async fn main() {
     info!(log, "Starting Quilkin"; "version" => VERSION);
 
     let config = Arc::new(from_reader(File::open(filename).unwrap()).unwrap());
-    let server = Server::new(base_logger, filter_registry);
+    let server = Server::new(
+        base_logger,
+        filter_registry,
+        Metrics::new(Some("0.0.0.0:9091".parse().unwrap()), Registry::default()),
+    );
 
     let (close, stop) = oneshot::channel::<()>();
     tokio::spawn(async move {

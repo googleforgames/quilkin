@@ -14,9 +14,5 @@
  * limitations under the License.
  */
 
-pub mod config;
-pub mod extensions;
-mod load_balancer_policy;
-pub mod metrics;
-pub mod server;
-pub mod test_utils;
+pub(crate) mod metrics;
+pub(crate) mod session;
