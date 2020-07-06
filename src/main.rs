@@ -54,7 +54,7 @@ async fn main() {
     let server = Server::new(
         base_logger,
         filter_registry,
-        Metrics::new(Some("0.0.0.0:9091".parse().unwrap()), Registry::default()),
+        Metrics::new(Some("[::]:9091".parse().unwrap()), Registry::default()),
     );
 
     let (close, stop) = oneshot::channel::<()>();
