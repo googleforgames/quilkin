@@ -1,4 +1,4 @@
-use crate::server::session::metrics::Metrics as SessionMetrics;
+use crate::server::sessions::metrics::Metrics as SessionMetrics;
 use prometheus::{Encoder, Registry, Result as MetricsResult, TextEncoder};
 use slog::{info, warn, Logger};
 use std::net::SocketAddr;

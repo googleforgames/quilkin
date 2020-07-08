@@ -20,7 +20,6 @@ use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::str::from_utf8;
 use std::sync::Arc;
 
-use anyhow::Error;
 use slog::{debug, error, info, o, warn, Logger};
 use tokio::io::Result;
 use tokio::net::udp::{RecvHalf, SendHalf};
@@ -33,7 +32,7 @@ use super::metrics::{start_metrics_server, Metrics};
 use crate::config::{Config, ConnectionConfig, EndPoint};
 use crate::extensions::{Filter, FilterChain, FilterRegistry};
 use crate::load_balancer_policy::LoadBalancerPolicy;
-use crate::server::session::session::{Packet, Session, SESSION_TIMEOUT_SECONDS};
+use crate::server::sessions::{Packet, Session, SESSION_TIMEOUT_SECONDS};
 
 type SessionMap = Arc<RwLock<HashMap<(SocketAddr, SocketAddr), Mutex<Session>>>>;
 
@@ -282,7 +281,7 @@ impl Server {
         from: SocketAddr,
         dest: &EndPoint,
         sender: mpsc::Sender<Packet>,
-    ) -> std::result::Result<(), Error> {
+    ) -> std::result::Result<(), Box<dyn std::error::Error>> {
         {
             let map = sessions.read().await;
             if map.contains_key(&(from, dest.address)) {
@@ -353,7 +352,7 @@ mod tests {
     use crate::config;
     use crate::config::{Config, ConnectionConfig, EndPoint, Local};
     use crate::extensions::default_filters;
-    use crate::server::session::session::{Packet, SESSION_TIMEOUT_SECONDS};
+    use crate::server::sessions::{Packet, SESSION_TIMEOUT_SECONDS};
     use crate::test_utils::{ephemeral_socket, logger, recv_udp, recv_udp_done, TestFilter};
 
     use super::*;

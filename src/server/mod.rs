@@ -19,4 +19,4 @@ pub use server::Server;
 
 mod metrics;
 mod server;
-mod session;
+mod sessions;

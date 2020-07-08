@@ -21,7 +21,6 @@ authors = ["Mark Mandel <markmandel@google.com>"]
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.31"
 clap = "2.33.0"
 prometheus = { version = "0.9", default-features = false }
 serde = { version = "1.0.104", features = ["derive"] }

@@ -14,5 +14,7 @@
  * limitations under the License.
  */
 
+pub use session::{Packet, Session, SESSION_TIMEOUT_SECONDS};
+
 pub(crate) mod metrics;
-pub(crate) mod session;
+mod session;
