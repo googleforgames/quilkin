@@ -20,7 +20,7 @@ use std::sync::Arc;
 use clap::App;
 use slog::{info, o, Drain, Logger};
 
-use quilkin::config::from_reader;
+use quilkin::config::Config;
 use quilkin::extensions::default_filters;
 use quilkin::server::Server;
 use tokio::signal;
@@ -49,7 +49,8 @@ async fn main() {
     let filename = matches.value_of("filename").unwrap();
     info!(log, "Starting Quilkin"; "version" => VERSION);
 
-    let config = Arc::new(from_reader(File::open(filename).unwrap()).unwrap());
+    let config = Arc::new(Config::from_reader(File::open(filename).unwrap()).unwrap());
+    config.validate().unwrap();
     let server = Server::new(base_logger, filter_registry);
 
     let (close, stop) = oneshot::channel::<()>();

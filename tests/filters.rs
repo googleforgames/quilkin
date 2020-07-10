@@ -49,6 +49,7 @@ mod tests {
                 }],
             },
         };
+        assert_eq!(Ok(()), server_config.validate());
 
         let mut registry = default_filters(&base_logger);
         registry.insert("TestFilter".to_string(), TestFilter {});
@@ -71,6 +72,8 @@ mod tests {
                 lb_policy: None,
             },
         };
+        assert_eq!(Ok(()), client_config.validate());
+
         let mut registry = default_filters(&base_logger);
         registry.insert("TestFilter".to_string(), TestFilter {});
         let close_client = run_proxy(&base_logger, registry, client_config);
