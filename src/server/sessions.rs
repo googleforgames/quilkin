@@ -159,8 +159,8 @@ impl Session {
     }
 
     /// key returns the key to be used for this session in a SessionMap
-    pub fn key(&self) -> (SocketAddr, SocketAddr) {
-        (self.from, self.dest.address)
+    pub fn key(&self) -> (SocketAddr, String) {
+        (self.from, self.dest.name.clone())
     }
 
     /// process_recv_packet processes a packet that is received by this session.

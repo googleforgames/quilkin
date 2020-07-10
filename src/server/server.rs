@@ -33,7 +33,7 @@ use crate::extensions::{Filter, FilterChain, FilterRegistry};
 use crate::load_balancer_policy::LoadBalancerPolicy;
 use crate::server::sessions::{Packet, Session, SESSION_TIMEOUT_SECONDS};
 
-type SessionMap = Arc<RwLock<HashMap<(SocketAddr, SocketAddr), Mutex<Session>>>>;
+type SessionMap = Arc<RwLock<HashMap<(SocketAddr, String), Mutex<Session>>>>;
 
 /// Server is the UDP server main implementation
 pub struct Server {
@@ -172,7 +172,7 @@ impl Server {
                     }
 
                     let map = sessions.read().await;
-                    let key = (recv_addr, endpoint.address);
+                    let key = (recv_addr, endpoint.name.clone());
                     match map.get(&key) {
                         Some(mtx) => {
                             let mut session = mtx.lock().await;
@@ -258,7 +258,7 @@ impl Server {
     ) -> Result<()> {
         {
             let map = sessions.read().await;
-            if map.contains_key(&(from, dest.address)) {
+            if map.contains_key(&(from, dest.name.clone())) {
                 return Ok(());
             }
         }
@@ -274,7 +274,7 @@ impl Server {
     /// Should be run on a time interval.
     /// This will lock the SessionMap if it finds expired sessions
     async fn prune_sessions(log: &Logger, sessions: SessionMap) {
-        let mut remove_keys = Vec::<(SocketAddr, SocketAddr)>::new();
+        let mut remove_keys = Vec::<(SocketAddr, String)>::new();
         {
             let now = Instant::now();
             let map = sessions.read().await;
@@ -540,7 +540,7 @@ mod tests {
             // need to switch to 127.0.0.1, as the request comes locally
             let mut receive_addr_local = receive_addr.clone();
             receive_addr_local.set_ip("127.0.0.1".parse().unwrap());
-            let build_key = (receive_addr_local, local_addr);
+            let build_key = (receive_addr_local, "address-0".to_string());
             assert!(map.contains_key(&build_key));
             let session = map.get(&build_key).unwrap().lock().await;
             assert_eq!(
@@ -650,7 +650,7 @@ mod tests {
         .unwrap();
 
         let rmap = map.read().await;
-        let key = (from, dest);
+        let key = (from, endpoint.name);
         assert!(rmap.contains_key(&key));
 
         let sess = rmap.get(&key).unwrap().lock().await;
@@ -734,7 +734,7 @@ mod tests {
         .await
         .unwrap();
 
-        let key = (from, to);
+        let key = (from, endpoint.name);
         // gate, to ensure valid state
         {
             let map = sessions.read().await;
@@ -775,12 +775,12 @@ mod tests {
         let from: SocketAddr = "127.0.0.1:7000".parse().unwrap();
         let to: SocketAddr = "127.0.0.1:7001".parse().unwrap();
         let (send, _recv) = mpsc::channel::<Packet>(1);
-        let key = (from, to);
         let endpoint = EndPoint {
             name: "endpoint".to_string(),
             address: to,
             connection_ids: vec![],
         };
+        let key = (from, endpoint.name.clone());
 
         server.run_prune_sessions(&sessions);
         Server::ensure_session(
