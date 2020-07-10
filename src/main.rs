@@ -50,6 +50,7 @@ async fn main() {
     info!(log, "Starting Quilkin"; "version" => VERSION);
 
     let config = Arc::new(Config::from_reader(File::open(filename).unwrap()).unwrap());
+    config.validate().unwrap();
     let server = Server::new(base_logger, filter_registry);
 
     let (close, stop) = oneshot::channel::<()>();

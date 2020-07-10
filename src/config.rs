@@ -14,44 +14,16 @@
  * limitations under the License.
  */
 
-use std::collections::HashMap;
+use std::collections::HashSet;
 use std::fmt;
+use std::io;
 use std::net::SocketAddr;
-use std::{convert, io};
 
 use serde::export::Formatter;
 use serde::{Deserialize, Serialize};
 
-/// Error type for Configuration
-#[derive(Debug)]
-pub enum Error {
-    Validation(ValidationError),
-    Deserialise(serde_yaml::Error),
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            Error::Validation(err) => write!(f, "validation error: {}", err),
-            Error::Deserialise(err) => write!(f, "deserialisation error: {}", err),
-        }
-    }
-}
-
-impl convert::From<serde_yaml::Error> for Error {
-    fn from(err: serde_yaml::Error) -> Self {
-        Error::Deserialise(err)
-    }
-}
-
-impl convert::From<ValidationError> for Error {
-    fn from(err: ValidationError) -> Self {
-        Error::Validation(err)
-    }
-}
-
 /// Validation failure for a Config
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ValidationError {
     NotUnique(String),
 }
@@ -128,21 +100,20 @@ pub struct EndPoint {
 
 impl Config {
     /// from_reader returns a config from a given Reader
-    pub fn from_reader<R: io::Read>(input: R) -> Result<Config, Error> {
-        let config: Config = serde_yaml::from_reader(input)?;
-        config.validate()?;
-        return Ok(config);
+    pub fn from_reader<R: io::Read>(input: R) -> Result<Config, serde_yaml::Error> {
+        serde_yaml::from_reader(input)
     }
 
     /// validates the current Config.
     pub fn validate(&self) -> Result<(), ValidationError> {
         if let ConnectionConfig::Server { endpoints } = &self.connections {
-            let set = endpoints.iter().fold(HashMap::new(), |mut map, item| {
-                map.insert(item.name.clone(), true);
-                map
-            });
-
-            if set.len() != endpoints.len() {
+            if endpoints
+                .iter()
+                .map(|ep| ep.name.clone())
+                .collect::<HashSet<_>>()
+                .len()
+                != endpoints.len()
+            {
                 return Err(ValidationError::NotUnique("endpoint.name".to_string()));
             }
         }
