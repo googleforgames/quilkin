@@ -22,7 +22,7 @@ use slog::{info, o, Drain, Logger};
 
 use prometheus::Registry;
 use quilkin::config::Config;
-use quilkin::extensions::default_filters;
+use quilkin::extensions::default_registry;
 use quilkin::server::{Metrics, Server};
 use tokio::signal;
 use tokio::sync::oneshot;
@@ -33,7 +33,7 @@ const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 async fn main() {
     let base_logger = logger();
     let log = base_logger.new(o!("source" => "main"));
-    let filter_registry = default_filters(&log);
+    let filter_registry = default_registry(&log);
 
     let matches = App::new("Quilkin Proxy")
         .version("0.1.0")

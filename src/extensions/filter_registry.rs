@@ -15,9 +15,9 @@
  */
 
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use crate::config::EndPoint;
+use slog::Logger;
 use std::net::SocketAddr;
 
 /// Filter is a trait for routing and manipulating packets.
@@ -62,26 +62,32 @@ pub trait Filter: Send + Sync {
     ) -> Option<Vec<u8>>;
 }
 
+pub type BoxFilter = Box<dyn Filter>;
+/// Function that returns a filter
+type FnFilter = Box<dyn Fn(&Logger, &serde_yaml::Value) -> BoxFilter + Send>;
+
 /// FilterRegistry is the registry of all Filters that can be applied in the system.
 pub struct FilterRegistry {
-    registry: HashMap<String, Arc<dyn Filter>>,
+    log: Logger,
+    registry: HashMap<String, FnFilter>,
 }
 
 impl FilterRegistry {
-    pub fn new() -> FilterRegistry {
+    pub fn new(base: &Logger) -> FilterRegistry {
         FilterRegistry {
+            log: base.clone(),
             registry: Default::default(),
         }
     }
 
-    /// insert inserts a Filter into the registry.
-    pub fn insert(&mut self, key: String, filter: impl Filter + 'static) {
-        self.registry.insert(key, Arc::new(filter));
+    /// insert inserts the fucntion that will create a Filter into the registry.
+    pub fn insert(&mut self, key: String, filter: FnFilter) {
+        self.registry.insert(key, filter);
     }
 
-    /// get returns the filter for a given Key. Returns None if not found.
-    pub fn get(&self, key: &String) -> Option<&Arc<dyn Filter>> {
-        self.registry.get(key)
+    /// get returns an instance of a filter for a given Key. Returns None if not found.
+    pub fn get(&self, key: &String, config: &serde_yaml::Value) -> Option<Box<dyn Filter>> {
+        self.registry.get(key).map(|f| f(&self.log, &config))
     }
 }
 
@@ -90,6 +96,7 @@ mod tests {
     use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
     use super::*;
+    use crate::test_utils::logger;
 
     struct TestFilter {}
 
@@ -123,12 +130,17 @@ mod tests {
 
     #[test]
     fn insert_and_get() {
-        let mut reg = FilterRegistry::new();
-        reg.insert(String::from("test.filter"), TestFilter {});
-        assert!(reg.get(&String::from("not.found")).is_none());
-        assert!(reg.get(&String::from("test.filter")).is_some());
+        let logger = logger();
+        let mut reg = FilterRegistry::new(&logger);
+        reg.insert(
+            String::from("test.filter"),
+            Box::new(|_, _| Box::new(TestFilter {})),
+        );
+        let config = serde_yaml::Value::Null;
+        assert!(reg.get(&String::from("not.found"), &config).is_none());
+        assert!(reg.get(&String::from("test.filter"), &config).is_some());
 
-        let filter = reg.get(&String::from("test.filter")).unwrap();
+        let filter = reg.get(&String::from("test.filter"), &config).unwrap();
 
         let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080);
         let endpoint = EndPoint {

@@ -28,11 +28,11 @@ use crate::extensions::{Filter, FilterRegistry};
 /// The filter implementation returns the results of data that has gone through each of the filters in the chain.
 /// If any of the Filters in the chain return a None, then the chain is broken, and nothing is returned.
 pub struct FilterChain {
-    filters: Vec<Arc<dyn Filter>>,
+    filters: Vec<Box<dyn Filter>>,
 }
 
 impl FilterChain {
-    pub fn new(filters: Vec<Arc<dyn Filter>>) -> Self {
+    pub fn new(filters: Vec<Box<dyn Filter>>) -> Self {
         FilterChain { filters }
     }
 
@@ -42,9 +42,9 @@ impl FilterChain {
         config: Arc<Config>,
         filter_registry: &FilterRegistry,
     ) -> Result<FilterChain> {
-        let mut filters = Vec::<Arc<dyn Filter>>::new();
+        let mut filters = Vec::<Box<dyn Filter>>::new();
         for filter_config in &config.filters {
-            match filter_registry.get(&filter_config.name) {
+            match filter_registry.get(&filter_config.name, &filter_config.config) {
                 None => {
                     return Err(Error::new(
                         ErrorKind::InvalidInput,
@@ -52,7 +52,7 @@ impl FilterChain {
                     ));
                 }
                 Some(filter) => {
-                    filters.push(filter.clone());
+                    filters.push(filter);
                 }
             }
         }
@@ -137,7 +137,7 @@ mod tests {
 
     use crate::config;
     use crate::config::{ConnectionConfig, Local};
-    use crate::extensions::default_filters;
+    use crate::extensions::default_registry;
     use crate::extensions::filters::DebugFilter;
     use crate::test_utils::{logger, noop_endpoint, TestFilter};
 
@@ -161,7 +161,7 @@ mod tests {
             },
         });
 
-        let registry = default_filters(&log);
+        let registry = default_registry(&log);
         let chain = FilterChain::from_config(config, &registry).unwrap();
         assert_eq!(1, chain.filters.len());
 
@@ -199,7 +199,7 @@ mod tests {
 
     #[test]
     fn chain_single_test_filter() {
-        let chain = FilterChain::new(vec![Arc::new(TestFilter {})]);
+        let chain = FilterChain::new(vec![Box::new(TestFilter {})]);
 
         let endpoints_fixture = endpoints();
 
@@ -256,7 +256,7 @@ mod tests {
 
     #[test]
     fn chain_double_test_filter() {
-        let chain = FilterChain::new(vec![Arc::new(TestFilter {}), Arc::new(TestFilter {})]);
+        let chain = FilterChain::new(vec![Box::new(TestFilter {}), Box::new(TestFilter {})]);
 
         let endpoints_fixture = endpoints();
 

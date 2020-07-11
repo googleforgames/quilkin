@@ -17,7 +17,7 @@
 use slog::Logger;
 
 pub use filter_chain::FilterChain;
-pub use filter_registry::{Filter, FilterRegistry};
+pub use filter_registry::{BoxFilter, Filter, FilterRegistry};
 
 use crate::extensions::filters::DebugFilter;
 
@@ -26,10 +26,10 @@ pub mod filters;
 
 mod filter_chain;
 
-/// default_filters returns a FilterRegistry with the default
-/// set of filters registered to it
-pub fn default_filters(base: &Logger) -> FilterRegistry {
-    let mut fr = FilterRegistry::new();
-    fr.insert(DebugFilter::name(), DebugFilter::new(base));
+/// default_registry returns a FilterRegistry with the default
+/// set of filters that are user configurable registered to it
+pub fn default_registry(base: &Logger) -> FilterRegistry {
+    let mut fr = FilterRegistry::new(base);
+    fr.insert(DebugFilter::name(), Box::new(DebugFilter::config));
     fr
 }

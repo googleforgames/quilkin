@@ -23,7 +23,7 @@ mod tests {
     use slog::info;
 
     use quilkin::config::{Config, ConnectionConfig, EndPoint, Filter, Local};
-    use quilkin::extensions::default_filters;
+    use quilkin::extensions::default_registry;
     use quilkin::test_utils::{echo_server, logger, recv_multiple_packets, run_proxy, TestFilter};
 
     #[tokio::test]
@@ -51,8 +51,11 @@ mod tests {
         };
         assert_eq!(Ok(()), server_config.validate());
 
-        let mut registry = default_filters(&base_logger);
-        registry.insert("TestFilter".to_string(), TestFilter {});
+        let mut registry = default_registry(&base_logger);
+        registry.insert(
+            "TestFilter".to_string(),
+            Box::new(|_, _| Box::new(TestFilter {})),
+        );
         let close_server = run_proxy(&base_logger, registry, server_config);
 
         // create a local client
@@ -74,8 +77,11 @@ mod tests {
         };
         assert_eq!(Ok(()), client_config.validate());
 
-        let mut registry = default_filters(&base_logger);
-        registry.insert("TestFilter".to_string(), TestFilter {});
+        let mut registry = default_registry(&base_logger);
+        registry.insert(
+            "TestFilter".to_string(),
+            Box::new(|_, _| Box::new(TestFilter {})),
+        );
         let close_client = run_proxy(&base_logger, registry, client_config);
 
         // let's send the packet

@@ -351,7 +351,7 @@ mod tests {
 
     use crate::config;
     use crate::config::{Config, ConnectionConfig, EndPoint, Local};
-    use crate::extensions::default_filters;
+    use crate::extensions::default_registry;
     use crate::server::sessions::{Packet, SESSION_TIMEOUT_SECONDS};
     use crate::test_utils::{ephemeral_socket, logger, recv_udp, recv_udp_done, TestFilter};
 
@@ -360,7 +360,7 @@ mod tests {
     #[tokio::test]
     async fn run_server() {
         let log = logger();
-        let server = Server::new(log.clone(), FilterRegistry::new(), Metrics::default());
+        let server = Server::new(log.clone(), FilterRegistry::new(&log), Metrics::default());
 
         let socket1 = ephemeral_socket().await;
         let endpoint1 = socket1.local_addr().unwrap();
@@ -411,7 +411,7 @@ mod tests {
     #[tokio::test]
     async fn run_client() {
         let log = logger();
-        let server = Server::new(log.clone(), FilterRegistry::new(), Metrics::default());
+        let server = Server::new(log.clone(), FilterRegistry::new(&log), Metrics::default());
         let socket = ephemeral_socket().await;
         let endpoint_addr = socket.local_addr().unwrap();
         let (recv, mut send) = socket.split();
@@ -445,8 +445,11 @@ mod tests {
     #[tokio::test]
     async fn run_with_filter() {
         let log = logger();
-        let mut registry = FilterRegistry::new();
-        registry.insert("TestFilter".to_string(), TestFilter {});
+        let mut registry = FilterRegistry::new(&log);
+        registry.insert(
+            "TestFilter".to_string(),
+            Box::new(|_, _| Box::new(TestFilter {})),
+        );
 
         let server = Server::new(log.clone(), registry, Metrics::default());
         let socket = ephemeral_socket().await;
@@ -515,6 +518,8 @@ mod tests {
 
     #[tokio::test]
     async fn recv_from() {
+        time::pause();
+
         struct Result {
             msg: String,
             addr: SocketAddr,
@@ -529,7 +534,6 @@ mod tests {
             chain: Arc<FilterChain>,
             expected: Expected,
         ) -> Result {
-            time::pause();
             info!(log, "Test"; "name" => name);
             let msg = "hello".to_string();
             let (local_addr, wait) = recv_udp().await;
@@ -587,8 +591,6 @@ mod tests {
                     .as_secs(),
             );
 
-            time::resume();
-
             Result {
                 msg: result,
                 addr: receive_addr_local,
@@ -607,7 +609,7 @@ mod tests {
         .await;
         assert_eq!("hello", result.msg);
 
-        let chain = Arc::new(FilterChain::new(vec![Arc::new(TestFilter {})]));
+        let chain = Arc::new(FilterChain::new(vec![Box::new(TestFilter {})]));
         let result = test(
             "test filter".to_string(),
             &log,
@@ -624,13 +626,15 @@ mod tests {
             ),
             result.msg
         );
+
+        time::resume();
     }
 
     #[tokio::test]
     async fn run_recv_from() {
         let log = logger();
         let msg = "hello";
-        let server = Server::new(log.clone(), default_filters(&log), Metrics::default());
+        let server = Server::new(log.clone(), default_registry(&log), Metrics::default());
         let (local_addr, wait) = recv_udp().await;
         let lb_policy = Arc::new(LoadBalancerPolicy::new(&ConnectionConfig::Client {
             addresses: vec![local_addr],
@@ -698,7 +702,8 @@ mod tests {
 
     #[tokio::test]
     async fn run_receive_packet() {
-        let server = Server::new(logger(), FilterRegistry::new(), Metrics::default());
+        let log = logger();
+        let server = Server::new(logger(), FilterRegistry::new(&log), Metrics::default());
         let msg = "hello";
 
         // without a filter
@@ -738,7 +743,7 @@ mod tests {
             .unwrap();
 
         server.run_receive_packet(
-            Arc::new(FilterChain::new(vec![Arc::new(TestFilter {})])),
+            Arc::new(FilterChain::new(vec![Box::new(TestFilter {})])),
             send_socket,
             recv_packet,
         );
@@ -807,7 +812,7 @@ mod tests {
     async fn run_prune_sessions() {
         time::pause();
         let log = logger();
-        let server = Server::new(log.clone(), default_filters(&log), Metrics::default());
+        let server = Server::new(log.clone(), default_registry(&log), Metrics::default());
         let sessions: SessionMap = Arc::new(RwLock::new(HashMap::new()));
         let from: SocketAddr = "127.0.0.1:7000".parse().unwrap();
         let to: SocketAddr = "127.0.0.1:7001".parse().unwrap();
