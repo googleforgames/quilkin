@@ -55,6 +55,7 @@ mod tests {
                 ],
             },
         };
+        assert_eq!(Ok(()), server_config.validate());
 
         let close_server = run_proxy(&base_logger, default_filters(&base_logger), server_config);
 
@@ -72,6 +73,7 @@ mod tests {
                 lb_policy: None,
             },
         };
+        assert_eq!(Ok(()), client_config.validate());
 
         let close_client = run_proxy(&base_logger, default_filters(&base_logger), client_config);
 

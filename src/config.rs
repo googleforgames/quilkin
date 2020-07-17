@@ -14,11 +14,27 @@
  * limitations under the License.
  */
 
+use std::collections::HashSet;
+use std::fmt;
 use std::io;
 use std::net::SocketAddr;
 
+use serde::export::Formatter;
 use serde::{Deserialize, Serialize};
-use serde_yaml::Error;
+
+/// Validation failure for a Config
+#[derive(Debug, PartialEq)]
+pub enum ValidationError {
+    NotUnique(String),
+}
+
+impl fmt::Display for ValidationError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ValidationError::NotUnique(field) => write!(f, "field {} is not unique", field),
+        }
+    }
+}
 
 /// Config is the configuration for either a Client or Server proxy
 #[derive(Debug, Deserialize, Serialize)]
@@ -82,20 +98,38 @@ pub struct EndPoint {
     pub connection_ids: Vec<String>,
 }
 
-/// from_reader returns a config from a given Reader
-pub fn from_reader<R: io::Read>(input: R) -> Result<Config, Error> {
-    let config: Config = serde_yaml::from_reader(input)?;
-    return Ok(config);
+impl Config {
+    /// from_reader returns a config from a given Reader
+    pub fn from_reader<R: io::Read>(input: R) -> Result<Config, serde_yaml::Error> {
+        serde_yaml::from_reader(input)
+    }
+
+    /// validates the current Config.
+    pub fn validate(&self) -> Result<(), ValidationError> {
+        if let ConnectionConfig::Server { endpoints } = &self.connections {
+            if endpoints
+                .iter()
+                .map(|ep| ep.name.clone())
+                .collect::<HashSet<_>>()
+                .len()
+                != endpoints.len()
+            {
+                return Err(ValidationError::NotUnique("endpoint.name".to_string()));
+            }
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::net::SocketAddr;
+
     use serde_yaml::Value;
 
     use crate::config::{
-        from_reader, Config, ConnectionConfig, EndPoint, LoadBalancerPolicy, Local,
+        Config, ConnectionConfig, EndPoint, LoadBalancerPolicy, Local, ValidationError,
     };
-    use std::net::SocketAddr;
 
     #[test]
     fn deserialise_client() {
@@ -155,7 +189,7 @@ client:
     - 127.0.0.1:7001
   connection_id: 1x7ijy6
         ";
-        let config = from_reader(yaml.as_bytes()).unwrap();
+        let config = Config::from_reader(yaml.as_bytes()).unwrap();
 
         let filter = config.filters.get(0).unwrap();
         assert_eq!("quilkin.core.v1.rate-limiter", filter.name);
@@ -186,7 +220,7 @@ client:
   connection_id: 1x7ijy6
   lb_policy: ROUND_ROBIN
   ";
-        let config = from_reader(yaml.as_bytes()).unwrap();
+        let config = Config::from_reader(yaml.as_bytes()).unwrap();
         assert_eq!(7000, config.local.port);
         match config.connections {
             ConnectionConfig::Client {
@@ -222,7 +256,7 @@ server:
       address: 127.0.0.1:26001
       connection_ids:
         - nkuy70x";
-        let config = from_reader(yaml.as_bytes()).unwrap();
+        let config = Config::from_reader(yaml.as_bytes()).unwrap();
         assert_eq!(7000, config.local.port);
         assert_eq!(0, config.filters.len());
         match config.connections {
@@ -243,5 +277,70 @@ server:
                 assert_eq!(expected, endpoints);
             }
         }
+    }
+
+    #[test]
+    fn validate() {
+        // client
+        let config = Config {
+            local: Local { port: 7000 },
+            filters: vec![],
+            connections: ConnectionConfig::Client {
+                addresses: vec![
+                    "127.0.0.1:25999".parse().unwrap(),
+                    "127.0.0.1:25998".parse().unwrap(),
+                ],
+                connection_id: String::from("1234"),
+                lb_policy: Some(LoadBalancerPolicy::RoundRobin),
+            },
+        };
+
+        assert!(config.validate().is_ok());
+
+        // server - valid
+        let config = Config {
+            local: Local { port: 7000 },
+            filters: vec![],
+            connections: ConnectionConfig::Server {
+                endpoints: vec![
+                    EndPoint {
+                        name: String::from("ONE"),
+                        address: "127.0.0.1:26000".parse().unwrap(),
+                        connection_ids: vec![String::from("1234"), String::from("5678")],
+                    },
+                    EndPoint {
+                        name: String::from("TWO"),
+                        address: "127.0.0.1:26001".parse().unwrap(),
+                        connection_ids: vec![String::from("1234")],
+                    },
+                ],
+            },
+        };
+        assert!(config.validate().is_ok());
+
+        // server - non unique endpoint names
+        let config = Config {
+            local: Local { port: 7000 },
+            filters: vec![],
+            connections: ConnectionConfig::Server {
+                endpoints: vec![
+                    EndPoint {
+                        name: String::from("SAME"),
+                        address: "127.0.0.1:26000".parse().unwrap(),
+                        connection_ids: vec![String::from("1234"), String::from("5678")],
+                    },
+                    EndPoint {
+                        name: String::from("SAME"),
+                        address: "127.0.0.1:26001".parse().unwrap(),
+                        connection_ids: vec![String::from("1234")],
+                    },
+                ],
+            },
+        };
+
+        assert_eq!(
+            ValidationError::NotUnique("endpoint.name".to_string()).to_string(),
+            config.validate().unwrap_err().to_string()
+        )
     }
 }
