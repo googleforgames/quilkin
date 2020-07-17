@@ -61,13 +61,22 @@ impl DebugFilter {
 }
 
 /// Provider for the DebugFilter
-pub struct DebugFilterProvider {}
+pub struct DebugFilterProvider {
+    log: Logger,
+}
+
+impl DebugFilterProvider {
+    pub fn new(base: &Logger) -> Self {
+        DebugFilterProvider { log: base.clone() }
+    }
+}
+
 impl FilterProvider for DebugFilterProvider {
     fn name(&self) -> String {
         return String::from("quilkin.core.v1alpaha1.debug");
     }
 
-    fn from_config(&self, logger: &Logger, config: &Value) -> Result<Box<dyn Filter>, Error> {
+    fn from_config(&self, config: &Value) -> Result<Box<dyn Filter>, Error> {
         let prefix = match config {
             serde_yaml::Value::Mapping(map) => match map.get(&serde_yaml::Value::from("id")) {
                 Some(value) => match value.as_str() {
@@ -84,7 +93,7 @@ impl FilterProvider for DebugFilterProvider {
             _ => None,
         };
 
-        Ok(Box::new(DebugFilter::new(logger, prefix)))
+        Ok(Box::new(DebugFilter::new(&self.log, prefix)))
     }
 }
 
@@ -216,30 +225,30 @@ mod tests {
     fn from_config_with_id() {
         let log = logger();
         let mut map = Mapping::new();
-        let provider = DebugFilterProvider {};
+        let provider = DebugFilterProvider::new(&log);
 
         map.insert(Value::from("id"), Value::from("name"));
-        assert!(provider.from_config(&log, &Value::Mapping(map)).is_ok());
+        assert!(provider.from_config(&Value::Mapping(map)).is_ok());
     }
 
     #[test]
     fn from_config_without_id() {
         let log = logger();
         let mut map = Mapping::new();
-        let provider = DebugFilterProvider {};
+        let provider = DebugFilterProvider::new(&log);
 
         map.insert(Value::from("id"), Value::from("name"));
-        assert!(provider.from_config(&log, &Value::Mapping(map)).is_ok());
+        assert!(provider.from_config(&Value::Mapping(map)).is_ok());
     }
 
     #[test]
     fn from_config_should_panic() {
         let log = logger();
         let mut map = Mapping::new();
-        let provider = DebugFilterProvider {};
+        let provider = DebugFilterProvider::new(&log);
 
         map.insert(Value::from("id"), Value::from(false));
-        match provider.from_config(&log, &Value::Mapping(map)) {
+        match provider.from_config(&Value::Mapping(map)) {
             Ok(_) => assert!(false, "should be an error"),
             Err(err) => {
                 assert_eq!(

@@ -19,7 +19,7 @@ use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::str::from_utf8;
 use std::sync::Arc;
 
-use slog::{o, warn, Drain, Logger, Never, SendSyncRefUnwindSafeDrain};
+use slog::{o, warn, Drain, Logger};
 use slog_term::{FullFormat, PlainSyncDecorator};
 use tokio::net::udp::{RecvHalf, SendHalf};
 use tokio::net::UdpSocket;
@@ -45,11 +45,7 @@ impl FilterProvider for TestFilterProvider {
         "TestFilter".to_string()
     }
 
-    fn from_config(
-        &self,
-        _: &Logger<Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>>>,
-        _: &Value,
-    ) -> Result<Box<dyn Filter>, Error> {
+    fn from_config(&self, _: &Value) -> Result<Box<dyn Filter>, Error> {
         Ok(Box::new(TestFilter {}))
     }
 }

@@ -144,7 +144,7 @@ mod tests {
     #[test]
     fn from_config() {
         let log = logger();
-        let provider = DebugFilterProvider {};
+        let provider = DebugFilterProvider::new(&log);
 
         // everything is fine
         let config = Arc::new(Config {

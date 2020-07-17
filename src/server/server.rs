@@ -28,11 +28,12 @@ use tokio::sync::{mpsc, oneshot};
 use tokio::sync::{Mutex, RwLock};
 use tokio::time::{delay_for, Duration, Instant};
 
-use super::metrics::{start_metrics_server, Metrics};
 use crate::config::{Config, ConnectionConfig, EndPoint};
 use crate::extensions::{Filter, FilterChain, FilterRegistry};
 use crate::load_balancer_policy::LoadBalancerPolicy;
 use crate::server::sessions::{Packet, Session, SESSION_TIMEOUT_SECONDS};
+
+use super::metrics::{start_metrics_server, Metrics};
 
 type SessionMap = Arc<RwLock<HashMap<(SocketAddr, SocketAddr), Mutex<Session>>>>;
 
@@ -362,7 +363,7 @@ mod tests {
     #[tokio::test]
     async fn run_server() {
         let log = logger();
-        let server = Server::new(log.clone(), FilterRegistry::new(&log), Metrics::default());
+        let server = Server::new(log.clone(), FilterRegistry::new(), Metrics::default());
 
         let socket1 = ephemeral_socket().await;
         let endpoint1 = socket1.local_addr().unwrap();
@@ -413,7 +414,7 @@ mod tests {
     #[tokio::test]
     async fn run_client() {
         let log = logger();
-        let server = Server::new(log.clone(), FilterRegistry::new(&log), Metrics::default());
+        let server = Server::new(log.clone(), FilterRegistry::new(), Metrics::default());
         let socket = ephemeral_socket().await;
         let endpoint_addr = socket.local_addr().unwrap();
         let (recv, mut send) = socket.split();
@@ -447,7 +448,7 @@ mod tests {
     #[tokio::test]
     async fn run_with_filter() {
         let log = logger();
-        let mut registry = FilterRegistry::new(&log);
+        let mut registry = FilterRegistry::new();
         registry.insert(TestFilterProvider {});
 
         let server = Server::new(log.clone(), registry, Metrics::default());
@@ -701,8 +702,7 @@ mod tests {
 
     #[tokio::test]
     async fn run_receive_packet() {
-        let log = logger();
-        let server = Server::new(logger(), FilterRegistry::new(&log), Metrics::default());
+        let server = Server::new(logger(), FilterRegistry::new(), Metrics::default());
         let msg = "hello";
 
         // without a filter

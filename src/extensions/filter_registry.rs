@@ -15,12 +15,12 @@
  */
 
 use std::collections::HashMap;
-
-use crate::config::EndPoint;
-use serde::export::Formatter;
-use slog::Logger;
 use std::fmt;
 use std::net::SocketAddr;
+
+use serde::export::Formatter;
+
+use crate::config::EndPoint;
 
 /// Filter is a trait for routing and manipulating packets.
 pub trait Filter: Send + Sync {
@@ -65,7 +65,7 @@ pub trait Filter: Send + Sync {
 }
 
 #[derive(Debug, PartialEq)]
-/// ConfigError is an error when attempting to create a Filter from_config() from a FilterProvider
+/// Error is an error when attempting to create a Filter from_config() from a FilterProvider
 pub enum Error {
     NotFound(String),
     FieldInvalid { field: String, reason: String },
@@ -86,23 +86,17 @@ impl fmt::Display for Error {
 pub trait FilterProvider: Sync + Send {
     /// name returns the configuration name for the Filter
     fn name(&self) -> String;
-    fn from_config(
-        &self,
-        logger: &Logger,
-        config: &serde_yaml::Value,
-    ) -> Result<Box<dyn Filter>, Error>;
+    fn from_config(&self, config: &serde_yaml::Value) -> Result<Box<dyn Filter>, Error>;
 }
 
 /// FilterRegistry is the registry of all Filters that can be applied in the system.
 pub struct FilterRegistry {
-    log: Logger,
     registry: HashMap<String, Box<dyn FilterProvider>>,
 }
 
 impl FilterRegistry {
-    pub fn new(base: &Logger) -> FilterRegistry {
+    pub fn new() -> FilterRegistry {
         FilterRegistry {
-            log: base.clone(),
             registry: Default::default(),
         }
     }
@@ -115,13 +109,10 @@ impl FilterRegistry {
         self.registry.insert(provider.name(), Box::new(provider));
     }
 
-    /// get returns an instance of a filter for a given Key. Returns None if not found.
+    /// get returns an instance of a filter for a given Key. Returns Error if not found,
+    /// or if there is a configuration issue.
     pub fn get(&self, key: &String, config: &serde_yaml::Value) -> Result<Box<dyn Filter>, Error> {
-        match self
-            .registry
-            .get(key)
-            .map(|p| p.from_config(&self.log, &config))
-        {
+        match self.registry.get(key).map(|p| p.from_config(&config)) {
             None => Err(Error::NotFound(key.clone())),
             Some(filter) => filter,
         }
@@ -132,8 +123,9 @@ impl FilterRegistry {
 mod tests {
     use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
+    use crate::test_utils::TestFilterProvider;
+
     use super::*;
-    use crate::test_utils::{logger, TestFilterProvider};
 
     struct TestFilter {}
 
@@ -167,13 +159,15 @@ mod tests {
 
     #[test]
     fn insert_and_get() {
-        let logger = logger();
-        let mut reg = FilterRegistry::new(&logger);
+        let mut reg = FilterRegistry::new();
         reg.insert(TestFilterProvider {});
         let config = serde_yaml::Value::Null;
 
-        // TOXO: might want to convert to equals operation
-        assert!(reg.get(&String::from("not.found"), &config).is_err());
+        match reg.get(&String::from("not.found"), &config) {
+            Ok(_) => assert!(false, "should not be filter"),
+            Err(err) => assert_eq!(Error::NotFound("not.found".to_string()), err),
+        };
+
         assert!(reg.get(&String::from("TestFilter"), &config).is_ok());
 
         let filter = reg.get(&String::from("TestFilter"), &config).unwrap();
