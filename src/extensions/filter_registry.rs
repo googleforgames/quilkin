@@ -17,7 +17,9 @@
 use std::collections::HashMap;
 
 use crate::config::EndPoint;
+use serde::export::Formatter;
 use slog::Logger;
+use std::fmt;
 use std::net::SocketAddr;
 
 /// Filter is a trait for routing and manipulating packets.
@@ -62,11 +64,33 @@ pub trait Filter: Send + Sync {
     ) -> Option<Vec<u8>>;
 }
 
+#[derive(Debug, PartialEq)]
+/// ConfigError is an error when attempting to create a Filter from_config() from a FilterProvider
+pub enum Error {
+    NotFound(String),
+    FieldInvalid { field: String, reason: String },
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Error::NotFound(key) => write!(f, "filter {} is not found", key),
+            Error::FieldInvalid { field, reason } => {
+                write!(f, "field {} is invalid: {}", field, reason)
+            }
+        }
+    }
+}
+
 /// FilterProvider provides the name and creation function for a given Filter.
 pub trait FilterProvider: Sync + Send {
     /// name returns the configuration name for the Filter
     fn name(&self) -> String;
-    fn from_config(&self, logger: &Logger, config: &serde_yaml::Value) -> Box<dyn Filter>;
+    fn from_config(
+        &self,
+        logger: &Logger,
+        config: &serde_yaml::Value,
+    ) -> Result<Box<dyn Filter>, Error>;
 }
 
 /// FilterRegistry is the registry of all Filters that can be applied in the system.
@@ -92,10 +116,15 @@ impl FilterRegistry {
     }
 
     /// get returns an instance of a filter for a given Key. Returns None if not found.
-    pub fn get(&self, key: &String, config: &serde_yaml::Value) -> Option<Box<dyn Filter>> {
-        self.registry
+    pub fn get(&self, key: &String, config: &serde_yaml::Value) -> Result<Box<dyn Filter>, Error> {
+        match self
+            .registry
             .get(key)
             .map(|p| p.from_config(&self.log, &config))
+        {
+            None => Err(Error::NotFound(key.clone())),
+            Some(filter) => filter,
+        }
     }
 }
 
@@ -142,8 +171,10 @@ mod tests {
         let mut reg = FilterRegistry::new(&logger);
         reg.insert(TestFilterProvider {});
         let config = serde_yaml::Value::Null;
-        assert!(reg.get(&String::from("not.found"), &config).is_none());
-        assert!(reg.get(&String::from("TestFilter"), &config).is_some());
+
+        // TOXO: might want to convert to equals operation
+        assert!(reg.get(&String::from("not.found"), &config).is_err());
+        assert!(reg.get(&String::from("TestFilter"), &config).is_ok());
 
         let filter = reg.get(&String::from("TestFilter"), &config).unwrap();
 

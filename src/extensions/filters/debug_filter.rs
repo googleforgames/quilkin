@@ -19,7 +19,7 @@ use std::net::SocketAddr;
 use slog::{info, o, Logger};
 
 use crate::config::EndPoint;
-use crate::extensions::filter_registry::FilterProvider;
+use crate::extensions::filter_registry::{Error, FilterProvider};
 use crate::extensions::Filter;
 use serde_yaml::Value;
 
@@ -67,20 +67,24 @@ impl FilterProvider for DebugFilterProvider {
         return String::from("quilkin.core.v1alpaha1.debug");
     }
 
-    fn from_config(&self, logger: &Logger, config: &Value) -> Box<dyn Filter> {
+    fn from_config(&self, logger: &Logger, config: &Value) -> Result<Box<dyn Filter>, Error> {
         let prefix = match config {
-            serde_yaml::Value::Mapping(map) => {
-                map.get(&serde_yaml::Value::from("id")).map(|value| {
-                    value
-                        .as_str()
-                        .expect("DebugFilter.config.id should have a string value")
-                        .to_string()
-                })
-            }
+            serde_yaml::Value::Mapping(map) => match map.get(&serde_yaml::Value::from("id")) {
+                Some(value) => match value.as_str() {
+                    Some(str) => Some(str.to_string()),
+                    None => {
+                        return Err(Error::FieldInvalid {
+                            field: "config.id".to_string(),
+                            reason: "id value should be a string".to_string(),
+                        });
+                    }
+                },
+                None => None,
+            },
             _ => None,
         };
 
-        Box::new(DebugFilter::new(logger, prefix))
+        Ok(Box::new(DebugFilter::new(logger, prefix)))
     }
 }
 
@@ -215,7 +219,7 @@ mod tests {
         let provider = DebugFilterProvider {};
 
         map.insert(Value::from("id"), Value::from("name"));
-        provider.from_config(&log, &Value::Mapping(map));
+        assert!(provider.from_config(&log, &Value::Mapping(map)).is_ok());
     }
 
     #[test]
@@ -225,17 +229,28 @@ mod tests {
         let provider = DebugFilterProvider {};
 
         map.insert(Value::from("id"), Value::from("name"));
-        provider.from_config(&log, &Value::Mapping(map));
+        assert!(provider.from_config(&log, &Value::Mapping(map)).is_ok());
     }
 
     #[test]
-    #[should_panic(expected = "DebugFilter.config.id should have a string value")]
     fn from_config_should_panic() {
         let log = logger();
         let mut map = Mapping::new();
         let provider = DebugFilterProvider {};
 
         map.insert(Value::from("id"), Value::from(false));
-        provider.from_config(&log, &Value::Mapping(map));
+        match provider.from_config(&log, &Value::Mapping(map)) {
+            Ok(_) => assert!(false, "should be an error"),
+            Err(err) => {
+                assert_eq!(
+                    Error::FieldInvalid {
+                        field: "config.id".to_string(),
+                        reason: "id value should be a string".to_string()
+                    }
+                    .to_string(),
+                    err.to_string()
+                );
+            }
+        }
     }
 }

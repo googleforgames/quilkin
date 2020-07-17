@@ -26,7 +26,7 @@ use tokio::net::UdpSocket;
 use tokio::sync::{mpsc, oneshot};
 
 use crate::config::{Config, EndPoint};
-use crate::extensions::{Filter, FilterProvider, FilterRegistry};
+use crate::extensions::{Error, Filter, FilterProvider, FilterRegistry};
 use crate::server::{Metrics, Server};
 use serde_yaml::Value;
 
@@ -49,8 +49,8 @@ impl FilterProvider for TestFilterProvider {
         &self,
         _: &Logger<Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>>>,
         _: &Value,
-    ) -> Box<dyn Filter> {
-        Box::new(TestFilter {})
+    ) -> Result<Box<dyn Filter>, Error> {
+        Ok(Box::new(TestFilter {}))
     }
 }
 

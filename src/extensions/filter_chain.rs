@@ -45,14 +45,12 @@ impl FilterChain {
         let mut filters = Vec::<Box<dyn Filter>>::new();
         for filter_config in &config.filters {
             match filter_registry.get(&filter_config.name, &filter_config.config) {
-                None => {
+                Ok(filter) => filters.push(filter),
+                Err(err) => {
                     return Err(Error::new(
                         ErrorKind::InvalidInput,
-                        format!("Filter '{}' not found", filter_config.name),
+                        format!("Issue with filter '{}': {}", filter_config.name, err),
                     ));
-                }
-                Some(filter) => {
-                    filters.push(filter);
                 }
             }
         }
