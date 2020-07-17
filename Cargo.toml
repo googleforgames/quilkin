@@ -22,6 +22,7 @@ edition = "2018"
 
 [dependencies]
 clap = "2.33.0"
+prometheus = { version = "0.9", default-features = false }
 serde = { version = "1.0.104", features = ["derive"] }
 serde_yaml = "0.8.11"
 slog = "2.5.2"
@@ -30,5 +31,6 @@ slog-json = "2.3.0"
 tokio = { version = "0.2.11", features = ["full", "test-util"] }
 slog-term = "2.5.0"
 rand = "0.7.3"
+warp = "0.2.3"
 
 [dev-dependencies]
