@@ -29,6 +29,7 @@ use tokio::select;
 use tokio::sync::{mpsc, watch, RwLock};
 use tokio::time::{Duration, Instant};
 
+use super::metrics::Metrics;
 use crate::config::EndPoint;
 use crate::extensions::{Filter, FilterChain};
 
@@ -38,7 +39,10 @@ pub const SESSION_TIMEOUT_SECONDS: u64 = 60;
 /// Session encapsulates a UDP stream session
 pub struct Session {
     log: Logger,
+    metrics: Metrics,
     chain: Arc<FilterChain>,
+    /// created_at is time at which the session was created
+    created_at: Instant,
     send: SendHalf,
     /// dest is where to send data to
     dest: EndPoint,
@@ -77,20 +81,24 @@ impl Session {
     /// from its ephemeral port from endpoint(s)
     pub async fn new(
         base: &Logger,
+        metrics: Metrics,
         chain: Arc<FilterChain>,
         from: SocketAddr,
         dest: EndPoint,
         sender: mpsc::Sender<Packet>,
     ) -> Result<Self> {
+        let log = base.new(o!("source" => "server::Session", "from" => from, "dest_name" => dest.name.clone(), "dest_address" => dest.address.clone()));
         let addr = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 0);
         let (recv, send) = UdpSocket::bind(addr).await?.split();
         let (closer, closed) = watch::channel::<bool>(false);
         let mut s = Session {
-            log: base.new(o!("source" => "server::Session", "from" => from, "dest_name" => dest.name.clone(), "dest_address" => dest.address.clone())),
+            metrics,
+            log,
             chain,
             send,
             from,
             dest,
+            created_at: Instant::now(),
             expiration: Arc::new(RwLock::new(
                 Instant::now() + Duration::from_secs(SESSION_TIMEOUT_SECONDS),
             )),
@@ -99,6 +107,8 @@ impl Session {
         };
         debug!(s.log, "Session created");
 
+        s.metrics.sessions_total.inc();
+        s.metrics.active_sessions.inc();
         s.run(recv, sender, closed);
         Ok(s)
     }
@@ -108,15 +118,15 @@ impl Session {
         &mut self,
         mut recv: RecvHalf,
         sender: mpsc::Sender<Packet>,
-        closed: watch::Receiver<bool>,
+        mut closed: watch::Receiver<bool>,
     ) {
         let log = self.log.clone();
         let from = self.from;
         let expiration_mtx = self.expiration.clone();
-        let mut closed = Box::new(closed);
         let is_closed = self.is_closed.clone();
         let chain = self.chain.clone();
         let endpoint = self.dest.clone();
+        let metrics = self.metrics.clone();
         tokio::spawn(async move {
             let mut buf: Vec<u8> = vec![0; 65535];
             loop {
@@ -124,16 +134,24 @@ impl Session {
                 select! {
                     received = recv.recv_from(&mut buf) => {
                         match received {
-                            Err(err) => error!(log, "Error receiving packet"; "error" => %err),
-                            Ok((size, recv_addr)) => Session::process_recv_packet(
-                                &log,
-                                chain.clone(),
-                                &buf[..size],
-                                &endpoint,
-                                recv_addr,
-                                from,
-                                sender.clone(),
-                                expiration_mtx.clone()).await,
+                            Err(err) => {
+                                metrics.errors_total.inc();
+                                error!(log, "Error receiving packet"; "error" => %err);
+                            },
+                            Ok((size, recv_addr)) => {
+                                metrics.rx_bytes_total.inc_by(size as i64);
+                                metrics.rx_packets_total.inc();
+                                Session::process_recv_packet(
+                                    &log,
+                                    &metrics,
+                                    chain.clone(),
+                                    &buf[..size],
+                                    &endpoint,
+                                    recv_addr,
+                                    from,
+                                    sender.clone(),
+                                    expiration_mtx.clone()).await
+                            }
                         };
                     }
                     close_request = closed.recv() => {
@@ -166,6 +184,7 @@ impl Session {
     /// process_recv_packet processes a packet that is received by this session.
     async fn process_recv_packet(
         log: &Logger,
+        metrics: &Metrics,
         chain: Arc<FilterChain>,
         packet: &[u8],
         from: &EndPoint,
@@ -179,8 +198,11 @@ impl Session {
 
         if let Some(data) = chain.endpoint_receive_filter(from, recv_addr, packet.to_vec()) {
             if let Err(err) = sender.send(Packet::new(dest, data)).await {
+                metrics.errors_total.inc();
                 error!(log, "Error sending packet to channel"; "error" => %err);
             }
+        } else {
+            metrics.packets_dropped_total.inc();
         }
     }
 
@@ -204,12 +226,22 @@ impl Session {
             .chain
             .endpoint_send_filter(&self.dest, self.from, buf.to_vec())
         {
-            return match self.send.send_to(data.as_slice(), &self.dest.address).await {
-                Ok(size) => Ok(Some(size)),
-                Err(err) => Err(err),
-            };
+            return self
+                .send
+                .send_to(data.as_slice(), &self.dest.address)
+                .await
+                .map(|size| {
+                    self.metrics.tx_packets_total.inc();
+                    self.metrics.tx_bytes_total.inc_by(size as i64);
+                    Some(size)
+                })
+                .map_err(|err| {
+                    self.metrics.errors_total.inc();
+                    err
+                });
         }
 
+        self.metrics.packets_dropped_total.inc();
         Ok(None)
     }
 
@@ -226,8 +258,18 @@ impl Session {
     }
 }
 
+impl Drop for Session {
+    fn drop(&mut self) {
+        self.metrics.active_sessions.dec();
+        self.metrics
+            .duration_secs
+            .observe(self.created_at.elapsed().as_secs() as f64);
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use prometheus::Registry;
     use slog::info;
     use tokio::time;
     use tokio::time::delay_for;
@@ -252,6 +294,12 @@ mod tests {
 
         let mut sess = Session::new(
             &log,
+            Metrics::new(
+                &Registry::default(),
+                local_addr.to_string(),
+                local_addr.to_string(),
+            )
+            .unwrap(),
             Arc::new(FilterChain::new(vec![])),
             local_addr,
             endpoint,
@@ -314,6 +362,12 @@ mod tests {
 
         let mut session = Session::new(
             &log,
+            Metrics::new(
+                &Registry::default(),
+                local_addr.to_string(),
+                local_addr.to_string(),
+            )
+            .unwrap(),
             Arc::new(FilterChain::new(vec![])),
             local_addr,
             endpoint.clone(),
@@ -334,6 +388,12 @@ mod tests {
         };
         let mut session = Session::new(
             &log,
+            Metrics::new(
+                &Registry::default(),
+                local_addr.to_string(),
+                local_addr.to_string(),
+            )
+            .unwrap(),
             Arc::new(FilterChain::new(vec![Arc::new(TestFilter {})])),
             local_addr,
             endpoint.clone(),
@@ -364,6 +424,12 @@ mod tests {
         info!(log, ">> creating sessions");
         let sess = Session::new(
             &log,
+            Metrics::new(
+                &Registry::default(),
+                local_addr.to_string(),
+                local_addr.to_string(),
+            )
+            .unwrap(),
             Arc::new(FilterChain::new(vec![])),
             local_addr,
             endpoint,
@@ -377,14 +443,14 @@ mod tests {
         sess.close().unwrap();
 
         // Poll the state to wait for the change, because everything is async
-        for _ in 1..10 {
+        for _ in 1..1000 {
             let is_closed = sess.is_closed();
             info!(log, "session closed?"; "closed" => is_closed);
             if is_closed {
                 break;
             }
 
-            delay_for(Duration::from_secs(1)).await;
+            delay_for(Duration::from_millis(10)).await;
         }
 
         assert!(sess.is_closed(), "session should be closed");
@@ -411,6 +477,12 @@ mod tests {
         let msg = "hello";
         Session::process_recv_packet(
             &log,
+            &Metrics::new(
+                &Registry::default(),
+                "127.0.1.1:80".parse().unwrap(),
+                "127.0.1.1:80".parse().unwrap(),
+            )
+            .unwrap(),
             chain,
             msg.as_bytes(),
             &endpoint,
@@ -433,6 +505,12 @@ mod tests {
         let chain = Arc::new(FilterChain::new(vec![Arc::new(TestFilter {})]));
         Session::process_recv_packet(
             &log,
+            &Metrics::new(
+                &Registry::default(),
+                "127.0.1.1:80".parse().unwrap(),
+                "127.0.1.1:80".parse().unwrap(),
+            )
+            .unwrap(),
             chain,
             msg.as_bytes(),
             &endpoint,
@@ -450,5 +528,108 @@ mod tests {
             from_utf8(p.contents.as_slice()).unwrap()
         );
         assert_eq!(dest, p.dest);
+    }
+
+    #[tokio::test]
+    async fn session_new_metrics() {
+        let log = logger();
+        let socket = ephemeral_socket().await;
+        let local_addr = socket.local_addr().unwrap();
+        let endpoint = EndPoint {
+            name: "endpoint".to_string(),
+            address: local_addr,
+            connection_ids: vec![],
+        };
+        let (send_packet, _) = mpsc::channel::<Packet>(5);
+
+        let session = Session::new(
+            &log,
+            Metrics::new(
+                &Registry::default(),
+                local_addr.to_string(),
+                local_addr.to_string(),
+            )
+            .unwrap(),
+            Arc::new(FilterChain::new(vec![])),
+            local_addr,
+            endpoint,
+            send_packet,
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(session.metrics.sessions_total.get(), 1);
+        assert_eq!(session.metrics.active_sessions.get(), 1);
+        session.close().unwrap();
+    }
+
+    #[tokio::test]
+    async fn send_to_metrics() {
+        let (sender, _) = mpsc::channel::<Packet>(1);
+        let (local_addr, wait) = recv_udp().await;
+
+        let mut session = Session::new(
+            &logger(),
+            Metrics::new(
+                &Registry::default(),
+                local_addr.to_string(),
+                local_addr.to_string(),
+            )
+            .unwrap(),
+            Arc::new(FilterChain::new(vec![])),
+            local_addr,
+            EndPoint {
+                name: "endpoint".to_string(),
+                address: local_addr,
+                connection_ids: vec![],
+            },
+            sender,
+        )
+        .await
+        .unwrap();
+        session.send_to(b"hello").await.unwrap();
+        wait.await.unwrap();
+
+        assert_eq!(session.metrics.tx_bytes_total.get(), 5);
+        assert_eq!(session.metrics.tx_packets_total.get(), 1);
+        session.close().unwrap();
+    }
+
+    #[tokio::test]
+    async fn session_drop_metrics() {
+        let log = logger();
+        let socket = ephemeral_socket().await;
+        let local_addr = socket.local_addr().unwrap();
+        let endpoint = EndPoint {
+            name: "endpoint".to_string(),
+            address: local_addr,
+            connection_ids: vec![],
+        };
+        let (send_packet, _) = mpsc::channel::<Packet>(5);
+
+        let session = Session::new(
+            &log,
+            Metrics::new(
+                &Registry::default(),
+                local_addr.to_string(),
+                local_addr.to_string(),
+            )
+            .unwrap(),
+            Arc::new(FilterChain::new(vec![])),
+            local_addr,
+            endpoint,
+            send_packet,
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(session.metrics.sessions_total.get(), 1);
+        assert_eq!(session.metrics.active_sessions.get(), 1);
+
+        let metrics = session.metrics.clone();
+        session.close().unwrap();
+        drop(session);
+        assert_eq!(metrics.sessions_total.get(), 1);
+        assert_eq!(metrics.active_sessions.get(), 0);
     }
 }

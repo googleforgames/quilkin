@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
+pub use metrics::Metrics;
 pub use server::Server;
 
+mod metrics;
 mod server;
 mod sessions;

@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-pub mod config;
-pub mod extensions;
-mod load_balancer_policy;
-pub mod metrics;
-pub mod server;
-pub mod test_utils;
+pub use session::{Packet, Session, SESSION_TIMEOUT_SECONDS};
+
+pub(crate) mod metrics;
+mod session;

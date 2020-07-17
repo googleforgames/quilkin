@@ -27,7 +27,7 @@ use tokio::sync::{mpsc, oneshot};
 
 use crate::config::{Config, EndPoint};
 use crate::extensions::{Filter, FilterRegistry};
-use crate::server::Server;
+use crate::server::{Metrics, Server};
 
 // noop_endpoint returns an endpoint for data that should go nowhere.
 pub fn noop_endpoint() -> EndPoint {
@@ -163,7 +163,7 @@ pub async fn echo_server() -> SocketAddr {
 // run_proxy creates a instance of the Server proxy and runs it, returning a cancel function
 pub fn run_proxy(logger: &Logger, registry: FilterRegistry, config: Config) -> Box<dyn FnOnce()> {
     let (close, stop) = oneshot::channel::<()>();
-    let proxy = Server::new(logger.clone(), registry);
+    let proxy = Server::new(logger.clone(), registry, Metrics::default());
     // run the proxy
     tokio::spawn(async move {
         proxy.run(Arc::new(config), stop).await.unwrap();
