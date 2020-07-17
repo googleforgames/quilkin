@@ -62,20 +62,17 @@ pub trait Filter: Send + Sync {
     ) -> Option<Vec<u8>>;
 }
 
-/// Function that returns a filter
-type FnFilter = Box<dyn Fn(&Logger, &serde_yaml::Value) -> Box<dyn Filter> + Send>;
-
 /// FilterProvider provides the name and creation function for a given Filter.
 pub trait FilterProvider: Sync + Send {
     /// name returns the configuration name for the Filter
-    fn name() -> String;
-    fn from_config(logger: &Logger, config: &serde_yaml::Value) -> Box<dyn Filter>;
+    fn name(&self) -> String;
+    fn from_config(&self, logger: &Logger, config: &serde_yaml::Value) -> Box<dyn Filter>;
 }
 
 /// FilterRegistry is the registry of all Filters that can be applied in the system.
 pub struct FilterRegistry {
     log: Logger,
-    registry: HashMap<String, FnFilter>,
+    registry: HashMap<String, Box<dyn FilterProvider>>,
 }
 
 impl FilterRegistry {
@@ -87,16 +84,18 @@ impl FilterRegistry {
     }
 
     /// insert registers a Filter under the provider's given name.
-    pub fn insert<P: 'static>(&mut self)
+    pub fn insert<P: 'static>(&mut self, provider: P)
     where
         P: FilterProvider,
     {
-        self.registry.insert(P::name(), Box::new(P::from_config));
+        self.registry.insert(provider.name(), Box::new(provider));
     }
 
     /// get returns an instance of a filter for a given Key. Returns None if not found.
     pub fn get(&self, key: &String, config: &serde_yaml::Value) -> Option<Box<dyn Filter>> {
-        self.registry.get(key).map(|p| p(&self.log, &config))
+        self.registry
+            .get(key)
+            .map(|p| p.from_config(&self.log, &config))
     }
 }
 
@@ -141,7 +140,7 @@ mod tests {
     fn insert_and_get() {
         let logger = logger();
         let mut reg = FilterRegistry::new(&logger);
-        reg.insert::<TestFilterProvider>();
+        reg.insert(TestFilterProvider {});
         let config = serde_yaml::Value::Null;
         assert!(reg.get(&String::from("not.found"), &config).is_none());
         assert!(reg.get(&String::from("TestFilter"), &config).is_some());

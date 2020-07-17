@@ -146,12 +146,13 @@ mod tests {
     #[test]
     fn from_config() {
         let log = logger();
+        let provider = DebugFilterProvider {};
 
         // everything is fine
         let config = Arc::new(Config {
             local: Local { port: 0 },
             filters: vec![config::Filter {
-                name: DebugFilterProvider::name(),
+                name: provider.name(),
                 config: Default::default(),
             }],
             connections: ConnectionConfig::Client {

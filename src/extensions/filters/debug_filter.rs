@@ -63,11 +63,11 @@ impl DebugFilter {
 /// Provider for the DebugFilter
 pub struct DebugFilterProvider {}
 impl FilterProvider for DebugFilterProvider {
-    fn name() -> String {
+    fn name(&self) -> String {
         return String::from("quilkin.core.v1alpaha1.debug");
     }
 
-    fn from_config(logger: &Logger, config: &Value) -> Box<dyn Filter> {
+    fn from_config(&self, logger: &Logger, config: &Value) -> Box<dyn Filter> {
         let prefix = match config {
             serde_yaml::Value::Mapping(map) => {
                 map.get(&serde_yaml::Value::from("id")).map(|value| {
@@ -212,18 +212,20 @@ mod tests {
     fn from_config_with_id() {
         let log = logger();
         let mut map = Mapping::new();
-        map.insert(Value::from("id"), Value::from("name"));
+        let provider = DebugFilterProvider {};
 
-        DebugFilterProvider::from_config(&log, &Value::Mapping(map));
+        map.insert(Value::from("id"), Value::from("name"));
+        provider.from_config(&log, &Value::Mapping(map));
     }
 
     #[test]
     fn from_config_without_id() {
         let log = logger();
         let mut map = Mapping::new();
-        map.insert(Value::from("id"), Value::from("name"));
+        let provider = DebugFilterProvider {};
 
-        DebugFilterProvider::from_config(&log, &Value::Mapping(map));
+        map.insert(Value::from("id"), Value::from("name"));
+        provider.from_config(&log, &Value::Mapping(map));
     }
 
     #[test]
@@ -231,8 +233,9 @@ mod tests {
     fn from_config_should_panic() {
         let log = logger();
         let mut map = Mapping::new();
-        map.insert(Value::from("id"), Value::from(false));
+        let provider = DebugFilterProvider {};
 
-        DebugFilterProvider::from_config(&log, &Value::Mapping(map));
+        map.insert(Value::from("id"), Value::from(false));
+        provider.from_config(&log, &Value::Mapping(map));
     }
 }

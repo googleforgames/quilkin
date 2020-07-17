@@ -28,6 +28,6 @@ mod filter_chain;
 /// set of filters that are user configurable registered to it
 pub fn default_registry(base: &Logger) -> FilterRegistry {
     let mut fr = FilterRegistry::new(base);
-    fr.insert::<filters::DebugFilterProvider>();
+    fr.insert(filters::DebugFilterProvider {});
     fr
 }

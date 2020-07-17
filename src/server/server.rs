@@ -448,7 +448,7 @@ mod tests {
     async fn run_with_filter() {
         let log = logger();
         let mut registry = FilterRegistry::new(&log);
-        registry.insert::<TestFilterProvider>();
+        registry.insert(TestFilterProvider {});
 
         let server = Server::new(log.clone(), registry, Metrics::default());
         let socket = ephemeral_socket().await;

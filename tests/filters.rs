@@ -54,7 +54,7 @@ mod tests {
         assert_eq!(Ok(()), server_config.validate());
 
         let mut registry = default_registry(&base_logger);
-        registry.insert::<TestFilterProvider>();
+        registry.insert(TestFilterProvider {});
         let close_server = run_proxy(&base_logger, registry, server_config);
 
         // create a local client
@@ -77,7 +77,7 @@ mod tests {
         assert_eq!(Ok(()), client_config.validate());
 
         let mut registry = default_registry(&base_logger);
-        registry.insert::<TestFilterProvider>();
+        registry.insert(TestFilterProvider {});
         let close_client = run_proxy(&base_logger, registry, client_config);
 
         // let's send the packet

@@ -41,11 +41,12 @@ pub fn noop_endpoint() -> EndPoint {
 
 pub struct TestFilterProvider {}
 impl FilterProvider for TestFilterProvider {
-    fn name() -> String {
+    fn name(&self) -> String {
         "TestFilter".to_string()
     }
 
     fn from_config(
+        &self,
         _: &Logger<Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>>>,
         _: &Value,
     ) -> Box<dyn Filter> {
