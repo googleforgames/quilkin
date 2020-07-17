@@ -14,6 +14,6 @@
  * limitations under the License.
  */
 
-pub use debug_filter::DebugFilter;
+pub use debug_filter::{DebugFilter, DebugFilterProvider};
 
 mod debug_filter;

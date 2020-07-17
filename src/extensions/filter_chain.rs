@@ -137,8 +137,8 @@ mod tests {
 
     use crate::config;
     use crate::config::{ConnectionConfig, Local};
-    use crate::extensions::default_registry;
-    use crate::extensions::filters::DebugFilter;
+    use crate::extensions::filters::DebugFilterProvider;
+    use crate::extensions::{default_registry, FilterProvider};
     use crate::test_utils::{logger, noop_endpoint, TestFilter};
 
     use super::*;
@@ -151,7 +151,7 @@ mod tests {
         let config = Arc::new(Config {
             local: Local { port: 0 },
             filters: vec![config::Filter {
-                name: DebugFilter::name(),
+                name: DebugFilterProvider::name(),
                 config: Default::default(),
             }],
             connections: ConnectionConfig::Client {

@@ -19,7 +19,9 @@ use std::net::SocketAddr;
 use slog::{info, o, Logger};
 
 use crate::config::EndPoint;
-use crate::extensions::{BoxFilter, Filter};
+use crate::extensions::filter_registry::FilterProvider;
+use crate::extensions::Filter;
+use serde_yaml::Value;
 
 /// Debug Filter logs all incoming and outgoing packets
 ///
@@ -48,7 +50,7 @@ pub struct DebugFilter {
 impl DebugFilter {
     /// Constructor for the DebugFilter. Pass in a "id" to append a string to your log messages from this
     /// Filter.
-    pub fn new(base: &Logger, id: Option<String>) -> Self {
+    fn new(base: &Logger, id: Option<String>) -> Self {
         let log = match id {
             None => base.new(o!("source" => "extensions::DebugFilter")),
             Some(id) => base.new(o!("source" => "extensions::DebugFilter", "id" => id)),
@@ -56,14 +58,16 @@ impl DebugFilter {
 
         DebugFilter { log }
     }
+}
 
-    /// name returns the configuration name for the DebugFilter
-    pub fn name() -> String {
+/// Provider for the DebugFilter
+pub struct DebugFilterProvider {}
+impl FilterProvider for DebugFilterProvider {
+    fn name() -> String {
         return String::from("quilkin.core.v1alpaha1.debug");
     }
 
-    /// config configures the DebugFilter from yaml and returns it ready for the FilterRegistry
-    pub fn config(base: &Logger, config: &serde_yaml::Value) -> BoxFilter {
+    fn from_config(logger: &Logger, config: &Value) -> Box<dyn Filter> {
         let prefix = match config {
             serde_yaml::Value::Mapping(map) => {
                 map.get(&serde_yaml::Value::from("id")).map(|value| {
@@ -76,7 +80,7 @@ impl DebugFilter {
             _ => None,
         };
 
-        Box::new(DebugFilter::new(base, prefix))
+        Box::new(DebugFilter::new(logger, prefix))
     }
 }
 
@@ -205,30 +209,30 @@ mod tests {
     }
 
     #[test]
-    fn config_with_id() {
+    fn from_config_with_id() {
         let log = logger();
         let mut map = Mapping::new();
         map.insert(Value::from("id"), Value::from("name"));
 
-        DebugFilter::config(&log, &Value::Mapping(map));
+        DebugFilterProvider::from_config(&log, &Value::Mapping(map));
     }
 
     #[test]
-    fn config_without_id() {
+    fn from_config_without_id() {
         let log = logger();
         let mut map = Mapping::new();
         map.insert(Value::from("id"), Value::from("name"));
 
-        DebugFilter::config(&log, &Value::Mapping(map));
+        DebugFilterProvider::from_config(&log, &Value::Mapping(map));
     }
 
     #[test]
     #[should_panic(expected = "DebugFilter.config.id should have a string value")]
-    fn config_should_panic() {
+    fn from_config_should_panic() {
         let log = logger();
         let mut map = Mapping::new();
         map.insert(Value::from("id"), Value::from(false));
 
-        DebugFilter::config(&log, &Value::Mapping(map));
+        DebugFilterProvider::from_config(&log, &Value::Mapping(map));
     }
 }

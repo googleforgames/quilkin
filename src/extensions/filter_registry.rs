@@ -62,9 +62,15 @@ pub trait Filter: Send + Sync {
     ) -> Option<Vec<u8>>;
 }
 
-pub type BoxFilter = Box<dyn Filter>;
 /// Function that returns a filter
-type FnFilter = Box<dyn Fn(&Logger, &serde_yaml::Value) -> BoxFilter + Send>;
+type FnFilter = Box<dyn Fn(&Logger, &serde_yaml::Value) -> Box<dyn Filter> + Send>;
+
+/// FilterProvider provides the name and creation function for a given Filter.
+pub trait FilterProvider: Sync + Send {
+    /// name returns the configuration name for the Filter
+    fn name() -> String;
+    fn from_config(logger: &Logger, config: &serde_yaml::Value) -> Box<dyn Filter>;
+}
 
 /// FilterRegistry is the registry of all Filters that can be applied in the system.
 pub struct FilterRegistry {
@@ -80,14 +86,17 @@ impl FilterRegistry {
         }
     }
 
-    /// insert inserts the fucntion that will create a Filter into the registry.
-    pub fn insert(&mut self, key: String, filter: FnFilter) {
-        self.registry.insert(key, filter);
+    /// insert registers a Filter under the provider's given name.
+    pub fn insert<P: 'static>(&mut self)
+    where
+        P: FilterProvider,
+    {
+        self.registry.insert(P::name(), Box::new(P::from_config));
     }
 
     /// get returns an instance of a filter for a given Key. Returns None if not found.
     pub fn get(&self, key: &String, config: &serde_yaml::Value) -> Option<Box<dyn Filter>> {
-        self.registry.get(key).map(|f| f(&self.log, &config))
+        self.registry.get(key).map(|p| p(&self.log, &config))
     }
 }
 
@@ -96,7 +105,7 @@ mod tests {
     use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
     use super::*;
-    use crate::test_utils::logger;
+    use crate::test_utils::{logger, TestFilterProvider};
 
     struct TestFilter {}
 
@@ -132,15 +141,12 @@ mod tests {
     fn insert_and_get() {
         let logger = logger();
         let mut reg = FilterRegistry::new(&logger);
-        reg.insert(
-            String::from("test.filter"),
-            Box::new(|_, _| Box::new(TestFilter {})),
-        );
+        reg.insert::<TestFilterProvider>();
         let config = serde_yaml::Value::Null;
         assert!(reg.get(&String::from("not.found"), &config).is_none());
-        assert!(reg.get(&String::from("test.filter"), &config).is_some());
+        assert!(reg.get(&String::from("TestFilter"), &config).is_some());
 
-        let filter = reg.get(&String::from("test.filter"), &config).unwrap();
+        let filter = reg.get(&String::from("TestFilter"), &config).unwrap();
 
         let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080);
         let endpoint = EndPoint {
@@ -149,9 +155,9 @@ mod tests {
             connection_ids: vec![],
         };
 
-        assert!(filter.local_receive_filter(&vec![], addr, vec![]).is_none());
+        assert!(filter.local_receive_filter(&vec![], addr, vec![]).is_some());
         assert!(filter
             .endpoint_receive_filter(&endpoint, addr, vec![])
-            .is_none());
+            .is_some());
     }
 }

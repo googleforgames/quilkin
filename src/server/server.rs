@@ -353,7 +353,9 @@ mod tests {
     use crate::config::{Config, ConnectionConfig, EndPoint, Local};
     use crate::extensions::default_registry;
     use crate::server::sessions::{Packet, SESSION_TIMEOUT_SECONDS};
-    use crate::test_utils::{ephemeral_socket, logger, recv_udp, recv_udp_done, TestFilter};
+    use crate::test_utils::{
+        ephemeral_socket, logger, recv_udp, recv_udp_done, TestFilter, TestFilterProvider,
+    };
 
     use super::*;
 
@@ -446,10 +448,7 @@ mod tests {
     async fn run_with_filter() {
         let log = logger();
         let mut registry = FilterRegistry::new(&log);
-        registry.insert(
-            "TestFilter".to_string(),
-            Box::new(|_, _| Box::new(TestFilter {})),
-        );
+        registry.insert::<TestFilterProvider>();
 
         let server = Server::new(log.clone(), registry, Metrics::default());
         let socket = ephemeral_socket().await;

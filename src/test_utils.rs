@@ -19,15 +19,16 @@ use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::str::from_utf8;
 use std::sync::Arc;
 
-use slog::{o, warn, Drain, Logger};
+use slog::{o, warn, Drain, Logger, Never, SendSyncRefUnwindSafeDrain};
 use slog_term::{FullFormat, PlainSyncDecorator};
 use tokio::net::udp::{RecvHalf, SendHalf};
 use tokio::net::UdpSocket;
 use tokio::sync::{mpsc, oneshot};
 
 use crate::config::{Config, EndPoint};
-use crate::extensions::{Filter, FilterRegistry};
+use crate::extensions::{Filter, FilterProvider, FilterRegistry};
 use crate::server::{Metrics, Server};
+use serde_yaml::Value;
 
 // noop_endpoint returns an endpoint for data that should go nowhere.
 pub fn noop_endpoint() -> EndPoint {
@@ -35,6 +36,20 @@ pub fn noop_endpoint() -> EndPoint {
         name: "noop".to_string(),
         address: "127.0.0.1:10".parse().unwrap(),
         connection_ids: vec![],
+    }
+}
+
+pub struct TestFilterProvider {}
+impl FilterProvider for TestFilterProvider {
+    fn name() -> String {
+        "TestFilter".to_string()
+    }
+
+    fn from_config(
+        _: &Logger<Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>>>,
+        _: &Value,
+    ) -> Box<dyn Filter> {
+        Box::new(TestFilter {})
     }
 }
 
