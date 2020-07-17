@@ -65,7 +65,7 @@ impl RateLimitFilter {
             let mut interval = time::interval_at(Instant::now() + period, period);
             loop {
                 tokio::select! {
-                    _ = &mut Box::pin(interval.tick()) => {
+                    _ = interval.tick() => {
                         // Refill tokens.
                         let mut refilled = false;
                         while !refilled {
