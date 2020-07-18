@@ -116,17 +116,41 @@ impl Config {
 
     /// validates the current Config.
     pub fn validate(&self) -> Result<(), ValidationError> {
-        if let ConnectionConfig::Server { endpoints } = &self.connections {
-            if endpoints
-                .iter()
-                .map(|ep| ep.name.clone())
-                .collect::<HashSet<_>>()
-                .len()
-                != endpoints.len()
-            {
-                return Err(ValidationError::NotUnique("endpoint.name".to_string()));
+        match &self.connections {
+            ConnectionConfig::Server { endpoints } => {
+                if endpoints
+                    .iter()
+                    .map(|ep| ep.name.clone())
+                    .collect::<HashSet<_>>()
+                    .len()
+                    != endpoints.len()
+                {
+                    return Err(ValidationError::NotUnique("endpoint.name".to_string()));
+                }
+
+                if endpoints
+                    .iter()
+                    .map(|ep| ep.address)
+                    .collect::<HashSet<_>>()
+                    .len()
+                    != endpoints.len()
+                {
+                    return Err(ValidationError::NotUnique("endpoint.address".to_string()));
+                }
+            }
+            ConnectionConfig::Client {
+                addresses,
+                connection_id: _,
+                lb_policy: _,
+            } => {
+                if addresses.iter().collect::<HashSet<_>>().len() != addresses.len() {
+                    return Err(ValidationError::NotUnique(
+                        "connections.addresses".to_string(),
+                    ));
+                }
             }
         }
+
         Ok(())
     }
 }
@@ -291,7 +315,7 @@ server:
 
     #[test]
     fn validate() {
-        // client
+        // client - valid
         let config = Config {
             local: Local { port: 7000 },
             filters: vec![],
@@ -306,6 +330,25 @@ server:
         };
 
         assert!(config.validate().is_ok());
+
+        // client - non unique address
+        let config = Config {
+            local: Local { port: 7000 },
+            filters: vec![],
+            connections: ConnectionConfig::Client {
+                addresses: vec![
+                    "127.0.0.1:25999".parse().unwrap(),
+                    "127.0.0.1:25999".parse().unwrap(),
+                ],
+                connection_id: String::from("1234"),
+                lb_policy: Some(LoadBalancerPolicy::RoundRobin),
+            },
+        };
+
+        assert_eq!(
+            ValidationError::NotUnique("connections.addresses".to_string()).to_string(),
+            config.validate().unwrap_err().to_string()
+        );
 
         // server - valid
         let config = Config {
@@ -351,6 +394,31 @@ server:
         assert_eq!(
             ValidationError::NotUnique("endpoint.name".to_string()).to_string(),
             config.validate().unwrap_err().to_string()
-        )
+        );
+
+        // server - non unique addresses
+        let config = Config {
+            local: Local { port: 7000 },
+            filters: vec![],
+            connections: ConnectionConfig::Server {
+                endpoints: vec![
+                    EndPoint {
+                        name: String::from("ONE"),
+                        address: "127.0.0.1:26000".parse().unwrap(),
+                        connection_ids: vec![String::from("1234"), String::from("5678")],
+                    },
+                    EndPoint {
+                        name: String::from("TWO"),
+                        address: "127.0.0.1:26000".parse().unwrap(),
+                        connection_ids: vec![String::from("1234")],
+                    },
+                ],
+            },
+        };
+
+        assert_eq!(
+            ValidationError::NotUnique("endpoint.address".to_string()).to_string(),
+            config.validate().unwrap_err().to_string()
+        );
     }
 }
