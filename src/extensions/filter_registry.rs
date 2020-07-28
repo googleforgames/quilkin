@@ -65,7 +65,7 @@ pub trait Filter: Send + Sync {
 }
 
 #[derive(Debug, PartialEq)]
-/// Error is an error when attempting to create a Filter from_config() from a FilterProvider
+/// Error is an error when attempting to create a Filter from_config() from a FilterFactory
 pub enum Error {
     NotFound(String),
     FieldInvalid { field: String, reason: String },
@@ -82,16 +82,16 @@ impl fmt::Display for Error {
     }
 }
 
-/// FilterProvider provides the name and creation function for a given Filter.
-pub trait FilterProvider: Sync + Send {
+/// FilterFactory provides the name and creation function for a given Filter.
+pub trait FilterFactory: Sync + Send {
     /// name returns the configuration name for the Filter
     fn name(&self) -> String;
-    fn from_config(&self, config: &serde_yaml::Value) -> Result<Box<dyn Filter>, Error>;
+    fn create_from_config(&self, config: &serde_yaml::Value) -> Result<Box<dyn Filter>, Error>;
 }
 
 /// FilterRegistry is the registry of all Filters that can be applied in the system.
 pub struct FilterRegistry {
-    registry: HashMap<String, Box<dyn FilterProvider>>,
+    registry: HashMap<String, Box<dyn FilterFactory>>,
 }
 
 impl FilterRegistry {
@@ -104,7 +104,7 @@ impl FilterRegistry {
     /// insert registers a Filter under the provider's given name.
     pub fn insert<P: 'static>(&mut self, provider: P)
     where
-        P: FilterProvider,
+        P: FilterFactory,
     {
         self.registry.insert(provider.name(), Box::new(provider));
     }
@@ -112,7 +112,11 @@ impl FilterRegistry {
     /// get returns an instance of a filter for a given Key. Returns Error if not found,
     /// or if there is a configuration issue.
     pub fn get(&self, key: &String, config: &serde_yaml::Value) -> Result<Box<dyn Filter>, Error> {
-        match self.registry.get(key).map(|p| p.from_config(&config)) {
+        match self
+            .registry
+            .get(key)
+            .map(|p| p.create_from_config(&config))
+        {
             None => Err(Error::NotFound(key.clone())),
             Some(filter) => filter,
         }
@@ -123,7 +127,7 @@ impl FilterRegistry {
 mod tests {
     use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
-    use crate::test_utils::TestFilterProvider;
+    use crate::test_utils::TestFilterFactory;
 
     use super::*;
 
@@ -160,7 +164,7 @@ mod tests {
     #[test]
     fn insert_and_get() {
         let mut reg = FilterRegistry::new();
-        reg.insert(TestFilterProvider {});
+        reg.insert(TestFilterFactory {});
         let config = serde_yaml::Value::Null;
 
         match reg.get(&String::from("not.found"), &config) {

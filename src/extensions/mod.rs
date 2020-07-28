@@ -17,7 +17,7 @@
 use slog::Logger;
 
 pub use filter_chain::FilterChain;
-pub use filter_registry::{Error, Filter, FilterProvider, FilterRegistry};
+pub use filter_registry::{Error, Filter, FilterFactory, FilterRegistry};
 
 mod filter_registry;
 pub mod filters;
@@ -28,6 +28,6 @@ mod filter_chain;
 /// set of filters that are user configurable registered to it
 pub fn default_registry(base: &Logger) -> FilterRegistry {
     let mut fr = FilterRegistry::new();
-    fr.insert(filters::DebugFilterProvider::new(base));
+    fr.insert(filters::DebugFilterFactory::new(base));
     fr
 }

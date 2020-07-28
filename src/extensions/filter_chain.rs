@@ -135,8 +135,8 @@ mod tests {
 
     use crate::config;
     use crate::config::{ConnectionConfig, Local};
-    use crate::extensions::filters::DebugFilterProvider;
-    use crate::extensions::{default_registry, FilterProvider};
+    use crate::extensions::filters::DebugFilterFactory;
+    use crate::extensions::{default_registry, FilterFactory};
     use crate::test_utils::{logger, noop_endpoint, TestFilter};
 
     use super::*;
@@ -144,7 +144,7 @@ mod tests {
     #[test]
     fn from_config() {
         let log = logger();
-        let provider = DebugFilterProvider::new(&log);
+        let provider = DebugFilterFactory::new(&log);
 
         // everything is fine
         let config = Arc::new(Config {
