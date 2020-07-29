@@ -19,23 +19,85 @@ use std::net::SocketAddr;
 use slog::{info, o, Logger};
 
 use crate::config::EndPoint;
+use crate::extensions::filter_registry::{Error, FilterFactory};
 use crate::extensions::Filter;
+use serde_yaml::Value;
 
 /// Debug Filter logs all incoming and outgoing packets
+///
+/// # Configuration
+///
+/// ```yaml
+/// local:
+///   port: 7000 # the port to receive traffic to locally
+/// filters:
+///   - name: quilkin.core.v1alpaha1.debug
+///     config:
+///       id: "debug-1"
+/// client:
+///   addresses:
+///     - 127.0.0.1:7001
+///   connection_id: 1x7ijy6
+/// ```
+///  `config.id` (optional) adds a "id" field with a given value to each log line.
+///     This can be useful to identify debug log positioning within a filter config if you have
+///     multiple DebugFilters configured.
+///
 pub struct DebugFilter {
     log: Logger,
 }
 
 impl DebugFilter {
+    /// Constructor for the DebugFilter. Pass in a "id" to append a string to your log messages from this
+    /// Filter.
+    fn new(base: &Logger, id: Option<String>) -> Self {
+        let log = match id {
+            None => base.new(o!("source" => "extensions::DebugFilter")),
+            Some(id) => base.new(o!("source" => "extensions::DebugFilter", "id" => id)),
+        };
+
+        DebugFilter { log }
+    }
+}
+
+/// Provider for the DebugFilter
+pub struct DebugFilterFactory {
+    log: Logger,
+}
+
+impl DebugFilterFactory {
     pub fn new(base: &Logger) -> Self {
-        DebugFilter {
-            log: base.new(o!("source" => "extensions::DebugFilter")),
-        }
+        DebugFilterFactory { log: base.clone() }
+    }
+}
+
+impl FilterFactory for DebugFilterFactory {
+    fn name(&self) -> String {
+        return String::from("quilkin.core.v1alpaha1.debug");
     }
 
-    /// name returns the configuration name for the DebugFilter
-    pub fn name() -> String {
-        return String::from("quilkin.core.alpahav1.debug");
+    fn create_from_config(&self, config: &Value) -> Result<Box<dyn Filter>, Error> {
+        // pull out the Option<&Value>
+        let prefix = match config {
+            serde_yaml::Value::Mapping(map) => map.get(&serde_yaml::Value::from("id")),
+            _ => None,
+        };
+
+        return match prefix {
+            // if no config value supplied, then no prefix, which is fine
+            None => Ok(Box::new(DebugFilter::new(&self.log, None))),
+            // return an Error if the id exists but is not a string.
+            Some(value) => match value.as_str() {
+                None => Err(Error::FieldInvalid {
+                    field: "config.id".to_string(),
+                    reason: "id value should be a string".to_string(),
+                }),
+                Some(prefix) => Ok(Box::new(DebugFilter::new(
+                    &self.log,
+                    Some(prefix.to_string()),
+                ))),
+            },
+        };
     }
 }
 
@@ -95,10 +157,12 @@ mod tests {
     use crate::test_utils::logger;
 
     use super::*;
+    use serde_yaml::Mapping;
+    use serde_yaml::Value;
 
     #[test]
     fn local_receive_filter() {
-        let df = DebugFilter::new(&logger());
+        let df = DebugFilter::new(&logger(), None);
         let endpoints = vec![EndPoint {
             name: "e1".to_string(),
             address: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12357),
@@ -118,7 +182,7 @@ mod tests {
 
     #[test]
     fn local_send_filter() {
-        let df = DebugFilter::new(&logger());
+        let df = DebugFilter::new(&logger(), None);
         let to = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12358);
         let contents = "hello".to_string().into_bytes();
 
@@ -130,7 +194,7 @@ mod tests {
 
     #[test]
     fn endpoint_receive_filter() {
-        let df = DebugFilter::new(&logger());
+        let df = DebugFilter::new(&logger(), None);
         let endpoint = EndPoint {
             name: "e1".to_string(),
             address: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12357),
@@ -146,7 +210,7 @@ mod tests {
 
     #[test]
     fn endpoint_send_filter() {
-        let df = DebugFilter::new(&logger());
+        let df = DebugFilter::new(&logger(), None);
         let endpoint = EndPoint {
             name: "e1".to_string(),
             address: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12357),
@@ -158,6 +222,48 @@ mod tests {
         match df.endpoint_send_filter(&endpoint, from, contents.clone()) {
             None => assert!(false, "should return a result"),
             Some(result_contents) => assert_eq!(contents, result_contents),
+        }
+    }
+
+    #[test]
+    fn from_config_with_id() {
+        let log = logger();
+        let mut map = Mapping::new();
+        let provider = DebugFilterFactory::new(&log);
+
+        map.insert(Value::from("id"), Value::from("name"));
+        assert!(provider.create_from_config(&Value::Mapping(map)).is_ok());
+    }
+
+    #[test]
+    fn from_config_without_id() {
+        let log = logger();
+        let mut map = Mapping::new();
+        let provider = DebugFilterFactory::new(&log);
+
+        map.insert(Value::from("id"), Value::from("name"));
+        assert!(provider.create_from_config(&Value::Mapping(map)).is_ok());
+    }
+
+    #[test]
+    fn from_config_should_panic() {
+        let log = logger();
+        let mut map = Mapping::new();
+        let provider = DebugFilterFactory::new(&log);
+
+        map.insert(Value::from("id"), Value::from(false));
+        match provider.create_from_config(&Value::Mapping(map)) {
+            Ok(_) => assert!(false, "should be an error"),
+            Err(err) => {
+                assert_eq!(
+                    Error::FieldInvalid {
+                        field: "config.id".to_string(),
+                        reason: "id value should be a string".to_string()
+                    }
+                    .to_string(),
+                    err.to_string()
+                );
+            }
         }
     }
 }

@@ -24,7 +24,7 @@ mod tests {
     use tokio::time::{delay_for, Duration};
 
     use quilkin::config::{Config, ConnectionConfig, EndPoint, Local};
-    use quilkin::extensions::default_filters;
+    use quilkin::extensions::default_registry;
     use quilkin::test_utils::{echo_server, logger, recv_multiple_packets, run_proxy};
 
     #[tokio::test]
@@ -57,7 +57,7 @@ mod tests {
         };
         assert_eq!(Ok(()), server_config.validate());
 
-        let close_server = run_proxy(&base_logger, default_filters(&base_logger), server_config);
+        let close_server = run_proxy(&base_logger, default_registry(&base_logger), server_config);
 
         // create a local client
         let client_port = 12344;
@@ -75,7 +75,7 @@ mod tests {
         };
         assert_eq!(Ok(()), client_config.validate());
 
-        let close_client = run_proxy(&base_logger, default_filters(&base_logger), client_config);
+        let close_client = run_proxy(&base_logger, default_registry(&base_logger), client_config);
 
         // let's send the packet
         let (mut recv_chan, mut send) = recv_multiple_packets(&base_logger).await;

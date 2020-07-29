@@ -28,11 +28,12 @@ use tokio::sync::{mpsc, oneshot};
 use tokio::sync::{Mutex, RwLock};
 use tokio::time::{delay_for, Duration, Instant};
 
-use super::metrics::{start_metrics_server, Metrics};
 use crate::config::{Config, ConnectionConfig, EndPoint};
 use crate::extensions::{Filter, FilterChain, FilterRegistry};
 use crate::load_balancer_policy::LoadBalancerPolicy;
 use crate::server::sessions::{Packet, Session, SESSION_TIMEOUT_SECONDS};
+
+use super::metrics::{start_metrics_server, Metrics};
 
 type SessionMap = Arc<RwLock<HashMap<(SocketAddr, SocketAddr), Mutex<Session>>>>;
 
@@ -351,9 +352,11 @@ mod tests {
 
     use crate::config;
     use crate::config::{Config, ConnectionConfig, EndPoint, Local};
-    use crate::extensions::default_filters;
+    use crate::extensions::default_registry;
     use crate::server::sessions::{Packet, SESSION_TIMEOUT_SECONDS};
-    use crate::test_utils::{ephemeral_socket, logger, recv_udp, recv_udp_done, TestFilter};
+    use crate::test_utils::{
+        ephemeral_socket, logger, recv_udp, recv_udp_done, TestFilter, TestFilterFactory,
+    };
 
     use super::*;
 
@@ -446,7 +449,7 @@ mod tests {
     async fn run_with_filter() {
         let log = logger();
         let mut registry = FilterRegistry::new();
-        registry.insert("TestFilter".to_string(), TestFilter {});
+        registry.insert(TestFilterFactory {});
 
         let server = Server::new(log.clone(), registry, Metrics::default());
         let socket = ephemeral_socket().await;
@@ -515,6 +518,8 @@ mod tests {
 
     #[tokio::test]
     async fn recv_from() {
+        time::pause();
+
         struct Result {
             msg: String,
             addr: SocketAddr,
@@ -529,7 +534,6 @@ mod tests {
             chain: Arc<FilterChain>,
             expected: Expected,
         ) -> Result {
-            time::pause();
             info!(log, "Test"; "name" => name);
             let msg = "hello".to_string();
             let (local_addr, wait) = recv_udp().await;
@@ -587,8 +591,6 @@ mod tests {
                     .as_secs(),
             );
 
-            time::resume();
-
             Result {
                 msg: result,
                 addr: receive_addr_local,
@@ -607,7 +609,7 @@ mod tests {
         .await;
         assert_eq!("hello", result.msg);
 
-        let chain = Arc::new(FilterChain::new(vec![Arc::new(TestFilter {})]));
+        let chain = Arc::new(FilterChain::new(vec![Box::new(TestFilter {})]));
         let result = test(
             "test filter".to_string(),
             &log,
@@ -624,13 +626,15 @@ mod tests {
             ),
             result.msg
         );
+
+        time::resume();
     }
 
     #[tokio::test]
     async fn run_recv_from() {
         let log = logger();
         let msg = "hello";
-        let server = Server::new(log.clone(), default_filters(&log), Metrics::default());
+        let server = Server::new(log.clone(), default_registry(&log), Metrics::default());
         let (local_addr, wait) = recv_udp().await;
         let lb_policy = Arc::new(LoadBalancerPolicy::new(&ConnectionConfig::Client {
             addresses: vec![local_addr],
@@ -738,7 +742,7 @@ mod tests {
             .unwrap();
 
         server.run_receive_packet(
-            Arc::new(FilterChain::new(vec![Arc::new(TestFilter {})])),
+            Arc::new(FilterChain::new(vec![Box::new(TestFilter {})])),
             send_socket,
             recv_packet,
         );
@@ -807,7 +811,7 @@ mod tests {
     async fn run_prune_sessions() {
         time::pause();
         let log = logger();
-        let server = Server::new(log.clone(), default_filters(&log), Metrics::default());
+        let server = Server::new(log.clone(), default_registry(&log), Metrics::default());
         let sessions: SessionMap = Arc::new(RwLock::new(HashMap::new()));
         let from: SocketAddr = "127.0.0.1:7000".parse().unwrap();
         let to: SocketAddr = "127.0.0.1:7001".parse().unwrap();
