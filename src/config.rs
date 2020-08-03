@@ -19,8 +19,9 @@ use std::fmt;
 use std::io;
 use std::net::SocketAddr;
 
+use serde::de::Visitor;
 use serde::export::Formatter;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 /// Validation failure for a Config
 #[derive(Debug, PartialEq)]
@@ -74,6 +75,76 @@ pub struct Filter {
     pub config: serde_yaml::Value,
 }
 
+/// Array of bytes, serialised and deserialised to base64
+#[derive(Debug, Clone, PartialEq)]
+pub struct ByteArray(Vec<u8>);
+
+impl ByteArray {
+    /// create a new, empty ByteArray
+    pub fn new() -> Self {
+        ByteArray(vec![])
+    }
+
+    /// create from a str
+    pub fn from_str(str: &str) -> Self {
+        ByteArray(str.as_bytes().to_vec())
+    }
+
+    /// borrow the underlying vector
+    pub fn as_vec(&self) -> &Vec<u8> {
+        &self.0
+    }
+}
+
+impl PartialEq<Vec<u8>> for ByteArray {
+    fn eq(&self, other: &Vec<u8>) -> bool {
+        self.0 == *other
+    }
+}
+
+impl Serialize for ByteArray {
+    fn serialize<S>(&self, serializer: S) -> Result<<S as Serializer>::Ok, <S as Serializer>::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(base64::encode(&self.0).as_str())
+    }
+}
+
+impl<'de> Deserialize<'de> for ByteArray {
+    fn deserialize<D>(deserializer: D) -> Result<ByteArray, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_str(ByteArrayVisitor)
+    }
+}
+
+/// ByteArrayVisitor deserialises a ByteArray from a base64 string
+struct ByteArrayVisitor;
+
+impl<'de> Visitor<'de> for ByteArrayVisitor {
+    type Value = ByteArray;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        write!(formatter, "a bytearray as a base64 string")
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        match base64::decode(v) {
+            Ok(arr) => Ok(ByteArray(arr)),
+            Err(err) => Err(serde::de::Error::custom(format!(
+                "error deserialising '{}' as base64 byte array: {}",
+                v,
+                err.to_string()
+            ))),
+        }
+    }
+}
+
 /// ConnectionConfig is the configuration for either a Client or Server proxy
 #[derive(Debug, Deserialize, Serialize)]
 pub enum ConnectionConfig {
@@ -81,7 +152,7 @@ pub enum ConnectionConfig {
     #[serde(rename = "client")]
     Client {
         addresses: Vec<SocketAddr>,
-        connection_id: String,
+        connection_id: ByteArray,
         lb_policy: Option<LoadBalancerPolicy>,
     },
 
@@ -95,7 +166,7 @@ pub enum ConnectionConfig {
 pub struct EndPoint {
     pub name: String,
     pub address: SocketAddr,
-    pub connection_ids: Vec<String>,
+    pub connection_ids: Vec<ByteArray>,
 }
 
 impl Config {
@@ -152,7 +223,7 @@ mod tests {
     use serde_yaml::Value;
 
     use crate::config::{
-        Config, ConnectionConfig, EndPoint, LoadBalancerPolicy, Local, ValidationError,
+        ByteArray, Config, ConnectionConfig, EndPoint, LoadBalancerPolicy, Local, ValidationError,
     };
 
     #[test]
@@ -162,7 +233,7 @@ mod tests {
             filters: vec![],
             connections: ConnectionConfig::Client {
                 addresses: vec!["127.0.0.1:25999".parse().unwrap()],
-                connection_id: String::from("1234"),
+                connection_id: ByteArray::from_str("1234"),
                 lb_policy: Some(LoadBalancerPolicy::RoundRobin),
             },
         };
@@ -180,12 +251,15 @@ mod tests {
                     EndPoint {
                         name: String::from("No.1"),
                         address: "127.0.0.1:26000".parse().unwrap(),
-                        connection_ids: vec![String::from("1234"), String::from("5678")],
+                        connection_ids: vec![
+                            ByteArray::from_str("1234"),
+                            ByteArray::from_str("5678"),
+                        ],
                     },
                     EndPoint {
                         name: String::from("No.2"),
                         address: "127.0.0.1:26001".parse().unwrap(),
-                        connection_ids: vec![String::from("1234")],
+                        connection_ids: vec![ByteArray::from_str("1234")],
                     },
                 ],
             },
@@ -211,7 +285,7 @@ filters: # new filters section
 client:
   addresses:
     - 127.0.0.1:7001
-  connection_id: 1x7ijy6
+  connection_id: MXg3aWp5Ng== # 1x7ijy6
         ";
         let config = Config::from_reader(yaml.as_bytes()).unwrap();
 
@@ -241,7 +315,7 @@ local:
 client:
   addresses:
     - 127.0.0.1:25999
-  connection_id: 1x7ijy6
+  connection_id: MXg3aWp5Ng== # 1x7ijy6
   lb_policy: ROUND_ROBIN
   ";
         let config = Config::from_reader(yaml.as_bytes()).unwrap();
@@ -252,7 +326,7 @@ client:
                 connection_id,
                 lb_policy,
             } => {
-                assert_eq!("1x7ijy6", connection_id);
+                assert_eq!(ByteArray::from_str("1x7ijy6"), connection_id);
                 assert_eq!(
                     vec!["127.0.0.1:25999".parse::<SocketAddr>().unwrap()],
                     addresses
@@ -274,12 +348,12 @@ server:
     - name: Game Server No. 1
       address: 127.0.0.1:26000
       connection_ids:
-        - 1x7ijy6
-        - 8gj3v2i
+        - MXg3aWp5Ng== #1x7ijy6
+        - OGdqM3YyaQ== #8gj3v2i
     - name: Game Server No. 2
       address: 127.0.0.1:26001
       connection_ids:
-        - nkuy70x";
+        - bmt1eTcweA== #nkuy70x";
         let config = Config::from_reader(yaml.as_bytes()).unwrap();
         assert_eq!(7000, config.local.port);
         assert_eq!(0, config.filters.len());
@@ -290,12 +364,15 @@ server:
                     EndPoint {
                         name: String::from("Game Server No. 1"),
                         address: "127.0.0.1:26000".parse().unwrap(),
-                        connection_ids: vec![String::from("1x7ijy6"), String::from("8gj3v2i")],
+                        connection_ids: vec![
+                            ByteArray::from_str("1x7ijy6"),
+                            ByteArray::from_str("8gj3v2i"),
+                        ],
                     },
                     EndPoint {
                         name: String::from("Game Server No. 2"),
                         address: "127.0.0.1:26001".parse().unwrap(),
-                        connection_ids: vec![String::from("nkuy70x")],
+                        connection_ids: vec![ByteArray::from_str("nkuy70x")],
                     },
                 ];
                 assert_eq!(expected, endpoints);
@@ -314,7 +391,7 @@ server:
                     "127.0.0.1:25999".parse().unwrap(),
                     "127.0.0.1:25998".parse().unwrap(),
                 ],
-                connection_id: String::from("1234"),
+                connection_id: ByteArray::from_str("1234"),
                 lb_policy: Some(LoadBalancerPolicy::RoundRobin),
             },
         };
@@ -330,7 +407,7 @@ server:
                     "127.0.0.1:25999".parse().unwrap(),
                     "127.0.0.1:25999".parse().unwrap(),
                 ],
-                connection_id: String::from("1234"),
+                connection_id: ByteArray::from_str("1234"),
                 lb_policy: Some(LoadBalancerPolicy::RoundRobin),
             },
         };
@@ -349,12 +426,15 @@ server:
                     EndPoint {
                         name: String::from("ONE"),
                         address: "127.0.0.1:26000".parse().unwrap(),
-                        connection_ids: vec![String::from("1234"), String::from("5678")],
+                        connection_ids: vec![
+                            ByteArray::from_str("1234"),
+                            ByteArray::from_str("5678"),
+                        ],
                     },
                     EndPoint {
                         name: String::from("TWO"),
                         address: "127.0.0.1:26001".parse().unwrap(),
-                        connection_ids: vec![String::from("1234")],
+                        connection_ids: vec![ByteArray::from_str("1234")],
                     },
                 ],
             },
@@ -370,12 +450,15 @@ server:
                     EndPoint {
                         name: String::from("SAME"),
                         address: "127.0.0.1:26000".parse().unwrap(),
-                        connection_ids: vec![String::from("1234"), String::from("5678")],
+                        connection_ids: vec![
+                            ByteArray::from_str("1234"),
+                            ByteArray::from_str("5678"),
+                        ],
                     },
                     EndPoint {
                         name: String::from("SAME"),
                         address: "127.0.0.1:26001".parse().unwrap(),
-                        connection_ids: vec![String::from("1234")],
+                        connection_ids: vec![ByteArray::from_str("1234")],
                     },
                 ],
             },
@@ -395,12 +478,15 @@ server:
                     EndPoint {
                         name: String::from("ONE"),
                         address: "127.0.0.1:26000".parse().unwrap(),
-                        connection_ids: vec![String::from("1234"), String::from("5678")],
+                        connection_ids: vec![
+                            ByteArray::from_str("1234"),
+                            ByteArray::from_str("5678"),
+                        ],
                     },
                     EndPoint {
                         name: String::from("TWO"),
                         address: "127.0.0.1:26000".parse().unwrap(),
-                        connection_ids: vec![String::from("1234")],
+                        connection_ids: vec![ByteArray::from_str("1234")],
                     },
                 ],
             },

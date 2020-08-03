@@ -23,7 +23,7 @@ mod tests {
     use serde_yaml::{Mapping, Value};
     use slog::info;
 
-    use quilkin::config::{Config, ConnectionConfig, EndPoint, Filter, Local};
+    use quilkin::config::{ByteArray, Config, ConnectionConfig, EndPoint, Filter, Local};
     use quilkin::extensions::filters::DebugFilterFactory;
     use quilkin::extensions::{default_registry, FilterFactory};
     use quilkin::test_utils::{
@@ -72,7 +72,7 @@ mod tests {
                     IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
                     server_port,
                 )],
-                connection_id: String::from(""),
+                connection_id: ByteArray::new(),
                 lb_policy: None,
             },
         };
@@ -168,7 +168,7 @@ mod tests {
                     IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
                     server_port,
                 )],
-                connection_id: String::from(""),
+                connection_id: ByteArray::new(),
                 lb_policy: None,
             },
         };

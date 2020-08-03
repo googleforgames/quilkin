@@ -351,7 +351,7 @@ mod tests {
     use tokio::time::{Duration, Instant};
 
     use crate::config;
-    use crate::config::{Config, ConnectionConfig, EndPoint, Local};
+    use crate::config::{ByteArray, Config, ConnectionConfig, EndPoint, Local};
     use crate::extensions::default_registry;
     use crate::server::sessions::{Packet, SESSION_TIMEOUT_SECONDS};
     use crate::test_utils::{
@@ -427,7 +427,7 @@ mod tests {
             filters: vec![],
             connections: ConnectionConfig::Client {
                 addresses: vec![endpoint_addr],
-                connection_id: String::from(""),
+                connection_id: ByteArray::new(),
                 lb_policy: None,
             },
         });
@@ -467,7 +467,7 @@ mod tests {
             }],
             connections: ConnectionConfig::Client {
                 addresses: vec![endpoint_addr],
-                connection_id: String::from(""),
+                connection_id: ByteArray::new(),
                 lb_policy: None,
             },
         });
@@ -540,7 +540,7 @@ mod tests {
 
             let lb_policy = Arc::new(LoadBalancerPolicy::new(&ConnectionConfig::Client {
                 addresses: vec![local_addr],
-                connection_id: String::from(""),
+                connection_id: ByteArray::new(),
                 lb_policy: None,
             }));
             let receive_socket = ephemeral_socket().await;
@@ -638,7 +638,7 @@ mod tests {
         let (local_addr, wait) = recv_udp().await;
         let lb_policy = Arc::new(LoadBalancerPolicy::new(&ConnectionConfig::Client {
             addresses: vec![local_addr],
-            connection_id: String::from(""),
+            connection_id: ByteArray::new(),
             lb_policy: None,
         }));
         let socket = ephemeral_socket().await;
