@@ -81,24 +81,6 @@ pub struct Filter {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ConnectionId(#[serde(with = "Base64Standard")] Vec<u8>);
 
-impl ConnectionId {
-    /// create a new, empty ConnectionId
-    pub fn new() -> Self {
-        ConnectionId(vec![])
-    }
-
-    /// borrow the underlying vector
-    pub fn as_vec(&self) -> &Vec<u8> {
-        &self.0
-    }
-}
-
-impl PartialEq<Vec<u8>> for ConnectionId {
-    fn eq(&self, other: &Vec<u8>) -> bool {
-        self.0 == *other
-    }
-}
-
 impl From<&str> for ConnectionId {
     fn from(s: &str) -> Self {
         ConnectionId(s.as_bytes().to_vec())

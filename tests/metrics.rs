@@ -24,7 +24,7 @@ mod tests {
     use regex::Regex;
     use slog::info;
 
-    use quilkin::config::{Config, ConnectionConfig, ConnectionId, EndPoint, Local};
+    use quilkin::config::{Config, ConnectionConfig, EndPoint, Local};
     use quilkin::extensions::FilterRegistry;
     use quilkin::server::Metrics;
     use quilkin::test_utils::{
@@ -70,7 +70,7 @@ mod tests {
                     IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
                     server_port,
                 )],
-                connection_id: ConnectionId::new(),
+                connection_id: "".into(),
                 lb_policy: None,
             },
         };
