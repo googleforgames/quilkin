@@ -134,7 +134,7 @@ mod tests {
     use std::str::from_utf8;
 
     use crate::config;
-    use crate::config::{ByteArray, ConnectionConfig, Local};
+    use crate::config::{ConnectionConfig, ConnectionId, Local};
     use crate::extensions::filters::DebugFilterFactory;
     use crate::extensions::{default_registry, FilterFactory};
     use crate::test_utils::{logger, noop_endpoint, TestFilter};
@@ -155,7 +155,7 @@ mod tests {
             }],
             connections: ConnectionConfig::Client {
                 addresses: vec!["127.0.0.1:2456".parse().unwrap()],
-                connection_id: ByteArray::new(),
+                connection_id: ConnectionId::new(),
                 lb_policy: None,
             },
         });
@@ -173,7 +173,7 @@ mod tests {
             }],
             connections: ConnectionConfig::Client {
                 addresses: vec!["127.0.0.1:2456".parse().unwrap()],
-                connection_id: ByteArray::new(),
+                connection_id: ConnectionId::new(),
                 lb_policy: None,
             },
         });

@@ -23,7 +23,7 @@ mod tests {
     use tokio::select;
     use tokio::time::{delay_for, Duration};
 
-    use quilkin::config::{ByteArray, Config, ConnectionConfig, EndPoint, Local};
+    use quilkin::config::{Config, ConnectionConfig, ConnectionId, EndPoint, Local};
     use quilkin::extensions::default_registry;
     use quilkin::test_utils::{echo_server, logger, recv_multiple_packets, run_proxy};
 
@@ -69,7 +69,7 @@ mod tests {
                     IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
                     server_port,
                 )],
-                connection_id: ByteArray::new(),
+                connection_id: ConnectionId::new(),
                 lb_policy: None,
             },
         };

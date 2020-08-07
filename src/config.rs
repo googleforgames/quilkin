@@ -19,9 +19,11 @@ use std::fmt;
 use std::io;
 use std::net::SocketAddr;
 
-use serde::de::Visitor;
+use base64_serde::base64_serde_type;
 use serde::export::Formatter;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
+
+base64_serde_type!(Base64Standard, base64::STANDARD);
 
 /// Validation failure for a Config
 #[derive(Debug, PartialEq)]
@@ -75,14 +77,14 @@ pub struct Filter {
     pub config: serde_yaml::Value,
 }
 
-/// Array of bytes, serialised and deserialised to base64
-#[derive(Debug, Clone, PartialEq)]
-pub struct ByteArray(Vec<u8>);
+/// ConnectionId is the connection auth token value
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ConnectionId(#[serde(with = "Base64Standard")] Vec<u8>);
 
-impl ByteArray {
-    /// create a new, empty ByteArray
+impl ConnectionId {
+    /// create a new, empty ConnectionId
     pub fn new() -> Self {
-        ByteArray(vec![])
+        ConnectionId(vec![])
     }
 
     /// borrow the underlying vector
@@ -91,58 +93,15 @@ impl ByteArray {
     }
 }
 
-impl PartialEq<Vec<u8>> for ByteArray {
+impl PartialEq<Vec<u8>> for ConnectionId {
     fn eq(&self, other: &Vec<u8>) -> bool {
         self.0 == *other
     }
 }
 
-impl From<&str> for ByteArray {
+impl From<&str> for ConnectionId {
     fn from(s: &str) -> Self {
-        ByteArray(s.as_bytes().to_vec())
-    }
-}
-
-impl Serialize for ByteArray {
-    fn serialize<S>(&self, serializer: S) -> Result<<S as Serializer>::Ok, <S as Serializer>::Error>
-    where
-        S: Serializer,
-    {
-        serializer.serialize_str(base64::encode(&self.0).as_str())
-    }
-}
-
-impl<'de> Deserialize<'de> for ByteArray {
-    fn deserialize<D>(deserializer: D) -> Result<ByteArray, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_str(ByteArrayVisitor)
-    }
-}
-
-/// ByteArrayVisitor deserialises a ByteArray from a base64 string
-struct ByteArrayVisitor;
-
-impl<'de> Visitor<'de> for ByteArrayVisitor {
-    type Value = ByteArray;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        write!(formatter, "a bytearray as a base64 string")
-    }
-
-    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-    where
-        E: serde::de::Error,
-    {
-        match base64::decode(v) {
-            Ok(arr) => Ok(ByteArray(arr)),
-            Err(err) => Err(serde::de::Error::custom(format!(
-                "error deserialising '{}' as base64 byte array: {}",
-                v,
-                err.to_string()
-            ))),
-        }
+        ConnectionId(s.as_bytes().to_vec())
     }
 }
 
@@ -153,7 +112,7 @@ pub enum ConnectionConfig {
     #[serde(rename = "client")]
     Client {
         addresses: Vec<SocketAddr>,
-        connection_id: ByteArray,
+        connection_id: ConnectionId,
         lb_policy: Option<LoadBalancerPolicy>,
     },
 
@@ -167,7 +126,7 @@ pub enum ConnectionConfig {
 pub struct EndPoint {
     pub name: String,
     pub address: SocketAddr,
-    pub connection_ids: Vec<ByteArray>,
+    pub connection_ids: Vec<ConnectionId>,
 }
 
 impl Config {
@@ -224,7 +183,8 @@ mod tests {
     use serde_yaml::Value;
 
     use crate::config::{
-        ByteArray, Config, ConnectionConfig, EndPoint, LoadBalancerPolicy, Local, ValidationError,
+        Config, ConnectionConfig, ConnectionId, EndPoint, LoadBalancerPolicy, Local,
+        ValidationError,
     };
 
     #[test]
@@ -324,7 +284,7 @@ client:
                 connection_id,
                 lb_policy,
             } => {
-                assert_eq!(ByteArray::from("1x7ijy6"), connection_id);
+                assert_eq!(ConnectionId::from("1x7ijy6"), connection_id);
                 assert_eq!(
                     vec!["127.0.0.1:25999".parse::<SocketAddr>().unwrap()],
                     addresses

@@ -129,7 +129,7 @@ mod tests {
     use std::collections::HashSet;
 
     use crate::config::LoadBalancerPolicy::{Broadcast, Random, RoundRobin};
-    use crate::config::{ByteArray, ConnectionConfig};
+    use crate::config::{ConnectionConfig, ConnectionId};
     use crate::load_balancer_policy::LoadBalancerPolicy;
 
     #[test]
@@ -142,7 +142,7 @@ mod tests {
 
         let lb = LoadBalancerPolicy::new(&ConnectionConfig::Client {
             addresses: addresses.clone(),
-            connection_id: ByteArray::new(),
+            connection_id: ConnectionId::new(),
             lb_policy: Some(RoundRobin),
         });
 
@@ -177,7 +177,7 @@ mod tests {
 
         let lb = LoadBalancerPolicy::new(&ConnectionConfig::Client {
             addresses: addresses.clone(),
-            connection_id: ByteArray::new(),
+            connection_id: ConnectionId::new(),
             lb_policy: Some(Random),
         });
 
@@ -228,7 +228,7 @@ mod tests {
 
             let lb = LoadBalancerPolicy::new(&ConnectionConfig::Client {
                 addresses: addresses.clone(),
-                connection_id: ByteArray::new(),
+                connection_id: ConnectionId::new(),
                 lb_policy,
             });
 
