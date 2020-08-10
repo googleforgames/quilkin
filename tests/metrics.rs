@@ -20,16 +20,16 @@ extern crate quilkin;
 mod tests {
     use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
+    use prometheus::Registry;
+    use regex::Regex;
     use slog::info;
 
-    use prometheus::Registry;
     use quilkin::config::{Config, ConnectionConfig, EndPoint, Local};
     use quilkin::extensions::FilterRegistry;
     use quilkin::server::Metrics;
     use quilkin::test_utils::{
         echo_server, logger, recv_multiple_packets, run_proxy, run_proxy_with_metrics,
     };
-    use regex::Regex;
 
     #[tokio::test]
     async fn metrics_server() {
@@ -70,7 +70,7 @@ mod tests {
                     IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
                     server_port,
                 )],
-                connection_id: String::from(""),
+                connection_id: "".into(),
                 lb_policy: None,
             },
         };
