@@ -129,7 +129,7 @@ impl Filter for RateLimitFilter {
         _from: SocketAddr,
         contents: Vec<u8>,
     ) -> Option<(Vec<EndPoint>, Vec<u8>)> {
-        Some((endpoints.clone(), contents))
+        self.acquire_token().map(|()| (endpoints.clone(), contents))
     }
 
     fn local_send_filter(&self, _to: SocketAddr, contents: Vec<u8>) -> Option<Vec<u8>> {
@@ -151,7 +151,7 @@ impl Filter for RateLimitFilter {
         _from: SocketAddr,
         contents: Vec<u8>,
     ) -> Option<Vec<u8>> {
-        self.acquire_token().map(|()| contents)
+        Some(contents)
     }
 }
 
@@ -229,10 +229,6 @@ mod tests {
 
         // Check that other routes are not affected.
         assert_eq!(
-            r.local_receive_filter(&vec![], "127.0.0.1:8080".parse().unwrap(), vec![9]),
-            Some((vec![], vec![9]))
-        );
-        assert_eq!(
             r.local_send_filter("127.0.0.1:8080".parse().unwrap(), vec![9]),
             Some(vec![9])
         );
@@ -244,14 +240,18 @@ mod tests {
             ),
             Some(vec![9])
         );
-
-        // Check that we're rate limited.
         assert_eq!(
             r.endpoint_send_filter(
                 &EndPoint::new("e".to_string(), "127.0.0.1:8081".parse().unwrap(), vec![]),
                 "127.0.0.1:8080".parse().unwrap(),
                 vec![9]
             ),
+            Some(vec![9])
+        );
+
+        // Check that we're rate limited.
+        assert_eq!(
+            r.local_receive_filter(&vec![], "127.0.0.1:8080".parse().unwrap(), vec![9]),
             None
         );
     }
@@ -263,11 +263,14 @@ mod tests {
             period: Duration::from_millis(100),
         });
 
-        // Check that other routes are not affected.
         assert_eq!(
             r.local_receive_filter(&vec![], "127.0.0.1:8080".parse().unwrap(), vec![9]),
             Some((vec![], vec![9]))
         );
+        // We should be out of tokens now.
+        assert_eq!(None, r.acquire_token());
+
+        // Check that other routes are not affected.
         assert_eq!(
             r.local_send_filter("127.0.0.1:8080".parse().unwrap(), vec![9]),
             Some(vec![9])
@@ -280,8 +283,6 @@ mod tests {
             ),
             Some(vec![9])
         );
-
-        // Check that we're rate limited.
         assert_eq!(
             r.endpoint_send_filter(
                 &EndPoint::new("e".to_string(), "127.0.0.1:8081".parse().unwrap(), vec![]),
@@ -290,8 +291,5 @@ mod tests {
             ),
             Some(vec![9])
         );
-
-        // We should be out of tokens now.
-        assert_eq!(None, r.acquire_token());
     }
 }
