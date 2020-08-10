@@ -112,7 +112,7 @@ pub struct EndPoint {
 }
 
 impl EndPoint {
-    pub fn new(name: String, address: SocketAddr, connection_ids: Vec<String>) -> Self {
+    pub fn new(name: String, address: SocketAddr, connection_ids: Vec<ConnectionId>) -> Self {
         EndPoint {
             name,
             address,
