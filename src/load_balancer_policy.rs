@@ -126,10 +126,11 @@ impl EndpointChooser for BroadcastEndpointChooser {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use crate::config::ConnectionConfig;
     use crate::config::LoadBalancerPolicy::{Broadcast, Random, RoundRobin};
     use crate::load_balancer_policy::LoadBalancerPolicy;
-    use std::collections::HashSet;
 
     #[test]
     fn round_robin_load_balancer_policy() {
@@ -141,7 +142,7 @@ mod tests {
 
         let lb = LoadBalancerPolicy::new(&ConnectionConfig::Client {
             addresses: addresses.clone(),
-            connection_id: "".to_string(),
+            connection_id: "".into(),
             lb_policy: Some(RoundRobin),
         });
 
@@ -176,7 +177,7 @@ mod tests {
 
         let lb = LoadBalancerPolicy::new(&ConnectionConfig::Client {
             addresses: addresses.clone(),
-            connection_id: "".to_string(),
+            connection_id: "".into(),
             lb_policy: Some(Random),
         });
 
@@ -227,7 +228,7 @@ mod tests {
 
             let lb = LoadBalancerPolicy::new(&ConnectionConfig::Client {
                 addresses: addresses.clone(),
-                connection_id: "".to_string(),
+                connection_id: "".into(),
                 lb_policy,
             });
 

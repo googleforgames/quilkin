@@ -25,9 +25,9 @@ server:
     - name: Game Server No. 1
       address: 127.0.0.1:26000
       connection_ids:
-        - 1x7ijy6 # connection ids to route on
-        - 8gj3v2i
+        - MXg3aWp5Ng== # the connection byte array to route to, encoded as base64 (string value: 1x7ijy6)
+        - OGdqM3YyaQ== # (string value: 8gj3v2i)
     - name: Game Server No. 2
       address: 127.0.0.1:26001
       connection_ids:
-        - nkuy70x
+        - bmt1eTcweA== # (string value: nkuy70x)
