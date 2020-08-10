@@ -111,6 +111,16 @@ pub struct EndPoint {
     pub connection_ids: Vec<ConnectionId>,
 }
 
+impl EndPoint {
+    pub fn new(name: String, address: SocketAddr, connection_ids: Vec<ConnectionId>) -> Self {
+        EndPoint {
+            name,
+            address,
+            connection_ids,
+        }
+    }
+}
+
 impl Config {
     /// from_reader returns a config from a given Reader
     pub fn from_reader<R: io::Read>(input: R) -> Result<Config, serde_yaml::Error> {
