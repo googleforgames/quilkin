@@ -394,7 +394,7 @@ mod tests {
                 local_addr.to_string(),
             )
             .unwrap(),
-            Arc::new(FilterChain::new(vec![Arc::new(TestFilter {})])),
+            Arc::new(FilterChain::new(vec![Box::new(TestFilter {})])),
             local_addr,
             endpoint.clone(),
             sender,
@@ -502,7 +502,7 @@ mod tests {
             initial_expiration = expiration.read().await.clone();
         }
         // add filter
-        let chain = Arc::new(FilterChain::new(vec![Arc::new(TestFilter {})]));
+        let chain = Arc::new(FilterChain::new(vec![Box::new(TestFilter {})]));
         Session::process_recv_packet(
             &log,
             &Metrics::new(

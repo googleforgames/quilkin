@@ -15,10 +15,12 @@
  */
 
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::fmt;
+use std::net::SocketAddr;
+
+use serde::export::Formatter;
 
 use crate::config::EndPoint;
-use std::net::SocketAddr;
 
 /// Filter is a trait for routing and manipulating packets.
 pub trait Filter: Send + Sync {
@@ -62,9 +64,34 @@ pub trait Filter: Send + Sync {
     ) -> Option<Vec<u8>>;
 }
 
+#[derive(Debug, PartialEq)]
+/// Error is an error when attempting to create a Filter from_config() from a FilterFactory
+pub enum Error {
+    NotFound(String),
+    FieldInvalid { field: String, reason: String },
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Error::NotFound(key) => write!(f, "filter {} is not found", key),
+            Error::FieldInvalid { field, reason } => {
+                write!(f, "field {} is invalid: {}", field, reason)
+            }
+        }
+    }
+}
+
+/// FilterFactory provides the name and creation function for a given Filter.
+pub trait FilterFactory: Sync + Send {
+    /// name returns the configuration name for the Filter
+    fn name(&self) -> String;
+    fn create_from_config(&self, config: &serde_yaml::Value) -> Result<Box<dyn Filter>, Error>;
+}
+
 /// FilterRegistry is the registry of all Filters that can be applied in the system.
 pub struct FilterRegistry {
-    registry: HashMap<String, Arc<dyn Filter>>,
+    registry: HashMap<String, Box<dyn FilterFactory>>,
 }
 
 impl FilterRegistry {
@@ -74,20 +101,33 @@ impl FilterRegistry {
         }
     }
 
-    /// insert inserts a Filter into the registry.
-    pub fn insert(&mut self, key: String, filter: impl Filter + 'static) {
-        self.registry.insert(key, Arc::new(filter));
+    /// insert registers a Filter under the provider's given name.
+    pub fn insert<P: 'static>(&mut self, provider: P)
+    where
+        P: FilterFactory,
+    {
+        self.registry.insert(provider.name(), Box::new(provider));
     }
 
-    /// get returns the filter for a given Key. Returns None if not found.
-    pub fn get(&self, key: &String) -> Option<&Arc<dyn Filter>> {
-        self.registry.get(key)
+    /// get returns an instance of a filter for a given Key. Returns Error if not found,
+    /// or if there is a configuration issue.
+    pub fn get(&self, key: &String, config: &serde_yaml::Value) -> Result<Box<dyn Filter>, Error> {
+        match self
+            .registry
+            .get(key)
+            .map(|p| p.create_from_config(&config))
+        {
+            None => Err(Error::NotFound(key.clone())),
+            Some(filter) => filter,
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+
+    use crate::test_utils::TestFilterFactory;
 
     use super::*;
 
@@ -124,11 +164,17 @@ mod tests {
     #[test]
     fn insert_and_get() {
         let mut reg = FilterRegistry::new();
-        reg.insert(String::from("test.filter"), TestFilter {});
-        assert!(reg.get(&String::from("not.found")).is_none());
-        assert!(reg.get(&String::from("test.filter")).is_some());
+        reg.insert(TestFilterFactory {});
+        let config = serde_yaml::Value::Null;
 
-        let filter = reg.get(&String::from("test.filter")).unwrap();
+        match reg.get(&String::from("not.found"), &config) {
+            Ok(_) => assert!(false, "should not be filter"),
+            Err(err) => assert_eq!(Error::NotFound("not.found".to_string()), err),
+        };
+
+        assert!(reg.get(&String::from("TestFilter"), &config).is_ok());
+
+        let filter = reg.get(&String::from("TestFilter"), &config).unwrap();
 
         let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080);
         let endpoint = EndPoint {
@@ -137,9 +183,9 @@ mod tests {
             connection_ids: vec![],
         };
 
-        assert!(filter.local_receive_filter(&vec![], addr, vec![]).is_none());
+        assert!(filter.local_receive_filter(&vec![], addr, vec![]).is_some());
         assert!(filter
             .endpoint_receive_filter(&endpoint, addr, vec![])
-            .is_none());
+            .is_some());
     }
 }

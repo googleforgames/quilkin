@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-pub use debug_filter::DebugFilter;
+pub use debug_filter::{DebugFilter, DebugFilterFactory};
 
 mod debug_filter;
 mod local_rate_limit;
