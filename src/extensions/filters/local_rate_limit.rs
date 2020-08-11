@@ -15,7 +15,9 @@
  */
 
 use crate::config::EndPoint;
-use crate::extensions::Filter;
+use crate::extensions::{Error, Filter, FilterFactory};
+use serde::{Deserialize, Serialize};
+use serde_yaml::Value;
 use std::net::SocketAddr;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -23,25 +25,33 @@ use std::time::Duration;
 use tokio::sync::oneshot::{channel, Sender};
 use tokio::time::{self, Instant};
 
-#[allow(dead_code)]
 /// Config represents a RateLimitFilter's configuration.
+#[derive(Serialize, Deserialize, Debug)]
 struct Config {
     /// max_packets is the maximum number of packets allowed
     /// to be forwarded by the rate limiter in a given duration.
     max_packets: usize,
     /// period is the duration during which max_packets applies.
-    period: Duration,
+    /// If none is provided, it defaults to 1 second.
+    #[serde(with = "humantime_serde")]
+    period: Option<Duration>,
 }
 
-#[allow(dead_code)]
-/// RateLimitFilter is a filter that implements packet rate limiting
-/// based on the token-bucket algorithm.
+/// Creates instances of RateLimitFilter.
+pub struct RateLimitFilterFactory;
+
+impl RateLimitFilterFactory {
+    pub fn new() -> Self {
+        RateLimitFilterFactory {}
+    }
+}
+
+/// A filter that implements rate limiting on packets based on
+/// the token-bucket algorithm.
 /// Packets that violate the rate limit are dropped.
 /// It only applies rate limiting on packets that are destined for the
 /// proxy's endpoints. All other packets flow through the filter untouched.
-pub struct RateLimitFilter {
-    /// max_tokens is the number of tokens in a full bucket.
-    max_tokens: usize,
+struct RateLimitFilter {
     /// available_tokens is how many tokens are left in the bucket any
     /// any given moment.
     available_tokens: Arc<AtomicUsize>,
@@ -49,8 +59,27 @@ pub struct RateLimitFilter {
     shutdown_tx: Option<Sender<()>>,
 }
 
+impl FilterFactory for RateLimitFilterFactory {
+    fn name(&self) -> String {
+        "quilkin.extensions.filters.local_rate_limit.alphav1.LocalRateLimit".into()
+    }
+
+    fn create_from_config(&self, config_value: &Value) -> Result<Box<dyn Filter>, Error> {
+        let config: Config = serde_yaml::to_string(config_value)
+            .and_then(|raw_config| serde_yaml::from_str(raw_config.as_str()))
+            .map_err(|err| Error::DeserializeFailed(err.to_string()))?;
+
+        match config.period {
+            Some(period) if period.lt(&Duration::from_millis(100)) => Err(Error::FieldInvalid {
+                field: "period".into(),
+                reason: format!("value must be at least 100ms"),
+            }),
+            _ => Ok(Box::new(RateLimitFilter::new(config))),
+        }
+    }
+}
+
 impl RateLimitFilter {
-    #[allow(dead_code)]
     /// new returns a new RateLimitFilter. It spawns a future in the background
     /// that periodically refills the rate limiter's tokens.
     fn new(config: Config) -> Self {
@@ -59,7 +88,7 @@ impl RateLimitFilter {
         let tokens = Arc::new(AtomicUsize::new(config.max_packets));
 
         let max_tokens = config.max_packets;
-        let period = config.period;
+        let period = config.period.unwrap_or(Duration::from_secs(1));
         let available_tokens = tokens.clone();
         let _ = tokio::spawn(async move {
             let mut interval = time::interval_at(Instant::now() + period, period);
@@ -85,7 +114,6 @@ impl RateLimitFilter {
         });
 
         RateLimitFilter {
-            max_tokens: config.max_packets,
             available_tokens: tokens,
             shutdown_tx: Some(shutdown_tx),
         }
@@ -168,7 +196,7 @@ mod tests {
         // Test that we always start with the max number of tokens available.
         let r = RateLimitFilter::new(Config {
             max_packets: 3,
-            period: Duration::from_millis(100),
+            period: Some(Duration::from_millis(100)),
         });
 
         assert_eq!(r.acquire_token(), Some(()));
@@ -181,7 +209,7 @@ mod tests {
     async fn token_exhaustion_and_refill() {
         let r = RateLimitFilter::new(Config {
             max_packets: 2,
-            period: Duration::from_millis(100),
+            period: Some(Duration::from_millis(100)),
         });
 
         // Exhaust tokens
@@ -204,7 +232,7 @@ mod tests {
 
         let r = RateLimitFilter::new(Config {
             max_packets: 3,
-            period: Duration::from_millis(100),
+            period: Some(Duration::from_millis(100)),
         });
 
         // Use up some of the tokens.
@@ -224,7 +252,7 @@ mod tests {
     async fn filter_with_no_available_tokens() {
         let r = RateLimitFilter::new(Config {
             max_packets: 0,
-            period: Duration::from_millis(100),
+            period: Some(Duration::from_millis(100)),
         });
 
         // Check that other routes are not affected.
@@ -260,7 +288,7 @@ mod tests {
     async fn filter_with_available_tokens() {
         let r = RateLimitFilter::new(Config {
             max_packets: 1,
-            period: Duration::from_millis(100),
+            period: Some(Duration::from_millis(100)),
         });
 
         assert_eq!(

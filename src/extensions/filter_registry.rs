@@ -69,6 +69,7 @@ pub trait Filter: Send + Sync {
 pub enum Error {
     NotFound(String),
     FieldInvalid { field: String, reason: String },
+    DeserializeFailed(String),
 }
 
 impl fmt::Display for Error {
@@ -78,6 +79,7 @@ impl fmt::Display for Error {
             Error::FieldInvalid { field, reason } => {
                 write!(f, "field {} is invalid: {}", field, reason)
             }
+            Error::DeserializeFailed(reason) => write!(f, "{}", reason),
         }
     }
 }

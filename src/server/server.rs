@@ -241,7 +241,6 @@ impl Server {
                     "origin" => packet.dest(),
                     "contents" => String::from_utf8(packet.contents().clone()).unwrap(),
                 );
-
                 if let Some(data) =
                     chain.local_send_filter(packet.dest(), packet.contents().to_vec())
                 {
