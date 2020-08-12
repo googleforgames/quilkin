@@ -96,26 +96,14 @@ mod tests {
         // the round-tripped packets.
         assert_eq!(
             2,
-            result.matches("lrf").count(),
-            "Should be 2 local_receive_filter calls in {}",
+            result.matches("odr").count(),
+            "Should be 2 on_downstream_receive calls in {}",
             result
         );
         assert_eq!(
             2,
-            result.matches("lsf").count(),
-            "Should be 2 local_send_filter calls in {}",
-            result
-        );
-        assert_eq!(
-            2,
-            result.matches("esf").count(),
-            "Should be 2 endpoint_send_filter calls in {}",
-            result
-        );
-        assert_eq!(
-            2,
-            result.matches("erf").count(),
-            "Should be 2 endpoint_receive_filter calls in {}",
+            result.matches("our").count(),
+            "Should be 2 on_upstream_receive calls in {}",
             result
         );
 

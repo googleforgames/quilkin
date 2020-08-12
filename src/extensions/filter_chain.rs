@@ -59,7 +59,7 @@ impl FilterChain {
 }
 
 impl Filter for FilterChain {
-    fn local_receive_filter(
+    fn on_downstream_receive(
         &self,
         endpoints: &Vec<EndPoint>,
         from: SocketAddr,
@@ -68,7 +68,7 @@ impl Filter for FilterChain {
         let mut e = endpoints.clone();
         let mut c = contents;
         for f in &self.filters {
-            match f.local_receive_filter(&e, from, c) {
+            match f.on_downstream_receive(&e, from, c) {
                 None => return None,
                 Some((endpoints, contents)) => {
                     e = endpoints;
@@ -79,46 +79,16 @@ impl Filter for FilterChain {
         Some((e, c))
     }
 
-    fn local_send_filter(&self, to: SocketAddr, contents: Vec<u8>) -> Option<Vec<u8>> {
-        let mut c = contents;
-        for f in &self.filters {
-            match f.local_send_filter(to, c) {
-                None => return None,
-                Some(contents) => {
-                    c = contents;
-                }
-            }
-        }
-        Some(c)
-    }
-
-    fn endpoint_receive_filter(
-        &self,
-        endpoint: &EndPoint,
-        recv_addr: SocketAddr,
-        contents: Vec<u8>,
-    ) -> Option<Vec<u8>> {
-        let mut c = contents;
-        for f in &self.filters {
-            match f.endpoint_receive_filter(&endpoint, recv_addr, c) {
-                None => return None,
-                Some(contents) => {
-                    c = contents;
-                }
-            }
-        }
-        Some(c)
-    }
-
-    fn endpoint_send_filter(
+    fn on_upstream_receive(
         &self,
         endpoint: &EndPoint,
         from: SocketAddr,
+        to: SocketAddr,
         contents: Vec<u8>,
     ) -> Option<Vec<u8>> {
         let mut c = contents;
         for f in &self.filters {
-            match f.endpoint_send_filter(&endpoint, from, c) {
+            match f.on_upstream_receive(&endpoint, from, to, c) {
                 None => return None,
                 Some(contents) => {
                     c = contents;
@@ -203,7 +173,7 @@ mod tests {
         let endpoints_fixture = endpoints();
 
         let (eps, content) = chain
-            .local_receive_filter(
+            .on_downstream_receive(
                 &endpoints_fixture,
                 "127.0.0.1:70".parse().unwrap(),
                 "hello".as_bytes().to_vec(),
@@ -214,41 +184,20 @@ mod tests {
         expected.push(noop_endpoint());
         assert_eq!(expected, eps);
         assert_eq!(
-            "hello:lrf:127.0.0.1:70",
+            "hello:odr:127.0.0.1:70",
             from_utf8(content.as_slice()).unwrap()
         );
 
         let content = chain
-            .local_send_filter("127.0.0.1:70".parse().unwrap(), "hello".as_bytes().to_vec())
-            .unwrap();
-
-        assert_eq!(
-            "hello:lsf:127.0.0.1:70",
-            from_utf8(content.as_slice()).unwrap()
-        );
-
-        let content = chain
-            .endpoint_receive_filter(
+            .on_upstream_receive(
                 &endpoints_fixture[0],
                 endpoints_fixture[0].address,
+                "127.0.0.1:70".parse().unwrap(),
                 "hello".as_bytes().to_vec(),
             )
             .unwrap();
         assert_eq!(
-            "hello:erf:one:127.0.0.1:80",
-            from_utf8(content.as_slice()).unwrap()
-        );
-
-        let content = chain
-            .endpoint_send_filter(
-                &endpoints_fixture[0],
-                "127.0.0.1:60".parse().unwrap(),
-                "hello".as_bytes().to_vec(),
-            )
-            .unwrap();
-
-        assert_eq!(
-            "hello:esf:one:127.0.0.1:60",
+            "hello:our:one:127.0.0.1:80:127.0.0.1:70",
             from_utf8(content.as_slice()).unwrap()
         );
     }
@@ -260,7 +209,7 @@ mod tests {
         let endpoints_fixture = endpoints();
 
         let (eps, content) = chain
-            .local_receive_filter(
+            .on_downstream_receive(
                 &endpoints_fixture,
                 "127.0.0.1:70".parse().unwrap(),
                 "hello".as_bytes().to_vec(),
@@ -272,41 +221,20 @@ mod tests {
         expected.push(noop_endpoint());
         assert_eq!(expected, eps);
         assert_eq!(
-            "hello:lrf:127.0.0.1:70:lrf:127.0.0.1:70",
+            "hello:odr:127.0.0.1:70:odr:127.0.0.1:70",
             from_utf8(content.as_slice()).unwrap()
         );
 
         let content = chain
-            .local_send_filter("127.0.0.1:70".parse().unwrap(), "hello".as_bytes().to_vec())
-            .unwrap();
-
-        assert_eq!(
-            "hello:lsf:127.0.0.1:70:lsf:127.0.0.1:70",
-            from_utf8(content.as_slice()).unwrap()
-        );
-
-        let content = chain
-            .endpoint_receive_filter(
+            .on_upstream_receive(
                 &endpoints_fixture[0],
                 endpoints_fixture[0].address,
+                "127.0.0.1:70".parse().unwrap(),
                 "hello".as_bytes().to_vec(),
             )
             .unwrap();
         assert_eq!(
-            "hello:erf:one:127.0.0.1:80:erf:one:127.0.0.1:80",
-            from_utf8(content.as_slice()).unwrap()
-        );
-
-        let content = chain
-            .endpoint_send_filter(
-                &endpoints_fixture[0],
-                "127.0.0.1:60".parse().unwrap(),
-                "hello".as_bytes().to_vec(),
-            )
-            .unwrap();
-
-        assert_eq!(
-            "hello:esf:one:127.0.0.1:60:esf:one:127.0.0.1:60",
+            "hello:our:one:127.0.0.1:80:127.0.0.1:70:our:one:127.0.0.1:80:127.0.0.1:70",
             from_utf8(content.as_slice()).unwrap()
         );
     }

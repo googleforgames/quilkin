@@ -187,17 +187,17 @@ impl Session {
         metrics: &Metrics,
         chain: Arc<FilterChain>,
         packet: &[u8],
-        from: &EndPoint,
-        recv_addr: SocketAddr,
-        dest: SocketAddr,
+        endpoint: &EndPoint,
+        from: SocketAddr,
+        to: SocketAddr,
         mut sender: mpsc::Sender<Packet>,
         expiration: Arc<RwLock<Instant>>,
     ) {
-        debug!(log, "Received packet"; "recv_address" => recv_addr, "from_name" => &from.name, "from_addr" => &from.address, "contents" => from_utf8(packet).unwrap());
+        debug!(log, "Received packet"; "from" => from, "endpoint_name" => &endpoint.name, "endpoint_addr" => &endpoint.address, "contents" => from_utf8(packet).unwrap());
         Session::inc_expiration(expiration).await;
 
-        if let Some(data) = chain.endpoint_receive_filter(from, recv_addr, packet.to_vec()) {
-            if let Err(err) = sender.send(Packet::new(dest, data)).await {
+        if let Some(data) = chain.on_upstream_receive(endpoint, from, to, packet.to_vec()) {
+            if let Err(err) = sender.send(Packet::new(to, data)).await {
                 metrics.errors_total.inc();
                 error!(log, "Error sending packet to channel"; "error" => %err);
             }
@@ -222,27 +222,18 @@ impl Session {
     pub async fn send_to(&mut self, buf: &[u8]) -> Result<Option<usize>> {
         debug!(self.log, "Sending packet"; "dest_name" => &self.dest.name, "dest_address" => &self.dest.address, "contents" => from_utf8(buf).unwrap());
 
-        if let Some(data) = self
-            .chain
-            .endpoint_send_filter(&self.dest, self.from, buf.to_vec())
-        {
-            return self
-                .send
-                .send_to(data.as_slice(), &self.dest.address)
-                .await
-                .map(|size| {
-                    self.metrics.tx_packets_total.inc();
-                    self.metrics.tx_bytes_total.inc_by(size as i64);
-                    Some(size)
-                })
-                .map_err(|err| {
-                    self.metrics.errors_total.inc();
-                    err
-                });
-        }
-
-        self.metrics.packets_dropped_total.inc();
-        Ok(None)
+        self.send
+            .send_to(buf, &self.dest.address)
+            .await
+            .map(|size| {
+                self.metrics.tx_packets_total.inc();
+                self.metrics.tx_bytes_total.inc_by(size as i64);
+                Some(size)
+            })
+            .map_err(|err| {
+                self.metrics.errors_total.inc();
+                err
+            })
     }
 
     /// is_closed returns if the Session is closed or not.
@@ -377,36 +368,6 @@ mod tests {
         .unwrap();
         session.send_to(msg.as_bytes()).await.unwrap();
         assert_eq!(msg, wait.await.unwrap());
-
-        // with a filter
-        let (sender, _) = mpsc::channel::<Packet>(1);
-        let (local_addr, wait) = recv_udp().await;
-        let endpoint = EndPoint {
-            name: "endpoint".to_string(),
-            address: local_addr,
-            connection_ids: vec![],
-        };
-        let mut session = Session::new(
-            &log,
-            Metrics::new(
-                &Registry::default(),
-                local_addr.to_string(),
-                local_addr.to_string(),
-            )
-            .unwrap(),
-            Arc::new(FilterChain::new(vec![Box::new(TestFilter {})])),
-            local_addr,
-            endpoint.clone(),
-            sender,
-        )
-        .await
-        .unwrap();
-
-        session.send_to(msg.as_bytes()).await.unwrap();
-        assert_eq!(
-            format!("{}:esf:{}:{}", msg, endpoint.name, local_addr),
-            wait.await.unwrap()
-        );
     }
 
     #[tokio::test]
@@ -524,7 +485,10 @@ mod tests {
         assert!(initial_expiration < *expiration.read().await);
         let p = receiver.try_recv().unwrap();
         assert_eq!(
-            format!("{}:erf:endpoint:127.0.1.1:80", msg),
+            format!(
+                "{}:our:{}:{}:{}",
+                msg, endpoint.name, endpoint.address, dest
+            ),
             from_utf8(p.contents.as_slice()).unwrap()
         );
         assert_eq!(dest, p.dest);

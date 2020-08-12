@@ -54,7 +54,7 @@ impl FilterFactory for TestFilterFactory {
 pub struct TestFilter {}
 
 impl Filter for TestFilter {
-    fn local_receive_filter(
+    fn on_downstream_receive(
         &self,
         endpoints: &Vec<EndPoint>,
         from: SocketAddr,
@@ -67,35 +67,19 @@ impl Filter for TestFilter {
         e.push(noop_endpoint());
 
         let mut c = contents;
-        c.append(&mut format!(":lrf:{}", from).into_bytes());
+        c.append(&mut format!(":odr:{}", from).into_bytes());
         Some((e, c))
     }
 
-    fn local_send_filter(&self, to: SocketAddr, contents: Vec<u8>) -> Option<Vec<u8>> {
-        let mut c = contents;
-        c.append(&mut format!(":lsf:{}", to).into_bytes());
-        Some(c)
-    }
-
-    fn endpoint_receive_filter(
-        &self,
-        endpoint: &EndPoint,
-        recv_addr: SocketAddr,
-        contents: Vec<u8>,
-    ) -> Option<Vec<u8>> {
-        let mut c = contents;
-        c.append(&mut format!(":erf:{}:{}", endpoint.name, recv_addr).into_bytes());
-        Some(c)
-    }
-
-    fn endpoint_send_filter(
+    fn on_upstream_receive(
         &self,
         endpoint: &EndPoint,
         from: SocketAddr,
+        to: SocketAddr,
         contents: Vec<u8>,
     ) -> Option<Vec<u8>> {
         let mut c = contents;
-        c.append(&mut format!(":esf:{}:{}", endpoint.name, from).into_bytes());
+        c.append(&mut format!(":our:{}:{}:{}", endpoint.name, from, to).into_bytes());
         Some(c)
     }
 }

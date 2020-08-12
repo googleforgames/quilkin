@@ -102,41 +102,27 @@ impl FilterFactory for DebugFilterFactory {
 }
 
 impl Filter for DebugFilter {
-    fn local_receive_filter(
+    fn on_downstream_receive(
         &self,
         endpoints: &Vec<EndPoint>,
         from: SocketAddr,
         contents: Vec<u8>,
     ) -> Option<(Vec<EndPoint>, Vec<u8>)> {
-        info!(self.log, "received local packet"; "from" => from, "contents" => packet_to_string(contents.clone()));
+        info!(self.log, "on local receive"; "from" => from, "contents" => packet_to_string(contents.clone()));
         Some((endpoints.to_vec(), contents))
     }
 
-    fn local_send_filter(&self, to: SocketAddr, contents: Vec<u8>) -> Option<Vec<u8>> {
-        info!(self.log, "sending local packet"; "to" => to, "contents" => packet_to_string(contents.clone()));
-        Some(contents)
-    }
-
-    fn endpoint_receive_filter(
-        &self,
-        endpoint: &EndPoint,
-        recv_addr: SocketAddr,
-        contents: Vec<u8>,
-    ) -> Option<Vec<u8>> {
-        info!(self.log, "received endpoint packet"; "endpoint" => endpoint.name.clone(),
-        "recv_addr" => recv_addr, 
-        "contents" => packet_to_string(contents.clone()));
-        Some(contents)
-    }
-
-    fn endpoint_send_filter(
+    fn on_upstream_receive(
         &self,
         endpoint: &EndPoint,
         from: SocketAddr,
+        to: SocketAddr,
         contents: Vec<u8>,
     ) -> Option<Vec<u8>> {
-        info!(self.log, "sending endpoint packet"; "endpoint" => endpoint.name.clone(),
-         "from" => from, "contents" => packet_to_string(contents.clone()));
+        info!(self.log, "received endpoint packet"; "endpoint" => endpoint.name.clone(),
+        "from" => from,
+        "to" => to,
+        "contents" => packet_to_string(contents.clone()));
         Some(contents)
     }
 }
@@ -161,7 +147,7 @@ mod tests {
     use serde_yaml::Value;
 
     #[test]
-    fn local_receive_filter() {
+    fn on_downstream_receive() {
         let df = DebugFilter::new(&logger(), None);
         let endpoints = vec![EndPoint {
             name: "e1".to_string(),
@@ -171,7 +157,7 @@ mod tests {
         let from = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12358);
         let contents = "hello".to_string().into_bytes();
 
-        match df.local_receive_filter(&endpoints, from, contents.clone()) {
+        match df.on_downstream_receive(&endpoints, from, contents.clone()) {
             None => assert!(false, "should return a result"),
             Some((result_endpoints, result_contents)) => {
                 assert_eq!(endpoints, result_endpoints);
@@ -181,19 +167,7 @@ mod tests {
     }
 
     #[test]
-    fn local_send_filter() {
-        let df = DebugFilter::new(&logger(), None);
-        let to = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12358);
-        let contents = "hello".to_string().into_bytes();
-
-        match df.local_send_filter(to, contents.clone()) {
-            None => assert!(false, "should return a result"),
-            Some(result_contents) => assert_eq!(contents, result_contents),
-        }
-    }
-
-    #[test]
-    fn endpoint_receive_filter() {
+    fn on_upstream_receive() {
         let df = DebugFilter::new(&logger(), None);
         let endpoint = EndPoint {
             name: "e1".to_string(),
@@ -202,24 +176,12 @@ mod tests {
         };
         let contents = "hello".to_string().into_bytes();
 
-        match df.endpoint_receive_filter(&endpoint, endpoint.address, contents.clone()) {
-            None => assert!(false, "should return a result"),
-            Some(result_contents) => assert_eq!(contents, result_contents),
-        }
-    }
-
-    #[test]
-    fn endpoint_send_filter() {
-        let df = DebugFilter::new(&logger(), None);
-        let endpoint = EndPoint {
-            name: "e1".to_string(),
-            address: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12357),
-            connection_ids: vec![],
-        };
-        let contents = "hello".to_string().into_bytes();
-        let from = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12358);
-
-        match df.endpoint_send_filter(&endpoint, from, contents.clone()) {
+        match df.on_upstream_receive(
+            &endpoint,
+            endpoint.address,
+            "127.0.0.1:70".parse().unwrap(),
+            contents.clone(),
+        ) {
             None => assert!(false, "should return a result"),
             Some(result_contents) => assert_eq!(contents, result_contents),
         }
