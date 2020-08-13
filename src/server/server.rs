@@ -82,7 +82,7 @@ impl Server {
             &self.filter_registry,
         )?);
 
-        self.run_receive_packet(chain.clone(), send_socket, receive_packets);
+        self.run_receive_packet(send_socket, receive_packets);
         self.run_prune_sessions(&sessions);
         self.run_recv_from(
             Arc::new(LoadBalancerPolicy::new(&config.connections)),
@@ -174,7 +174,7 @@ impl Server {
                 from_utf8(packet).unwrap()
             );
 
-            let result = chain.local_receive_filter(
+            let result = chain.on_downstream_receive(
                 &lb_policy.choose_endpoints(),
                 recv_addr,
                 packet.to_vec(),
@@ -228,7 +228,6 @@ impl Server {
     /// and sends each packet on to the Packet.dest
     fn run_receive_packet(
         &self,
-        chain: Arc<FilterChain>,
         mut send_socket: SendHalf,
         mut receive_packets: mpsc::Receiver<Packet>,
     ) {
@@ -242,12 +241,11 @@ impl Server {
                     "contents" => String::from_utf8(packet.contents().clone()).unwrap(),
                 );
 
-                if let Some(data) =
-                    chain.local_send_filter(packet.dest(), packet.contents().to_vec())
+                if let Err(err) = send_socket
+                    .send_to(packet.contents().as_slice(), &packet.dest())
+                    .await
                 {
-                    if let Err(err) = send_socket.send_to(data.as_slice(), &packet.dest()).await {
-                        error!(log, "Error sending packet"; "dest" => %packet.dest(), "error" => %err);
-                    }
+                    error!(log, "Error sending packet"; "dest" => %packet.dest(), "error" => %err);
                 }
             }
             debug!(log, "Receiver closed");
@@ -489,12 +487,8 @@ mod tests {
             format!("'{}' not found in '{}'", msg, result)
         );
         assert!(
-            result.contains(":lrf:"),
-            format!(":lrf: not found in '{}'", result)
-        );
-        assert!(
-            result.contains(":esf:"),
-            format!(":esf: not found in '{}'", result)
+            result.contains(":odr:"),
+            format!(":odr: not found in '{}'", result)
         );
 
         close.send(()).unwrap();
@@ -619,11 +613,7 @@ mod tests {
         .await;
 
         assert_eq!(
-            format!(
-                "hello:lrf:127.0.0.1:{}:esf:address-0:127.0.0.1:{}",
-                result.addr.port(),
-                result.addr.port()
-            ),
+            format!("hello:odr:127.0.0.1:{}", result.addr.port(),),
             result.msg
         );
 
@@ -722,31 +712,8 @@ mod tests {
             assert!(false, err)
         }
 
-        server.run_receive_packet(Arc::new(FilterChain::new(vec![])), send_socket, recv_packet);
+        server.run_receive_packet(send_socket, recv_packet);
         assert_eq!(msg, wait.await.unwrap());
-
-        // with a filter
-        let socket = ephemeral_socket().await;
-        let local_addr = socket.local_addr().unwrap();
-
-        let (recv_socket, send_socket) = socket.split();
-        let (mut send_packet, recv_packet) = mpsc::channel::<Packet>(5);
-        let (done, wait) = oneshot::channel::<String>();
-
-        recv_udp_done(recv_socket, done);
-
-        send_packet
-            .send(Packet::new(local_addr, msg.as_bytes().to_vec()))
-            .await
-            .map_err(|err| assert!(false, err))
-            .unwrap();
-
-        server.run_receive_packet(
-            Arc::new(FilterChain::new(vec![Box::new(TestFilter {})])),
-            send_socket,
-            recv_packet,
-        );
-        assert_eq!(format!("{}:lsf:{}", msg, local_addr), wait.await.unwrap());
     }
 
     #[tokio::test]
