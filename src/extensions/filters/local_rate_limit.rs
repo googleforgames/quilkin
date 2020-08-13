@@ -25,6 +25,29 @@ use std::time::Duration;
 use tokio::sync::oneshot::{channel, Sender};
 use tokio::time::{self, Instant};
 
+/// RateLimitFilter applies rate limiting to packets flowing through the proxy
+///
+/// # Configuration
+///
+/// ```yaml
+/// local:
+///   port: 7000 # the port to receive traffic to locally
+/// filters:
+///   - name: quilkin.extensions.filters.local_rate_limit.alphav1.LocalRateLimit
+///     config:
+///       max_packets: 10
+///       period: 500ms
+/// client:
+///   addresses:
+///     - 127.0.0.1:7001
+///   connection_id: 1x7ijy6
+/// ```
+///  `config.max_packets` is the maximum number of packets allowed
+///  to be forwarded by the rate limiter in a given duration.
+///  `config.period` (optional) is the duration during which config.max_packets applies.
+///  If none is provided, it defaults to 1 second.
+///
+
 /// Config represents a RateLimitFilter's configuration.
 #[derive(Serialize, Deserialize, Debug)]
 struct Config {

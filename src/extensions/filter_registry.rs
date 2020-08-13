@@ -79,7 +79,7 @@ impl fmt::Display for Error {
             Error::FieldInvalid { field, reason } => {
                 write!(f, "field {} is invalid: {}", field, reason)
             }
-            Error::DeserializeFailed(reason) => write!(f, "{}", reason),
+            Error::DeserializeFailed(reason) => write!(f, "Deserialization failed: {}", reason),
         }
     }
 }
