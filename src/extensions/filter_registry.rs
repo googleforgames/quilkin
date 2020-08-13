@@ -24,42 +24,27 @@ use crate::config::EndPoint;
 
 /// Filter is a trait for routing and manipulating packets.
 pub trait Filter: Send + Sync {
-    /// local_receive_filter filters packets received from the local port, and potentially sends them
+    /// on_downstream_receive filters packets received from the local port, and potentially sends them
     /// to configured endpoints.
     /// This function should return the array of endpoints that the packet should be sent to,
     /// and the packet that should be sent (which may be manipulated) as well.
     /// If the packet should be rejected, return None.
-    fn local_receive_filter(
+    fn on_downstream_receive(
         &self,
         endpoints: &Vec<EndPoint>,
         from: SocketAddr,
         contents: Vec<u8>,
     ) -> Option<(Vec<EndPoint>, Vec<u8>)>;
 
-    /// local_send_filter intercepts packets that are being sent back to the original local port sender
-    /// This function should return the packet to be sent (which may be manipulated).
-    /// If the packet should be rejected, return None.
-    fn local_send_filter(&self, to: SocketAddr, contents: Vec<u8>) -> Option<Vec<u8>>;
-
-    /// endpoint_receive_filter filters packets received from recv_addr, but expected from the given endpoint,
+    /// on_upstream_receive filters packets received from `from`, to a given endpoint,
     /// that are going back to the original sender.
     /// This function should return the packet to be sent (which may be manipulated).
     /// If the packet should be rejected, return None.
-    fn endpoint_receive_filter(
-        &self,
-        endpoint: &EndPoint,
-        recv_addr: SocketAddr,
-        contents: Vec<u8>,
-    ) -> Option<Vec<u8>>;
-
-    /// endpoint_send_filter intercepts packets that are being sent back to the original
-    /// endpoint sender address
-    /// This function should return the packet to be sent (which may be manipulated).
-    /// If the packet should be rejected, return None.
-    fn endpoint_send_filter(
+    fn on_upstream_receive(
         &self,
         endpoint: &EndPoint,
         from: SocketAddr,
+        to: SocketAddr,
         contents: Vec<u8>,
     ) -> Option<Vec<u8>>;
 }
@@ -136,7 +121,7 @@ mod tests {
     struct TestFilter {}
 
     impl Filter for TestFilter {
-        fn local_receive_filter(
+        fn on_downstream_receive(
             &self,
             _: &Vec<EndPoint>,
             _: SocketAddr,
@@ -145,20 +130,13 @@ mod tests {
             None
         }
 
-        fn local_send_filter(&self, _: SocketAddr, _: Vec<u8>) -> Option<Vec<u8>> {
-            None
-        }
-
-        fn endpoint_receive_filter(
+        fn on_upstream_receive(
             &self,
             _: &EndPoint,
             _: SocketAddr,
+            _: SocketAddr,
             _: Vec<u8>,
         ) -> Option<Vec<u8>> {
-            None
-        }
-
-        fn endpoint_send_filter(&self, _: &EndPoint, _: SocketAddr, _: Vec<u8>) -> Option<Vec<u8>> {
             None
         }
     }
@@ -185,9 +163,11 @@ mod tests {
             connection_ids: vec![],
         };
 
-        assert!(filter.local_receive_filter(&vec![], addr, vec![]).is_some());
         assert!(filter
-            .endpoint_receive_filter(&endpoint, addr, vec![])
+            .on_downstream_receive(&vec![], addr, vec![])
+            .is_some());
+        assert!(filter
+            .on_upstream_receive(&endpoint, addr, addr, vec![])
             .is_some());
     }
 }
