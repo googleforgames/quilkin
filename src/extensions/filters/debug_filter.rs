@@ -31,7 +31,7 @@ use serde_yaml::Value;
 /// local:
 ///   port: 7000 # the port to receive traffic to locally
 /// filters:
-///   - name: quilkin.core.v1alpha1.debug
+///   - name: quilkin.extensions.filter.debug_filter.v1alpha1.DebugFilter
 ///     config:
 ///       id: "debug-1"
 /// client:
