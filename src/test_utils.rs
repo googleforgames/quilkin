@@ -56,11 +56,11 @@ pub struct TestFilter {}
 impl Filter for TestFilter {
     fn on_downstream_receive(
         &self,
-        endpoints: &Vec<EndPoint>,
+        endpoints: &[EndPoint],
         from: SocketAddr,
         contents: Vec<u8>,
     ) -> Option<(Vec<EndPoint>, Vec<u8>)> {
-        let mut e = endpoints.clone();
+        let mut e = endpoints.to_vec();
         // we're going to add an extra endpoint, so we can test for the change,
         // but also so we don't break any tests are expecting traffic at the supplied
         // address and port

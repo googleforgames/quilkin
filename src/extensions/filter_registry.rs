@@ -31,7 +31,7 @@ pub trait Filter: Send + Sync {
     /// If the packet should be rejected, return None.
     fn on_downstream_receive(
         &self,
-        endpoints: &Vec<EndPoint>,
+        endpoints: &[EndPoint],
         from: SocketAddr,
         contents: Vec<u8>,
     ) -> Option<(Vec<EndPoint>, Vec<u8>)>;
@@ -75,17 +75,12 @@ pub trait FilterFactory: Sync + Send {
 }
 
 /// FilterRegistry is the registry of all Filters that can be applied in the system.
+#[derive(Default)]
 pub struct FilterRegistry {
     registry: HashMap<String, Box<dyn FilterFactory>>,
 }
 
 impl FilterRegistry {
-    pub fn new() -> FilterRegistry {
-        FilterRegistry {
-            registry: Default::default(),
-        }
-    }
-
     /// insert registers a Filter under the provider's given name.
     pub fn insert<P: 'static>(&mut self, provider: P)
     where
@@ -96,13 +91,13 @@ impl FilterRegistry {
 
     /// get returns an instance of a filter for a given Key. Returns Error if not found,
     /// or if there is a configuration issue.
-    pub fn get(&self, key: &String, config: &serde_yaml::Value) -> Result<Box<dyn Filter>, Error> {
+    pub fn get(&self, key: &str, config: &serde_yaml::Value) -> Result<Box<dyn Filter>, Error> {
         match self
             .registry
             .get(key)
             .map(|p| p.create_from_config(&config))
         {
-            None => Err(Error::NotFound(key.clone())),
+            None => Err(Error::NotFound(key.into())),
             Some(filter) => filter,
         }
     }
@@ -121,7 +116,7 @@ mod tests {
     impl Filter for TestFilter {
         fn on_downstream_receive(
             &self,
-            _: &Vec<EndPoint>,
+            _: &[EndPoint],
             _: SocketAddr,
             _: Vec<u8>,
         ) -> Option<(Vec<EndPoint>, Vec<u8>)> {
@@ -141,7 +136,7 @@ mod tests {
 
     #[test]
     fn insert_and_get() {
-        let mut reg = FilterRegistry::new();
+        let mut reg = FilterRegistry::default();
         reg.insert(TestFilterFactory {});
         let config = serde_yaml::Value::Null;
 

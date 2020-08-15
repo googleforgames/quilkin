@@ -61,11 +61,11 @@ impl FilterChain {
 impl Filter for FilterChain {
     fn on_downstream_receive(
         &self,
-        endpoints: &Vec<EndPoint>,
+        endpoints: &[EndPoint],
         from: SocketAddr,
         contents: Vec<u8>,
     ) -> Option<(Vec<EndPoint>, Vec<u8>)> {
-        let mut e = endpoints.clone();
+        let mut e = endpoints.to_vec();
         let mut c = contents;
         for f in &self.filters {
             match f.on_downstream_receive(&e, from, c) {

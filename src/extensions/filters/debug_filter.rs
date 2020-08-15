@@ -73,7 +73,7 @@ impl DebugFilterFactory {
 
 impl FilterFactory for DebugFilterFactory {
     fn name(&self) -> String {
-        return String::from("quilkin.core.v1alpaha1.debug");
+        "quilkin.core.v1alpaha1.debug".into()
     }
 
     fn create_from_config(&self, config: &Value) -> Result<Box<dyn Filter>, Error> {
@@ -83,7 +83,7 @@ impl FilterFactory for DebugFilterFactory {
             _ => None,
         };
 
-        return match prefix {
+        match prefix {
             // if no config value supplied, then no prefix, which is fine
             None => Ok(Box::new(DebugFilter::new(&self.log, None))),
             // return an Error if the id exists but is not a string.
@@ -97,14 +97,14 @@ impl FilterFactory for DebugFilterFactory {
                     Some(prefix.to_string()),
                 ))),
             },
-        };
+        }
     }
 }
 
 impl Filter for DebugFilter {
     fn on_downstream_receive(
         &self,
-        endpoints: &Vec<EndPoint>,
+        endpoints: &[EndPoint],
         from: SocketAddr,
         contents: Vec<u8>,
     ) -> Option<(Vec<EndPoint>, Vec<u8>)> {

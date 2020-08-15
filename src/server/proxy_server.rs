@@ -49,11 +49,11 @@ impl Server {
     /// new Server. Takes a logger, and the registry of available Filters.
     pub fn new(base: Logger, filter_registry: FilterRegistry, metrics: Metrics) -> Self {
         let log = base.new(o!("source" => "server::Server"));
-        return Server {
+        Server {
             log,
             filter_registry,
             metrics,
-        };
+        }
     }
 
     /// start the async processing of incoming UDP packets. Will block until an
@@ -268,7 +268,7 @@ impl Server {
     /// bind binds the local configured port
     async fn bind(config: &Config) -> Result<UdpSocket> {
         let addr = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), config.local.port);
-        return UdpSocket::bind(addr).await;
+        UdpSocket::bind(addr).await
     }
 
     /// ensure_session makes sure there is a value session for the name in the sessions map
@@ -300,7 +300,7 @@ impl Server {
             let mut map = sessions.write().await;
             map.insert(s.key(), Mutex::new(s));
         }
-        return Ok(());
+        Ok(())
     }
 
     /// prune_sessions removes expired Sessions from the SessionMap.
@@ -315,8 +315,7 @@ impl Server {
                 let session = v.lock().await;
                 let expiration = session.expiration().await;
                 if expiration.lt(&now) {
-                    let value = k.clone();
-                    remove_keys.push(value);
+                    remove_keys.push(*k);
                 }
             }
         }
@@ -361,7 +360,7 @@ mod tests {
     #[tokio::test]
     async fn run_server() {
         let log = logger();
-        let server = Server::new(log.clone(), FilterRegistry::new(), Metrics::default());
+        let server = Server::new(log.clone(), FilterRegistry::default(), Metrics::default());
 
         let socket1 = ephemeral_socket().await;
         let endpoint1 = socket1.local_addr().unwrap();
@@ -412,7 +411,7 @@ mod tests {
     #[tokio::test]
     async fn run_client() {
         let log = logger();
-        let server = Server::new(log.clone(), FilterRegistry::new(), Metrics::default());
+        let server = Server::new(log.clone(), FilterRegistry::default(), Metrics::default());
         let socket = ephemeral_socket().await;
         let endpoint_addr = socket.local_addr().unwrap();
         let (recv, mut send) = socket.split();
@@ -446,7 +445,7 @@ mod tests {
     #[tokio::test]
     async fn run_with_filter() {
         let log = logger();
-        let mut registry = FilterRegistry::new();
+        let mut registry = FilterRegistry::default();
         registry.insert(TestFilterFactory {});
 
         let server = Server::new(log.clone(), registry, Metrics::default());
@@ -692,7 +691,7 @@ mod tests {
 
     #[tokio::test]
     async fn run_receive_packet() {
-        let server = Server::new(logger(), FilterRegistry::new(), Metrics::default());
+        let server = Server::new(logger(), FilterRegistry::default(), Metrics::default());
         let msg = "hello";
 
         // without a filter

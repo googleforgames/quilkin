@@ -35,7 +35,7 @@ pub fn start_metrics_server(
                     warn!(log, "failed to convert metrics to utf8: {:?}", err);
                 })
             })
-            .unwrap_or("# failed to gather metrics".to_string())
+            .unwrap_or_else(|_| "# failed to gather metrics".to_string())
     });
 
     let (_, server) = warp::serve(metrics_route).bind_with_graceful_shutdown(addr, async {

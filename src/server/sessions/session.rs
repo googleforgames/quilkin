@@ -56,6 +56,15 @@ pub struct Session {
     is_closed: Arc<AtomicBool>,
 }
 
+/// ReceivedPacketContext contains state needed to process a received packet.
+struct ReceivedPacketContext<'a> {
+    packet: &'a [u8],
+    chain: Arc<FilterChain>,
+    endpoint: &'a EndPoint,
+    from: SocketAddr,
+    to: SocketAddr,
+}
+
 /// Packet represents a packet that needs to go somewhere
 pub struct Packet {
     dest: SocketAddr,
@@ -87,7 +96,7 @@ impl Session {
         dest: EndPoint,
         sender: mpsc::Sender<Packet>,
     ) -> Result<Self> {
-        let log = base.new(o!("source" => "server::Session", "from" => from, "dest_name" => dest.name.clone(), "dest_address" => dest.address.clone()));
+        let log = base.new(o!("source" => "server::Session", "from" => from, "dest_name" => dest.name.clone(), "dest_address" => dest.address));
         let addr = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 0);
         let (recv, send) = UdpSocket::bind(addr).await?.split();
         let (closer, closed) = watch::channel::<bool>(false);
@@ -144,13 +153,15 @@ impl Session {
                                 Session::process_recv_packet(
                                     &log,
                                     &metrics,
-                                    chain.clone(),
-                                    &buf[..size],
-                                    &endpoint,
-                                    recv_addr,
-                                    from,
                                     sender.clone(),
-                                    expiration_mtx.clone()).await
+                                    expiration_mtx.clone(),
+                                    ReceivedPacketContext {
+                                        chain: chain.clone(),
+                                        packet: &buf[..size],
+                                        endpoint: &endpoint,
+                                        from: recv_addr,
+                                        to: from,
+                                    }).await
                             }
                         };
                     }
@@ -160,7 +171,7 @@ impl Session {
                             is_closed.store(true, Relaxed);
                             debug!(log, "Closing Session");
                             return;
-                        } else if let None = close_request {
+                        } else if close_request.is_none() {
                             is_closed.store(true, Relaxed);
                             debug!(log, "Dropping Session");
                             return;
@@ -185,14 +196,17 @@ impl Session {
     async fn process_recv_packet(
         log: &Logger,
         metrics: &Metrics,
-        chain: Arc<FilterChain>,
-        packet: &[u8],
-        endpoint: &EndPoint,
-        from: SocketAddr,
-        to: SocketAddr,
         mut sender: mpsc::Sender<Packet>,
         expiration: Arc<RwLock<Instant>>,
+        packet_ctx: ReceivedPacketContext<'_>,
     ) {
+        let ReceivedPacketContext {
+            packet,
+            chain,
+            endpoint,
+            from,
+            to,
+        } = packet_ctx;
         debug!(log, "Received packet"; "from" => from, "endpoint_name" => &endpoint.name, "endpoint_addr" => &endpoint.address, "contents" => from_utf8(packet).unwrap());
         Session::inc_expiration(expiration).await;
 
@@ -239,7 +253,7 @@ impl Session {
     /// is_closed returns if the Session is closed or not.
     #[allow(dead_code)]
     pub fn is_closed(&self) -> bool {
-        return self.is_closed.load(Relaxed);
+        self.is_closed.load(Relaxed)
     }
 
     /// close closes this Session.
@@ -444,13 +458,15 @@ mod tests {
                 "127.0.1.1:80".parse().unwrap(),
             )
             .unwrap(),
-            chain,
-            msg.as_bytes(),
-            &endpoint,
-            endpoint.address,
-            dest,
             sender.clone(),
             expiration.clone(),
+            ReceivedPacketContext {
+                packet: msg.as_bytes(),
+                chain,
+                endpoint: &endpoint,
+                from: endpoint.address,
+                to: dest,
+            },
         )
         .await;
 
@@ -472,13 +488,15 @@ mod tests {
                 "127.0.1.1:80".parse().unwrap(),
             )
             .unwrap(),
-            chain,
-            msg.as_bytes(),
-            &endpoint,
-            endpoint.address,
-            dest,
             sender.clone(),
             expiration.clone(),
+            ReceivedPacketContext {
+                chain,
+                packet: msg.as_bytes(),
+                endpoint: &endpoint,
+                from: endpoint.address,
+                to: dest,
+            },
         )
         .await;
 

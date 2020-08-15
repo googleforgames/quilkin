@@ -32,7 +32,7 @@ pub fn histogram_opts(
 ) -> HistogramOpts {
     HistogramOpts {
         common_opts: opts(name, subsystem, description),
-        buckets: buckets.unwrap_or(Vec::from(DEFAULT_BUCKETS as &'static [f64])),
+        buckets: buckets.unwrap_or_else(|| Vec::from(DEFAULT_BUCKETS as &'static [f64])),
     }
 }
 

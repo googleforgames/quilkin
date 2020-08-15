@@ -20,6 +20,9 @@ steps:
     args: ["fmt", "--", "--check"]
     id: fmt-check
   - name: gcr.io/$PROJECT_ID/ci
+    args: ["clippy"]
+    id: clippy
+  - name: gcr.io/$PROJECT_ID/ci
     args: ["test"]
     id: test
 timeout: 30m

@@ -125,11 +125,12 @@ impl Drop for RateLimitFilter {
 impl Filter for RateLimitFilter {
     fn on_downstream_receive(
         &self,
-        endpoints: &Vec<EndPoint>,
+        endpoints: &[EndPoint],
         _from: SocketAddr,
         contents: Vec<u8>,
     ) -> Option<(Vec<EndPoint>, Vec<u8>)> {
-        self.acquire_token().map(|()| (endpoints.clone(), contents))
+        self.acquire_token()
+            .map(|()| (endpoints.to_vec(), contents))
     }
 
     fn on_upstream_receive(

@@ -27,7 +27,7 @@ use quilkin::server::{Metrics, Server};
 use tokio::signal;
 use tokio::sync::oneshot;
 
-const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[tokio::main]
 async fn main() {
@@ -75,6 +75,5 @@ fn logger() -> Logger {
         .build()
         .fuse();
     let drain = slog_async::Async::new(drain).build().fuse();
-    let log = slog::Logger::root(drain, o!());
-    return log;
+    slog::Logger::root(drain, o!())
 }
