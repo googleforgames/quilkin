@@ -31,7 +31,7 @@ use serde_yaml::Value;
 /// local:
 ///   port: 7000 # the port to receive traffic to locally
 /// filters:
-///   - name: quilkin.core.v1alpaha1.debug
+///   - name: quilkin.core.v1alpha1.debug
 ///     config:
 ///       id: "debug-1"
 /// client:
@@ -73,7 +73,7 @@ impl DebugFilterFactory {
 
 impl FilterFactory for DebugFilterFactory {
     fn name(&self) -> String {
-        return String::from("quilkin.core.v1alpaha1.debug");
+        return String::from("quilkin.core.v1alpha1.debug");
     }
 
     fn create_from_config(&self, config: &Value) -> Result<Box<dyn Filter>, Error> {

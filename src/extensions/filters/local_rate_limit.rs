@@ -33,7 +33,7 @@ use tokio::time::{self, Instant};
 /// local:
 ///   port: 7000 # the port to receive traffic to locally
 /// filters:
-///   - name: quilkin.extensions.filters.local_rate_limit.alphav1.LocalRateLimit
+///   - name: quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit
 ///     config:
 ///       max_packets: 10
 ///       period: 500ms
@@ -84,7 +84,7 @@ struct RateLimitFilter {
 
 impl FilterFactory for RateLimitFilterFactory {
     fn name(&self) -> String {
-        "quilkin.extensions.filters.local_rate_limit.alphav1.LocalRateLimit".into()
+        "quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit".into()
     }
 
     fn create_from_config(&self, config_value: &Value) -> Result<Box<dyn Filter>, Error> {
