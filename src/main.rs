@@ -52,6 +52,10 @@ async fn main() {
 
     let config = Arc::new(Config::from_reader(File::open(filename).unwrap()).unwrap());
     config.validate().unwrap();
+    filter_registry
+        .validate_filter_configs(&config.filters)
+        .unwrap();
+
     let server = Server::new(
         base_logger,
         filter_registry,

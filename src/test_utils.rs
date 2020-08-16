@@ -25,24 +25,19 @@ use tokio::net::udp::{RecvHalf, SendHalf};
 use tokio::net::UdpSocket;
 use tokio::sync::{mpsc, oneshot};
 
-use crate::config::{Config, EndPoint};
+use crate::config::{Config, EndPoint, ValidationError};
 use crate::extensions::{Error, Filter, FilterFactory, FilterRegistry};
 use crate::server::{Metrics, Server};
 use serde_yaml::Value;
-
-// noop_endpoint returns an endpoint for data that should go nowhere.
-pub fn noop_endpoint() -> EndPoint {
-    EndPoint {
-        name: "noop".to_string(),
-        address: "127.0.0.1:10".parse().unwrap(),
-        connection_ids: vec![],
-    }
-}
 
 pub struct TestFilterFactory {}
 impl FilterFactory for TestFilterFactory {
     fn name(&self) -> String {
         "TestFilter".to_string()
+    }
+
+    fn validate_config(&self, _: &Value) -> Result<(), ValidationError> {
+        Ok(())
     }
 
     fn create_from_config(&self, _: &Value) -> Result<Box<dyn Filter>, Error> {
@@ -60,15 +55,9 @@ impl Filter for TestFilter {
         from: SocketAddr,
         contents: Vec<u8>,
     ) -> Option<(Vec<EndPoint>, Vec<u8>)> {
-        let mut e = endpoints.clone();
-        // we're going to add an extra endpoint, so we can test for the change,
-        // but also so we don't break any tests are expecting traffic at the supplied
-        // address and port
-        e.push(noop_endpoint());
-
         let mut c = contents;
         c.append(&mut format!(":odr:{}", from).into_bytes());
-        Some((e, c))
+        Some((endpoints.clone(), c))
     }
 
     fn on_upstream_receive(

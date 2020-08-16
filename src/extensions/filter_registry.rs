@@ -15,12 +15,11 @@
  */
 
 use std::collections::HashMap;
+use std::error::Error as StdError;
 use std::fmt;
 use std::net::SocketAddr;
 
-use serde::export::Formatter;
-
-use crate::config::EndPoint;
+use crate::config::{EndPoint, Filter as FilterConfig, ValidationError};
 
 /// Filter is a trait for routing and manipulating packets.
 pub trait Filter: Send + Sync {
@@ -53,16 +52,23 @@ pub trait Filter: Send + Sync {
 /// Error is an error when attempting to create a Filter from_config() from a FilterFactory
 pub enum Error {
     NotFound(String),
-    FieldInvalid { field: String, reason: String },
+    InvalidConfig(ValidationError),
+}
+
+impl StdError for Error {
+    fn source(&self) -> Option<&(dyn StdError + 'static)> {
+        match self {
+            Error::InvalidConfig(err) => Some(err),
+            _ => None,
+        }
+    }
 }
 
 impl fmt::Display for Error {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Error::NotFound(key) => write!(f, "filter {} is not found", key),
-            Error::FieldInvalid { field, reason } => {
-                write!(f, "field {} is invalid: {}", field, reason)
-            }
+            Error::InvalidConfig(err) => write!(f, "filter configuration is invalid: {}", err),
         }
     }
 }
@@ -71,6 +77,14 @@ impl fmt::Display for Error {
 pub trait FilterFactory: Sync + Send {
     /// name returns the configuration name for the Filter
     fn name(&self) -> String;
+
+    /// Checks that the provided config is of a type expected by the filter
+    /// and that it is valid.
+    fn validate_config(&self, config: &serde_yaml::Value) -> Result<(), ValidationError>;
+
+    /// Returns a new filter based on the provided `config`.
+    /// This method is only called if `validate_config` returned `Ok(())` for `config`.
+    /// As a result, the method can assume that a valid `config` is provided.
     fn create_from_config(&self, config: &serde_yaml::Value) -> Result<Box<dyn Filter>, Error>;
 }
 
@@ -83,6 +97,27 @@ impl FilterRegistry {
     pub fn new() -> FilterRegistry {
         FilterRegistry {
             registry: Default::default(),
+        }
+    }
+
+    /// Checks that all provided filter configurations are valid, returning
+    /// an error for each invalid config if any.
+    pub fn validate_filter_configs(&self, configs: &Vec<FilterConfig>) -> Result<(), Vec<Error>> {
+        let invalid = configs
+            .into_iter()
+            .map(|config| (self.registry.get(&config.name), config))
+            .filter_map(|(factory, config)| match factory {
+                None => Some(Error::NotFound(config.name.clone())),
+                Some(factory) => factory
+                    .validate_config(&config.config)
+                    .map_or_else(|err| Some(Error::InvalidConfig(err)), |_| None),
+            })
+            .collect::<Vec<_>>();
+
+        if invalid.is_empty() {
+            Ok(())
+        } else {
+            Err(invalid)
         }
     }
 

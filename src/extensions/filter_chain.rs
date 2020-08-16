@@ -16,7 +16,6 @@
 
 use std::io::{Error, ErrorKind, Result};
 use std::net::SocketAddr;
-use std::sync::Arc;
 
 use crate::config::{Config, EndPoint};
 use crate::extensions::{Filter, FilterRegistry};
@@ -38,10 +37,7 @@ impl FilterChain {
 
     // from_config returns a FilterChain from a given config. Will return a ErrorKind::InvalidInput
     // if there is an issue with the passed in Configuration.
-    pub fn from_config(
-        config: Arc<Config>,
-        filter_registry: &FilterRegistry,
-    ) -> Result<FilterChain> {
+    pub fn from_config(config: &Config, filter_registry: &FilterRegistry) -> Result<FilterChain> {
         let mut filters = Vec::<Box<dyn Filter>>::new();
         for filter_config in &config.filters {
             match filter_registry.get(&filter_config.name, &filter_config.config) {
@@ -107,7 +103,7 @@ mod tests {
     use crate::config::{ConnectionConfig, Local};
     use crate::extensions::filters::DebugFilterFactory;
     use crate::extensions::{default_registry, FilterFactory};
-    use crate::test_utils::{logger, noop_endpoint, TestFilter};
+    use crate::test_utils::{logger, TestFilter};
 
     use super::*;
 
@@ -117,7 +113,7 @@ mod tests {
         let provider = DebugFilterFactory::new(&log);
 
         // everything is fine
-        let config = Arc::new(Config {
+        let config = Config {
             local: Local { port: 0 },
             filters: vec![config::Filter {
                 name: provider.name(),
@@ -128,14 +124,14 @@ mod tests {
                 connection_id: "".into(),
                 lb_policy: None,
             },
-        });
+        };
 
         let registry = default_registry(&log);
-        let chain = FilterChain::from_config(config, &registry).unwrap();
+        let chain = FilterChain::from_config(&config, &registry).unwrap();
         assert_eq!(1, chain.filters.len());
 
         // uh oh, something went wrong
-        let config = Arc::new(Config {
+        let config = Config {
             local: Local { port: 0 },
             filters: vec![config::Filter {
                 name: "this is so wrong".to_string(),
@@ -146,8 +142,8 @@ mod tests {
                 connection_id: "".into(),
                 lb_policy: None,
             },
-        });
-        let result = FilterChain::from_config(config, &registry);
+        };
+        let result = FilterChain::from_config(&config, &registry);
         assert!(result.is_err());
     }
 
@@ -180,9 +176,7 @@ mod tests {
             )
             .unwrap();
 
-        let mut expected = endpoints_fixture.clone();
-        expected.push(noop_endpoint());
-        assert_eq!(expected, eps);
+        assert_eq!(endpoints_fixture.clone(), eps);
         assert_eq!(
             "hello:odr:127.0.0.1:70",
             from_utf8(content.as_slice()).unwrap()
@@ -216,10 +210,7 @@ mod tests {
             )
             .unwrap();
 
-        let mut expected = endpoints_fixture.clone();
-        expected.push(noop_endpoint());
-        expected.push(noop_endpoint());
-        assert_eq!(expected, eps);
+        assert_eq!(endpoints_fixture.clone(), eps);
         assert_eq!(
             "hello:odr:127.0.0.1:70:odr:127.0.0.1:70",
             from_utf8(content.as_slice()).unwrap()

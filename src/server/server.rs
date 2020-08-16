@@ -29,7 +29,7 @@ use tokio::sync::{Mutex, RwLock};
 use tokio::time::{delay_for, Duration, Instant};
 
 use crate::config::{Config, ConnectionConfig, EndPoint};
-use crate::extensions::{Filter, FilterChain, FilterRegistry};
+use crate::extensions::{FilterChain, FilterRegistry};
 use crate::load_balancer_policy::LoadBalancerPolicy;
 use crate::server::sessions::{Packet, Session, SESSION_TIMEOUT_SECONDS};
 
@@ -77,16 +77,12 @@ impl Server {
         // HashMap key is from,destination addresses as a tuple.
         let sessions: SessionMap = Arc::new(RwLock::new(HashMap::new()));
         let (send_packets, receive_packets) = mpsc::channel::<Packet>(1024);
-        let chain = Arc::new(FilterChain::from_config(
-            config.clone(),
-            &self.filter_registry,
-        )?);
 
         self.run_receive_packet(send_socket, receive_packets);
         self.run_prune_sessions(&sessions);
         self.run_recv_from(
             Arc::new(LoadBalancerPolicy::new(&config.connections)),
-            chain,
+            config,
             receive_socket,
             &sessions,
             send_packets,
@@ -120,9 +116,9 @@ impl Server {
     // run_recv_from is a non blocking function that continually runs
     // Server::recv_from() to process new incoming packets.
     fn run_recv_from(
-        &self,
+        self,
         lb_policy: Arc<LoadBalancerPolicy>,
-        chain: Arc<FilterChain>,
+        config: Arc<Config>,
         mut receive_socket: RecvHalf,
         sessions: &SessionMap,
         send_packets: mpsc::Sender<Packet>,
@@ -130,16 +126,18 @@ impl Server {
         let sessions = sessions.clone();
         let log = self.log.clone();
         let metrics = self.metrics.clone();
+        let create_filter_chain =
+            Arc::new(move || FilterChain::from_config(&config, &self.filter_registry));
         tokio::spawn(async move {
             loop {
                 if let Err(err) = Server::recv_from(
                     &log,
                     &metrics,
                     lb_policy.clone(),
-                    chain.clone(),
                     &mut receive_socket,
                     sessions.clone(),
                     send_packets.clone(),
+                    create_filter_chain.clone(),
                 )
                 .await
                 {
@@ -151,73 +149,81 @@ impl Server {
 
     /// recv_from takes packets from the local socket and asynchronously
     /// processes them to send them out to endpoints.
-    async fn recv_from(
+    async fn recv_from<F>(
         log: &Logger,
         metrics: &Metrics,
         lb_policy: Arc<LoadBalancerPolicy>,
-        chain: Arc<FilterChain>,
         receive_socket: &mut RecvHalf,
         sessions: SessionMap,
         send_packets: mpsc::Sender<Packet>,
-    ) -> Result<()> {
-        let mut buf: Vec<u8> = vec![0; 65535];
-        let (size, recv_addr) = receive_socket.recv_from(&mut buf).await?;
+        create_filter_chain: Arc<F>,
+    ) -> std::result::Result<(), Box<dyn std::error::Error>>
+    where
+        F: Fn() -> std::result::Result<FilterChain, std::io::Error> + Send + Sync + 'static,
+    {
+        let mut packet: Vec<u8> = vec![0; 65535];
+        let (size, recv_addr) = receive_socket.recv_from(&mut packet).await?;
+        packet.truncate(size);
+
         let log = log.clone();
         let metrics = metrics.clone();
         tokio::spawn(async move {
-            let packet = &buf[..size];
-
             debug!(
                 log,
                 "Packet Received from: {}, {}",
                 recv_addr,
-                from_utf8(packet).unwrap()
+                from_utf8(&packet).unwrap()
             );
 
-            let result = chain.on_downstream_receive(
-                &lb_policy.choose_endpoints(),
-                recv_addr,
-                packet.to_vec(),
-            );
+            let endpoints = &lb_policy.choose_endpoints();
 
-            if let Some((endpoints, packet)) = result {
-                for endpoint in endpoints.iter() {
-                    if let Err(err) = Server::ensure_session(
-                        &log,
-                        &metrics,
-                        chain.clone(),
-                        sessions.clone(),
-                        recv_addr,
-                        &endpoint,
-                        send_packets.clone(),
-                    )
-                    .await
-                    {
-                        error!(log, "Error ensuring session exists"; "error" => %err);
-                        continue;
-                    }
+            let mut packet = Some(packet);
+            for (index, endpoint) in endpoints.iter().enumerate() {
+                if let Err(err) = Server::ensure_session(
+                    &log,
+                    &metrics,
+                    sessions.clone(),
+                    recv_addr,
+                    &endpoint,
+                    send_packets.clone(),
+                    create_filter_chain.as_ref(),
+                )
+                .await
+                {
+                    error!(log, "Error ensuring session exists"; "error" => %err);
+                    continue;
+                }
 
-                    let map = sessions.read().await;
-                    let key = (recv_addr, endpoint.address);
-                    match map.get(&key) {
-                        Some(mtx) => {
-                            let mut session = mtx.lock().await;
-                            match session.send_to(packet.as_slice()).await {
-                                Ok(_) => {
-                                    session.increment_expiration().await;
-                                }
-                                Err(err) => {
-                                    error!(log, "Error sending packet from session"; "error" => %err)
-                                }
-                            };
-                        }
-                        None => warn!(
-                            log,
-                            "Could not find session for key: ({}:{})",
-                            key.0.to_string(),
-                            key.1.to_string()
-                        ),
+                // Only make a copy of the packet if this isn't the last endpoint.
+                let packet = if index == endpoints.len() - 1 {
+                    // unwrapping is safe since we start with `Some(packet)` and
+                    // will not re-enter the loop after we `take` the packet.
+                    packet.take().unwrap()
+                } else {
+                    // unwrapping is safe since we start with `Some(packet)`
+                    packet.clone().take().unwrap()
+                };
+
+                let map = sessions.read().await;
+                let key = (recv_addr, endpoint.address);
+                match map.get(&key) {
+                    Some(mtx) => {
+                        let mut session = mtx.lock().await;
+                        match session.send_to(packet).await {
+                            Ok(_) => {
+                                session.increment_expiration().await;
+                            }
+                            Err(err) => {
+                                error!(log, "Error sending packet from session"; "error" => %err)
+                            }
+                        };
                     }
+                    None => warn!(
+                        log,
+                        "Could not find session for key: ({}:{})",
+                        key.0.to_string(),
+                        key.1.to_string()
+                    ),
                 }
             }
         });
@@ -272,15 +278,18 @@ impl Server {
     }
 
     /// ensure_session makes sure there is a value session for the name in the sessions map
-    async fn ensure_session(
+    async fn ensure_session<F>(
         log: &Logger,
         metrics: &Metrics,
-        chain: Arc<FilterChain>,
         sessions: SessionMap,
         from: SocketAddr,
         dest: &EndPoint,
         sender: mpsc::Sender<Packet>,
-    ) -> std::result::Result<(), Box<dyn std::error::Error>> {
+        create_filter_chain: &F,
+    ) -> std::result::Result<(), Box<dyn std::error::Error>>
+    where
+        F: Fn() -> std::result::Result<FilterChain, std::io::Error>,
+    {
         {
             let map = sessions.read().await;
             if map.contains_key(&(from, dest.address)) {
@@ -290,7 +299,7 @@ impl Server {
         let s = Session::new(
             log,
             metrics.new_session_metrics(&from, &dest.address)?,
-            chain,
+            create_filter_chain()?,
             from,
             dest.clone(),
             sender,
@@ -522,12 +531,10 @@ mod tests {
             session_len: usize,
         }
 
-        async fn test(
-            name: String,
-            log: &Logger,
-            chain: Arc<FilterChain>,
-            expected: Expected,
-        ) -> Result {
+        async fn test<F>(name: String, log: &Logger, chain: F, expected: Expected) -> Result
+        where
+            F: Fn() -> FilterChain + Send + Sync + 'static,
+        {
             info!(log, "Test"; "name" => name);
             let msg = "hello".to_string();
             let (local_addr, wait) = recv_udp().await;
@@ -554,12 +561,13 @@ mod tests {
                     &log_clone,
                     &Metrics::default(),
                     lb_policy,
-                    chain,
                     &mut recv,
                     sessions_clone,
                     send_packets.clone(),
+                    Arc::new(move || Ok(chain())),
                 )
                 .await
+                .unwrap();
             });
 
             send.send_to(msg.as_bytes(), &receive_addr).await.unwrap();
@@ -593,22 +601,20 @@ mod tests {
 
         let log = logger();
 
-        let chain = Arc::new(FilterChain::new(vec![]));
         let result = test(
             "no filter".to_string(),
             &log,
-            chain,
+            || FilterChain::new(vec![]),
             Expected { session_len: 1 },
         )
         .await;
         assert_eq!("hello", result.msg);
 
-        let chain = Arc::new(FilterChain::new(vec![Box::new(TestFilter {})]));
         let result = test(
             "test filter".to_string(),
             &log,
-            chain,
-            Expected { session_len: 2 },
+            || FilterChain::new(vec![Box::new(TestFilter {})]),
+            Expected { session_len: 1 },
         )
         .await;
 
@@ -639,7 +645,13 @@ mod tests {
 
         server.run_recv_from(
             lb_policy,
-            Arc::new(FilterChain::new(vec![])),
+            Arc::new(Config {
+                local: Local { port: 12345 },
+                filters: vec![],
+                connections: ConnectionConfig::Server {
+                    endpoints: Vec::new(),
+                },
+            }),
             recv,
             &sessions,
             send_packets,
@@ -670,11 +682,11 @@ mod tests {
         Server::ensure_session(
             &log,
             &Metrics::default(),
-            Arc::new(FilterChain::new(vec![])),
             map.clone(),
             from,
             &endpoint,
             sender,
+            &|| Ok(FilterChain::new(vec![])),
         )
         .await
         .unwrap();
@@ -733,11 +745,11 @@ mod tests {
         Server::ensure_session(
             &log,
             &Metrics::default(),
-            Arc::new(FilterChain::new(vec![])),
             sessions.clone(),
             from,
             &endpoint,
             send,
+            &|| Ok(FilterChain::new(vec![])),
         )
         .await
         .unwrap();
@@ -794,11 +806,11 @@ mod tests {
         Server::ensure_session(
             &log,
             &Metrics::default(),
-            Arc::new(FilterChain::new(vec![])),
             sessions.clone(),
             from,
             &endpoint,
             send,
+            &|| Ok(FilterChain::new(vec![])),
         )
         .await
         .unwrap();

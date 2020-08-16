@@ -18,7 +18,7 @@ use std::net::SocketAddr;
 
 use slog::{info, o, Logger};
 
-use crate::config::EndPoint;
+use crate::config::{EndPoint, ValidationError};
 use crate::extensions::filter_registry::{Error, FilterFactory};
 use crate::extensions::Filter;
 use serde_yaml::Value;
@@ -69,6 +69,26 @@ impl DebugFilterFactory {
     pub fn new(base: &Logger) -> Self {
         DebugFilterFactory { log: base.clone() }
     }
+
+    fn validate(&self, config: &Value) -> Result<Option<String>, ValidationError> {
+        let prefix = match config {
+            serde_yaml::Value::Mapping(map) => map.get(&serde_yaml::Value::from("id")),
+            _ => None,
+        };
+
+        match prefix {
+            // if no config value supplied, then no prefix, which is fine
+            None => Ok(None),
+            // return an Error if the id exists but is not a string.
+            Some(value) => match value.as_str() {
+                None => Err(ValidationError::FieldInvalid {
+                    field: "config.id".to_string(),
+                    reason: "id value should be a string".to_string(),
+                }),
+                Some(prefix) => Ok(Some(prefix.to_owned())),
+            },
+        }
+    }
 }
 
 impl FilterFactory for DebugFilterFactory {
@@ -76,28 +96,14 @@ impl FilterFactory for DebugFilterFactory {
         return String::from("quilkin.core.v1alpaha1.debug");
     }
 
-    fn create_from_config(&self, config: &Value) -> Result<Box<dyn Filter>, Error> {
-        // pull out the Option<&Value>
-        let prefix = match config {
-            serde_yaml::Value::Mapping(map) => map.get(&serde_yaml::Value::from("id")),
-            _ => None,
-        };
+    fn validate_config(&self, config: &Value) -> Result<(), ValidationError> {
+        self.validate(config).map(|_| ())
+    }
 
-        return match prefix {
-            // if no config value supplied, then no prefix, which is fine
-            None => Ok(Box::new(DebugFilter::new(&self.log, None))),
-            // return an Error if the id exists but is not a string.
-            Some(value) => match value.as_str() {
-                None => Err(Error::FieldInvalid {
-                    field: "config.id".to_string(),
-                    reason: "id value should be a string".to_string(),
-                }),
-                Some(prefix) => Ok(Box::new(DebugFilter::new(
-                    &self.log,
-                    Some(prefix.to_string()),
-                ))),
-            },
-        };
+    fn create_from_config(&self, config: &Value) -> Result<Box<dyn Filter>, Error> {
+        self.validate(config)
+            .map(|prefix| Box::new(DebugFilter::new(&self.log, prefix)) as Box<dyn Filter>)
+            .map_err(|err| Error::InvalidConfig(err))
     }
 }
 
@@ -145,6 +151,7 @@ mod tests {
     use super::*;
     use serde_yaml::Mapping;
     use serde_yaml::Value;
+    use std::error::Error;
 
     #[test]
     fn on_downstream_receive() {
@@ -218,12 +225,12 @@ mod tests {
             Ok(_) => assert!(false, "should be an error"),
             Err(err) => {
                 assert_eq!(
-                    Error::FieldInvalid {
+                    ValidationError::FieldInvalid {
                         field: "config.id".to_string(),
                         reason: "id value should be a string".to_string()
                     }
                     .to_string(),
-                    err.to_string()
+                    err.source().unwrap().to_string()
                 );
             }
         }

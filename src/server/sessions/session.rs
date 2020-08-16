@@ -82,7 +82,7 @@ impl Session {
     pub async fn new(
         base: &Logger,
         metrics: Metrics,
-        chain: Arc<FilterChain>,
+        chain: FilterChain,
         from: SocketAddr,
         dest: EndPoint,
         sender: mpsc::Sender<Packet>,
@@ -94,7 +94,7 @@ impl Session {
         let mut s = Session {
             metrics,
             log,
-            chain,
+            chain: Arc::new(chain),
             send,
             from,
             dest,
@@ -219,21 +219,32 @@ impl Session {
     }
 
     /// Sends a packet to the Session's dest.
-    pub async fn send_to(&mut self, buf: &[u8]) -> Result<Option<usize>> {
-        debug!(self.log, "Sending packet"; "dest_name" => &self.dest.name, "dest_address" => &self.dest.address, "contents" => from_utf8(buf).unwrap());
+    pub async fn send_to(&mut self, packet: Vec<u8>) -> Result<Option<usize>> {
+        match self
+            .chain
+            .on_downstream_receive(&vec![self.dest.clone()], self.from, packet)
+        {
+            Some((_, packet)) => {
+                debug!(self.log, "Sending packet"; "dest_name" => &self.dest.name, "dest_address" => &self.dest.address, "contents" => from_utf8(&packet).unwrap());
 
-        self.send
-            .send_to(buf, &self.dest.address)
-            .await
-            .map(|size| {
-                self.metrics.tx_packets_total.inc();
-                self.metrics.tx_bytes_total.inc_by(size as i64);
-                Some(size)
-            })
-            .map_err(|err| {
-                self.metrics.errors_total.inc();
-                err
-            })
+                self.send
+                    .send_to(&packet, &self.dest.address)
+                    .await
+                    .map(|size| {
+                        self.metrics.tx_packets_total.inc();
+                        self.metrics.tx_bytes_total.inc_by(size as i64);
+                        Some(size)
+                    })
+                    .map_err(|err| {
+                        self.metrics.errors_total.inc();
+                        err
+                    })
+            }
+            None => {
+                self.metrics.packets_dropped_total.inc();
+                Ok(None)
+            }
+        }
     }
 
     /// is_closed returns if the Session is closed or not.
@@ -291,7 +302,7 @@ mod tests {
                 local_addr.to_string(),
             )
             .unwrap(),
-            Arc::new(FilterChain::new(vec![])),
+            FilterChain::new(vec![]),
             local_addr,
             endpoint,
             send_packet,
@@ -317,7 +328,7 @@ mod tests {
             socket.send_to(&buf[..size], recv_addr).await.unwrap();
         });
 
-        sess.send_to("hello".as_bytes()).await.unwrap();
+        sess.send_to("hello".as_bytes().to_vec()).await.unwrap();
 
         let packet = recv_packet
             .recv()
@@ -359,14 +370,14 @@ mod tests {
                 local_addr.to_string(),
             )
             .unwrap(),
-            Arc::new(FilterChain::new(vec![])),
+            FilterChain::new(vec![]),
             local_addr,
             endpoint.clone(),
             sender,
         )
         .await
         .unwrap();
-        session.send_to(msg.as_bytes()).await.unwrap();
+        session.send_to(msg.as_bytes().to_vec()).await.unwrap();
         assert_eq!(msg, wait.await.unwrap());
     }
 
@@ -391,7 +402,7 @@ mod tests {
                 local_addr.to_string(),
             )
             .unwrap(),
-            Arc::new(FilterChain::new(vec![])),
+            FilterChain::new(vec![]),
             local_addr,
             endpoint,
             send_packet,
@@ -514,7 +525,7 @@ mod tests {
                 local_addr.to_string(),
             )
             .unwrap(),
-            Arc::new(FilterChain::new(vec![])),
+            FilterChain::new(vec![]),
             local_addr,
             endpoint,
             send_packet,
@@ -540,7 +551,7 @@ mod tests {
                 local_addr.to_string(),
             )
             .unwrap(),
-            Arc::new(FilterChain::new(vec![])),
+            FilterChain::new(vec![]),
             local_addr,
             EndPoint {
                 name: "endpoint".to_string(),
@@ -551,7 +562,7 @@ mod tests {
         )
         .await
         .unwrap();
-        session.send_to(b"hello").await.unwrap();
+        session.send_to(b"hello".to_vec()).await.unwrap();
         wait.await.unwrap();
 
         assert_eq!(session.metrics.tx_bytes_total.get(), 5);
@@ -579,7 +590,7 @@ mod tests {
                 local_addr.to_string(),
             )
             .unwrap(),
-            Arc::new(FilterChain::new(vec![])),
+            FilterChain::new(vec![]),
             local_addr,
             endpoint,
             send_packet,

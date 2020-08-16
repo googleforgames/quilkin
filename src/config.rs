@@ -22,6 +22,7 @@ use std::net::SocketAddr;
 use base64_serde::base64_serde_type;
 use serde::export::Formatter;
 use serde::{Deserialize, Serialize};
+use std::error::Error;
 
 base64_serde_type!(Base64Standard, base64::STANDARD);
 
@@ -29,12 +30,18 @@ base64_serde_type!(Base64Standard, base64::STANDARD);
 #[derive(Debug, PartialEq)]
 pub enum ValidationError {
     NotUnique(String),
+    FieldInvalid { field: String, reason: String },
 }
+
+impl Error for ValidationError {}
 
 impl fmt::Display for ValidationError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             ValidationError::NotUnique(field) => write!(f, "field {} is not unique", field),
+            ValidationError::FieldInvalid { field, reason } => {
+                write!(f, "field {} is invalid: {}", field, reason)
+            }
         }
     }
 }
