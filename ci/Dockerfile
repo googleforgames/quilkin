@@ -14,6 +14,6 @@
 
 FROM rust:1.42.0
 
-RUN rustup component add rustfmt
+RUN rustup component add rustfmt clippy
 
 ENTRYPOINT ["cargo"]
