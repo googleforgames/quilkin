@@ -73,13 +73,13 @@ impl fmt::Display for Error {
 pub trait FilterFactory: Sync + Send {
     /// name returns the configuration name for the Filter
     /// The returned string identifies the filter item's path with the following format:
-    ///     `quilkin.extensions.filter.<module>.<version>.<item-name>`
+    ///     `quilkin.extensions.filters.<module>.<version>.<item-name>`
     /// where:
     ///     <module>: The rust module name containing the filter item
     ///     <version>: The filter's version.
     ///     <item-name>: The name of the rust item (e.g enum, struct) implementing the filter.
     /// For example the `v1alpha1` version of the debug filter has the name:
-    ///     `quilkin.extensions.filter.debug_filter.v1alpha1.DebugFilter`
+    ///     `quilkin.extensions.filters.debug_filter.v1alpha1.DebugFilter`
     fn name(&self) -> String;
     fn create_from_config(&self, config: &serde_yaml::Value) -> Result<Box<dyn Filter>, Error>;
 }
