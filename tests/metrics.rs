@@ -26,7 +26,7 @@ mod tests {
 
     use quilkin::config::{Config, ConnectionConfig, EndPoint, Local};
     use quilkin::extensions::FilterRegistry;
-    use quilkin::server::Metrics;
+    use quilkin::proxy::Metrics;
     use quilkin::test_utils::{
         echo_server, logger, recv_multiple_packets, run_proxy, run_proxy_with_metrics,
     };

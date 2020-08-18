@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM rust:1.42.0
+FROM rust:1.45.0
 
 RUN rustup component add rustfmt clippy
 

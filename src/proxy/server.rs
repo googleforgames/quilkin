@@ -31,7 +31,7 @@ use tokio::time::{delay_for, Duration, Instant};
 use crate::config::{Config, ConnectionConfig, EndPoint};
 use crate::extensions::{Filter, FilterChain, FilterRegistry};
 use crate::load_balancer_policy::LoadBalancerPolicy;
-use crate::server::sessions::{Packet, Session, SESSION_TIMEOUT_SECONDS};
+use crate::proxy::sessions::{Packet, Session, SESSION_TIMEOUT_SECONDS};
 
 use super::metrics::{start_metrics_server, Metrics};
 
@@ -350,7 +350,7 @@ mod tests {
     use crate::config;
     use crate::config::{Config, ConnectionConfig, EndPoint, Local};
     use crate::extensions::default_registry;
-    use crate::server::sessions::{Packet, SESSION_TIMEOUT_SECONDS};
+    use crate::proxy::sessions::{Packet, SESSION_TIMEOUT_SECONDS};
     use crate::test_utils::{
         ephemeral_socket, logger, recv_udp, recv_udp_done, TestFilter, TestFilterFactory,
     };

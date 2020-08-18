@@ -15,8 +15,8 @@
  */
 
 pub use metrics::Metrics;
-pub use proxy_server::Server;
+pub use server::Server;
 
 mod metrics;
-mod proxy_server;
+mod server;
 mod sessions;

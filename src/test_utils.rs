@@ -27,7 +27,7 @@ use tokio::sync::{mpsc, oneshot};
 
 use crate::config::{Config, EndPoint};
 use crate::extensions::{Error, Filter, FilterFactory, FilterRegistry};
-use crate::server::{Metrics, Server};
+use crate::proxy::{Metrics, Server};
 use serde_yaml::Value;
 
 // noop_endpoint returns an endpoint for data that should go nowhere.

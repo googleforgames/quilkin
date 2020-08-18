@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
+// Fail the build if clippy finds any warnings.
 #![deny(warnings)]
 
 pub mod config;
 pub mod extensions;
 mod load_balancer_policy;
 pub mod metrics;
-pub mod server;
+pub mod proxy;
 pub mod test_utils;

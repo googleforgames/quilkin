@@ -23,7 +23,7 @@ use slog::{info, o, Drain, Logger};
 use prometheus::Registry;
 use quilkin::config::Config;
 use quilkin::extensions::default_registry;
-use quilkin::server::{Metrics, Server};
+use quilkin::proxy::{Metrics, Server};
 use tokio::signal;
 use tokio::sync::oneshot;
 

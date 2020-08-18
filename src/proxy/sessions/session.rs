@@ -96,7 +96,7 @@ impl Session {
         dest: EndPoint,
         sender: mpsc::Sender<Packet>,
     ) -> Result<Self> {
-        let log = base.new(o!("source" => "server::Session", "from" => from, "dest_name" => dest.name.clone(), "dest_address" => dest.address));
+        let log = base.new(o!("source" => "proxy::Session", "from" => from, "dest_name" => dest.name.clone(), "dest_address" => dest.address));
         let addr = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 0);
         let (recv, send) = UdpSocket::bind(addr).await?.split();
         let (closer, closed) = watch::channel::<bool>(false);
