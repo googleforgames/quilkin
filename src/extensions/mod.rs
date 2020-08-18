@@ -29,5 +29,6 @@ mod filter_chain;
 pub fn default_registry(base: &Logger) -> FilterRegistry {
     let mut fr = FilterRegistry::new();
     fr.insert(filters::DebugFilterFactory::new(base));
+    fr.insert(filters::RateLimitFilterFactory::new());
     fr
 }

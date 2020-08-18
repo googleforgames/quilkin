@@ -22,6 +22,7 @@ edition = "2018"
 
 [dependencies]
 clap = "2.33.0"
+humantime-serde = "1.0.0"
 prometheus = { version = "0.9", default-features = false }
 serde = { version = "1.0.104", features = ["derive"] }
 serde_yaml = "0.8.11"
