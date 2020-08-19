@@ -293,7 +293,7 @@ client:
 ---
 local:
   port: 7000
-proxy:
+server:
   endpoints:
     - name: Game Server No. 1
       address: 127.0.0.1:26000
