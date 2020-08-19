@@ -30,7 +30,7 @@ impl LoadBalancerPolicy {
             } => (
                 lb_policy,
                 addresses
-                    .into_iter()
+                    .iter()
                     .cloned()
                     .enumerate()
                     .map(|(offset, address)| EndPoint {

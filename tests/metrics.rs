@@ -26,7 +26,7 @@ mod tests {
 
     use quilkin::config::{Config, ConnectionConfig, EndPoint, Local};
     use quilkin::extensions::FilterRegistry;
-    use quilkin::server::Metrics;
+    use quilkin::proxy::Metrics;
     use quilkin::test_utils::{
         echo_server, logger, recv_multiple_packets, run_proxy, run_proxy_with_metrics,
     };
@@ -55,7 +55,7 @@ mod tests {
 
         let close_server = run_proxy_with_metrics(
             &base_logger,
-            FilterRegistry::new(),
+            FilterRegistry::default(),
             server_config,
             server_metrics,
         );
@@ -74,7 +74,7 @@ mod tests {
                 lb_policy: None,
             },
         };
-        let close_client = run_proxy(&base_logger, FilterRegistry::new(), client_config);
+        let close_client = run_proxy(&base_logger, FilterRegistry::default(), client_config);
 
         // let's send the packet
         let (mut recv_chan, mut send) = recv_multiple_packets(&base_logger).await;

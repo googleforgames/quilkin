@@ -27,8 +27,8 @@ mod filter_chain;
 /// default_registry returns a FilterRegistry with the default
 /// set of filters that are user configurable registered to it
 pub fn default_registry(base: &Logger) -> FilterRegistry {
-    let mut fr = FilterRegistry::new();
+    let mut fr = FilterRegistry::default();
     fr.insert(filters::DebugFilterFactory::new(base));
-    fr.insert(filters::RateLimitFilterFactory::new());
+    fr.insert(filters::RateLimitFilterFactory::default());
     fr
 }

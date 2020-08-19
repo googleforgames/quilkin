@@ -61,13 +61,8 @@ struct Config {
 }
 
 /// Creates instances of RateLimitFilter.
+#[derive(Default)]
 pub struct RateLimitFilterFactory;
-
-impl RateLimitFilterFactory {
-    pub fn new() -> Self {
-        RateLimitFilterFactory {}
-    }
-}
 
 /// A filter that implements rate limiting on packets based on
 /// the token-bucket algorithm.
@@ -95,7 +90,7 @@ impl FilterFactory for RateLimitFilterFactory {
         match config.period {
             Some(period) if period.lt(&Duration::from_millis(100)) => Err(Error::FieldInvalid {
                 field: "period".into(),
-                reason: format!("value must be at least 100ms"),
+                reason: "value must be at least 100ms".into(),
             }),
             _ => Ok(Box::new(RateLimitFilter::new(config))),
         }
@@ -176,11 +171,12 @@ impl Drop for RateLimitFilter {
 impl Filter for RateLimitFilter {
     fn on_downstream_receive(
         &self,
-        endpoints: &Vec<EndPoint>,
+        endpoints: &[EndPoint],
         _from: SocketAddr,
         contents: Vec<u8>,
     ) -> Option<(Vec<EndPoint>, Vec<u8>)> {
-        self.acquire_token().map(|()| (endpoints.clone(), contents))
+        self.acquire_token()
+            .map(|()| (endpoints.to_vec(), contents))
     }
 
     fn on_upstream_receive(

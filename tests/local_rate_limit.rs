@@ -39,7 +39,7 @@ period: 1s
         let server_config = Config {
             local: Local { port: server_port },
             filters: vec![Filter {
-                name: RateLimitFilterFactory::new().name(),
+                name: RateLimitFilterFactory::default().name(),
                 config: serde_yaml::from_str(yaml).unwrap(),
             }],
             connections: ConnectionConfig::Server {
