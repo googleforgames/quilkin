@@ -149,9 +149,11 @@ pub async fn echo_server() -> SocketAddr {
     let mut socket = ephemeral_socket().await;
     let addr = socket.local_addr().unwrap();
     tokio::spawn(async move {
-        let mut buf = vec![0; 1024];
-        let (size, sender) = socket.recv_from(&mut buf).await.unwrap();
-        socket.send_to(&buf[..size], sender).await.unwrap();
+        loop {
+            let mut buf = vec![0; 1024];
+            let (size, sender) = socket.recv_from(&mut buf).await.unwrap();
+            socket.send_to(&buf[..size], sender).await.unwrap();
+        }
     });
     addr
 }

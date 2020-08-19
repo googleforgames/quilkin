@@ -54,6 +54,7 @@ pub trait Filter: Send + Sync {
 pub enum Error {
     NotFound(String),
     FieldInvalid { field: String, reason: String },
+    DeserializeFailed(String),
 }
 
 impl fmt::Display for Error {
@@ -63,6 +64,7 @@ impl fmt::Display for Error {
             Error::FieldInvalid { field, reason } => {
                 write!(f, "field {} is invalid: {}", field, reason)
             }
+            Error::DeserializeFailed(reason) => write!(f, "Deserialization failed: {}", reason),
         }
     }
 }
@@ -70,6 +72,14 @@ impl fmt::Display for Error {
 /// FilterFactory provides the name and creation function for a given Filter.
 pub trait FilterFactory: Sync + Send {
     /// name returns the configuration name for the Filter
+    /// The returned string identifies the filter item's path with the following format:
+    ///     `quilkin.extensions.filters.<module>.<version>.<item-name>`
+    /// where:
+    ///     <module>: The rust module name containing the filter item
+    ///     <version>: The filter's version.
+    ///     <item-name>: The name of the rust item (e.g enum, struct) implementing the filter.
+    /// For example the `v1alpha1` version of the debug filter has the name:
+    ///     `quilkin.extensions.filters.debug_filter.v1alpha1.DebugFilter`
     fn name(&self) -> String;
     fn create_from_config(&self, config: &serde_yaml::Value) -> Result<Box<dyn Filter>, Error>;
 }
