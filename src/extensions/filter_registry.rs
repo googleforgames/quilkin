@@ -21,6 +21,7 @@ use std::net::SocketAddr;
 use serde::export::Formatter;
 
 use crate::config::EndPoint;
+use prometheus::{Error as MetricsError, Registry};
 
 /// Filter is a trait for routing and manipulating packets.
 pub trait Filter: Send + Sync {
@@ -55,6 +56,7 @@ pub enum Error {
     NotFound(String),
     FieldInvalid { field: String, reason: String },
     DeserializeFailed(String),
+    InitializeMetricsFailed(String),
 }
 
 impl fmt::Display for Error {
@@ -65,6 +67,39 @@ impl fmt::Display for Error {
                 write!(f, "field {} is invalid: {}", field, reason)
             }
             Error::DeserializeFailed(reason) => write!(f, "Deserialization failed: {}", reason),
+            Error::InitializeMetricsFailed(reason) => {
+                write!(f, "failed to initialize metrics: {}", reason)
+            }
+        }
+    }
+}
+
+impl From<MetricsError> for Error {
+    fn from(error: MetricsError) -> Self {
+        Error::InitializeMetricsFailed(error.to_string())
+    }
+}
+
+/// Arguments needed to create a new filter.
+pub struct CreateFilterArgs<'a> {
+    /// Configuration for the filter.
+    pub config: &'a serde_yaml::Value,
+    /// metrics_registry is used to register filter metrics collectors.
+    pub metrics_registry: Registry,
+}
+
+impl CreateFilterArgs<'_> {
+    pub fn from_config(config: &serde_yaml::Value) -> CreateFilterArgs {
+        CreateFilterArgs {
+            config,
+            metrics_registry: Registry::default(),
+        }
+    }
+
+    pub fn with_metrics_registry(self, metrics_registry: Registry) -> Self {
+        CreateFilterArgs {
+            metrics_registry,
+            ..self
         }
     }
 }
@@ -81,7 +116,9 @@ pub trait FilterFactory: Sync + Send {
     /// For example the `v1alpha1` version of the debug filter has the name:
     ///     `quilkin.extensions.filters.debug_filter.v1alpha1.DebugFilter`
     fn name(&self) -> String;
-    fn create_from_config(&self, config: &serde_yaml::Value) -> Result<Box<dyn Filter>, Error>;
+
+    /// Returns a filter based on the provided arguments.
+    fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error>;
 }
 
 /// FilterRegistry is the registry of all Filters that can be applied in the system.
@@ -101,12 +138,8 @@ impl FilterRegistry {
 
     /// get returns an instance of a filter for a given Key. Returns Error if not found,
     /// or if there is a configuration issue.
-    pub fn get(&self, key: &str, config: &serde_yaml::Value) -> Result<Box<dyn Filter>, Error> {
-        match self
-            .registry
-            .get(key)
-            .map(|p| p.create_from_config(&config))
-        {
+    pub fn get(&self, key: &str, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
+        match self.registry.get(key).map(|p| p.create_filter(args)) {
             None => Err(Error::NotFound(key.into())),
             Some(filter) => filter,
         }
@@ -148,16 +181,28 @@ mod tests {
     fn insert_and_get() {
         let mut reg = FilterRegistry::default();
         reg.insert(TestFilterFactory {});
-        let config = serde_yaml::Value::Null;
 
-        match reg.get(&String::from("not.found"), &config) {
+        match reg.get(
+            &String::from("not.found"),
+            CreateFilterArgs::from_config(&serde_yaml::Value::Null),
+        ) {
             Ok(_) => assert!(false, "should not be filter"),
             Err(err) => assert_eq!(Error::NotFound("not.found".to_string()), err),
         };
 
-        assert!(reg.get(&String::from("TestFilter"), &config).is_ok());
+        assert!(reg
+            .get(
+                &String::from("TestFilter"),
+                CreateFilterArgs::from_config(&serde_yaml::Value::Null)
+            )
+            .is_ok());
 
-        let filter = reg.get(&String::from("TestFilter"), &config).unwrap();
+        let filter = reg
+            .get(
+                &String::from("TestFilter"),
+                CreateFilterArgs::from_config(&serde_yaml::Value::Null),
+            )
+            .unwrap();
 
         let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080);
         let endpoint = EndPoint {

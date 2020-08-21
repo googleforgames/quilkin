@@ -19,7 +19,8 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use crate::config::{Config, EndPoint};
-use crate::extensions::{Filter, FilterRegistry};
+use crate::extensions::{CreateFilterArgs, Filter, FilterRegistry};
+use prometheus::Registry;
 
 /// FilterChain implements a chain of Filters amd the implementation
 /// of passing the information between Filters for each filter function
@@ -36,15 +37,21 @@ impl FilterChain {
         FilterChain { filters }
     }
 
-    // from_config returns a FilterChain from a given config. Will return a ErrorKind::InvalidInput
-    // if there is an issue with the passed in Configuration.
-    pub fn from_config(
+    // from_arguments returns a FilterChain from the provided arguments.
+    // Will return a ErrorKind::InvalidInput if there is an issue with the passed
+    // in Configuration.
+    pub fn from_arguments(
         config: Arc<Config>,
         filter_registry: &FilterRegistry,
+        metrics_registry: &Registry,
     ) -> Result<FilterChain> {
         let mut filters = Vec::<Box<dyn Filter>>::new();
         for filter_config in &config.filters {
-            match filter_registry.get(&filter_config.name, &filter_config.config) {
+            match filter_registry.get(
+                &filter_config.name,
+                CreateFilterArgs::from_config(&filter_config.config)
+                    .with_metrics_registry(metrics_registry.clone()),
+            ) {
                 Ok(filter) => filters.push(filter),
                 Err(err) => {
                     return Err(Error::new(
@@ -131,7 +138,7 @@ mod tests {
         });
 
         let registry = default_registry(&log);
-        let chain = FilterChain::from_config(config, &registry).unwrap();
+        let chain = FilterChain::from_arguments(config, &registry, &Registry::default()).unwrap();
         assert_eq!(1, chain.filters.len());
 
         // uh oh, something went wrong
@@ -147,7 +154,7 @@ mod tests {
                 lb_policy: None,
             },
         });
-        let result = FilterChain::from_config(config, &registry);
+        let result = FilterChain::from_arguments(config, &registry, &Registry::default());
         assert!(result.is_err());
     }
 
