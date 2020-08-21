@@ -17,7 +17,7 @@
 use slog::Logger;
 
 pub use filter_chain::FilterChain;
-pub use filter_registry::{Error, Filter, FilterFactory, FilterRegistry};
+pub use filter_registry::{CreateFilterArgs, Error, Filter, FilterFactory, FilterRegistry};
 
 mod filter_registry;
 pub mod filters;

@@ -19,9 +19,8 @@ use std::net::SocketAddr;
 use slog::{info, o, Logger};
 
 use crate::config::EndPoint;
-use crate::extensions::filter_registry::{Error, FilterFactory};
+use crate::extensions::filter_registry::{CreateFilterArgs, Error, FilterFactory};
 use crate::extensions::Filter;
-use serde_yaml::Value;
 
 /// Debug Filter logs all incoming and outgoing packets
 ///
@@ -76,9 +75,9 @@ impl FilterFactory for DebugFilterFactory {
         "quilkin.extensions.filters.debug_filter.v1alpha1.DebugFilter".into()
     }
 
-    fn create_from_config(&self, config: &Value) -> Result<Box<dyn Filter>, Error> {
+    fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
         // pull out the Option<&Value>
-        let prefix = match config {
+        let prefix = match args.config {
             serde_yaml::Value::Mapping(map) => map.get(&serde_yaml::Value::from("id")),
             _ => None,
         };
@@ -194,7 +193,9 @@ mod tests {
         let provider = DebugFilterFactory::new(&log);
 
         map.insert(Value::from("id"), Value::from("name"));
-        assert!(provider.create_from_config(&Value::Mapping(map)).is_ok());
+        assert!(provider
+            .create_filter(CreateFilterArgs::from_config(&Value::Mapping(map),))
+            .is_ok());
     }
 
     #[test]
@@ -204,7 +205,9 @@ mod tests {
         let provider = DebugFilterFactory::new(&log);
 
         map.insert(Value::from("id"), Value::from("name"));
-        assert!(provider.create_from_config(&Value::Mapping(map)).is_ok());
+        assert!(provider
+            .create_filter(CreateFilterArgs::from_config(&Value::Mapping(map),))
+            .is_ok());
     }
 
     #[test]
@@ -214,7 +217,7 @@ mod tests {
         let provider = DebugFilterFactory::new(&log);
 
         map.insert(Value::from("id"), Value::from(false));
-        match provider.create_from_config(&Value::Mapping(map)) {
+        match provider.create_filter(CreateFilterArgs::from_config(&Value::Mapping(map))) {
             Ok(_) => assert!(false, "should be an error"),
             Err(err) => {
                 assert_eq!(

@@ -77,9 +77,10 @@ impl Server {
         // HashMap key is from,destination addresses as a tuple.
         let sessions: SessionMap = Arc::new(RwLock::new(HashMap::new()));
         let (send_packets, receive_packets) = mpsc::channel::<Packet>(1024);
-        let chain = Arc::new(FilterChain::from_config(
+        let chain = Arc::new(FilterChain::from_arguments(
             config.clone(),
             &self.filter_registry,
+            &self.metrics.registry,
         )?);
 
         self.run_receive_packet(send_socket, receive_packets);

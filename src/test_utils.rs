@@ -26,9 +26,8 @@ use tokio::net::UdpSocket;
 use tokio::sync::{mpsc, oneshot};
 
 use crate::config::{Config, EndPoint};
-use crate::extensions::{Error, Filter, FilterFactory, FilterRegistry};
+use crate::extensions::{CreateFilterArgs, Error, Filter, FilterFactory, FilterRegistry};
 use crate::proxy::{Metrics, Server};
-use serde_yaml::Value;
 
 // noop_endpoint returns an endpoint for data that should go nowhere.
 pub fn noop_endpoint() -> EndPoint {
@@ -45,7 +44,7 @@ impl FilterFactory for TestFilterFactory {
         "TestFilter".to_string()
     }
 
-    fn create_from_config(&self, _: &Value) -> Result<Box<dyn Filter>, Error> {
+    fn create_filter(&self, _: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
         Ok(Box::new(TestFilter {}))
     }
 }

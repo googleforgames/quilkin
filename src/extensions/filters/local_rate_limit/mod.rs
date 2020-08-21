@@ -15,15 +15,18 @@
  */
 
 use crate::config::EndPoint;
+use crate::extensions::filter_registry::CreateFilterArgs;
 use crate::extensions::{Error, Filter, FilterFactory};
+use metrics::Metrics;
 use serde::{Deserialize, Serialize};
-use serde_yaml::Value;
 use std::net::SocketAddr;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::oneshot::{channel, Sender};
 use tokio::time::{self, Instant};
+
+mod metrics;
 
 /// RateLimitFilter applies rate limiting to packets flowing through the proxy
 ///
@@ -73,6 +76,8 @@ struct RateLimitFilter {
     /// available_tokens is how many tokens are left in the bucket any
     /// any given moment.
     available_tokens: Arc<AtomicUsize>,
+    /// metrics reporter for this filter.
+    metrics: Metrics,
     /// shutdown_tx signals the spawned token refill future to exit.
     shutdown_tx: Option<Sender<()>>,
 }
@@ -82,8 +87,8 @@ impl FilterFactory for RateLimitFilterFactory {
         "quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit".into()
     }
 
-    fn create_from_config(&self, config_value: &Value) -> Result<Box<dyn Filter>, Error> {
-        let config: Config = serde_yaml::to_string(config_value)
+    fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
+        let config: Config = serde_yaml::to_string(args.config)
             .and_then(|raw_config| serde_yaml::from_str(raw_config.as_str()))
             .map_err(|err| Error::DeserializeFailed(err.to_string()))?;
 
@@ -92,7 +97,10 @@ impl FilterFactory for RateLimitFilterFactory {
                 field: "period".into(),
                 reason: "value must be at least 100ms".into(),
             }),
-            _ => Ok(Box::new(RateLimitFilter::new(config))),
+            _ => Ok(Box::new(RateLimitFilter::new(
+                config,
+                Metrics::new(&args.metrics_registry)?,
+            ))),
         }
     }
 }
@@ -100,7 +108,7 @@ impl FilterFactory for RateLimitFilterFactory {
 impl RateLimitFilter {
     /// new returns a new RateLimitFilter. It spawns a future in the background
     /// that periodically refills the rate limiter's tokens.
-    fn new(config: Config) -> Self {
+    fn new(config: Config, metrics: Metrics) -> Self {
         let (shutdown_tx, mut shutdown_rx) = channel();
 
         let tokens = Arc::new(AtomicUsize::new(config.max_packets));
@@ -133,6 +141,7 @@ impl RateLimitFilter {
 
         RateLimitFilter {
             available_tokens: tokens,
+            metrics,
             shutdown_tx: Some(shutdown_tx),
         }
     }
@@ -177,6 +186,10 @@ impl Filter for RateLimitFilter {
     ) -> Option<(Vec<EndPoint>, Vec<u8>)> {
         self.acquire_token()
             .map(|()| (endpoints.to_vec(), contents))
+            .or_else(|| {
+                self.metrics.packets_dropped_total.inc();
+                None
+            })
     }
 
     fn on_upstream_receive(
@@ -193,15 +206,21 @@ impl Filter for RateLimitFilter {
 #[cfg(test)]
 mod tests {
     use crate::config::EndPoint;
+    use crate::extensions::filters::local_rate_limit::metrics::Metrics;
     use crate::extensions::filters::local_rate_limit::{Config, RateLimitFilter};
     use crate::extensions::Filter;
+    use prometheus::Registry;
     use std::time::Duration;
     use tokio::time;
+
+    fn rate_limiter(config: Config) -> RateLimitFilter {
+        RateLimitFilter::new(config, Metrics::new(&Registry::default()).unwrap())
+    }
 
     #[tokio::test]
     async fn initially_available_tokens() {
         // Test that we always start with the max number of tokens available.
-        let r = RateLimitFilter::new(Config {
+        let r = rate_limiter(Config {
             max_packets: 3,
             period: Some(Duration::from_millis(100)),
         });
@@ -214,7 +233,7 @@ mod tests {
 
     #[tokio::test]
     async fn token_exhaustion_and_refill() {
-        let r = RateLimitFilter::new(Config {
+        let r = rate_limiter(Config {
             max_packets: 2,
             period: Some(Duration::from_millis(100)),
         });
@@ -237,7 +256,7 @@ mod tests {
     async fn token_refill_maximum() {
         // Test that we never refill more than the max_tokens specified.
 
-        let r = RateLimitFilter::new(Config {
+        let r = rate_limiter(Config {
             max_packets: 3,
             period: Some(Duration::from_millis(100)),
         });
@@ -257,7 +276,7 @@ mod tests {
 
     #[tokio::test]
     async fn filter_with_no_available_tokens() {
-        let r = RateLimitFilter::new(Config {
+        let r = rate_limiter(Config {
             max_packets: 0,
             period: Some(Duration::from_millis(100)),
         });
@@ -282,7 +301,7 @@ mod tests {
 
     #[tokio::test]
     async fn filter_with_available_tokens() {
-        let r = RateLimitFilter::new(Config {
+        let r = rate_limiter(Config {
             max_packets: 1,
             period: Some(Duration::from_millis(100)),
         });
