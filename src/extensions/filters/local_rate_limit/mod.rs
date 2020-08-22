@@ -50,6 +50,10 @@ mod metrics;
 ///  `config.period` (optional) is the duration during which config.max_packets applies.
 ///  If none is provided, it defaults to 1 second.
 ///
+/// # Metrics
+///
+/// `quilkin_filter_LocalRateLimit_packets_dropped`: Total number of packets dropped due to rate limiting
+///
 
 /// Config represents a RateLimitFilter's configuration.
 #[derive(Serialize, Deserialize, Debug)]
