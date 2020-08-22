@@ -52,7 +52,7 @@ mod metrics;
 ///
 /// # Metrics
 ///
-/// `filter_LocalRateLimit.packets_dropped`: Total number of packets dropped due to rate limiting
+/// `quilkin_filter_LocalRateLimit_packets_dropped`: Total number of packets dropped due to rate limiting
 ///
 
 /// Config represents a RateLimitFilter's configuration.
