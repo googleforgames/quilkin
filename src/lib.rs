@@ -17,9 +17,25 @@
 // Fail the build if clippy finds any warnings.
 #![deny(warnings)]
 
+// Running external documentation tests depends on the
+// `external_doc` unstable feature only available on a
+// nightly compiler. So we enable the feature only when needed.
+#![cfg_attr(doctest, feature(external_doc))]
+
 pub mod config;
 pub mod extensions;
 mod load_balancer_policy;
 pub mod metrics;
 pub mod proxy;
 pub mod test_utils;
+
+#[cfg(doctest)]
+pub mod external_doc_tests {
+    // Run tests in our external documentation.
+    // Because this depends on the `external_doc` unstable feature,
+    // it is only available using a nightly compiler.
+    // To run them locally run e.g `cargo +nightly test --doc`
+    #![doc(include = "../docs/extensions/filters/filters.md")]
+    #![doc(include = "../docs/extensions/filters/local_rate_limit.md")]
+    #![doc(include = "../docs/extensions/filters/debug_filter.md")]
+}

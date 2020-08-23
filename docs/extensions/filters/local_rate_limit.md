@@ -1,0 +1,59 @@
+# LocalRateLimit
+
+The LocalRateLimit filter controls the frequency at which packets received downstream are forwarded upstream by the proxy.
+
+#### Filter name
+```text
+quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit
+```
+
+### Configuration Examples
+```rust
+# let yaml = "
+local:
+  port: 7000
+filters:
+  - name: quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit
+    config:
+      max_packets: 1000
+      period: 500ms
+client:
+  addresses:
+    - 127.0.0.1:7001
+  connection_id: MXg3aWp5Ng==
+# ";
+# let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
+# assert_eq!(config.validate().unwrap(), ());
+# assert_eq!(config.filters.len(), 1);
+# // TODO: make it possible to easily validate filter's config from here.
+```
+To configure a rate limiter, we specify the maximum rate at which the proxy is allowed to forward packets. In the example above, we configured the proxy to forward a maximum of 1000 packets per 500ms (2000 packets/second).
+
+> Packets that that exceeds the maximum configured rate are dropped.
+
+### Configuration Options
+
+```yaml
+properties:
+  max_packets:
+    type: integer
+    description: |
+      The maximum number of packets allowed to be forwarded over the given duration.
+    minimum: 0
+
+  period:
+    type: string
+    description: |
+      A human readable duration overwhich `max_packets` applies.
+      Examples: `1s` 1 second, `500ms` 500 milliseconds.
+      The minimum allowed value is 100ms.
+    default: '1s' # 1 second
+
+required: [ 'max_packets' ]
+```
+
+
+### Metrics
+
+* `quilkin_filter_LocalRateLimit_packets_dropped`  
+  A counter over the total number of packets that have exceeded the configured maximum rate limit and have been dropped as a result.

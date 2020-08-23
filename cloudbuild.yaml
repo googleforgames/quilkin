@@ -23,6 +23,9 @@ steps:
     args: ["clippy"]
     id: clippy
   - name: gcr.io/$PROJECT_ID/ci
-    args: ["test"]
+    args: ["test", "--lib"]
     id: test
+  - name: gcr.io/$PROJECT_ID/ci
+    args: ["+nightly", "test", "--doc"]
+    id: external-doc-test
 timeout: 30m
