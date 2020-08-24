@@ -59,7 +59,7 @@ impl DebugFilter {
     }
 }
 
-/// Provider for the DebugFilter
+/// Factory for the DebugFilter
 pub struct DebugFilterFactory {
     log: Logger,
 }
@@ -137,9 +137,10 @@ fn packet_to_string(contents: Vec<u8>) -> String {
 
 #[cfg(test)]
 mod tests {
-    use std::net::{IpAddr, Ipv4Addr};
-
-    use crate::test_utils::logger;
+    use crate::test_utils::{
+        assert_filter_on_downstream_receive_no_change, assert_filter_on_upstream_receive_no_change,
+        logger,
+    };
 
     use super::*;
     use serde_yaml::Mapping;
@@ -148,42 +149,13 @@ mod tests {
     #[test]
     fn on_downstream_receive() {
         let df = DebugFilter::new(&logger(), None);
-        let endpoints = vec![EndPoint {
-            name: "e1".to_string(),
-            address: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12357),
-            connection_ids: vec![],
-        }];
-        let from = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12358);
-        let contents = "hello".to_string().into_bytes();
-
-        match df.on_downstream_receive(&endpoints, from, contents.clone()) {
-            None => assert!(false, "should return a result"),
-            Some((result_endpoints, result_contents)) => {
-                assert_eq!(endpoints, result_endpoints);
-                assert_eq!(contents, result_contents);
-            }
-        }
+        assert_filter_on_downstream_receive_no_change(&df);
     }
 
     #[test]
     fn on_upstream_receive() {
         let df = DebugFilter::new(&logger(), None);
-        let endpoint = EndPoint {
-            name: "e1".to_string(),
-            address: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12357),
-            connection_ids: vec![],
-        };
-        let contents = "hello".to_string().into_bytes();
-
-        match df.on_upstream_receive(
-            &endpoint,
-            endpoint.address,
-            "127.0.0.1:70".parse().unwrap(),
-            contents.clone(),
-        ) {
-            None => assert!(false, "should return a result"),
-            Some(result_contents) => assert_eq!(contents, result_contents),
-        }
+        assert_filter_on_upstream_receive_no_change(&df);
     }
 
     #[test]

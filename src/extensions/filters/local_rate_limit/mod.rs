@@ -209,10 +209,10 @@ impl Filter for RateLimitFilter {
 
 #[cfg(test)]
 mod tests {
-    use crate::config::EndPoint;
     use crate::extensions::filters::local_rate_limit::metrics::Metrics;
     use crate::extensions::filters::local_rate_limit::{Config, RateLimitFilter};
     use crate::extensions::Filter;
+    use crate::test_utils::assert_filter_on_upstream_receive_no_change;
     use prometheus::Registry;
     use std::time::Duration;
     use tokio::time;
@@ -286,15 +286,7 @@ mod tests {
         });
 
         // Check that other routes are not affected.
-        assert_eq!(
-            r.on_upstream_receive(
-                &EndPoint::new("e".to_string(), "127.0.0.1:8081".parse().unwrap(), vec![]),
-                "127.0.0.1:8080".parse().unwrap(),
-                "127.0.0.1:8080".parse().unwrap(),
-                vec![9]
-            ),
-            Some(vec![9])
-        );
+        assert_filter_on_upstream_receive_no_change(&r);
 
         // Check that we're rate limited.
         assert_eq!(
@@ -318,14 +310,6 @@ mod tests {
         assert_eq!(None, r.acquire_token());
 
         // Check that other routes are not affected.
-        assert_eq!(
-            r.on_upstream_receive(
-                &EndPoint::new("e".to_string(), "127.0.0.1:8081".parse().unwrap(), vec![]),
-                "127.0.0.1:8080".parse().unwrap(),
-                "127.0.0.1:8080".parse().unwrap(),
-                vec![9]
-            ),
-            Some(vec![9])
-        );
+        assert_filter_on_upstream_receive_no_change(&r);
     }
 }
