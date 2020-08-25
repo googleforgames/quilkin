@@ -14,6 +14,6 @@
 
 FROM rust:1.45.0
 
-RUN rustup component add rustfmt clippy
+RUN rustup component add rustfmt clippy && rustup toolchain install nightly
 
 ENTRYPOINT ["cargo"]
