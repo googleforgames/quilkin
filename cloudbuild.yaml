@@ -23,7 +23,7 @@ steps:
     args: ["clippy"]
     id: clippy
   - name: gcr.io/$PROJECT_ID/ci
-    args: ["test", "--lib"]
+    args: ["test", "--tests"]
     id: test
   - name: gcr.io/$PROJECT_ID/ci
     args: ["+nightly", "test", "--doc"]

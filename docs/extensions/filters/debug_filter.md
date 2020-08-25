@@ -33,9 +33,10 @@ client:
 
 ```yaml
 properties:
-  type: string
-  description: |
-    An identifier that will be included with each log message.
+  id:
+    type: string
+    description: |
+      An identifier that will be included with each log message.
 ```
 
 
