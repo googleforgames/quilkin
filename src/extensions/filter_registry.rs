@@ -18,10 +18,10 @@ use std::collections::HashMap;
 use std::fmt;
 use std::net::SocketAddr;
 
+use prometheus::{Error as MetricsError, Registry};
 use serde::export::Formatter;
 
-use crate::config::EndPoint;
-use prometheus::{Error as MetricsError, Registry};
+use crate::config::{ConnectionConfig, EndPoint};
 
 /// Filter is a trait for routing and manipulating packets.
 pub trait Filter: Send + Sync {
@@ -81,18 +81,21 @@ impl From<MetricsError> for Error {
 }
 
 /// Arguments needed to create a new filter.
-pub struct CreateFilterArgs<'a> {
+pub struct CreateFilterArgs {
     /// Configuration for the filter.
-    pub config: &'a serde_yaml::Value,
+    pub config: serde_yaml::Value,
     /// metrics_registry is used to register filter metrics collectors.
     pub metrics_registry: Registry,
+    /// connection is used to pass the connection configuration
+    pub connection: ConnectionConfig,
 }
 
-impl CreateFilterArgs<'_> {
-    pub fn from_config(config: &serde_yaml::Value) -> CreateFilterArgs {
+impl CreateFilterArgs {
+    pub fn new(connection: &ConnectionConfig, config: &serde_yaml::Value) -> CreateFilterArgs {
         CreateFilterArgs {
-            config,
+            config: config.clone(),
             metrics_registry: Registry::default(),
+            connection: connection.clone(),
         }
     }
 
@@ -181,10 +184,12 @@ mod tests {
     fn insert_and_get() {
         let mut reg = FilterRegistry::default();
         reg.insert(TestFilterFactory {});
+        let config = serde_yaml::Value::Null;
+        let connection = ConnectionConfig::Server { endpoints: vec![] };
 
         match reg.get(
             &String::from("not.found"),
-            CreateFilterArgs::from_config(&serde_yaml::Value::Null),
+            CreateFilterArgs::new(&connection, &config),
         ) {
             Ok(_) => assert!(false, "should not be filter"),
             Err(err) => assert_eq!(Error::NotFound("not.found".to_string()), err),
@@ -193,14 +198,14 @@ mod tests {
         assert!(reg
             .get(
                 &String::from("TestFilter"),
-                CreateFilterArgs::from_config(&serde_yaml::Value::Null)
+                CreateFilterArgs::new(&connection, &config)
             )
             .is_ok());
 
         let filter = reg
             .get(
                 &String::from("TestFilter"),
-                CreateFilterArgs::from_config(&serde_yaml::Value::Null),
+                CreateFilterArgs::new(&connection, &config),
             )
             .unwrap();
 

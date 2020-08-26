@@ -77,7 +77,7 @@ impl FilterFactory for DebugFilterFactory {
 
     fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
         // pull out the Option<&Value>
-        let prefix = match args.config {
+        let prefix = match &args.config {
             serde_yaml::Value::Mapping(map) => map.get(&serde_yaml::Value::from("id")),
             _ => None,
         };
@@ -137,14 +137,16 @@ fn packet_to_string(contents: Vec<u8>) -> String {
 
 #[cfg(test)]
 mod tests {
+    use serde_yaml::Mapping;
+    use serde_yaml::Value;
+
+    use crate::config::ConnectionConfig::Server;
     use crate::test_utils::{
         assert_filter_on_downstream_receive_no_change, assert_filter_on_upstream_receive_no_change,
         logger,
     };
 
     use super::*;
-    use serde_yaml::Mapping;
-    use serde_yaml::Value;
 
     #[test]
     fn on_downstream_receive() {
@@ -162,11 +164,12 @@ mod tests {
     fn from_config_with_id() {
         let log = logger();
         let mut map = Mapping::new();
-        let provider = DebugFilterFactory::new(&log);
+        let connection = Server { endpoints: vec![] };
+        let factory = DebugFilterFactory::new(&log);
 
         map.insert(Value::from("id"), Value::from("name"));
-        assert!(provider
-            .create_filter(CreateFilterArgs::from_config(&Value::Mapping(map),))
+        assert!(factory
+            .create_filter(CreateFilterArgs::new(&connection, &Value::Mapping(map),))
             .is_ok());
     }
 
@@ -174,22 +177,24 @@ mod tests {
     fn from_config_without_id() {
         let log = logger();
         let mut map = Mapping::new();
-        let provider = DebugFilterFactory::new(&log);
+        let connection = Server { endpoints: vec![] };
+        let factory = DebugFilterFactory::new(&log);
 
         map.insert(Value::from("id"), Value::from("name"));
-        assert!(provider
-            .create_filter(CreateFilterArgs::from_config(&Value::Mapping(map),))
+        assert!(factory
+            .create_filter(CreateFilterArgs::new(&connection, &Value::Mapping(map),))
             .is_ok());
     }
 
     #[test]
-    fn from_config_should_panic() {
+    fn from_config_should_error() {
         let log = logger();
         let mut map = Mapping::new();
-        let provider = DebugFilterFactory::new(&log);
+        let connection = Server { endpoints: vec![] };
+        let factory = DebugFilterFactory::new(&log);
 
         map.insert(Value::from("id"), Value::from(false));
-        match provider.create_filter(CreateFilterArgs::from_config(&Value::Mapping(map))) {
+        match factory.create_filter(CreateFilterArgs::new(&connection, &Value::Mapping(map))) {
             Ok(_) => assert!(false, "should be an error"),
             Err(err) => {
                 assert_eq!(

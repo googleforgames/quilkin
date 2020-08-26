@@ -57,7 +57,7 @@ pub struct Local {
 
 /// LoadBalancerPolicy represents how a proxy load-balances
 /// traffic between endpoints.
-#[derive(Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Eq, PartialEq, Clone)]
 pub enum LoadBalancerPolicy {
     /// Send all traffic to all endpoints.
     #[serde(rename = "BROADCAST")]
@@ -88,7 +88,7 @@ impl From<&str> for ConnectionId {
 }
 
 /// ConnectionConfig is the configuration for either a Client or Server proxy
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub enum ConnectionConfig {
     /// Client is the configuration for a client proxy, for sitting behind a game client.
     #[serde(rename = "client")]
