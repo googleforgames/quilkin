@@ -81,21 +81,24 @@ impl From<MetricsError> for Error {
 }
 
 /// Arguments needed to create a new filter.
-pub struct CreateFilterArgs {
+pub struct CreateFilterArgs<'a> {
     /// Configuration for the filter.
-    pub config: serde_yaml::Value,
+    pub config: &'a serde_yaml::Value,
     /// metrics_registry is used to register filter metrics collectors.
     pub metrics_registry: Registry,
     /// connection is used to pass the connection configuration
-    pub connection: ConnectionConfig,
+    pub connection: &'a ConnectionConfig,
 }
 
-impl CreateFilterArgs {
-    pub fn new(connection: &ConnectionConfig, config: &serde_yaml::Value) -> CreateFilterArgs {
+impl CreateFilterArgs<'_> {
+    pub fn new<'a>(
+        connection: &'a ConnectionConfig,
+        config: &'a serde_yaml::Value,
+    ) -> CreateFilterArgs<'a> {
         CreateFilterArgs {
-            config: config.clone(),
+            config,
             metrics_registry: Registry::default(),
-            connection: connection.clone(),
+            connection,
         }
     }
 

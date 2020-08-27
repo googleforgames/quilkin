@@ -77,7 +77,7 @@ impl FilterFactory for DebugFilterFactory {
 
     fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
         // pull out the Option<&Value>
-        let prefix = match &args.config {
+        let prefix = match args.config {
             serde_yaml::Value::Mapping(map) => map.get(&serde_yaml::Value::from("id")),
             _ => None,
         };
