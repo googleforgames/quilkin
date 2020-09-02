@@ -74,7 +74,7 @@ pub enum LoadBalancerPolicy {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Filter {
     pub name: String,
-    pub config: serde_yaml::Value,
+    pub config: Option<serde_yaml::Value>,
 }
 
 /// ConnectionId is the connection auth token value
@@ -241,7 +241,8 @@ client:
 
         let filter = config.filters.get(0).unwrap();
         assert_eq!("quilkin.core.v1.rate-limiter", filter.name);
-        let filter_config = filter.config.as_mapping().unwrap();
+        let config = filter.config.as_ref().unwrap();
+        let filter_config = config.as_mapping().unwrap();
 
         let key = Value::from("map");
         assert_eq!(

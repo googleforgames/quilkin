@@ -342,7 +342,6 @@ mod tests {
     use std::net::{IpAddr, Ipv4Addr, SocketAddr};
     use std::sync::Arc;
 
-    use serde_yaml::Value;
     use slog::info;
     use tokio::sync::{mpsc, oneshot, RwLock};
     use tokio::time;
@@ -461,7 +460,7 @@ mod tests {
             },
             filters: vec![config::Filter {
                 name: "TestFilter".to_string(),
-                config: Value::Null,
+                config: None,
             }],
             connections: ConnectionConfig::Client {
                 addresses: vec![endpoint_addr],

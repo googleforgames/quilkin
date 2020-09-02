@@ -78,7 +78,7 @@ impl FilterFactory for DebugFilterFactory {
     fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
         // pull out the Option<&Value>
         let prefix = match args.config {
-            serde_yaml::Value::Mapping(map) => map.get(&serde_yaml::Value::from("id")),
+            Some(serde_yaml::Value::Mapping(map)) => map.get(&serde_yaml::Value::from("id")),
             _ => None,
         };
 
@@ -169,7 +169,10 @@ mod tests {
 
         map.insert(Value::from("id"), Value::from("name"));
         assert!(factory
-            .create_filter(CreateFilterArgs::new(&connection, &Value::Mapping(map),))
+            .create_filter(CreateFilterArgs::new(
+                &connection,
+                &Some(&Value::Mapping(map)),
+            ))
             .is_ok());
     }
 
@@ -182,7 +185,10 @@ mod tests {
 
         map.insert(Value::from("id"), Value::from("name"));
         assert!(factory
-            .create_filter(CreateFilterArgs::new(&connection, &Value::Mapping(map),))
+            .create_filter(CreateFilterArgs::new(
+                &connection,
+                &Some(&Value::Mapping(map)),
+            ))
             .is_ok());
     }
 
@@ -194,7 +200,10 @@ mod tests {
         let factory = DebugFilterFactory::new(&log);
 
         map.insert(Value::from("id"), Value::from(false));
-        match factory.create_filter(CreateFilterArgs::new(&connection, &Value::Mapping(map))) {
+        match factory.create_filter(CreateFilterArgs::new(
+            &connection,
+            &Some(&Value::Mapping(map)),
+        )) {
             Ok(_) => assert!(false, "should be an error"),
             Err(err) => {
                 assert_eq!(

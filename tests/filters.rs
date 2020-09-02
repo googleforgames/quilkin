@@ -43,7 +43,7 @@ mod tests {
             local: Local { port: server_port },
             filters: vec![Filter {
                 name: "TestFilter".to_string(),
-                config: serde_yaml::Value::Null,
+                config: None,
             }],
             connections: ConnectionConfig::Server {
                 endpoints: vec![EndPoint {
@@ -65,7 +65,7 @@ mod tests {
             local: Local { port: client_port },
             filters: vec![Filter {
                 name: "TestFilter".to_string(),
-                config: serde_yaml::Value::Null,
+                config: None,
             }],
             connections: ConnectionConfig::Client {
                 addresses: vec![SocketAddr::new(
@@ -129,7 +129,7 @@ mod tests {
             local: Local { port: server_port },
             filters: vec![Filter {
                 name: factory.name(),
-                config: serde_yaml::Value::Mapping(map),
+                config: Some(serde_yaml::Value::Mapping(map)),
             }],
             connections: ConnectionConfig::Server {
                 endpoints: vec![EndPoint {
@@ -149,7 +149,7 @@ mod tests {
             local: Local { port: client_port },
             filters: vec![Filter {
                 name: factory.name(),
-                config: serde_yaml::Value::Mapping(map),
+                config: Some(serde_yaml::Value::Mapping(map)),
             }],
             connections: ConnectionConfig::Client {
                 addresses: vec![SocketAddr::new(

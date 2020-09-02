@@ -83,7 +83,7 @@ impl From<MetricsError> for Error {
 /// Arguments needed to create a new filter.
 pub struct CreateFilterArgs<'a> {
     /// Configuration for the filter.
-    pub config: &'a serde_yaml::Value,
+    pub config: &'a Option<&'a serde_yaml::Value>,
     /// metrics_registry is used to register filter metrics collectors.
     pub metrics_registry: Registry,
     /// connection is used to pass the connection configuration
@@ -93,7 +93,7 @@ pub struct CreateFilterArgs<'a> {
 impl CreateFilterArgs<'_> {
     pub fn new<'a>(
         connection: &'a ConnectionConfig,
-        config: &'a serde_yaml::Value,
+        config: &'a Option<&'a serde_yaml::Value>,
     ) -> CreateFilterArgs<'a> {
         CreateFilterArgs {
             config,
@@ -187,7 +187,7 @@ mod tests {
     fn insert_and_get() {
         let mut reg = FilterRegistry::default();
         reg.insert(TestFilterFactory {});
-        let config = serde_yaml::Value::Null;
+        let config = None;
         let connection = ConnectionConfig::Server { endpoints: vec![] };
 
         match reg.get(
