@@ -55,7 +55,7 @@ client:
 
 We specify our filter chain in the `.filters` section of the proxy's configuration which has takes a sequence of [FilterConfig](#filter-config) objects. Each object describes all information necessary to create a single filter.
 
-The above example creates a filter chain comprising a [Debug](./debug_filter.md) filter followed by a [Rate limiter](./local_rate_limit.md) filter - the effect is that every packet will be logged and the proxy will not forward more than 20 packets per second.
+The above example creates a filter chain comprising a [Debug](debug.md) filter followed by a [Rate limiter](./local_rate_limit.md) filter - the effect is that every packet will be logged and the proxy will not forward more than 20 packets per second.
 
 > The sequence determines the filter chain order so its ordering matters - the chain starts with the filter corresponding the first filter config and ends with the filter conrresponding the last filter config in the sequence.
 
@@ -64,7 +64,7 @@ Quilkin includes several filters out of the box.
 
 | Filter                                    | Description                    |
 | ----------------------------------------- | ------------------------------ |
-| [Debug](./debug_filter.md)                | Logs every packet              |
+| [Debug](debug.md)                | Logs every packet              |
 | [LocalRateLimiter](./local_rate_limit.md) | Limit the frequency of packets |
 
 ### FilterConfig <a name="filter-config"></a>

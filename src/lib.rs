@@ -36,5 +36,5 @@ pub mod external_doc_tests {
     // To run them locally run e.g `cargo +nightly test --doc`
     #![doc(include = "../docs/extensions/filters/filters.md")]
     #![doc(include = "../docs/extensions/filters/local_rate_limit.md")]
-    #![doc(include = "../docs/extensions/filters/debug_filter.md")]
+    #![doc(include = "../docs/extensions/filters/debug.md")]
 }
