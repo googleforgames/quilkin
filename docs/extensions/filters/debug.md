@@ -15,7 +15,7 @@ quilkin.extensions.filters.debug_filter.v1alpha1.DebugFilter
 local:
   port: 7000
 filters:
-  - name: quilkin.extensions.filters.debug_filter.v1alpha1.DebugFilter
+  - name: quilkin.extensions.filters.debug.v1alpha1.DebugFilter
     config:
       id: debug-1
 client:
