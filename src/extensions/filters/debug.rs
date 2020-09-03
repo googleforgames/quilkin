@@ -171,7 +171,7 @@ mod tests {
         assert!(factory
             .create_filter(CreateFilterArgs::new(
                 &connection,
-                &Some(&Value::Mapping(map)),
+                Some(&Value::Mapping(map)),
             ))
             .is_ok());
     }
@@ -187,7 +187,7 @@ mod tests {
         assert!(factory
             .create_filter(CreateFilterArgs::new(
                 &connection,
-                &Some(&Value::Mapping(map)),
+                Some(&Value::Mapping(map)),
             ))
             .is_ok());
     }
@@ -202,7 +202,7 @@ mod tests {
         map.insert(Value::from("id"), Value::from(false));
         match factory.create_filter(CreateFilterArgs::new(
             &connection,
-            &Some(&Value::Mapping(map)),
+            Some(&Value::Mapping(map)),
         )) {
             Ok(_) => assert!(false, "should be an error"),
             Err(err) => {
