@@ -21,12 +21,14 @@
 // nightly compiler. So we enable the feature only when needed.
 #![cfg_attr(doctest, feature(external_doc))]
 
+mod cluster;
 pub mod config;
 pub mod extensions;
 mod load_balancer_policy;
 pub mod metrics;
 pub mod proxy;
 pub mod test_utils;
+pub(crate) mod xds;
 
 #[cfg(doctest)]
 pub mod external_doc_tests {
