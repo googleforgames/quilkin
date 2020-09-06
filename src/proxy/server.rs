@@ -24,16 +24,18 @@ use slog::{debug, error, info, o, warn, Logger};
 use tokio::io::Result;
 use tokio::net::udp::{RecvHalf, SendHalf};
 use tokio::net::UdpSocket;
+use tokio::sync::watch;
 use tokio::sync::{mpsc, oneshot};
 use tokio::sync::{Mutex, RwLock};
 use tokio::time::{delay_for, Duration, Instant};
 
 use crate::config::{Config, ConnectionConfig, EndPoint};
 use crate::extensions::{Filter, FilterChain, FilterRegistry};
-use crate::load_balancer_policy::LoadBalancerPolicy;
 use crate::proxy::sessions::{Packet, Session, SESSION_TIMEOUT_SECONDS};
 
 use super::metrics::{start_metrics_server, Metrics};
+use crate::cluster::cluster_manager::{ClusterManager, InitializeError, InitializedClusterManager};
+use parking_lot::RwLock as ParkingLotRwLock;
 
 type SessionMap = Arc<RwLock<HashMap<(SocketAddr, SocketAddr), Mutex<Session>>>>;
 
@@ -58,7 +60,7 @@ impl Server {
 
     /// start the async processing of incoming UDP packets. Will block until an
     /// event is sent through the stop Receiver.
-    pub async fn run(self, config: Arc<Config>, stop: oneshot::Receiver<()>) -> Result<()> {
+    pub async fn run(self, config: Arc<Config>, mut stop: watch::Receiver<()>) -> Result<()> {
         self.log_config(&config);
 
         // Start metrics server if needed - it is shutdown before exiting the function.
@@ -83,10 +85,13 @@ impl Server {
             &self.metrics.registry,
         )?);
 
+        let cluster_manager =
+            Self::create_cluster_manager(self.log.clone(), &config, stop.clone()).await?;
+
         self.run_receive_packet(send_socket, receive_packets);
         self.run_prune_sessions(&sessions);
         self.run_recv_from(
-            Arc::new(LoadBalancerPolicy::new(&config.connections)),
+            cluster_manager,
             chain,
             receive_socket,
             &sessions,
@@ -95,8 +100,9 @@ impl Server {
 
         // convert to an IO error
         let result = stop
+            .recv()
             .await
-            .map_err(|err| IOError::new(ErrorKind::BrokenPipe, err));
+            .ok_or_else(|| ErrorKind::BrokenPipe.into());
 
         metrics_shutdown_tx.map(|tx| tx.send(()).ok());
         result
@@ -122,7 +128,7 @@ impl Server {
     // Server::recv_from() to process new incoming packets.
     fn run_recv_from(
         &self,
-        lb_policy: Arc<LoadBalancerPolicy>,
+        cluster_manager: Arc<ParkingLotRwLock<ClusterManager>>,
         chain: Arc<FilterChain>,
         mut receive_socket: RecvHalf,
         sessions: &SessionMap,
@@ -136,7 +142,7 @@ impl Server {
                 if let Err(err) = Server::recv_from(
                     &log,
                     &metrics,
-                    lb_policy.clone(),
+                    cluster_manager.clone(),
                     chain.clone(),
                     &mut receive_socket,
                     sessions.clone(),
@@ -155,7 +161,7 @@ impl Server {
     async fn recv_from(
         log: &Logger,
         metrics: &Metrics,
-        lb_policy: Arc<LoadBalancerPolicy>,
+        cluster_manager: Arc<ParkingLotRwLock<ClusterManager>>,
         chain: Arc<FilterChain>,
         receive_socket: &mut RecvHalf,
         sessions: SessionMap,
@@ -176,7 +182,7 @@ impl Server {
             );
 
             let result = chain.on_downstream_receive(
-                &lb_policy.choose_endpoints(),
+                &cluster_manager.read().choose_endpoints(),
                 recv_addr,
                 packet.to_vec(),
             );
@@ -334,6 +340,45 @@ impl Server {
             }
         }
     }
+
+    async fn create_cluster_manager(
+        log: Logger,
+        config: &Config,
+        mut shutdown_rx: watch::Receiver<()>,
+    ) -> std::result::Result<Arc<ParkingLotRwLock<ClusterManager>>, IOError> {
+        async fn create_helper(
+            log: Logger,
+            create_result: std::result::Result<InitializedClusterManager, InitializeError>,
+        ) -> std::result::Result<Arc<ParkingLotRwLock<ClusterManager>>, IOError> {
+            let cluster_manager =
+                match create_result.map_err(|err| IOError::new(ErrorKind::Other, err))? {
+                    InitializedClusterManager::Static(cm) => cm,
+                    InitializedClusterManager::Ads(cm, execution_result_rx) => {
+                        // Spawn a task to check for an error when the client
+                        // execution terminates and forward the error upstream.
+                        tokio::spawn(async move {
+                            if let Err(err) = execution_result_rx.await {
+                                // TODO: For now only log the error but we would like to
+                                //   initiate a shut down instead once this happens.
+                                error!(log, "xds client terminated with an error: {}", err);
+                            }
+                        });
+                        cm
+                    }
+                };
+
+            Ok(cluster_manager)
+        }
+
+        tokio::select! {
+            create_result = ClusterManager::new_initialized(log.clone(), &config, shutdown_rx.clone()) => {
+                create_helper(log, create_result).await
+            },
+            _ = shutdown_rx.recv() => {
+                Err(ErrorKind::Interrupted.into())
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -343,12 +388,11 @@ mod tests {
     use std::sync::Arc;
 
     use slog::info;
-    use tokio::sync::{mpsc, oneshot, RwLock};
+    use tokio::sync::{mpsc, oneshot, watch, RwLock};
     use tokio::time;
     use tokio::time::{Duration, Instant};
 
-    use crate::config;
-    use crate::config::{Config, ConnectionConfig, EndPoint, Local};
+    use crate::config::{ConfigBuilder, ConnectionConfig, EndPoint, Local};
     use crate::extensions::default_registry;
     use crate::proxy::sessions::{Packet, SESSION_TIMEOUT_SECONDS};
     use crate::test_utils::{
@@ -356,6 +400,7 @@ mod tests {
     };
 
     use super::*;
+    use crate::config;
 
     #[tokio::test]
     async fn run_server() {
@@ -373,12 +418,11 @@ mod tests {
         let (done1, wait1) = oneshot::channel::<String>();
         let (done2, wait2) = oneshot::channel::<String>();
 
-        let config = Arc::new(Config {
-            local: Local {
+        let config = ConfigBuilder::default()
+            .with_local(Local {
                 port: local_addr.port(),
-            },
-            filters: vec![],
-            connections: ConnectionConfig::Server {
+            })
+            .with_connections(ConnectionConfig::Server {
                 endpoints: vec![
                     EndPoint {
                         name: String::from("e1"),
@@ -391,12 +435,13 @@ mod tests {
                         connection_ids: vec![],
                     },
                 ],
-            },
-        });
+            })
+            .build();
 
-        let (close, stop) = oneshot::channel::<()>();
+        let (close, mut stop) = watch::channel(());
         tokio::spawn(async move {
-            server.run(config, stop).await.unwrap();
+            stop.recv().await;
+            server.run(Arc::new(config), stop).await.unwrap();
         });
 
         let msg = "hello";
@@ -405,7 +450,7 @@ mod tests {
         send.send_to(msg.as_bytes(), &local_addr).await.unwrap();
         assert_eq!(msg, wait1.await.unwrap());
         assert_eq!(msg, wait2.await.unwrap());
-        close.send(()).unwrap();
+        close.broadcast(()).unwrap();
     }
 
     #[tokio::test]
@@ -417,21 +462,21 @@ mod tests {
         let (recv, mut send) = socket.split();
         let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12357);
         let (done, wait) = oneshot::channel::<String>();
-        let config = Arc::new(Config {
-            local: Local {
+        let config = ConfigBuilder::default()
+            .with_local(Local {
                 port: local_addr.port(),
-            },
-            filters: vec![],
-            connections: ConnectionConfig::Client {
+            })
+            .with_connections(ConnectionConfig::Client {
                 addresses: vec![endpoint_addr],
                 connection_id: "".into(),
                 lb_policy: None,
-            },
-        });
+            })
+            .build();
 
-        let (close, stop) = oneshot::channel::<()>();
+        let (close, mut stop) = watch::channel(());
         tokio::spawn(async move {
-            server.run(config, stop).await.unwrap();
+            stop.recv().await;
+            server.run(Arc::new(config), stop).await.unwrap();
         });
 
         let msg = "hello";
@@ -439,7 +484,7 @@ mod tests {
         send.send_to(msg.as_bytes(), &local_addr).await.unwrap();
         assert_eq!(msg, wait.await.unwrap());
 
-        close.send(()).unwrap();
+        close.broadcast(()).unwrap();
     }
 
     #[tokio::test]
@@ -454,24 +499,25 @@ mod tests {
         let (recv, mut send) = socket.split();
         let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12367);
         let (done, wait) = oneshot::channel::<String>();
-        let config = Arc::new(Config {
-            local: Local {
+        let config = ConfigBuilder::default()
+            .with_local(Local {
                 port: local_addr.port(),
-            },
-            filters: vec![config::Filter {
+            })
+            .with_filters(vec![config::Filter {
                 name: "TestFilter".to_string(),
                 config: None,
-            }],
-            connections: ConnectionConfig::Client {
+            }])
+            .with_connections(ConnectionConfig::Client {
                 addresses: vec![endpoint_addr],
                 connection_id: "".into(),
                 lb_policy: None,
-            },
-        });
+            })
+            .build();
 
-        let (close, stop) = oneshot::channel::<()>();
+        let (close, mut stop) = watch::channel(());
         tokio::spawn(async move {
-            server.run(config, stop).await.unwrap();
+            stop.recv().await;
+            server.run(Arc::new(config), stop).await.unwrap();
         });
 
         let msg = "hello";
@@ -490,18 +536,17 @@ mod tests {
             format!(":odr: not found in '{}'", result)
         );
 
-        close.send(()).unwrap();
+        close.broadcast(()).unwrap();
     }
 
     #[tokio::test]
     async fn bind() {
-        let config = Config {
-            local: Local { port: 12345 },
-            filters: vec![],
-            connections: ConnectionConfig::Server {
+        let config = ConfigBuilder::default()
+            .with_local(Local { port: 12345 })
+            .with_connections(ConnectionConfig::Server {
                 endpoints: Vec::new(),
-            },
-        };
+            })
+            .build();
         let socket = Server::bind(&config).await.unwrap();
         let addr = socket.local_addr().unwrap();
 
@@ -531,11 +576,11 @@ mod tests {
             let msg = "hello".to_string();
             let (local_addr, wait) = recv_udp().await;
 
-            let lb_policy = Arc::new(LoadBalancerPolicy::new(&ConnectionConfig::Client {
+            let cluster_manager = ClusterManager::new_static(&ConnectionConfig::Client {
                 addresses: vec![local_addr],
                 connection_id: "".into(),
                 lb_policy: None,
-            }));
+            });
             let receive_socket = ephemeral_socket().await;
             let receive_addr = receive_socket.local_addr().unwrap();
             let (mut recv, mut send) = receive_socket.split();
@@ -552,7 +597,7 @@ mod tests {
                 Server::recv_from(
                     &log_clone,
                     &Metrics::default(),
-                    lb_policy,
+                    cluster_manager,
                     chain,
                     &mut recv,
                     sessions_clone,
@@ -625,11 +670,11 @@ mod tests {
         let msg = "hello";
         let server = Server::new(log.clone(), default_registry(&log), Metrics::default());
         let (local_addr, wait) = recv_udp().await;
-        let lb_policy = Arc::new(LoadBalancerPolicy::new(&ConnectionConfig::Client {
+        let cluster_manager = ClusterManager::new_static(&ConnectionConfig::Client {
             addresses: vec![local_addr],
             connection_id: "".into(),
             lb_policy: None,
-        }));
+        });
         let socket = ephemeral_socket().await;
         let addr = socket.local_addr().unwrap();
         let (recv, mut send) = socket.split();
@@ -637,7 +682,7 @@ mod tests {
         let (send_packets, mut recv_packets) = mpsc::channel::<Packet>(1);
 
         server.run_recv_from(
-            lb_policy,
+            cluster_manager,
             Arc::new(FilterChain::new(vec![])),
             recv,
             &sessions,

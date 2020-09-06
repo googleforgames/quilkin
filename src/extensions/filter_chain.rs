@@ -111,7 +111,7 @@ mod tests {
     use std::str::from_utf8;
 
     use crate::config;
-    use crate::config::{ConnectionConfig, Local};
+    use crate::config::{ConfigBuilder, ConnectionConfig};
     use crate::extensions::filters::DebugFilterFactory;
     use crate::extensions::{default_registry, FilterFactory};
     use crate::test_utils::{logger, noop_endpoint, TestFilter};
@@ -124,37 +124,36 @@ mod tests {
         let provider = DebugFilterFactory::new(&log);
 
         // everything is fine
-        let config = Arc::new(Config {
-            local: Local { port: 0 },
-            filters: vec![config::Filter {
+        let config = ConfigBuilder::default()
+            .with_filters(vec![config::Filter {
                 name: provider.name(),
                 config: Default::default(),
-            }],
-            connections: ConnectionConfig::Client {
+            }])
+            .with_connections(ConnectionConfig::Client {
                 addresses: vec!["127.0.0.1:2456".parse().unwrap()],
                 connection_id: "".into(),
                 lb_policy: None,
-            },
-        });
+            })
+            .build();
 
         let registry = default_registry(&log);
-        let chain = FilterChain::from_arguments(config, &registry, &Registry::default()).unwrap();
+        let chain =
+            FilterChain::from_arguments(Arc::new(config), &registry, &Registry::default()).unwrap();
         assert_eq!(1, chain.filters.len());
 
         // uh oh, something went wrong
-        let config = Arc::new(Config {
-            local: Local { port: 0 },
-            filters: vec![config::Filter {
+        let config = ConfigBuilder::default()
+            .with_filters(vec![config::Filter {
                 name: "this is so wrong".to_string(),
                 config: Default::default(),
-            }],
-            connections: ConnectionConfig::Client {
+            }])
+            .with_connections(ConnectionConfig::Client {
                 addresses: vec!["127.0.0.1:2456".parse().unwrap()],
                 connection_id: "".into(),
                 lb_policy: None,
-            },
-        });
-        let result = FilterChain::from_arguments(config, &registry, &Registry::default());
+            })
+            .build();
+        let result = FilterChain::from_arguments(Arc::new(config), &registry, &Registry::default());
         assert!(result.is_err());
     }
 

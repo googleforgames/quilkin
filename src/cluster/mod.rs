@@ -17,6 +17,9 @@
 use std::collections::HashMap;
 use std::net::SocketAddr;
 
+pub mod cluster_manager;
+pub mod load_balancer;
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ServiceDiscoveryTypedAddress {
     Static(SocketAddr),

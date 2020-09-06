@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 
-use crate::config::{ConnectionConfig, EndPoint, LoadBalancerPolicy as PolicyName};
+use crate::config::{ConnectionConfig, EndPoint, LoadBalancerPolicy};
 
 // CLIENT_ENDPOINT_PREFIX is a prefix to the name of a client proxy's endpoint.
 const CLIENT_ENDPOINT_PREFIX: &str = "address";
@@ -14,14 +14,14 @@ trait EndpointChooser: Send + Sync {
     fn choose_endpoints(&self) -> Vec<EndPoint>;
 }
 
-/// LoadBalancerPolicy represents a load balancing algorithm over a set
+/// LoadBalancer represents a load balancing algorithm over a set
 /// of endpoints that a proxy is connected to.
-pub struct LoadBalancerPolicy {
+pub struct LoadBalancer {
     endpoint_chooser: Box<dyn EndpointChooser>,
 }
 
-impl LoadBalancerPolicy {
-    pub fn new(connection_config: &ConnectionConfig) -> Self {
+impl LoadBalancer {
+    pub fn from_connection_config(connection_config: &ConnectionConfig) -> Self {
         let (policy_name, endpoints) = match connection_config {
             ConnectionConfig::Client {
                 lb_policy,
@@ -41,19 +41,25 @@ impl LoadBalancerPolicy {
                     .collect(),
             ),
             ConnectionConfig::Server { endpoints } => {
-                (&Some(PolicyName::Broadcast), endpoints.clone())
+                (&Some(LoadBalancerPolicy::Broadcast), endpoints.clone())
             }
         };
 
+        LoadBalancer::new(policy_name, endpoints)
+    }
+
+    pub fn new(policy_name: &Option<LoadBalancerPolicy>, endpoints: Vec<EndPoint>) -> Self {
         let endpoint_chooser: Box<dyn EndpointChooser> = match policy_name {
-            Some(PolicyName::RoundRobin) => Box::new(RoundRobinEndpointChooser::new(endpoints)),
-            Some(PolicyName::Random) => Box::new(RandomEndpointChooser::new(endpoints)),
-            Some(PolicyName::Broadcast) | None => {
+            Some(LoadBalancerPolicy::RoundRobin) => {
+                Box::new(RoundRobinEndpointChooser::new(endpoints))
+            }
+            Some(LoadBalancerPolicy::Random) => Box::new(RandomEndpointChooser::new(endpoints)),
+            Some(LoadBalancerPolicy::Broadcast) | None => {
                 Box::new(BroadcastEndpointChooser::new(endpoints))
             }
         };
 
-        LoadBalancerPolicy { endpoint_chooser }
+        LoadBalancer { endpoint_chooser }
     }
 
     // choose_endpoints returns a list of endpoints.
@@ -128,9 +134,9 @@ impl EndpointChooser for BroadcastEndpointChooser {
 mod tests {
     use std::collections::HashSet;
 
+    use super::LoadBalancer;
     use crate::config::ConnectionConfig;
     use crate::config::LoadBalancerPolicy::{Broadcast, Random, RoundRobin};
-    use crate::load_balancer_policy::LoadBalancerPolicy;
 
     #[test]
     fn round_robin_load_balancer_policy() {
@@ -140,7 +146,7 @@ mod tests {
             "127.0.0.3:8080".parse().unwrap(),
         ];
 
-        let lb = LoadBalancerPolicy::new(&ConnectionConfig::Client {
+        let lb = LoadBalancer::from_connection_config(&ConnectionConfig::Client {
             addresses: addresses.clone(),
             connection_id: "".into(),
             lb_policy: Some(RoundRobin),
@@ -175,7 +181,7 @@ mod tests {
             "127.0.0.3:8080".parse().unwrap(),
         ];
 
-        let lb = LoadBalancerPolicy::new(&ConnectionConfig::Client {
+        let lb = LoadBalancer::from_connection_config(&ConnectionConfig::Client {
             addresses: addresses.clone(),
             connection_id: "".into(),
             lb_policy: Some(Random),
@@ -226,7 +232,7 @@ mod tests {
                 "127.0.0.3:8080".parse().unwrap(),
             ];
 
-            let lb = LoadBalancerPolicy::new(&ConnectionConfig::Client {
+            let lb = LoadBalancer::from_connection_config(&ConnectionConfig::Client {
                 addresses: addresses.clone(),
                 connection_id: "".into(),
                 lb_policy,

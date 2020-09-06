@@ -25,7 +25,7 @@ use quilkin::config::Config;
 use quilkin::extensions::default_registry;
 use quilkin::proxy::{Metrics, Server};
 use tokio::signal;
-use tokio::sync::oneshot;
+use tokio::sync::watch;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -58,10 +58,13 @@ async fn main() {
         Metrics::new(Some("[::]:9091".parse().unwrap()), Registry::default()),
     );
 
-    let (close, stop) = oneshot::channel::<()>();
+    let (close, mut stop) = watch::channel(());
+    // Remove the init value from the channel - ensuring that the channel is
+    // empty so that we can terminate once we receive any value from it.
+    stop.recv().await;
     tokio::spawn(async move {
-        signal::ctrl_c().await.unwrap();
-        close.send(()).unwrap();
+        signal::ctrl_c().await.ok();
+        close.broadcast(()).ok();
     });
 
     server.run(config.clone(), stop).await.unwrap();

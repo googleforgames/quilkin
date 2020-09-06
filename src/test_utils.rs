@@ -23,7 +23,7 @@ use slog::{o, warn, Drain, Logger};
 use slog_term::{FullFormat, PlainSyncDecorator};
 use tokio::net::udp::{RecvHalf, SendHalf};
 use tokio::net::UdpSocket;
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::{mpsc, oneshot, watch};
 
 use crate::config::{Config, EndPoint};
 use crate::extensions::{CreateFilterArgs, Error, Filter, FilterFactory, FilterRegistry};
@@ -170,14 +170,15 @@ pub fn run_proxy_with_metrics(
     config: Config,
     metrics: Metrics,
 ) -> Box<dyn FnOnce()> {
-    let (close, stop) = oneshot::channel::<()>();
+    let (close, mut stop) = watch::channel(());
     let proxy = Server::new(logger.clone(), registry, metrics);
     // run the proxy
     tokio::spawn(async move {
+        stop.recv().await.unwrap();
         proxy.run(Arc::new(config), stop).await.unwrap();
     });
 
-    Box::new(|| close.send(()).unwrap())
+    Box::new(move || close.broadcast(()).unwrap())
 }
 
 /// assert that on_downstream_receive makes no changes
@@ -194,7 +195,7 @@ where
     let contents = "hello".to_string().into_bytes();
 
     match filter.on_downstream_receive(&endpoints, from, contents.clone()) {
-        None => assert!(false, "should return a result"),
+        None => unreachable!("should return a result"),
         Some((result_endpoints, result_contents)) => {
             assert_eq!(endpoints, result_endpoints);
             assert_eq!(contents, result_contents);
@@ -220,7 +221,7 @@ where
         "127.0.0.1:70".parse().unwrap(),
         contents.clone(),
     ) {
-        None => assert!(false, "should return a result"),
+        None => unreachable!("should return a result"),
         Some(result_contents) => assert_eq!(contents, result_contents),
     }
 }

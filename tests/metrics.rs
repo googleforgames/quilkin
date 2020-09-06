@@ -24,7 +24,7 @@ mod tests {
     use regex::Regex;
     use slog::info;
 
-    use quilkin::config::{Config, ConnectionConfig, EndPoint, Local};
+    use quilkin::config::{ConfigBuilder, ConnectionConfig, EndPoint, Local};
     use quilkin::extensions::FilterRegistry;
     use quilkin::proxy::Metrics;
     use quilkin::test_utils::{
@@ -41,17 +41,16 @@ mod tests {
 
         // create server configuration
         let server_port = 12346;
-        let server_config = Config {
-            local: Local { port: server_port },
-            filters: vec![],
-            connections: ConnectionConfig::Server {
+        let server_config = ConfigBuilder::default()
+            .with_local(Local { port: server_port })
+            .with_connections(ConnectionConfig::Server {
                 endpoints: vec![EndPoint {
                     name: "server".to_string(),
                     address: echo,
                     connection_ids: vec![],
                 }],
-            },
-        };
+            })
+            .build();
 
         let close_server = run_proxy_with_metrics(
             &base_logger,
@@ -62,18 +61,17 @@ mod tests {
 
         // create a local client
         let client_port = 12347;
-        let client_config = Config {
-            local: Local { port: client_port },
-            filters: vec![],
-            connections: ConnectionConfig::Client {
+        let client_config = ConfigBuilder::default()
+            .with_local(Local { port: client_port })
+            .with_connections(ConnectionConfig::Client {
                 addresses: vec![SocketAddr::new(
                     IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
                     server_port,
                 )],
                 connection_id: "".into(),
                 lb_policy: None,
-            },
-        };
+            })
+            .build();
         let close_client = run_proxy(&base_logger, FilterRegistry::default(), client_config);
 
         // let's send the packet

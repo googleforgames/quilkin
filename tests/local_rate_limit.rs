@@ -20,7 +20,7 @@ extern crate quilkin;
 mod tests {
     use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
-    use quilkin::config::{Config, ConnectionConfig, EndPoint, Filter, Local};
+    use quilkin::config::{ConfigBuilder, ConnectionConfig, EndPoint, Filter, Local};
     use quilkin::extensions::filters::RateLimitFilterFactory;
     use quilkin::extensions::{default_registry, FilterFactory};
     use quilkin::test_utils::{echo_server, logger, recv_multiple_packets, run_proxy};
@@ -36,20 +36,20 @@ period: 1s
         let echo = echo_server().await;
 
         let server_port = 12346;
-        let server_config = Config {
-            local: Local { port: server_port },
-            filters: vec![Filter {
+        let server_config = ConfigBuilder::default()
+            .with_local(Local { port: server_port })
+            .with_filters(vec![Filter {
                 name: RateLimitFilterFactory::default().name(),
                 config: serde_yaml::from_str(yaml).unwrap(),
-            }],
-            connections: ConnectionConfig::Server {
+            }])
+            .with_connections(ConnectionConfig::Server {
                 endpoints: vec![EndPoint {
                     name: "server".to_string(),
                     address: echo,
                     connection_ids: vec![],
                 }],
-            },
-        };
+            })
+            .build();
 
         let close_server = run_proxy(&base_logger, default_registry(&base_logger), server_config);
 
