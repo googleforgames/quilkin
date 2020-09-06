@@ -87,6 +87,18 @@ impl From<&str> for ConnectionId {
     }
 }
 
+impl From<Vec<u8>> for ConnectionId {
+    fn from(contents: Vec<u8>) -> Self {
+        ConnectionId(contents)
+    }
+}
+
+impl AsRef<Vec<u8>> for ConnectionId {
+    fn as_ref(&self) -> &Vec<u8> {
+        &self.0
+    }
+}
+
 /// ConnectionConfig is the configuration for either a Client or Server proxy
 #[derive(Debug, Deserialize, Serialize)]
 pub enum ConnectionConfig {

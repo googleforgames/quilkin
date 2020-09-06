@@ -22,6 +22,7 @@ use prometheus::{Error as MetricsError, Registry};
 use serde::export::Formatter;
 
 use crate::config::{ConnectionConfig, EndPoint};
+use std::ops::Deref;
 
 /// Filter is a trait for routing and manipulating packets.
 pub trait Filter: Send + Sync {
@@ -50,12 +51,36 @@ pub trait Filter: Send + Sync {
     ) -> Option<Vec<u8>>;
 }
 
+impl Filter for Box<dyn Filter> {
+    fn on_downstream_receive(
+        &self,
+        endpoints: &[EndPoint],
+        from: SocketAddr,
+        contents: Vec<u8>,
+    ) -> Option<(Vec<EndPoint>, Vec<u8>)> {
+        self.deref()
+            .on_downstream_receive(endpoints, from, contents)
+    }
+
+    fn on_upstream_receive(
+        &self,
+        endpoint: &EndPoint,
+        from: SocketAddr,
+        to: SocketAddr,
+        contents: Vec<u8>,
+    ) -> Option<Vec<u8>> {
+        self.deref()
+            .on_upstream_receive(endpoint, from, to, contents)
+    }
+}
+
 #[derive(Debug, PartialEq)]
 /// Error is an error when attempting to create a Filter from_config() from a FilterFactory
 pub enum Error {
     NotFound(String),
     FieldInvalid { field: String, reason: String },
     DeserializeFailed(String),
+    FieldNotFound(String),
     InitializeMetricsFailed(String),
 }
 
@@ -67,6 +92,9 @@ impl fmt::Display for Error {
                 write!(f, "field {} is invalid: {}", field, reason)
             }
             Error::DeserializeFailed(reason) => write!(f, "Deserialization failed: {}", reason),
+            Error::FieldNotFound(field) => {
+                write!(f, "field {} is required, but wasn't found", field)
+            }
             Error::InitializeMetricsFailed(reason) => {
                 write!(f, "failed to initialize metrics: {}", reason)
             }

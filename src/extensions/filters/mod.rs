@@ -14,8 +14,10 @@
  * limitations under the License.
  */
 
+pub use append_token_router::AppendTokenRouterFactory;
 pub use debug::DebugFilterFactory;
 pub use local_rate_limit::RateLimitFilterFactory;
 
+mod append_token_router;
 mod debug;
 mod local_rate_limit;
