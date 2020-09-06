@@ -14,9 +14,6 @@
  * limitations under the License.
  */
 
-use std::collections::{HashMap, HashSet};
-use std::net::SocketAddr;
-
 use crate::cluster::{
     Cluster as QuilkinCluster, ClusterLocalities, ClusterType, Endpoint, Locality,
     LocalityEndpoints, ServiceDiscoveryTypedAddress,
@@ -27,9 +24,12 @@ use crate::xds::envoy::config::endpoint::v3::{lb_endpoint, ClusterLoadAssignment
 use crate::xds::envoy::service::discovery::v3::{DiscoveryRequest, DiscoveryResponse};
 use crate::xds::google::rpc::Status;
 use crate::xds::{CLUSTER_TYPE, ENDPOINT_TYPE};
+
 use bytes::Bytes;
 use prost::Message;
 use slog::{info, warn, Logger};
+use std::collections::{HashMap, HashSet};
+use std::net::SocketAddr;
 use tokio::sync::mpsc;
 
 #[derive(Debug)]
@@ -43,9 +43,8 @@ impl Error {
     }
 }
 
-/// ClusterManager processes CDS and EDS updates from an ADS server
-/// and internally tracks the state of any reported clusters and their endpoints.
-pub struct ClusterManager {
+/// Tracks clusters and endpoints reported by an ADS server.
+pub(crate) struct ClusterManager {
     log: Logger,
 
     // Send discovery requests ACKs/NACKs
@@ -78,7 +77,7 @@ impl ClusterManager {
         }
     }
 
-    // Processes a CDS response received from the control plane.
+    // Processes a CDS response.
     pub(in crate::xds) async fn on_cluster_response(&mut self, response: DiscoveryResponse) {
         info!(
             self.log,
@@ -125,7 +124,7 @@ impl ClusterManager {
                     }
                 })
                 .unwrap_or_else(|| Err("no cluster_discovery_type was provided in request".into()))
-                .map_err(|err_msg| Error::new(err_msg))?;
+                .map_err(Error::new)?;
 
             let localities = cluster
                 .load_assignment
@@ -152,8 +151,7 @@ impl ClusterManager {
         // Send the new cluster set downstream.
         self.send_cluster_update().await;
 
-        // Do we have any newly added/removed clusters?
-        // If yes, we need to update our ClusterLoadAssignment watch as well.
+        // If we have any added/removed clusters, we need to update our ClusterLoadAssignment watch.
         // This also handles deletion - if a previously existing cluster wasn't returned in a response,
         // then it has been deleted on the server-side. We don't have any explicit cleanup to do since
         // we always recreate the cluster set - ClusterLoadAssignment watch
@@ -173,7 +171,7 @@ impl ClusterManager {
         Ok(())
     }
 
-    // Processes an EDS response received from the control plane.
+    // Processes an EDS response.
     pub(in crate::xds) async fn on_cluster_load_assignment_response(
         &mut self,
         response: DiscoveryResponse,
@@ -255,8 +253,8 @@ impl ClusterManager {
             .ok();
     }
 
-    // Parses a ClusterLoadAssignment response into the endpoint components that
-    // we're interested, in partitioned by their locality within the cluster.
+    // Parses a ClusterLoadAssignment response into the endpoint
+    // components that we're interested in.
     fn process_cluster_load_assignment(
         cluster_type: ClusterType,
         mut assignment: ClusterLoadAssignment,
@@ -450,7 +448,7 @@ mod tests {
         // the endpoint watch list.
 
         let (cluster_updates_tx, _) = mpsc::channel::<ClusterState>(100);
-        let (mut discovery_req_tx, mut discovery_req_rx) = mpsc::channel::<DiscoveryRequest>(100);
+        let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel::<DiscoveryRequest>(100);
         let mut cm = ClusterManager::new(logger(), cluster_updates_tx, discovery_req_tx);
 
         let initial_names = vec!["a".into()];
@@ -491,8 +489,8 @@ mod tests {
     async fn endpoint_updates() {
         // Test that whenever we receive endpoint changes, we update our cluster state.
 
-        let (cluster_updates_tx, cluster_updates_rx) = mpsc::channel::<ClusterState>(100);
-        let (mut discovery_req_tx, mut discovery_req_rx) = mpsc::channel::<DiscoveryRequest>(100);
+        let (cluster_updates_tx, _) = mpsc::channel::<ClusterState>(100);
+        let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel::<DiscoveryRequest>(100);
         let mut cm = ClusterManager::new(logger(), cluster_updates_tx, discovery_req_tx);
 
         let names = vec!["a".into(), "b".into()];
@@ -581,8 +579,8 @@ mod tests {
     async fn watch_endpoints_for_clusters() {
         // Test that whenever we receive endpoint changes, we send back a new discovery request.
 
-        let (cluster_updates_tx, cluster_updates_rx) = mpsc::channel::<ClusterState>(100);
-        let (mut discovery_req_tx, mut discovery_req_rx) = mpsc::channel::<DiscoveryRequest>(100);
+        let (cluster_updates_tx, _) = mpsc::channel::<ClusterState>(100);
+        let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel::<DiscoveryRequest>(100);
         let mut cm = ClusterManager::new(logger(), cluster_updates_tx, discovery_req_tx);
 
         let names = vec!["a".into(), "b".into()];
@@ -617,8 +615,8 @@ mod tests {
     async fn nack_cluster_update() {
         // Test that if we receive a bad cluster update, we NACK.
 
-        let (cluster_updates_tx, cluster_updates_rx) = mpsc::channel::<ClusterState>(100);
-        let (mut discovery_req_tx, mut discovery_req_rx) = mpsc::channel::<DiscoveryRequest>(100);
+        let (cluster_updates_tx, _) = mpsc::channel::<ClusterState>(100);
+        let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel::<DiscoveryRequest>(100);
         let mut cm = ClusterManager::new(logger(), cluster_updates_tx, discovery_req_tx);
 
         let initial_names = vec!["a".into()];
@@ -648,8 +646,8 @@ mod tests {
     async fn nack_endpoint_update() {
         // Test that if we receive a bad endpoint update, we NACK.
 
-        let (cluster_updates_tx, cluster_updates_rx) = mpsc::channel::<ClusterState>(100);
-        let (mut discovery_req_tx, mut discovery_req_rx) = mpsc::channel::<DiscoveryRequest>(100);
+        let (cluster_updates_tx, _) = mpsc::channel::<ClusterState>(100);
+        let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel::<DiscoveryRequest>(100);
         let mut cm = ClusterManager::new(logger(), cluster_updates_tx, discovery_req_tx);
 
         cm.on_cluster_response(cluster_discovery_response(
@@ -699,7 +697,7 @@ mod tests {
         // Test that whenever we receive a cluster update, we send it downstream.
 
         let (cluster_updates_tx, mut cluster_updates_rx) = mpsc::channel::<ClusterState>(100);
-        let (mut discovery_req_tx, mut discovery_req_rx) = mpsc::channel::<DiscoveryRequest>(100);
+        let (discovery_req_tx, _) = mpsc::channel::<DiscoveryRequest>(100);
         let mut cm = ClusterManager::new(logger(), cluster_updates_tx, discovery_req_tx);
 
         cm.on_cluster_response(cluster_discovery_response(
@@ -725,7 +723,7 @@ mod tests {
             vec!["a".into(), "b".into()],
             |mut cluster| {
                 if &cluster.name == "a" {
-                    cluster.load_assignment.as_mut().map(|mut assignment| {
+                    cluster.load_assignment.as_mut().map(|assignment| {
                         assignment.endpoints[0].lb_endpoints[0].host_identifier =
                             Some(HostIdentifier::Endpoint(Endpoint {
                                 address: Some(Address {
@@ -762,7 +760,7 @@ mod tests {
         // Test that whenever we receive an endpoint update, we send a new cluster set downstream.
 
         let (cluster_updates_tx, mut cluster_updates_rx) = mpsc::channel::<ClusterState>(100);
-        let (mut discovery_req_tx, mut discovery_req_rx) = mpsc::channel::<DiscoveryRequest>(100);
+        let (discovery_req_tx, _) = mpsc::channel::<DiscoveryRequest>(100);
         let mut cm = ClusterManager::new(logger(), cluster_updates_tx, discovery_req_tx);
 
         cm.on_cluster_response(cluster_discovery_response(

@@ -14,9 +14,6 @@
  * limitations under the License.
  */
 
-const ENDPOINT_TYPE: &str = "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment";
-const CLUSTER_TYPE: &str = "type.googleapis.com/envoy.config.cluster.v3.Cluster";
-
 mod udpa {
     pub mod core {
         pub mod v1 {
@@ -44,6 +41,7 @@ mod envoy {
         }
         pub mod core {
             pub mod v3 {
+                #![allow(clippy::large_enum_variant)]
                 tonic::include_proto!("envoy.config.core.v3");
             }
         }
@@ -73,5 +71,8 @@ mod google {
     }
 }
 
-mod client;
+pub mod ads_client;
 mod cluster;
+
+const ENDPOINT_TYPE: &str = "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment";
+const CLUSTER_TYPE: &str = "type.googleapis.com/envoy.config.cluster.v3.Cluster";

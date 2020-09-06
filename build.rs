@@ -1,6 +1,5 @@
 // Use tonic to generate the rust files we need from the protobuf files.
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // TODO: emit cargo:rerun-if any of the proto deps change.
     let proto_files = vec![
         "proto/data-plane-api/envoy/config/cluster/v3/cluster.proto",
         "proto/data-plane-api/envoy/service/cluster/v3/cds.proto",
@@ -32,6 +31,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .map(|p| p.to_str().unwrap())
             .collect::<Vec<_>>(),
     )?;
+
+    // Rerun script only when proto dependencies change.
+    for path in vec![proto_files, include_dirs].concat() {
+        println!("cargo:rerun-if-changed={}", path.to_str().unwrap());
+    }
 
     Ok(())
 }
