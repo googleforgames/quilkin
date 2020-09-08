@@ -13,15 +13,18 @@
 # limitations under the License.
 
 steps:
+  # clippy tends to rely on cached results from other cargo sub-commands so
+  # that it skips checking some files that were built previously. As a result
+  # we run it before other cargo sub-commands to ensure that it checks all files.
+  - name: gcr.io/$PROJECT_ID/ci
+    args: ["clippy"]
+    id: clippy
   - name: gcr.io/$PROJECT_ID/ci
     args: ["check", "--tests"]
     id: check-tests
   - name: gcr.io/$PROJECT_ID/ci
     args: ["fmt", "--", "--check"]
     id: fmt-check
-  - name: gcr.io/$PROJECT_ID/ci
-    args: ["clippy"]
-    id: clippy
   - name: gcr.io/$PROJECT_ID/ci
     args: ["test", "--tests"]
     id: test
