@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
+use std::fmt::{self, Formatter};
 use std::io::{Error, ErrorKind, Result};
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-use crate::config::{Config, EndPoint};
+use crate::config::{Config, EndPoint, ValidationError};
 use crate::extensions::{CreateFilterArgs, Filter, FilterRegistry};
 use prometheus::Registry;
 
@@ -32,11 +33,54 @@ pub struct FilterChain {
     filters: Vec<Box<dyn Filter>>,
 }
 
+/// Represents an error while creating a `FilterChain`
+#[derive(Debug)]
+pub struct CreateFilterError {
+    filter_name: String,
+    error: ValidationError,
+}
+
+impl fmt::Display for CreateFilterError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "failed to create filter {}: {}",
+            self.filter_name,
+            format!("{}", self.error)
+        )
+    }
+}
+
 impl FilterChain {
     pub fn new(filters: Vec<Box<dyn Filter>>) -> Self {
         FilterChain { filters }
     }
 
+    /// Validates the filter configurations in the provided config and constructs
+    /// a FilterChain if all configurations are valid.
+    pub fn try_create(
+        config: Arc<Config>,
+        filter_registry: &FilterRegistry,
+        metrics_registry: &Registry,
+    ) -> std::result::Result<FilterChain, CreateFilterError> {
+        let mut filters = Vec::<Box<dyn Filter>>::new();
+        for filter_config in &config.filters {
+            match filter_registry.get(
+                &filter_config.name,
+                CreateFilterArgs::new(&config.connections, filter_config.config.as_ref())
+                    .with_metrics_registry(metrics_registry.clone()),
+            ) {
+                Ok(filter) => filters.push(filter),
+                Err(err) => {
+                    return Err(CreateFilterError {
+                        filter_name: filter_config.name.clone(),
+                        error: err.into(),
+                    });
+                }
+            }
+        }
+        Ok(FilterChain::new(filters))
+    }
     // from_arguments returns a FilterChain from the provided arguments.
     // Will return a ErrorKind::InvalidInput if there is an issue with the passed
     // in Configuration.

@@ -27,7 +27,7 @@ use tokio::sync::{mpsc, oneshot};
 
 use crate::config::{Config, EndPoint};
 use crate::extensions::{CreateFilterArgs, Error, Filter, FilterFactory, FilterRegistry};
-use crate::proxy::{Metrics, Server};
+use crate::proxy::{Metrics, ServerBuilder};
 
 // noop_endpoint returns an endpoint for data that should go nowhere.
 pub fn noop_endpoint() -> EndPoint {
@@ -158,23 +158,27 @@ pub async fn echo_server() -> SocketAddr {
 }
 
 // run_proxy creates a instance of the Server proxy and runs it, returning a cancel function
-pub fn run_proxy(logger: &Logger, registry: FilterRegistry, config: Config) -> Box<dyn FnOnce()> {
-    run_proxy_with_metrics(logger, registry, config, Metrics::default())
+pub fn run_proxy(registry: FilterRegistry, config: Config) -> Box<dyn FnOnce()> {
+    run_proxy_with_metrics(registry, config, Metrics::default())
 }
 
 // run_proxy_with_metrics creates a instance of the Server proxy and
 // runs it, returning a cancel function
 pub fn run_proxy_with_metrics(
-    logger: &Logger,
     registry: FilterRegistry,
     config: Config,
     metrics: Metrics,
 ) -> Box<dyn FnOnce()> {
     let (close, stop) = oneshot::channel::<()>();
-    let proxy = Server::new(logger.clone(), registry, metrics);
+    let proxy = ServerBuilder::from(Arc::new(config))
+        .with_filter_registry(registry)
+        .with_metrics(metrics)
+        .validate()
+        .unwrap()
+        .build();
     // run the proxy
     tokio::spawn(async move {
-        proxy.run(Arc::new(config), stop).await.unwrap();
+        proxy.run(stop).await.unwrap();
     });
 
     Box::new(|| close.send(()).unwrap())

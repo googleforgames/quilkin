@@ -21,7 +21,7 @@ use std::net::SocketAddr;
 use prometheus::{Error as MetricsError, Registry};
 use serde::export::Formatter;
 
-use crate::config::{ConnectionConfig, EndPoint};
+use crate::config::{ConnectionConfig, EndPoint, ValidationError};
 
 /// Filter is a trait for routing and manipulating packets.
 pub trait Filter: Send + Sync {
@@ -71,6 +71,12 @@ impl fmt::Display for Error {
                 write!(f, "failed to initialize metrics: {}", reason)
             }
         }
+    }
+}
+
+impl Into<ValidationError> for Error {
+    fn into(self) -> ValidationError {
+        ValidationError::FilterInvalid(self)
     }
 }
 

@@ -16,7 +16,9 @@
 
 pub use metrics::Metrics;
 pub use server::Server;
+pub use server_builder::{logger, ServerBuilder};
 
 mod metrics;
 mod server;
+mod server_builder;
 mod sessions;

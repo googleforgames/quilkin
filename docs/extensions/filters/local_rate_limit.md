@@ -9,7 +9,9 @@ quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit
 
 ### Configuration Examples
 ```rust
-# let yaml = "
+# #[tokio::main]
+# async fn main() {
+#   let yaml = "
 local:
   port: 7000
 filters:
@@ -22,10 +24,10 @@ client:
     - 127.0.0.1:7001
   connection_id: MXg3aWp5Ng==
 # ";
-# let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-# assert_eq!(config.validate().unwrap(), ());
-# assert_eq!(config.filters.len(), 1);
-# // TODO: make it possible to easily validate filter's config from here.
+#   let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
+#   assert_eq!(config.filters.len(), 1);
+#   quilkin::proxy::ServerBuilder::from(std::sync::Arc::new(config)).validate().unwrap();
+# }
 ```
 To configure a rate limiter, we specify the maximum rate at which the proxy is allowed to forward packets. In the example above, we configured the proxy to forward a maximum of 1000 packets per 500ms (2000 packets/second).
 
