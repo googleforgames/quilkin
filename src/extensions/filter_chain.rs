@@ -15,7 +15,6 @@
  */
 
 use std::fmt::{self, Formatter};
-use std::io::{Error, ErrorKind, Result};
 use std::net::SocketAddr;
 use std::sync::Arc;
 
@@ -76,32 +75,6 @@ impl FilterChain {
                         filter_name: filter_config.name.clone(),
                         error: err.into(),
                     });
-                }
-            }
-        }
-        Ok(FilterChain::new(filters))
-    }
-    // from_arguments returns a FilterChain from the provided arguments.
-    // Will return a ErrorKind::InvalidInput if there is an issue with the passed
-    // in Configuration.
-    pub fn from_arguments(
-        config: Arc<Config>,
-        filter_registry: &FilterRegistry,
-        metrics_registry: &Registry,
-    ) -> Result<FilterChain> {
-        let mut filters = Vec::<Box<dyn Filter>>::new();
-        for filter_config in &config.filters {
-            match filter_registry.get(
-                &filter_config.name,
-                CreateFilterArgs::new(&config.connections, filter_config.config.as_ref())
-                    .with_metrics_registry(metrics_registry.clone()),
-            ) {
-                Ok(filter) => filters.push(filter),
-                Err(err) => {
-                    return Err(Error::new(
-                        ErrorKind::InvalidInput,
-                        format!("Issue with filter '{}': {}", filter_config.name, err),
-                    ));
                 }
             }
         }
@@ -182,7 +155,7 @@ mod tests {
         });
 
         let registry = default_registry(&log);
-        let chain = FilterChain::from_arguments(config, &registry, &Registry::default()).unwrap();
+        let chain = FilterChain::try_create(config, &registry, &Registry::default()).unwrap();
         assert_eq!(1, chain.filters.len());
 
         // uh oh, something went wrong
@@ -198,7 +171,7 @@ mod tests {
                 lb_policy: None,
             },
         });
-        let result = FilterChain::from_arguments(config, &registry, &Registry::default());
+        let result = FilterChain::try_create(config, &registry, &Registry::default());
         assert!(result.is_err());
     }
 
