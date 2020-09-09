@@ -198,7 +198,7 @@ where
     let contents = "hello".to_string().into_bytes();
 
     match filter.on_downstream_receive(&endpoints, from, contents.clone()) {
-        None => assert!(false, "should return a result"),
+        None => unreachable!("should return a result"),
         Some((result_endpoints, result_contents)) => {
             assert_eq!(endpoints, result_endpoints);
             assert_eq!(contents, result_contents);
@@ -224,7 +224,7 @@ where
         "127.0.0.1:70".parse().unwrap(),
         contents.clone(),
     ) {
-        None => assert!(false, "should return a result"),
+        None => unreachable!("should return a result"),
         Some(result_contents) => assert_eq!(contents, result_contents),
     }
 }
