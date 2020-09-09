@@ -31,7 +31,7 @@ use tokio::time::{Duration, Instant};
 
 use super::metrics::Metrics;
 use crate::config::EndPoint;
-use crate::extensions::{Filter, FilterChain};
+use crate::extensions::{Filter, FilterChain, UpstreamContext};
 
 /// SESSION_TIMEOUT_SECONDS is the default session timeout - which is one minute.
 pub const SESSION_TIMEOUT_SECONDS: u64 = 60;
@@ -210,8 +210,10 @@ impl Session {
         debug!(log, "Received packet"; "from" => from, "endpoint_name" => &endpoint.name, "endpoint_addr" => &endpoint.address, "contents" => from_utf8(packet).unwrap());
         Session::inc_expiration(expiration).await;
 
-        if let Some(data) = chain.on_upstream_receive(endpoint, from, to, packet.to_vec()) {
-            if let Err(err) = sender.send(Packet::new(to, data)).await {
+        if let Some(response) =
+            chain.on_upstream_receive(UpstreamContext::new(endpoint, from, to, packet.to_vec()))
+        {
+            if let Err(err) = sender.send(Packet::new(to, response.contents)).await {
                 metrics.errors_total.inc();
                 error!(log, "Error sending packet to channel"; "error" => %err);
             }

@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-use std::net::SocketAddr;
-
 use slog::{info, o, Logger};
 
-use crate::config::EndPoint;
-use crate::extensions::filter_registry::{CreateFilterArgs, Error, FilterFactory};
+use crate::extensions::filter_registry::{
+    CreateFilterArgs, DownstreamContext, DownstreamResponse, Error, FilterFactory, UpstreamContext,
+    UpstreamResponse,
+};
 use crate::extensions::Filter;
 
 /// Debug Filter logs all incoming and outgoing packets
@@ -101,28 +101,17 @@ impl FilterFactory for DebugFilterFactory {
 }
 
 impl Filter for DebugFilter {
-    fn on_downstream_receive(
-        &self,
-        endpoints: &[EndPoint],
-        from: SocketAddr,
-        contents: Vec<u8>,
-    ) -> Option<(Vec<EndPoint>, Vec<u8>)> {
-        info!(self.log, "on local receive"; "from" => from, "contents" => packet_to_string(contents.clone()));
-        Some((endpoints.to_vec(), contents))
+    fn on_downstream_receive(&self, ctx: DownstreamContext) -> Option<DownstreamResponse> {
+        info!(self.log, "on local receive"; "from" => ctx.from, "contents" => packet_to_string(ctx.contents.clone()));
+        Some(ctx.into())
     }
 
-    fn on_upstream_receive(
-        &self,
-        endpoint: &EndPoint,
-        from: SocketAddr,
-        to: SocketAddr,
-        contents: Vec<u8>,
-    ) -> Option<Vec<u8>> {
-        info!(self.log, "received endpoint packet"; "endpoint" => endpoint.name.clone(),
-        "from" => from,
-        "to" => to,
-        "contents" => packet_to_string(contents.clone()));
-        Some(contents)
+    fn on_upstream_receive(&self, ctx: UpstreamContext) -> Option<UpstreamResponse> {
+        info!(self.log, "received endpoint packet"; "endpoint" => ctx.endpoint.name.clone(),
+        "from" => ctx.from,
+        "to" => ctx.to,
+        "contents" => packet_to_string(ctx.contents.clone()));
+        Some(ctx.into())
     }
 }
 

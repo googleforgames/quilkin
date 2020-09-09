@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-use crate::config::EndPoint;
-use crate::extensions::filter_registry::CreateFilterArgs;
+use crate::extensions::filter_registry::{
+    CreateFilterArgs, DownstreamContext, DownstreamResponse, UpstreamContext, UpstreamResponse,
+};
 use crate::extensions::{Error, Filter, FilterFactory};
 use metrics::Metrics;
 use serde::{Deserialize, Serialize};
-use std::net::SocketAddr;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
@@ -182,33 +182,21 @@ impl Drop for RateLimitFilter {
 }
 
 impl Filter for RateLimitFilter {
-    fn on_downstream_receive(
-        &self,
-        endpoints: &[EndPoint],
-        _from: SocketAddr,
-        contents: Vec<u8>,
-    ) -> Option<(Vec<EndPoint>, Vec<u8>)> {
-        self.acquire_token()
-            .map(|()| (endpoints.to_vec(), contents))
-            .or_else(|| {
-                self.metrics.packets_dropped_total.inc();
-                None
-            })
+    fn on_downstream_receive(&self, ctx: DownstreamContext) -> Option<DownstreamResponse> {
+        self.acquire_token().map(|()| ctx.into()).or_else(|| {
+            self.metrics.packets_dropped_total.inc();
+            None
+        })
     }
 
-    fn on_upstream_receive(
-        &self,
-        _endpoint: &EndPoint,
-        _from: SocketAddr,
-        _to: SocketAddr,
-        contents: Vec<u8>,
-    ) -> Option<Vec<u8>> {
-        Some(contents)
+    fn on_upstream_receive(&self, ctx: UpstreamContext) -> Option<UpstreamResponse> {
+        Some(ctx.into())
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::extensions::filter_registry::DownstreamContext;
     use crate::extensions::filters::local_rate_limit::metrics::Metrics;
     use crate::extensions::filters::local_rate_limit::{Config, RateLimitFilter};
     use crate::extensions::Filter;
@@ -289,10 +277,13 @@ mod tests {
         assert_filter_on_upstream_receive_no_change(&r);
 
         // Check that we're rate limited.
-        assert_eq!(
-            r.on_downstream_receive(&vec![], "127.0.0.1:8080".parse().unwrap(), vec![9]),
-            None
-        );
+        assert!(r
+            .on_downstream_receive(DownstreamContext::new(
+                vec![],
+                "127.0.0.1:8080".parse().unwrap(),
+                vec![9]
+            ))
+            .is_none(),);
     }
 
     #[tokio::test]
@@ -302,10 +293,14 @@ mod tests {
             period: Some(Duration::from_millis(100)),
         });
 
-        assert_eq!(
-            r.on_downstream_receive(&vec![], "127.0.0.1:8080".parse().unwrap(), vec![9]),
-            Some((vec![], vec![9]))
-        );
+        let result = r
+            .on_downstream_receive(DownstreamContext::new(
+                vec![],
+                "127.0.0.1:8080".parse().unwrap(),
+                vec![9],
+            ))
+            .unwrap();
+        assert_eq!((result.endpoints, result.contents), (vec![], vec![9]));
         // We should be out of tokens now.
         assert_eq!(None, r.acquire_token());
 
