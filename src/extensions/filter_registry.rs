@@ -41,7 +41,7 @@ pub struct DownstreamContext {
 ///
 /// ```rust
 /// # use quilkin::extensions::{DownstreamContext, DownstreamResponse};
-///   fn on_downstream_receive(ctx: DownstreamContext) -> Option<DownstreamContext> {
+///   fn on_downstream_receive(ctx: DownstreamContext) -> Option<DownstreamResponse> {
 ///       Some(ctx.into())
 ///   }
 /// ```
@@ -74,7 +74,7 @@ pub struct UpstreamContext<'a> {
 ///
 /// ```rust
 /// # use quilkin::extensions::{UpstreamContext, UpstreamResponse};
-///   fn on_upstream_receive(ctx: UpstreamContext) -> Option<UpstreamContext> {
+///   fn on_upstream_receive(ctx: UpstreamContext) -> Option<UpstreamResponse> {
 ///       Some(ctx.into())
 ///   }
 /// ```
