@@ -45,9 +45,9 @@ impl FilterFactory for AppendTokenRouterFactory {
             ConnectionConfig::Server { .. } => {
                 let result = args
                     .config
-                    .ok_or(FieldNotFound("config".into()))?
+                    .ok_or_else(|| FieldNotFound("config".into()))?
                     .get("connection_id_bytes")
-                    .ok_or(FieldNotFound("config.connection_id_bytes".into()))?;
+                    .ok_or_else(|| FieldNotFound("config.connection_id_bytes".into()))?;
                 let cil = result.as_u64().ok_or(FieldInvalid {
                     field: "config.connection_id_bytes".into(),
                     reason: "should be an unsigned integer".into(),
@@ -181,11 +181,11 @@ impl Filter for Server {
                     .iter()
                     .any(|id| *id == connection_id)
             })
-            .map(|e| e.clone())
+            .cloned()
             .collect();
 
         debug!(self.log, "on_downstream_receive";
-        "filtered_endpoints" => filtered_endpoints.clone().into_iter().map(|e| e.name.clone()).collect::<Vec<String>>().as_slice().join(", "),
+        "filtered_endpoints" => filtered_endpoints.clone().into_iter().map(|e| e.name).collect::<Vec<String>>().as_slice().join(", "),
         "contents" => String::from_utf8(contents.clone()).unwrap_or(format!("{:?}", contents)),
         "connection_id" => String::from_utf8(connection_id.as_ref().clone()).unwrap_or(format!("{:?}", connection_id)));
 
