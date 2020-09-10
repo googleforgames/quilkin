@@ -16,7 +16,7 @@
 
 use std::net::SocketAddr;
 
-use slog::{debug, o, Logger};
+use slog::{debug, o, warn, Logger};
 
 use crate::config::{ConnectionConfig, ConnectionId, EndPoint};
 use crate::extensions::filter_registry::Error::{FieldInvalid, FieldNotFound};
@@ -34,9 +34,7 @@ impl AppendTokenRouterFactory {
 
 impl FilterFactory for AppendTokenRouterFactory {
     fn name(&self) -> String {
-        return String::from(
-            "quilkin.extensions.filters.append_token_router.v1alpha1.AppendTokenRouter",
-        );
+        String::from("quilkin.extensions.filters.append_token_router.v1alpha1.AppendTokenRouter")
     }
 
     fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
@@ -165,12 +163,17 @@ impl Filter for Server {
         _: SocketAddr,
         contents: Vec<u8>,
     ) -> Option<(Vec<EndPoint>, Vec<u8>)> {
-        let mut contents = contents;
         // splits the connection_id off the content and returns the value
+        if self.connection_id_length > contents.len() {
+            warn!(self.log, "connection_id_length was larger than packet size. Packet dropped.";
+                "connection_id_length" => self.connection_id_length, "packet_length" => contents.len());
+            return None;
+        }
+        let mut contents = contents;
         let connection_id =
             ConnectionId::from(contents.split_off(contents.len() - self.connection_id_length));
 
-        let result: Vec<EndPoint> = endpoints
+        let filtered_endpoints: Vec<EndPoint> = endpoints
             .iter()
             .filter(|endpoint| {
                 endpoint
@@ -182,11 +185,15 @@ impl Filter for Server {
             .collect();
 
         debug!(self.log, "on_downstream_receive";
-        "endpoints" => result.clone().into_iter().map(|e| e.name.clone()).collect::<Vec<String>>().as_slice().join(", "),
+        "filtered_endpoints" => filtered_endpoints.clone().into_iter().map(|e| e.name.clone()).collect::<Vec<String>>().as_slice().join(", "),
         "contents" => String::from_utf8(contents.clone()).unwrap_or(format!("{:?}", contents)),
         "connection_id" => String::from_utf8(connection_id.as_ref().clone()).unwrap_or(format!("{:?}", connection_id)));
 
-        Some((result, contents.to_vec()))
+        if filtered_endpoints.is_empty() {
+            return None;
+        }
+
+        Some((filtered_endpoints, contents.to_vec()))
     }
 
     fn on_upstream_receive(
@@ -263,6 +270,44 @@ mod tests {
         let log = logger();
         let server = Server::new(&log, 3);
         assert_server_on_downstream_receive(&server)
+    }
+
+    #[test]
+    fn server_on_downstream_receive_bad_connection_id_length() {
+        let log = logger();
+        let server = Server::new(&log, 99);
+        let e1 = EndPoint::new(
+            "e1".into(),
+            "127.0.0.1:80".parse().unwrap(),
+            vec!["abc".into()],
+        );
+
+        assert!(server
+            .on_downstream_receive(
+                vec![e1].as_slice(),
+                "127.0.0.1:70".parse().unwrap(),
+                "helloabc".as_bytes().to_vec(),
+            )
+            .is_none());
+    }
+
+    #[test]
+    fn server_on_downstream_receive_no_endpoints() {
+        let log = logger();
+        let server = Server::new(&log, 3);
+        let e1 = EndPoint::new(
+            "e1".into(),
+            "127.0.0.1:80".parse().unwrap(),
+            vec!["xyz".into()],
+        );
+
+        assert!(server
+            .on_downstream_receive(
+                vec![e1].as_slice(),
+                "127.0.0.1:70".parse().unwrap(),
+                "helloabc".as_bytes().to_vec(),
+            )
+            .is_none());
     }
 
     #[test]
