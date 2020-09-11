@@ -39,10 +39,11 @@ type SessionMap = Arc<RwLock<HashMap<(SocketAddr, SocketAddr), Mutex<Session>>>>
 
 /// Server is the UDP server main implementation
 pub struct Server {
-    pub(in crate::proxy) log: Logger,
-    pub(in crate::proxy) config: Arc<Config>,
-    pub(in crate::proxy) filter_chain: Arc<FilterChain>,
-    pub(in crate::proxy) metrics: Metrics,
+    // We use pub(super) to limit instantiation only to the Builder.
+    pub(super) log: Logger,
+    pub(super) config: Arc<Config>,
+    pub(super) filter_chain: Arc<FilterChain>,
+    pub(super) metrics: Metrics,
 }
 
 impl Server {
@@ -341,7 +342,7 @@ mod tests {
 
     use super::*;
     use crate::extensions::FilterRegistry;
-    use crate::proxy::ServerBuilder;
+    use crate::proxy::Builder;
 
     #[tokio::test]
     async fn run_server() {
@@ -377,7 +378,7 @@ mod tests {
             },
         });
 
-        let server = ServerBuilder::from(config).validate().unwrap().build();
+        let server = Builder::from(config).validate().unwrap().build();
         let (close, stop) = oneshot::channel::<()>();
         tokio::spawn(async move {
             server.run(stop).await.unwrap();
@@ -412,7 +413,7 @@ mod tests {
         });
 
         let (close, stop) = oneshot::channel::<()>();
-        let server = ServerBuilder::from(config).validate().unwrap().build();
+        let server = Builder::from(config).validate().unwrap().build();
         tokio::spawn(async move {
             server.run(stop).await.unwrap();
         });
@@ -451,7 +452,7 @@ mod tests {
         });
 
         let (close, stop) = oneshot::channel::<()>();
-        let server = ServerBuilder::from(config)
+        let server = Builder::from(config)
             .with_filter_registry(registry)
             .validate()
             .unwrap()
@@ -631,7 +632,7 @@ mod tests {
                 lb_policy: None,
             },
         });
-        let server = ServerBuilder::from(config).validate().unwrap().build();
+        let server = Builder::from(config).validate().unwrap().build();
 
         server.run_recv_from(
             lb_policy,
@@ -718,7 +719,7 @@ mod tests {
                 lb_policy: None,
             },
         });
-        let server = ServerBuilder::from(config).validate().unwrap().build();
+        let server = Builder::from(config).validate().unwrap().build();
         server.run_receive_packet(send_socket, recv_packet);
         assert_eq!(msg, wait.await.unwrap());
     }
@@ -805,7 +806,7 @@ mod tests {
                 lb_policy: None,
             },
         });
-        let server = ServerBuilder::from(config).validate().unwrap().build();
+        let server = Builder::from(config).validate().unwrap().build();
         server.run_prune_sessions(&sessions);
         Server::ensure_session(
             &log,

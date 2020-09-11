@@ -22,7 +22,7 @@ use slog::{info, o};
 
 use prometheus::Registry;
 use quilkin::config::Config;
-use quilkin::proxy::{logger, Metrics, ServerBuilder};
+use quilkin::proxy::{logger, Builder, Metrics};
 use tokio::signal;
 use tokio::sync::oneshot;
 
@@ -49,7 +49,7 @@ async fn main() {
     info!(log, "Starting Quilkin"; "version" => VERSION);
 
     let config = Arc::new(Config::from_reader(File::open(filename).unwrap()).unwrap());
-    let server = ServerBuilder::from(config)
+    let server = Builder::from(config)
         .with_log(base_logger)
         .with_metrics(Metrics::new(
             Some("[::]:9091".parse().unwrap()),

@@ -60,7 +60,7 @@ impl ValidationStatus for PendingValidation {
 }
 
 /// Represents the components needed to create a Server.
-pub struct ServerBuilder<V> {
+pub struct Builder<V> {
     log: Logger,
     config: Arc<Config>,
     filter_registry: FilterRegistry,
@@ -68,10 +68,10 @@ pub struct ServerBuilder<V> {
     validation_status: V,
 }
 
-impl From<Arc<Config>> for ServerBuilder<PendingValidation> {
+impl From<Arc<Config>> for Builder<PendingValidation> {
     fn from(config: Arc<Config>) -> Self {
         let log = logger();
-        ServerBuilder {
+        Builder {
             config,
             filter_registry: default_registry(&log),
             metrics: Metrics::default(),
@@ -81,7 +81,7 @@ impl From<Arc<Config>> for ServerBuilder<PendingValidation> {
     }
 }
 
-impl ServerBuilder<PendingValidation> {
+impl Builder<PendingValidation> {
     pub fn with_log(self, log: Logger) -> Self {
         Self { log, ..self }
     }
@@ -98,14 +98,14 @@ impl ServerBuilder<PendingValidation> {
     }
 
     // Validates the builder's config and filter configurations.
-    pub fn validate(self) -> Result<ServerBuilder<Validated>, Error> {
+    pub fn validate(self) -> Result<Builder<Validated>, Error> {
         let _ = self.config.validate()?;
         let filter_chain = Arc::new(FilterChain::try_create(
             self.config.clone(),
             &self.filter_registry,
             &self.metrics.registry,
         )?);
-        Ok(ServerBuilder {
+        Ok(Builder {
             log: self.log,
             config: self.config,
             metrics: self.metrics,
@@ -115,7 +115,7 @@ impl ServerBuilder<PendingValidation> {
     }
 }
 
-impl ServerBuilder<Validated> {
+impl Builder<Validated> {
     pub fn build(self) -> Server {
         Server {
             log: self.log.new(o!("source" => "server::Server")),

@@ -27,7 +27,7 @@ use tokio::sync::{mpsc, oneshot};
 
 use crate::config::{Config, EndPoint};
 use crate::extensions::{CreateFilterArgs, Error, Filter, FilterFactory, FilterRegistry};
-use crate::proxy::{Metrics, ServerBuilder};
+use crate::proxy::{Builder, Metrics};
 
 // noop_endpoint returns an endpoint for data that should go nowhere.
 pub fn noop_endpoint() -> EndPoint {
@@ -170,7 +170,7 @@ pub fn run_proxy_with_metrics(
     metrics: Metrics,
 ) -> Box<dyn FnOnce()> {
     let (close, stop) = oneshot::channel::<()>();
-    let proxy = ServerBuilder::from(Arc::new(config))
+    let proxy = Builder::from(Arc::new(config))
         .with_filter_registry(registry)
         .with_metrics(metrics)
         .validate()
