@@ -90,7 +90,12 @@ impl Filter for FilterChain {
             match f.on_downstream_receive(ctx) {
                 None => return None,
                 Some(response) => {
-                    ctx = DownstreamContext::new(response.endpoints, from, response.contents)
+                    ctx = DownstreamContext::new(
+                        response.endpoints,
+                        from,
+                        response.contents,
+                        response.values,
+                    )
                 }
             }
         }
@@ -105,7 +110,13 @@ impl Filter for FilterChain {
             match f.on_upstream_receive(ctx) {
                 None => return None,
                 Some(response) => {
-                    ctx = UpstreamContext::new(endpoint, from, to, response.contents);
+                    ctx = UpstreamContext::new(
+                        endpoint,
+                        from,
+                        to,
+                        response.contents,
+                        response.values,
+                    );
                 }
             }
         }
@@ -124,6 +135,7 @@ mod tests {
     use crate::test_utils::{logger, noop_endpoint, TestFilter};
 
     use super::*;
+    use std::collections::HashMap;
 
     #[test]
     fn from_config() {
@@ -191,6 +203,7 @@ mod tests {
                 endpoints_fixture.clone(),
                 "127.0.0.1:70".parse().unwrap(),
                 "hello".as_bytes().to_vec(),
+                HashMap::new(),
             ))
             .unwrap();
 
@@ -201,6 +214,12 @@ mod tests {
             "hello:odr:127.0.0.1:70",
             from_utf8(response.contents.as_slice()).unwrap()
         );
+        assert_eq!(
+            "receive",
+            response.values["downstream"]
+                .downcast_ref::<String>()
+                .unwrap()
+        );
 
         let response = chain
             .on_upstream_receive(UpstreamContext::new(
@@ -208,8 +227,16 @@ mod tests {
                 endpoints_fixture[0].address,
                 "127.0.0.1:70".parse().unwrap(),
                 "hello".as_bytes().to_vec(),
+                HashMap::new(),
             ))
             .unwrap();
+
+        assert_eq!(
+            "receive",
+            response.values["upstream"]
+                .downcast_ref::<String>()
+                .unwrap()
+        );
         assert_eq!(
             "hello:our:one:127.0.0.1:80:127.0.0.1:70",
             from_utf8(response.contents.as_slice()).unwrap()
@@ -227,6 +254,7 @@ mod tests {
                 endpoints_fixture.clone(),
                 "127.0.0.1:70".parse().unwrap(),
                 "hello".as_bytes().to_vec(),
+                HashMap::new(),
             ))
             .unwrap();
 
@@ -238,6 +266,12 @@ mod tests {
             "hello:odr:127.0.0.1:70:odr:127.0.0.1:70",
             from_utf8(response.contents.as_slice()).unwrap()
         );
+        assert_eq!(
+            "receive:receive",
+            response.values["downstream"]
+                .downcast_ref::<String>()
+                .unwrap()
+        );
 
         let response = chain
             .on_upstream_receive(UpstreamContext::new(
@@ -245,11 +279,18 @@ mod tests {
                 endpoints_fixture[0].address,
                 "127.0.0.1:70".parse().unwrap(),
                 "hello".as_bytes().to_vec(),
+                HashMap::new(),
             ))
             .unwrap();
         assert_eq!(
             "hello:our:one:127.0.0.1:80:127.0.0.1:70:our:one:127.0.0.1:80:127.0.0.1:70",
             from_utf8(response.contents.as_slice()).unwrap()
+        );
+        assert_eq!(
+            "receive:receive",
+            response.values["upstream"]
+                .downcast_ref::<String>()
+                .unwrap()
         );
     }
 }

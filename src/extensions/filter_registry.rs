@@ -14,14 +14,15 @@
  * limitations under the License.
  */
 
+use std::any::Any;
 use std::collections::HashMap;
 use std::fmt;
+use std::marker::PhantomData;
 use std::net::SocketAddr;
 
 use prometheus::{Error as MetricsError, Registry};
 
 use crate::config::{ConnectionConfig, EndPoint, ValidationError};
-use std::marker::PhantomData;
 
 /// Contains the input arguments to [on_downstream_receive](crate::extensions::filter_registry::Filter::on_downstream_receive)
 pub struct DownstreamContext {
@@ -31,6 +32,8 @@ pub struct DownstreamContext {
     pub from: SocketAddr,
     /// Contents of the received packet.
     pub contents: Vec<u8>,
+    /// Arbitrary values that can be passed from one filter to another
+    pub values: HashMap<String, Box<dyn Any + Send>>,
     // Enforce using constructor to create this struct.
     phantom: PhantomData<()>,
 }
@@ -50,6 +53,8 @@ pub struct DownstreamResponse {
     pub endpoints: Vec<EndPoint>,
     /// Contents of the packet to be forwarded.
     pub contents: Vec<u8>,
+    /// Arbitrary values that can be passed from one filter to another
+    pub values: HashMap<String, Box<dyn Any + Send>>,
     // Enforce using constructor to create this struct.
     phantom: PhantomData<()>,
 }
@@ -64,6 +69,8 @@ pub struct UpstreamContext<'a> {
     pub to: SocketAddr,
     /// Contents of the received packet.
     pub contents: Vec<u8>,
+    /// Arbitrary values that can be passed from one filter to another
+    pub values: HashMap<String, Box<dyn Any + Send>>,
     // Enforce using constructor to create this struct.
     phantom: PhantomData<()>,
 }
@@ -81,17 +88,25 @@ pub struct UpstreamContext<'a> {
 pub struct UpstreamResponse {
     /// Contents of the packet to be sent back to the original sender.
     pub contents: Vec<u8>,
+    /// Arbitrary values that can be passed from one filter to another
+    pub values: HashMap<String, Box<dyn Any + Send>>,
     // Enforce using constructor to create this struct.
     phantom: PhantomData<()>,
 }
 
 impl DownstreamContext {
     /// Creates a new [`DownstreamContext`]
-    pub fn new(endpoints: Vec<EndPoint>, from: SocketAddr, contents: Vec<u8>) -> Self {
+    pub fn new(
+        endpoints: Vec<EndPoint>,
+        from: SocketAddr,
+        contents: Vec<u8>,
+        values: HashMap<String, Box<dyn Any + Send>>,
+    ) -> Self {
         Self {
             endpoints,
             from,
             contents,
+            values,
             phantom: PhantomData,
         }
     }
@@ -102,6 +117,7 @@ impl From<DownstreamContext> for DownstreamResponse {
         Self {
             endpoints: ctx.endpoints,
             contents: ctx.contents,
+            values: ctx.values,
             phantom: ctx.phantom,
         }
     }
@@ -114,12 +130,14 @@ impl UpstreamContext<'_> {
         from: SocketAddr,
         to: SocketAddr,
         contents: Vec<u8>,
+        values: HashMap<String, Box<dyn Any + Send>>,
     ) -> UpstreamContext {
         UpstreamContext {
             endpoint,
             from,
             to,
             contents,
+            values,
             phantom: PhantomData,
         }
     }
@@ -130,6 +148,7 @@ impl From<UpstreamContext<'_>> for UpstreamResponse {
         Self {
             contents: ctx.contents,
             phantom: ctx.phantom,
+            values: ctx.values,
         }
     }
 }
@@ -316,10 +335,16 @@ mod tests {
         };
 
         assert!(filter
-            .on_downstream_receive(DownstreamContext::new(vec![], addr, vec![]))
+            .on_downstream_receive(DownstreamContext::new(vec![], addr, vec![], HashMap::new()))
             .is_some());
         assert!(filter
-            .on_upstream_receive(UpstreamContext::new(&endpoint, addr, addr, vec![]))
+            .on_upstream_receive(UpstreamContext::new(
+                &endpoint,
+                addr,
+                addr,
+                vec![],
+                HashMap::new()
+            ))
             .is_some());
     }
 }

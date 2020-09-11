@@ -32,6 +32,7 @@ use tokio::time::{Duration, Instant};
 use super::metrics::Metrics;
 use crate::config::EndPoint;
 use crate::extensions::{Filter, FilterChain, UpstreamContext};
+use std::collections::HashMap;
 
 /// SESSION_TIMEOUT_SECONDS is the default session timeout - which is one minute.
 pub const SESSION_TIMEOUT_SECONDS: u64 = 60;
@@ -210,9 +211,13 @@ impl Session {
         debug!(log, "Received packet"; "from" => from, "endpoint_name" => &endpoint.name, "endpoint_addr" => &endpoint.address, "contents" => from_utf8(packet).unwrap());
         Session::inc_expiration(expiration).await;
 
-        if let Some(response) =
-            chain.on_upstream_receive(UpstreamContext::new(endpoint, from, to, packet.to_vec()))
-        {
+        if let Some(response) = chain.on_upstream_receive(UpstreamContext::new(
+            endpoint,
+            from,
+            to,
+            packet.to_vec(),
+            HashMap::new(),
+        )) {
             if let Err(err) = sender.send(Packet::new(to, response.contents)).await {
                 metrics.errors_total.inc();
                 error!(log, "Error sending packet to channel"; "error" => %err);
