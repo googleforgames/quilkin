@@ -19,35 +19,137 @@ use std::fmt;
 use std::net::SocketAddr;
 
 use prometheus::{Error as MetricsError, Registry};
-use serde::export::Formatter;
 
 use crate::config::{ConnectionConfig, EndPoint};
+use std::marker::PhantomData;
+
+/// Contains the input arguments to [on_downstream_receive](crate::extensions::filter_registry::Filter::on_downstream_receive)
+pub struct DownstreamContext {
+    /// The upstream endpoints that the packet will be forwarded to.
+    pub endpoints: Vec<EndPoint>,
+    /// The source of the received packet.
+    pub from: SocketAddr,
+    /// Contents of the received packet.
+    pub contents: Vec<u8>,
+    // Enforce using constructor to create this struct.
+    phantom: PhantomData<()>,
+}
+
+/// Contains the output of [on_downstream_receive](crate::extensions::filter_registry::Filter::on_downstream_receive)
+///
+/// New instances are created from a [`DownstreamContext`]
+///
+/// ```rust
+/// # use quilkin::extensions::{DownstreamContext, DownstreamResponse};
+///   fn on_downstream_receive(ctx: DownstreamContext) -> Option<DownstreamResponse> {
+///       Some(ctx.into())
+///   }
+/// ```
+pub struct DownstreamResponse {
+    /// The upstream endpoints that the packet should be forwarded to.
+    pub endpoints: Vec<EndPoint>,
+    /// Contents of the packet to be forwarded.
+    pub contents: Vec<u8>,
+    // Enforce using constructor to create this struct.
+    phantom: PhantomData<()>,
+}
+
+/// Contains the input arguments to [on_upstream_receive](crate::extensions::filter_registry::Filter::on_upstream_receive)
+pub struct UpstreamContext<'a> {
+    /// The upstream endpoint that we're expecting packets from.
+    pub endpoint: &'a EndPoint,
+    /// The source of the received packet.
+    pub from: SocketAddr,
+    /// The destination of the received packet.
+    pub to: SocketAddr,
+    /// Contents of the received packet.
+    pub contents: Vec<u8>,
+    // Enforce using constructor to create this struct.
+    phantom: PhantomData<()>,
+}
+
+/// Contains the output of [on_upstream_receive](crate::extensions::filter_registry::Filter::on_upstream_receive)
+///
+/// New instances are created from an [`UpstreamContext`]
+///
+/// ```rust
+/// # use quilkin::extensions::{UpstreamContext, UpstreamResponse};
+///   fn on_upstream_receive(ctx: UpstreamContext) -> Option<UpstreamResponse> {
+///       Some(ctx.into())
+///   }
+/// ```
+pub struct UpstreamResponse {
+    /// Contents of the packet to be sent back to the original sender.
+    pub contents: Vec<u8>,
+    // Enforce using constructor to create this struct.
+    phantom: PhantomData<()>,
+}
+
+impl DownstreamContext {
+    /// Creates a new [`DownstreamContext`]
+    pub fn new(endpoints: Vec<EndPoint>, from: SocketAddr, contents: Vec<u8>) -> Self {
+        Self {
+            endpoints,
+            from,
+            contents,
+            phantom: PhantomData,
+        }
+    }
+}
+
+impl From<DownstreamContext> for DownstreamResponse {
+    fn from(ctx: DownstreamContext) -> Self {
+        Self {
+            endpoints: ctx.endpoints,
+            contents: ctx.contents,
+            phantom: ctx.phantom,
+        }
+    }
+}
+
+impl UpstreamContext<'_> {
+    /// Creates a new [`UpstreamContext`]
+    pub fn new(
+        endpoint: &EndPoint,
+        from: SocketAddr,
+        to: SocketAddr,
+        contents: Vec<u8>,
+    ) -> UpstreamContext {
+        UpstreamContext {
+            endpoint,
+            from,
+            to,
+            contents,
+            phantom: PhantomData,
+        }
+    }
+}
+
+impl From<UpstreamContext<'_>> for UpstreamResponse {
+    fn from(ctx: UpstreamContext) -> Self {
+        Self {
+            contents: ctx.contents,
+            phantom: ctx.phantom,
+        }
+    }
+}
 
 /// Filter is a trait for routing and manipulating packets.
 pub trait Filter: Send + Sync {
     /// on_downstream_receive filters packets received from the local port, and potentially sends them
     /// to configured endpoints.
-    /// This function should return the array of endpoints that the packet should be sent to,
-    /// and the packet that should be sent (which may be manipulated) as well.
+    /// This function should return a [`DownstreamResponse`] containing the array of
+    /// endpoints that the packet should be sent to and the packet that should be
+    /// sent (which may be manipulated) as well.
     /// If the packet should be rejected, return None.
-    fn on_downstream_receive(
-        &self,
-        endpoints: &[EndPoint],
-        from: SocketAddr,
-        contents: Vec<u8>,
-    ) -> Option<(Vec<EndPoint>, Vec<u8>)>;
+    fn on_downstream_receive(&self, ctx: DownstreamContext) -> Option<DownstreamResponse>;
 
-    /// on_upstream_receive filters packets received from `from`, to a given endpoint,
-    /// that are going back to the original sender.
-    /// This function should return the packet to be sent (which may be manipulated).
+    /// on_upstream_receive filters packets received upstream and destined
+    /// for a given endpoint, that are going back to the original sender.
+    /// This function should return an [`UpstreamResponse`] containing the packet to
+    /// be sent (which may be manipulated).
     /// If the packet should be rejected, return None.
-    fn on_upstream_receive(
-        &self,
-        endpoint: &EndPoint,
-        from: SocketAddr,
-        to: SocketAddr,
-        contents: Vec<u8>,
-    ) -> Option<Vec<u8>>;
+    fn on_upstream_receive(&self, ctx: UpstreamContext) -> Option<UpstreamResponse>;
 }
 
 #[derive(Debug, PartialEq)]
@@ -60,7 +162,7 @@ pub enum Error {
 }
 
 impl fmt::Display for Error {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Error::NotFound(key) => write!(f, "filter {} is not found", key),
             Error::FieldInvalid { field, reason } => {
@@ -163,22 +265,11 @@ mod tests {
     struct TestFilter {}
 
     impl Filter for TestFilter {
-        fn on_downstream_receive(
-            &self,
-            _: &[EndPoint],
-            _: SocketAddr,
-            _: Vec<u8>,
-        ) -> Option<(Vec<EndPoint>, Vec<u8>)> {
+        fn on_downstream_receive(&self, _: DownstreamContext) -> Option<DownstreamResponse> {
             None
         }
 
-        fn on_upstream_receive(
-            &self,
-            _: &EndPoint,
-            _: SocketAddr,
-            _: SocketAddr,
-            _: Vec<u8>,
-        ) -> Option<Vec<u8>> {
+        fn on_upstream_receive(&self, _: UpstreamContext) -> Option<UpstreamResponse> {
             None
         }
     }
@@ -219,10 +310,10 @@ mod tests {
         };
 
         assert!(filter
-            .on_downstream_receive(&vec![], addr, vec![])
+            .on_downstream_receive(DownstreamContext::new(vec![], addr, vec![]))
             .is_some());
         assert!(filter
-            .on_upstream_receive(&endpoint, addr, addr, vec![])
+            .on_upstream_receive(UpstreamContext::new(&endpoint, addr, addr, vec![]))
             .is_some());
     }
 }

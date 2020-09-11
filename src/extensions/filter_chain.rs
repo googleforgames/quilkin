@@ -15,11 +15,13 @@
  */
 
 use std::io::{Error, ErrorKind, Result};
-use std::net::SocketAddr;
 use std::sync::Arc;
 
-use crate::config::{Config, EndPoint};
-use crate::extensions::{CreateFilterArgs, Filter, FilterRegistry};
+use crate::config::Config;
+use crate::extensions::{
+    CreateFilterArgs, DownstreamContext, DownstreamResponse, Filter, FilterRegistry,
+    UpstreamContext, UpstreamResponse,
+};
 use prometheus::Registry;
 
 /// FilterChain implements a chain of Filters amd the implementation
@@ -66,43 +68,32 @@ impl FilterChain {
 }
 
 impl Filter for FilterChain {
-    fn on_downstream_receive(
-        &self,
-        endpoints: &[EndPoint],
-        from: SocketAddr,
-        contents: Vec<u8>,
-    ) -> Option<(Vec<EndPoint>, Vec<u8>)> {
-        let mut e = endpoints.to_vec();
-        let mut c = contents;
+    fn on_downstream_receive(&self, mut ctx: DownstreamContext) -> Option<DownstreamResponse> {
+        let from = ctx.from;
         for f in &self.filters {
-            match f.on_downstream_receive(&e, from, c) {
+            match f.on_downstream_receive(ctx) {
                 None => return None,
-                Some((endpoints, contents)) => {
-                    e = endpoints;
-                    c = contents;
+                Some(response) => {
+                    ctx = DownstreamContext::new(response.endpoints, from, response.contents)
                 }
             }
         }
-        Some((e, c))
+        Some(ctx.into())
     }
 
-    fn on_upstream_receive(
-        &self,
-        endpoint: &EndPoint,
-        from: SocketAddr,
-        to: SocketAddr,
-        contents: Vec<u8>,
-    ) -> Option<Vec<u8>> {
-        let mut c = contents;
+    fn on_upstream_receive(&self, mut ctx: UpstreamContext) -> Option<UpstreamResponse> {
+        let endpoint = ctx.endpoint;
+        let from = ctx.from;
+        let to = ctx.to;
         for f in &self.filters {
-            match f.on_upstream_receive(&endpoint, from, to, c) {
+            match f.on_upstream_receive(ctx) {
                 None => return None,
-                Some(contents) => {
-                    c = contents;
+                Some(response) => {
+                    ctx = UpstreamContext::new(endpoint, from, to, response.contents);
                 }
             }
         }
-        Some(c)
+        Some(ctx.into())
     }
 }
 
@@ -111,7 +102,7 @@ mod tests {
     use std::str::from_utf8;
 
     use crate::config;
-    use crate::config::{ConnectionConfig, Local};
+    use crate::config::{ConnectionConfig, EndPoint, Local};
     use crate::extensions::filters::DebugFilterFactory;
     use crate::extensions::{default_registry, FilterFactory};
     use crate::test_utils::{logger, noop_endpoint, TestFilter};
@@ -179,33 +170,33 @@ mod tests {
 
         let endpoints_fixture = endpoints();
 
-        let (eps, content) = chain
-            .on_downstream_receive(
-                &endpoints_fixture,
+        let response = chain
+            .on_downstream_receive(DownstreamContext::new(
+                endpoints_fixture.clone(),
                 "127.0.0.1:70".parse().unwrap(),
                 "hello".as_bytes().to_vec(),
-            )
+            ))
             .unwrap();
 
         let mut expected = endpoints_fixture.clone();
         expected.push(noop_endpoint());
-        assert_eq!(expected, eps);
+        assert_eq!(expected, response.endpoints);
         assert_eq!(
             "hello:odr:127.0.0.1:70",
-            from_utf8(content.as_slice()).unwrap()
+            from_utf8(response.contents.as_slice()).unwrap()
         );
 
-        let content = chain
-            .on_upstream_receive(
+        let response = chain
+            .on_upstream_receive(UpstreamContext::new(
                 &endpoints_fixture[0],
                 endpoints_fixture[0].address,
                 "127.0.0.1:70".parse().unwrap(),
                 "hello".as_bytes().to_vec(),
-            )
+            ))
             .unwrap();
         assert_eq!(
             "hello:our:one:127.0.0.1:80:127.0.0.1:70",
-            from_utf8(content.as_slice()).unwrap()
+            from_utf8(response.contents.as_slice()).unwrap()
         );
     }
 
@@ -215,34 +206,34 @@ mod tests {
 
         let endpoints_fixture = endpoints();
 
-        let (eps, content) = chain
-            .on_downstream_receive(
-                &endpoints_fixture,
+        let response = chain
+            .on_downstream_receive(DownstreamContext::new(
+                endpoints_fixture.clone(),
                 "127.0.0.1:70".parse().unwrap(),
                 "hello".as_bytes().to_vec(),
-            )
+            ))
             .unwrap();
 
         let mut expected = endpoints_fixture.clone();
         expected.push(noop_endpoint());
         expected.push(noop_endpoint());
-        assert_eq!(expected, eps);
+        assert_eq!(expected, response.endpoints);
         assert_eq!(
             "hello:odr:127.0.0.1:70:odr:127.0.0.1:70",
-            from_utf8(content.as_slice()).unwrap()
+            from_utf8(response.contents.as_slice()).unwrap()
         );
 
-        let content = chain
-            .on_upstream_receive(
+        let response = chain
+            .on_upstream_receive(UpstreamContext::new(
                 &endpoints_fixture[0],
                 endpoints_fixture[0].address,
                 "127.0.0.1:70".parse().unwrap(),
                 "hello".as_bytes().to_vec(),
-            )
+            ))
             .unwrap();
         assert_eq!(
             "hello:our:one:127.0.0.1:80:127.0.0.1:70:our:one:127.0.0.1:80:127.0.0.1:70",
-            from_utf8(content.as_slice()).unwrap()
+            from_utf8(response.contents.as_slice()).unwrap()
         );
     }
 }
