@@ -26,7 +26,7 @@ client:
 # ";
 #   let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 #   assert_eq!(config.filters.len(), 1);
-#   quilkin::proxy::ServerBuilder::from(std::sync::Arc::new(config)).validate().unwrap();
+#   quilkin::proxy::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
 # }
 ```
 To configure a rate limiter, we specify the maximum rate at which the proxy is allowed to forward packets. In the example above, we configured the proxy to forward a maximum of 1000 packets per 500ms (2000 packets/second).

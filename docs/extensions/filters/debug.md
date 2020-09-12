@@ -25,7 +25,7 @@ client:
 # ";
 # let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 # assert_eq!(config.filters.len(), 1);
-# quilkin::proxy::ServerBuilder::from(std::sync::Arc::new(config)).validate().unwrap();
+# quilkin::proxy::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
 ```
 
 ### Configuration Options
