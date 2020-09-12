@@ -29,7 +29,7 @@ use tokio::sync::{Mutex, RwLock};
 use tokio::time::{delay_for, Duration, Instant};
 
 use crate::config::{Config, ConnectionConfig, EndPoint};
-use crate::extensions::{Filter, FilterChain};
+use crate::extensions::{DownstreamContext, Filter, FilterChain};
 use crate::load_balancer_policy::LoadBalancerPolicy;
 use crate::proxy::sessions::{Packet, Session, SESSION_TIMEOUT_SECONDS};
 
@@ -161,14 +161,14 @@ impl Server {
                 from_utf8(packet).unwrap()
             );
 
-            let result = chain.on_downstream_receive(
-                &lb_policy.choose_endpoints(),
+            let result = chain.on_downstream_receive(DownstreamContext::new(
+                lb_policy.choose_endpoints(),
                 recv_addr,
                 packet.to_vec(),
-            );
+            ));
 
-            if let Some((endpoints, packet)) = result {
-                for endpoint in endpoints.iter() {
+            if let Some(response) = result {
+                for endpoint in response.endpoints.iter() {
                     if let Err(err) = Server::ensure_session(
                         &log,
                         &metrics,
@@ -189,7 +189,7 @@ impl Server {
                     match map.get(&key) {
                         Some(mtx) => {
                             let mut session = mtx.lock().await;
-                            match session.send_to(packet.as_slice()).await {
+                            match session.send_to(response.contents.as_slice()).await {
                                 Ok(_) => {
                                     session.increment_expiration().await;
                                 }

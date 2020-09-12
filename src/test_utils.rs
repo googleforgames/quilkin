@@ -26,7 +26,10 @@ use tokio::net::UdpSocket;
 use tokio::sync::{mpsc, oneshot};
 
 use crate::config::{Config, EndPoint};
-use crate::extensions::{CreateFilterArgs, Error, Filter, FilterFactory, FilterRegistry};
+use crate::extensions::{
+    CreateFilterArgs, DownstreamContext, DownstreamResponse, Error, Filter, FilterFactory,
+    FilterRegistry, UpstreamContext, UpstreamResponse,
+};
 use crate::proxy::{Builder, Metrics};
 
 // noop_endpoint returns an endpoint for data that should go nowhere.
@@ -53,33 +56,22 @@ impl FilterFactory for TestFilterFactory {
 pub struct TestFilter {}
 
 impl Filter for TestFilter {
-    fn on_downstream_receive(
-        &self,
-        endpoints: &[EndPoint],
-        from: SocketAddr,
-        contents: Vec<u8>,
-    ) -> Option<(Vec<EndPoint>, Vec<u8>)> {
-        let mut e = endpoints.to_vec();
+    fn on_downstream_receive(&self, mut ctx: DownstreamContext) -> Option<DownstreamResponse> {
         // we're going to add an extra endpoint, so we can test for the change,
         // but also so we don't break any tests are expecting traffic at the supplied
         // address and port
-        e.push(noop_endpoint());
+        ctx.endpoints.push(noop_endpoint());
 
-        let mut c = contents;
-        c.append(&mut format!(":odr:{}", from).into_bytes());
-        Some((e, c))
+        ctx.contents
+            .append(&mut format!(":odr:{}", ctx.from).into_bytes());
+        Some(ctx.into())
     }
 
-    fn on_upstream_receive(
-        &self,
-        endpoint: &EndPoint,
-        from: SocketAddr,
-        to: SocketAddr,
-        contents: Vec<u8>,
-    ) -> Option<Vec<u8>> {
-        let mut c = contents;
-        c.append(&mut format!(":our:{}:{}:{}", endpoint.name, from, to).into_bytes());
-        Some(c)
+    fn on_upstream_receive(&self, mut ctx: UpstreamContext) -> Option<UpstreamResponse> {
+        ctx.contents.append(
+            &mut format!(":our:{}:{}:{}", ctx.endpoint.name, ctx.from, ctx.to).into_bytes(),
+        );
+        Some(ctx.into())
     }
 }
 
@@ -197,11 +189,15 @@ where
     let from = "127.0.0.1:90".parse().unwrap();
     let contents = "hello".to_string().into_bytes();
 
-    match filter.on_downstream_receive(&endpoints, from, contents.clone()) {
+    match filter.on_downstream_receive(DownstreamContext::new(
+        endpoints.clone(),
+        from,
+        contents.clone(),
+    )) {
         None => unreachable!("should return a result"),
-        Some((result_endpoints, result_contents)) => {
-            assert_eq!(endpoints, result_endpoints);
-            assert_eq!(contents, result_contents);
+        Some(response) => {
+            assert_eq!(endpoints, response.endpoints);
+            assert_eq!(contents, response.contents);
         }
     }
 }
@@ -218,14 +214,14 @@ where
     };
     let contents = "hello".to_string().into_bytes();
 
-    match filter.on_upstream_receive(
+    match filter.on_upstream_receive(UpstreamContext::new(
         &endpoint,
         endpoint.address,
         "127.0.0.1:70".parse().unwrap(),
         contents.clone(),
-    ) {
+    )) {
         None => unreachable!("should return a result"),
-        Some(result_contents) => assert_eq!(contents, result_contents),
+        Some(response) => assert_eq!(contents, response.contents),
     }
 }
 
