@@ -22,18 +22,18 @@ mod tests {
 
     use quilkin::config::{Config, ConnectionConfig, EndPoint, Filter, Local};
     use quilkin::extensions::filters::RateLimitFilterFactory;
-    use quilkin::extensions::{default_registry, FilterFactory};
-    use quilkin::test_utils::{echo_server, logger, recv_multiple_packets, run_proxy};
+    use quilkin::extensions::FilterFactory;
+    use quilkin::test_utils::TestHelper;
 
     #[tokio::test]
     async fn local_rate_limit_filter() {
-        let base_logger = logger();
+        let mut t = TestHelper::default();
 
         let yaml = "
 max_packets: 2
 period: 1s
 ";
-        let echo = echo_server().await;
+        let echo = t.run_echo_server().await;
 
         let server_port = 12346;
         let server_config = Config {
@@ -50,10 +50,9 @@ period: 1s
                 }],
             },
         };
+        t.run_server(server_config);
 
-        let close_server = run_proxy(&base_logger, default_registry(&base_logger), server_config);
-
-        let (mut recv_chan, mut send) = recv_multiple_packets(&base_logger).await;
+        let (mut recv_chan, mut send) = t.open_socket_and_recv_multiple_packets().await;
 
         let server_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port);
 
@@ -71,7 +70,5 @@ period: 1s
         tokio::time::delay_for(std::time::Duration::from_millis(100)).await;
         // Check that we do not get any response.
         assert!(recv_chan.try_recv().is_err());
-
-        close_server();
     }
 }
