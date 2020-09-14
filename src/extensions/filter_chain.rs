@@ -14,15 +14,14 @@
  * limitations under the License.
  */
 
-use std::io::{Error, ErrorKind, Result};
-use std::sync::Arc;
-
-use crate::config::Config;
+use crate::config::{Config, ValidationError};
 use crate::extensions::{
     CreateFilterArgs, DownstreamContext, DownstreamResponse, Filter, FilterRegistry,
     UpstreamContext, UpstreamResponse,
 };
 use prometheus::Registry;
+use std::fmt::{self, Formatter};
+use std::sync::Arc;
 
 /// FilterChain implements a chain of Filters amd the implementation
 /// of passing the information between Filters for each filter function
@@ -34,19 +33,36 @@ pub struct FilterChain {
     filters: Vec<Box<dyn Filter>>,
 }
 
+/// Represents an error while creating a `FilterChain`
+#[derive(Debug)]
+pub struct CreateFilterError {
+    filter_name: String,
+    error: ValidationError,
+}
+
+impl fmt::Display for CreateFilterError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "failed to create filter {}: {}",
+            self.filter_name,
+            format!("{}", self.error)
+        )
+    }
+}
+
 impl FilterChain {
     pub fn new(filters: Vec<Box<dyn Filter>>) -> Self {
         FilterChain { filters }
     }
 
-    // from_arguments returns a FilterChain from the provided arguments.
-    // Will return a ErrorKind::InvalidInput if there is an issue with the passed
-    // in Configuration.
-    pub fn from_arguments(
+    /// Validates the filter configurations in the provided config and constructs
+    /// a FilterChain if all configurations are valid.
+    pub fn try_create(
         config: Arc<Config>,
         filter_registry: &FilterRegistry,
         metrics_registry: &Registry,
-    ) -> Result<FilterChain> {
+    ) -> std::result::Result<FilterChain, CreateFilterError> {
         let mut filters = Vec::<Box<dyn Filter>>::new();
         for filter_config in &config.filters {
             match filter_registry.get(
@@ -56,10 +72,10 @@ impl FilterChain {
             ) {
                 Ok(filter) => filters.push(filter),
                 Err(err) => {
-                    return Err(Error::new(
-                        ErrorKind::InvalidInput,
-                        format!("Issue with filter '{}': {}", filter_config.name, err),
-                    ));
+                    return Err(CreateFilterError {
+                        filter_name: filter_config.name.clone(),
+                        error: err.into(),
+                    });
                 }
             }
         }
@@ -129,7 +145,7 @@ mod tests {
         });
 
         let registry = default_registry(&log);
-        let chain = FilterChain::from_arguments(config, &registry, &Registry::default()).unwrap();
+        let chain = FilterChain::try_create(config, &registry, &Registry::default()).unwrap();
         assert_eq!(1, chain.filters.len());
 
         // uh oh, something went wrong
@@ -145,7 +161,7 @@ mod tests {
                 lb_policy: None,
             },
         });
-        let result = FilterChain::from_arguments(config, &registry, &Registry::default());
+        let result = FilterChain::try_create(config, &registry, &Registry::default());
         assert!(result.is_err());
     }
 

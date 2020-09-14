@@ -57,7 +57,7 @@ mod tests {
 
         let mut registry = default_registry(&base_logger);
         registry.insert(TestFilterFactory {});
-        let close_server = run_proxy(&base_logger, registry, server_config);
+        let close_server = run_proxy(registry, server_config);
 
         // create a local client
         let client_port = 12347;
@@ -80,7 +80,7 @@ mod tests {
 
         let mut registry = default_registry(&base_logger);
         registry.insert(TestFilterFactory {});
-        let close_client = run_proxy(&base_logger, registry, client_config);
+        let close_client = run_proxy(registry, client_config);
 
         // let's send the packet
         let (mut recv_chan, mut send) = recv_multiple_packets(&base_logger).await;
@@ -139,7 +139,7 @@ mod tests {
                 }],
             },
         };
-        let close_server = run_proxy(&base_logger, default_registry(&base_logger), server_config);
+        let close_server = run_proxy(default_registry(&base_logger), server_config);
 
         let mut map = Mapping::new();
         map.insert(Value::from("id"), Value::from("client"));
@@ -160,7 +160,7 @@ mod tests {
                 lb_policy: None,
             },
         };
-        let close_client = run_proxy(&base_logger, default_registry(&base_logger), client_config);
+        let close_client = run_proxy(default_registry(&base_logger), client_config);
 
         // let's send the packet
         let (mut recv_chan, mut send) = recv_multiple_packets(&base_logger).await;
