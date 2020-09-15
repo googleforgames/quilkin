@@ -30,7 +30,7 @@ use crate::extensions::{
     default_registry, CreateFilterArgs, DownstreamContext, DownstreamResponse, Error, Filter,
     FilterFactory, FilterRegistry, UpstreamContext, UpstreamResponse,
 };
-use crate::proxy::{Metrics, Server};
+use crate::proxy::{Builder, Metrics};
 
 // noop_endpoint returns an endpoint for data that should go nowhere.
 pub fn noop_endpoint() -> EndPoint {
@@ -265,10 +265,16 @@ impl TestHelper {
     ) {
         let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
         self.server_shutdown_tx.push(Some(shutdown_tx));
-        let log = self.log.clone();
         tokio::spawn(async move {
-            let server = Server::new(log, filter_registry, metrics);
-            server.run(Arc::new(config), shutdown_rx).await.unwrap();
+            Builder::from(Arc::new(config))
+                .with_filter_registry(filter_registry)
+                .with_metrics(metrics)
+                .validate()
+                .unwrap()
+                .build()
+                .run(shutdown_rx)
+                .await
+                .unwrap();
         });
     }
 
@@ -288,6 +294,33 @@ impl TestHelper {
             }
         }
     }
+    // =======
+    // // run_proxy creates a instance of the Server proxy and runs it, returning a cancel function
+    // pub fn run_proxy(registry: FilterRegistry, config: Config) -> Box<dyn FnOnce()> {
+    //     run_proxy_with_metrics(registry, config, Metrics::default())
+    // }
+    //
+    // // run_proxy_with_metrics creates a instance of the Server proxy and
+    // // runs it, returning a cancel function
+    // pub fn run_proxy_with_metrics(
+    //     registry: FilterRegistry,
+    //     config: Config,
+    //     metrics: Metrics,
+    // ) -> Box<dyn FnOnce()> {
+    //     let (close, stop) = oneshot::channel::<()>();
+    //     let proxy = Builder::from(Arc::new(config))
+    //         .with_filter_registry(registry)
+    //         .with_metrics(metrics)
+    //         .validate()
+    //         .unwrap()
+    //         .build();
+    //     // run the proxy
+    //     tokio::spawn(async move {
+    //         proxy.run(stop).await.unwrap();
+    //     });
+    //
+    //     Box::new(|| close.send(()).unwrap())
+    // >>>>>>> master
 }
 
 /// assert that on_downstream_receive makes no changes

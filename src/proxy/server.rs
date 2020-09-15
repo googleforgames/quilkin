@@ -20,7 +20,7 @@ use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::str::from_utf8;
 use std::sync::Arc;
 
-use slog::{debug, error, info, o, warn, Logger};
+use slog::{debug, error, info, warn, Logger};
 use tokio::io::Result;
 use tokio::net::udp::{RecvHalf, SendHalf};
 use tokio::net::UdpSocket;
@@ -29,7 +29,7 @@ use tokio::sync::{Mutex, RwLock};
 use tokio::time::{delay_for, Duration, Instant};
 
 use crate::config::{Config, ConnectionConfig, EndPoint};
-use crate::extensions::{DownstreamContext, Filter, FilterChain, FilterRegistry};
+use crate::extensions::{DownstreamContext, Filter, FilterChain};
 use crate::load_balancer_policy::LoadBalancerPolicy;
 use crate::proxy::sessions::{Packet, Session, SESSION_TIMEOUT_SECONDS};
 
@@ -39,27 +39,18 @@ type SessionMap = Arc<RwLock<HashMap<(SocketAddr, SocketAddr), Mutex<Session>>>>
 
 /// Server is the UDP server main implementation
 pub struct Server {
-    log: Logger,
-    /// registry for the set of available filters
-    filter_registry: FilterRegistry,
-    metrics: Metrics,
+    // We use pub(super) to limit instantiation only to the Builder.
+    pub(super) log: Logger,
+    pub(super) config: Arc<Config>,
+    pub(super) filter_chain: Arc<FilterChain>,
+    pub(super) metrics: Metrics,
 }
 
 impl Server {
-    /// new Server. Takes a logger, and the registry of available Filters.
-    pub fn new(base: Logger, filter_registry: FilterRegistry, metrics: Metrics) -> Self {
-        let log = base.new(o!("source" => "server::Server"));
-        Server {
-            log,
-            filter_registry,
-            metrics,
-        }
-    }
-
     /// start the async processing of incoming UDP packets. Will block until an
     /// event is sent through the stop Receiver.
-    pub async fn run(self, config: Arc<Config>, stop: oneshot::Receiver<()>) -> Result<()> {
-        self.log_config(&config);
+    pub async fn run(self, stop: oneshot::Receiver<()>) -> Result<()> {
+        self.log_config();
 
         // Start metrics server if needed - it is shutdown before exiting the function.
         let metrics_shutdown_tx = self.metrics.addr.map(|addr| {
@@ -73,21 +64,16 @@ impl Server {
             metrics_shutdown_tx
         });
 
-        let (receive_socket, send_socket) = Server::bind(&config).await?.split();
+        let (receive_socket, send_socket) = Server::bind(&self.config).await?.split();
         // HashMap key is from,destination addresses as a tuple.
         let sessions: SessionMap = Arc::new(RwLock::new(HashMap::new()));
         let (send_packets, receive_packets) = mpsc::channel::<Packet>(1024);
-        let chain = Arc::new(FilterChain::from_arguments(
-            config.clone(),
-            &self.filter_registry,
-            &self.metrics.registry,
-        )?);
 
         self.run_receive_packet(send_socket, receive_packets);
         self.run_prune_sessions(&sessions);
         self.run_recv_from(
-            Arc::new(LoadBalancerPolicy::new(&config.connections)),
-            chain,
+            Arc::new(LoadBalancerPolicy::new(&self.config.connections)),
+            self.filter_chain.clone(),
             receive_socket,
             &sessions,
             send_packets,
@@ -254,9 +240,9 @@ impl Server {
     }
 
     /// log_config outputs a log of what is configured
-    fn log_config(&self, config: &Arc<Config>) {
-        info!(self.log, "Starting on port {}", config.local.port);
-        match &config.connections {
+    fn log_config(&self) {
+        info!(self.log, "Starting on port {}", self.config.local.port);
+        match &self.config.connections {
             ConnectionConfig::Client { addresses, .. } => {
                 info!(self.log, "Client proxy configuration"; "address" => format!("{:?}", addresses))
             }
@@ -349,11 +335,12 @@ mod tests {
 
     use crate::config;
     use crate::config::{Config, ConnectionConfig, EndPoint, Local};
-    use crate::extensions::default_registry;
     use crate::proxy::sessions::{Packet, SESSION_TIMEOUT_SECONDS};
     use crate::test_utils::{SplitSocket, TestFilter, TestFilterFactory, TestHelper};
 
     use super::*;
+    use crate::extensions::FilterRegistry;
+    use crate::proxy::Builder;
 
     #[tokio::test]
     async fn run_server() {
@@ -591,11 +578,6 @@ mod tests {
         let t = TestHelper::default();
 
         let msg = "hello";
-        let server = Server::new(
-            t.log.clone(),
-            default_registry(&t.log.clone()),
-            Metrics::default(),
-        );
         let endpoint = t.open_socket_and_recv_single_packet().await;
         let lb_policy = Arc::new(LoadBalancerPolicy::new(&ConnectionConfig::Client {
             addresses: vec![endpoint.addr],
@@ -610,9 +592,20 @@ mod tests {
         let sessions: SessionMap = Arc::new(RwLock::new(HashMap::new()));
         let (send_packets, mut recv_packets) = mpsc::channel::<Packet>(1);
 
+        let config = Arc::new(Config {
+            local: Local { port: 0 },
+            filters: vec![],
+            connections: ConnectionConfig::Client {
+                addresses: vec![],
+                connection_id: "".into(),
+                lb_policy: None,
+            },
+        });
+        let server = Builder::from(config).validate().unwrap().build();
+
         server.run_recv_from(
             lb_policy,
-            Arc::new(FilterChain::new(vec![])),
+            server.filter_chain.clone(),
             recv,
             &sessions,
             send_packets,
@@ -665,7 +658,6 @@ mod tests {
     async fn run_receive_packet() {
         let t = TestHelper::default();
 
-        let server = Server::new(t.log.clone(), FilterRegistry::default(), Metrics::default());
         let msg = "hello";
 
         // without a filter
@@ -678,6 +670,16 @@ mod tests {
             unreachable!("failed to send packet over channel");
         }
 
+        let config = Arc::new(Config {
+            local: Local { port: 0 },
+            filters: vec![],
+            connections: ConnectionConfig::Client {
+                addresses: vec![],
+                connection_id: "".into(),
+                lb_policy: None,
+            },
+        });
+        let server = Builder::from(config).validate().unwrap().build();
         server.run_receive_packet(endpoint.send, recv_packet);
         assert_eq!(msg, endpoint.packet_rx.await.unwrap());
     }
@@ -744,7 +746,6 @@ mod tests {
     async fn run_prune_sessions() {
         time::pause();
         let t = TestHelper::default();
-        let server = Server::new(t.log.clone(), default_registry(&t.log), Metrics::default());
         let sessions: SessionMap = Arc::new(RwLock::new(HashMap::new()));
         let from: SocketAddr = "127.0.0.1:7000".parse().unwrap();
         let to: SocketAddr = "127.0.0.1:7001".parse().unwrap();
@@ -756,6 +757,16 @@ mod tests {
             connection_ids: vec![],
         };
 
+        let config = Arc::new(Config {
+            local: Local { port: to.port() },
+            filters: vec![],
+            connections: ConnectionConfig::Client {
+                addresses: vec![],
+                connection_id: "".into(),
+                lb_policy: None,
+            },
+        });
+        let server = Builder::from(config).validate().unwrap().build();
         server.run_prune_sessions(&sessions);
         Server::ensure_session(
             &t.log,

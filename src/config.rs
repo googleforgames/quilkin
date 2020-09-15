@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+use crate::extensions::Error as FilterRegistryError;
 use std::collections::HashSet;
 use std::fmt;
 use std::io;
@@ -29,12 +30,16 @@ base64_serde_type!(Base64Standard, base64::STANDARD);
 #[derive(Debug, PartialEq)]
 pub enum ValidationError {
     NotUnique(String),
+    FilterInvalid(FilterRegistryError),
 }
 
 impl fmt::Display for ValidationError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             ValidationError::NotUnique(field) => write!(f, "field {} is not unique", field),
+            ValidationError::FilterInvalid(reason) => {
+                write!(f, "filter configuration is invalid: {}", reason)
+            }
         }
     }
 }

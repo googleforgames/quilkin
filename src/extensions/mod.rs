@@ -16,6 +16,7 @@
 
 use slog::Logger;
 
+pub(crate) use filter_chain::CreateFilterError;
 pub use filter_chain::FilterChain;
 pub use filter_registry::{
     CreateFilterArgs, DownstreamContext, DownstreamResponse, Error, Filter, FilterFactory,
