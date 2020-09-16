@@ -294,33 +294,6 @@ impl TestHelper {
             }
         }
     }
-    // =======
-    // // run_proxy creates a instance of the Server proxy and runs it, returning a cancel function
-    // pub fn run_proxy(registry: FilterRegistry, config: Config) -> Box<dyn FnOnce()> {
-    //     run_proxy_with_metrics(registry, config, Metrics::default())
-    // }
-    //
-    // // run_proxy_with_metrics creates a instance of the Server proxy and
-    // // runs it, returning a cancel function
-    // pub fn run_proxy_with_metrics(
-    //     registry: FilterRegistry,
-    //     config: Config,
-    //     metrics: Metrics,
-    // ) -> Box<dyn FnOnce()> {
-    //     let (close, stop) = oneshot::channel::<()>();
-    //     let proxy = Builder::from(Arc::new(config))
-    //         .with_filter_registry(registry)
-    //         .with_metrics(metrics)
-    //         .validate()
-    //         .unwrap()
-    //         .build();
-    //     // run the proxy
-    //     tokio::spawn(async move {
-    //         proxy.run(stop).await.unwrap();
-    //     });
-    //
-    //     Box::new(|| close.send(()).unwrap())
-    // >>>>>>> master
 }
 
 /// assert that on_downstream_receive makes no changes
