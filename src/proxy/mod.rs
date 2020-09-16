@@ -14,9 +14,11 @@
  * limitations under the License.
  */
 
+pub use builder::{logger, Builder};
 pub use metrics::Metrics;
 pub use server::Server;
 
+mod builder;
 mod metrics;
 mod server;
 mod sessions;

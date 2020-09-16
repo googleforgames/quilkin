@@ -51,7 +51,7 @@ period: 1s
             },
         };
 
-        let close_server = run_proxy(&base_logger, default_registry(&base_logger), server_config);
+        let close_server = run_proxy(default_registry(&base_logger), server_config);
 
         let (mut recv_chan, mut send) = recv_multiple_packets(&base_logger).await;
 

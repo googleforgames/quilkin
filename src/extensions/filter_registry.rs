@@ -20,7 +20,7 @@ use std::net::SocketAddr;
 
 use prometheus::{Error as MetricsError, Registry};
 
-use crate::config::{ConnectionConfig, EndPoint};
+use crate::config::{ConnectionConfig, EndPoint, ValidationError};
 use std::marker::PhantomData;
 
 /// Contains the input arguments to [on_downstream_receive](crate::extensions::filter_registry::Filter::on_downstream_receive)
@@ -173,6 +173,12 @@ impl fmt::Display for Error {
                 write!(f, "failed to initialize metrics: {}", reason)
             }
         }
+    }
+}
+
+impl Into<ValidationError> for Error {
+    fn into(self) -> ValidationError {
+        ValidationError::FilterInvalid(self)
     }
 }
 

@@ -53,12 +53,8 @@ mod tests {
             },
         };
 
-        let close_server = run_proxy_with_metrics(
-            &base_logger,
-            FilterRegistry::default(),
-            server_config,
-            server_metrics,
-        );
+        let close_server =
+            run_proxy_with_metrics(FilterRegistry::default(), server_config, server_metrics);
 
         // create a local client
         let client_port = 12347;
@@ -74,7 +70,7 @@ mod tests {
                 lb_policy: None,
             },
         };
-        let close_client = run_proxy(&base_logger, FilterRegistry::default(), client_config);
+        let close_client = run_proxy(FilterRegistry::default(), client_config);
 
         // let's send the packet
         let (mut recv_chan, mut send) = recv_multiple_packets(&base_logger).await;

@@ -24,9 +24,8 @@ client:
   connection_id: MXg3aWp5Ng==
 # ";
 # let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-# assert_eq!(config.validate().unwrap(), ());
 # assert_eq!(config.filters.len(), 1);
-# // TODO: make it possible to easily validate filter's config from here.
+# quilkin::proxy::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
 ```
 
 ### Configuration Options
