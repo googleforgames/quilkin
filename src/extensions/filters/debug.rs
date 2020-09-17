@@ -36,7 +36,6 @@ use crate::extensions::Filter;
 /// client:
 ///   addresses:
 ///     - 127.0.0.1:7001
-///   connection_id: 1x7ijy6
 /// ```
 ///  `config.id` (optional) adds a "id" field with a given value to each log line.
 ///     This can be useful to identify debug log positioning within a filter config if you have

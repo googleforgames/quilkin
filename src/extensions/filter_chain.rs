@@ -138,7 +138,6 @@ mod tests {
             }])
             .with_connections(ConnectionConfig::Client {
                 addresses: vec!["127.0.0.1:2456".parse().unwrap()],
-                connection_id: "".into(),
                 lb_policy: None,
             })
             .build();
@@ -156,7 +155,6 @@ mod tests {
             }])
             .with_connections(ConnectionConfig::Client {
                 addresses: vec!["127.0.0.1:2456".parse().unwrap()],
-                connection_id: "".into(),
                 lb_policy: None,
             })
             .build();

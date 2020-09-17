@@ -89,7 +89,6 @@ pub enum ConnectionConfig {
     #[serde(rename = "client")]
     Client {
         addresses: Vec<SocketAddr>,
-        connection_id: ConnectionId,
         lb_policy: Option<LoadBalancerPolicy>,
     },
 
@@ -148,7 +147,6 @@ impl Config {
             }
             ConnectionConfig::Client {
                 addresses,
-                connection_id: _,
                 lb_policy: _,
             } => {
                 if addresses.iter().collect::<HashSet<_>>().len() != addresses.len() {
@@ -170,8 +168,7 @@ mod tests {
     use serde_yaml::Value;
 
     use crate::config::{
-        Builder, Config, ConnectionConfig, ConnectionId, EndPoint, LoadBalancerPolicy, Local,
-        ValidationError,
+        Builder, Config, ConnectionConfig, EndPoint, LoadBalancerPolicy, Local, ValidationError,
     };
 
     #[test]
@@ -180,7 +177,6 @@ mod tests {
             .with_local(Local { port: 7000 })
             .with_connections(ConnectionConfig::Client {
                 addresses: vec!["127.0.0.1:25999".parse().unwrap()],
-                connection_id: "1234".into(),
                 lb_policy: Some(LoadBalancerPolicy::RoundRobin),
             })
             .build();
@@ -228,7 +224,6 @@ filters: # new filters section
 client:
   addresses:
     - 127.0.0.1:7001
-  connection_id: MXg3aWp5Ng== # 1x7ijy6
         ";
         let config = Config::from_reader(yaml.as_bytes()).unwrap();
 
@@ -259,7 +254,6 @@ local:
 client:
   addresses:
     - 127.0.0.1:25999
-  connection_id: MXg3aWp5Ng== # 1x7ijy6
   lb_policy: ROUND_ROBIN
   ";
         let config = Config::from_reader(yaml.as_bytes()).unwrap();
@@ -267,10 +261,8 @@ client:
         match config.connections {
             ConnectionConfig::Client {
                 addresses,
-                connection_id,
                 lb_policy,
             } => {
-                assert_eq!(ConnectionId::from("1x7ijy6"), connection_id);
                 assert_eq!(
                     vec!["127.0.0.1:25999".parse::<SocketAddr>().unwrap()],
                     addresses
@@ -331,7 +323,6 @@ server:
                     "127.0.0.1:25999".parse().unwrap(),
                     "127.0.0.1:25998".parse().unwrap(),
                 ],
-                connection_id: "1234".into(),
                 lb_policy: Some(LoadBalancerPolicy::RoundRobin),
             })
             .build();
@@ -346,7 +337,6 @@ server:
                     "127.0.0.1:25999".parse().unwrap(),
                     "127.0.0.1:25999".parse().unwrap(),
                 ],
-                connection_id: "1234".into(),
                 lb_policy: Some(LoadBalancerPolicy::RoundRobin),
             })
             .build();

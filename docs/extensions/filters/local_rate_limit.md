@@ -22,7 +22,6 @@ filters:
 client:
   addresses:
     - 127.0.0.1:7001
-  connection_id: MXg3aWp5Ng==
 # ";
 #   let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 #   assert_eq!(config.filters.len(), 1);

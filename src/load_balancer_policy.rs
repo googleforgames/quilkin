@@ -142,7 +142,6 @@ mod tests {
 
         let lb = LoadBalancerPolicy::new(&ConnectionConfig::Client {
             addresses: addresses.clone(),
-            connection_id: "".into(),
             lb_policy: Some(RoundRobin),
         });
 
@@ -172,7 +171,6 @@ mod tests {
 
         let lb = LoadBalancerPolicy::new(&ConnectionConfig::Client {
             addresses: addresses.clone(),
-            connection_id: "".into(),
             lb_policy: Some(Random),
         });
 
@@ -222,7 +220,6 @@ mod tests {
 
             let lb = LoadBalancerPolicy::new(&ConnectionConfig::Client {
                 addresses: addresses.clone(),
-                connection_id: "".into(),
                 lb_policy,
             });
 
