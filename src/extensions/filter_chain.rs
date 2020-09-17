@@ -14,14 +14,16 @@
  * limitations under the License.
  */
 
+use std::fmt::{self, Formatter};
+use std::sync::Arc;
+
+use prometheus::Registry;
+
 use crate::config::{Config, ValidationError};
 use crate::extensions::{
     CreateFilterArgs, DownstreamContext, DownstreamResponse, Filter, FilterRegistry,
     UpstreamContext, UpstreamResponse,
 };
-use prometheus::Registry;
-use std::fmt::{self, Formatter};
-use std::sync::Arc;
 
 /// FilterChain implements a chain of Filters amd the implementation
 /// of passing the information between Filters for each filter function
@@ -89,14 +91,7 @@ impl Filter for FilterChain {
         for f in &self.filters {
             match f.on_downstream_receive(ctx) {
                 None => return None,
-                Some(response) => {
-                    ctx = DownstreamContext::new(
-                        response.endpoints,
-                        from,
-                        response.contents,
-                        response.values,
-                    )
-                }
+                Some(response) => ctx = DownstreamContext::with_response(from, response),
             }
         }
         Some(ctx.into())
@@ -110,13 +105,7 @@ impl Filter for FilterChain {
             match f.on_upstream_receive(ctx) {
                 None => return None,
                 Some(response) => {
-                    ctx = UpstreamContext::new(
-                        endpoint,
-                        from,
-                        to,
-                        response.contents,
-                        response.values,
-                    );
+                    ctx = UpstreamContext::with_response(endpoint, from, to, response);
                 }
             }
         }
@@ -135,7 +124,6 @@ mod tests {
     use crate::test_utils::{logger, noop_endpoint, TestFilter};
 
     use super::*;
-    use std::collections::HashMap;
 
     #[test]
     fn from_config() {
@@ -203,7 +191,6 @@ mod tests {
                 endpoints_fixture.clone(),
                 "127.0.0.1:70".parse().unwrap(),
                 "hello".as_bytes().to_vec(),
-                HashMap::new(),
             ))
             .unwrap();
 
@@ -227,7 +214,6 @@ mod tests {
                 endpoints_fixture[0].address,
                 "127.0.0.1:70".parse().unwrap(),
                 "hello".as_bytes().to_vec(),
-                HashMap::new(),
             ))
             .unwrap();
 
@@ -254,7 +240,6 @@ mod tests {
                 endpoints_fixture.clone(),
                 "127.0.0.1:70".parse().unwrap(),
                 "hello".as_bytes().to_vec(),
-                HashMap::new(),
             ))
             .unwrap();
 
@@ -279,7 +264,6 @@ mod tests {
                 endpoints_fixture[0].address,
                 "127.0.0.1:70".parse().unwrap(),
                 "hello".as_bytes().to_vec(),
-                HashMap::new(),
             ))
             .unwrap();
         assert_eq!(

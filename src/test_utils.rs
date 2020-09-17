@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-use std::collections::HashMap;
 /// Common utilities for testing
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::str::from_utf8;
@@ -64,18 +63,10 @@ impl Filter for TestFilter {
         ctx.endpoints.push(noop_endpoint());
 
         // append values on each run
-        let key = "downstream";
-        match ctx.values.get(key) {
-            None => {
-                ctx.values
-                    .insert(key.into(), Box::new("receive".to_string()));
-            }
-            Some(value) => {
-                let mut value = value.downcast_ref::<String>().unwrap().clone();
-                value.push_str(":receive");
-                ctx.values.insert(key.into(), Box::new(value));
-            }
-        }
+        ctx.values
+            .entry("downstream".into())
+            .and_modify(|e| e.downcast_mut::<String>().unwrap().push_str(":receive"))
+            .or_insert_with(|| Box::new("receive".to_string()));
 
         ctx.contents
             .append(&mut format!(":odr:{}", ctx.from).into_bytes());
@@ -84,18 +75,11 @@ impl Filter for TestFilter {
 
     fn on_upstream_receive(&self, mut ctx: UpstreamContext) -> Option<UpstreamResponse> {
         // append values on each run
-        let key = "upstream";
-        match ctx.values.get(key) {
-            None => {
-                ctx.values
-                    .insert(key.into(), Box::new("receive".to_string()));
-            }
-            Some(value) => {
-                let mut value = value.downcast_ref::<String>().unwrap().clone();
-                value.push_str(":receive");
-                ctx.values.insert(key.into(), Box::new(value));
-            }
-        }
+        ctx.values
+            .entry("upstream".into())
+            .and_modify(|e| e.downcast_mut::<String>().unwrap().push_str(":receive"))
+            .or_insert_with(|| Box::new("receive".to_string()));
+
         ctx.contents.append(
             &mut format!(":our:{}:{}:{}", ctx.endpoint.name, ctx.from, ctx.to).into_bytes(),
         );
@@ -341,7 +325,6 @@ where
         endpoints.clone(),
         from,
         contents.clone(),
-        HashMap::new(),
     )) {
         None => unreachable!("should return a result"),
         Some(response) => {
@@ -368,7 +351,6 @@ where
         endpoint.address,
         "127.0.0.1:70".parse().unwrap(),
         contents.clone(),
-        HashMap::new(),
     )) {
         None => unreachable!("should return a result"),
         Some(response) => assert_eq!(contents, response.contents),

@@ -199,7 +199,6 @@ impl Filter for RateLimitFilter {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
     use std::time::Duration;
 
     use prometheus::Registry;
@@ -288,7 +287,6 @@ mod tests {
                 vec![],
                 "127.0.0.1:8080".parse().unwrap(),
                 vec![9],
-                HashMap::new(),
             ))
             .is_none(),);
     }
@@ -305,7 +303,6 @@ mod tests {
                 vec![],
                 "127.0.0.1:8080".parse().unwrap(),
                 vec![9],
-                HashMap::new(),
             ))
             .unwrap();
         assert_eq!((result.endpoints, result.contents), (vec![], vec![9]));

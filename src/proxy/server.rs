@@ -165,7 +165,6 @@ impl Server {
                 lb_policy.choose_endpoints(),
                 recv_addr,
                 packet.to_vec(),
-                HashMap::new(),
             ));
 
             if let Some(response) = result {

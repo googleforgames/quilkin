@@ -96,17 +96,23 @@ pub struct UpstreamResponse {
 
 impl DownstreamContext {
     /// Creates a new [`DownstreamContext`]
-    pub fn new(
-        endpoints: Vec<EndPoint>,
-        from: SocketAddr,
-        contents: Vec<u8>,
-        values: HashMap<String, Box<dyn Any + Send>>,
-    ) -> Self {
+    pub fn new(endpoints: Vec<EndPoint>, from: SocketAddr, contents: Vec<u8>) -> Self {
         Self {
             endpoints,
             from,
             contents,
-            values,
+            values: HashMap::new(),
+            phantom: PhantomData,
+        }
+    }
+
+    /// Creates a new [`DownstreamContext`] from a [`DownstreamResponse`]
+    pub fn with_response(from: SocketAddr, response: DownstreamResponse) -> Self {
+        Self {
+            endpoints: response.endpoints,
+            from,
+            contents: response.contents,
+            values: response.values,
             phantom: PhantomData,
         }
     }
@@ -130,14 +136,30 @@ impl UpstreamContext<'_> {
         from: SocketAddr,
         to: SocketAddr,
         contents: Vec<u8>,
-        values: HashMap<String, Box<dyn Any + Send>>,
     ) -> UpstreamContext {
         UpstreamContext {
             endpoint,
             from,
             to,
             contents,
-            values,
+            values: HashMap::new(),
+            phantom: PhantomData,
+        }
+    }
+
+    /// Creates a new [`UpstreamContext`] from a [`UpstreamResponse`]
+    pub fn with_response(
+        endpoint: &EndPoint,
+        from: SocketAddr,
+        to: SocketAddr,
+        response: UpstreamResponse,
+    ) -> UpstreamContext {
+        UpstreamContext {
+            endpoint,
+            from,
+            to,
+            contents: response.contents,
+            values: response.values,
             phantom: PhantomData,
         }
     }
@@ -335,16 +357,10 @@ mod tests {
         };
 
         assert!(filter
-            .on_downstream_receive(DownstreamContext::new(vec![], addr, vec![], HashMap::new()))
+            .on_downstream_receive(DownstreamContext::new(vec![], addr, vec![]))
             .is_some());
         assert!(filter
-            .on_upstream_receive(UpstreamContext::new(
-                &endpoint,
-                addr,
-                addr,
-                vec![],
-                HashMap::new()
-            ))
+            .on_upstream_receive(UpstreamContext::new(&endpoint, addr, addr, vec![],))
             .is_some());
     }
 }
