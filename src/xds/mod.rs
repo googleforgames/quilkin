@@ -20,6 +20,7 @@
 mod udpa {
     pub mod core {
         pub mod v1 {
+            #![cfg(not(doctest))]
             tonic::include_proto!("udpa.core.v1");
         }
     }
@@ -29,27 +30,32 @@ mod envoy {
     pub mod r#type {
         pub mod matcher {
             pub mod v3 {
+                #![cfg(not(doctest))]
                 tonic::include_proto!("envoy.r#type.matcher.v3");
             }
         }
         pub mod v3 {
+            #![cfg(not(doctest))]
             tonic::include_proto!("envoy.r#type.v3");
         }
     }
     pub mod config {
         pub mod cluster {
             pub mod v3 {
+                #![cfg(not(doctest))]
                 tonic::include_proto!("envoy.config.cluster.v3");
             }
         }
         pub mod core {
             pub mod v3 {
                 #![allow(clippy::large_enum_variant)]
+                #![cfg(not(doctest))]
                 tonic::include_proto!("envoy.config.core.v3");
             }
         }
         pub mod endpoint {
             pub mod v3 {
+                #![cfg(not(doctest))]
                 tonic::include_proto!("envoy.config.endpoint.v3");
             }
         }
@@ -57,11 +63,13 @@ mod envoy {
     pub mod service {
         pub mod discovery {
             pub mod v3 {
+                #![cfg(not(doctest))]
                 tonic::include_proto!("envoy.service.discovery.v3");
             }
         }
         pub mod cluster {
             pub mod v3 {
+                #![cfg(not(doctest))]
                 tonic::include_proto!("envoy.service.cluster.v3");
             }
         }
@@ -70,6 +78,7 @@ mod envoy {
 
 mod google {
     pub mod rpc {
+        #![cfg(not(doctest))]
         tonic::include_proto!("google.rpc");
     }
 }
