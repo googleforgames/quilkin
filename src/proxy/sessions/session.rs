@@ -281,7 +281,7 @@ mod tests {
     use tokio::time;
     use tokio::time::delay_for;
 
-    use crate::test_utils::{ephemeral_socket, logger, recv_udp, TestFilter};
+    use crate::test_utils::{SplitSocket, TestFilter, TestHelper};
 
     use super::*;
 
@@ -289,26 +289,24 @@ mod tests {
     async fn session_new() {
         time::pause();
 
-        let log = logger();
-        let mut socket = ephemeral_socket().await;
-        let local_addr = socket.local_addr().unwrap();
+        let t = TestHelper::default();
+        let SplitSocket {
+            addr,
+            mut recv,
+            mut send,
+        } = t.create_and_split_socket().await;
         let endpoint = EndPoint {
             name: "endpoint".to_string(),
-            address: local_addr,
+            address: addr,
             connection_ids: vec![],
         };
         let (send_packet, mut recv_packet) = mpsc::channel::<Packet>(5);
 
         let mut sess = Session::new(
-            &log,
-            Metrics::new(
-                &Registry::default(),
-                local_addr.to_string(),
-                local_addr.to_string(),
-            )
-            .unwrap(),
+            &t.log,
+            Metrics::new(&Registry::default(), addr.to_string(), addr.to_string()).unwrap(),
             Arc::new(FilterChain::new(vec![])),
-            local_addr,
+            addr,
             endpoint,
             send_packet,
         )
@@ -328,9 +326,9 @@ mod tests {
         // echo the packet back again
         tokio::spawn(async move {
             let mut buf = vec![0; 1024];
-            let (size, recv_addr) = socket.recv_from(&mut buf).await.unwrap();
+            let (size, recv_addr) = recv.recv_from(&mut buf).await.unwrap();
             assert_eq!("hello", from_utf8(&buf[..size]).unwrap());
-            socket.send_to(&buf[..size], recv_addr).await.unwrap();
+            send.send_to(&buf[..size], &recv_addr).await.unwrap();
         });
 
         sess.send_to("hello".as_bytes()).await.unwrap();
@@ -340,13 +338,13 @@ mod tests {
             .await
             .expect("Should receive a packet 'hello'");
         assert_eq!(String::from("hello").into_bytes(), packet.contents);
-        assert_eq!(local_addr, packet.dest);
+        assert_eq!(addr, packet.dest);
 
         let current_expiration = sess.expiration.read().await.clone();
         assert!(Instant::now() < current_expiration);
 
         let diff = current_expiration.duration_since(initial_expiration);
-        info!(log, "difference during test"; "duration" => format!("{:?}", diff));
+        info!(t.log, "difference during test"; "duration" => format!("{:?}", diff));
         assert!(diff.as_secs() >= time_increment);
 
         sess.close().unwrap();
@@ -355,66 +353,66 @@ mod tests {
 
     #[tokio::test]
     async fn session_send_to() {
-        let log = logger();
+        let t = TestHelper::default();
         let msg = "hello";
 
         // without a filter
         let (sender, _) = mpsc::channel::<Packet>(1);
-        let (local_addr, wait) = recv_udp().await;
+        let ep = t.open_socket_and_recv_single_packet().await;
         let endpoint = EndPoint {
             name: "endpoint".to_string(),
-            address: local_addr,
+            address: ep.addr,
             connection_ids: vec![],
         };
 
         let mut session = Session::new(
-            &log,
+            &t.log,
             Metrics::new(
                 &Registry::default(),
-                local_addr.to_string(),
-                local_addr.to_string(),
+                ep.addr.to_string(),
+                ep.addr.to_string(),
             )
             .unwrap(),
             Arc::new(FilterChain::new(vec![])),
-            local_addr,
+            ep.addr,
             endpoint.clone(),
             sender,
         )
         .await
         .unwrap();
         session.send_to(msg.as_bytes()).await.unwrap();
-        assert_eq!(msg, wait.await.unwrap());
+        assert_eq!(msg, ep.packet_rx.await.unwrap());
     }
 
     #[tokio::test]
     async fn session_close() {
-        let log = logger();
-        let socket = ephemeral_socket().await;
-        let local_addr = socket.local_addr().unwrap();
+        let t = TestHelper::default();
+
+        let ep = t.open_socket_and_recv_single_packet().await;
         let (send_packet, _) = mpsc::channel::<Packet>(5);
         let endpoint = EndPoint {
             name: "endpoint".to_string(),
-            address: local_addr,
+            address: ep.addr,
             connection_ids: vec![],
         };
 
-        info!(log, ">> creating sessions");
+        info!(t.log, ">> creating sessions");
         let sess = Session::new(
-            &log,
+            &t.log,
             Metrics::new(
                 &Registry::default(),
-                local_addr.to_string(),
-                local_addr.to_string(),
+                ep.addr.to_string(),
+                ep.addr.to_string(),
             )
             .unwrap(),
             Arc::new(FilterChain::new(vec![])),
-            local_addr,
+            ep.addr,
             endpoint,
             send_packet,
         )
         .await
         .unwrap();
-        info!(log, ">> session created and running");
+        info!(t.log, ">> session created and running");
 
         assert!(!sess.is_closed(), "session should not be closed");
         sess.close().unwrap();
@@ -422,7 +420,7 @@ mod tests {
         // Poll the state to wait for the change, because everything is async
         for _ in 1..1000 {
             let is_closed = sess.is_closed();
-            info!(log, "session closed?"; "closed" => is_closed);
+            info!(t.log, "session closed?"; "closed" => is_closed);
             if is_closed {
                 break;
             }
@@ -435,7 +433,8 @@ mod tests {
 
     #[tokio::test]
     async fn process_recv_packet() {
-        let log = logger();
+        let t = TestHelper::default();
+
         let chain = Arc::new(FilterChain::new(vec![]));
         let endpoint = EndPoint {
             name: "endpoint".to_string(),
@@ -453,7 +452,7 @@ mod tests {
         // first test with no filtering
         let msg = "hello";
         Session::process_recv_packet(
-            &log,
+            &t.log,
             &Metrics::new(
                 &Registry::default(),
                 "127.0.1.1:80".parse().unwrap(),
@@ -483,7 +482,7 @@ mod tests {
         // add filter
         let chain = Arc::new(FilterChain::new(vec![Box::new(TestFilter {})]));
         Session::process_recv_packet(
-            &log,
+            &t.log,
             &Metrics::new(
                 &Registry::default(),
                 "127.0.1.1:80".parse().unwrap(),
@@ -516,26 +515,25 @@ mod tests {
 
     #[tokio::test]
     async fn session_new_metrics() {
-        let log = logger();
-        let socket = ephemeral_socket().await;
-        let local_addr = socket.local_addr().unwrap();
+        let t = TestHelper::default();
+        let ep = t.open_socket_and_recv_single_packet().await;
         let endpoint = EndPoint {
             name: "endpoint".to_string(),
-            address: local_addr,
+            address: ep.addr,
             connection_ids: vec![],
         };
         let (send_packet, _) = mpsc::channel::<Packet>(5);
 
         let session = Session::new(
-            &log,
+            &t.log,
             Metrics::new(
                 &Registry::default(),
-                local_addr.to_string(),
-                local_addr.to_string(),
+                ep.addr.to_string(),
+                ep.addr.to_string(),
             )
             .unwrap(),
             Arc::new(FilterChain::new(vec![])),
-            local_addr,
+            ep.addr,
             endpoint,
             send_packet,
         )
@@ -549,22 +547,24 @@ mod tests {
 
     #[tokio::test]
     async fn send_to_metrics() {
+        let t = TestHelper::default();
+
         let (sender, _) = mpsc::channel::<Packet>(1);
-        let (local_addr, wait) = recv_udp().await;
+        let endpoint = t.open_socket_and_recv_single_packet().await;
 
         let mut session = Session::new(
-            &logger(),
+            &t.log,
             Metrics::new(
                 &Registry::default(),
-                local_addr.to_string(),
-                local_addr.to_string(),
+                endpoint.addr.to_string(),
+                endpoint.addr.to_string(),
             )
             .unwrap(),
             Arc::new(FilterChain::new(vec![])),
-            local_addr,
+            endpoint.addr,
             EndPoint {
                 name: "endpoint".to_string(),
-                address: local_addr,
+                address: endpoint.addr,
                 connection_ids: vec![],
             },
             sender,
@@ -572,7 +572,7 @@ mod tests {
         .await
         .unwrap();
         session.send_to(b"hello").await.unwrap();
-        wait.await.unwrap();
+        endpoint.packet_rx.await.unwrap();
 
         assert_eq!(session.metrics.tx_bytes_total.get(), 5);
         assert_eq!(session.metrics.tx_packets_total.get(), 1);
@@ -581,27 +581,25 @@ mod tests {
 
     #[tokio::test]
     async fn session_drop_metrics() {
-        let log = logger();
-        let socket = ephemeral_socket().await;
-        let local_addr = socket.local_addr().unwrap();
-        let endpoint = EndPoint {
-            name: "endpoint".to_string(),
-            address: local_addr,
-            connection_ids: vec![],
-        };
+        let t = TestHelper::default();
         let (send_packet, _) = mpsc::channel::<Packet>(5);
+        let endpoint = t.open_socket_and_recv_single_packet().await;
 
         let session = Session::new(
-            &log,
+            &t.log,
             Metrics::new(
                 &Registry::default(),
-                local_addr.to_string(),
-                local_addr.to_string(),
+                endpoint.addr.to_string(),
+                endpoint.addr.to_string(),
             )
             .unwrap(),
             Arc::new(FilterChain::new(vec![])),
-            local_addr,
-            endpoint,
+            endpoint.addr,
+            EndPoint {
+                name: "endpoint".to_string(),
+                address: endpoint.addr,
+                connection_ids: vec![],
+            },
             send_packet,
         )
         .await

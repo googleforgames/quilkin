@@ -24,16 +24,15 @@ mod tests {
     use tokio::time::{delay_for, Duration};
 
     use quilkin::config::{Config, ConnectionConfig, EndPoint, Local};
-    use quilkin::extensions::default_registry;
-    use quilkin::test_utils::{echo_server, logger, recv_multiple_packets, run_proxy};
+    use quilkin::test_utils::TestHelper;
 
     #[tokio::test]
     async fn echo() {
-        let base_logger = logger();
+        let mut t = TestHelper::default();
 
         // create two echo servers as endpoints
-        let server1 = echo_server().await;
-        let server2 = echo_server().await;
+        let server1 = t.run_echo_server().await;
+        let server2 = t.run_echo_server().await;
 
         // create server configuration
         let server_port = 12345;
@@ -57,7 +56,7 @@ mod tests {
         };
         assert_eq!(Ok(()), server_config.validate());
 
-        let close_server = run_proxy(default_registry(&base_logger), server_config);
+        t.run_server(server_config);
 
         // create a local client
         let client_port = 12344;
@@ -75,10 +74,10 @@ mod tests {
         };
         assert_eq!(Ok(()), client_config.validate());
 
-        let close_client = run_proxy(default_registry(&base_logger), client_config);
+        t.run_server(client_config);
 
         // let's send the packet
-        let (mut recv_chan, mut send) = recv_multiple_packets(&base_logger).await;
+        let (mut recv_chan, mut send) = t.open_socket_and_recv_multiple_packets().await;
 
         // game_client
         let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), client_port);
@@ -90,11 +89,9 @@ mod tests {
         // should only be two returned items
         select! {
             res = recv_chan.recv() => {
-                assert!(false, format!("Should not receive a third packet: {}", res.unwrap()));
+                unreachable!("Should not receive a third packet: {}", res.unwrap());
             }
             _ = delay_for(Duration::from_secs(2)) => {}
         };
-        close_server();
-        close_client();
     }
 }
