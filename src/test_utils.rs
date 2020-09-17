@@ -62,12 +62,24 @@ impl Filter for TestFilter {
         // address and port
         ctx.endpoints.push(noop_endpoint());
 
+        // append values on each run
+        ctx.values
+            .entry("downstream".into())
+            .and_modify(|e| e.downcast_mut::<String>().unwrap().push_str(":receive"))
+            .or_insert_with(|| Box::new("receive".to_string()));
+
         ctx.contents
             .append(&mut format!(":odr:{}", ctx.from).into_bytes());
         Some(ctx.into())
     }
 
     fn on_upstream_receive(&self, mut ctx: UpstreamContext) -> Option<UpstreamResponse> {
+        // append values on each run
+        ctx.values
+            .entry("upstream".into())
+            .and_modify(|e| e.downcast_mut::<String>().unwrap().push_str(":receive"))
+            .or_insert_with(|| Box::new("receive".to_string()));
+
         ctx.contents.append(
             &mut format!(":our:{}:{}:{}", ctx.endpoint.name, ctx.from, ctx.to).into_bytes(),
         );

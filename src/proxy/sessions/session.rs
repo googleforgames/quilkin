@@ -29,9 +29,10 @@ use tokio::select;
 use tokio::sync::{mpsc, watch, RwLock};
 use tokio::time::{Duration, Instant};
 
-use super::metrics::Metrics;
 use crate::config::EndPoint;
 use crate::extensions::{Filter, FilterChain, UpstreamContext};
+
+use super::metrics::Metrics;
 
 /// SESSION_TIMEOUT_SECONDS is the default session timeout - which is one minute.
 pub const SESSION_TIMEOUT_SECONDS: u64 = 60;

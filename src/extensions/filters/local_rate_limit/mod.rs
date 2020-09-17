@@ -14,17 +14,20 @@
  * limitations under the License.
  */
 
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
+use std::time::Duration;
+
+use serde::{Deserialize, Serialize};
+use tokio::sync::oneshot::{channel, Sender};
+use tokio::time::{self, Instant};
+
+use metrics::Metrics;
+
 use crate::extensions::filter_registry::{
     CreateFilterArgs, DownstreamContext, DownstreamResponse, UpstreamContext, UpstreamResponse,
 };
 use crate::extensions::{Error, Filter, FilterFactory};
-use metrics::Metrics;
-use serde::{Deserialize, Serialize};
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Arc;
-use std::time::Duration;
-use tokio::sync::oneshot::{channel, Sender};
-use tokio::time::{self, Instant};
 
 mod metrics;
 
@@ -196,14 +199,16 @@ impl Filter for RateLimitFilter {
 
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+
+    use prometheus::Registry;
+    use tokio::time;
+
     use crate::extensions::filter_registry::DownstreamContext;
     use crate::extensions::filters::local_rate_limit::metrics::Metrics;
     use crate::extensions::filters::local_rate_limit::{Config, RateLimitFilter};
     use crate::extensions::Filter;
     use crate::test_utils::assert_filter_on_upstream_receive_no_change;
-    use prometheus::Registry;
-    use std::time::Duration;
-    use tokio::time;
 
     fn rate_limiter(config: Config) -> RateLimitFilter {
         RateLimitFilter::new(config, Metrics::new(&Registry::default()).unwrap())
@@ -281,7 +286,7 @@ mod tests {
             .on_downstream_receive(DownstreamContext::new(
                 vec![],
                 "127.0.0.1:8080".parse().unwrap(),
-                vec![9]
+                vec![9],
             ))
             .is_none(),);
     }
