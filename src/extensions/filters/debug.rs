@@ -193,7 +193,7 @@ mod tests {
             &connection,
             Some(&Value::Mapping(map)),
         )) {
-            Ok(_) => assert!(false, "should be an error"),
+            Ok(_) => unreachable!("should be an error"),
             Err(err) => {
                 assert_eq!(
                     Error::FieldInvalid {

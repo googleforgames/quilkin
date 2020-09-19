@@ -147,16 +147,11 @@ mod tests {
         });
 
         // Check that we repeat the same addresses in sequence forever.
-        let expected_sequence = addresses
-            .clone()
-            .iter()
-            .map(|&a| vec![a])
-            .collect::<Vec<_>>();
+        let expected_sequence = addresses.iter().map(|&a| vec![a]).collect::<Vec<_>>();
         for _ in 0..10 {
             assert_eq!(
                 expected_sequence,
                 (0..addresses.len())
-                    .into_iter()
                     .map(|_| lb
                         .choose_endpoints()
                         .iter()
@@ -185,7 +180,6 @@ mod tests {
         let mut result_sequences = vec![];
         for _ in 0..10 {
             let sequence = (0..addresses.len())
-                .into_iter()
                 .map(|_| {
                     lb.choose_endpoints()
                         .iter()
@@ -198,7 +192,7 @@ mod tests {
 
         // Check that every address was chosen at least once.
         assert_eq!(
-            addresses.clone().into_iter().collect::<HashSet<_>>(),
+            addresses.into_iter().collect::<HashSet<_>>(),
             result_sequences
                 .clone()
                 .into_iter()
