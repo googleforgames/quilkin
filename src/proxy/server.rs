@@ -334,7 +334,7 @@ mod tests {
     use tokio::time::{Duration, Instant};
 
     use crate::config;
-    use crate::config::{Config, ConnectionConfig, EndPoint, Local};
+    use crate::config::{Builder as ConfigBuilder, ConnectionConfig, EndPoint, Local};
     use crate::proxy::sessions::{Packet, SESSION_TIMEOUT_SECONDS};
     use crate::test_utils::{SplitSocket, TestFilter, TestFilterFactory, TestHelper};
 
@@ -350,12 +350,11 @@ mod tests {
         let endpoint2 = t.open_socket_and_recv_single_packet().await;
 
         let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12358);
-        let config = Config {
-            local: Local {
+        let config = ConfigBuilder::empty()
+            .with_local(Local {
                 port: local_addr.port(),
-            },
-            filters: vec![],
-            connections: ConnectionConfig::Server {
+            })
+            .with_connections(ConnectionConfig::Server {
                 endpoints: vec![
                     EndPoint {
                         name: String::from("e1"),
@@ -368,8 +367,8 @@ mod tests {
                         connection_ids: vec![],
                     },
                 ],
-            },
-        };
+            })
+            .build();
         t.run_server(config);
 
         let msg = "hello";
@@ -389,17 +388,16 @@ mod tests {
         let mut endpoint = t.open_socket_and_recv_single_packet().await;
 
         let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12357);
-        let config = Config {
-            local: Local {
+        let config = ConfigBuilder::empty()
+            .with_local(Local {
                 port: local_addr.port(),
-            },
-            filters: vec![],
-            connections: ConnectionConfig::Client {
+            })
+            .with_connections(ConnectionConfig::Client {
                 addresses: vec![endpoint.addr],
                 connection_id: "".into(),
                 lb_policy: None,
-            },
-        };
+            })
+            .build();
         t.run_server(config);
 
         let msg = "hello";
@@ -420,20 +418,20 @@ mod tests {
 
         let mut endpoint = t.open_socket_and_recv_single_packet().await;
         let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12367);
-        let config = Config {
-            local: Local {
+        let config = ConfigBuilder::empty()
+            .with_local(Local {
                 port: local_addr.port(),
-            },
-            filters: vec![config::Filter {
+            })
+            .with_filters(vec![config::Filter {
                 name: "TestFilter".to_string(),
                 config: None,
-            }],
-            connections: ConnectionConfig::Client {
+            }])
+            .with_connections(ConnectionConfig::Client {
                 addresses: vec![endpoint.addr],
                 connection_id: "".into(),
                 lb_policy: None,
-            },
-        };
+            })
+            .build();
         t.run_server_with_filter_registry(config, registry);
 
         let msg = "hello";
@@ -458,13 +456,12 @@ mod tests {
 
     #[tokio::test]
     async fn bind() {
-        let config = Config {
-            local: Local { port: 12345 },
-            filters: vec![],
-            connections: ConnectionConfig::Server {
+        let config = ConfigBuilder::empty()
+            .with_local(Local { port: 12345 })
+            .with_connections(ConnectionConfig::Server {
                 endpoints: Vec::new(),
-            },
-        };
+            })
+            .build();
         let socket = Server::bind(&config).await.unwrap();
         let addr = socket.local_addr().unwrap();
 
@@ -592,15 +589,7 @@ mod tests {
         let sessions: SessionMap = Arc::new(RwLock::new(HashMap::new()));
         let (send_packets, mut recv_packets) = mpsc::channel::<Packet>(1);
 
-        let config = Arc::new(Config {
-            local: Local { port: 0 },
-            filters: vec![],
-            connections: ConnectionConfig::Client {
-                addresses: vec![],
-                connection_id: "".into(),
-                lb_policy: None,
-            },
-        });
+        let config = Arc::new(ConfigBuilder::empty().build());
         let server = Builder::from(config).validate().unwrap().build();
 
         server.run_recv_from(
@@ -670,15 +659,7 @@ mod tests {
             unreachable!("failed to send packet over channel");
         }
 
-        let config = Arc::new(Config {
-            local: Local { port: 0 },
-            filters: vec![],
-            connections: ConnectionConfig::Client {
-                addresses: vec![],
-                connection_id: "".into(),
-                lb_policy: None,
-            },
-        });
+        let config = Arc::new(ConfigBuilder::empty().build());
         let server = Builder::from(config).validate().unwrap().build();
         server.run_receive_packet(endpoint.send, recv_packet);
         assert_eq!(msg, endpoint.packet_rx.await.unwrap());
@@ -757,15 +738,7 @@ mod tests {
             connection_ids: vec![],
         };
 
-        let config = Arc::new(Config {
-            local: Local { port: to.port() },
-            filters: vec![],
-            connections: ConnectionConfig::Client {
-                addresses: vec![],
-                connection_id: "".into(),
-                lb_policy: None,
-            },
-        });
+        let config = Arc::new(ConfigBuilder::empty().build());
         let server = Builder::from(config).validate().unwrap().build();
         server.run_prune_sessions(&sessions);
         Server::ensure_session(
