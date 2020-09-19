@@ -14,8 +14,10 @@
  * limitations under the License.
  */
 
+pub use concat_bytes::ConcatBytesFactory;
 pub use debug::DebugFilterFactory;
 pub use local_rate_limit::RateLimitFilterFactory;
 
+mod concat_bytes;
 mod debug;
 mod local_rate_limit;

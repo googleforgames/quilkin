@@ -193,6 +193,16 @@ pub trait Filter: Send + Sync {
     fn on_upstream_receive(&self, ctx: UpstreamContext) -> Option<UpstreamResponse>;
 }
 
+impl Filter for Box<dyn Filter> {
+    fn on_downstream_receive(&self, ctx: DownstreamContext) -> Option<DownstreamResponse> {
+        self.as_ref().on_downstream_receive(ctx)
+    }
+
+    fn on_upstream_receive(&self, ctx: UpstreamContext) -> Option<UpstreamResponse> {
+        self.as_ref().on_upstream_receive(ctx)
+    }
+}
+
 #[derive(Debug, PartialEq)]
 /// Error is an error when attempting to create a Filter from_config() from a FilterFactory
 pub enum Error {
