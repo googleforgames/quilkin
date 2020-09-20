@@ -316,7 +316,7 @@ mod tests {
 
         let initial_expiration: Instant;
         {
-            initial_expiration = sess.expiration.read().await.clone();
+            initial_expiration = *sess.expiration.read().await;
         }
         let diff = initial_expiration.duration_since(Instant::now());
         assert_eq!(diff.as_secs(), SESSION_TIMEOUT_SECONDS);
@@ -332,7 +332,7 @@ mod tests {
             send.send_to(&buf[..size], &recv_addr).await.unwrap();
         });
 
-        sess.send_to("hello".as_bytes()).await.unwrap();
+        sess.send_to(b"hello").await.unwrap();
 
         let packet = recv_packet
             .recv()
@@ -341,7 +341,7 @@ mod tests {
         assert_eq!(String::from("hello").into_bytes(), packet.contents);
         assert_eq!(addr, packet.dest);
 
-        let current_expiration = sess.expiration.read().await.clone();
+        let current_expiration = *sess.expiration.read().await;
         assert!(Instant::now() < current_expiration);
 
         let diff = current_expiration.duration_since(initial_expiration);
@@ -447,7 +447,7 @@ mod tests {
         let expiration = Arc::new(RwLock::new(Instant::now()));
         let mut initial_expiration: Instant;
         {
-            initial_expiration = expiration.read().await.clone();
+            initial_expiration = *expiration.read().await;
         }
 
         // first test with no filtering
@@ -478,7 +478,7 @@ mod tests {
         assert_eq!(dest, p.dest);
 
         {
-            initial_expiration = expiration.read().await.clone();
+            initial_expiration = *expiration.read().await;
         }
         // add filter
         let chain = Arc::new(FilterChain::new(vec![Box::new(TestFilter {})]));

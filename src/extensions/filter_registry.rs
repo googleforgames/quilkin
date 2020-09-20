@@ -331,7 +331,7 @@ mod tests {
             &String::from("not.found"),
             CreateFilterArgs::new(&connection, None),
         ) {
-            Ok(_) => assert!(false, "should not be filter"),
+            Ok(_) => unreachable!("should not be filter"),
             Err(err) => assert_eq!(Error::NotFound("not.found".to_string()), err),
         };
 
