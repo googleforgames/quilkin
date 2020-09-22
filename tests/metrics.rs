@@ -25,19 +25,16 @@ mod tests {
     use slog::info;
 
     use quilkin::config::{Config, ConnectionConfig, EndPoint, Local};
-    use quilkin::extensions::FilterRegistry;
     use quilkin::proxy::Metrics;
-    use quilkin::test_utils::{
-        echo_server, logger, recv_multiple_packets, run_proxy, run_proxy_with_metrics,
-    };
+    use quilkin::test_utils::TestHelper;
 
     #[tokio::test]
     async fn metrics_server() {
-        let base_logger = logger();
+        let mut t = TestHelper::default();
         let server_metrics = Metrics::new(Some("[::]:9092".parse().unwrap()), Registry::default());
 
-        // create two echo servers as endpoints
-        let echo = echo_server().await;
+        // create an echo server as an endpoint.
+        let echo = t.run_echo_server().await;
 
         // create server configuration
         let server_port = 12346;
@@ -53,8 +50,7 @@ mod tests {
             },
         };
 
-        let close_server =
-            run_proxy_with_metrics(FilterRegistry::default(), server_config, server_metrics);
+        t.run_server_with_metrics(server_config, server_metrics);
 
         // create a local client
         let client_port = 12347;
@@ -70,15 +66,15 @@ mod tests {
                 lb_policy: None,
             },
         };
-        let close_client = run_proxy(FilterRegistry::default(), client_config);
+        t.run_server(client_config);
 
         // let's send the packet
-        let (mut recv_chan, mut send) = recv_multiple_packets(&base_logger).await;
+        let (mut recv_chan, mut send) = t.open_socket_and_recv_multiple_packets().await;
 
         // game_client
         let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), client_port);
-        info!(base_logger, "Sending hello"; "addr" => local_addr);
-        send.send_to("hello".as_bytes(), &local_addr).await.unwrap();
+        info!(t.log, "Sending hello"; "addr" => local_addr);
+        send.send_to(b"hello", &local_addr).await.unwrap();
 
         let _ = recv_chan.recv().await.unwrap();
 
@@ -99,8 +95,5 @@ mod tests {
             let upstream = (&c[2]).parse::<SocketAddr>().unwrap();
             assert_ne!(downstream, upstream);
         }
-
-        close_server();
-        close_client();
     }
 }

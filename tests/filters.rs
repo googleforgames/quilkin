@@ -26,16 +26,14 @@ mod tests {
     use quilkin::config::{Config, ConnectionConfig, EndPoint, Filter, Local};
     use quilkin::extensions::filters::DebugFilterFactory;
     use quilkin::extensions::{default_registry, FilterFactory};
-    use quilkin::test_utils::{
-        echo_server, logger, recv_multiple_packets, run_proxy, TestFilterFactory,
-    };
+    use quilkin::test_utils::{TestFilterFactory, TestHelper};
 
     #[tokio::test]
     async fn test_filter() {
-        let base_logger = logger();
+        let mut t = TestHelper::default();
 
-        // create two echo servers as endpoints
-        let echo = echo_server().await;
+        // create an echo server as an endpoint.
+        let echo = t.run_echo_server().await;
 
         // create server configuration
         let server_port = 12346;
@@ -55,9 +53,10 @@ mod tests {
         };
         assert_eq!(Ok(()), server_config.validate());
 
-        let mut registry = default_registry(&base_logger);
+        // Run server proxy.
+        let mut registry = default_registry(&t.log);
         registry.insert(TestFilterFactory {});
-        let close_server = run_proxy(registry, server_config);
+        t.run_server_with_filter_registry(server_config, registry);
 
         // create a local client
         let client_port = 12347;
@@ -78,17 +77,18 @@ mod tests {
         };
         assert_eq!(Ok(()), client_config.validate());
 
-        let mut registry = default_registry(&base_logger);
+        // Run client proxy.
+        let mut registry = default_registry(&t.log);
         registry.insert(TestFilterFactory {});
-        let close_client = run_proxy(registry, client_config);
+        t.run_server_with_filter_registry(client_config, registry);
 
         // let's send the packet
-        let (mut recv_chan, mut send) = recv_multiple_packets(&base_logger).await;
+        let (mut recv_chan, mut send) = t.open_socket_and_recv_multiple_packets().await;
 
         // game_client
         let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), client_port);
-        info!(base_logger, "Sending hello"; "addr" => local_addr);
-        send.send_to("hello".as_bytes(), &local_addr).await.unwrap();
+        info!(t.log, "Sending hello"; "addr" => local_addr);
+        send.send_to(b"hello", &local_addr).await.unwrap();
 
         let result = recv_chan.recv().await.unwrap();
         // since we don't know the ephemeral ip addresses in use, we'll search for
@@ -106,19 +106,17 @@ mod tests {
             "Should be 2 on_upstream_receive calls in {}",
             result
         );
-
-        close_server();
-        close_client();
     }
 
     #[tokio::test]
     async fn debug_filter() {
-        let base_logger = logger();
-        // handy for grabbing the configuration name
-        let factory = DebugFilterFactory::new(&base_logger);
+        let mut t = TestHelper::default();
 
-        // create two echo servers as endpoints
-        let echo = echo_server().await;
+        // handy for grabbing the configuration name
+        let factory = DebugFilterFactory::new(&t.log);
+
+        // create an echo server as an endpoint.
+        let echo = t.run_echo_server().await;
 
         // filter config
         let mut map = Mapping::new();
@@ -139,7 +137,7 @@ mod tests {
                 }],
             },
         };
-        let close_server = run_proxy(default_registry(&base_logger), server_config);
+        t.run_server(server_config);
 
         let mut map = Mapping::new();
         map.insert(Value::from("id"), Value::from("client"));
@@ -160,20 +158,17 @@ mod tests {
                 lb_policy: None,
             },
         };
-        let close_client = run_proxy(default_registry(&base_logger), client_config);
+        t.run_server(client_config);
 
         // let's send the packet
-        let (mut recv_chan, mut send) = recv_multiple_packets(&base_logger).await;
+        let (mut recv_chan, mut send) = t.open_socket_and_recv_multiple_packets().await;
 
         // game client
         let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), client_port);
-        info!(base_logger, "Sending hello"; "addr" => local_addr);
-        send.send_to("hello".as_bytes(), &local_addr).await.unwrap();
+        info!(t.log, "Sending hello"; "addr" => local_addr);
+        send.send_to(b"hello", &local_addr).await.unwrap();
 
         // since the debug filter doesn't change the data, it should be exactly the same
         assert_eq!("hello", recv_chan.recv().await.unwrap());
-
-        close_server();
-        close_client();
     }
 }

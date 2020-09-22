@@ -329,16 +329,14 @@ mod tests {
     use std::sync::Arc;
 
     use slog::info;
-    use tokio::sync::{mpsc, oneshot, RwLock};
+    use tokio::sync::{mpsc, RwLock};
     use tokio::time;
     use tokio::time::{Duration, Instant};
 
     use crate::config;
     use crate::config::{Config, ConnectionConfig, EndPoint, Local};
     use crate::proxy::sessions::{Packet, SESSION_TIMEOUT_SECONDS};
-    use crate::test_utils::{
-        ephemeral_socket, logger, recv_udp, recv_udp_done, TestFilter, TestFilterFactory,
-    };
+    use crate::test_utils::{SplitSocket, TestFilter, TestFilterFactory, TestHelper};
 
     use super::*;
     use crate::extensions::FilterRegistry;
@@ -346,18 +344,13 @@ mod tests {
 
     #[tokio::test]
     async fn run_server() {
-        let socket1 = ephemeral_socket().await;
-        let endpoint1 = socket1.local_addr().unwrap();
-        let socket2 = ephemeral_socket().await;
-        let endpoint2 = socket2.local_addr().unwrap();
+        let mut t = TestHelper::default();
+
+        let mut endpoint1 = t.open_socket_and_recv_single_packet().await;
+        let endpoint2 = t.open_socket_and_recv_single_packet().await;
+
         let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12358);
-
-        let (recv1, mut send) = socket1.split();
-        let (recv2, _) = socket2.split();
-        let (done1, wait1) = oneshot::channel::<String>();
-        let (done2, wait2) = oneshot::channel::<String>();
-
-        let config = Arc::new(Config {
+        let config = Config {
             local: Local {
                 port: local_addr.port(),
             },
@@ -366,77 +359,68 @@ mod tests {
                 endpoints: vec![
                     EndPoint {
                         name: String::from("e1"),
-                        address: endpoint1.clone(),
+                        address: endpoint1.addr,
                         connection_ids: vec![],
                     },
                     EndPoint {
                         name: String::from("e2"),
-                        address: endpoint2.clone(),
+                        address: endpoint2.addr,
                         connection_ids: vec![],
                     },
                 ],
             },
-        });
-
-        let server = Builder::from(config).validate().unwrap().build();
-        let (close, stop) = oneshot::channel::<()>();
-        tokio::spawn(async move {
-            server.run(stop).await.unwrap();
-        });
+        };
+        t.run_server(config);
 
         let msg = "hello";
-        recv_udp_done(recv1, done1);
-        recv_udp_done(recv2, done2);
-        send.send_to(msg.as_bytes(), &local_addr).await.unwrap();
-        assert_eq!(msg, wait1.await.unwrap());
-        assert_eq!(msg, wait2.await.unwrap());
-        close.send(()).unwrap();
+        endpoint1
+            .send
+            .send_to(msg.as_bytes(), &local_addr)
+            .await
+            .unwrap();
+        assert_eq!(msg, endpoint1.packet_rx.await.unwrap());
+        assert_eq!(msg, endpoint2.packet_rx.await.unwrap());
     }
 
     #[tokio::test]
     async fn run_client() {
-        let socket = ephemeral_socket().await;
-        let endpoint_addr = socket.local_addr().unwrap();
-        let (recv, mut send) = socket.split();
+        let mut t = TestHelper::default();
+
+        let mut endpoint = t.open_socket_and_recv_single_packet().await;
+
         let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12357);
-        let (done, wait) = oneshot::channel::<String>();
-        let config = Arc::new(Config {
+        let config = Config {
             local: Local {
                 port: local_addr.port(),
             },
             filters: vec![],
             connections: ConnectionConfig::Client {
-                addresses: vec![endpoint_addr],
+                addresses: vec![endpoint.addr],
                 connection_id: "".into(),
                 lb_policy: None,
             },
-        });
-
-        let (close, stop) = oneshot::channel::<()>();
-        let server = Builder::from(config).validate().unwrap().build();
-        tokio::spawn(async move {
-            server.run(stop).await.unwrap();
-        });
+        };
+        t.run_server(config);
 
         let msg = "hello";
-        recv_udp_done(recv, done);
-        send.send_to(msg.as_bytes(), &local_addr).await.unwrap();
-        assert_eq!(msg, wait.await.unwrap());
-
-        close.send(()).unwrap();
+        endpoint
+            .send
+            .send_to(msg.as_bytes(), &local_addr)
+            .await
+            .unwrap();
+        assert_eq!(msg, endpoint.packet_rx.await.unwrap());
     }
 
     #[tokio::test]
     async fn run_with_filter() {
+        let mut t = TestHelper::default();
+
         let mut registry = FilterRegistry::default();
         registry.insert(TestFilterFactory {});
 
-        let socket = ephemeral_socket().await;
-        let endpoint_addr = socket.local_addr().unwrap();
-        let (recv, mut send) = socket.split();
+        let mut endpoint = t.open_socket_and_recv_single_packet().await;
         let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12367);
-        let (done, wait) = oneshot::channel::<String>();
-        let config = Arc::new(Config {
+        let config = Config {
             local: Local {
                 port: local_addr.port(),
             },
@@ -445,29 +429,23 @@ mod tests {
                 config: None,
             }],
             connections: ConnectionConfig::Client {
-                addresses: vec![endpoint_addr],
+                addresses: vec![endpoint.addr],
                 connection_id: "".into(),
                 lb_policy: None,
             },
-        });
-
-        let (close, stop) = oneshot::channel::<()>();
-        let server = Builder::from(config)
-            .with_filter_registry(registry)
-            .validate()
-            .unwrap()
-            .build();
-        tokio::spawn(async move {
-            server.run(stop).await.unwrap();
-        });
+        };
+        t.run_server_with_filter_registry(config, registry);
 
         let msg = "hello";
-        recv_udp_done(recv, done);
-        send.send_to(msg.as_bytes(), &local_addr).await.unwrap();
+        endpoint
+            .send
+            .send_to(msg.as_bytes(), &local_addr)
+            .await
+            .unwrap();
 
         // since we don't know what the session ephemeral port is, we'll just
         // search for the filter strings.
-        let result = wait.await.unwrap();
+        let result = endpoint.packet_rx.await.unwrap();
         assert!(
             result.contains(msg),
             format!("'{}' not found in '{}'", msg, result)
@@ -476,8 +454,6 @@ mod tests {
             result.contains(":odr:"),
             format!(":odr: not found in '{}'", result)
         );
-
-        close.send(()).unwrap();
     }
 
     #[tokio::test]
@@ -508,36 +484,36 @@ mod tests {
             session_len: usize,
         }
 
-        async fn test(
-            name: String,
-            log: &Logger,
-            chain: Arc<FilterChain>,
-            expected: Expected,
-        ) -> Result {
-            info!(log, "Test"; "name" => name);
+        async fn test(name: String, chain: Arc<FilterChain>, expected: Expected) -> Result {
+            let t = TestHelper::default();
+
+            info!(t.log, "Test"; "name" => name);
             let msg = "hello".to_string();
-            let (local_addr, wait) = recv_udp().await;
+            let endpoint = t.open_socket_and_recv_single_packet().await;
 
             let lb_policy = Arc::new(LoadBalancerPolicy::new(&ConnectionConfig::Client {
-                addresses: vec![local_addr],
+                addresses: vec![endpoint.addr],
                 connection_id: "".into(),
                 lb_policy: None,
             }));
-            let receive_socket = ephemeral_socket().await;
-            let receive_addr = receive_socket.local_addr().unwrap();
-            let (mut recv, mut send) = receive_socket.split();
+
+            let SplitSocket {
+                addr: receive_addr,
+                mut recv,
+                mut send,
+            } = t.create_and_split_socket().await;
+
             let sessions: SessionMap = Arc::new(RwLock::new(HashMap::new()));
             let (send_packets, mut recv_packets) = mpsc::channel::<Packet>(1);
 
             let sessions_clone = sessions.clone();
-            let log_clone = log.clone();
 
             let time_increment = 10;
             time::advance(Duration::from_secs(time_increment)).await;
 
             tokio::spawn(async move {
                 Server::recv_from(
-                    &log_clone,
+                    &t.log,
                     &Metrics::default(),
                     lb_policy,
                     chain,
@@ -550,16 +526,16 @@ mod tests {
 
             send.send_to(msg.as_bytes(), &receive_addr).await.unwrap();
 
-            let result = wait.await.unwrap();
+            let result = endpoint.packet_rx.await.unwrap();
             recv_packets.close();
 
             let map = sessions.read().await;
             assert_eq!(expected.session_len, map.len());
 
             // need to switch to 127.0.0.1, as the request comes locally
-            let mut receive_addr_local = receive_addr.clone();
+            let mut receive_addr_local = receive_addr;
             receive_addr_local.set_ip("127.0.0.1".parse().unwrap());
-            let build_key = (receive_addr_local, local_addr);
+            let build_key = (receive_addr_local, endpoint.addr);
             assert!(map.contains_key(&build_key));
             let session = map.get(&build_key).unwrap().lock().await;
             assert_eq!(
@@ -577,22 +553,13 @@ mod tests {
             }
         }
 
-        let log = logger();
-
         let chain = Arc::new(FilterChain::new(vec![]));
-        let result = test(
-            "no filter".to_string(),
-            &log,
-            chain,
-            Expected { session_len: 1 },
-        )
-        .await;
+        let result = test("no filter".to_string(), chain, Expected { session_len: 1 }).await;
         assert_eq!("hello", result.msg);
 
         let chain = Arc::new(FilterChain::new(vec![Box::new(TestFilter {})]));
         let result = test(
             "test filter".to_string(),
-            &log,
             chain,
             Expected { session_len: 2 },
         )
@@ -608,26 +575,28 @@ mod tests {
 
     #[tokio::test]
     async fn run_recv_from() {
+        let t = TestHelper::default();
+
         let msg = "hello";
-        let (local_addr, wait) = recv_udp().await;
+        let endpoint = t.open_socket_and_recv_single_packet().await;
         let lb_policy = Arc::new(LoadBalancerPolicy::new(&ConnectionConfig::Client {
-            addresses: vec![local_addr],
+            addresses: vec![endpoint.addr],
             connection_id: "".into(),
             lb_policy: None,
         }));
-        let socket = ephemeral_socket().await;
-        let addr = socket.local_addr().unwrap();
-        let (recv, mut send) = socket.split();
+        let SplitSocket {
+            addr,
+            recv,
+            mut send,
+        } = t.create_and_split_socket().await;
         let sessions: SessionMap = Arc::new(RwLock::new(HashMap::new()));
         let (send_packets, mut recv_packets) = mpsc::channel::<Packet>(1);
 
         let config = Arc::new(Config {
-            local: Local {
-                port: local_addr.port(),
-            },
+            local: Local { port: 0 },
             filters: vec![],
             connections: ConnectionConfig::Client {
-                addresses: vec![local_addr],
+                addresses: vec![],
                 connection_id: "".into(),
                 lb_policy: None,
             },
@@ -643,17 +612,17 @@ mod tests {
         );
 
         send.send_to(msg.as_bytes(), &addr).await.unwrap();
-        assert_eq!(msg, wait.await.unwrap());
+        assert_eq!(msg, endpoint.packet_rx.await.unwrap());
         recv_packets.close();
     }
 
     #[tokio::test]
     async fn ensure_session() {
-        let log = logger();
+        let t = TestHelper::default();
         let map: SessionMap = Arc::new(RwLock::new(HashMap::new()));
         let from: SocketAddr = "127.0.0.1:27890".parse().unwrap();
         let dest: SocketAddr = "127.0.0.1:27891".parse().unwrap();
-        let (sender, mut recv) = mpsc::channel::<Packet>(1);
+        let (sender, _) = mpsc::channel::<Packet>(1);
         let endpoint = EndPoint {
             name: "endpoint".to_string(),
             address: dest,
@@ -665,7 +634,7 @@ mod tests {
             assert!(map.read().await.is_empty());
         }
         Server::ensure_session(
-            &log,
+            &t.log,
             &Metrics::default(),
             Arc::new(FilterChain::new(vec![])),
             map.clone(),
@@ -683,51 +652,43 @@ mod tests {
         let sess = rmap.get(&key).unwrap().lock().await;
         assert_eq!(key, sess.key());
         assert_eq!(1, rmap.keys().len());
-
-        recv.close();
     }
 
     #[tokio::test]
     async fn run_receive_packet() {
+        let t = TestHelper::default();
+
         let msg = "hello";
 
         // without a filter
-        let socket = ephemeral_socket().await;
-        let local_addr = socket.local_addr().unwrap();
-
-        let (recv_socket, send_socket) = socket.split();
         let (mut send_packet, recv_packet) = mpsc::channel::<Packet>(5);
-        let (done, wait) = oneshot::channel::<String>();
-
-        recv_udp_done(recv_socket, done);
-
-        if let Err(err) = send_packet
-            .send(Packet::new(local_addr, msg.as_bytes().to_vec()))
+        let endpoint = t.open_socket_and_recv_single_packet().await;
+        if send_packet
+            .send(Packet::new(endpoint.addr, msg.as_bytes().to_vec()))
             .await
+            .is_err()
         {
-            assert!(false, err)
+            unreachable!("failed to send packet over channel");
         }
 
         let config = Arc::new(Config {
-            local: Local {
-                port: local_addr.port(),
-            },
+            local: Local { port: 0 },
             filters: vec![],
             connections: ConnectionConfig::Client {
-                addresses: vec![local_addr],
+                addresses: vec![],
                 connection_id: "".into(),
                 lb_policy: None,
             },
         });
         let server = Builder::from(config).validate().unwrap().build();
-        server.run_receive_packet(send_socket, recv_packet);
-        assert_eq!(msg, wait.await.unwrap());
+        server.run_receive_packet(endpoint.send, recv_packet);
+        assert_eq!(msg, endpoint.packet_rx.await.unwrap());
     }
 
     #[tokio::test]
     async fn prune_sessions() {
         time::pause();
-        let log = logger();
+        let t = TestHelper::default();
         let sessions: SessionMap = Arc::new(RwLock::new(HashMap::new()));
         let from: SocketAddr = "127.0.0.1:7000".parse().unwrap();
         let to: SocketAddr = "127.0.0.1:7001".parse().unwrap();
@@ -739,7 +700,7 @@ mod tests {
         };
 
         Server::ensure_session(
-            &log,
+            &t.log.clone(),
             &Metrics::default(),
             Arc::new(FilterChain::new(vec![])),
             sessions.clone(),
@@ -761,7 +722,7 @@ mod tests {
 
         // session map should be the same since, we haven't passed expiry
         time::advance(Duration::new(SESSION_TIMEOUT_SECONDS / 2, 0)).await;
-        Server::prune_sessions(&log, sessions.clone()).await;
+        Server::prune_sessions(&t.log, sessions.clone()).await;
         {
             let map = sessions.read().await;
             assert!(map.contains_key(&key));
@@ -769,7 +730,7 @@ mod tests {
         }
 
         time::advance(Duration::new(2 * SESSION_TIMEOUT_SECONDS, 0)).await;
-        Server::prune_sessions(&log, sessions.clone()).await;
+        Server::prune_sessions(&t.log, sessions.clone()).await;
         {
             let map = sessions.read().await;
             assert!(
@@ -778,14 +739,14 @@ mod tests {
             );
             assert_eq!(0, map.len(), "len should be 0, bit is {}", map.len());
         }
-        info!(log, "test complete");
+        info!(t.log, "test complete");
         time::resume();
     }
 
     #[tokio::test]
     async fn run_prune_sessions() {
         time::pause();
-        let log = logger();
+        let t = TestHelper::default();
         let sessions: SessionMap = Arc::new(RwLock::new(HashMap::new()));
         let from: SocketAddr = "127.0.0.1:7000".parse().unwrap();
         let to: SocketAddr = "127.0.0.1:7001".parse().unwrap();
@@ -809,7 +770,7 @@ mod tests {
         let server = Builder::from(config).validate().unwrap().build();
         server.run_prune_sessions(&sessions);
         Server::ensure_session(
-            &log,
+            &t.log,
             &Metrics::default(),
             Arc::new(FilterChain::new(vec![])),
             sessions.clone(),

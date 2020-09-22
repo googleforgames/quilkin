@@ -23,12 +23,12 @@ use slog::{o, warn, Drain, Logger};
 use slog_term::{FullFormat, PlainSyncDecorator};
 use tokio::net::udp::{RecvHalf, SendHalf};
 use tokio::net::UdpSocket;
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::{mpsc, oneshot, watch};
 
 use crate::config::{Config, EndPoint};
 use crate::extensions::{
-    CreateFilterArgs, DownstreamContext, DownstreamResponse, Error, Filter, FilterFactory,
-    FilterRegistry, UpstreamContext, UpstreamResponse,
+    default_registry, CreateFilterArgs, DownstreamContext, DownstreamResponse, Error, Filter,
+    FilterFactory, FilterRegistry, UpstreamContext, UpstreamResponse,
 };
 use crate::proxy::{Builder, Metrics};
 
@@ -62,12 +62,24 @@ impl Filter for TestFilter {
         // address and port
         ctx.endpoints.push(noop_endpoint());
 
+        // append values on each run
+        ctx.values
+            .entry("downstream".into())
+            .and_modify(|e| e.downcast_mut::<String>().unwrap().push_str(":receive"))
+            .or_insert_with(|| Box::new("receive".to_string()));
+
         ctx.contents
             .append(&mut format!(":odr:{}", ctx.from).into_bytes());
         Some(ctx.into())
     }
 
     fn on_upstream_receive(&self, mut ctx: UpstreamContext) -> Option<UpstreamResponse> {
+        // append values on each run
+        ctx.values
+            .entry("upstream".into())
+            .and_modify(|e| e.downcast_mut::<String>().unwrap().push_str(":receive"))
+            .or_insert_with(|| Box::new("receive".to_string()));
+
         ctx.contents.append(
             &mut format!(":our:{}:{}:{}", ctx.endpoint.name, ctx.from, ctx.to).into_bytes(),
         );
@@ -83,97 +95,217 @@ pub fn logger() -> Logger {
     Logger::root(drain, o!())
 }
 
-/// recv_udp waits for a UDP packet to be received on SocketAddr, and sends
-/// that value to the oneshot channel so it can be tested.
-pub async fn recv_udp() -> (SocketAddr, oneshot::Receiver<String>) {
-    let socket = ephemeral_socket().await;
-    let local_addr = socket.local_addr().unwrap();
-    let (recv, _) = socket.split();
-    let (done, wait) = oneshot::channel::<String>();
-    recv_udp_done(recv, done);
-    (local_addr, wait)
+pub struct TestHelper {
+    pub log: Logger,
+    /// Channel to subscribe to, and trigger the shutdown of created resources.
+    shutdown_ch: Option<(watch::Sender<()>, watch::Receiver<()>)>,
+    server_shutdown_tx: Vec<Option<oneshot::Sender<()>>>,
 }
 
-/// ephemeral_socket provides a socket bound to an ephemeral port
-pub async fn ephemeral_socket() -> UdpSocket {
-    let addr = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 0);
-    UdpSocket::bind(addr).await.unwrap()
+/// Returned from [creating a socket](TestHelper::open_socket_and_recv_single_packet)
+pub struct OpenSocketRecvPacket {
+    /// The local address that the opened socket is bound to.
+    pub addr: SocketAddr,
+    /// The sender side, after splitting the opened socket.
+    pub send: SendHalf,
+    /// A channel on which the received packet will be forwarded.
+    pub packet_rx: oneshot::Receiver<String>,
 }
 
-/// recv_udp_done will send the String value of the receiving UDP packet to the passed in oneshot channel.
-pub fn recv_udp_done(mut recv: RecvHalf, done: oneshot::Sender<String>) {
-    tokio::spawn(async move {
-        let mut buf = vec![0; 1024];
-        let size = recv.recv(&mut buf).await.unwrap();
-        done.send(from_utf8(&buf[..size]).unwrap().to_string())
-            .unwrap();
-    });
+/// Returned from [creating a socket](TestHelper::create_and_split_socket)
+pub struct SplitSocket {
+    /// The local address that the opened socket is bound to.
+    pub addr: SocketAddr,
+    /// The receiver side, after splitting the opened socket.
+    pub recv: RecvHalf,
+    /// The sender side, after splitting the opened socket.
+    pub send: SendHalf,
 }
 
-// recv_multiple_packets enables you to send multiple packets through SendHalf
-// and will return any received packets back to the Receiver.
-pub async fn recv_multiple_packets(logger: &Logger) -> (mpsc::Receiver<String>, SendHalf) {
-    let (mut send_chan, recv_chan) = mpsc::channel::<String>(10);
-    let (mut recv, send) = ephemeral_socket().await.split();
-    // a channel, so we can wait for packets coming back.
-    let logger = logger.clone();
-    tokio::spawn(async move {
-        let mut buf = vec![0; 1024];
-        loop {
-            let (size, _) = recv.recv_from(&mut buf).await.unwrap();
-            let str = from_utf8(&buf[..size]).unwrap().to_string();
-            match send_chan.send(str).await {
-                Ok(_) => {}
-                Err(err) => {
-                    warn!(logger, "recv_multiple_packets: recv_chan dropped"; "error" => %err);
-                    break;
-                }
-            };
+impl Drop for TestHelper {
+    fn drop(&mut self) {
+        let log = self.log.clone();
+        for shutdown_tx in self
+            .server_shutdown_tx
+            .iter_mut()
+            .map(|tx| tx.take())
+            .flatten()
+        {
+            shutdown_tx
+                .send(())
+                .map_err(|err| {
+                    warn!(
+                        log,
+                        "failed to send server shutdown over channel: {:?}", err
+                    )
+                })
+                .ok();
         }
-    });
-    (recv_chan, send)
+
+        if let Some((shutdown_tx, _)) = self.shutdown_ch.take() {
+            shutdown_tx.broadcast(()).unwrap();
+        }
+    }
 }
 
-// echo_server runs a udp echo server, and returns the ephemeral addr
-// that it is running on.
-pub async fn echo_server() -> SocketAddr {
-    let mut socket = ephemeral_socket().await;
-    let addr = socket.local_addr().unwrap();
-    tokio::spawn(async move {
-        loop {
+impl Default for TestHelper {
+    fn default() -> Self {
+        TestHelper {
+            log: logger(),
+            shutdown_ch: None,
+            server_shutdown_tx: vec![],
+        }
+    }
+}
+
+impl TestHelper {
+    /// Creates a [`Server`] and runs it. The server is shutdown once `self`
+    /// goes out of scope.
+    pub fn run_server(&mut self, config: Config) {
+        self.run_server_with_filter_registry(config, default_registry(&self.log))
+    }
+
+    pub fn run_server_with_filter_registry(
+        &mut self,
+        config: Config,
+        filter_registry: FilterRegistry,
+    ) {
+        self.run_server_with_arguments(config, filter_registry, Metrics::default())
+    }
+
+    pub fn run_server_with_metrics(&mut self, config: Config, metrics: Metrics) {
+        self.run_server_with_arguments(config, default_registry(&self.log), metrics)
+    }
+
+    /// Opens a new socket bound to an ephemeral port
+    pub async fn create_socket(&self) -> UdpSocket {
+        let addr = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 0);
+        UdpSocket::bind(addr).await.unwrap()
+    }
+
+    /// Helper function to opens a new socket and split it immediately.
+    pub async fn create_and_split_socket(&self) -> SplitSocket {
+        let socket = self.create_socket().await;
+        let addr = socket.local_addr().unwrap();
+        let (recv, send) = socket.split();
+        SplitSocket { addr, recv, send }
+    }
+
+    /// Opens a socket, listening for a packet. Once a packet is received, it
+    /// is forwarded over the returned channel.
+    pub async fn open_socket_and_recv_single_packet(&self) -> OpenSocketRecvPacket {
+        let socket = self.create_socket().await;
+        let addr = socket.local_addr().unwrap();
+        let (mut recv, send) = socket.split();
+        let (packet_tx, packet_rx) = oneshot::channel::<String>();
+        tokio::spawn(async move {
             let mut buf = vec![0; 1024];
-            let (size, sender) = socket.recv_from(&mut buf).await.unwrap();
-            socket.send_to(&buf[..size], sender).await.unwrap();
+            let size = recv.recv(&mut buf).await.unwrap();
+            packet_tx
+                .send(from_utf8(&buf[..size]).unwrap().to_string())
+                .unwrap();
+        });
+        OpenSocketRecvPacket {
+            addr,
+            send,
+            packet_rx,
         }
-    });
-    addr
-}
+    }
 
-// run_proxy creates a instance of the Server proxy and runs it, returning a cancel function
-pub fn run_proxy(registry: FilterRegistry, config: Config) -> Box<dyn FnOnce()> {
-    run_proxy_with_metrics(registry, config, Metrics::default())
-}
+    /// Opens a socket, listening for packets. Received packets are forwarded over the
+    /// returned channel.
+    pub async fn open_socket_and_recv_multiple_packets(
+        &mut self,
+    ) -> (mpsc::Receiver<String>, SendHalf) {
+        let (mut packet_tx, packet_rx) = mpsc::channel::<String>(10);
+        let (mut socket_recv, socket_send) = self.create_socket().await.split();
+        let log = self.log.clone();
+        let mut shutdown_rx = self.get_shutdown_subscriber().await;
+        tokio::spawn(async move {
+            let mut buf = vec![0; 1024];
+            loop {
+                tokio::select! {
+                    received = socket_recv.recv_from(&mut buf) => {
+                        let (size, _) = received.unwrap();
+                        let str = from_utf8(&buf[..size]).unwrap().to_string();
+                        match packet_tx.send(str).await {
+                            Ok(_) => {}
+                            Err(err) => {
+                                warn!(log, "recv_multiple_packets: recv_chan dropped"; "error" => %err);
+                                return;
+                            }
+                        };
+                    },
+                    _ = shutdown_rx.recv() => {
+                        return;
+                    }
+                }
+            }
+        });
+        (packet_rx, socket_send)
+    }
 
-// run_proxy_with_metrics creates a instance of the Server proxy and
-// runs it, returning a cancel function
-pub fn run_proxy_with_metrics(
-    registry: FilterRegistry,
-    config: Config,
-    metrics: Metrics,
-) -> Box<dyn FnOnce()> {
-    let (close, stop) = oneshot::channel::<()>();
-    let proxy = Builder::from(Arc::new(config))
-        .with_filter_registry(registry)
-        .with_metrics(metrics)
-        .validate()
-        .unwrap()
-        .build();
-    // run the proxy
-    tokio::spawn(async move {
-        proxy.run(stop).await.unwrap();
-    });
+    /// Runs a simple UDP server that echos back payloads.
+    /// Returns the server's address.
+    pub async fn run_echo_server(&mut self) -> SocketAddr {
+        let mut socket = self.create_socket().await;
+        let addr = socket.local_addr().unwrap();
+        let mut shutdown = self.get_shutdown_subscriber().await;
+        tokio::spawn(async move {
+            loop {
+                let mut buf = vec![0; 1024];
+                tokio::select! {
+                    recvd = socket.recv_from(&mut buf) => {
+                        let (size, sender) = recvd.unwrap();
+                        socket.send_to(&buf[..size], sender).await.unwrap();
+                    },
+                    _ = shutdown.recv() => {
+                        return;
+                    }
+                }
+            }
+        });
+        addr
+    }
 
-    Box::new(|| close.send(()).unwrap())
+    /// Create and run a server.
+    fn run_server_with_arguments(
+        &mut self,
+        config: Config,
+        filter_registry: FilterRegistry,
+        metrics: Metrics,
+    ) {
+        let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
+        self.server_shutdown_tx.push(Some(shutdown_tx));
+        tokio::spawn(async move {
+            Builder::from(Arc::new(config))
+                .with_filter_registry(filter_registry)
+                .with_metrics(metrics)
+                .validate()
+                .unwrap()
+                .build()
+                .run(shutdown_rx)
+                .await
+                .unwrap();
+        });
+    }
+
+    /// Returns a receiver subscribed to the helper's shutdown event.
+    async fn get_shutdown_subscriber(&mut self) -> watch::Receiver<()> {
+        // If this is the first call, then we set up the channel first.
+        match self.shutdown_ch {
+            Some((_, ref rx)) => rx.clone(),
+            None => {
+                let mut ch = watch::channel(());
+                // Remove the init value from the channel so that we can later
+                // shutdown as soon as we receive any value from the channel.
+                let _ = ch.1.recv().await;
+                let recv = ch.1.clone();
+                self.shutdown_ch = Some(ch);
+                recv
+            }
+        }
+    }
 }
 
 /// assert that on_downstream_receive makes no changes
@@ -227,16 +359,19 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::test_utils::TestHelper;
 
     #[tokio::test]
     async fn test_echo_server() {
-        let echo_addr = echo_server().await;
-        let (recv, mut send) = ephemeral_socket().await.split();
-        let (done, wait) = oneshot::channel::<String>();
+        let mut t = TestHelper::default();
+        let echo_addr = t.run_echo_server().await;
+        let mut endpoint = t.open_socket_and_recv_single_packet().await;
         let msg = "hello";
-        recv_udp_done(recv, done);
-        send.send_to(msg.as_bytes(), &echo_addr).await.unwrap();
-        assert_eq!(msg, wait.await.unwrap());
+        endpoint
+            .send
+            .send_to(msg.as_bytes(), &echo_addr)
+            .await
+            .unwrap();
+        assert_eq!(msg, endpoint.packet_rx.await.unwrap());
     }
 }
