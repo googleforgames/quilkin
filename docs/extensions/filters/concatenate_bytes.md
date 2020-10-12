@@ -5,7 +5,7 @@ through. This is commonly used to provide an auth token to each packet, so they 
 
 #### Filter name
 ```text
-quilkin.extensions.filters.concat_token.v1alpha1.ConcatBytes
+quilkin.extensions.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
 ```
 
 ### Configuration Examples
@@ -14,7 +14,7 @@ quilkin.extensions.filters.concat_token.v1alpha1.ConcatBytes
 local:
   port: 7000
 filters:
-  - name: quilkin.extensions.filters.concat_bytes.v1alpha1.ConcatBytes
+  - name: quilkin.extensions.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
     config:
         strategy: Append
         bytes: MXg3aWp5Ng==
@@ -34,9 +34,10 @@ client:
 properties:
   strategy:
     type: string
-    default: "Append"
     description: |
-      Either 'Append' or 'Prepend' to either append or prepend the `bytes` data to each packet filtered respectively.
+      Either append or prepend the `bytes` data to each packet filtered.
+    default: "Append"
+    enum: ['Append', 'Prepend']
   bytes:
     type: string
     description: |

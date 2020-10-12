@@ -193,6 +193,9 @@ pub trait Filter: Send + Sync {
     fn on_upstream_receive(&self, ctx: UpstreamContext) -> Option<UpstreamResponse>;
 }
 
+/// Since Factory.create_filter returns a Box<dyn Filter>, this implementation of Filter on Box
+/// makes it much easier to write generic test assertions for Filter traits, as well as
+/// making sure the compiler doesn't complain that the size for values cannot be known.
 impl Filter for Box<dyn Filter> {
     fn on_downstream_receive(&self, ctx: DownstreamContext) -> Option<DownstreamResponse> {
         self.as_ref().on_downstream_receive(ctx)

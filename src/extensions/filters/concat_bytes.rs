@@ -47,9 +47,9 @@ impl Default for Strategy {
     }
 }
 
-/// The `ConcatBytes` filter's job is to add a byte packet to either the beginning or end of each UDP packet that passes
+/// The `ConcatenateBytes` filter's job is to add a byte packet to either the beginning or end of each UDP packet that passes
 /// through. This is commonly used to provide an auth token to each packet, so they can be routed appropriately.
-struct ConcatBytes {
+struct ConcatenateBytes {
     strategy: Strategy,
     bytes: Vec<u8>,
 }
@@ -64,7 +64,7 @@ impl Default for ConcatBytesFactory {
 
 impl FilterFactory for ConcatBytesFactory {
     fn name(&self) -> String {
-        "quilkin.extensions.filters.concat_bytes.v1alpha1.ConcatBytes".into()
+        "quilkin.extensions.filters.concatenate_bytes.v1alpha1.ConcatenateBytes".into()
     }
 
     fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
@@ -72,20 +72,20 @@ impl FilterFactory for ConcatBytesFactory {
             .and_then(|raw_config| serde_yaml::from_str(raw_config.as_str()))
             .map_err(|err| Error::DeserializeFailed(err.to_string()))?;
 
-        Ok(Box::new(ConcatBytes::new(config)))
+        Ok(Box::new(ConcatenateBytes::new(config)))
     }
 }
 
-impl ConcatBytes {
+impl ConcatenateBytes {
     pub fn new(config: Config) -> Self {
-        ConcatBytes {
+        ConcatenateBytes {
             strategy: config.strategy,
             bytes: config.bytes,
         }
     }
 }
 
-impl Filter for ConcatBytes {
+impl Filter for ConcatenateBytes {
     fn on_downstream_receive(&self, mut ctx: DownstreamContext) -> Option<DownstreamResponse> {
         let mut payload = self.bytes.clone();
 
@@ -210,7 +210,7 @@ mod tests {
             strategy: Default::default(),
             bytes: vec![],
         };
-        let filter = ConcatBytes::new(config);
+        let filter = ConcatenateBytes::new(config);
         assert_filter_on_downstream_receive_no_change(&filter);
     }
 
@@ -220,7 +220,7 @@ mod tests {
             strategy,
             bytes: contents,
         };
-        let filter = ConcatBytes::new(config);
+        let filter = ConcatenateBytes::new(config);
 
         assert_with_filter(&filter, expected);
     }
