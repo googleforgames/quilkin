@@ -27,10 +27,10 @@ mod tests {
     use quilkin::test_utils::TestHelper;
 
     #[tokio::test]
-    async fn concat_bytes() {
+    async fn concatenate_bytes() {
         let mut t = TestHelper::default();
         let yaml = "
-strategy: Append
+strategy: APPEND
 bytes: YWJj #abc
 ";
         let echo = t.run_echo_server().await;

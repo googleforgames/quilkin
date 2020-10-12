@@ -26,7 +26,9 @@ base64_serde_type!(Base64Standard, base64::STANDARD);
 
 #[derive(Serialize, Deserialize, Debug)]
 enum Strategy {
+    #[serde(rename = "APPEND")]
     Append,
+    #[serde(rename = "PREPEND")]
     Prepend,
 }
 
@@ -138,7 +140,7 @@ mod tests {
         // specific append
         map.insert(
             Value::String("strategy".into()),
-            Value::String("Append".into()),
+            Value::String("APPEND".into()),
         );
 
         let filter = factory
@@ -152,7 +154,7 @@ mod tests {
         // specific prepend
         map.insert(
             Value::String("strategy".into()),
-            Value::String("Prepend".into()),
+            Value::String("PREPEND".into()),
         );
 
         let filter = factory

@@ -16,7 +16,7 @@ local:
 filters:
   - name: quilkin.extensions.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
     config:
-        strategy: Append
+        strategy: APPEND
         bytes: MXg3aWp5Ng==
 client:
   addresses:
@@ -36,8 +36,8 @@ properties:
     type: string
     description: |
       Either append or prepend the `bytes` data to each packet filtered.
-    default: "Append"
-    enum: ['Append', 'Prepend']
+    default: "APPEND"
+    enum: ['APPEND', 'PREPEND']
   bytes:
     type: string
     description: |
