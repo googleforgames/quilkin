@@ -189,7 +189,7 @@ mod tests {
             .on_downstream_receive(DownstreamContext::new(
                 endpoints_fixture.clone(),
                 "127.0.0.1:70".parse().unwrap(),
-                "hello".as_bytes().to_vec(),
+                b"hello".to_vec(),
             ))
             .unwrap();
 
@@ -212,7 +212,7 @@ mod tests {
                 &endpoints_fixture[0],
                 endpoints_fixture[0].address,
                 "127.0.0.1:70".parse().unwrap(),
-                "hello".as_bytes().to_vec(),
+                b"hello".to_vec(),
             ))
             .unwrap();
 
@@ -238,7 +238,7 @@ mod tests {
             .on_downstream_receive(DownstreamContext::new(
                 endpoints_fixture.clone(),
                 "127.0.0.1:70".parse().unwrap(),
-                "hello".as_bytes().to_vec(),
+                b"hello".to_vec(),
             ))
             .unwrap();
 
@@ -262,7 +262,7 @@ mod tests {
                 &endpoints_fixture[0],
                 endpoints_fixture[0].address,
                 "127.0.0.1:70".parse().unwrap(),
-                "hello".as_bytes().to_vec(),
+                b"hello".to_vec(),
             ))
             .unwrap();
         assert_eq!(

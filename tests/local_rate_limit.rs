@@ -57,9 +57,7 @@ period: 1s
         let server_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port);
 
         for _ in 0..3 {
-            send.send_to("hello".as_bytes(), &server_addr)
-                .await
-                .unwrap();
+            send.send_to(b"hello", &server_addr).await.unwrap();
         }
 
         for _ in 0..2 {

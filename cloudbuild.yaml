@@ -31,7 +31,7 @@ steps:
   # that it skips checking some files that were built previously. As a result
   # we run it before other cargo sub-commands to ensure that it checks all files.
   - name: gcr.io/$PROJECT_ID/ci
-    args: ["clippy"]
+    args: ["clippy", "--tests"]
     id: clippy
   - name: gcr.io/$PROJECT_ID/ci
     args: ["check", "--tests"]

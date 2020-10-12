@@ -358,12 +358,12 @@ mod tests {
                 endpoints: vec![
                     EndPoint {
                         name: String::from("e1"),
-                        address: endpoint1.addr.clone(),
+                        address: endpoint1.addr,
                         connection_ids: vec![],
                     },
                     EndPoint {
                         name: String::from("e2"),
-                        address: endpoint2.addr.clone(),
+                        address: endpoint2.addr,
                         connection_ids: vec![],
                     },
                 ],
@@ -530,7 +530,7 @@ mod tests {
             assert_eq!(expected.session_len, map.len());
 
             // need to switch to 127.0.0.1, as the request comes locally
-            let mut receive_addr_local = receive_addr.clone();
+            let mut receive_addr_local = receive_addr;
             receive_addr_local.set_ip("127.0.0.1".parse().unwrap());
             let build_key = (receive_addr_local, endpoint.addr);
             assert!(map.contains_key(&build_key));
@@ -652,9 +652,10 @@ mod tests {
         // without a filter
         let (mut send_packet, recv_packet) = mpsc::channel::<Packet>(5);
         let endpoint = t.open_socket_and_recv_single_packet().await;
-        if let Err(_) = send_packet
+        if send_packet
             .send(Packet::new(endpoint.addr, msg.as_bytes().to_vec()))
             .await
+            .is_err()
         {
             unreachable!("failed to send packet over channel");
         }
