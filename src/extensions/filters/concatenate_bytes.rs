@@ -89,15 +89,12 @@ impl ConcatenateBytes {
 
 impl Filter for ConcatenateBytes {
     fn on_downstream_receive(&self, mut ctx: DownstreamContext) -> Option<DownstreamResponse> {
-        let mut payload = self.bytes.clone();
-
         match self.strategy {
             Strategy::Append => {
-                ctx.contents.append(&mut payload);
+                ctx.contents.extend(self.bytes.iter());
             }
             Strategy::Prepend => {
-                payload.append(&mut ctx.contents);
-                ctx.contents = payload;
+                ctx.contents.splice(..0, self.bytes.iter().cloned());
             }
         }
 
@@ -135,7 +132,7 @@ mod tests {
                 Some(&Value::Mapping(map.clone())),
             ))
             .unwrap();
-        assert_with_filter(&filter, "abchello");
+        assert_with_filter(filter.as_ref(), "abchello");
 
         // specific append
         map.insert(
@@ -149,7 +146,7 @@ mod tests {
                 Some(&Value::Mapping(map.clone())),
             ))
             .unwrap();
-        assert_with_filter(&filter, "abchello");
+        assert_with_filter(filter.as_ref(), "abchello");
 
         // specific prepend
         map.insert(
@@ -164,7 +161,7 @@ mod tests {
             ))
             .unwrap();
 
-        assert_with_filter(&filter, "helloabc");
+        assert_with_filter(filter.as_ref(), "helloabc");
     }
 
     #[test]
@@ -229,7 +226,7 @@ mod tests {
 
     fn assert_with_filter<F>(filter: &F, expected: &str)
     where
-        F: Filter,
+        F: Filter + ?Sized,
     {
         let endpoints = vec![EndPoint {
             name: "e1".to_string(),
