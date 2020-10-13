@@ -21,7 +21,7 @@ mod tests {
     use tokio::select;
     use tokio::time::{delay_for, Duration};
 
-    use quilkin::config::{Config, ConnectionConfig, EndPoint, Filter, Local};
+    use quilkin::config::{Builder, ConnectionConfig, EndPoint, Filter, Local};
     use quilkin::extensions::filters::ConcatBytesFactory;
     use quilkin::extensions::FilterFactory;
     use quilkin::test_utils::TestHelper;
@@ -36,20 +36,21 @@ bytes: YWJj #abc
         let echo = t.run_echo_server().await;
 
         let server_port = 12346;
-        let server_config = Config {
-            local: Local { port: server_port },
-            filters: vec![Filter {
+        let server_config = Builder::empty()
+            .with_local(Local { port: server_port })
+            .with_filters(vec![Filter {
                 name: ConcatBytesFactory::default().name(),
                 config: serde_yaml::from_str(yaml).unwrap(),
-            }],
-            connections: ConnectionConfig::Server {
+            }])
+            .with_connections(ConnectionConfig::Server {
                 endpoints: vec![EndPoint {
                     name: "server".to_string(),
                     address: echo,
                     connection_ids: vec![],
                 }],
-            },
-        };
+            })
+            .build();
+
         t.run_server(server_config);
 
         // let's send the packet
