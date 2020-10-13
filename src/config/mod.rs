@@ -14,35 +14,21 @@
  * limitations under the License.
  */
 
-use crate::extensions::Error as FilterRegistryError;
 use std::collections::HashSet;
-use std::fmt;
 use std::io;
+use std::marker::PhantomData;
 use std::net::SocketAddr;
 
 use base64_serde::base64_serde_type;
-use serde::export::Formatter;
 use serde::{Deserialize, Serialize};
 
+mod builder;
+mod error;
+
+pub use builder::Builder;
+pub use error::ValidationError;
+
 base64_serde_type!(Base64Standard, base64::STANDARD);
-
-/// Validation failure for a Config
-#[derive(Debug, PartialEq)]
-pub enum ValidationError {
-    NotUnique(String),
-    FilterInvalid(FilterRegistryError),
-}
-
-impl fmt::Display for ValidationError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ValidationError::NotUnique(field) => write!(f, "field {} is not unique", field),
-            ValidationError::FilterInvalid(reason) => {
-                write!(f, "filter configuration is invalid: {}", reason)
-            }
-        }
-    }
-}
 
 /// Config is the configuration for either a Client or Server proxy
 #[derive(Debug, Deserialize, Serialize)]
@@ -52,6 +38,10 @@ pub struct Config {
     pub filters: Vec<Filter>,
     #[serde(flatten)]
     pub connections: ConnectionConfig,
+
+    // Limit struct creation to the builder. We use an Optional<Phantom>
+    // so that we can create instances though deserialization.
+    pub(super) phantom: Option<PhantomData<()>>,
 }
 
 /// Local is the local host configuration options
@@ -180,31 +170,29 @@ mod tests {
     use serde_yaml::Value;
 
     use crate::config::{
-        Config, ConnectionConfig, ConnectionId, EndPoint, LoadBalancerPolicy, Local,
+        Builder, Config, ConnectionConfig, ConnectionId, EndPoint, LoadBalancerPolicy, Local,
         ValidationError,
     };
 
     #[test]
     fn deserialise_client() {
-        let config = Config {
-            local: Local { port: 7000 },
-            filters: vec![],
-            connections: ConnectionConfig::Client {
+        let config = Builder::empty()
+            .with_local(Local { port: 7000 })
+            .with_connections(ConnectionConfig::Client {
                 addresses: vec!["127.0.0.1:25999".parse().unwrap()],
                 connection_id: "1234".into(),
                 lb_policy: Some(LoadBalancerPolicy::RoundRobin),
-            },
-        };
+            })
+            .build();
         let yaml = serde_yaml::to_string(&config).unwrap();
         println!("{}", yaml);
     }
 
     #[test]
     fn deserialise_server() {
-        let config = Config {
-            local: Local { port: 7000 },
-            filters: vec![],
-            connections: ConnectionConfig::Server {
+        let config = Builder::empty()
+            .with_local(Local { port: 7000 })
+            .with_connections(ConnectionConfig::Server {
                 endpoints: vec![
                     EndPoint {
                         name: String::from("No.1"),
@@ -217,8 +205,8 @@ mod tests {
                         connection_ids: vec!["1234".into()],
                     },
                 ],
-            },
-        };
+            })
+            .build();
         let yaml = serde_yaml::to_string(&config).unwrap();
         println!("{}", yaml);
     }
@@ -336,34 +324,32 @@ server:
     #[test]
     fn validate() {
         // client - valid
-        let config = Config {
-            local: Local { port: 7000 },
-            filters: vec![],
-            connections: ConnectionConfig::Client {
+        let config = Builder::empty()
+            .with_local(Local { port: 7000 })
+            .with_connections(ConnectionConfig::Client {
                 addresses: vec![
                     "127.0.0.1:25999".parse().unwrap(),
                     "127.0.0.1:25998".parse().unwrap(),
                 ],
                 connection_id: "1234".into(),
                 lb_policy: Some(LoadBalancerPolicy::RoundRobin),
-            },
-        };
+            })
+            .build();
 
         assert!(config.validate().is_ok());
 
         // client - non unique address
-        let config = Config {
-            local: Local { port: 7000 },
-            filters: vec![],
-            connections: ConnectionConfig::Client {
+        let config = Builder::empty()
+            .with_local(Local { port: 7000 })
+            .with_connections(ConnectionConfig::Client {
                 addresses: vec![
                     "127.0.0.1:25999".parse().unwrap(),
                     "127.0.0.1:25999".parse().unwrap(),
                 ],
                 connection_id: "1234".into(),
                 lb_policy: Some(LoadBalancerPolicy::RoundRobin),
-            },
-        };
+            })
+            .build();
 
         assert_eq!(
             ValidationError::NotUnique("connections.addresses".to_string()).to_string(),
@@ -371,10 +357,9 @@ server:
         );
 
         // server - valid
-        let config = Config {
-            local: Local { port: 7000 },
-            filters: vec![],
-            connections: ConnectionConfig::Server {
+        let config = Builder::empty()
+            .with_local(Local { port: 7000 })
+            .with_connections(ConnectionConfig::Server {
                 endpoints: vec![
                     EndPoint {
                         name: String::from("ONE"),
@@ -387,15 +372,14 @@ server:
                         connection_ids: vec!["1234".into()],
                     },
                 ],
-            },
-        };
+            })
+            .build();
         assert!(config.validate().is_ok());
 
         // server - non unique endpoint names
-        let config = Config {
-            local: Local { port: 7000 },
-            filters: vec![],
-            connections: ConnectionConfig::Server {
+        let config = Builder::empty()
+            .with_local(Local { port: 7000 })
+            .with_connections(ConnectionConfig::Server {
                 endpoints: vec![
                     EndPoint {
                         name: String::from("SAME"),
@@ -408,8 +392,8 @@ server:
                         connection_ids: vec!["1234".into()],
                     },
                 ],
-            },
-        };
+            })
+            .build();
 
         assert_eq!(
             ValidationError::NotUnique("endpoint.name".to_string()).to_string(),
@@ -417,10 +401,9 @@ server:
         );
 
         // server - non unique addresses
-        let config = Config {
-            local: Local { port: 7000 },
-            filters: vec![],
-            connections: ConnectionConfig::Server {
+        let config = Builder::empty()
+            .with_local(Local { port: 7000 })
+            .with_connections(ConnectionConfig::Server {
                 endpoints: vec![
                     EndPoint {
                         name: String::from("ONE"),
@@ -433,8 +416,8 @@ server:
                         connection_ids: vec!["1234".into()],
                     },
                 ],
-            },
-        };
+            })
+            .build();
 
         assert_eq!(
             ValidationError::NotUnique("endpoint.address".to_string()).to_string(),

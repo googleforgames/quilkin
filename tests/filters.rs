@@ -23,7 +23,7 @@ mod tests {
     use serde_yaml::{Mapping, Value};
     use slog::info;
 
-    use quilkin::config::{Config, ConnectionConfig, EndPoint, Filter, Local};
+    use quilkin::config::{Builder as ConfigBuilder, ConnectionConfig, EndPoint, Filter, Local};
     use quilkin::extensions::filters::DebugFilterFactory;
     use quilkin::extensions::{default_registry, FilterFactory};
     use quilkin::test_utils::{TestFilterFactory, TestHelper};
@@ -37,20 +37,20 @@ mod tests {
 
         // create server configuration
         let server_port = 12346;
-        let server_config = Config {
-            local: Local { port: server_port },
-            filters: vec![Filter {
+        let server_config = ConfigBuilder::empty()
+            .with_local(Local { port: server_port })
+            .with_filters(vec![Filter {
                 name: "TestFilter".to_string(),
                 config: None,
-            }],
-            connections: ConnectionConfig::Server {
+            }])
+            .with_connections(ConnectionConfig::Server {
                 endpoints: vec![EndPoint {
                     name: "server".to_string(),
                     address: echo,
                     connection_ids: vec![],
                 }],
-            },
-        };
+            })
+            .build();
         assert_eq!(Ok(()), server_config.validate());
 
         // Run server proxy.
@@ -60,21 +60,21 @@ mod tests {
 
         // create a local client
         let client_port = 12347;
-        let client_config = Config {
-            local: Local { port: client_port },
-            filters: vec![Filter {
+        let client_config = ConfigBuilder::empty()
+            .with_local(Local { port: client_port })
+            .with_filters(vec![Filter {
                 name: "TestFilter".to_string(),
                 config: None,
-            }],
-            connections: ConnectionConfig::Client {
+            }])
+            .with_connections(ConnectionConfig::Client {
                 addresses: vec![SocketAddr::new(
                     IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
                     server_port,
                 )],
                 connection_id: "".into(),
                 lb_policy: None,
-            },
-        };
+            })
+            .build();
         assert_eq!(Ok(()), client_config.validate());
 
         // Run client proxy.
@@ -123,41 +123,41 @@ mod tests {
         map.insert(Value::from("id"), Value::from("server"));
         // create server configuration
         let server_port = 12247;
-        let server_config = Config {
-            local: Local { port: server_port },
-            filters: vec![Filter {
+        let server_config = ConfigBuilder::empty()
+            .with_local(Local { port: server_port })
+            .with_filters(vec![Filter {
                 name: factory.name(),
                 config: Some(serde_yaml::Value::Mapping(map)),
-            }],
-            connections: ConnectionConfig::Server {
+            }])
+            .with_connections(ConnectionConfig::Server {
                 endpoints: vec![EndPoint {
                     name: "server".to_string(),
                     address: echo,
                     connection_ids: vec![],
                 }],
-            },
-        };
+            })
+            .build();
         t.run_server(server_config);
 
         let mut map = Mapping::new();
         map.insert(Value::from("id"), Value::from("client"));
         // create a local client
         let client_port = 12248;
-        let client_config = Config {
-            local: Local { port: client_port },
-            filters: vec![Filter {
+        let client_config = ConfigBuilder::empty()
+            .with_local(Local { port: client_port })
+            .with_filters(vec![Filter {
                 name: factory.name(),
                 config: Some(serde_yaml::Value::Mapping(map)),
-            }],
-            connections: ConnectionConfig::Client {
+            }])
+            .with_connections(ConnectionConfig::Client {
                 addresses: vec![SocketAddr::new(
                     IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
                     server_port,
                 )],
                 connection_id: "".into(),
                 lb_policy: None,
-            },
-        };
+            })
+            .build();
         t.run_server(client_config);
 
         // let's send the packet
