@@ -27,6 +27,7 @@ mod load_balancer_policy;
 pub mod metrics;
 pub mod proxy;
 pub mod test_utils;
+pub(crate) mod xds;
 
 #[cfg(doctest)]
 pub mod external_doc_tests {
