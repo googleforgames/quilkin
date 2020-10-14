@@ -15,6 +15,7 @@
  */
 
 // Allow unused variables since this module is WIP.
+// TODO: remove this when we start implementing the xDS API
 #![allow(unused)]
 
 mod udpa {
