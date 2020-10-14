@@ -66,6 +66,7 @@ Quilkin includes several filters out of the box.
 | ----------------------------------------- | ------------------------------ |
 | [Debug](debug.md)                | Logs every packet              |
 | [LocalRateLimiter](./local_rate_limit.md) | Limit the frequency of packets |
+| [ConcatenateBytes](./concatenate_bytes.md) | Add authentication tokens to packets |
 
 ### FilterConfig <a name="filter-config"></a>
 Represents configuration for a filter instance.

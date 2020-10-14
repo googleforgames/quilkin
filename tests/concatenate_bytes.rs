@@ -14,32 +14,32 @@
  * limitations under the License.
  */
 
-extern crate quilkin;
-
 #[cfg(test)]
 mod tests {
     use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
-    use quilkin::config::{Builder as ConfigBuilder, ConnectionConfig, EndPoint, Filter, Local};
-    use quilkin::extensions::filters::RateLimitFilterFactory;
+    use tokio::select;
+    use tokio::time::{delay_for, Duration};
+
+    use quilkin::config::{Builder, ConnectionConfig, EndPoint, Filter, Local};
+    use quilkin::extensions::filters::ConcatBytesFactory;
     use quilkin::extensions::FilterFactory;
     use quilkin::test_utils::TestHelper;
 
     #[tokio::test]
-    async fn local_rate_limit_filter() {
+    async fn concatenate_bytes() {
         let mut t = TestHelper::default();
-
         let yaml = "
-max_packets: 2
-period: 1s
+strategy: APPEND
+bytes: YWJj #abc
 ";
         let echo = t.run_echo_server().await;
 
         let server_port = 12346;
-        let server_config = ConfigBuilder::empty()
+        let server_config = Builder::empty()
             .with_local(Local { port: server_port })
             .with_filters(vec![Filter {
-                name: RateLimitFilterFactory::default().name(),
+                name: ConcatBytesFactory::default().name(),
                 config: serde_yaml::from_str(yaml).unwrap(),
             }])
             .with_connections(ConnectionConfig::Server {
@@ -50,23 +50,22 @@ period: 1s
                 }],
             })
             .build();
+
         t.run_server(server_config);
 
+        // let's send the packet
         let (mut recv_chan, mut send) = t.open_socket_and_recv_multiple_packets().await;
 
-        let server_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port);
+        let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port);
+        send.send_to(b"hello", &local_addr).await.unwrap();
 
-        for _ in 0..3 {
-            send.send_to(b"hello", &server_addr).await.unwrap();
-        }
-
-        for _ in 0..2 {
-            assert_eq!(recv_chan.recv().await.unwrap(), "hello");
-        }
-
-        // Allow enough time to have received any response.
-        tokio::time::delay_for(std::time::Duration::from_millis(100)).await;
-        // Check that we do not get any response.
-        assert!(recv_chan.try_recv().is_err());
+        select! {
+            res = recv_chan.recv() => {
+                assert_eq!("helloabc", res.unwrap());
+            }
+            _ = delay_for(Duration::from_secs(5)) => {
+                unreachable!("should have received a packet");
+            }
+        };
     }
 }

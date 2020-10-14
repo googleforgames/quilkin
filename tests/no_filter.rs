@@ -23,7 +23,7 @@ mod tests {
     use tokio::select;
     use tokio::time::{delay_for, Duration};
 
-    use quilkin::config::{Config, ConnectionConfig, EndPoint, Local};
+    use quilkin::config::{Builder as ConfigBuilder, ConnectionConfig, EndPoint, Local};
     use quilkin::test_utils::TestHelper;
 
     #[tokio::test]
@@ -36,10 +36,9 @@ mod tests {
 
         // create server configuration
         let server_port = 12345;
-        let server_config = Config {
-            local: Local { port: server_port },
-            filters: vec![],
-            connections: ConnectionConfig::Server {
+        let server_config = ConfigBuilder::empty()
+            .with_local(Local { port: server_port })
+            .with_connections(ConnectionConfig::Server {
                 endpoints: vec![
                     EndPoint {
                         name: "server1".to_string(),
@@ -52,26 +51,25 @@ mod tests {
                         connection_ids: vec![],
                     },
                 ],
-            },
-        };
+            })
+            .build();
         assert_eq!(Ok(()), server_config.validate());
 
         t.run_server(server_config);
 
         // create a local client
         let client_port = 12344;
-        let client_config = Config {
-            local: Local { port: client_port },
-            filters: vec![],
-            connections: ConnectionConfig::Client {
+        let client_config = ConfigBuilder::empty()
+            .with_local(Local { port: client_port })
+            .with_connections(ConnectionConfig::Client {
                 addresses: vec![SocketAddr::new(
                     IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
                     server_port,
                 )],
                 connection_id: "".into(),
                 lb_policy: None,
-            },
-        };
+            })
+            .build();
         assert_eq!(Ok(()), client_config.validate());
 
         t.run_server(client_config);
