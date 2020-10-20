@@ -15,7 +15,7 @@
  */
 
 pub use concatenate_bytes::ConcatBytesFactory;
-pub use debug::DebugFilterFactory;
+pub use debug::DebugFactory;
 pub use local_rate_limit::RateLimitFilterFactory;
 
 mod concatenate_bytes;

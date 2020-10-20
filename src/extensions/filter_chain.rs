@@ -119,7 +119,7 @@ mod tests {
 
     use crate::config;
     use crate::config::{Builder, ConnectionConfig, EndPoint};
-    use crate::extensions::filters::DebugFilterFactory;
+    use crate::extensions::filters::DebugFactory;
     use crate::extensions::{default_registry, FilterFactory};
     use crate::test_utils::{logger, noop_endpoint, TestFilter};
 
@@ -128,7 +128,7 @@ mod tests {
     #[test]
     fn from_config() {
         let log = logger();
-        let provider = DebugFilterFactory::new(&log);
+        let provider = DebugFactory::new(&log);
 
         // everything is fine
         let config = Builder::empty()

@@ -6,7 +6,7 @@ This filter is useful in debugging deployments where the packets strictly contai
 
 #### Filter name
 ```text
-quilkin.extensions.filters.debug_filter.v1alpha1.DebugFilter
+quilkin.extensions.filters.debug_filter.v1alpha1.Debug
 ```
 
 ### Configuration Examples
@@ -15,7 +15,7 @@ quilkin.extensions.filters.debug_filter.v1alpha1.DebugFilter
 local:
   port: 7000
 filters:
-  - name: quilkin.extensions.filters.debug.v1alpha1.DebugFilter
+  - name: quilkin.extensions.filters.debug.v1alpha1.Debug
     config:
       id: debug-1
 client:
