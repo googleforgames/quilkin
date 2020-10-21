@@ -32,7 +32,7 @@ mod filter_chain;
 /// set of filters that are user configurable registered to it
 pub fn default_registry(base: &Logger) -> FilterRegistry {
     let mut fr = FilterRegistry::default();
-    fr.insert(filters::DebugFilterFactory::new(base));
+    fr.insert(filters::DebugFactory::new(base));
     fr.insert(filters::RateLimitFilterFactory::default());
     fr.insert(filters::ConcatBytesFactory::default());
     fr

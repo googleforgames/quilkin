@@ -36,7 +36,7 @@ There are a few things we note here:
 local:
   port: 7000
 filters:
-  - name: quilkin.extensions.filters.debug_filter.v1alpha1.DebugFilter
+  - name: quilkin.extensions.filters.debug_filter.v1alpha1.Debug
     config:
       id: debug-1
   - name: quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit

@@ -22,7 +22,7 @@ use crate::extensions::filter_registry::{
 };
 use crate::extensions::Filter;
 
-/// Debug Filter logs all incoming and outgoing packets
+/// Debug logs all incoming and outgoing packets
 ///
 /// # Configuration
 ///
@@ -30,7 +30,7 @@ use crate::extensions::Filter;
 /// local:
 ///   port: 7000 # the port to receive traffic to locally
 /// filters:
-///   - name: quilkin.extensions.filters.debug.v1alpha1.DebugFilter
+///   - name: quilkin.extensions.filters.debug.v1alpha1.Debug
 ///     config:
 ///       id: "debug-1"
 /// client:
@@ -40,39 +40,39 @@ use crate::extensions::Filter;
 /// ```
 ///  `config.id` (optional) adds a "id" field with a given value to each log line.
 ///     This can be useful to identify debug log positioning within a filter config if you have
-///     multiple DebugFilters configured.
+///     multiple Debug configured.
 ///
-pub struct DebugFilter {
+pub struct Debug {
     log: Logger,
 }
 
-impl DebugFilter {
-    /// Constructor for the DebugFilter. Pass in a "id" to append a string to your log messages from this
+impl Debug {
+    /// Constructor for the Debug. Pass in a "id" to append a string to your log messages from this
     /// Filter.
     fn new(base: &Logger, id: Option<String>) -> Self {
         let log = match id {
-            None => base.new(o!("source" => "extensions::DebugFilter")),
-            Some(id) => base.new(o!("source" => "extensions::DebugFilter", "id" => id)),
+            None => base.new(o!("source" => "extensions::Debug")),
+            Some(id) => base.new(o!("source" => "extensions::Debug", "id" => id)),
         };
 
-        DebugFilter { log }
+        Debug { log }
     }
 }
 
-/// Factory for the DebugFilter
-pub struct DebugFilterFactory {
+/// Factory for the Debug
+pub struct DebugFactory {
     log: Logger,
 }
 
-impl DebugFilterFactory {
+impl DebugFactory {
     pub fn new(base: &Logger) -> Self {
-        DebugFilterFactory { log: base.clone() }
+        DebugFactory { log: base.clone() }
     }
 }
 
-impl FilterFactory for DebugFilterFactory {
+impl FilterFactory for DebugFactory {
     fn name(&self) -> String {
-        "quilkin.extensions.filters.debug.v1alpha1.DebugFilter".into()
+        "quilkin.extensions.filters.debug.v1alpha1.Debug".into()
     }
 
     fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
@@ -84,23 +84,20 @@ impl FilterFactory for DebugFilterFactory {
 
         match prefix {
             // if no config value supplied, then no prefix, which is fine
-            None => Ok(Box::new(DebugFilter::new(&self.log, None))),
+            None => Ok(Box::new(Debug::new(&self.log, None))),
             // return an Error if the id exists but is not a string.
             Some(value) => match value.as_str() {
                 None => Err(Error::FieldInvalid {
                     field: "config.id".to_string(),
                     reason: "id value should be a string".to_string(),
                 }),
-                Some(prefix) => Ok(Box::new(DebugFilter::new(
-                    &self.log,
-                    Some(prefix.to_string()),
-                ))),
+                Some(prefix) => Ok(Box::new(Debug::new(&self.log, Some(prefix.to_string())))),
             },
         }
     }
 }
 
-impl Filter for DebugFilter {
+impl Filter for Debug {
     fn on_downstream_receive(&self, ctx: DownstreamContext) -> Option<DownstreamResponse> {
         info!(self.log, "on local receive"; "from" => ctx.from, "contents" => packet_to_string(ctx.contents.clone()));
         Some(ctx.into())
@@ -139,13 +136,13 @@ mod tests {
 
     #[test]
     fn on_downstream_receive() {
-        let df = DebugFilter::new(&logger(), None);
+        let df = Debug::new(&logger(), None);
         assert_filter_on_downstream_receive_no_change(&df);
     }
 
     #[test]
     fn on_upstream_receive() {
-        let df = DebugFilter::new(&logger(), None);
+        let df = Debug::new(&logger(), None);
         assert_filter_on_upstream_receive_no_change(&df);
     }
 
@@ -154,7 +151,7 @@ mod tests {
         let log = logger();
         let mut map = Mapping::new();
         let connection = Server { endpoints: vec![] };
-        let factory = DebugFilterFactory::new(&log);
+        let factory = DebugFactory::new(&log);
 
         map.insert(Value::from("id"), Value::from("name"));
         assert!(factory
@@ -170,7 +167,7 @@ mod tests {
         let log = logger();
         let mut map = Mapping::new();
         let connection = Server { endpoints: vec![] };
-        let factory = DebugFilterFactory::new(&log);
+        let factory = DebugFactory::new(&log);
 
         map.insert(Value::from("id"), Value::from("name"));
         assert!(factory
@@ -186,7 +183,7 @@ mod tests {
         let log = logger();
         let mut map = Mapping::new();
         let connection = Server { endpoints: vec![] };
-        let factory = DebugFilterFactory::new(&log);
+        let factory = DebugFactory::new(&log);
 
         map.insert(Value::from("id"), Value::from(false));
         match factory.create_filter(CreateFilterArgs::new(
