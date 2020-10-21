@@ -15,7 +15,7 @@
  */
 
 use crate::cluster::{
-    Cluster as QuilkinCluster, ClusterLocalities, Endpoint, Locality, LocalityEndpoints,
+    Cluster as ProxyCluster, ClusterLocalities, Endpoint, Locality, LocalityEndpoints,
 };
 use crate::xds::envoy::config::cluster::v3::{cluster, Cluster};
 use crate::xds::envoy::config::core::v3::{address, socket_address};
@@ -27,7 +27,7 @@ use crate::xds::{CLUSTER_TYPE, ENDPOINT_TYPE};
 use crate::xds::error::Error;
 use bytes::Bytes;
 use prost::Message;
-use slog::{info, warn, Logger};
+use slog::{debug, warn, Logger};
 use std::collections::{HashMap, HashSet};
 use std::net::SocketAddr;
 use tokio::sync::mpsc;
@@ -43,10 +43,10 @@ pub(crate) struct ClusterManager {
     discovery_req_tx: mpsc::Sender<DiscoveryRequest>,
 
     // Sends cluster state updates to the caller.
-    cluster_updates_tx: mpsc::Sender<HashMap<String, QuilkinCluster>>,
+    cluster_updates_tx: mpsc::Sender<HashMap<String, ProxyCluster>>,
 
     // Tracks each cluster's endpoints and localities.
-    clusters: HashMap<String, QuilkinCluster>,
+    clusters: HashMap<String, ProxyCluster>,
 
     // Tracks the (version, nonce) state for EDS request/response.
     // This is used to make spontaneous EDS requests to
@@ -61,7 +61,7 @@ impl ClusterManager {
     /// server.
     pub(in crate::xds) fn new(
         log: Logger,
-        cluster_updates_tx: mpsc::Sender<HashMap<String, QuilkinCluster>>,
+        cluster_updates_tx: mpsc::Sender<HashMap<String, ProxyCluster>>,
         discovery_req_tx: mpsc::Sender<DiscoveryRequest>,
     ) -> Self {
         ClusterManager {
@@ -74,8 +74,9 @@ impl ClusterManager {
     }
 
     /// Processes a CDS response and updates its cluster view if needed.
+    /// This method is called upon receiving a `CDS` `DiscoveryResponse` from the XDS server.
     pub(in crate::xds) async fn on_cluster_response(&mut self, response: DiscoveryResponse) {
-        info!(
+        debug!(
             self.log,
             "{}: received response containing {} resource(s)",
             CLUSTER_TYPE,
@@ -125,7 +126,7 @@ impl ClusterManager {
                 .map(ClusterManager::process_cluster_load_assignment)
                 .unwrap_or_else(|| Ok(HashMap::new()))?;
 
-            temp_cluster_set.insert(cluster.name, QuilkinCluster { localities });
+            temp_cluster_set.insert(cluster.name, ProxyCluster { localities });
         }
 
         // Update to the new cluster set.
@@ -155,11 +156,12 @@ impl ClusterManager {
     }
 
     /// Processes an EDS response and updates its endpoint view if needed.
+    /// This method is called upon receiving an `EDS` `DiscoveryResponse` from the XDS server.
     pub(in crate::xds) async fn on_cluster_load_assignment_response(
         &mut self,
         response: DiscoveryResponse,
     ) {
-        info!(
+        debug!(
             self.log,
             "{}: received response containing {} resource(s)",
             ENDPOINT_TYPE,
@@ -396,8 +398,8 @@ impl ClusterManager {
 
 #[cfg(test)]
 mod tests {
-    use super::{ClusterManager, QuilkinCluster};
-    use crate::cluster::Endpoint as QuilkinEndpoint;
+    use super::{ClusterManager, ProxyCluster};
+    use crate::cluster::Endpoint as ProxyEndpoint;
     use crate::test_utils::logger;
     use crate::xds::envoy::config::cluster::v3::{cluster::ClusterDiscoveryType, Cluster};
     use crate::xds::envoy::config::core::v3::{
@@ -414,7 +416,7 @@ mod tests {
     use std::net::SocketAddr;
     use tokio::sync::mpsc;
 
-    type ClusterState = HashMap<String, QuilkinCluster>;
+    type ClusterState = HashMap<String, ProxyCluster>;
 
     #[tokio::test]
     async fn watch_endpoints_for_new_clusters() {
@@ -528,7 +530,7 @@ mod tests {
                     .get(&None)
                     .unwrap()
                     .endpoints,
-                vec![QuilkinEndpoint {
+                vec![ProxyEndpoint {
                     address: expected_socket_addr
                 }]
             );
@@ -540,7 +542,7 @@ mod tests {
                     .get(&None)
                     .unwrap()
                     .endpoints,
-                vec![QuilkinEndpoint {
+                vec![ProxyEndpoint {
                     address: "127.0.0.1:2020".parse().unwrap()
                 }]
             );
@@ -980,7 +982,7 @@ mod tests {
         assert_eq!(nonce, &req.response_nonce);
     }
 
-    fn assert_cluster_has_lone_static_address(cluster: &QuilkinCluster, expected_addr: &str) {
+    fn assert_cluster_has_lone_static_address(cluster: &ProxyCluster, expected_addr: &str) {
         assert_eq!(
             cluster.localities.get(&None).unwrap().endpoints[0].address,
             expected_addr.parse().unwrap()
