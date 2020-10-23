@@ -46,7 +46,6 @@ mod metrics;
 /// client:
 ///   addresses:
 ///     - 127.0.0.1:7001
-///   connection_id: 1x7ijy6
 /// ```
 ///  `config.max_packets` is the maximum number of packets allowed
 ///  to be forwarded by the rate limiter in a given duration.

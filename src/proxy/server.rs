@@ -394,7 +394,6 @@ mod tests {
             })
             .with_connections(ConnectionConfig::Client {
                 addresses: vec![endpoint.addr],
-                connection_id: "".into(),
                 lb_policy: None,
             })
             .build();
@@ -428,7 +427,6 @@ mod tests {
             }])
             .with_connections(ConnectionConfig::Client {
                 addresses: vec![endpoint.addr],
-                connection_id: "".into(),
                 lb_policy: None,
             })
             .build();
@@ -490,7 +488,6 @@ mod tests {
 
             let lb_policy = Arc::new(LoadBalancerPolicy::new(&ConnectionConfig::Client {
                 addresses: vec![endpoint.addr],
-                connection_id: "".into(),
                 lb_policy: None,
             }));
 
@@ -578,7 +575,6 @@ mod tests {
         let endpoint = t.open_socket_and_recv_single_packet().await;
         let lb_policy = Arc::new(LoadBalancerPolicy::new(&ConnectionConfig::Client {
             addresses: vec![endpoint.addr],
-            connection_id: "".into(),
             lb_policy: None,
         }));
         let SplitSocket {

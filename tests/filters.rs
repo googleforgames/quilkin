@@ -71,7 +71,6 @@ mod tests {
                     IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
                     server_port,
                 )],
-                connection_id: "".into(),
                 lb_policy: None,
             })
             .build();
@@ -154,7 +153,6 @@ mod tests {
                     IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
                     server_port,
                 )],
-                connection_id: "".into(),
                 lb_policy: None,
             })
             .build();

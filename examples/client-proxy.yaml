@@ -24,7 +24,6 @@ client:
   addresses: # array of potential endpoints to send traffic to
     - 127.0.0.1:7000
     - 127.0.0.1:7001
-  connection_id: MXg3aWp5Ng== # the connection byte array to attach to the traffic, encoded as base64 (string value: 1x7ijy6)
   lb_policy: ROUND_ROBIN # (Optional) load balancing policy for selecting endpoints.
                          # Possible values are: `ROUND_ROBIN` `RANDOM` `BROADCAST`
                          # Defaults to `BROADCAST` if not set.
