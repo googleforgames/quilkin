@@ -21,6 +21,7 @@ authors = ["Mark Mandel <markmandel@google.com>"]
 edition = "2018"
 
 [dependencies]
+backoff = "0.2.1"
 bytes = "0.5.6"
 clap = "2.33.0"
 humantime-serde = "1.0.0"

@@ -97,5 +97,7 @@ const ENDPOINT_TYPE: &str = "type.googleapis.com/envoy.config.endpoint.v3.Cluste
 const CLUSTER_TYPE: &str = "type.googleapis.com/envoy.config.cluster.v3.Cluster";
 
 #[cfg(not(doctest))]
+mod ads_client;
+#[cfg(not(doctest))]
 mod cluster;
 mod error;
