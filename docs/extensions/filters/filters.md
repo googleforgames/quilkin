@@ -79,11 +79,11 @@ properties:
       This value is unique for every filter type - please consult the documentation for the particular filter for this value.
 
   config:
-    type: any
+    type: object
     description: |
       The configuration value to be passed onto the created filter.
-      This can be any value since it is specific to the filter's type and is validated by the filter implementation.
-      please consult the documentation for the particular filter for its schema.
+      This is passed as an object value since it is specific to the filter's type and is validated by the filter
+      implementation. Please consult the documentation for the particular filter for its schema.
 
 required: [ 'name', 'config' ]
 ```
