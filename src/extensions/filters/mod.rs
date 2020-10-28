@@ -14,15 +14,14 @@
  * limitations under the License.
  */
 
-pub use auth_token_capture::AuthTokenCaptureFactory;
+pub use capture_bytes::CaptureBytesFactory;
 pub use concatenate_bytes::ConcatBytesFactory;
 pub use debug::DebugFactory;
 pub use local_rate_limit::RateLimitFilterFactory;
 
-mod auth_token_capture;
+mod capture_bytes;
 mod concatenate_bytes;
 mod debug;
 mod local_rate_limit;
 
-/// Key for where to put a found authentication token withing a Context.Values
-pub const AUTHENTICATION_TOKEN_KEY: &str = "AUTHENTICATION_TOKEN";
+pub const CAPTURED_BYTES: &str = "quilkin.dev/captured_bytes";

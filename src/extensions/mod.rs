@@ -35,6 +35,6 @@ pub fn default_registry(base: &Logger) -> FilterRegistry {
     fr.insert(filters::DebugFactory::new(base));
     fr.insert(filters::RateLimitFilterFactory::default());
     fr.insert(filters::ConcatBytesFactory::default());
-    fr.insert(filters::AuthTokenCaptureFactory::default());
+    fr.insert(filters::CaptureBytesFactory::new(base));
     fr
 }
