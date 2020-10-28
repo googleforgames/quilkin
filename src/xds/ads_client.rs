@@ -15,7 +15,7 @@
  */
 
 use backoff::{backoff::Backoff, exponential::ExponentialBackoff, Clock, SystemClock};
-use slog::{error, info, Logger};
+use slog::{error, info, o, Logger};
 use std::collections::HashMap;
 use tokio::{
     sync::{mpsc, watch},
@@ -79,12 +79,13 @@ impl AdsClient {
     /// sending summarized cluster updates on the provided channel.
     pub async fn run(
         self,
-        log: Logger,
+        base_logger: Logger,
         node_id: String,
         server_addresses: Vec<String>,
         cluster_updates_tx: mpsc::Sender<ClusterUpdate>,
         mut shutdown_rx: watch::Receiver<()>,
     ) -> ExecutionResult {
+        let log = base_logger.new(o!("source" => "xds::AdsClient", "node_id" => node_id.clone()));
         let mut backoff = ExponentialBackoff::<SystemClock>::default();
 
         let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel::<DiscoveryRequest>(100);
