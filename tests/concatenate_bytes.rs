@@ -19,7 +19,7 @@ mod tests {
     use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
     use tokio::select;
-    use tokio::time::{delay_for, Duration};
+    use tokio::time::{sleep, Duration};
 
     use quilkin::config::{Builder, ConnectionConfig, EndPoint, Filter, Local};
     use quilkin::extensions::filters::ConcatBytesFactory;
@@ -54,7 +54,7 @@ bytes: YWJj #abc
         t.run_server(server_config);
 
         // let's send the packet
-        let (mut recv_chan, mut send) = t.open_socket_and_recv_multiple_packets().await;
+        let (mut recv_chan, send) = t.open_socket_and_recv_multiple_packets().await;
 
         let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port);
         send.send_to(b"hello", &local_addr).await.unwrap();
@@ -63,7 +63,7 @@ bytes: YWJj #abc
             res = recv_chan.recv() => {
                 assert_eq!("helloabc", res.unwrap());
             }
-            _ = delay_for(Duration::from_secs(5)) => {
+            _ = sleep(Duration::from_secs(5)) => {
                 unreachable!("should have received a packet");
             }
         };

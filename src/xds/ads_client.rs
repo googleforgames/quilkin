@@ -150,7 +150,7 @@ impl AdsClient {
                     }
                 },
 
-                _ = shutdown_rx.recv() => {
+                _ = shutdown_rx.changed() => {
                     info!(log, "stopping client execution - received shutdown signal.");
                     return Ok(())
                 },
@@ -314,7 +314,7 @@ impl AdsClient {
                         }
                     }
 
-                    _ = shutdown_rx.recv() => {
+                    _ = shutdown_rx.changed() => {
                         info!(log, "exiting receive loop - received shutdown signal.");
                         return Ok(cluster_manager)
                     }
@@ -333,7 +333,7 @@ impl AdsClient {
             .next_backoff()
             .ok_or_else(|| ExecutionError::BackoffLimitExceeded)?;
         info!(log, "retrying in {:?}", delay);
-        tokio::time::delay_for(delay).await;
+        tokio::time::sleep(delay).await;
         Ok(())
     }
 }

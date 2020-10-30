@@ -22,11 +22,10 @@ use std::sync::Arc;
 
 use slog::{debug, error, info, warn, Logger};
 use tokio::io::Result;
-use tokio::net::udp::{RecvHalf, SendHalf};
 use tokio::net::UdpSocket;
 use tokio::sync::{mpsc, oneshot};
 use tokio::sync::{Mutex, RwLock};
-use tokio::time::{delay_for, Duration, Instant};
+use tokio::time::{sleep, Duration, Instant};
 
 use crate::config::{Config, ConnectionConfig, EndPoint};
 use crate::extensions::{DownstreamContext, Filter, FilterChain};
@@ -64,17 +63,17 @@ impl Server {
             metrics_shutdown_tx
         });
 
-        let (receive_socket, send_socket) = Server::bind(&self.config).await?.split();
+        let socket = Arc::new(Server::bind(&self.config).await?);
         // HashMap key is from,destination addresses as a tuple.
         let sessions: SessionMap = Arc::new(RwLock::new(HashMap::new()));
         let (send_packets, receive_packets) = mpsc::channel::<Packet>(1024);
 
-        self.run_receive_packet(send_socket, receive_packets);
+        self.run_receive_packet(socket.clone(), receive_packets);
         self.run_prune_sessions(&sessions);
         self.run_recv_from(
             Arc::new(LoadBalancerPolicy::new(&self.config.connections)),
             self.filter_chain.clone(),
-            receive_socket,
+            socket,
             &sessions,
             send_packets,
         );
@@ -84,7 +83,9 @@ impl Server {
             .await
             .map_err(|err| IOError::new(ErrorKind::BrokenPipe, err));
 
+        info!(self.log, "Starting shutdown..."; "reason" => format!("{:?}", result));
         metrics_shutdown_tx.map(|tx| tx.send(()).ok());
+        info!(self.log, "...shutdown complete");
         result
     }
 
@@ -97,7 +98,7 @@ impl Server {
         let sessions = sessions.clone();
         tokio::spawn(async move {
             loop {
-                delay_for(Duration::from_secs(SESSION_TIMEOUT_SECONDS)).await;
+                sleep(Duration::from_secs(SESSION_TIMEOUT_SECONDS)).await;
                 debug!(log, "Attempting to Prune Sessions");
                 Server::prune_sessions(&log, sessions.clone()).await;
             }
@@ -110,7 +111,7 @@ impl Server {
         &self,
         lb_policy: Arc<LoadBalancerPolicy>,
         chain: Arc<FilterChain>,
-        mut receive_socket: RecvHalf,
+        mut socket: Arc<UdpSocket>,
         sessions: &SessionMap,
         send_packets: mpsc::Sender<Packet>,
     ) {
@@ -124,7 +125,7 @@ impl Server {
                     &metrics,
                     lb_policy.clone(),
                     chain.clone(),
-                    &mut receive_socket,
+                    &mut socket,
                     sessions.clone(),
                     send_packets.clone(),
                 )
@@ -143,12 +144,12 @@ impl Server {
         metrics: &Metrics,
         lb_policy: Arc<LoadBalancerPolicy>,
         chain: Arc<FilterChain>,
-        receive_socket: &mut RecvHalf,
+        socket: &mut Arc<UdpSocket>,
         sessions: SessionMap,
         send_packets: mpsc::Sender<Packet>,
     ) -> Result<()> {
         let mut buf: Vec<u8> = vec![0; 65535];
-        let (size, recv_addr) = receive_socket.recv_from(&mut buf).await?;
+        let (size, recv_addr) = socket.recv_from(&mut buf).await?;
         let log = log.clone();
         let metrics = metrics.clone();
         tokio::spawn(async move {
@@ -215,7 +216,7 @@ impl Server {
     /// and sends each packet on to the Packet.dest
     fn run_receive_packet(
         &self,
-        mut send_socket: SendHalf,
+        socket: Arc<UdpSocket>,
         mut receive_packets: mpsc::Receiver<Packet>,
     ) {
         let log = self.log.clone();
@@ -228,7 +229,7 @@ impl Server {
                     "contents" => String::from_utf8(packet.contents().clone()).unwrap(),
                 );
 
-                if let Err(err) = send_socket
+                if let Err(err) = socket
                     .send_to(packet.contents().as_slice(), &packet.dest())
                     .await
                 {
@@ -335,18 +336,18 @@ mod tests {
 
     use crate::config;
     use crate::config::{Builder as ConfigBuilder, ConnectionConfig, EndPoint, Local};
+    use crate::extensions::FilterRegistry;
     use crate::proxy::sessions::{Packet, SESSION_TIMEOUT_SECONDS};
-    use crate::test_utils::{SplitSocket, TestFilter, TestFilterFactory, TestHelper};
+    use crate::proxy::Builder;
+    use crate::test_utils::{TestFilter, TestFilterFactory, TestHelper};
 
     use super::*;
-    use crate::extensions::FilterRegistry;
-    use crate::proxy::Builder;
 
     #[tokio::test]
     async fn run_server() {
         let mut t = TestHelper::default();
 
-        let mut endpoint1 = t.open_socket_and_recv_single_packet().await;
+        let endpoint1 = t.open_socket_and_recv_single_packet().await;
         let endpoint2 = t.open_socket_and_recv_single_packet().await;
 
         let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12358);
@@ -358,12 +359,12 @@ mod tests {
                 endpoints: vec![
                     EndPoint {
                         name: String::from("e1"),
-                        address: endpoint1.addr,
+                        address: endpoint1.socket.local_addr().unwrap(),
                         connection_ids: vec![],
                     },
                     EndPoint {
                         name: String::from("e2"),
-                        address: endpoint2.addr,
+                        address: endpoint2.socket.local_addr().unwrap(),
                         connection_ids: vec![],
                     },
                 ],
@@ -373,7 +374,7 @@ mod tests {
 
         let msg = "hello";
         endpoint1
-            .send
+            .socket
             .send_to(msg.as_bytes(), &local_addr)
             .await
             .unwrap();
@@ -385,7 +386,7 @@ mod tests {
     async fn run_client() {
         let mut t = TestHelper::default();
 
-        let mut endpoint = t.open_socket_and_recv_single_packet().await;
+        let endpoint = t.open_socket_and_recv_single_packet().await;
 
         let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12357);
         let config = ConfigBuilder::empty()
@@ -393,7 +394,7 @@ mod tests {
                 port: local_addr.port(),
             })
             .with_connections(ConnectionConfig::Client {
-                addresses: vec![endpoint.addr],
+                addresses: vec![endpoint.socket.local_addr().unwrap()],
                 lb_policy: None,
             })
             .build();
@@ -401,7 +402,7 @@ mod tests {
 
         let msg = "hello";
         endpoint
-            .send
+            .socket
             .send_to(msg.as_bytes(), &local_addr)
             .await
             .unwrap();
@@ -415,7 +416,7 @@ mod tests {
         let mut registry = FilterRegistry::default();
         registry.insert(TestFilterFactory {});
 
-        let mut endpoint = t.open_socket_and_recv_single_packet().await;
+        let endpoint = t.open_socket_and_recv_single_packet().await;
         let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12367);
         let config = ConfigBuilder::empty()
             .with_local(Local {
@@ -426,7 +427,7 @@ mod tests {
                 config: None,
             }])
             .with_connections(ConnectionConfig::Client {
-                addresses: vec![endpoint.addr],
+                addresses: vec![endpoint.socket.local_addr().unwrap()],
                 lb_policy: None,
             })
             .build();
@@ -434,7 +435,7 @@ mod tests {
 
         let msg = "hello";
         endpoint
-            .send
+            .socket
             .send_to(msg.as_bytes(), &local_addr)
             .await
             .unwrap();
@@ -487,16 +488,12 @@ mod tests {
             let endpoint = t.open_socket_and_recv_single_packet().await;
 
             let lb_policy = Arc::new(LoadBalancerPolicy::new(&ConnectionConfig::Client {
-                addresses: vec![endpoint.addr],
+                addresses: vec![endpoint.socket.local_addr().unwrap()],
                 lb_policy: None,
             }));
 
-            let SplitSocket {
-                addr: receive_addr,
-                mut recv,
-                mut send,
-            } = t.create_and_split_socket().await;
-
+            let socket = t.create_socket().await;
+            let receive_addr = socket.local_addr().unwrap();
             let sessions: SessionMap = Arc::new(RwLock::new(HashMap::new()));
             let (send_packets, mut recv_packets) = mpsc::channel::<Packet>(1);
 
@@ -505,20 +502,21 @@ mod tests {
             let time_increment = 10;
             time::advance(Duration::from_secs(time_increment)).await;
 
+            let mut socket_recv = socket.clone();
             tokio::spawn(async move {
                 Server::recv_from(
                     &t.log,
                     &Metrics::default(),
                     lb_policy,
                     chain,
-                    &mut recv,
+                    &mut socket_recv,
                     sessions_clone,
                     send_packets.clone(),
                 )
                 .await
             });
 
-            send.send_to(msg.as_bytes(), &receive_addr).await.unwrap();
+            socket.send_to(msg.as_bytes(), &receive_addr).await.unwrap();
 
             let result = endpoint.packet_rx.await.unwrap();
             recv_packets.close();
@@ -529,7 +527,7 @@ mod tests {
             // need to switch to 127.0.0.1, as the request comes locally
             let mut receive_addr_local = receive_addr;
             receive_addr_local.set_ip("127.0.0.1".parse().unwrap());
-            let build_key = (receive_addr_local, endpoint.addr);
+            let build_key = (receive_addr_local, endpoint.socket.local_addr().unwrap());
             assert!(map.contains_key(&build_key));
             let session = map.get(&build_key).unwrap().lock().await;
             assert_eq!(
@@ -574,14 +572,10 @@ mod tests {
         let msg = "hello";
         let endpoint = t.open_socket_and_recv_single_packet().await;
         let lb_policy = Arc::new(LoadBalancerPolicy::new(&ConnectionConfig::Client {
-            addresses: vec![endpoint.addr],
+            addresses: vec![endpoint.socket.local_addr().unwrap()],
             lb_policy: None,
         }));
-        let SplitSocket {
-            addr,
-            recv,
-            mut send,
-        } = t.create_and_split_socket().await;
+        let socket = t.create_socket().await;
         let sessions: SessionMap = Arc::new(RwLock::new(HashMap::new()));
         let (send_packets, mut recv_packets) = mpsc::channel::<Packet>(1);
 
@@ -591,12 +585,12 @@ mod tests {
         server.run_recv_from(
             lb_policy,
             server.filter_chain.clone(),
-            recv,
+            socket.clone(),
             &sessions,
             send_packets,
         );
-
-        send.send_to(msg.as_bytes(), &addr).await.unwrap();
+        let addr = socket.local_addr().unwrap();
+        socket.send_to(msg.as_bytes(), &addr).await.unwrap();
         assert_eq!(msg, endpoint.packet_rx.await.unwrap());
         recv_packets.close();
     }
@@ -646,10 +640,13 @@ mod tests {
         let msg = "hello";
 
         // without a filter
-        let (mut send_packet, recv_packet) = mpsc::channel::<Packet>(5);
+        let (send_packet, recv_packet) = mpsc::channel::<Packet>(5);
         let endpoint = t.open_socket_and_recv_single_packet().await;
         if send_packet
-            .send(Packet::new(endpoint.addr, msg.as_bytes().to_vec()))
+            .send(Packet::new(
+                endpoint.socket.local_addr().unwrap(),
+                msg.as_bytes().to_vec(),
+            ))
             .await
             .is_err()
         {
@@ -658,7 +655,7 @@ mod tests {
 
         let config = Arc::new(ConfigBuilder::empty().build());
         let server = Builder::from(config).validate().unwrap().build();
-        server.run_receive_packet(endpoint.send, recv_packet);
+        server.run_receive_packet(endpoint.socket, recv_packet);
         assert_eq!(msg, endpoint.packet_rx.await.unwrap());
     }
 
@@ -762,7 +759,7 @@ mod tests {
 
         // poll, since cleanup is async, and may not have happened yet
         for _ in 1..10 {
-            time::delay_for(Duration::from_secs(1)).await;
+            time::sleep(Duration::from_secs(1)).await;
             let map = sessions.read().await;
             if !map.contains_key(&key) && map.len() == 0 {
                 break;

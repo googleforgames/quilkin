@@ -23,6 +23,8 @@ mod tests {
     use prometheus::Registry;
     use regex::Regex;
     use slog::info;
+    use tokio::select;
+    use tokio::time::{sleep, Duration};
 
     use quilkin::config::{Builder as ConfigBuilder, ConnectionConfig, EndPoint, Local};
     use quilkin::proxy::Metrics;
@@ -31,7 +33,7 @@ mod tests {
     #[tokio::test]
     async fn metrics_server() {
         let mut t = TestHelper::default();
-        let server_metrics = Metrics::new(Some("[::]:9092".parse().unwrap()), Registry::default());
+        let server_metrics = Metrics::new(Some("[::]:9093".parse().unwrap()), Registry::default());
 
         // create an echo server as an endpoint.
         let echo = t.run_echo_server().await;
@@ -48,6 +50,7 @@ mod tests {
                 }],
             })
             .build();
+        assert_eq!(Ok(()), server_config.validate());
         t.run_server_with_metrics(server_config, server_metrics);
 
         // create a local client
@@ -62,18 +65,28 @@ mod tests {
                 lb_policy: None,
             })
             .build();
+        assert_eq!(Ok(()), client_config.validate());
         t.run_server(client_config);
 
         // let's send the packet
-        let (mut recv_chan, mut send) = t.open_socket_and_recv_multiple_packets().await;
+        let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
 
         // game_client
         let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), client_port);
+
         info!(t.log, "Sending hello"; "addr" => local_addr);
-        send.send_to(b"hello", &local_addr).await.unwrap();
+        socket.send_to(b"hello", &local_addr).await.unwrap();
+        info!(t.log, "Waiting for response");
+        select! {
+            result = recv_chan.recv() => {
+                let _ = result.unwrap();
+            }
+            _ = sleep(Duration::from_secs(5)) => {
+                unreachable!("should have received a packet");
+            }
+        };
 
-        let _ = recv_chan.recv().await.unwrap();
-
+        info!(t.log, "got response!");
         let resp = reqwest::get("http://localhost:9092/metrics")
             .await
             .unwrap()

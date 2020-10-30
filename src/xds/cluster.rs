@@ -25,7 +25,7 @@ use crate::xds::google::rpc::Status;
 use crate::xds::{CLUSTER_TYPE, ENDPOINT_TYPE};
 
 use crate::xds::error::Error;
-use bytes::Bytes;
+use bytes::{Buf, Bytes};
 use prost::Message;
 use slog::{debug, warn, Logger};
 use std::collections::{HashMap, HashSet};

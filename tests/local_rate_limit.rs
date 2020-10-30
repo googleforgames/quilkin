@@ -52,7 +52,7 @@ period: 1s
             .build();
         t.run_server(server_config);
 
-        let (mut recv_chan, mut send) = t.open_socket_and_recv_multiple_packets().await;
+        let (mut recv_chan, send) = t.open_socket_and_recv_multiple_packets().await;
 
         let server_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port);
 
@@ -65,7 +65,7 @@ period: 1s
         }
 
         // Allow enough time to have received any response.
-        tokio::time::delay_for(std::time::Duration::from_millis(100)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
         // Check that we do not get any response.
         assert!(recv_chan.try_recv().is_err());
     }
