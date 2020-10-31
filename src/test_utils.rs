@@ -248,16 +248,29 @@ impl TestHelper {
     /// Runs a simple UDP server that echos back payloads.
     /// Returns the server's address.
     pub async fn run_echo_server(&mut self) -> SocketAddr {
+        self.run_echo_server_with_tap(|_, _, _| {}).await
+    }
+
+    /// Runs a simple UDP server that echos back payloads.
+    /// The provided function is invoked for each received payload.
+    /// Returns the server's address.
+    pub async fn run_echo_server_with_tap<F>(&mut self, tap: F) -> SocketAddr
+    where
+        F: Fn(SocketAddr, &[u8], SocketAddr) + Send + 'static,
+    {
         let mut socket = self.create_socket().await;
         let addr = socket.local_addr().unwrap();
         let mut shutdown = self.get_shutdown_subscriber().await;
+        let local_addr = addr;
         tokio::spawn(async move {
             loop {
                 let mut buf = vec![0; 1024];
                 tokio::select! {
                     recvd = socket.recv_from(&mut buf) => {
                         let (size, sender) = recvd.unwrap();
-                        socket.send_to(&buf[..size], sender).await.unwrap();
+                        let packet = &buf[..size];
+                        tap(sender, packet, local_addr);
+                        socket.send_to(packet, sender).await.unwrap();
                     },
                     _ = shutdown.recv() => {
                         return;

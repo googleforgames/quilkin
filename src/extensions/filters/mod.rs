@@ -16,8 +16,10 @@
 
 pub use concatenate_bytes::ConcatBytesFactory;
 pub use debug::DebugFactory;
+pub use load_balancer::LoadBalancerFilterFactory;
 pub use local_rate_limit::RateLimitFilterFactory;
 
 mod concatenate_bytes;
 mod debug;
+mod load_balancer;
 mod local_rate_limit;

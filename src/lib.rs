@@ -24,7 +24,6 @@
 mod cluster;
 pub mod config;
 pub mod extensions;
-mod load_balancer_policy;
 pub mod metrics;
 pub mod proxy;
 pub mod test_utils;
