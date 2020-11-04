@@ -19,6 +19,7 @@ use std::net::SocketAddr;
 use prometheus::{Encoder, Registry, Result as MetricsResult, TextEncoder};
 use slog::{info, warn, Logger};
 use tokio::sync::oneshot::Receiver;
+use tokio_compat_02::FutureExt;
 use warp::Filter as WarpFilter;
 
 use crate::proxy::sessions::metrics::Metrics as SessionMetrics;
@@ -34,14 +35,14 @@ pub struct Metrics {
 
 /// start_metrics_server starts a HTTP server in the background at `addr` which
 /// serves prometheus metrics from `registry`. The server is bounded by `shutdown_signal`,
-pub fn start_metrics_server(
+pub async fn start_metrics_server(
     addr: SocketAddr,
     registry: Registry,
     shutdown_signal: Receiver<()>,
     log: Logger,
 ) {
+    let log2 = log.clone();
     info!(log, "Starting metrics endpoint"; "addr" => addr.to_string());
-
     let metrics_route = warp::path!("metrics").map(move || {
         let mut buffer = vec![];
         let encoder = TextEncoder::new();
@@ -56,11 +57,17 @@ pub fn start_metrics_server(
             .unwrap_or_else(|_| "# failed to gather metrics".to_string())
     });
 
-    let (_, server) = warp::serve(metrics_route).bind_with_graceful_shutdown(addr, async {
-        shutdown_signal.await.ok();
-    });
+    let operation = async {
+        let (_, server) = warp::serve(metrics_route).bind_with_graceful_shutdown(addr, async {
+            shutdown_signal.await.ok();
+        });
 
-    tokio::spawn(server);
+        let _ = tokio::spawn(server).compat().await;
+    };
+
+    info!(log2, ">>> start operation");
+    operation.compat().await;
+    info!(log2, ">>> return out of operation");
 }
 
 impl Default for Metrics {

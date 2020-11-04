@@ -52,16 +52,20 @@ impl Server {
         self.log_config();
 
         // Start metrics server if needed - it is shutdown before exiting the function.
-        let metrics_shutdown_tx = self.metrics.addr.map(|addr| {
-            let (metrics_shutdown_tx, metrics_shutdown_rx) = oneshot::channel();
-            start_metrics_server(
-                addr,
-                self.metrics.registry.clone(),
-                metrics_shutdown_rx,
-                self.log.clone(),
-            );
-            metrics_shutdown_tx
-        });
+        let metrics_shutdown_tx = match self.metrics.addr {
+            None => None,
+            Some(addr) => {
+                let (metrics_shutdown_tx, metrics_shutdown_rx) = oneshot::channel();
+                start_metrics_server(
+                    addr,
+                    self.metrics.registry.clone(),
+                    metrics_shutdown_rx,
+                    self.log.clone(),
+                )
+                .await;
+                Some(metrics_shutdown_tx)
+            }
+        };
 
         let socket = Arc::new(Server::bind(&self.config).await?);
         // HashMap key is from,destination addresses as a tuple.
