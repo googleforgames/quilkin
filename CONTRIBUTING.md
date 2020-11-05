@@ -24,26 +24,77 @@ Participation in this project comes under the [Contributor Covenant Code of Cond
 - We follow the [GitHub Pull Request Model](https://help.github.com/articles/about-pull-requests/) for
   all contributions.
 - For large bodies of work, we recommend creating an issue and labelling it
-  "[kind/design](https://github.com/googleprivate/agones/issues?q=is%3Aissue+is%3Aopen+label%3Akind%2Fdesign)"
+  "[kind/design](https://github.com/googleforgames/quilkin/issues?q=is%3Aissue+is%3Aopen+label%3Akind%2Fdesign)"
   outlining the feature that you wish to build, and describing how it will be implemented. This gives a chance
   for review to happen early, and ensures no wasted effort occurs.
-- For new features, documentation *must* be included. Review the [Documentation Editing and Contribution](https://agones.dev/site/docs/contribute/)
-  guide for details.
+- For new features, documentation *must* be included. Documentation can currently be found under 
+  the [docs](./docs) folder.
 - All submissions, including submissions by project members, will require review before being merged.
-- Once review has occurred, please rebase your PR down to a single commit. This will ensure a nice clean Git history.
-- Finally - *Thanks* for considering submitting code to Agones!
+- Finally - *Thanks* for considering submitting code to Quilkin!
 
-## Formatting
+## Development
+
+We welcome development from the community on Quilkin!
+
+### Cloning the repository
+
+We use several submodules, so make sure you have them downloaded and updated.
+
+```shell script
+git clone https://github.com/googleforgames/quilkin.git
+cd quilkin
+git submodule update --init --recursive
+```
+
+You will likely want to replace `https://github.com/googleforgames/quilkin.git` with your own fork of the repository
+for your development.
+
+### Building
+
+Debug release:
+
+`cargo build`
+
+Production Release:
+
+`cargo build --release`
+
+### Testing
+
+We use some nightly features to automatically test our external documentation, so you will need to be explicit about
+which tests you wish to run.
+
+To run the unit and integration tests:
+
+`cargo test --tests`
+
+To run our external documentation tests:
+
+`cargo +nightly test --doc`
+
+## Coding standards
 
 When submitting pull requests, make sure to do the following:
 
 - Format all Rust code with [rustfmt](https://github.com/rust-lang/rustfmt).
+- Ensure all Rust code passes the Rust [clippy](https://github.com/rust-lang/rust-clippy) linter.
 - Remove trailing whitespace. Many editors will do this automatically.
 - Ensure any new files have [a trailing newline](https://stackoverflow.com/questions/5813311/no-newline-at-end-of-file)
 
 ## Continuous Integration
 
-Soon.
+Continuous integration is provided by [Google Cloud Build](https://cloud.google.com/cloud-build),
+through the [cloudbuild.yaml](./cloudbuild.yaml) file found at the root of the directory, and integrated with the
+Github repository via the 
+[Cloud Build Github app](https://cloud.google.com/cloud-build/docs/automating-builds/run-builds-on-github).
+
+Build success or failure are displayed on each pull request with relevant details.
+
+To gain access to the details of a specific Cloud Build, join the 
+[quilkin-discuss](https://groups.google.com/forum/#!forum/quilkin-discuss) google group.
+
+See the [Google Cloud Build documentation](https://cloud.google.com/cloud-build/docs/) for more details on
+how to edit and expand the build process.
 
 ### Additional Resources
 

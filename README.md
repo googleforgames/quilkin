@@ -14,7 +14,7 @@ It is designed to be used behind game clients as well as in front of dedicated g
 - [ ] UDP Filtering design and implementation
 - [ ] Simple UDP routing Filter (Client and Server Proxy implementation)
 - [ ] gRPC configuration management control plane API
-- [ ] Open Telemetry metrics
+- [x] Metrics tracking and export
 
 ## Project State
 
@@ -52,7 +52,8 @@ Not to be used in production systems.
 
 `quilkin --filename="configuration.yaml"`
 
-See [examples](./examples) folder for configuration examples.
+* See [examples](./examples) folder for basic configuration examples.
+* See [Filter documentation](./docs/extensions/filters/filters.md) for a list of filters, and their configuration options.
 
 ## Code of Conduct
 
@@ -64,19 +65,38 @@ Please read the [contributing](CONTRIBUTING.md) guide for directions on writing 
 
 Quilkin is in active development - we would love your help in shaping its future!
 
-### Building
+## Building
 
-`cargo build`
+To build a binary of Quilkin on your operating system of choice, first clone the repository.
 
-### Testing
+```shell script
+git clone https://github.com/googleforgames/quilkin.git
+cd quilkin
+git submodule update --init --recursive
+```
+We use several submodules, so make sure you have them downloaded and updated.
 
-`cargo test`
+To build a production release version of the binary:
+
+`cargo build --release`
+
+## Community
+
+There are lots of ways to engage with the Quilkin community:
+
+* Here on [Github](https://github.com/googleforgames/quilkin) via 
+  [issues](https://github.com/googleforgames/quilkin/issues) and 
+  [pull requests](https://github.com/googleforgames/quilkin/pulls).
+* Join our [mailing list](https://groups.google.com/forum/#!forum/quilkin-discuss), which also gives you access to
+  our continuous integration builds.
+* Join our [Discord chat server](https://discord.gg/mfBNZjBDnc).
+* Follow up on [Twitter](https://twitter.com/quilkindev).
 
 ## Credits
 
 Many concepts and architectural decisions where inspired by [Envoy Proxy](https://www.envoyproxy.io/). 
 Huge thanks to that team for the inspiration they provided with all their hard work. 
-
+ 
 ## Licence
 
 Apache 2.0

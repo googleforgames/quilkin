@@ -56,7 +56,7 @@ We specify our filter chain in the `.filters` section of the proxy's configurati
 
 The above example creates a filter chain comprising a [Debug](debug.md) filter followed by a [Rate limiter](./local_rate_limit.md) filter - the effect is that every packet will be logged and the proxy will not forward more than 20 packets per second.
 
-> The sequence determines the filter chain order so its ordering matters - the chain starts with the filter corresponding the first filter config and ends with the filter conrresponding the last filter config in the sequence.
+> The sequence determines the filter chain order so its ordering matters - the chain starts with the filter corresponding the first filter config and ends with the filter corresponding the last filter config in the sequence.
 
 ### Built-in filters <a name="built-in-filters"></a>
 Quilkin includes several filters out of the box.
