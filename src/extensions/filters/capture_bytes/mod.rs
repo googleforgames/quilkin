@@ -46,16 +46,16 @@ struct Config {
     #[serde(rename = "size")]
     size: usize,
     /// the key to use when storing the captured bytes in the filter context
-    #[serde(rename = "contextKey")]
-    #[serde(default = "default_context_key")]
-    context_key: String,
+    #[serde(rename = "valuesKey")]
+    #[serde(default = "default_values_key")]
+    values_key: String,
     /// whether or not to remove the set of the bytes from the packet once captured
     #[serde(default)]
     remove: bool,
 }
 
 /// default value for the context key in the Config
-fn default_context_key() -> String {
+fn default_values_key() -> String {
     CAPTURED_BYTES.into()
 }
 
@@ -114,7 +114,7 @@ impl CaptureBytes {
             log: base.new(o!("source" => "extensions::CaptureBytes")),
             capture,
             metrics,
-            context_key: config.context_key,
+            context_key: config.values_key,
             size: config.size,
             remove: config.remove,
         }
@@ -214,7 +214,7 @@ mod tests {
             Value::String("SUFFIX".into()),
         );
         map.insert(
-            Value::String("contextKey".into()),
+            Value::String("valuesKey".into()),
             Value::String(TOKEN_KEY.into()),
         );
         map.insert(Value::String("size".into()), Value::Number(3.into()));
@@ -262,7 +262,7 @@ mod tests {
     fn on_downstream_receive() {
         let config = Config {
             strategy: Strategy::Suffix,
-            context_key: TOKEN_KEY.into(),
+            values_key: TOKEN_KEY.into(),
             size: 3,
             remove: true,
         };
@@ -274,7 +274,7 @@ mod tests {
     fn on_downstream_receive_overflow_capture_size() {
         let config = Config {
             strategy: Strategy::Suffix,
-            context_key: TOKEN_KEY.into(),
+            values_key: TOKEN_KEY.into(),
             size: 99,
             remove: true,
         };
@@ -299,7 +299,7 @@ mod tests {
     fn on_upstream_receive() {
         let config = Config {
             strategy: Strategy::Suffix,
-            context_key: TOKEN_KEY.into(),
+            values_key: TOKEN_KEY.into(),
             size: 0,
             remove: false,
         };
