@@ -30,7 +30,6 @@ use tokio::time::{delay_for, Duration, Instant};
 
 use crate::config::{Config, ConnectionConfig, EndPoint};
 use crate::extensions::{DownstreamContext, Filter, FilterChain};
-use crate::load_balancer_policy::LoadBalancerPolicy;
 use crate::proxy::sessions::{Packet, Session, SESSION_TIMEOUT_SECONDS};
 
 use super::metrics::{start_metrics_server, Metrics};
@@ -72,7 +71,7 @@ impl Server {
         self.run_receive_packet(send_socket, receive_packets);
         self.run_prune_sessions(&sessions);
         self.run_recv_from(
-            Arc::new(LoadBalancerPolicy::new(&self.config.connections)),
+            Arc::new(self.config.connections.get_endpoints()),
             self.filter_chain.clone(),
             receive_socket,
             &sessions,
@@ -108,7 +107,7 @@ impl Server {
     // Server::recv_from() to process new incoming packets.
     fn run_recv_from(
         &self,
-        lb_policy: Arc<LoadBalancerPolicy>,
+        endpoints: Arc<Vec<EndPoint>>,
         chain: Arc<FilterChain>,
         mut receive_socket: RecvHalf,
         sessions: &SessionMap,
@@ -122,7 +121,7 @@ impl Server {
                 if let Err(err) = Server::recv_from(
                     &log,
                     &metrics,
-                    lb_policy.clone(),
+                    endpoints.clone(),
                     chain.clone(),
                     &mut receive_socket,
                     sessions.clone(),
@@ -141,7 +140,7 @@ impl Server {
     async fn recv_from(
         log: &Logger,
         metrics: &Metrics,
-        lb_policy: Arc<LoadBalancerPolicy>,
+        endpoints: Arc<Vec<EndPoint>>,
         chain: Arc<FilterChain>,
         receive_socket: &mut RecvHalf,
         sessions: SessionMap,
@@ -162,7 +161,7 @@ impl Server {
             );
 
             let result = chain.on_downstream_receive(DownstreamContext::new(
-                lb_policy.choose_endpoints(),
+                (*endpoints).clone(),
                 recv_addr,
                 packet.to_vec(),
             ));
@@ -486,11 +485,6 @@ mod tests {
             let msg = "hello".to_string();
             let endpoint = t.open_socket_and_recv_single_packet().await;
 
-            let lb_policy = Arc::new(LoadBalancerPolicy::new(&ConnectionConfig::Client {
-                addresses: vec![endpoint.addr],
-                lb_policy: None,
-            }));
-
             let SplitSocket {
                 addr: receive_addr,
                 mut recv,
@@ -505,11 +499,12 @@ mod tests {
             let time_increment = 10;
             time::advance(Duration::from_secs(time_increment)).await;
 
+            let endpoint_address = endpoint.addr;
             tokio::spawn(async move {
                 Server::recv_from(
                     &t.log,
                     &Metrics::default(),
-                    lb_policy,
+                    Arc::new(vec![EndPoint::new("".into(), endpoint_address, vec![])]),
                     chain,
                     &mut recv,
                     sessions_clone,
@@ -573,10 +568,6 @@ mod tests {
 
         let msg = "hello";
         let endpoint = t.open_socket_and_recv_single_packet().await;
-        let lb_policy = Arc::new(LoadBalancerPolicy::new(&ConnectionConfig::Client {
-            addresses: vec![endpoint.addr],
-            lb_policy: None,
-        }));
         let SplitSocket {
             addr,
             recv,
@@ -589,7 +580,7 @@ mod tests {
         let server = Builder::from(config).validate().unwrap().build();
 
         server.run_recv_from(
-            lb_policy,
+            Arc::new(vec![EndPoint::new("".into(), endpoint.addr, vec![])]),
             server.filter_chain.clone(),
             recv,
             &sessions,

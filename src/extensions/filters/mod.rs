@@ -17,11 +17,13 @@
 pub use capture_bytes::CaptureBytesFactory;
 pub use concatenate_bytes::ConcatBytesFactory;
 pub use debug::DebugFactory;
+pub use load_balancer::LoadBalancerFilterFactory;
 pub use local_rate_limit::RateLimitFilterFactory;
 
 mod capture_bytes;
 mod concatenate_bytes;
 mod debug;
+mod load_balancer;
 mod local_rate_limit;
 
 pub const CAPTURED_BYTES: &str = "quilkin.dev/captured_bytes";
