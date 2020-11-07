@@ -39,4 +39,5 @@ pub mod external_doc_tests {
     #![doc(include = "../docs/extensions/filters/local_rate_limit.md")]
     #![doc(include = "../docs/extensions/filters/debug.md")]
     #![doc(include = "../docs/extensions/filters/concatenate_bytes.md")]
+    #![doc(include = "../docs/extensions/filters/capture_bytes.md")]
 }
