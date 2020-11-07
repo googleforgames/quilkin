@@ -2,7 +2,7 @@ use crate::proxy::sessions::metrics::Metrics as SessionMetrics;
 use prometheus::{Encoder, Registry, Result as MetricsResult, TextEncoder};
 use slog::{info, warn, Logger};
 use std::net::SocketAddr;
-use tokio::sync::oneshot::Receiver;
+use tokio::sync::watch::Receiver;
 use warp::Filter as WarpFilter;
 
 /// Metrics contains metrics configuration for the server.
@@ -19,7 +19,7 @@ pub struct Metrics {
 pub fn start_metrics_server(
     addr: SocketAddr,
     registry: Registry,
-    shutdown_signal: Receiver<()>,
+    mut shutdown_rx: Receiver<()>,
     log: Logger,
 ) {
     info!(log, "starting metrics endpoint at {}", addr.to_string());
@@ -38,8 +38,8 @@ pub fn start_metrics_server(
             .unwrap_or_else(|_| "# failed to gather metrics".to_string())
     });
 
-    let (_, server) = warp::serve(metrics_route).bind_with_graceful_shutdown(addr, async {
-        shutdown_signal.await.ok();
+    let (_, server) = warp::serve(metrics_route).bind_with_graceful_shutdown(addr, async move {
+        let _ = shutdown_rx.recv().await;
     });
 
     tokio::spawn(server);

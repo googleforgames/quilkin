@@ -15,7 +15,6 @@
  */
 
 use std::collections::HashMap;
-use std::io::{Error as IOError, ErrorKind};
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::str::from_utf8;
 use std::sync::Arc;
@@ -24,7 +23,7 @@ use slog::{debug, error, info, warn, Logger};
 use tokio::io::Result;
 use tokio::net::udp::{RecvHalf, SendHalf};
 use tokio::net::UdpSocket;
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::{mpsc, watch};
 use tokio::sync::{Mutex, RwLock};
 use tokio::time::{delay_for, Duration, Instant};
 
@@ -48,20 +47,17 @@ pub struct Server {
 impl Server {
     /// start the async processing of incoming UDP packets. Will block until an
     /// event is sent through the stop Receiver.
-    pub async fn run(self, stop: oneshot::Receiver<()>) -> Result<()> {
+    pub async fn run(self, mut shutdown_rx: watch::Receiver<()>) -> Result<()> {
         self.log_config();
 
-        // Start metrics server if needed - it is shutdown before exiting the function.
-        let metrics_shutdown_tx = self.metrics.addr.map(|addr| {
-            let (metrics_shutdown_tx, metrics_shutdown_rx) = oneshot::channel();
+        if let Some(addr) = self.metrics.addr {
             start_metrics_server(
                 addr,
                 self.metrics.registry.clone(),
-                metrics_shutdown_rx,
+                shutdown_rx.clone(),
                 self.log.clone(),
             );
-            metrics_shutdown_tx
-        });
+        }
 
         let (receive_socket, send_socket) = Server::bind(&self.config).await?.split();
         // HashMap key is from,destination addresses as a tuple.
@@ -78,13 +74,8 @@ impl Server {
             send_packets,
         );
 
-        // convert to an IO error
-        let result = stop
-            .await
-            .map_err(|err| IOError::new(ErrorKind::BrokenPipe, err));
-
-        metrics_shutdown_tx.map(|tx| tx.send(()).ok());
-        result
+        let _ = shutdown_rx.recv().await;
+        Ok(())
     }
 
     /// run_prune_sessions starts the timer for pruning sessions and runs prune_sessions every

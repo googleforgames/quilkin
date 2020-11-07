@@ -99,7 +99,7 @@ pub struct TestHelper {
     pub log: Logger,
     /// Channel to subscribe to, and trigger the shutdown of created resources.
     shutdown_ch: Option<(watch::Sender<()>, watch::Receiver<()>)>,
-    server_shutdown_tx: Vec<Option<oneshot::Sender<()>>>,
+    server_shutdown_tx: Vec<Option<watch::Sender<()>>>,
 }
 
 /// Returned from [creating a socket](TestHelper::open_socket_and_recv_single_packet)
@@ -132,7 +132,7 @@ impl Drop for TestHelper {
             .flatten()
         {
             shutdown_tx
-                .send(())
+                .broadcast(())
                 .map_err(|err| {
                     warn!(
                         log,
@@ -288,9 +288,12 @@ impl TestHelper {
         filter_registry: FilterRegistry,
         metrics: Metrics,
     ) {
-        let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
+        let (shutdown_tx, mut shutdown_rx) = watch::channel::<()>(());
         self.server_shutdown_tx.push(Some(shutdown_tx));
         tokio::spawn(async move {
+            // Remove the init value from the channel - ensuring that the channel is
+            // empty so that we can terminate once we receive any value from it.
+            let _ = shutdown_rx.recv().await;
             Builder::from(Arc::new(config))
                 .with_filter_registry(filter_registry)
                 .with_metrics(metrics)
