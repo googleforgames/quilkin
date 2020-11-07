@@ -14,10 +14,6 @@
  * limitations under the License.
  */
 
-// Allow unused variables since this module is WIP.
-// TODO: remove this when we start implementing the xDS API
-#![allow(unused)]
-
 mod udpa {
     pub mod core {
         pub mod v1 {
@@ -97,7 +93,7 @@ const ENDPOINT_TYPE: &str = "type.googleapis.com/envoy.config.endpoint.v3.Cluste
 const CLUSTER_TYPE: &str = "type.googleapis.com/envoy.config.cluster.v3.Cluster";
 
 #[cfg(not(doctest))]
-mod ads_client;
+pub mod ads_client;
 #[cfg(not(doctest))]
 mod cluster;
 mod error;

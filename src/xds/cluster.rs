@@ -697,7 +697,7 @@ mod tests {
             vec!["a".into(), "b".into()],
             |mut cluster| {
                 if &cluster.name == "a" {
-                    if let (Some(assignment)) = cluster.load_assignment.as_mut() {
+                    if let Some(assignment) = cluster.load_assignment.as_mut() {
                         assignment.endpoints[0].lb_endpoints[0].host_identifier =
                             Some(HostIdentifier::Endpoint(Endpoint {
                                 address: Some(Address {
