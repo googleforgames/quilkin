@@ -30,6 +30,9 @@ pub use error::ValidationError;
 
 base64_serde_type!(Base64Standard, base64::STANDARD);
 
+// CLIENT_ENDPOINT_PREFIX is a prefix to the name of a client proxy's endpoint.
+const CLIENT_ENDPOINT_PREFIX: &str = "address";
+
 /// Config is the configuration for either a Client or Server proxy
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Config {
@@ -42,6 +45,26 @@ pub struct Config {
     // Limit struct creation to the builder. We use an Optional<Phantom>
     // so that we can create instances though deserialization.
     pub(super) phantom: Option<PhantomData<()>>,
+}
+
+impl ConnectionConfig {
+    pub fn get_endpoints(&self) -> Vec<EndPoint> {
+        match self {
+            ConnectionConfig::Client { addresses, .. } => addresses
+                .iter()
+                .cloned()
+                .enumerate()
+                .map(|(offset, address)| {
+                    EndPoint::new(
+                        format!("{}-{}", CLIENT_ENDPOINT_PREFIX, offset),
+                        address,
+                        vec![],
+                    )
+                })
+                .collect(),
+            ConnectionConfig::Server { endpoints } => endpoints.clone(),
+        }
+    }
 }
 
 /// Local is the local host configuration options

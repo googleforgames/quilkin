@@ -120,7 +120,7 @@ impl RateLimitFilter {
         let tokens = Arc::new(AtomicUsize::new(config.max_packets));
 
         let max_tokens = config.max_packets;
-        let period = config.period.unwrap_or(Duration::from_secs(1));
+        let period = config.period.unwrap_or_else(|| Duration::from_secs(1));
         let available_tokens = tokens.clone();
         let _ = tokio::spawn(async move {
             let mut interval = time::interval_at(Instant::now() + period, period);
