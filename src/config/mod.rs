@@ -111,6 +111,12 @@ impl From<&str> for ConnectionId {
     }
 }
 
+impl PartialEq<Vec<u8>> for ConnectionId {
+    fn eq(&self, other: &Vec<u8>) -> bool {
+        self.0.eq(other)
+    }
+}
+
 /// ConnectionConfig is the configuration for either a Client or Server proxy
 #[derive(Debug, Deserialize, Serialize)]
 pub enum ConnectionConfig {

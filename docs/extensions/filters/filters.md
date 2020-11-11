@@ -66,7 +66,8 @@ Quilkin includes several filters out of the box.
 | [Debug](debug.md)                | Logs every packet              |
 | [LocalRateLimiter](./local_rate_limit.md) | Limit the frequency of packets. |
 | [ConcatenateBytes](./concatenate_bytes.md) | Add authentication tokens to packets. |
-| [CaptureBytes](capture_bytes.md) | Capture bytes from a packet into the Filter Context. |
+| [CaptureBytes](capture_bytes.md) | Capture specific bytes from a packet and store them in filter dynamic metadata. |
+| [EndpointAuthentication](endpoint_authentication.md) | Only sends packets to Endpoints that they are authenticated to access. |
 
 ### FilterConfig <a name="filter-config"></a>
 Represents configuration for a filter instance.

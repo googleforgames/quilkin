@@ -17,12 +17,14 @@
 pub use capture_bytes::CaptureBytesFactory;
 pub use concatenate_bytes::ConcatBytesFactory;
 pub use debug::DebugFactory;
+pub use endpoint_authentication::EndpointAuthenticationFactory;
 pub use load_balancer::LoadBalancerFilterFactory;
 pub use local_rate_limit::RateLimitFilterFactory;
 
 mod capture_bytes;
 mod concatenate_bytes;
 mod debug;
+mod endpoint_authentication;
 mod load_balancer;
 mod local_rate_limit;
 
