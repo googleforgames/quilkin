@@ -17,6 +17,7 @@
 // TODO: Allow unused variables since this module is WIP.
 #![allow(unused)]
 
+// We use a parking_lot since it's significantly faster under low contention
 use parking_lot::RwLock;
 use slog::{info, warn, Logger};
 use std::collections::HashMap;
