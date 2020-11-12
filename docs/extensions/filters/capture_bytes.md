@@ -1,7 +1,7 @@
 # CaptureBytes
 
 The `CaptureBytes` filter's job is to find a series of bytes within a packet, and capture it into
-[Filter invocation values]`(TODO: add link to filter invocation docs)`, so that it can be utilised by filters further
+[Filter dynamic metadata]`(TODO: add link to dynamic metadata docs)`, so that it can be utilised by filters further
 down the chain.
 
 This is often used as a way of retrieving authentication tokens from a packet, and used in combination with
@@ -22,7 +22,7 @@ filters:
   - name: quilkin.extensions.filters.capture_bytes.v1alpha1.CaptureBytes
     config:
         strategy: PREFIX
-        valuesKey: myapp.com/myownkey
+        metadataKey: myapp.com/myownkey
         size: 3
         remove: false
 client:
@@ -48,7 +48,7 @@ properties:
        - PREFIX: Retrieve bytes from the beginnning of the packet.
     default: "SUFFIX"
     enum: ['PREFIX', 'SUFFIX']
-  valuesKey:
+  metadataKey:
     type: string
     default: quilkin.dev/captured_bytes
     description: | 

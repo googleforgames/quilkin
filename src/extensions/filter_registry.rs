@@ -33,7 +33,7 @@ pub struct DownstreamContext {
     /// Contents of the received packet.
     pub contents: Vec<u8>,
     /// Arbitrary values that can be passed from one filter to another
-    pub values: HashMap<String, Box<dyn Any + Send>>,
+    pub metadata: HashMap<String, Box<dyn Any + Send>>,
     // Enforce using constructor to create this struct.
     phantom: PhantomData<()>,
 }
@@ -54,7 +54,7 @@ pub struct DownstreamResponse {
     /// Contents of the packet to be forwarded.
     pub contents: Vec<u8>,
     /// Arbitrary values that can be passed from one filter to another
-    pub values: HashMap<String, Box<dyn Any + Send>>,
+    pub metadata: HashMap<String, Box<dyn Any + Send>>,
     // Enforce using constructor to create this struct.
     phantom: PhantomData<()>,
 }
@@ -70,7 +70,7 @@ pub struct UpstreamContext<'a> {
     /// Contents of the received packet.
     pub contents: Vec<u8>,
     /// Arbitrary values that can be passed from one filter to another
-    pub values: HashMap<String, Box<dyn Any + Send>>,
+    pub metadata: HashMap<String, Box<dyn Any + Send>>,
     // Enforce using constructor to create this struct.
     phantom: PhantomData<()>,
 }
@@ -89,7 +89,7 @@ pub struct UpstreamResponse {
     /// Contents of the packet to be sent back to the original sender.
     pub contents: Vec<u8>,
     /// Arbitrary values that can be passed from one filter to another
-    pub values: HashMap<String, Box<dyn Any + Send>>,
+    pub metadata: HashMap<String, Box<dyn Any + Send>>,
     // Enforce using constructor to create this struct.
     phantom: PhantomData<()>,
 }
@@ -101,7 +101,7 @@ impl DownstreamContext {
             endpoints,
             from,
             contents,
-            values: HashMap::new(),
+            metadata: HashMap::new(),
             phantom: PhantomData,
         }
     }
@@ -112,7 +112,7 @@ impl DownstreamContext {
             endpoints: response.endpoints,
             from,
             contents: response.contents,
-            values: response.values,
+            metadata: response.metadata,
             phantom: PhantomData,
         }
     }
@@ -123,7 +123,7 @@ impl From<DownstreamContext> for DownstreamResponse {
         Self {
             endpoints: ctx.endpoints,
             contents: ctx.contents,
-            values: ctx.values,
+            metadata: ctx.metadata,
             phantom: ctx.phantom,
         }
     }
@@ -142,7 +142,7 @@ impl UpstreamContext<'_> {
             from,
             to,
             contents,
-            values: HashMap::new(),
+            metadata: HashMap::new(),
             phantom: PhantomData,
         }
     }
@@ -159,7 +159,7 @@ impl UpstreamContext<'_> {
             from,
             to,
             contents: response.contents,
-            values: response.values,
+            metadata: response.metadata,
             phantom: PhantomData,
         }
     }
@@ -170,7 +170,7 @@ impl From<UpstreamContext<'_>> for UpstreamResponse {
         Self {
             contents: ctx.contents,
             phantom: ctx.phantom,
-            values: ctx.values,
+            metadata: ctx.metadata,
         }
     }
 }
