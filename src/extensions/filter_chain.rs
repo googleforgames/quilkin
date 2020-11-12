@@ -200,7 +200,7 @@ mod tests {
         );
         assert_eq!(
             "receive",
-            response.values["downstream"]
+            response.metadata["downstream"]
                 .downcast_ref::<String>()
                 .unwrap()
         );
@@ -216,7 +216,7 @@ mod tests {
 
         assert_eq!(
             "receive",
-            response.values["upstream"]
+            response.metadata["upstream"]
                 .downcast_ref::<String>()
                 .unwrap()
         );
@@ -250,7 +250,7 @@ mod tests {
         );
         assert_eq!(
             "receive:receive",
-            response.values["downstream"]
+            response.metadata["downstream"]
                 .downcast_ref::<String>()
                 .unwrap()
         );
@@ -269,7 +269,7 @@ mod tests {
         );
         assert_eq!(
             "receive:receive",
-            response.values["upstream"]
+            response.metadata["upstream"]
                 .downcast_ref::<String>()
                 .unwrap()
         );

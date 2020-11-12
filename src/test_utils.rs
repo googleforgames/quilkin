@@ -63,7 +63,7 @@ impl Filter for TestFilter {
         ctx.endpoints.push(noop_endpoint());
 
         // append values on each run
-        ctx.values
+        ctx.metadata
             .entry("downstream".into())
             .and_modify(|e| e.downcast_mut::<String>().unwrap().push_str(":receive"))
             .or_insert_with(|| Box::new("receive".to_string()));
@@ -75,7 +75,7 @@ impl Filter for TestFilter {
 
     fn on_upstream_receive(&self, mut ctx: UpstreamContext) -> Option<UpstreamResponse> {
         // append values on each run
-        ctx.values
+        ctx.metadata
             .entry("upstream".into())
             .and_modify(|e| e.downcast_mut::<String>().unwrap().push_str(":receive"))
             .or_insert_with(|| Box::new("receive".to_string()));
