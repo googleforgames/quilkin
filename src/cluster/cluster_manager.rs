@@ -18,6 +18,8 @@
 #![allow(unused)]
 
 // We use a parking_lot since it's significantly faster under low contention
+// and we will need to acquire a read lock with every packet that is processed
+// to be able to capture the current endpoint state and pass it to Filters.
 use parking_lot::RwLock;
 use slog::{info, warn, Logger};
 use std::collections::HashMap;
