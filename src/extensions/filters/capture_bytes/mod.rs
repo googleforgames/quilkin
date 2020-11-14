@@ -98,7 +98,7 @@ struct CaptureBytes {
     capture: Box<dyn Capture + Sync + Send>,
     /// metrics reporter for this filter.
     metrics: Metrics,
-    context_key: String,
+    metadata_key: String,
     size: usize,
     remove: bool,
 }
@@ -114,7 +114,7 @@ impl CaptureBytes {
             log: base.new(o!("source" => "extensions::CaptureBytes")),
             capture,
             metrics,
-            context_key: config.metadata_key,
+            metadata_key: config.metadata_key,
             size: config.size,
             remove: config.remove,
         }
@@ -141,7 +141,7 @@ impl Filter for CaptureBytes {
             .capture(&mut ctx.contents, self.size, self.remove);
 
         ctx.metadata
-            .insert(self.context_key.clone(), Box::new(token));
+            .insert(self.metadata_key.clone(), Box::new(token));
 
         Some(ctx.into())
     }
