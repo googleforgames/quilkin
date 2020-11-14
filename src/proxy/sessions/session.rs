@@ -22,7 +22,6 @@ use std::sync::atomic::Ordering::Relaxed;
 use std::sync::Arc;
 
 use slog::{debug, error, o, Logger};
-use tokio::io::Result;
 use tokio::net::udp::{RecvHalf, SendHalf};
 use tokio::net::UdpSocket;
 use tokio::select;
@@ -32,7 +31,10 @@ use tokio::time::{Duration, Instant};
 use crate::config::EndPoint;
 use crate::extensions::{Filter, FilterChain, UpstreamContext};
 
-use super::metrics::Metrics;
+use crate::proxy::sessions::error::Error;
+use crate::proxy::sessions::metrics::Metrics;
+
+type Result<T> = std::result::Result<T, Error>;
 
 /// SESSION_TIMEOUT_SECONDS is the default session timeout - which is one minute.
 pub const SESSION_TIMEOUT_SECONDS: u64 = 60;
@@ -99,7 +101,10 @@ impl Session {
     ) -> Result<Self> {
         let log = base.new(o!("source" => "proxy::Session", "from" => from, "dest_name" => dest.name.clone(), "dest_address" => dest.address));
         let addr = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 0);
-        let (recv, send) = UdpSocket::bind(addr).await?.split();
+        let (recv, send) = UdpSocket::bind(addr)
+            .await
+            .map_err(Error::BindUdpSocket)?
+            .split();
         let (closer, closed) = watch::channel::<bool>(false);
         let mut s = Session {
             metrics,
@@ -249,7 +254,7 @@ impl Session {
             })
             .map_err(|err| {
                 self.metrics.errors_total.inc();
-                err
+                Error::SendToDst(err)
             })
     }
 

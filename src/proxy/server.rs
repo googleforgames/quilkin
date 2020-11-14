@@ -15,12 +15,12 @@
  */
 
 use std::collections::HashMap;
+use std::fmt::{self, Display, Formatter};
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::str::from_utf8;
 use std::sync::Arc;
 
 use slog::{debug, error, info, warn, Logger};
-use tokio::io::Result;
 use tokio::net::udp::{RecvHalf, SendHalf};
 use tokio::net::UdpSocket;
 use tokio::sync::{mpsc, watch};
@@ -29,11 +29,47 @@ use tokio::time::{delay_for, Duration, Instant};
 
 use crate::config::{Config, ConnectionConfig, EndPoint};
 use crate::extensions::{DownstreamContext, Filter, FilterChain};
-use crate::proxy::sessions::{Packet, Session, SESSION_TIMEOUT_SECONDS};
+use crate::proxy::sessions::{
+    error::Error as SessionError, Packet, Session, SESSION_TIMEOUT_SECONDS,
+};
 
 use super::metrics::{start_metrics_server, Metrics};
 
 type SessionMap = Arc<RwLock<HashMap<(SocketAddr, SocketAddr), Mutex<Session>>>>;
+
+// TODO: Move error code into error.rs file
+#[derive(Debug)]
+pub enum Error {
+    Session(SessionError),
+    Bind(tokio::io::Error),
+}
+
+// InternalError is an error that isn't exposed outside this module.
+#[derive(Debug)]
+pub enum InternalError {
+    RecvFrom(tokio::io::Error),
+}
+
+impl std::error::Error for Error {}
+
+impl Display for Error {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Error::Session(inner) => write!(f, "session error: {}", inner),
+            Error::Bind(inner) => write!(f, "failed to bind to port: {}", inner),
+        }
+    }
+}
+
+impl Display for InternalError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            InternalError::RecvFrom(inner) => write!(f, "recv_from error: {}", inner),
+        }
+    }
+}
+
+type Result<T> = std::result::Result<T, Error>;
 
 /// Server is the UDP server main implementation
 pub struct Server {
@@ -136,9 +172,12 @@ impl Server {
         receive_socket: &mut RecvHalf,
         sessions: SessionMap,
         send_packets: mpsc::Sender<Packet>,
-    ) -> Result<()> {
+    ) -> std::result::Result<(), InternalError> {
         let mut buf: Vec<u8> = vec![0; 65535];
-        let (size, recv_addr) = receive_socket.recv_from(&mut buf).await?;
+        let (size, recv_addr) = receive_socket
+            .recv_from(&mut buf)
+            .await
+            .map_err(InternalError::RecvFrom)?;
         let log = log.clone();
         let metrics = metrics.clone();
         tokio::spawn(async move {
@@ -245,7 +284,7 @@ impl Server {
     /// bind binds the local configured port
     async fn bind(config: &Config) -> Result<UdpSocket> {
         let addr = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), config.local.port);
-        UdpSocket::bind(addr).await
+        UdpSocket::bind(addr).await.map_err(Error::Bind)
     }
 
     /// ensure_session makes sure there is a value session for the name in the sessions map
