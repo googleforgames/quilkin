@@ -191,7 +191,7 @@ mod tests {
     use serde_yaml::{Mapping, Value};
 
     use crate::config::{ConnectionConfig, EndPoint};
-    use crate::test_utils::{assert_filter_on_downstream_receive_no_change, logger};
+    use crate::test_utils::{assert_filter_on_upstream_receive_no_change, logger};
 
     use super::*;
 
@@ -305,7 +305,7 @@ mod tests {
             remove: false,
         };
         let filter = capture_bytes(config);
-        assert_filter_on_downstream_receive_no_change(&filter);
+        assert_filter_on_upstream_receive_no_change(&filter);
     }
 
     #[test]
