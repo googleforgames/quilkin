@@ -20,7 +20,6 @@ use std::str::from_utf8;
 use std::sync::Arc;
 
 use slog::{debug, error, info, warn, Logger};
-use tokio::io::Result;
 use tokio::net::udp::{RecvHalf, SendHalf};
 use tokio::net::UdpSocket;
 use tokio::sync::{mpsc, watch};
@@ -32,8 +31,13 @@ use crate::extensions::{DownstreamContext, Filter, FilterChain};
 use crate::proxy::sessions::{Packet, Session, SESSION_TIMEOUT_SECONDS};
 
 use super::metrics::{start_metrics_server, Metrics};
+use crate::proxy::server::error::{Error, RecvFromError};
+
+pub mod error;
 
 type SessionMap = Arc<RwLock<HashMap<(SocketAddr, SocketAddr), Mutex<Session>>>>;
+
+type Result<T> = std::result::Result<T, Error>;
 
 /// Server is the UDP server main implementation
 pub struct Server {
@@ -136,9 +140,12 @@ impl Server {
         receive_socket: &mut RecvHalf,
         sessions: SessionMap,
         send_packets: mpsc::Sender<Packet>,
-    ) -> Result<()> {
+    ) -> std::result::Result<(), RecvFromError> {
         let mut buf: Vec<u8> = vec![0; 65535];
-        let (size, recv_addr) = receive_socket.recv_from(&mut buf).await?;
+        let (size, recv_addr) = receive_socket
+            .recv_from(&mut buf)
+            .await
+            .map_err(RecvFromError)?;
         let log = log.clone();
         let metrics = metrics.clone();
         tokio::spawn(async move {
@@ -245,7 +252,7 @@ impl Server {
     /// bind binds the local configured port
     async fn bind(config: &Config) -> Result<UdpSocket> {
         let addr = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), config.local.port);
-        UdpSocket::bind(addr).await
+        UdpSocket::bind(addr).await.map_err(Error::Bind)
     }
 
     /// ensure_session makes sure there is a value session for the name in the sessions map
