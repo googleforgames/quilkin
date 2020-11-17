@@ -15,7 +15,6 @@
  */
 
 use std::collections::HashMap;
-use std::fmt::{self, Display, Formatter};
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::str::from_utf8;
 use std::sync::Arc;
@@ -29,45 +28,14 @@ use tokio::time::{delay_for, Duration, Instant};
 
 use crate::config::{Config, ConnectionConfig, EndPoint};
 use crate::extensions::{DownstreamContext, Filter, FilterChain};
-use crate::proxy::sessions::{
-    error::Error as SessionError, Packet, Session, SESSION_TIMEOUT_SECONDS,
-};
+use crate::proxy::sessions::{Packet, Session, SESSION_TIMEOUT_SECONDS};
 
 use super::metrics::{start_metrics_server, Metrics};
+use crate::proxy::server::error::{Error, RecvFromError};
+
+pub mod error;
 
 type SessionMap = Arc<RwLock<HashMap<(SocketAddr, SocketAddr), Mutex<Session>>>>;
-
-// TODO: Move error code into error.rs file
-#[derive(Debug)]
-pub enum Error {
-    Session(SessionError),
-    Bind(tokio::io::Error),
-}
-
-// InternalError is an error that isn't exposed outside this module.
-#[derive(Debug)]
-pub enum InternalError {
-    RecvFrom(tokio::io::Error),
-}
-
-impl std::error::Error for Error {}
-
-impl Display for Error {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            Error::Session(inner) => write!(f, "session error: {}", inner),
-            Error::Bind(inner) => write!(f, "failed to bind to port: {}", inner),
-        }
-    }
-}
-
-impl Display for InternalError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            InternalError::RecvFrom(inner) => write!(f, "recv_from error: {}", inner),
-        }
-    }
-}
 
 type Result<T> = std::result::Result<T, Error>;
 
@@ -172,12 +140,12 @@ impl Server {
         receive_socket: &mut RecvHalf,
         sessions: SessionMap,
         send_packets: mpsc::Sender<Packet>,
-    ) -> std::result::Result<(), InternalError> {
+    ) -> std::result::Result<(), RecvFromError> {
         let mut buf: Vec<u8> = vec![0; 65535];
         let (size, recv_addr) = receive_socket
             .recv_from(&mut buf)
             .await
-            .map_err(InternalError::RecvFrom)?;
+            .map_err(RecvFromError)?;
         let log = log.clone();
         let metrics = metrics.clone();
         tokio::spawn(async move {
