@@ -23,7 +23,7 @@ Some of Quilkin's advantages:
   servers.
 * Multiple integration patterns, allowing you to choose the level of integration that makes sense for your
   architecture.
-* Remove this non-game specific computation out of your game server's processing loop - and save that precious CPU for
+* Remove non-game specific computation out of your game server's processing loop - and save that precious CPU for
   your game simulation!
 
 ## Major Features
