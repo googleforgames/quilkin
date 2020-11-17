@@ -21,7 +21,7 @@
 // and we will need to acquire a read lock with every packet that is processed
 // to be able to capture the current endpoint state and pass it to Filters.
 use parking_lot::RwLock;
-use slog::{info, warn, Logger};
+use slog::{debug, warn, Logger};
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::{fmt, sync::Arc};
@@ -221,17 +221,17 @@ impl ClusterManager {
                         match update {
                             Some(update) => {
                                 let update = Self::create_clusters_from_update(update);
-                                info!(log, "received cluster update");
+                                debug!(log, "Received a cluster update.");
                                 cluster_manager.write().update(update);
                             }
                             None => {
-                                info!(log, "exiting cluster update receive loop because sender dropped the channel.");
+                                debug!(log, "Exiting cluster update receive loop because the sender dropped the channel.");
                                 return;
                             }
                         }
                     }
                     _ = shutdown_rx.recv() => {
-                        info!(log, "exiting cluster update receive loop because sender a shutdown signal was received.");
+                        debug!(log, "Exiting cluster update receive loop because a shutdown signal was received.");
                         return;
                     },
                 }
