@@ -29,7 +29,7 @@ mod metrics;
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(default)]
 struct Config {
-    /// the key to use when retrieving the captured bytes in the filter context
+    /// the key to use when retrieving the token from the Filter's dynamic metadata
     #[serde(rename = "metadataKey")]
     metadata_key: String,
 }
@@ -95,7 +95,7 @@ impl Filter for TokenRouter {
             None => {
                 error!(self.log, "Filter configuration issue: token not found"; 
                     "metadata_key" => self.metadata_key.clone());
-                self.metrics.packets_dropped_total.inc();
+                self.metrics.packets_dropped_no_token_found.inc();
                 None
             }
             Some(value) => match value.downcast_ref::<Vec<u8>>() {
@@ -103,7 +103,7 @@ impl Filter for TokenRouter {
                     ctx.endpoints
                         .retain(|e| e.connection_ids.iter().any(|id| id.as_ref() == token));
                     if ctx.endpoints.is_empty() {
-                        self.metrics.packets_dropped_total.inc();
+                        self.metrics.packets_dropped_no_endpoint_match.inc();
                         None
                     } else {
                         Some(ctx.into())
@@ -112,7 +112,7 @@ impl Filter for TokenRouter {
                 None => {
                     error!(self.log, "Filter configuration issue: retrieved token is not the correct type (Vec<u8>)";
                         "metadata_key" => self.metadata_key.clone());
-                    self.metrics.packets_dropped_total.inc();
+                    self.metrics.packets_dropped_invalid_token.inc();
                     None
                 }
             },
@@ -218,19 +218,19 @@ mod tests {
         ctx.metadata
             .insert(CAPTURED_BYTES.into(), Box::new(b"567".to_vec()));
         assert!(filter.on_downstream_receive(ctx).is_none());
-        assert_eq!(1, filter.metrics.packets_dropped_total.get());
+        assert_eq!(1, filter.metrics.packets_dropped_no_endpoint_match.get());
 
         // no key
         let ctx = new_ctx();
         assert!(filter.on_downstream_receive(ctx).is_none());
-        assert_eq!(2, filter.metrics.packets_dropped_total.get());
+        assert_eq!(1, filter.metrics.packets_dropped_no_token_found.get());
 
         // wrong type key
         let mut ctx = new_ctx();
         ctx.metadata
             .insert(CAPTURED_BYTES.into(), Box::new(String::from("wrong")));
         assert!(filter.on_downstream_receive(ctx).is_none());
-        assert_eq!(3, filter.metrics.packets_dropped_total.get());
+        assert_eq!(1, filter.metrics.packets_dropped_invalid_token.get());
     }
 
     #[test]

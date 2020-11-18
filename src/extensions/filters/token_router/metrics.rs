@@ -14,25 +14,37 @@
  *  limitations under the License.
  */
 use prometheus::core::{AtomicI64, GenericCounter};
-use prometheus::Result as MetricsResult;
-use prometheus::{IntCounter, Registry};
+use prometheus::{IntCounterVec, Registry, Result as MetricsResult};
 
 use crate::metrics::{filter_opts, CollectorExt};
 
 /// Register and manage metrics for this filter
 pub(super) struct Metrics {
-    pub(super) packets_dropped_total: GenericCounter<AtomicI64>,
+    pub(super) packets_dropped_no_token_found: GenericCounter<AtomicI64>,
+    pub(super) packets_dropped_invalid_token: GenericCounter<AtomicI64>,
+    pub(super) packets_dropped_no_endpoint_match: GenericCounter<AtomicI64>,
 }
 
 impl Metrics {
     pub(super) fn new(registry: &Registry) -> MetricsResult<Self> {
-        Ok(Metrics {
-            packets_dropped_total: IntCounter::with_opts(filter_opts(
+        let label_names = vec!["reason"];
+        let metric = IntCounterVec::new(
+            filter_opts(
                 "packets_dropped",
                 "TokenRouter",
-                "Total number of packets dropped due to invalid connection_id values.",
-            ))?
-            .register(registry)?,
+                "Total number of packets dropped. Reason is provided via the `Reason` label.",
+            ),
+            &label_names,
+        )?
+        .register(registry)?;
+
+        Ok(Metrics {
+            packets_dropped_no_token_found: metric
+                .get_metric_with_label_values(vec!["NoTokenFound"].as_slice())?,
+            packets_dropped_invalid_token: metric
+                .get_metric_with_label_values(vec!["InvalidToken"].as_slice())?,
+            packets_dropped_no_endpoint_match: metric
+                .get_metric_with_label_values(vec!["NoEndpointMatch"].as_slice())?,
         })
     }
 }
