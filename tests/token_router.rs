@@ -23,14 +23,14 @@ mod tests {
     use tokio::time::{delay_for, Duration};
 
     use quilkin::config::{Builder, ConnectionConfig, ConnectionId, EndPoint, Filter, Local};
-    use quilkin::extensions::filters::{CaptureBytesFactory, EndpointAuthenticationFactory};
+    use quilkin::extensions::filters::{CaptureBytesFactory, TokenRouterFactory};
     use quilkin::extensions::FilterFactory;
     use quilkin::test_utils::{logger, TestHelper};
 
-    /// This test covers both endpoint_authentication and capture_bytes filters,
+    /// This test covers both token_router and capture_bytes filters,
     /// since they work in concert together.
     #[tokio::test]
-    async fn endpoint_authentication() {
+    async fn token_router() {
         let log = logger();
         let mut t = TestHelper::default();
         let echo = t.run_echo_server().await;
@@ -48,7 +48,7 @@ remove: true
                     config: serde_yaml::from_str(capture_yaml).unwrap(),
                 },
                 Filter {
-                    name: EndpointAuthenticationFactory::new(&log).name(),
+                    name: TokenRouterFactory::new(&log).name(),
                     config: None,
                 },
             ])

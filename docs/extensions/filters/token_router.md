@@ -1,6 +1,6 @@
-# EndpointAuthentication
+# TokenRouter
 
-The `EndpointAuthentication` filter's job is to ensure only authorised clients are able to send packets to Endpoints that
+The `TokenRouter` filter's job is to ensure only authorised clients are able to send packets to Endpoints that
 they have access to.
 
 It does this via matching an authentication token found in the
@@ -16,7 +16,7 @@ to outgoing packets.
 
 #### Filter name
 ```text
-quilkin.extensions.filters.endpoint_authentication.v1alpha1.EndpointAuthentication
+quilkin.extensions.filters.token_router.v1alpha1.TokenRouter
 ```
 
 ### Configuration Examples
@@ -30,7 +30,7 @@ filters:
         metadataKey: myapp.com/myownkey
         size: 3
         remove: true  
-  - name: quilkin.extensions.filters.endpoint_authentication.v1alpha1.EndpointAuthentication
+  - name: quilkin.extensions.filters.token_router.v1alpha1.TokenRouter
     config:
         metadataKey: myapp.com/myownkey
 server:
@@ -65,6 +65,6 @@ properties:
 
 ### Metrics
 
-* `quilkin_filter_EndpointAuthentication_packets_dropped`  
+* `quilkin_filter_TokenRouter_packets_dropped`  
   A counter of the total number of packets that have been dropped as they could not be authenticated against an
   Endpoint.

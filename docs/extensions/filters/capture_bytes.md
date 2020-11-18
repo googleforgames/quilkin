@@ -6,7 +6,7 @@ down the chain.
 
 This is often used as a way of retrieving authentication tokens from a packet, and used in combination with
 [ConcatenateBytes](./concatenate_bytes.md) and 
-[EndpointAuthentication](endpoint_authentication.md) filter to provide common packet routing utilities.
+[TokenRouter](token_router.md) filter to provide common packet routing utilities.
 
 #### Filter name
 ```text

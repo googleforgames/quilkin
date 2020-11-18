@@ -17,7 +17,7 @@
 use serde::{Deserialize, Serialize};
 use slog::{error, o, Logger};
 
-use crate::extensions::filters::endpoint_authentication::metrics::Metrics;
+use crate::extensions::filters::token_router::metrics::Metrics;
 use crate::extensions::filters::CAPTURED_BYTES;
 use crate::extensions::{
     CreateFilterArgs, DownstreamContext, DownstreamResponse, Error, Filter, FilterFactory,
@@ -44,26 +44,26 @@ impl Default for Config {
 
 /// Filter that only allows packets to be passed to Endpoints that have a matching
 /// connection_id to the token stored in the Filter's dynamic metadata.
-struct EndpointAuthentication {
+struct TokenRouter {
     log: Logger,
     metadata_key: String,
     metrics: Metrics,
 }
 
-/// Factory for the EndpointAuthentication filter
-pub struct EndpointAuthenticationFactory {
+/// Factory for the TokenRouter filter
+pub struct TokenRouterFactory {
     log: Logger,
 }
 
-impl EndpointAuthenticationFactory {
+impl TokenRouterFactory {
     pub fn new(base: &Logger) -> Self {
-        EndpointAuthenticationFactory { log: base.clone() }
+        TokenRouterFactory { log: base.clone() }
     }
 }
 
-impl FilterFactory for EndpointAuthenticationFactory {
+impl FilterFactory for TokenRouterFactory {
     fn name(&self) -> String {
-        "quilkin.extensions.filters.endpoint_authentication.v1alpha1.EndpointAuthentication".into()
+        "quilkin.extensions.filters.token_router.v1alpha1.TokenRouter".into()
     }
 
     fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
@@ -71,7 +71,7 @@ impl FilterFactory for EndpointAuthenticationFactory {
             .and_then(|raw_config| serde_yaml::from_str(raw_config.as_str()))
             .map_err(|err| Error::DeserializeFailed(err.to_string()))?;
 
-        Ok(Box::new(EndpointAuthentication::new(
+        Ok(Box::new(TokenRouter::new(
             &self.log,
             config.unwrap_or_default(),
             Metrics::new(&args.metrics_registry)?,
@@ -79,31 +79,29 @@ impl FilterFactory for EndpointAuthenticationFactory {
     }
 }
 
-impl EndpointAuthentication {
+impl TokenRouter {
     fn new(base: &Logger, config: Config, metrics: Metrics) -> Self {
         Self {
-            log: base.new(o!("source" => "extensions::EndpointAuthentication")),
+            log: base.new(o!("source" => "extensions::TokenRouter")),
             metadata_key: config.metadata_key,
             metrics,
         }
     }
 }
 
-impl Filter for EndpointAuthentication {
+impl Filter for TokenRouter {
     fn on_downstream_receive(&self, mut ctx: DownstreamContext) -> Option<DownstreamResponse> {
         match ctx.metadata.get(self.metadata_key.as_str()) {
             None => {
-                error!(self.log, "Value key not found in DownstreamContext"; "key" => self.metadata_key.clone());
+                error!(self.log, "Filter configuration issue: token not found"; 
+                    "metadata_key" => self.metadata_key.clone());
                 self.metrics.packets_dropped_total.inc();
                 None
             }
             Some(value) => match value.downcast_ref::<Vec<u8>>() {
-                Some(connection_id) => {
-                    ctx.endpoints.retain(|e| {
-                        e.connection_ids
-                            .iter()
-                            .any(|id| id.as_ref() == connection_id)
-                    });
+                Some(token) => {
+                    ctx.endpoints
+                        .retain(|e| e.connection_ids.iter().any(|id| id.as_ref() == token));
                     if ctx.endpoints.is_empty() {
                         self.metrics.packets_dropped_total.inc();
                         None
@@ -112,8 +110,8 @@ impl Filter for EndpointAuthentication {
                     }
                 }
                 None => {
-                    error!(self.log, "Type of value stored in DownstreamContext.values is not Vec<u8>";
-                        "key" => self.metadata_key.clone());
+                    error!(self.log, "Filter configuration issue: retrieved token is not the correct type (Vec<u8>)";
+                        "metadata_key" => self.metadata_key.clone());
                     self.metrics.packets_dropped_total.inc();
                     None
                 }
@@ -140,8 +138,8 @@ mod tests {
 
     const TOKEN_KEY: &str = "TOKEN";
 
-    fn router(config: Config) -> EndpointAuthentication {
-        EndpointAuthentication::new(
+    fn router(config: Config) -> TokenRouter {
+        TokenRouter::new(
             &logger(),
             config,
             Metrics::new(&Registry::default()).unwrap(),
@@ -150,7 +148,7 @@ mod tests {
 
     #[test]
     fn factory_custom_tokens() {
-        let factory = EndpointAuthenticationFactory::new(&logger());
+        let factory = TokenRouterFactory::new(&logger());
         let connection = ConnectionConfig::Server { endpoints: vec![] };
         let mut map = Mapping::new();
         map.insert(
@@ -172,7 +170,7 @@ mod tests {
 
     #[test]
     fn factory_empty_config() {
-        let factory = EndpointAuthenticationFactory::new(&logger());
+        let factory = TokenRouterFactory::new(&logger());
         let connection = ConnectionConfig::Server { endpoints: vec![] };
         let map = Mapping::new();
 
@@ -190,7 +188,7 @@ mod tests {
 
     #[test]
     fn factory_no_config() {
-        let factory = EndpointAuthenticationFactory::new(&logger());
+        let factory = TokenRouterFactory::new(&logger());
         let connection = ConnectionConfig::Server { endpoints: vec![] };
 
         let filter = factory

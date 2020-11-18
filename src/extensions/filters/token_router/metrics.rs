@@ -29,7 +29,7 @@ impl Metrics {
         Ok(Metrics {
             packets_dropped_total: IntCounter::with_opts(filter_opts(
                 "packets_dropped",
-                "EndpointAuthentication",
+                "TokenRouter",
                 "Total number of packets dropped due to invalid connection_id values.",
             ))?
             .register(registry)?,
