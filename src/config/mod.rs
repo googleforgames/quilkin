@@ -111,9 +111,9 @@ impl From<&str> for ConnectionId {
     }
 }
 
-impl PartialEq<Vec<u8>> for ConnectionId {
-    fn eq(&self, other: &Vec<u8>) -> bool {
-        self.0.eq(other)
+impl AsRef<Vec<u8>> for ConnectionId {
+    fn as_ref(&self) -> &Vec<u8> {
+        &self.0
     }
 }
 

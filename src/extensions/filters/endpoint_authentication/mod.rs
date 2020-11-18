@@ -27,34 +27,30 @@ use crate::extensions::{
 mod metrics;
 
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(default)]
 struct Config {
     /// the key to use when retrieving the captured bytes in the filter context
     #[serde(rename = "metadataKey")]
-    #[serde(default = "default_metadata_key")]
     metadata_key: String,
-}
-
-/// default value for the context key in the Config
-fn default_metadata_key() -> String {
-    CAPTURED_BYTES.into()
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
-            metadata_key: default_metadata_key(),
+            metadata_key: CAPTURED_BYTES.into(),
         }
     }
 }
 
+/// Filter that only allows packets to be passed to Endpoints that have a matching
+/// connection_id to the token stored in the Filter's dynamic metadata.
 struct EndpointAuthentication {
     log: Logger,
-    values_key: String,
+    metadata_key: String,
     metrics: Metrics,
 }
 
-/// Factory for the EndpointAuthentication filter that only allows packets to be passed to Endpoints that have a matching
-/// connection_id to the token stored in the Filter's dynamic metadata.
+/// Factory for the EndpointAuthentication filter
 pub struct EndpointAuthenticationFactory {
     log: Logger,
 }
@@ -87,7 +83,7 @@ impl EndpointAuthentication {
     fn new(base: &Logger, config: Config, metrics: Metrics) -> Self {
         Self {
             log: base.new(o!("source" => "extensions::EndpointAuthentication")),
-            values_key: config.metadata_key,
+            metadata_key: config.metadata_key,
             metrics,
         }
     }
@@ -95,31 +91,36 @@ impl EndpointAuthentication {
 
 impl Filter for EndpointAuthentication {
     fn on_downstream_receive(&self, mut ctx: DownstreamContext) -> Option<DownstreamResponse> {
-        match ctx.metadata.get(self.values_key.as_str()) {
+        match ctx.metadata.get(self.metadata_key.as_str()) {
             None => {
-                error!(self.log, "Value key not found in DownstreamContext"; "key" => self.values_key.clone());
+                error!(self.log, "Value key not found in DownstreamContext"; "key" => self.metadata_key.clone());
                 self.metrics.packets_dropped_total.inc();
                 None
             }
             Some(value) => match value.downcast_ref::<Vec<u8>>() {
                 Some(connection_id) => {
-                    ctx.endpoints
-                        .retain(|e| e.connection_ids.iter().any(|id| id == connection_id));
+                    ctx.endpoints.retain(|e| {
+                        e.connection_ids
+                            .iter()
+                            .any(|id| id.as_ref() == connection_id)
+                    });
                     if ctx.endpoints.is_empty() {
                         self.metrics.packets_dropped_total.inc();
-                        return None;
+                        None
+                    } else {
+                        Some(ctx.into())
                     }
-                    Some(ctx.into())
                 }
                 None => {
                     error!(self.log, "Type of value stored in DownstreamContext.values is not Vec<u8>";
-                        "key" => self.values_key.clone());
+                        "key" => self.metadata_key.clone());
                     self.metrics.packets_dropped_total.inc();
                     None
                 }
             },
         }
     }
+
     fn on_upstream_receive(&self, ctx: UpstreamContext) -> Option<UpstreamResponse> {
         Some(ctx.into())
     }
