@@ -46,16 +46,16 @@ struct Config {
     #[serde(rename = "size")]
     size: usize,
     /// the key to use when storing the captured bytes in the filter context
-    #[serde(rename = "valuesKey")]
-    #[serde(default = "default_values_key")]
-    values_key: String,
+    #[serde(rename = "metadataKey")]
+    #[serde(default = "default_metadata_key")]
+    metadata_key: String,
     /// whether or not to remove the set of the bytes from the packet once captured
     #[serde(default)]
     remove: bool,
 }
 
 /// default value for the context key in the Config
-fn default_values_key() -> String {
+fn default_metadata_key() -> String {
     CAPTURED_BYTES.into()
 }
 
@@ -98,7 +98,7 @@ struct CaptureBytes {
     capture: Box<dyn Capture + Sync + Send>,
     /// metrics reporter for this filter.
     metrics: Metrics,
-    context_key: String,
+    metadata_key: String,
     size: usize,
     remove: bool,
 }
@@ -114,7 +114,7 @@ impl CaptureBytes {
             log: base.new(o!("source" => "extensions::CaptureBytes")),
             capture,
             metrics,
-            context_key: config.values_key,
+            metadata_key: config.metadata_key,
             size: config.size,
             remove: config.remove,
         }
@@ -140,7 +140,8 @@ impl Filter for CaptureBytes {
             .capture
             .capture(&mut ctx.contents, self.size, self.remove);
 
-        ctx.values.insert(self.context_key.clone(), Box::new(token));
+        ctx.metadata
+            .insert(self.metadata_key.clone(), Box::new(token));
 
         Some(ctx.into())
     }
@@ -190,7 +191,7 @@ mod tests {
     use serde_yaml::{Mapping, Value};
 
     use crate::config::{ConnectionConfig, EndPoint};
-    use crate::test_utils::{assert_filter_on_downstream_receive_no_change, logger};
+    use crate::test_utils::{assert_filter_on_upstream_receive_no_change, logger};
 
     use super::*;
 
@@ -214,7 +215,7 @@ mod tests {
             Value::String("SUFFIX".into()),
         );
         map.insert(
-            Value::String("valuesKey".into()),
+            Value::String("metadataKey".into()),
             Value::String(TOKEN_KEY.into()),
         );
         map.insert(Value::String("size".into()), Value::Number(3.into()));
@@ -262,7 +263,7 @@ mod tests {
     fn on_downstream_receive() {
         let config = Config {
             strategy: Strategy::Suffix,
-            values_key: TOKEN_KEY.into(),
+            metadata_key: TOKEN_KEY.into(),
             size: 3,
             remove: true,
         };
@@ -274,7 +275,7 @@ mod tests {
     fn on_downstream_receive_overflow_capture_size() {
         let config = Config {
             strategy: Strategy::Suffix,
-            values_key: TOKEN_KEY.into(),
+            metadata_key: TOKEN_KEY.into(),
             size: 99,
             remove: true,
         };
@@ -299,12 +300,12 @@ mod tests {
     fn on_upstream_receive() {
         let config = Config {
             strategy: Strategy::Suffix,
-            values_key: TOKEN_KEY.into(),
+            metadata_key: TOKEN_KEY.into(),
             size: 0,
             remove: false,
         };
         let filter = capture_bytes(config);
-        assert_filter_on_downstream_receive_no_change(&filter);
+        assert_filter_on_upstream_receive_no_change(&filter);
     }
 
     #[test]
@@ -358,7 +359,7 @@ mod tests {
         }
 
         let token = response
-            .values
+            .metadata
             .get(key)
             .unwrap()
             .downcast_ref::<Vec<u8>>()

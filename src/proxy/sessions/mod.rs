@@ -16,5 +16,6 @@
 
 pub use session::{Packet, Session, SESSION_TIMEOUT_SECONDS};
 
+pub(crate) mod error;
 pub(crate) mod metrics;
 mod session;

@@ -15,16 +15,14 @@
  */
 
 use std::collections::HashMap;
-use std::io::{Error as IOError, ErrorKind};
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::str::from_utf8;
 use std::sync::Arc;
 
 use slog::{debug, error, info, warn, Logger};
-use tokio::io::Result;
 use tokio::net::udp::{RecvHalf, SendHalf};
 use tokio::net::UdpSocket;
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::{mpsc, watch};
 use tokio::sync::{Mutex, RwLock};
 use tokio::time::{delay_for, Duration, Instant};
 
@@ -33,8 +31,13 @@ use crate::extensions::{DownstreamContext, Filter, FilterChain};
 use crate::proxy::sessions::{Packet, Session, SESSION_TIMEOUT_SECONDS};
 
 use super::metrics::{start_metrics_server, Metrics};
+use crate::proxy::server::error::{Error, RecvFromError};
+
+pub mod error;
 
 type SessionMap = Arc<RwLock<HashMap<(SocketAddr, SocketAddr), Mutex<Session>>>>;
+
+type Result<T> = std::result::Result<T, Error>;
 
 /// Server is the UDP server main implementation
 pub struct Server {
@@ -48,20 +51,17 @@ pub struct Server {
 impl Server {
     /// start the async processing of incoming UDP packets. Will block until an
     /// event is sent through the stop Receiver.
-    pub async fn run(self, stop: oneshot::Receiver<()>) -> Result<()> {
+    pub async fn run(self, mut shutdown_rx: watch::Receiver<()>) -> Result<()> {
         self.log_config();
 
-        // Start metrics server if needed - it is shutdown before exiting the function.
-        let metrics_shutdown_tx = self.metrics.addr.map(|addr| {
-            let (metrics_shutdown_tx, metrics_shutdown_rx) = oneshot::channel();
+        if let Some(addr) = self.metrics.addr {
             start_metrics_server(
                 addr,
                 self.metrics.registry.clone(),
-                metrics_shutdown_rx,
+                shutdown_rx.clone(),
                 self.log.clone(),
             );
-            metrics_shutdown_tx
-        });
+        }
 
         let (receive_socket, send_socket) = Server::bind(&self.config).await?.split();
         // HashMap key is from,destination addresses as a tuple.
@@ -78,13 +78,8 @@ impl Server {
             send_packets,
         );
 
-        // convert to an IO error
-        let result = stop
-            .await
-            .map_err(|err| IOError::new(ErrorKind::BrokenPipe, err));
-
-        metrics_shutdown_tx.map(|tx| tx.send(()).ok());
-        result
+        let _ = shutdown_rx.recv().await;
+        Ok(())
     }
 
     /// run_prune_sessions starts the timer for pruning sessions and runs prune_sessions every
@@ -145,9 +140,12 @@ impl Server {
         receive_socket: &mut RecvHalf,
         sessions: SessionMap,
         send_packets: mpsc::Sender<Packet>,
-    ) -> Result<()> {
+    ) -> std::result::Result<(), RecvFromError> {
         let mut buf: Vec<u8> = vec![0; 65535];
-        let (size, recv_addr) = receive_socket.recv_from(&mut buf).await?;
+        let (size, recv_addr) = receive_socket
+            .recv_from(&mut buf)
+            .await
+            .map_err(RecvFromError)?;
         let log = log.clone();
         let metrics = metrics.clone();
         tokio::spawn(async move {
@@ -254,7 +252,7 @@ impl Server {
     /// bind binds the local configured port
     async fn bind(config: &Config) -> Result<UdpSocket> {
         let addr = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), config.local.port);
-        UdpSocket::bind(addr).await
+        UdpSocket::bind(addr).await.map_err(Error::Bind)
     }
 
     /// ensure_session makes sure there is a value session for the name in the sessions map

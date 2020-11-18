@@ -24,7 +24,7 @@ use prometheus::Registry;
 use quilkin::config::Config;
 use quilkin::proxy::{logger, Builder, Metrics};
 use tokio::signal;
-use tokio::sync::oneshot;
+use tokio::sync::watch;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -59,12 +59,17 @@ async fn main() {
         .unwrap()
         .build();
 
-    let (close, stop) = oneshot::channel::<()>();
+    let (shutdown_tx, mut shutdown_rx) = watch::channel::<()>(());
+    // Remove the init value from the channel - ensuring that the channel is
+    // empty so that we can terminate once we receive any value from it.
+    shutdown_rx.recv().await;
     tokio::spawn(async move {
-        signal::ctrl_c().await.unwrap();
-        close.send(()).unwrap();
+        // Don't unwrap in order to ensure that we execute
+        // any subsequent shutdown tasks.
+        signal::ctrl_c().await.ok();
+        shutdown_tx.broadcast(()).ok();
     });
 
-    server.run(stop).await.unwrap();
+    server.run(shutdown_rx).await.unwrap();
     info!(log, "Shutting down");
 }
