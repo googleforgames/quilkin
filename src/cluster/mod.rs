@@ -17,6 +17,9 @@
 use std::collections::HashMap;
 use std::net::SocketAddr;
 
+#[cfg(not(doctest))]
+mod cluster_manager;
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Endpoint {
     pub address: SocketAddr,
@@ -36,7 +39,7 @@ pub struct LocalityEndpoints {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Cluster {
-    pub localities: HashMap<Option<Locality>, LocalityEndpoints>,
+    pub localities: ClusterLocalities,
 }
 
 pub type ClusterLocalities = HashMap<Option<Locality>, LocalityEndpoints>;
