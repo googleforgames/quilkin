@@ -25,21 +25,12 @@ use tokio::net::udp::{RecvHalf, SendHalf};
 use tokio::net::UdpSocket;
 use tokio::sync::{mpsc, oneshot, watch};
 
-use crate::config::{Config, EndPoint};
+use crate::config::{Config, EndPoint, Endpoints};
 use crate::extensions::{
     default_registry, CreateFilterArgs, DownstreamContext, DownstreamResponse, Error, Filter,
     FilterFactory, FilterRegistry, UpstreamContext, UpstreamResponse,
 };
 use crate::proxy::{Builder, Metrics};
-
-// noop_endpoint returns an endpoint for data that should go nowhere.
-pub fn noop_endpoint() -> EndPoint {
-    EndPoint {
-        name: "noop".to_string(),
-        address: "127.0.0.1:10".parse().unwrap(),
-        connection_ids: vec![],
-    }
-}
 
 pub struct TestFilterFactory {}
 impl FilterFactory for TestFilterFactory {
@@ -57,11 +48,6 @@ pub struct TestFilter {}
 
 impl Filter for TestFilter {
     fn on_downstream_receive(&self, mut ctx: DownstreamContext) -> Option<DownstreamResponse> {
-        // we're going to add an extra endpoint, so we can test for the change,
-        // but also so we don't break any tests are expecting traffic at the supplied
-        // address and port
-        ctx.endpoints.push(noop_endpoint());
-
         // append values on each run
         ctx.metadata
             .entry("downstream".into())
@@ -338,13 +324,16 @@ where
     let contents = "hello".to_string().into_bytes();
 
     match filter.on_downstream_receive(DownstreamContext::new(
-        endpoints.clone(),
+        Endpoints::new(endpoints.clone()).unwrap().into(),
         from,
         contents.clone(),
     )) {
         None => unreachable!("should return a result"),
         Some(response) => {
-            assert_eq!(endpoints, response.endpoints);
+            assert_eq!(
+                endpoints,
+                response.endpoints.iter().cloned().collect::<Vec<_>>()
+            );
             assert_eq!(contents, response.contents);
         }
     }

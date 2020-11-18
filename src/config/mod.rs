@@ -23,8 +23,10 @@ use base64_serde::base64_serde_type;
 use serde::{Deserialize, Serialize};
 
 mod builder;
+mod endpoints;
 mod error;
 
+pub use crate::config::endpoints::{Endpoints, UpstreamEndpoints, UpstreamEndpointsIter};
 pub use builder::Builder;
 pub use error::ValidationError;
 
@@ -48,8 +50,8 @@ pub struct Config {
 }
 
 impl ConnectionConfig {
-    pub fn get_endpoints(&self) -> Vec<EndPoint> {
-        match self {
+    pub fn get_endpoints(&self) -> Endpoints {
+        let endpoints = match self {
             ConnectionConfig::Client { addresses, .. } => addresses
                 .iter()
                 .cloned()
@@ -63,7 +65,9 @@ impl ConnectionConfig {
                 })
                 .collect(),
             ConnectionConfig::Server { endpoints } => endpoints.clone(),
-        }
+        };
+
+        Endpoints::new(endpoints).expect("endpoints list in config should be validated non-empty")
     }
 }
 

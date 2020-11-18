@@ -22,12 +22,12 @@ use std::net::SocketAddr;
 
 use prometheus::{Error as MetricsError, Registry};
 
-use crate::config::{ConnectionConfig, EndPoint, ValidationError};
+use crate::config::{ConnectionConfig, EndPoint, UpstreamEndpoints, ValidationError};
 
 /// Contains the input arguments to [on_downstream_receive](crate::extensions::filter_registry::Filter::on_downstream_receive)
 pub struct DownstreamContext {
     /// The upstream endpoints that the packet will be forwarded to.
-    pub endpoints: Vec<EndPoint>,
+    pub endpoints: UpstreamEndpoints,
     /// The source of the received packet.
     pub from: SocketAddr,
     /// Contents of the received packet.
@@ -50,7 +50,7 @@ pub struct DownstreamContext {
 /// ```
 pub struct DownstreamResponse {
     /// The upstream endpoints that the packet should be forwarded to.
-    pub endpoints: Vec<EndPoint>,
+    pub endpoints: UpstreamEndpoints,
     /// Contents of the packet to be forwarded.
     pub contents: Vec<u8>,
     /// Arbitrary values that can be passed from one filter to another
@@ -96,7 +96,7 @@ pub struct UpstreamResponse {
 
 impl DownstreamContext {
     /// Creates a new [`DownstreamContext`]
-    pub fn new(endpoints: Vec<EndPoint>, from: SocketAddr, contents: Vec<u8>) -> Self {
+    pub fn new(endpoints: UpstreamEndpoints, from: SocketAddr, contents: Vec<u8>) -> Self {
         Self {
             endpoints,
             from,
@@ -308,6 +308,7 @@ mod tests {
     use crate::test_utils::TestFilterFactory;
 
     use super::*;
+    use crate::config::Endpoints;
 
     struct TestFilter {}
 
@@ -357,7 +358,17 @@ mod tests {
         };
 
         assert!(filter
-            .on_downstream_receive(DownstreamContext::new(vec![], addr, vec![]))
+            .on_downstream_receive(DownstreamContext::new(
+                Endpoints::new(vec![EndPoint::new(
+                    "foo".into(),
+                    "127.0.0.1:8080".parse().unwrap(),
+                    vec![]
+                )])
+                .unwrap()
+                .into(),
+                addr,
+                vec![]
+            ))
             .is_some());
         assert!(filter
             .on_upstream_receive(UpstreamContext::new(&endpoint, addr, addr, vec![],))
