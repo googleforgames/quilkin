@@ -24,9 +24,7 @@ use tokio::time::{self, Instant};
 
 use metrics::Metrics;
 
-use crate::extensions::filter_registry::{
-    CreateFilterArgs, DownstreamContext, DownstreamResponse, UpstreamContext, UpstreamResponse,
-};
+use crate::extensions::filter_registry::{CreateFilterArgs, DownstreamContext, DownstreamResponse};
 use crate::extensions::{Error, Filter, FilterFactory};
 
 mod metrics;
@@ -189,10 +187,6 @@ impl Filter for RateLimitFilter {
             self.metrics.packets_dropped_total.inc();
             None
         })
-    }
-
-    fn on_upstream_receive(&self, ctx: UpstreamContext) -> Option<UpstreamResponse> {
-        Some(ctx.into())
     }
 }
 

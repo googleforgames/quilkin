@@ -22,7 +22,6 @@ use metrics::Metrics;
 use crate::extensions::filters::CAPTURED_BYTES;
 use crate::extensions::{
     CreateFilterArgs, DownstreamContext, DownstreamResponse, Error, Filter, FilterFactory,
-    UpstreamContext, UpstreamResponse,
 };
 
 mod metrics;
@@ -143,10 +142,6 @@ impl Filter for CaptureBytes {
         ctx.metadata
             .insert(self.metadata_key.clone(), Box::new(token));
 
-        Some(ctx.into())
-    }
-
-    fn on_upstream_receive(&self, ctx: UpstreamContext) -> Option<UpstreamResponse> {
         Some(ctx.into())
     }
 }

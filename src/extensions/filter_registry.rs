@@ -183,14 +183,20 @@ pub trait Filter: Send + Sync {
     /// endpoints that the packet should be sent to and the packet that should be
     /// sent (which may be manipulated) as well.
     /// If the packet should be rejected, return None.
-    fn on_downstream_receive(&self, ctx: DownstreamContext) -> Option<DownstreamResponse>;
+    /// By default, passes the context through unchanged
+    fn on_downstream_receive(&self, ctx: DownstreamContext) -> Option<DownstreamResponse> {
+        Some(ctx.into())
+    }
 
     /// on_upstream_receive filters packets received upstream and destined
     /// for a given endpoint, that are going back to the original sender.
     /// This function should return an [`UpstreamResponse`] containing the packet to
     /// be sent (which may be manipulated).
     /// If the packet should be rejected, return None.
-    fn on_upstream_receive(&self, ctx: UpstreamContext) -> Option<UpstreamResponse>;
+    /// By default, passes the context through unchanged
+    fn on_upstream_receive(&self, ctx: UpstreamContext) -> Option<UpstreamResponse> {
+        Some(ctx.into())
+    }
 }
 
 #[derive(Debug, PartialEq)]
