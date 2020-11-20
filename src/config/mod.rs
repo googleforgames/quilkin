@@ -26,7 +26,9 @@ mod builder;
 mod endpoints;
 mod error;
 
-pub use crate::config::endpoints::{Endpoints, UpstreamEndpoints, UpstreamEndpointsIter};
+pub use crate::config::endpoints::{
+    EmptyListError, Endpoints, UpstreamEndpoints, UpstreamEndpointsIter,
+};
 pub use builder::Builder;
 pub use error::ValidationError;
 
