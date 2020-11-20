@@ -25,7 +25,7 @@ use tokio::net::udp::{RecvHalf, SendHalf};
 use tokio::net::UdpSocket;
 use tokio::sync::{mpsc, oneshot, watch};
 
-use crate::config::{Config, EndPoint, Endpoints};
+use crate::config::{Builder as ConfigBuilder, Config, ConnectionConfig, EndPoint, Endpoints};
 use crate::extensions::{
     default_registry, CreateFilterArgs, DownstreamContext, DownstreamResponse, Error, Filter,
     FilterFactory, FilterRegistry, UpstreamContext, UpstreamResponse,
@@ -360,6 +360,16 @@ where
         None => unreachable!("should return a result"),
         Some(response) => assert_eq!(contents, response.contents),
     }
+}
+
+pub fn config_with_dummy_endpoint() -> ConfigBuilder {
+    ConfigBuilder::empty().with_connections(ConnectionConfig::Server {
+        endpoints: vec![EndPoint::new(
+            "test".into(),
+            "127.0.0.1:8080".parse().unwrap(),
+            vec![],
+        )],
+    })
 }
 
 #[cfg(test)]

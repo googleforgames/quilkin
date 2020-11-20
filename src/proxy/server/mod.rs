@@ -333,7 +333,9 @@ mod tests {
     use crate::config;
     use crate::config::{Builder as ConfigBuilder, ConnectionConfig, EndPoint, Local};
     use crate::proxy::sessions::{Packet, SESSION_TIMEOUT_SECONDS};
-    use crate::test_utils::{SplitSocket, TestFilter, TestFilterFactory, TestHelper};
+    use crate::test_utils::{
+        config_with_dummy_endpoint, SplitSocket, TestFilter, TestFilterFactory, TestHelper,
+    };
 
     use super::*;
     use crate::extensions::FilterRegistry;
@@ -451,11 +453,8 @@ mod tests {
 
     #[tokio::test]
     async fn bind() {
-        let config = ConfigBuilder::empty()
+        let config = config_with_dummy_endpoint()
             .with_local(Local { port: 12345 })
-            .with_connections(ConnectionConfig::Server {
-                endpoints: Vec::new(),
-            })
             .build();
         let socket = Server::bind(&config).await.unwrap();
         let addr = socket.local_addr().unwrap();
@@ -576,7 +575,7 @@ mod tests {
         let sessions: SessionMap = Arc::new(RwLock::new(HashMap::new()));
         let (send_packets, mut recv_packets) = mpsc::channel::<Packet>(1);
 
-        let config = Arc::new(ConfigBuilder::empty().build());
+        let config = Arc::new(config_with_dummy_endpoint().build());
         let server = Builder::from(config).validate().unwrap().build();
 
         server.run_recv_from(
@@ -646,8 +645,7 @@ mod tests {
         {
             unreachable!("failed to send packet over channel");
         }
-
-        let config = Arc::new(ConfigBuilder::empty().build());
+        let config = Arc::new(config_with_dummy_endpoint().build());
         let server = Builder::from(config).validate().unwrap().build();
         server.run_receive_packet(endpoint.send, recv_packet);
         assert_eq!(msg, endpoint.packet_rx.await.unwrap());
@@ -726,7 +724,7 @@ mod tests {
             connection_ids: vec![],
         };
 
-        let config = Arc::new(ConfigBuilder::empty().build());
+        let config = Arc::new(config_with_dummy_endpoint().build());
         let server = Builder::from(config).validate().unwrap().build();
         server.run_prune_sessions(&sessions);
         Server::ensure_session(
