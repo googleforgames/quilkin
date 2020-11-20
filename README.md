@@ -22,37 +22,12 @@ Project is currently in *alpha* status, and is being actively developed. Expect 
 
 Not to be used in production systems.
 
-## Proposed Architecture
-```
-                                       +                          +
-                                       +                          |
-                                    Internet                   Private
-                                       +                       Network
-                                       |     +----------------+   +          +----------------+
-                                       |     | Quilkin        |   |          | Dedicated      |
-                                       |  +--> (Server Proxy) +-------+------> Game Server    |
-+---------+      +----------------+    |  |  |                |   |   |      |                |
-|  Game   |      | Quilkin        +-------+  +----------------+   |   |      +----------------+
-|  Client +------+ (Client Proxy) |    |  |                       |   |
-+---------+      +----------------+    |  |  +----------------+   |   |      +----------------+
-                                       |  |  | Quilkin        |   |   |      | Dedicated      |
-                                       |  +--> (Server Proxy) +-------+      | Game Server    |
-                                       |     |                |   |          |                |
-                                       |     +----------------+   |          +----------------+
-                                       |                          |
-                                       |     +----------------+   |          +----------------+
-                                       |     | Quilkin        |   |          | Dedicated      |
-                                       |     | (Server Proxy) |   |          | Game Server    |
-                                       |     |                |   |          |                |
-                                       |     +----------------+   |          +----------------+
-                                       +                          +
-```
-
 ## Usage
 
 `quilkin --filename="configuration.yaml"`
 
 * Start with our [Project Overview](./docs/README.md).
+* View [example integration architectures](./docs/integrations.md).
 * See [examples](./examples) folder for basic configuration examples.
 * See [Filter documentation](./docs/extensions/filters/filters.md) for a list of filters, and their configuration options.
 

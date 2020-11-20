@@ -19,7 +19,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::extensions::{
     CreateFilterArgs, DownstreamContext, DownstreamResponse, Error, Filter, FilterFactory,
-    UpstreamContext, UpstreamResponse,
 };
 
 base64_serde_type!(Base64Standard, base64::STANDARD);
@@ -100,19 +99,15 @@ impl Filter for ConcatenateBytes {
 
         Some(ctx.into())
     }
-
-    fn on_upstream_receive(&self, ctx: UpstreamContext) -> Option<UpstreamResponse> {
-        Some(ctx.into())
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::config::{ConnectionConfig, EndPoint, Endpoints};
     use crate::test_utils::assert_filter_on_downstream_receive_no_change;
+    use serde_yaml::{Mapping, Value};
 
     use super::*;
-    use serde_yaml::{Mapping, Value};
 
     #[test]
     fn factory_valid_config() {
