@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-use crate::config::EndPoint;
-use crate::extensions::{
-    CreateFilterArgs, DownstreamContext, DownstreamResponse, Error, Filter, FilterFactory,
-    UpstreamContext, UpstreamResponse,
-};
-use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use rand::{thread_rng, Rng};
+use serde::{Deserialize, Serialize};
+
+use crate::config::EndPoint;
+use crate::extensions::{
+    CreateFilterArgs, DownstreamContext, DownstreamResponse, Error, Filter, FilterFactory,
+};
 
 /// Policy represents how a [`LoadBalancerFilter`] distributes
 /// packets across endpoints.
@@ -125,10 +125,6 @@ impl Filter for LoadBalancerFilter {
         let chosen_endpoints = self.endpoint_chooser.choose_endpoints(endpoints);
         let _ = std::mem::replace(&mut ctx.endpoints, chosen_endpoints);
 
-        Some(ctx.into())
-    }
-
-    fn on_upstream_receive(&self, ctx: UpstreamContext) -> Option<UpstreamResponse> {
         Some(ctx.into())
     }
 }
