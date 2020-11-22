@@ -5,21 +5,26 @@ use std::sync::Arc;
 pub struct EmptyListError;
 
 #[derive(Debug)]
+pub struct AllEndpointsRemovedError;
+
+#[derive(Debug)]
 pub struct IndexOutOfRangeError;
 
 /// Endpoints represents the set of all known upstream endpoints.
 #[derive(Clone)]
 pub struct Endpoints(Arc<Vec<EndPoint>>);
 
-/// UpstreamEndpoints is wrapper [`Endpoints`] that exposes a subset of
-/// the internal endpoints.
-/// This subset is guaranteed to be non-empty.
-pub enum UpstreamEndpoints {
-    // All is backed by all endpoints in the original set.
-    All(Endpoints),
-    // Some is backed by a subset of endpoints in the original set.
-    // It uses indices into the original set, to form its subset.
-    Some(Endpoints, Vec<usize>),
+/// UpstreamEndpoints represents a set of endpoints.
+/// This set is guaranteed to be non-empty - any operation that would
+/// cause the set to be empty will return an error instead.
+pub struct UpstreamEndpoints {
+    /// All endpoints in the initial set - this list never
+    /// changes after initialization.
+    endpoints: Endpoints,
+    /// A view into the current subset of endpoints in the original set.
+    /// It contains indices into the initial set, to form the subset.
+    /// If unset, the initial set is the current subset.
+    subset: Option<Vec<usize>>,
 }
 
 impl Endpoints {
@@ -31,86 +36,89 @@ impl Endpoints {
             Ok(Self(Arc::new(endpoints)))
         }
     }
-
-    /// Returns a [`Endpoints`] backed by an empty list of endpoints.
-    ///
-    /// # Safety
-    /// Invoking operations on [`Endpoints`] empty is not supported and the effect
-    /// is undefined. The caller must either ensure that the returned value is populated
-    /// by some other means or avoid invoking any operation the returned value.
-    pub(crate) unsafe fn empty() -> Self {
-        Self(Arc::new(vec![]))
-    }
 }
 
 impl From<Endpoints> for UpstreamEndpoints {
     fn from(endpoints: Endpoints) -> Self {
-        UpstreamEndpoints::All(endpoints)
+        UpstreamEndpoints {
+            endpoints,
+            subset: None,
+        }
     }
 }
 
 impl UpstreamEndpoints {
     /// Returns the number of endpoints in the backing set.
     pub fn size(&self) -> usize {
-        match self {
-            UpstreamEndpoints::All(endpoints) => endpoints.0.len(),
-            UpstreamEndpoints::Some(_, subset) => subset.len(),
-        }
+        self.subset
+            .as_ref()
+            .map(|subset| subset.len())
+            .unwrap_or_else(|| self.endpoints.0.len())
     }
 
-    /// Returns a new [`UpstreamEndpoints`] backed by a singleton set that
-    /// contains the endpoint at the specified zero-indexed position.
-    pub fn keep(self, index: usize) -> Result<Self, IndexOutOfRangeError> {
+    /// Updates the current subset of endpoints to contain only the endpoint
+    /// at the specified zero-indexed position.
+    pub fn keep(&mut self, index: usize) -> Result<(), IndexOutOfRangeError> {
         if index >= self.size() {
             return Err(IndexOutOfRangeError);
         }
 
-        let (endpoints, index) = match self {
-            UpstreamEndpoints::All(endpoints) => (endpoints, index),
-            UpstreamEndpoints::Some(endpoints, subset) => (endpoints, subset[index]),
-        };
+        match self.subset.as_mut() {
+            Some(subset) => {
+                let index = subset[index];
+                subset.clear();
+                subset.push(index);
+            }
+            None => {
+                self.subset = Some(vec![index]);
+            }
+        }
 
-        Ok(UpstreamEndpoints::Some(endpoints, vec![index]))
+        Ok(())
     }
 
-    /// Returns a new [`UpstreamEndpoints`] backed by a subset set that
-    /// contains only the endpoint for which the predicate returned `true`.
-    /// Returns `None` if the predicate returns `false` for all endpoints.
-    pub fn retain<F>(self, predicate: F) -> Option<Self>
+    /// Updates the current subset of endpoints to contain only the endpoints
+    /// which the predicate returned `true`.
+    /// Returns an error if the predicate returns `false` for all endpoints.
+    pub fn retain<F>(&mut self, predicate: F) -> Result<(), AllEndpointsRemovedError>
     where
         F: Fn(&EndPoint) -> bool,
     {
-        let (endpoints, subset) = match self {
-            UpstreamEndpoints::All(endpoints) => {
-                let subset = endpoints
-                    .0
+        match self.subset.as_mut() {
+            Some(subset) => {
+                let endpoints = &self.endpoints;
+                let new_subset = subset
                     .iter()
-                    .enumerate()
-                    .filter(|(_, ep)| predicate(ep))
-                    .map(|(i, _)| i)
+                    .filter(|&&index| predicate(&endpoints.0[index]))
+                    .copied()
                     .collect::<Vec<_>>();
-                (endpoints, subset)
+
+                if new_subset.is_empty() {
+                    return Err(AllEndpointsRemovedError);
+                }
+
+                *subset = new_subset;
             }
-            UpstreamEndpoints::Some(endpoints, subset) => {
-                let subset = subset
-                    .into_iter()
-                    .filter(|&index| predicate(&endpoints.0[index]))
-                    .collect::<Vec<_>>();
-                (endpoints, subset)
+            None => {
+                self.subset = Some(
+                    self.endpoints
+                        .0
+                        .iter()
+                        .enumerate()
+                        .filter(|(_, ep)| predicate(ep))
+                        .map(|(i, _)| i)
+                        .collect::<Vec<_>>(),
+                )
             }
         };
 
-        if subset.is_empty() {
-            None
-        } else {
-            Some(UpstreamEndpoints::Some(endpoints, subset))
-        }
+        Ok(())
     }
 
-    /// Iterate over the endpoints in the backing set.
+    /// Iterate over the endpoints in the current subset.
     pub fn iter(&self) -> UpstreamEndpointsIter {
         UpstreamEndpointsIter {
-            endpoints: self,
+            collection: self,
             index: 0,
         }
     }
@@ -118,7 +126,7 @@ impl UpstreamEndpoints {
 
 /// An Iterator over all endpoints in an [`UpstreamEndpoints`]
 pub struct UpstreamEndpointsIter<'a> {
-    endpoints: &'a UpstreamEndpoints,
+    collection: &'a UpstreamEndpoints,
     index: usize,
 }
 
@@ -126,16 +134,16 @@ impl<'a> Iterator for UpstreamEndpointsIter<'a> {
     type Item = &'a EndPoint;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.endpoints {
-            UpstreamEndpoints::All(endpoints) => {
-                self.index += 1;
-                endpoints.0.get(self.index - 1)
-            }
-            UpstreamEndpoints::Some(endpoints, subset) => {
+        match &self.collection.subset {
+            Some(subset) => {
                 self.index += 1;
                 subset
                     .get(self.index - 1)
-                    .and_then(|&index| endpoints.0.get(index))
+                    .and_then(|&index| self.collection.endpoints.0.get(index))
+            }
+            None => {
+                self.index += 1;
+                self.collection.endpoints.0.get(self.index - 1)
             }
         }
     }
@@ -164,22 +172,20 @@ mod tests {
     fn keep() {
         let initial_endpoints = vec![ep(1), ep(2), ep(3)];
 
-        let up: UpstreamEndpoints = Endpoints::new(initial_endpoints.clone()).unwrap().into();
+        let mut up: UpstreamEndpoints = Endpoints::new(initial_endpoints.clone()).unwrap().into();
         assert!(up.keep(initial_endpoints.len() - 1).is_ok());
 
-        let up: UpstreamEndpoints = Endpoints::new(initial_endpoints.clone()).unwrap().into();
+        let mut up: UpstreamEndpoints = Endpoints::new(initial_endpoints.clone()).unwrap().into();
         assert!(up.keep(initial_endpoints.len()).is_err());
 
         // Limit the set to only one element.
-        let up = UpstreamEndpoints::from(Endpoints::new(initial_endpoints.clone()).unwrap())
-            .keep(1)
-            .unwrap();
-        let up = up.keep(0).unwrap();
+        let mut up = UpstreamEndpoints::from(Endpoints::new(initial_endpoints.clone()).unwrap());
+        up.keep(1).unwrap();
+        up.keep(0).unwrap();
         assert_eq!(vec![&initial_endpoints[1]], up.iter().collect::<Vec<_>>());
 
-        let up = UpstreamEndpoints::from(Endpoints::new(initial_endpoints).unwrap())
-            .keep(1)
-            .unwrap();
+        let mut up = UpstreamEndpoints::from(Endpoints::new(initial_endpoints).unwrap());
+        up.keep(1).unwrap();
         assert!(up.keep(1).is_err());
     }
 
@@ -187,45 +193,43 @@ mod tests {
     fn retain() {
         let initial_endpoints = vec![ep(1), ep(2), ep(3), ep(4)];
 
-        let up: UpstreamEndpoints = Endpoints::new(initial_endpoints).unwrap().into();
+        let mut up: UpstreamEndpoints = Endpoints::new(initial_endpoints).unwrap().into();
 
-        let up = up.retain(|ep| ep.name != "ep-2").unwrap();
+        up.retain(|ep| ep.name != "ep-2").unwrap();
         assert_eq!(up.size(), 3);
         assert_eq!(
             vec![ep(1), ep(3), ep(4)],
             up.iter().cloned().collect::<Vec<_>>()
         );
 
-        let up = up.retain(|ep| ep.name != "ep-3").unwrap();
+        up.retain(|ep| ep.name != "ep-3").unwrap();
         assert_eq!(up.size(), 2);
         assert_eq!(vec![ep(1), ep(4)], up.iter().cloned().collect::<Vec<_>>());
     }
 
     #[test]
     fn upstream_len() {
-        let endpoints: UpstreamEndpoints =
-            Endpoints::new(vec![ep(1), ep(2), ep(3)]).unwrap().into();
+        let mut up: UpstreamEndpoints = Endpoints::new(vec![ep(1), ep(2), ep(3)]).unwrap().into();
         // starts out with all endpoints.
-        assert_eq!(endpoints.size(), 3);
+        assert_eq!(up.size(), 3);
         // verify that the set is now a singleton.
-        assert_eq!(endpoints.keep(1).unwrap().size(), 1);
+        up.keep(1).unwrap();
+        assert_eq!(up.size(), 1);
     }
 
     #[test]
     fn upstream_all_iter() {
         let initial_endpoints = vec![ep(1), ep(2), ep(3)];
-        let endpoints: UpstreamEndpoints =
-            Endpoints::new(initial_endpoints.clone()).unwrap().into();
+        let up: UpstreamEndpoints = Endpoints::new(initial_endpoints.clone()).unwrap().into();
 
-        let result = endpoints.iter().cloned().collect::<Vec<_>>();
+        let result = up.iter().cloned().collect::<Vec<_>>();
         assert_eq!(initial_endpoints, result);
     }
 
     #[test]
     fn upstream_some_iter() {
-        let endpoints = UpstreamEndpoints::from(Endpoints::new(vec![ep(1), ep(2), ep(3)]).unwrap())
-            .keep(1)
-            .unwrap();
-        assert_eq!(vec![ep(2)], endpoints.iter().cloned().collect::<Vec<_>>());
+        let mut up = UpstreamEndpoints::from(Endpoints::new(vec![ep(1), ep(2), ep(3)]).unwrap());
+        up.keep(1).unwrap();
+        assert_eq!(vec![ep(2)], up.iter().cloned().collect::<Vec<_>>());
     }
 }
