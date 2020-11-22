@@ -6,6 +6,7 @@ use std::fmt::{self, Display, Formatter};
 pub enum ValidationError {
     NotUnique(String),
     EmptyList(String),
+    ValueInvalid(String, Option<Vec<String>>),
     FilterInvalid(FilterRegistryError),
 }
 
@@ -14,6 +15,12 @@ impl Display for ValidationError {
         match self {
             ValidationError::NotUnique(field) => write!(f, "field {} is not unique", field),
             ValidationError::EmptyList(field) => write!(f, "field {} is cannot be an empty", field),
+            ValidationError::ValueInvalid(field, examples) => write!(
+                f,
+                "{} has an invalid value {}",
+                field,
+                examples.as_ref().map(|v| v.join(",")).unwrap_or_default()
+            ),
             ValidationError::FilterInvalid(reason) => {
                 write!(f, "filter configuration is invalid: {}", reason)
             }

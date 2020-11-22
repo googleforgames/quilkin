@@ -11,7 +11,7 @@ pub struct AllEndpointsRemovedError;
 pub struct IndexOutOfRangeError;
 
 /// Endpoints represents the set of all known upstream endpoints.
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Endpoints(Arc<Vec<EndPoint>>);
 
 /// UpstreamEndpoints represents a set of endpoints.

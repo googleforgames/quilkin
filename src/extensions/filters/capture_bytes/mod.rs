@@ -185,7 +185,7 @@ mod tests {
     use prometheus::Registry;
     use serde_yaml::{Mapping, Value};
 
-    use crate::config::{ConnectionConfig, EndPoint, Endpoints};
+    use crate::config::{EndPoint, Endpoints};
     use crate::test_utils::{assert_filter_on_upstream_receive_no_change, logger};
 
     use super::*;
@@ -203,7 +203,6 @@ mod tests {
     #[test]
     fn factory_valid_config_all() {
         let factory = CaptureBytesFactory::new(&logger());
-        let connection = ConnectionConfig::Server { endpoints: vec![] };
         let mut map = Mapping::new();
         map.insert(
             Value::String("strategy".into()),
@@ -217,10 +216,7 @@ mod tests {
         map.insert(Value::String("remove".into()), Value::Bool(true));
 
         let filter = factory
-            .create_filter(CreateFilterArgs::new(
-                &connection,
-                Some(&Value::Mapping(map)),
-            ))
+            .create_filter(CreateFilterArgs::new(Some(&Value::Mapping(map))))
             .unwrap();
         assert_end_strategy(filter.as_ref(), TOKEN_KEY, true);
     }
@@ -228,14 +224,10 @@ mod tests {
     #[test]
     fn factory_valid_config_defaults() {
         let factory = CaptureBytesFactory::new(&logger());
-        let connection = ConnectionConfig::Server { endpoints: vec![] };
         let mut map = Mapping::new();
         map.insert(Value::String("size".into()), Value::Number(3.into()));
         let filter = factory
-            .create_filter(CreateFilterArgs::new(
-                &connection,
-                Some(&Value::Mapping(map)),
-            ))
+            .create_filter(CreateFilterArgs::new(Some(&Value::Mapping(map))))
             .unwrap();
         assert_end_strategy(filter.as_ref(), CAPTURED_BYTES, false);
     }
@@ -243,14 +235,10 @@ mod tests {
     #[test]
     fn factory_invalid_config() {
         let factory = CaptureBytesFactory::new(&logger());
-        let connection = ConnectionConfig::Server { endpoints: vec![] };
         let mut map = Mapping::new();
         map.insert(Value::String("size".into()), Value::String("WRONG".into()));
 
-        let result = factory.create_filter(CreateFilterArgs::new(
-            &connection,
-            Some(&Value::Mapping(map)),
-        ));
+        let result = factory.create_filter(CreateFilterArgs::new(Some(&Value::Mapping(map))));
         assert!(result.is_err(), "Should be an error");
     }
 

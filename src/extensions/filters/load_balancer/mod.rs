@@ -130,22 +130,17 @@ mod tests {
     use std::collections::HashSet;
     use std::net::SocketAddr;
 
-    use crate::config::LoadBalancerPolicy::RoundRobin;
-    use crate::config::{ConnectionConfig, EndPoint, Endpoints};
+    use crate::config::{EndPoint, Endpoints};
     use crate::extensions::filter_registry::DownstreamContext;
     use crate::extensions::filters::load_balancer::LoadBalancerFilterFactory;
     use crate::extensions::{CreateFilterArgs, Filter, FilterFactory};
 
-    fn create_filter(config: &str, addresses: &[SocketAddr]) -> Box<dyn Filter> {
+    fn create_filter(config: &str) -> Box<dyn Filter> {
         let factory = LoadBalancerFilterFactory;
         factory
-            .create_filter(CreateFilterArgs::new(
-                &ConnectionConfig::Client {
-                    addresses: addresses.into(),
-                    lb_policy: Some(RoundRobin),
-                },
-                Some(&serde_yaml::from_str(config).unwrap()),
-            ))
+            .create_filter(CreateFilterArgs::new(Some(
+                &serde_yaml::from_str(config).unwrap(),
+            )))
             .unwrap()
     }
 
@@ -184,7 +179,7 @@ mod tests {
         let yaml = "
 policy: ROUND_ROBIN
 ";
-        let filter = create_filter(yaml, &addresses);
+        let filter = create_filter(yaml);
 
         // Check that we repeat the same addresses in sequence forever.
         let expected_sequence = addresses.iter().map(|addr| vec![*addr]).collect::<Vec<_>>();
@@ -210,7 +205,7 @@ policy: ROUND_ROBIN
         let yaml = "
 policy: RANDOM
 ";
-        let filter = create_filter(yaml, &addresses);
+        let filter = create_filter(yaml);
 
         // Run a few selection rounds through the addresses.
         let mut result_sequences = vec![];

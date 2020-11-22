@@ -22,7 +22,7 @@ use std::net::SocketAddr;
 
 use prometheus::{Error as MetricsError, Registry};
 
-use crate::config::{ConnectionConfig, EndPoint, UpstreamEndpoints, ValidationError};
+use crate::config::{EndPoint, UpstreamEndpoints, ValidationError};
 
 /// Contains the input arguments to [on_downstream_receive](crate::extensions::filter_registry::Filter::on_downstream_receive)
 pub struct DownstreamContext {
@@ -241,19 +241,13 @@ pub struct CreateFilterArgs<'a> {
     pub config: Option<&'a serde_yaml::Value>,
     /// metrics_registry is used to register filter metrics collectors.
     pub metrics_registry: Registry,
-    /// connection is used to pass the connection configuration
-    pub connection: &'a ConnectionConfig,
 }
 
 impl CreateFilterArgs<'_> {
-    pub fn new<'a>(
-        connection: &'a ConnectionConfig,
-        config: Option<&'a serde_yaml::Value>,
-    ) -> CreateFilterArgs<'a> {
+    pub fn new(config: Option<&serde_yaml::Value>) -> CreateFilterArgs {
         CreateFilterArgs {
             config,
             metrics_registry: Registry::default(),
-            connection,
         }
     }
 
@@ -332,28 +326,18 @@ mod tests {
     fn insert_and_get() {
         let mut reg = FilterRegistry::default();
         reg.insert(TestFilterFactory {});
-        let connection = ConnectionConfig::Server { endpoints: vec![] };
 
-        match reg.get(
-            &String::from("not.found"),
-            CreateFilterArgs::new(&connection, None),
-        ) {
+        match reg.get(&String::from("not.found"), CreateFilterArgs::new(None)) {
             Ok(_) => unreachable!("should not be filter"),
             Err(err) => assert_eq!(Error::NotFound("not.found".to_string()), err),
         };
 
         assert!(reg
-            .get(
-                &String::from("TestFilter"),
-                CreateFilterArgs::new(&connection, None)
-            )
+            .get(&String::from("TestFilter"), CreateFilterArgs::new(None))
             .is_ok());
 
         let filter = reg
-            .get(
-                &String::from("TestFilter"),
-                CreateFilterArgs::new(&connection, None),
-            )
+            .get(&String::from("TestFilter"), CreateFilterArgs::new(None))
             .unwrap();
 
         let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080);

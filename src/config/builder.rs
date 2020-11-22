@@ -1,43 +1,50 @@
-use super::{Config, ConnectionConfig, Filter, Local};
+use super::{Config, Filter};
+use crate::config::{EndPoint, Proxy, ProxyMode, Source, Version};
 
 /// Builder for a [`Config`]
 #[derive(Debug)]
 pub struct Builder {
-    pub local: Local,
-    pub filters: Vec<Filter>,
-    pub connections: ConnectionConfig,
+    pub mode: ProxyMode,
+    pub port: u16,
+    pub source: Source,
 }
 
 impl Builder {
     /// Returns a [`Builder`] with empty values.
     pub fn empty() -> Self {
         Builder {
-            local: Local { port: 0 },
-            filters: vec![],
-            connections: ConnectionConfig::Server { endpoints: vec![] },
+            mode: ProxyMode::Server,
+            port: 0,
+            source: Source::Static {
+                filters: vec![],
+                endpoints: vec![],
+            },
         }
     }
 
-    pub fn with_local(self, local: Local) -> Self {
-        Builder { local, ..self }
+    pub fn with_mode(self, mode: ProxyMode) -> Self {
+        Builder { mode, ..self }
     }
 
-    pub fn with_filters(self, filters: Vec<Filter>) -> Self {
-        Builder { filters, ..self }
+    pub fn with_port(self, port: u16) -> Self {
+        Builder { port, ..self }
     }
 
-    pub fn with_connections(self, connections: ConnectionConfig) -> Self {
-        Builder {
-            connections,
-            ..self
-        }
+    pub fn with_static(self, filters: Vec<Filter>, endpoints: Vec<EndPoint>) -> Self {
+        let source = Source::Static { filters, endpoints };
+        Builder { source, ..self }
     }
 
     pub fn build(self) -> Config {
         Config {
-            local: self.local,
-            filters: self.filters,
-            connections: self.connections,
+            version: Version::V1Alpha1,
+            proxy: Proxy {
+                mode: self.mode,
+                id: "test".into(),
+                port: self.port,
+            },
+            admin: None,
+            source: self.source,
             phantom: None,
         }
     }

@@ -16,21 +16,21 @@ quilkin.extensions.filters.capture_bytes.v1alpha1.CaptureBytes
 ### Configuration Examples
 ```rust
 # let yaml = "
-local:
-  port: 7000
-filters:
-  - name: quilkin.extensions.filters.capture_bytes.v1alpha1.CaptureBytes
-    config:
-        strategy: PREFIX
-        metadataKey: myapp.com/myownkey
-        size: 3
-        remove: false
-client:
-  addresses:
-    - 127.0.0.1:7001
+version: v1alpha1
+static:
+  filters:
+    - name: quilkin.extensions.filters.capture_bytes.v1alpha1.CaptureBytes
+      config:
+          strategy: PREFIX
+          metadataKey: myapp.com/myownkey
+          size: 3
+          remove: false
+  endpoints:
+    - name: server-1
+      address: 127.0.0.1:7001
 # ";
 # let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-# assert_eq!(config.filters.len(), 1);
+# assert_eq!(config.source.get_filters().len(), 1);
 # quilkin::proxy::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
 ```
 

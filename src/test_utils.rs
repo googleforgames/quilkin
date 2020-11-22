@@ -25,7 +25,7 @@ use tokio::net::udp::{RecvHalf, SendHalf};
 use tokio::net::UdpSocket;
 use tokio::sync::{mpsc, oneshot, watch};
 
-use crate::config::{Builder as ConfigBuilder, Config, ConnectionConfig, EndPoint, Endpoints};
+use crate::config::{Builder as ConfigBuilder, Config, EndPoint, Endpoints, ProxyMode};
 use crate::extensions::{
     default_registry, CreateFilterArgs, DownstreamContext, DownstreamResponse, Error, Filter,
     FilterFactory, FilterRegistry, UpstreamContext, UpstreamResponse,
@@ -363,13 +363,24 @@ where
 }
 
 pub fn config_with_dummy_endpoint() -> ConfigBuilder {
-    ConfigBuilder::empty().with_connections(ConnectionConfig::Server {
-        endpoints: vec![EndPoint::new(
-            "test".into(),
-            "127.0.0.1:8080".parse().unwrap(),
+    ConfigBuilder::empty()
+        .with_mode(ProxyMode::Server)
+        .with_static(
             vec![],
-        )],
-    })
+            vec![EndPoint::new(
+                "test".into(),
+                "127.0.0.1:8080".parse().unwrap(),
+                vec![],
+            )],
+        )
+}
+/// Creates a dummy endpoint with `id` as a suffix.
+pub fn ep(id: u8) -> EndPoint {
+    EndPoint::new(
+        format!("test-{}", id),
+        format!("127.0.0.{:?}:8080", id).parse().unwrap(),
+        vec![],
+    )
 }
 
 #[cfg(test)]

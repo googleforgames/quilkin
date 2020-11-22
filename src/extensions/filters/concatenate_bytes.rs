@@ -103,7 +103,7 @@ impl Filter for ConcatenateBytes {
 
 #[cfg(test)]
 mod tests {
-    use crate::config::{ConnectionConfig, EndPoint, Endpoints};
+    use crate::config::{EndPoint, Endpoints};
     use crate::test_utils::assert_filter_on_downstream_receive_no_change;
     use serde_yaml::{Mapping, Value};
 
@@ -112,7 +112,6 @@ mod tests {
     #[test]
     fn factory_valid_config() {
         let factory = ConcatBytesFactory::default();
-        let connection = ConnectionConfig::Server { endpoints: vec![] };
         let mut map = Mapping::new();
 
         // default strategy
@@ -122,10 +121,7 @@ mod tests {
         );
 
         let filter = factory
-            .create_filter(CreateFilterArgs::new(
-                &connection,
-                Some(&Value::Mapping(map.clone())),
-            ))
+            .create_filter(CreateFilterArgs::new(Some(&Value::Mapping(map.clone()))))
             .unwrap();
         assert_with_filter(filter.as_ref(), "abchello");
 
@@ -136,10 +132,7 @@ mod tests {
         );
 
         let filter = factory
-            .create_filter(CreateFilterArgs::new(
-                &connection,
-                Some(&Value::Mapping(map.clone())),
-            ))
+            .create_filter(CreateFilterArgs::new(Some(&Value::Mapping(map.clone()))))
             .unwrap();
         assert_with_filter(filter.as_ref(), "abchello");
 
@@ -150,10 +143,7 @@ mod tests {
         );
 
         let filter = factory
-            .create_filter(CreateFilterArgs::new(
-                &connection,
-                Some(&Value::Mapping(map)),
-            ))
+            .create_filter(CreateFilterArgs::new(Some(&Value::Mapping(map))))
             .unwrap();
 
         assert_with_filter(filter.as_ref(), "helloabc");
@@ -162,13 +152,10 @@ mod tests {
     #[test]
     fn factory_invalid_config() {
         let factory = ConcatBytesFactory::default();
-        let connection = ConnectionConfig::Server { endpoints: vec![] };
         let mut map = Mapping::new();
 
-        let result = factory.create_filter(CreateFilterArgs::new(
-            &connection,
-            Some(&Value::Mapping(map.clone())),
-        ));
+        let result =
+            factory.create_filter(CreateFilterArgs::new(Some(&Value::Mapping(map.clone()))));
         assert!(result.is_err());
 
         // broken strategy
@@ -177,10 +164,7 @@ mod tests {
             Value::String("WRONG".into()),
         );
 
-        let result = factory.create_filter(CreateFilterArgs::new(
-            &connection,
-            Some(&Value::Mapping(map)),
-        ));
+        let result = factory.create_filter(CreateFilterArgs::new(Some(&Value::Mapping(map))));
         assert!(result.is_err());
     }
 
