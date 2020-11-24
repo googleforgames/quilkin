@@ -103,10 +103,9 @@ impl Filter for ConcatenateBytes {
 
 #[cfg(test)]
 mod tests {
-    use serde_yaml::{Mapping, Value};
-
-    use crate::config::{ConnectionConfig, EndPoint};
+    use crate::config::{ConnectionConfig, EndPoint, Endpoints};
     use crate::test_utils::assert_filter_on_downstream_receive_no_change;
+    use serde_yaml::{Mapping, Value};
 
     use super::*;
 
@@ -231,13 +230,16 @@ mod tests {
         }];
         let response = filter
             .on_downstream_receive(DownstreamContext::new(
-                endpoints.clone(),
+                Endpoints::new(endpoints.clone()).unwrap().into(),
                 "127.0.0.1:80".parse().unwrap(),
                 "abc".to_string().into_bytes(),
             ))
             .unwrap();
 
-        assert_eq!(endpoints, response.endpoints);
+        assert_eq!(
+            endpoints,
+            response.endpoints.iter().cloned().collect::<Vec<_>>()
+        );
         assert_eq!(expected.to_string().into_bytes(), response.contents);
     }
 }

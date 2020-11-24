@@ -19,7 +19,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 
-use crate::config::EndPoint;
+use crate::config::UpstreamEndpoints;
 use crate::extensions::{
     CreateFilterArgs, DownstreamContext, DownstreamResponse, Error, Filter, FilterFactory,
 };
@@ -52,7 +52,7 @@ struct Config {
 /// EndpointChooser chooses from a set of endpoints that a proxy is connected to.
 trait EndpointChooser: Send + Sync {
     /// choose_endpoints asks for the next endpoint(s) to use.
-    fn choose_endpoints(&self, endpoints: Vec<EndPoint>) -> Vec<EndPoint>;
+    fn choose_endpoints(&self, endpoints: &mut UpstreamEndpoints);
 }
 
 /// RoundRobinEndpointChooser chooses endpoints in round-robin order.
@@ -69,12 +69,12 @@ impl RoundRobinEndpointChooser {
 }
 
 impl EndpointChooser for RoundRobinEndpointChooser {
-    fn choose_endpoints(&self, mut endpoints: Vec<EndPoint>) -> Vec<EndPoint> {
-        if endpoints.is_empty() {
-            return vec![];
-        }
-        let offset = self.next_endpoint.fetch_add(1, Ordering::Relaxed);
-        vec![endpoints.swap_remove(offset % endpoints.len())]
+    fn choose_endpoints(&self, endpoints: &mut UpstreamEndpoints) {
+        let count = self.next_endpoint.fetch_add(1, Ordering::Relaxed);
+        // Note: Unwrap is safe here because the index is guaranteed to be in range.
+        let num_endpoints = endpoints.size();
+        endpoints.keep(count % num_endpoints)
+            .expect("BUG: unwrap should have been safe because index into endpoints list should be in range");
     }
 }
 
@@ -82,12 +82,11 @@ impl EndpointChooser for RoundRobinEndpointChooser {
 pub struct RandomEndpointChooser;
 
 impl EndpointChooser for RandomEndpointChooser {
-    fn choose_endpoints(&self, endpoints: Vec<EndPoint>) -> Vec<EndPoint> {
-        let idx = (&mut thread_rng()).gen_range(0, endpoints.len());
-        endpoints
-            .get(idx)
-            .map(|ep| vec![ep.clone()])
-            .unwrap_or_default()
+    fn choose_endpoints(&self, endpoints: &mut UpstreamEndpoints) {
+        // Note: Unwrap is safe here because the index is guaranteed to be in range.
+        let idx = (&mut thread_rng()).gen_range(0, endpoints.size());
+        endpoints.keep(idx)
+            .expect("BUG: unwrap should have been safe because index into endpoints list should be in range");
     }
 }
 
@@ -121,10 +120,7 @@ impl FilterFactory for LoadBalancerFilterFactory {
 
 impl Filter for LoadBalancerFilter {
     fn on_downstream_receive(&self, mut ctx: DownstreamContext) -> Option<DownstreamResponse> {
-        let endpoints = std::mem::replace(&mut ctx.endpoints, vec![]);
-        let chosen_endpoints = self.endpoint_chooser.choose_endpoints(endpoints);
-        let _ = std::mem::replace(&mut ctx.endpoints, chosen_endpoints);
-
+        self.endpoint_chooser.choose_endpoints(&mut ctx.endpoints);
         Some(ctx.into())
     }
 }
@@ -135,7 +131,7 @@ mod tests {
     use std::net::SocketAddr;
 
     use crate::config::LoadBalancerPolicy::RoundRobin;
-    use crate::config::{ConnectionConfig, EndPoint};
+    use crate::config::{ConnectionConfig, EndPoint, Endpoints};
     use crate::extensions::filter_registry::DownstreamContext;
     use crate::extensions::filters::load_balancer::LoadBalancerFilterFactory;
     use crate::extensions::{CreateFilterArgs, Filter, FilterFactory};
@@ -159,16 +155,20 @@ mod tests {
     ) -> Vec<SocketAddr> {
         filter
             .on_downstream_receive(DownstreamContext::new(
-                input_addresses
-                    .iter()
-                    .map(|addr| EndPoint::new("".into(), *addr, vec![]))
-                    .collect(),
+                Endpoints::new(
+                    input_addresses
+                        .iter()
+                        .map(|addr| EndPoint::new("".into(), *addr, vec![]))
+                        .collect(),
+                )
+                .unwrap()
+                .into(),
                 "127.0.0.1:8080".parse().unwrap(),
                 vec![],
             ))
             .unwrap()
             .endpoints
-            .into_iter()
+            .iter()
             .map(|ep| ep.address)
             .collect::<Vec<_>>()
     }

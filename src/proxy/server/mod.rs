@@ -26,7 +26,7 @@ use tokio::sync::{mpsc, watch};
 use tokio::sync::{Mutex, RwLock};
 use tokio::time::{delay_for, Duration, Instant};
 
-use crate::config::{Config, ConnectionConfig, EndPoint};
+use crate::config::{Config, ConnectionConfig, EndPoint, Endpoints, UpstreamEndpoints};
 use crate::extensions::{DownstreamContext, Filter, FilterChain};
 use crate::proxy::sessions::{Packet, Session, SESSION_TIMEOUT_SECONDS};
 
@@ -71,7 +71,7 @@ impl Server {
         self.run_receive_packet(send_socket, receive_packets);
         self.run_prune_sessions(&sessions);
         self.run_recv_from(
-            Arc::new(self.config.connections.get_endpoints()),
+            self.config.connections.get_endpoints(),
             self.filter_chain.clone(),
             receive_socket,
             &sessions,
@@ -102,7 +102,7 @@ impl Server {
     // Server::recv_from() to process new incoming packets.
     fn run_recv_from(
         &self,
-        endpoints: Arc<Vec<EndPoint>>,
+        endpoints: Endpoints,
         chain: Arc<FilterChain>,
         mut receive_socket: RecvHalf,
         sessions: &SessionMap,
@@ -116,7 +116,7 @@ impl Server {
                 if let Err(err) = Server::recv_from(
                     &log,
                     &metrics,
-                    endpoints.clone(),
+                    endpoints.clone().into(),
                     chain.clone(),
                     &mut receive_socket,
                     sessions.clone(),
@@ -135,7 +135,7 @@ impl Server {
     async fn recv_from(
         log: &Logger,
         metrics: &Metrics,
-        endpoints: Arc<Vec<EndPoint>>,
+        endpoints: UpstreamEndpoints,
         chain: Arc<FilterChain>,
         receive_socket: &mut RecvHalf,
         sessions: SessionMap,
@@ -159,7 +159,7 @@ impl Server {
             );
 
             let result = chain.on_downstream_receive(DownstreamContext::new(
-                (*endpoints).clone(),
+                endpoints,
                 recv_addr,
                 packet.to_vec(),
             ));
@@ -172,7 +172,7 @@ impl Server {
                         chain.clone(),
                         sessions.clone(),
                         recv_addr,
-                        &endpoint,
+                        endpoint,
                         send_packets.clone(),
                     )
                     .await
@@ -333,7 +333,9 @@ mod tests {
     use crate::config;
     use crate::config::{Builder as ConfigBuilder, ConnectionConfig, EndPoint, Local};
     use crate::proxy::sessions::{Packet, SESSION_TIMEOUT_SECONDS};
-    use crate::test_utils::{SplitSocket, TestFilter, TestFilterFactory, TestHelper};
+    use crate::test_utils::{
+        config_with_dummy_endpoint, SplitSocket, TestFilter, TestFilterFactory, TestHelper,
+    };
 
     use super::*;
     use crate::extensions::FilterRegistry;
@@ -451,11 +453,8 @@ mod tests {
 
     #[tokio::test]
     async fn bind() {
-        let config = ConfigBuilder::empty()
+        let config = config_with_dummy_endpoint()
             .with_local(Local { port: 12345 })
-            .with_connections(ConnectionConfig::Server {
-                endpoints: Vec::new(),
-            })
             .build();
         let socket = Server::bind(&config).await.unwrap();
         let addr = socket.local_addr().unwrap();
@@ -502,7 +501,9 @@ mod tests {
                 Server::recv_from(
                     &t.log,
                     &Metrics::default(),
-                    Arc::new(vec![EndPoint::new("".into(), endpoint_address, vec![])]),
+                    Endpoints::new(vec![EndPoint::new("".into(), endpoint_address, vec![])])
+                        .unwrap()
+                        .into(),
                     chain,
                     &mut recv,
                     sessions_clone,
@@ -548,7 +549,7 @@ mod tests {
         let result = test(
             "test filter".to_string(),
             chain,
-            Expected { session_len: 2 },
+            Expected { session_len: 1 },
         )
         .await;
 
@@ -574,11 +575,11 @@ mod tests {
         let sessions: SessionMap = Arc::new(RwLock::new(HashMap::new()));
         let (send_packets, mut recv_packets) = mpsc::channel::<Packet>(1);
 
-        let config = Arc::new(ConfigBuilder::empty().build());
+        let config = Arc::new(config_with_dummy_endpoint().build());
         let server = Builder::from(config).validate().unwrap().build();
 
         server.run_recv_from(
-            Arc::new(vec![EndPoint::new("".into(), endpoint.addr, vec![])]),
+            Endpoints::new(vec![EndPoint::new("".into(), endpoint.addr, vec![])]).unwrap(),
             server.filter_chain.clone(),
             recv,
             &sessions,
@@ -644,8 +645,7 @@ mod tests {
         {
             unreachable!("failed to send packet over channel");
         }
-
-        let config = Arc::new(ConfigBuilder::empty().build());
+        let config = Arc::new(config_with_dummy_endpoint().build());
         let server = Builder::from(config).validate().unwrap().build();
         server.run_receive_packet(endpoint.send, recv_packet);
         assert_eq!(msg, endpoint.packet_rx.await.unwrap());
@@ -724,7 +724,7 @@ mod tests {
             connection_ids: vec![],
         };
 
-        let config = Arc::new(ConfigBuilder::empty().build());
+        let config = Arc::new(config_with_dummy_endpoint().build());
         let server = Builder::from(config).validate().unwrap().build();
         server.run_prune_sessions(&sessions);
         Server::ensure_session(

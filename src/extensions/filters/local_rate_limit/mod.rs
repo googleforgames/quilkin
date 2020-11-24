@@ -197,6 +197,7 @@ mod tests {
     use prometheus::Registry;
     use tokio::time;
 
+    use crate::config::{EndPoint, Endpoints};
     use crate::extensions::filter_registry::DownstreamContext;
     use crate::extensions::filters::local_rate_limit::metrics::Metrics;
     use crate::extensions::filters::local_rate_limit::{Config, RateLimitFilter};
@@ -277,7 +278,13 @@ mod tests {
         // Check that we're rate limited.
         assert!(r
             .on_downstream_receive(DownstreamContext::new(
-                vec![],
+                Endpoints::new(vec![EndPoint::new(
+                    "ep".into(),
+                    "127.0.0.1:8080".parse().unwrap(),
+                    vec![]
+                )])
+                .unwrap()
+                .into(),
                 "127.0.0.1:8080".parse().unwrap(),
                 vec![9],
             ))
@@ -293,12 +300,18 @@ mod tests {
 
         let result = r
             .on_downstream_receive(DownstreamContext::new(
-                vec![],
+                Endpoints::new(vec![EndPoint::new(
+                    "ep".into(),
+                    "127.0.0.1:8080".parse().unwrap(),
+                    vec![],
+                )])
+                .unwrap()
+                .into(),
                 "127.0.0.1:8080".parse().unwrap(),
                 vec![9],
             ))
             .unwrap();
-        assert_eq!((result.endpoints, result.contents), (vec![], vec![9]));
+        assert_eq!(result.contents, vec![9]);
         // We should be out of tokens now.
         assert_eq!(None, r.acquire_token());
 

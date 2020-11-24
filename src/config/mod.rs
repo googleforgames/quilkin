@@ -23,8 +23,12 @@ use base64_serde::base64_serde_type;
 use serde::{Deserialize, Serialize};
 
 mod builder;
+mod endpoints;
 mod error;
 
+pub use crate::config::endpoints::{
+    EmptyListError, Endpoints, UpstreamEndpoints, UpstreamEndpointsIter,
+};
 pub use builder::Builder;
 pub use error::ValidationError;
 
@@ -48,8 +52,8 @@ pub struct Config {
 }
 
 impl ConnectionConfig {
-    pub fn get_endpoints(&self) -> Vec<EndPoint> {
-        match self {
+    pub fn get_endpoints(&self) -> Endpoints {
+        let endpoints = match self {
             ConnectionConfig::Client { addresses, .. } => addresses
                 .iter()
                 .cloned()
@@ -63,7 +67,9 @@ impl ConnectionConfig {
                 })
                 .collect(),
             ConnectionConfig::Server { endpoints } => endpoints.clone(),
-        }
+        };
+
+        Endpoints::new(endpoints).expect("endpoints list in config should be validated non-empty")
     }
 }
 
@@ -148,6 +154,9 @@ impl Config {
     pub fn validate(&self) -> Result<(), ValidationError> {
         match &self.connections {
             ConnectionConfig::Server { endpoints } => {
+                if endpoints.is_empty() {
+                    return Err(ValidationError::EmptyList("endpoints".to_string()));
+                }
                 if endpoints
                     .iter()
                     .map(|ep| ep.name.clone())
@@ -172,6 +181,11 @@ impl Config {
                 addresses,
                 lb_policy: _,
             } => {
+                if addresses.is_empty() {
+                    return Err(ValidationError::EmptyList(
+                        "connections.addresses".to_string(),
+                    ));
+                }
                 if addresses.iter().collect::<HashSet<_>>().len() != addresses.len() {
                     return Err(ValidationError::NotUnique(
                         "connections.addresses".to_string(),
@@ -369,6 +383,20 @@ server:
             config.validate().unwrap_err().to_string()
         );
 
+        // client - empty endpoints list
+        let config = Builder::empty()
+            .with_local(Local { port: 7000 })
+            .with_connections(ConnectionConfig::Client {
+                addresses: vec![],
+                lb_policy: Some(LoadBalancerPolicy::RoundRobin),
+            })
+            .build();
+
+        assert_eq!(
+            ValidationError::EmptyList("connections.addresses".to_string()).to_string(),
+            config.validate().unwrap_err().to_string()
+        );
+
         // server - valid
         let config = Builder::empty()
             .with_local(Local { port: 7000 })
@@ -434,6 +462,17 @@ server:
 
         assert_eq!(
             ValidationError::NotUnique("endpoint.address".to_string()).to_string(),
+            config.validate().unwrap_err().to_string()
+        );
+
+        // server - empty endpoints list
+        let config = Builder::empty()
+            .with_local(Local { port: 7000 })
+            .with_connections(ConnectionConfig::Server { endpoints: vec![] })
+            .build();
+
+        assert_eq!(
+            ValidationError::EmptyList("endpoints".to_string()).to_string(),
             config.validate().unwrap_err().to_string()
         );
     }
