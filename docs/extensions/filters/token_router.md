@@ -33,7 +33,7 @@ server:
         - bmt1eTcweA==
 # ";
 # let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-# assert_eq!(config.filters.len(), 2);
+# assert_eq!(config.filters.len(), 1);
 # quilkin::proxy::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
 ```
 

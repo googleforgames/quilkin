@@ -32,7 +32,7 @@ impl Metrics {
             filter_opts(
                 "packets_dropped",
                 "TokenRouter",
-                "Total number of packets dropped. Reason is provided via the `Reason` label.",
+                "Total number of packets dropped. labels: reason.",
             ),
             &label_names,
         )?
