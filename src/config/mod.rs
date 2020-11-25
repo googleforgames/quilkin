@@ -84,13 +84,13 @@ impl Default for Proxy {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct Metrics {
+pub struct AdminAddress {
     port: u16,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Admin {
-    metrics: Option<Metrics>,
+    address: Option<AdminAddress>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
