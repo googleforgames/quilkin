@@ -27,7 +27,7 @@ use std::net::SocketAddr;
 use std::{fmt, sync::Arc};
 use tokio::sync::{mpsc, oneshot, watch};
 
-use crate::config::EndPoint;
+use crate::config::{EmptyListError, EndPoint, Endpoints, UpstreamEndpoints};
 use crate::xds::ads_client::{AdsClient, ClusterUpdate, ExecutionResult};
 
 /// The max size of queue that provides updates from the XDS layer to the [`ClusterManager`].
@@ -65,8 +65,10 @@ impl ClusterManager {
     }
 
     /// Returns all endpoints known at the time of invocation.
-    pub fn get_all_endpoints(&self) -> Vec<EndPoint> {
-        self.clusters
+    /// Returns `None` if there are no endpoints.
+    pub fn get_all_endpoints(&self) -> Option<UpstreamEndpoints> {
+        let endpoints = self
+            .clusters
             .iter()
             .map(|(name, addresses)| {
                 addresses
@@ -74,7 +76,12 @@ impl ClusterManager {
                     .map(move |addr| EndPoint::new(name.clone(), *addr, vec![]))
             })
             .flatten()
-            .collect()
+            .collect();
+
+        match Endpoints::new(endpoints) {
+            Ok(endpoints) => Some(endpoints.into()),
+            Err(EmptyListError) => None,
+        }
     }
 
     /// Returns a ClusterManager backed by the fixed set of clusters provided in the config.

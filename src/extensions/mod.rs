@@ -37,5 +37,6 @@ pub fn default_registry(base: &Logger) -> FilterRegistry {
     fr.insert(filters::ConcatBytesFactory::default());
     fr.insert(filters::LoadBalancerFilterFactory::default());
     fr.insert(filters::CaptureBytesFactory::new(base));
+    fr.insert(filters::TokenRouterFactory::new(base));
     fr
 }

@@ -15,6 +15,9 @@ It is designed to be used behind game clients as well as in front of dedicated g
 - [ ] Simple UDP routing Filter (Client and Server Proxy implementation)
 - [ ] gRPC configuration management control plane API
 - [x] Metrics tracking and export
+- [ ] Documentation
+- [ ] Examples (standalone, Agones)
+- [ ] Release process with binaries and images
 
 ## Project State
 

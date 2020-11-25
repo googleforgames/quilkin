@@ -185,7 +185,7 @@ mod tests {
     use prometheus::Registry;
     use serde_yaml::{Mapping, Value};
 
-    use crate::config::{ConnectionConfig, EndPoint};
+    use crate::config::{ConnectionConfig, EndPoint, Endpoints};
     use crate::test_utils::{assert_filter_on_upstream_receive_no_change, logger};
 
     use super::*;
@@ -281,7 +281,7 @@ mod tests {
             connection_ids: vec![],
         }];
         let response = filter.on_downstream_receive(DownstreamContext::new(
-            endpoints,
+            Endpoints::new(endpoints).unwrap().into(),
             "127.0.0.1:80".parse().unwrap(),
             "abc".to_string().into_bytes(),
         ));
@@ -341,7 +341,7 @@ mod tests {
         }];
         let response = filter
             .on_downstream_receive(DownstreamContext::new(
-                endpoints,
+                Endpoints::new(endpoints).unwrap().into(),
                 "127.0.0.1:80".parse().unwrap(),
                 "helloabc".to_string().into_bytes(),
             ))

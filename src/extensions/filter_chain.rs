@@ -118,10 +118,10 @@ mod tests {
     use std::str::from_utf8;
 
     use crate::config;
-    use crate::config::{Builder, ConnectionConfig, EndPoint};
+    use crate::config::{Builder, ConnectionConfig, EndPoint, Endpoints, UpstreamEndpoints};
     use crate::extensions::filters::DebugFactory;
     use crate::extensions::{default_registry, FilterFactory};
-    use crate::test_utils::{logger, noop_endpoint, TestFilter};
+    use crate::test_utils::{logger, TestFilter};
 
     use super::*;
 
@@ -177,6 +177,10 @@ mod tests {
         ]
     }
 
+    fn upstream_endpoints(endpoints: Vec<EndPoint>) -> UpstreamEndpoints {
+        Endpoints::new(endpoints).unwrap().into()
+    }
+
     #[test]
     fn chain_single_test_filter() {
         let chain = FilterChain::new(vec![Box::new(TestFilter {})]);
@@ -185,15 +189,17 @@ mod tests {
 
         let response = chain
             .on_downstream_receive(DownstreamContext::new(
-                endpoints_fixture.clone(),
+                upstream_endpoints(endpoints_fixture.clone()),
                 "127.0.0.1:70".parse().unwrap(),
                 b"hello".to_vec(),
             ))
             .unwrap();
 
-        let mut expected = endpoints_fixture.clone();
-        expected.push(noop_endpoint());
-        assert_eq!(expected, response.endpoints);
+        let expected = endpoints_fixture.clone();
+        assert_eq!(
+            expected,
+            response.endpoints.iter().cloned().collect::<Vec<_>>()
+        );
         assert_eq!(
             "hello:odr:127.0.0.1:70",
             from_utf8(response.contents.as_slice()).unwrap()
@@ -234,16 +240,17 @@ mod tests {
 
         let response = chain
             .on_downstream_receive(DownstreamContext::new(
-                endpoints_fixture.clone(),
+                upstream_endpoints(endpoints_fixture.clone()),
                 "127.0.0.1:70".parse().unwrap(),
                 b"hello".to_vec(),
             ))
             .unwrap();
 
-        let mut expected = endpoints_fixture.clone();
-        expected.push(noop_endpoint());
-        expected.push(noop_endpoint());
-        assert_eq!(expected, response.endpoints);
+        let expected = endpoints_fixture.clone();
+        assert_eq!(
+            expected,
+            response.endpoints.iter().cloned().collect::<Vec<_>>()
+        );
         assert_eq!(
             "hello:odr:127.0.0.1:70:odr:127.0.0.1:70",
             from_utf8(response.contents.as_slice()).unwrap()
