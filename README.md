@@ -29,6 +29,7 @@ Not to be used in production systems.
 * Start with our [Project Overview](./docs/README.md).
 * View [example integration architectures](./docs/integrations.md).
 * See [examples](./examples) folder for basic configuration examples.
+* See the [Session documentation](./docs/session.md) for an overview of quilkin sessions and metrics.
 * See [Filter documentation](./docs/extensions/filters/filters.md) for a list of filters, and their configuration options.
 
 ## Code of Conduct
