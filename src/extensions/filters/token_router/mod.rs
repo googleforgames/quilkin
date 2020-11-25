@@ -93,20 +93,22 @@ impl Filter for TokenRouter {
     fn on_downstream_receive(&self, mut ctx: DownstreamContext) -> Option<DownstreamResponse> {
         match ctx.metadata.get(self.metadata_key.as_str()) {
             None => {
-                error!(self.log, "Filter configuration issue: token not found"; 
+                error!(self.log, "Filter configuration issue: token not found";
                     "metadata_key" => self.metadata_key.clone());
                 self.metrics.packets_dropped_no_token_found.inc();
                 None
             }
             Some(value) => match value.downcast_ref::<Vec<u8>>() {
                 Some(token) => {
-                    ctx.endpoints
-                        .retain(|e| e.connection_ids.iter().any(|id| id.as_ref() == token));
-                    if ctx.endpoints.is_empty() {
-                        self.metrics.packets_dropped_no_endpoint_match.inc();
-                        None
-                    } else {
-                        Some(ctx.into())
+                    match ctx
+                        .endpoints
+                        .retain(|e| e.connection_ids.iter().any(|id| id.as_ref() == token))
+                    {
+                        Ok(_) => Some(ctx.into()),
+                        Err(_) => {
+                            self.metrics.packets_dropped_no_endpoint_match.inc();
+                            None
+                        }
                     }
                 }
                 None => {
@@ -131,7 +133,7 @@ mod tests {
     use prometheus::Registry;
     use serde_yaml::{Mapping, Value};
 
-    use crate::config::{ConnectionConfig, ConnectionId, EndPoint};
+    use crate::config::{ConnectionConfig, ConnectionId, EndPoint, Endpoints};
     use crate::test_utils::{assert_filter_on_upstream_receive_no_change, logger};
 
     use super::*;
@@ -217,7 +219,9 @@ mod tests {
         let mut ctx = new_ctx();
         ctx.metadata
             .insert(CAPTURED_BYTES.into(), Box::new(b"567".to_vec()));
-        assert!(filter.on_downstream_receive(ctx).is_none());
+
+        let option = filter.on_downstream_receive(ctx);
+        assert!(option.is_none());
         assert_eq!(1, filter.metrics.packets_dropped_no_endpoint_match.get());
 
         // no key
@@ -255,7 +259,7 @@ mod tests {
         );
 
         DownstreamContext::new(
-            vec![endpoint1, endpoint2],
+            Endpoints::new(vec![endpoint1, endpoint2]).unwrap().into(),
             "127.0.0.1:100".parse().unwrap(),
             b"hello".to_vec(),
         )
@@ -268,7 +272,14 @@ mod tests {
         let result = filter.on_downstream_receive(ctx).unwrap();
 
         assert_eq!(b"hello".to_vec(), result.contents);
-        assert_eq!(1, result.endpoints.len());
-        assert_eq!("one", result.endpoints[0].name);
+        assert_eq!(1, result.endpoints.size());
+        assert_eq!(
+            vec!["one"],
+            result
+                .endpoints
+                .iter()
+                .map(|i| i.name.clone())
+                .collect::<Vec<_>>()
+        );
     }
 }
