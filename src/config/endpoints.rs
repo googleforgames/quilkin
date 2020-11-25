@@ -100,15 +100,19 @@ impl UpstreamEndpoints {
                 *subset = new_subset;
             }
             None => {
-                self.subset = Some(
-                    self.endpoints
-                        .0
-                        .iter()
-                        .enumerate()
-                        .filter(|(_, ep)| predicate(ep))
-                        .map(|(i, _)| i)
-                        .collect::<Vec<_>>(),
-                )
+                let new_subset = self
+                    .endpoints
+                    .0
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, ep)| predicate(ep))
+                    .map(|(i, _)| i)
+                    .collect::<Vec<_>>();
+
+                if new_subset.is_empty() {
+                    return Err(AllEndpointsRemovedError);
+                }
+                self.subset = Some(new_subset);
             }
         };
 
@@ -193,7 +197,7 @@ mod tests {
     fn retain() {
         let initial_endpoints = vec![ep(1), ep(2), ep(3), ep(4)];
 
-        let mut up: UpstreamEndpoints = Endpoints::new(initial_endpoints).unwrap().into();
+        let mut up: UpstreamEndpoints = Endpoints::new(initial_endpoints.clone()).unwrap().into();
 
         up.retain(|ep| ep.name != "ep-2").unwrap();
         assert_eq!(up.size(), 3);
@@ -205,6 +209,14 @@ mod tests {
         up.retain(|ep| ep.name != "ep-3").unwrap();
         assert_eq!(up.size(), 2);
         assert_eq!(vec![ep(1), ep(4)], up.iter().cloned().collect::<Vec<_>>());
+
+        // test an empty result on retain
+        let result = up.retain(|ep| ep.name == "never");
+        assert!(result.is_err());
+
+        let mut up: UpstreamEndpoints = Endpoints::new(initial_endpoints).unwrap().into();
+        let result = up.retain(|ep| ep.name == "never");
+        assert!(result.is_err());
     }
 
     #[test]
