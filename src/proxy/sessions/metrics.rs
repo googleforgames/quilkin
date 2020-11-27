@@ -28,8 +28,9 @@ pub struct Metrics {
     pub tx_bytes_total: GenericCounter<AtomicI64>,
     pub rx_packets_total: GenericCounter<AtomicI64>,
     pub tx_packets_total: GenericCounter<AtomicI64>,
+    pub rx_errors_total: GenericCounter<AtomicI64>,
+    pub tx_errors_total: GenericCounter<AtomicI64>,
     pub packets_dropped_total: GenericCounter<AtomicI64>,
-    pub errors_total: GenericCounter<AtomicI64>,
     pub duration_secs: Histogram,
 }
 
@@ -40,21 +41,13 @@ impl Metrics {
         let label_values = vec![downstream.as_str(), upstream.as_str()];
         Ok(Self {
             active_sessions: IntGaugeVec::new(
-                opts(
-                    "active",
-                    subsystem,
-                    "Number of sessions currently active by downstream, upstream",
-                ),
+                opts("active", subsystem, "Number of sessions currently active"),
                 &label_names,
             )?
             .register_if_not_exists(registry)?
             .get_metric_with_label_values(&label_values)?,
             sessions_total: IntCounterVec::new(
-                opts(
-                    "total",
-                    subsystem,
-                    "Total number of established sessions by downstream, upstream",
-                ),
+                opts("total", subsystem, "Total number of established sessions"),
                 &label_names,
             )?
             .register_if_not_exists(registry)?
@@ -63,18 +56,14 @@ impl Metrics {
                 opts(
                     "rx_bytes_total",
                     subsystem,
-                    "Total number of bytes received by downstream, upstream",
+                    "Total number of bytes received",
                 ),
                 &label_names,
             )?
             .register_if_not_exists(registry)?
             .get_metric_with_label_values(&label_values)?,
             tx_bytes_total: IntCounterVec::new(
-                opts(
-                    "tx_bytes_total",
-                    subsystem,
-                    "Total number of bytes sent by downstream, upstream",
-                ),
+                opts("tx_bytes_total", subsystem, "Total number of bytes sent"),
                 &label_names,
             )?
             .register_if_not_exists(registry)?
@@ -83,7 +72,7 @@ impl Metrics {
                 opts(
                     "rx_packets_total",
                     subsystem,
-                    "Total number of packets received by downstream, upstream",
+                    "Total number of packets received",
                 ),
                 &label_names,
             )?
@@ -93,7 +82,7 @@ impl Metrics {
                 opts(
                     "tx_packets_total",
                     subsystem,
-                    "Total number of packets sent by downstream, upstream",
+                    "Total number of packets sent",
                 ),
                 &label_names,
             )?
@@ -103,27 +92,40 @@ impl Metrics {
                 opts(
                     "packets_dropped_total",
                     subsystem,
-                    "Total number of dropped packets by downstream, upstream",
+                    "Total number of dropped packets",
                 ),
                 &label_names,
             )?
             .register_if_not_exists(registry)?
             .get_metric_with_label_values(&label_values)?,
-            errors_total: IntCounterVec::new(
+            rx_errors_total: IntCounterVec::new(
                 opts(
-                    "errors_total",
+                    "rx_errors_total",
                     subsystem,
-                    "Total number of errors during sending or receiving packets by downstream, upstream",
+                    "Total number of errors encountered while receiving a packet",
                 ),
                 &label_names,
             )?
             .register_if_not_exists(registry)?
             .get_metric_with_label_values(&label_values)?,
-            duration_secs: HistogramVec::new(histogram_opts(
-                "duration_secs",
-                subsystem,
-                "Duration of sessions by downstream, upstream",
-                Some(vec![1f64, 5f64, 10f64, 25f64, 60f64, 300f64, 900f64, 1800f64, 3600f64]),
+            tx_errors_total: IntCounterVec::new(
+                opts(
+                    "tx_errors_total",
+                    subsystem,
+                    "Total number of errors encountered while sending a packet",
+                ),
+                &label_names,
+            )?
+            .register_if_not_exists(registry)?
+            .get_metric_with_label_values(&label_values)?,
+            duration_secs: HistogramVec::new(
+                histogram_opts(
+                    "duration_secs",
+                    subsystem,
+                    "Duration of sessions",
+                    Some(vec![
+                        1f64, 5f64, 10f64, 25f64, 60f64, 300f64, 900f64, 1800f64, 3600f64,
+                    ]),
                 ),
                 &label_names,
             )?
