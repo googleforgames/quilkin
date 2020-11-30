@@ -150,7 +150,7 @@ impl Session {
                     received = recv.recv_from(&mut buf) => {
                         match received {
                             Err(err) => {
-                                metrics.errors_total.inc();
+                                metrics.rx_errors_total.inc();
                                 error!(log, "Error receiving packet"; "error" => %err);
                             },
                             Ok((size, recv_addr)) => {
@@ -220,7 +220,7 @@ impl Session {
             chain.on_upstream_receive(UpstreamContext::new(endpoint, from, to, packet.to_vec()))
         {
             if let Err(err) = sender.send(Packet::new(to, response.contents)).await {
-                metrics.errors_total.inc();
+                metrics.rx_errors_total.inc();
                 error!(log, "Error sending packet to channel"; "error" => %err);
             }
         } else {
@@ -253,7 +253,7 @@ impl Session {
                 Some(size)
             })
             .map_err(|err| {
-                self.metrics.errors_total.inc();
+                self.metrics.tx_errors_total.inc();
                 Error::SendToDst(err)
             })
     }
