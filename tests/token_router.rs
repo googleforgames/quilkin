@@ -22,7 +22,7 @@ mod tests {
     use tokio::select;
     use tokio::time::{delay_for, Duration};
 
-    use quilkin::config::{Builder, ConnectionConfig, ConnectionId, EndPoint, Filter, Local};
+    use quilkin::config::{Builder, ConnectionId, EndPoint, Filter};
     use quilkin::extensions::filters::{CaptureBytesFactory, TokenRouterFactory};
     use quilkin::extensions::FilterFactory;
     use quilkin::test_utils::{logger, TestHelper};
@@ -41,24 +41,24 @@ remove: true
 ";
         let server_port = 12348;
         let server_config = Builder::empty()
-            .with_local(Local { port: server_port })
-            .with_filters(vec![
-                Filter {
-                    name: CaptureBytesFactory::new(&log).name(),
-                    config: serde_yaml::from_str(capture_yaml).unwrap(),
-                },
-                Filter {
-                    name: TokenRouterFactory::new(&log).name(),
-                    config: None,
-                },
-            ])
-            .with_connections(ConnectionConfig::Server {
-                endpoints: vec![EndPoint {
+            .with_port(server_port)
+            .with_static(
+                vec![
+                    Filter {
+                        name: CaptureBytesFactory::new(&log).name(),
+                        config: serde_yaml::from_str(capture_yaml).unwrap(),
+                    },
+                    Filter {
+                        name: TokenRouterFactory::new(&log).name(),
+                        config: None,
+                    },
+                ],
+                vec![EndPoint {
                     name: "server".to_string(),
                     address: echo,
                     connection_ids: vec![ConnectionId::from("abc")],
                 }],
-            })
+            )
             .build();
         server_config.validate().unwrap();
         t.run_server(server_config);

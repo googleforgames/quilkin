@@ -133,7 +133,7 @@ mod tests {
     use prometheus::Registry;
     use serde_yaml::{Mapping, Value};
 
-    use crate::config::{ConnectionConfig, ConnectionId, EndPoint, Endpoints};
+    use crate::config::{ConnectionId, EndPoint, Endpoints};
     use crate::test_utils::{assert_filter_on_upstream_receive_no_change, logger};
 
     use super::*;
@@ -151,7 +151,6 @@ mod tests {
     #[test]
     fn factory_custom_tokens() {
         let factory = TokenRouterFactory::new(&logger());
-        let connection = ConnectionConfig::Server { endpoints: vec![] };
         let mut map = Mapping::new();
         map.insert(
             Value::String("metadataKey".into()),
@@ -159,10 +158,7 @@ mod tests {
         );
 
         let filter = factory
-            .create_filter(CreateFilterArgs::new(
-                &connection,
-                Some(&Value::Mapping(map)),
-            ))
+            .create_filter(CreateFilterArgs::new(Some(&Value::Mapping(map))))
             .unwrap();
         let mut ctx = new_ctx();
         ctx.metadata
@@ -173,14 +169,10 @@ mod tests {
     #[test]
     fn factory_empty_config() {
         let factory = TokenRouterFactory::new(&logger());
-        let connection = ConnectionConfig::Server { endpoints: vec![] };
         let map = Mapping::new();
 
         let filter = factory
-            .create_filter(CreateFilterArgs::new(
-                &connection,
-                Some(&Value::Mapping(map)),
-            ))
+            .create_filter(CreateFilterArgs::new(Some(&Value::Mapping(map))))
             .unwrap();
         let mut ctx = new_ctx();
         ctx.metadata
@@ -191,11 +183,8 @@ mod tests {
     #[test]
     fn factory_no_config() {
         let factory = TokenRouterFactory::new(&logger());
-        let connection = ConnectionConfig::Server { endpoints: vec![] };
 
-        let filter = factory
-            .create_filter(CreateFilterArgs::new(&connection, None))
-            .unwrap();
+        let filter = factory.create_filter(CreateFilterArgs::new(None)).unwrap();
         let mut ctx = new_ctx();
         ctx.metadata
             .insert(CAPTURED_BYTES.into(), Box::new(b"123".to_vec()));

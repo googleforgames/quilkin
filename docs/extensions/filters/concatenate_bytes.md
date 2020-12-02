@@ -11,19 +11,19 @@ quilkin.extensions.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
 ### Configuration Examples
 ```rust
 # let yaml = "
-local:
-  port: 7000
-filters:
-  - name: quilkin.extensions.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
-    config:
-        strategy: APPEND
-        bytes: MXg3aWp5Ng==
-client:
-  addresses:
-    - 127.0.0.1:7001
+version: v1alpha1
+static:
+  filters:
+    - name: quilkin.extensions.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
+      config:
+          strategy: APPEND
+          bytes: MXg3aWp5Ng==
+  endpoints:
+    - name: server-1
+      address: 127.0.0.1:7001
 # ";
 # let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-# assert_eq!(config.filters.len(), 1);
+# assert_eq!(config.source.get_filters().len(), 1);
 # quilkin::proxy::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
 ```
 

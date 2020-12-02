@@ -125,7 +125,6 @@ mod tests {
     use serde_yaml::Mapping;
     use serde_yaml::Value;
 
-    use crate::config::ConnectionConfig::Server;
     use crate::test_utils::{
         assert_filter_on_downstream_receive_no_change, assert_filter_on_upstream_receive_no_change,
         logger,
@@ -149,15 +148,11 @@ mod tests {
     fn from_config_with_id() {
         let log = logger();
         let mut map = Mapping::new();
-        let connection = Server { endpoints: vec![] };
         let factory = DebugFactory::new(&log);
 
         map.insert(Value::from("id"), Value::from("name"));
         assert!(factory
-            .create_filter(CreateFilterArgs::new(
-                &connection,
-                Some(&Value::Mapping(map)),
-            ))
+            .create_filter(CreateFilterArgs::new(Some(&Value::Mapping(map)),))
             .is_ok());
     }
 
@@ -165,15 +160,11 @@ mod tests {
     fn from_config_without_id() {
         let log = logger();
         let mut map = Mapping::new();
-        let connection = Server { endpoints: vec![] };
         let factory = DebugFactory::new(&log);
 
         map.insert(Value::from("id"), Value::from("name"));
         assert!(factory
-            .create_filter(CreateFilterArgs::new(
-                &connection,
-                Some(&Value::Mapping(map)),
-            ))
+            .create_filter(CreateFilterArgs::new(Some(&Value::Mapping(map)),))
             .is_ok());
     }
 
@@ -181,14 +172,10 @@ mod tests {
     fn from_config_should_error() {
         let log = logger();
         let mut map = Mapping::new();
-        let connection = Server { endpoints: vec![] };
         let factory = DebugFactory::new(&log);
 
         map.insert(Value::from("id"), Value::from(false));
-        match factory.create_filter(CreateFilterArgs::new(
-            &connection,
-            Some(&Value::Mapping(map)),
-        )) {
+        match factory.create_filter(CreateFilterArgs::new(Some(&Value::Mapping(map)))) {
             Ok(_) => unreachable!("should be an error"),
             Err(err) => {
                 assert_eq!(

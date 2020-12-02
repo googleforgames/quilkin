@@ -24,7 +24,7 @@ mod tests {
     use regex::Regex;
     use slog::info;
 
-    use quilkin::config::{Builder as ConfigBuilder, ConnectionConfig, EndPoint, Local};
+    use quilkin::config::{Builder as ConfigBuilder, EndPoint};
     use quilkin::proxy::Metrics;
     use quilkin::test_utils::TestHelper;
 
@@ -39,28 +39,30 @@ mod tests {
         // create server configuration
         let server_port = 12346;
         let server_config = ConfigBuilder::empty()
-            .with_local(Local { port: server_port })
-            .with_connections(ConnectionConfig::Server {
-                endpoints: vec![EndPoint {
+            .with_port(server_port)
+            .with_static(
+                vec![],
+                vec![EndPoint {
                     name: "server".to_string(),
                     address: echo,
                     connection_ids: vec![],
                 }],
-            })
+            )
             .build();
         t.run_server_with_metrics(server_config, server_metrics);
 
         // create a local client
         let client_port = 12347;
         let client_config = ConfigBuilder::empty()
-            .with_local(Local { port: client_port })
-            .with_connections(ConnectionConfig::Client {
-                addresses: vec![SocketAddr::new(
-                    IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
-                    server_port,
+            .with_port(client_port)
+            .with_static(
+                vec![],
+                vec![EndPoint::new(
+                    "test".into(),
+                    SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port),
+                    vec![],
                 )],
-                lb_policy: None,
-            })
+            )
             .build();
         t.run_server(client_config);
 

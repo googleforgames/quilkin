@@ -66,10 +66,10 @@ impl FilterChain {
         metrics_registry: &Registry,
     ) -> std::result::Result<FilterChain, CreateFilterError> {
         let mut filters = Vec::<Box<dyn Filter>>::new();
-        for filter_config in &config.filters {
+        for filter_config in config.source.get_filters() {
             match filter_registry.get(
                 &filter_config.name,
-                CreateFilterArgs::new(&config.connections, filter_config.config.as_ref())
+                CreateFilterArgs::new(filter_config.config.as_ref())
                     .with_metrics_registry(metrics_registry.clone()),
             ) {
                 Ok(filter) => filters.push(filter),
@@ -118,10 +118,10 @@ mod tests {
     use std::str::from_utf8;
 
     use crate::config;
-    use crate::config::{Builder, ConnectionConfig, EndPoint, Endpoints, UpstreamEndpoints};
+    use crate::config::{Builder, EndPoint, Endpoints, ProxyMode, UpstreamEndpoints};
     use crate::extensions::filters::DebugFactory;
     use crate::extensions::{default_registry, FilterFactory};
-    use crate::test_utils::{logger, TestFilter};
+    use crate::test_utils::{ep, logger, TestFilter};
 
     use super::*;
 
@@ -132,14 +132,14 @@ mod tests {
 
         // everything is fine
         let config = Builder::empty()
-            .with_filters(vec![config::Filter {
-                name: provider.name(),
-                config: Default::default(),
-            }])
-            .with_connections(ConnectionConfig::Client {
-                addresses: vec!["127.0.0.1:2456".parse().unwrap()],
-                lb_policy: None,
-            })
+            .with_mode(ProxyMode::Client)
+            .with_static(
+                vec![config::Filter {
+                    name: provider.name(),
+                    config: Default::default(),
+                }],
+                vec![ep(1)],
+            )
             .build();
 
         let registry = default_registry(&log);
@@ -149,14 +149,14 @@ mod tests {
 
         // uh oh, something went wrong
         let config = Builder::empty()
-            .with_filters(vec![config::Filter {
-                name: "this is so wrong".to_string(),
-                config: Default::default(),
-            }])
-            .with_connections(ConnectionConfig::Client {
-                addresses: vec!["127.0.0.1:2456".parse().unwrap()],
-                lb_policy: None,
-            })
+            .with_mode(ProxyMode::Client)
+            .with_static(
+                vec![config::Filter {
+                    name: "this is so wrong".to_string(),
+                    config: Default::default(),
+                }],
+                vec![ep(1)],
+            )
             .build();
         let result = FilterChain::try_create(Arc::new(config), &registry, &Registry::default());
         assert!(result.is_err());

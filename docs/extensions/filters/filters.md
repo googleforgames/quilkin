@@ -33,23 +33,23 @@ There are a few things we note here:
 
 ```rust
 # let yaml = "
-local:
-  port: 7000
-filters:
-  - name: quilkin.extensions.filters.debug_filter.v1alpha1.Debug
-    config:
-      id: debug-1
-  - name: quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit
-    config:
-      max_packets: 10
-      period: 500ms
-client:
-  addresses:
-    - 127.0.0.1:7001
+version: v1alpha1
+static:
+  filters:
+    - name: quilkin.extensions.filters.debug_filter.v1alpha1.Debug
+      config:
+        id: debug-1
+    - name: quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit
+      config:
+        max_packets: 10
+        period: 500ms
+  endpoints:
+    - name: server-1
+      address: 127.0.0.1:7001
 # ";
 # let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 # assert_eq!(config.validate().unwrap(), ());
-# assert_eq!(config.filters.len(), 2);
+# assert_eq!(config.source.get_filters().len(), 2);
 ```
 
 We specify our filter chain in the `.filters` section of the proxy's configuration which has takes a sequence of [FilterConfig](#filter-config) objects. Each object describes all information necessary to create a single filter.

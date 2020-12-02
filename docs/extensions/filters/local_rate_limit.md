@@ -12,19 +12,19 @@ quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit
 # #[tokio::main]
 # async fn main() {
 #   let yaml = "
-local:
-  port: 7000
-filters:
-  - name: quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit
-    config:
-      max_packets: 1000
-      period: 500ms
-client:
-  addresses:
-    - 127.0.0.1:7001
+version: v1alpha1
+static:
+  filters:
+    - name: quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit
+      config:
+        max_packets: 1000
+        period: 500ms
+  endpoints:
+    - name: server-1
+      address: 127.0.0.1:7001
 # ";
 #   let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-#   assert_eq!(config.filters.len(), 1);
+# assert_eq!(config.source.get_filters().len(), 1);
 #   quilkin::proxy::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
 # }
 ```

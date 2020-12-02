@@ -26,7 +26,7 @@ use tokio::sync::{mpsc, watch};
 use tokio::sync::{Mutex, RwLock};
 use tokio::time::{delay_for, Duration, Instant};
 
-use crate::config::{Config, ConnectionConfig, EndPoint, Endpoints, UpstreamEndpoints};
+use crate::config::{Config, EndPoint, Endpoints, ProxyMode, Source, UpstreamEndpoints};
 use crate::extensions::{DownstreamContext, Filter, FilterChain};
 use crate::proxy::sessions::{Packet, Session, SESSION_TIMEOUT_SECONDS};
 
@@ -71,7 +71,7 @@ impl Server {
         self.run_receive_packet(send_socket, receive_packets);
         self.run_prune_sessions(&sessions);
         self.run_recv_from(
-            self.config.connections.get_endpoints(),
+            self.config.source.get_endpoints(),
             self.filter_chain.clone(),
             receive_socket,
             &sessions,
@@ -238,20 +238,26 @@ impl Server {
 
     /// log_config outputs a log of what is configured
     fn log_config(&self) {
-        info!(self.log, "Starting on port {}", self.config.local.port);
-        match &self.config.connections {
-            ConnectionConfig::Client { addresses, .. } => {
+        info!(self.log, "Starting on port {}", self.config.proxy.port);
+        let addresses = match &self.config.source {
+            Source::Static {
+                filters: _,
+                endpoints,
+            } => endpoints.iter().map(|ep| ep.address),
+        };
+        match &self.config.proxy.mode {
+            ProxyMode::Client => {
                 info!(self.log, "Client proxy configuration"; "address" => format!("{:?}", addresses))
             }
-            ConnectionConfig::Server { endpoints } => {
-                info!(self.log, "Server proxy configuration"; "endpoints" => endpoints.len())
+            ProxyMode::Server => {
+                info!(self.log, "Server proxy configuration"; "endpoints" => addresses.len())
             }
         };
     }
 
     /// bind binds the local configured port
     async fn bind(config: &Config) -> Result<UdpSocket> {
-        let addr = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), config.local.port);
+        let addr = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), config.proxy.port);
         UdpSocket::bind(addr).await.map_err(Error::Bind)
     }
 
@@ -331,7 +337,7 @@ mod tests {
     use tokio::time::{Duration, Instant};
 
     use crate::config;
-    use crate::config::{Builder as ConfigBuilder, ConnectionConfig, EndPoint, Local};
+    use crate::config::{Builder as ConfigBuilder, EndPoint, ProxyMode};
     use crate::proxy::sessions::{Packet, SESSION_TIMEOUT_SECONDS};
     use crate::test_utils::{
         config_with_dummy_endpoint, SplitSocket, TestFilter, TestFilterFactory, TestHelper,
@@ -350,11 +356,11 @@ mod tests {
 
         let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12358);
         let config = ConfigBuilder::empty()
-            .with_local(Local {
-                port: local_addr.port(),
-            })
-            .with_connections(ConnectionConfig::Server {
-                endpoints: vec![
+            .with_mode(ProxyMode::Server)
+            .with_port(local_addr.port())
+            .with_static(
+                vec![],
+                vec![
                     EndPoint {
                         name: String::from("e1"),
                         address: endpoint1.addr,
@@ -366,7 +372,7 @@ mod tests {
                         connection_ids: vec![],
                     },
                 ],
-            })
+            )
             .build();
         t.run_server(config);
 
@@ -388,13 +394,12 @@ mod tests {
 
         let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12357);
         let config = ConfigBuilder::empty()
-            .with_local(Local {
-                port: local_addr.port(),
-            })
-            .with_connections(ConnectionConfig::Client {
-                addresses: vec![endpoint.addr],
-                lb_policy: None,
-            })
+            .with_mode(ProxyMode::Client)
+            .with_port(local_addr.port())
+            .with_static(
+                vec![],
+                vec![EndPoint::new("test".into(), endpoint.addr, vec![])],
+            )
             .build();
         t.run_server(config);
 
@@ -417,17 +422,15 @@ mod tests {
         let mut endpoint = t.open_socket_and_recv_single_packet().await;
         let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12367);
         let config = ConfigBuilder::empty()
-            .with_local(Local {
-                port: local_addr.port(),
-            })
-            .with_filters(vec![config::Filter {
-                name: "TestFilter".to_string(),
-                config: None,
-            }])
-            .with_connections(ConnectionConfig::Client {
-                addresses: vec![endpoint.addr],
-                lb_policy: None,
-            })
+            .with_mode(ProxyMode::Client)
+            .with_port(local_addr.port())
+            .with_static(
+                vec![config::Filter {
+                    name: "TestFilter".to_string(),
+                    config: None,
+                }],
+                vec![EndPoint::new("test".into(), endpoint.addr, vec![])],
+            )
             .build();
         t.run_server_with_filter_registry(config, registry);
 
@@ -453,9 +456,7 @@ mod tests {
 
     #[tokio::test]
     async fn bind() {
-        let config = config_with_dummy_endpoint()
-            .with_local(Local { port: 12345 })
-            .build();
+        let config = config_with_dummy_endpoint().with_port(12345).build();
         let socket = Server::bind(&config).await.unwrap();
         let addr = socket.local_addr().unwrap();
 

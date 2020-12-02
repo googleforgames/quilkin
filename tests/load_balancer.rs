@@ -21,7 +21,7 @@ mod tests {
     use std::net::{IpAddr, Ipv4Addr, SocketAddr};
     use std::sync::{Arc, Mutex};
 
-    use quilkin::config::{Builder as ConfigBuilder, ConnectionConfig, EndPoint, Filter, Local};
+    use quilkin::config::{Builder as ConfigBuilder, EndPoint, Filter};
     use quilkin::extensions::filters::LoadBalancerFilterFactory;
     use quilkin::extensions::FilterFactory;
     use quilkin::test_utils::TestHelper;
@@ -48,18 +48,18 @@ policy: ROUND_ROBIN
 
         let server_port = 12346;
         let server_config = ConfigBuilder::empty()
-            .with_local(Local { port: server_port })
-            .with_filters(vec![Filter {
-                name: LoadBalancerFilterFactory::default().name(),
-                config: serde_yaml::from_str(yaml).unwrap(),
-            }])
-            .with_connections(ConnectionConfig::Server {
-                endpoints: echo_addresses
+            .with_port(server_port)
+            .with_static(
+                vec![Filter {
+                    name: LoadBalancerFilterFactory::default().name(),
+                    config: serde_yaml::from_str(yaml).unwrap(),
+                }],
+                echo_addresses
                     .iter()
                     .enumerate()
                     .map(|(i, addr)| EndPoint::new(format!("server-{}", i), *addr, vec![]))
                     .collect(),
-            })
+            )
             .build();
         t.run_server(server_config);
         let server_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port);

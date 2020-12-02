@@ -12,18 +12,18 @@ quilkin.extensions.filters.load_balancer.v1alpha1.LoadBalancer
 # #[tokio::main]
 # async fn main() {
 #   let yaml = "
-local:
-  port: 7000
-filters:
-  - name: quilkin.extensions.filters.load_balancer.v1alpha1.LoadBalancer
-    config:
-      policy: ROUND_ROBIN
-client:
-  addresses:
-    - 127.0.0.1:7001
+version: v1alpha1
+static:
+  filters:
+    - name: quilkin.extensions.filters.load_balancer.v1alpha1.LoadBalancer
+      config:
+        policy: ROUND_ROBIN
+  endpoints:
+    - name: server-1
+      address: 127.0.0.1:7001
 # ";
 #   let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-#   assert_eq!(config.filters.len(), 1);
+# assert_eq!(config.source.get_filters().len(), 1);
 #   quilkin::proxy::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
 # }
 ```

@@ -21,6 +21,7 @@ use std::net::SocketAddr;
 
 use base64_serde::base64_serde_type;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 mod builder;
 mod endpoints;
@@ -34,64 +35,114 @@ pub use error::ValidationError;
 
 base64_serde_type!(Base64Standard, base64::STANDARD);
 
-// CLIENT_ENDPOINT_PREFIX is a prefix to the name of a client proxy's endpoint.
-const CLIENT_ENDPOINT_PREFIX: &str = "address";
+#[derive(Debug, Deserialize, Serialize)]
+pub enum Version {
+    #[serde(rename = "v1alpha1")]
+    V1Alpha1,
+}
+
+#[derive(Debug, Deserialize, Serialize, PartialEq)]
+pub enum ProxyMode {
+    #[serde(rename = "CLIENT")]
+    Client,
+    #[serde(rename = "SERVER")]
+    Server,
+}
+
+impl Default for ProxyMode {
+    fn default() -> Self {
+        ProxyMode::Server
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Proxy {
+    #[serde(default)]
+    pub mode: ProxyMode,
+    #[serde(default = "default_proxy_id")]
+    pub id: String,
+    #[serde(default = "default_proxy_port")]
+    pub port: u16,
+}
+
+fn default_proxy_id() -> String {
+    Uuid::new_v4().to_hyphenated().to_string()
+}
+
+fn default_proxy_port() -> u16 {
+    7000
+}
+
+impl Default for Proxy {
+    fn default() -> Self {
+        Proxy {
+            mode: Default::default(),
+            id: default_proxy_id(),
+            port: default_proxy_port(),
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct AdminAddress {
+    port: u16,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Admin {
+    address: Option<AdminAddress>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub enum Source {
+    #[serde(rename = "static")]
+    Static {
+        #[serde(default)]
+        filters: Vec<Filter>,
+
+        endpoints: Vec<EndPoint>,
+    },
+}
 
 /// Config is the configuration for either a Client or Server proxy
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Config {
-    pub local: Local,
+    pub version: Version,
+
     #[serde(default)]
-    pub filters: Vec<Filter>,
+    pub proxy: Proxy,
+
+    pub admin: Option<Admin>,
+
     #[serde(flatten)]
-    pub connections: ConnectionConfig,
+    pub source: Source,
 
     // Limit struct creation to the builder. We use an Optional<Phantom>
     // so that we can create instances though deserialization.
+    #[serde(skip_serializing)]
     pub(super) phantom: Option<PhantomData<()>>,
 }
 
-impl ConnectionConfig {
+impl Source {
+    pub fn get_filters(&self) -> &[Filter] {
+        match self {
+            Source::Static {
+                filters,
+                endpoints: _,
+            } => filters,
+        }
+    }
+
     pub fn get_endpoints(&self) -> Endpoints {
-        let endpoints = match self {
-            ConnectionConfig::Client { addresses, .. } => addresses
-                .iter()
-                .cloned()
-                .enumerate()
-                .map(|(offset, address)| {
-                    EndPoint::new(
-                        format!("{}-{}", CLIENT_ENDPOINT_PREFIX, offset),
-                        address,
-                        vec![],
-                    )
-                })
-                .collect(),
-            ConnectionConfig::Server { endpoints } => endpoints.clone(),
+        let endpoints = match &self {
+            Source::Static {
+                filters: _,
+                endpoints,
+            } => endpoints.clone(),
         };
 
         Endpoints::new(endpoints).expect("endpoints list in config should be validated non-empty")
     }
-}
-
-/// Local is the local host configuration options
-#[derive(Debug, Deserialize, Serialize)]
-pub struct Local {
-    pub port: u16,
-}
-
-/// LoadBalancerPolicy represents how a proxy load-balances
-/// traffic between endpoints.
-#[derive(Debug, Deserialize, Serialize, Eq, PartialEq)]
-pub enum LoadBalancerPolicy {
-    /// Send all traffic to all endpoints.
-    #[serde(rename = "BROADCAST")]
-    Broadcast,
-    /// Send traffic to endpoints in turns.
-    #[serde(rename = "ROUND_ROBIN")]
-    RoundRobin,
-    /// Send traffic to endpoints chosen at random.
-    #[serde(rename = "RANDOM")]
-    Random,
 }
 
 /// Filter is the configuration for a single filter
@@ -117,26 +168,12 @@ impl AsRef<Vec<u8>> for ConnectionId {
     }
 }
 
-/// ConnectionConfig is the configuration for either a Client or Server proxy
-#[derive(Debug, Deserialize, Serialize)]
-pub enum ConnectionConfig {
-    /// Client is the configuration for a client proxy, for sitting behind a game client.
-    #[serde(rename = "client")]
-    Client {
-        addresses: Vec<SocketAddr>,
-        lb_policy: Option<LoadBalancerPolicy>,
-    },
-
-    /// Server is the configuration for a Dedicated Game Server proxy
-    #[serde(rename = "server")]
-    Server { endpoints: Vec<EndPoint> },
-}
-
 /// A singular endpoint, to pass on UDP packets to.
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub struct EndPoint {
     pub name: String,
     pub address: SocketAddr,
+    #[serde(default)]
     pub connection_ids: Vec<ConnectionId>,
 }
 
@@ -158,11 +195,24 @@ impl Config {
 
     /// validates the current Config.
     pub fn validate(&self) -> Result<(), ValidationError> {
-        match &self.connections {
-            ConnectionConfig::Server { endpoints } => {
+        self.source.validate()?;
+
+        Ok(())
+    }
+}
+
+impl Source {
+    /// Validates the source configuration.
+    fn validate(&self) -> Result<(), ValidationError> {
+        match &self {
+            Source::Static {
+                filters: _,
+                endpoints,
+            } => {
                 if endpoints.is_empty() {
-                    return Err(ValidationError::EmptyList("endpoints".to_string()));
+                    return Err(ValidationError::EmptyList("static.endpoints".to_string()));
                 }
+
                 if endpoints
                     .iter()
                     .map(|ep| ep.name.clone())
@@ -170,7 +220,9 @@ impl Config {
                     .len()
                     != endpoints.len()
                 {
-                    return Err(ValidationError::NotUnique("endpoint.name".to_string()));
+                    return Err(ValidationError::NotUnique(
+                        "static.endpoints.name".to_string(),
+                    ));
                 }
 
                 if endpoints
@@ -180,59 +232,50 @@ impl Config {
                     .len()
                     != endpoints.len()
                 {
-                    return Err(ValidationError::NotUnique("endpoint.address".to_string()));
-                }
-            }
-            ConnectionConfig::Client {
-                addresses,
-                lb_policy: _,
-            } => {
-                if addresses.is_empty() {
-                    return Err(ValidationError::EmptyList(
-                        "connections.addresses".to_string(),
-                    ));
-                }
-                if addresses.iter().collect::<HashSet<_>>().len() != addresses.len() {
                     return Err(ValidationError::NotUnique(
-                        "connections.addresses".to_string(),
+                        "static.endpoints.address".to_string(),
                     ));
                 }
+
+                Ok(())
             }
         }
-
-        Ok(())
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::net::SocketAddr;
-
     use serde_yaml::Value;
 
-    use crate::config::{
-        Builder, Config, ConnectionConfig, EndPoint, LoadBalancerPolicy, Local, ValidationError,
-    };
+    use crate::config::{Builder, Config, EndPoint, Endpoints, ProxyMode, ValidationError};
+
+    fn parse_config(yaml: &str) -> Config {
+        Config::from_reader(yaml.as_bytes()).unwrap()
+    }
 
     #[test]
     fn deserialise_client() {
         let config = Builder::empty()
-            .with_local(Local { port: 7000 })
-            .with_connections(ConnectionConfig::Client {
-                addresses: vec!["127.0.0.1:25999".parse().unwrap()],
-                lb_policy: Some(LoadBalancerPolicy::RoundRobin),
-            })
+            .with_port(7000)
+            .with_static(
+                vec![],
+                vec![EndPoint {
+                    name: "test".into(),
+                    address: "127.0.0.1:25999".parse().unwrap(),
+                    connection_ids: vec![],
+                }],
+            )
             .build();
-        let yaml = serde_yaml::to_string(&config).unwrap();
-        println!("{}", yaml);
+        let _ = serde_yaml::to_string(&config).unwrap();
     }
 
     #[test]
     fn deserialise_server() {
         let config = Builder::empty()
-            .with_local(Local { port: 7000 })
-            .with_connections(ConnectionConfig::Server {
-                endpoints: vec![
+            .with_port(7000)
+            .with_static(
+                vec![],
+                vec![
                     EndPoint {
                         name: String::from("No.1"),
                         address: "127.0.0.1:26000".parse().unwrap(),
@@ -244,33 +287,52 @@ mod tests {
                         connection_ids: vec!["1234".into()],
                     },
                 ],
-            })
+            )
             .build();
-        let yaml = serde_yaml::to_string(&config).unwrap();
-        println!("{}", yaml);
+        let _ = serde_yaml::to_string(&config).unwrap();
+    }
+
+    #[test]
+    fn parse_default_values() {
+        let yaml = "
+version: v1alpha1
+static:
+  endpoints:
+    - name: ep-1
+      address: 127.0.0.1:25999
+  ";
+        let config = parse_config(yaml);
+
+        assert_eq!(config.proxy.mode, ProxyMode::Server);
+        assert_eq!(config.proxy.port, 7000);
+        assert_eq!(config.proxy.id.len(), 36);
     }
 
     #[test]
     fn parse_filter_config() {
         let yaml = "
-local:
+version: v1alpha1
+proxy:
+  mode: CLIENT
+  id: client-proxy
   port: 7000 # the port to receive traffic to locally
-filters: # new filters section
-  - name: quilkin.core.v1.rate-limiter
-    config:
-      map: of arbitrary key value pairs
-      could:
-        - also
-        - be
-        - 27
-        - true
-client:
-  addresses:
-    - 127.0.0.1:7001
+static:
+  filters: # new filters section
+    - name: quilkin.core.v1.rate-limiter
+      config:
+        map: of arbitrary key value pairs
+        could:
+          - also
+          - be
+          - 27
+          - true
+  endpoints:
+    - name: endpoint-1
+      address: 127.0.0.1:7001
         ";
-        let config = Config::from_reader(yaml.as_bytes()).unwrap();
+        let config = parse_config(yaml);
 
-        let filter = config.filters.get(0).unwrap();
+        let filter = config.source.get_filters().get(0).unwrap();
         assert_eq!("quilkin.core.v1.rate-limiter", filter.name);
         let config = filter.config.as_ref().unwrap();
         let filter_config = config.as_mapping().unwrap();
@@ -290,39 +352,58 @@ client:
     }
 
     #[test]
+    fn parse_proxy() {
+        let yaml = "
+version: v1alpha1
+proxy:
+  mode: CLIENT
+  id: server-proxy
+  port: 7000
+static:
+  endpoints:
+    - name: ep-1
+      address: 127.0.0.1:25999
+  ";
+        let config = parse_config(yaml);
+
+        assert_eq!(config.proxy.mode, ProxyMode::Client);
+        assert_eq!(config.proxy.port, 7000);
+        assert_eq!(config.proxy.id.as_str(), "server-proxy");
+    }
+
+    #[test]
     fn parse_client() {
         let yaml = "
-local:
-  port: 7000
-client:
-  addresses:
-    - 127.0.0.1:25999
-  lb_policy: ROUND_ROBIN
+version: v1alpha1
+proxy:
+  mode: CLIENT
+static:
+  endpoints:
+    - name: ep-1
+      address: 127.0.0.1:25999
   ";
-        let config = Config::from_reader(yaml.as_bytes()).unwrap();
-        assert_eq!(7000, config.local.port);
-        match config.connections {
-            ConnectionConfig::Client {
-                addresses,
-                lb_policy,
-            } => {
-                assert_eq!(
-                    vec!["127.0.0.1:25999".parse::<SocketAddr>().unwrap()],
-                    addresses
-                );
-                assert_eq!(Some(LoadBalancerPolicy::RoundRobin), lb_policy);
-            }
-            ConnectionConfig::Server { .. } => panic!("Should not be a receiver"),
-        }
+        let config = parse_config(yaml);
+
+        assert_eq!(config.proxy.mode, ProxyMode::Client);
+        assert_eq!(
+            config.source.get_endpoints(),
+            Endpoints::new(vec![EndPoint::new(
+                "ep-1".into(),
+                "127.0.0.1:25999".parse().unwrap(),
+                vec![]
+            )])
+            .unwrap()
+        );
     }
 
     #[test]
     fn parse_server() {
         let yaml = "
 ---
-local:
-  port: 7000
-server:
+version: v1alpha1
+proxy:
+  mode: SERVER
+static:
   endpoints:
     - name: Game Server No. 1
       address: 127.0.0.1:26000
@@ -333,153 +414,78 @@ server:
       address: 127.0.0.1:26001
       connection_ids:
         - bmt1eTcweA== #nkuy70x";
-        let config = Config::from_reader(yaml.as_bytes()).unwrap();
-        assert_eq!(7000, config.local.port);
-        assert_eq!(0, config.filters.len());
-        match config.connections {
-            ConnectionConfig::Client { .. } => panic!("Should not be a Client"),
-            ConnectionConfig::Server { endpoints } => {
-                let expected = vec![
-                    EndPoint {
-                        name: String::from("Game Server No. 1"),
-                        address: "127.0.0.1:26000".parse().unwrap(),
-                        connection_ids: vec!["1x7ijy6".into(), "8gj3v2i".into()],
-                    },
-                    EndPoint {
-                        name: String::from("Game Server No. 2"),
-                        address: "127.0.0.1:26001".parse().unwrap(),
-                        connection_ids: vec!["nkuy70x".into()],
-                    },
-                ];
-                assert_eq!(expected, endpoints);
-            }
-        }
+        let config = parse_config(yaml);
+        assert_eq!(
+            config.source.get_endpoints(),
+            Endpoints::new(vec![
+                EndPoint::new(
+                    "Game Server No. 1".into(),
+                    "127.0.0.1:26000".parse().unwrap(),
+                    vec!["1x7ijy6".into(), "8gj3v2i".into()],
+                ),
+                EndPoint::new(
+                    String::from("Game Server No. 2"),
+                    "127.0.0.1:26001".parse().unwrap(),
+                    vec!["nkuy70x".into()],
+                ),
+            ])
+            .unwrap()
+        );
     }
 
     #[test]
     fn validate() {
         // client - valid
-        let config = Builder::empty()
-            .with_local(Local { port: 7000 })
-            .with_connections(ConnectionConfig::Client {
-                addresses: vec![
-                    "127.0.0.1:25999".parse().unwrap(),
-                    "127.0.0.1:25998".parse().unwrap(),
-                ],
-                lb_policy: Some(LoadBalancerPolicy::RoundRobin),
-            })
-            .build();
+        let yaml = "
+version: v1alpha1
+static:
+  endpoints:
+    - name: a
+      address: 127.0.0.1:25999
+    - name: b
+      address: 127.0.0.1:25998
+";
+        assert!(parse_config(yaml).validate().is_ok());
 
-        assert!(config.validate().is_ok());
-
-        // client - non unique address
-        let config = Builder::empty()
-            .with_local(Local { port: 7000 })
-            .with_connections(ConnectionConfig::Client {
-                addresses: vec![
-                    "127.0.0.1:25999".parse().unwrap(),
-                    "127.0.0.1:25999".parse().unwrap(),
-                ],
-                lb_policy: Some(LoadBalancerPolicy::RoundRobin),
-            })
-            .build();
-
+        let yaml = "
+# Non unique addresses.
+version: v1alpha1
+static:
+  endpoints:
+    - name: a
+      address: 127.0.0.1:25999
+    - name: b
+      address: 127.0.0.1:25999
+";
         assert_eq!(
-            ValidationError::NotUnique("connections.addresses".to_string()).to_string(),
-            config.validate().unwrap_err().to_string()
+            ValidationError::NotUnique("static.endpoints.address".to_string()).to_string(),
+            parse_config(yaml).validate().unwrap_err().to_string()
         );
 
-        // client - empty endpoints list
-        let config = Builder::empty()
-            .with_local(Local { port: 7000 })
-            .with_connections(ConnectionConfig::Client {
-                addresses: vec![],
-                lb_policy: Some(LoadBalancerPolicy::RoundRobin),
-            })
-            .build();
-
+        let yaml = "
+# Empty endpoints list
+version: v1alpha1
+static:
+  endpoints: []
+";
         assert_eq!(
-            ValidationError::EmptyList("connections.addresses".to_string()).to_string(),
-            config.validate().unwrap_err().to_string()
+            ValidationError::EmptyList("static.endpoints".to_string()).to_string(),
+            parse_config(yaml).validate().unwrap_err().to_string()
         );
 
-        // server - valid
-        let config = Builder::empty()
-            .with_local(Local { port: 7000 })
-            .with_connections(ConnectionConfig::Server {
-                endpoints: vec![
-                    EndPoint {
-                        name: String::from("ONE"),
-                        address: "127.0.0.1:26000".parse().unwrap(),
-                        connection_ids: vec!["1234".into(), "5678".into()],
-                    },
-                    EndPoint {
-                        name: String::from("TWO"),
-                        address: "127.0.0.1:26001".parse().unwrap(),
-                        connection_ids: vec!["1234".into()],
-                    },
-                ],
-            })
-            .build();
-        assert!(config.validate().is_ok());
-
-        // server - non unique endpoint names
-        let config = Builder::empty()
-            .with_local(Local { port: 7000 })
-            .with_connections(ConnectionConfig::Server {
-                endpoints: vec![
-                    EndPoint {
-                        name: String::from("SAME"),
-                        address: "127.0.0.1:26000".parse().unwrap(),
-                        connection_ids: vec!["1234".into(), "5678".into()],
-                    },
-                    EndPoint {
-                        name: String::from("SAME"),
-                        address: "127.0.0.1:26001".parse().unwrap(),
-                        connection_ids: vec!["1234".into()],
-                    },
-                ],
-            })
-            .build();
-
+        let yaml = "
+# Non unique endpoint names.
+version: v1alpha1
+static:
+  endpoints:
+    - name: a
+      address: 127.0.0.1:25998
+    - name: a
+      address: 127.0.0.1:25999
+";
         assert_eq!(
-            ValidationError::NotUnique("endpoint.name".to_string()).to_string(),
-            config.validate().unwrap_err().to_string()
-        );
-
-        // server - non unique addresses
-        let config = Builder::empty()
-            .with_local(Local { port: 7000 })
-            .with_connections(ConnectionConfig::Server {
-                endpoints: vec![
-                    EndPoint {
-                        name: String::from("ONE"),
-                        address: "127.0.0.1:26000".parse().unwrap(),
-                        connection_ids: vec!["1234".into(), "5678".into()],
-                    },
-                    EndPoint {
-                        name: String::from("TWO"),
-                        address: "127.0.0.1:26000".parse().unwrap(),
-                        connection_ids: vec!["1234".into()],
-                    },
-                ],
-            })
-            .build();
-
-        assert_eq!(
-            ValidationError::NotUnique("endpoint.address".to_string()).to_string(),
-            config.validate().unwrap_err().to_string()
-        );
-
-        // server - empty endpoints list
-        let config = Builder::empty()
-            .with_local(Local { port: 7000 })
-            .with_connections(ConnectionConfig::Server { endpoints: vec![] })
-            .build();
-
-        assert_eq!(
-            ValidationError::EmptyList("endpoints".to_string()).to_string(),
-            config.validate().unwrap_err().to_string()
+            ValidationError::NotUnique("static.endpoints.name".to_string()).to_string(),
+            parse_config(yaml).validate().unwrap_err().to_string()
         );
     }
 }

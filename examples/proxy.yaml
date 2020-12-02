@@ -18,9 +18,12 @@
 # Example configuration for a Quilkin Proxy that sits in front of dedicated game servers
 #
 
-local:
+version: v1alpha1
+proxy:
+  mode: SERVER # Run the proxy in server mode.
+  id: my-proxy # An identifier for the proxy instance.
   port: 7001 # the port to receive traffic to locally
-server:
+static: # Provide static configuration of endpoints
   endpoints: # array of potential endpoints to send on traffic to
     - name: Game Server No. 1
       address: 127.0.0.1:26000

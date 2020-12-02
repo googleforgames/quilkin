@@ -14,13 +14,12 @@ quilkin.extensions.filters.token_router.v1alpha1.TokenRouter
 ### Configuration Examples
 ```rust
 # let yaml = "
-local:
-  port: 7000
-filters:
-  - name: quilkin.extensions.filters.token_router.v1alpha1.TokenRouter
-    config:
-        metadataKey: myapp.com/myownkey
-server:
+version: v1alpha1
+static:
+  filters:
+    - name: quilkin.extensions.filters.token_router.v1alpha1.TokenRouter
+      config:
+          metadataKey: myapp.com/myownkey
   endpoints: 
     - name: Game Server No. 1
       address: 127.0.0.1:26000
@@ -33,7 +32,7 @@ server:
         - bmt1eTcweA==
 # ";
 # let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-# assert_eq!(config.filters.len(), 1);
+# assert_eq!(config.source.get_filters().len(), 1);
 # quilkin::proxy::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
 ```
 
@@ -76,15 +75,14 @@ For example, a configuration would look like:
 
 ```rust
 # let yaml = "
-local:
-  port: 7000
-filters:
-  - name: quilkin.extensions.filters.capture_bytes.v1alpha1.CaptureBytes # Capture and remove the authentication token
-    config:
-        size: 3
-        remove: true
-  - name: quilkin.extensions.filters.token_router.v1alpha1.TokenRouter
-server:
+version: v1alpha1
+static:
+  filters:
+    - name: quilkin.extensions.filters.capture_bytes.v1alpha1.CaptureBytes # Capture and remove the authentication token
+      config:
+          size: 3
+          remove: true
+    - name: quilkin.extensions.filters.token_router.v1alpha1.TokenRouter
   endpoints: 
     - name: Game Server No. 1
       address: 127.0.0.1:26000
@@ -97,7 +95,7 @@ server:
         - bmt1eTcweA==
 # ";
 # let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-# assert_eq!(config.filters.len(), 2);
+# assert_eq!(config.source.get_filters().len(), 2);
 # quilkin::proxy::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
 ```
 
