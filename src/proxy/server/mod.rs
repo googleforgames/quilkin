@@ -26,14 +26,17 @@ use tokio::sync::{mpsc, watch};
 use tokio::sync::{Mutex, RwLock};
 use tokio::time::{delay_for, Duration, Instant};
 
-use crate::config::{Config, EndPoint, Endpoints, ProxyMode, Source, UpstreamEndpoints};
+use crate::config::{Config, EndPoint, Source};
 use crate::extensions::{DownstreamContext, Filter, FilterChain};
 use crate::proxy::sessions::{Packet, Session, SESSION_TIMEOUT_SECONDS};
 
 use super::metrics::{start_metrics_server, Metrics};
+use crate::cluster::cluster_manager::{ClusterManager, SharedClusterManager};
 use crate::proxy::server::error::{Error, RecvFromError};
+use metrics::Metrics as ProxyMetrics;
 
 pub mod error;
+pub(super) mod metrics;
 
 type SessionMap = Arc<RwLock<HashMap<(SocketAddr, SocketAddr), Mutex<Session>>>>;
 
@@ -46,6 +49,17 @@ pub struct Server {
     pub(super) config: Arc<Config>,
     pub(super) filter_chain: Arc<FilterChain>,
     pub(super) metrics: Metrics,
+    pub(super) proxy_metrics: ProxyMetrics,
+}
+
+struct RecvFromArgs {
+    log: Logger,
+    metrics: Metrics,
+    proxy_metrics: ProxyMetrics,
+    cluster_manager: SharedClusterManager,
+    chain: Arc<FilterChain>,
+    sessions: SessionMap,
+    send_packets: mpsc::Sender<Packet>,
 }
 
 impl Server {
@@ -71,7 +85,7 @@ impl Server {
         self.run_receive_packet(send_socket, receive_packets);
         self.run_prune_sessions(&sessions);
         self.run_recv_from(
-            self.config.source.get_endpoints(),
+            self.create_cluster_manager(shutdown_rx.clone()).await?,
             self.filter_chain.clone(),
             receive_socket,
             &sessions,
@@ -80,6 +94,47 @@ impl Server {
 
         let _ = shutdown_rx.recv().await;
         Ok(())
+    }
+
+    async fn create_cluster_manager(
+        &self,
+        shutdown_rx: watch::Receiver<()>,
+    ) -> Result<SharedClusterManager> {
+        match &self.config.source {
+            Source::Static {
+                filters: _,
+                endpoints,
+            } => Ok(ClusterManager::fixed(endpoints.to_vec())),
+            Source::Dynamic {
+                filters: _,
+                management_servers,
+            } => {
+                let (cm, execution_result_rx) = ClusterManager::from_xds(
+                    self.log.clone(),
+                    management_servers.to_vec(),
+                    self.config.proxy.id.clone(),
+                    shutdown_rx,
+                )
+                .await
+                .map_err(|err| Error::Initialize(format!("{}", err)))?;
+
+                // Spawn a task to check for an error if the XDS client
+                // terminates and forward the error upstream.
+                let log = self.log.clone();
+                tokio::spawn(async move {
+                    if let Err(err) = execution_result_rx.await {
+                        // TODO: For now only log the error but we would like to
+                        //   initiate a shut down instead once this happens.
+                        error!(
+                            log,
+                            "ClusterManager XDS client terminated with an error: {}", err
+                        );
+                    }
+                });
+
+                Ok(cm)
+            }
+        }
     }
 
     /// run_prune_sessions starts the timer for pruning sessions and runs prune_sessions every
@@ -102,7 +157,7 @@ impl Server {
     // Server::recv_from() to process new incoming packets.
     fn run_recv_from(
         &self,
-        endpoints: Endpoints,
+        cluster_manager: SharedClusterManager,
         chain: Arc<FilterChain>,
         mut receive_socket: RecvHalf,
         sessions: &SessionMap,
@@ -111,16 +166,20 @@ impl Server {
         let sessions = sessions.clone();
         let log = self.log.clone();
         let metrics = self.metrics.clone();
+        let proxy_metrics = self.proxy_metrics.clone();
         tokio::spawn(async move {
             loop {
                 if let Err(err) = Server::recv_from(
-                    &log,
-                    &metrics,
-                    endpoints.clone().into(),
-                    chain.clone(),
                     &mut receive_socket,
-                    sessions.clone(),
-                    send_packets.clone(),
+                    RecvFromArgs {
+                        log: log.clone(),
+                        metrics: metrics.clone(),
+                        proxy_metrics: proxy_metrics.clone(),
+                        cluster_manager: cluster_manager.clone(),
+                        chain: chain.clone(),
+                        sessions: sessions.clone(),
+                        send_packets: send_packets.clone(),
+                    },
                 )
                 .await
                 {
@@ -133,32 +192,33 @@ impl Server {
     /// recv_from takes packets from the local socket and asynchronously
     /// processes them to send them out to endpoints.
     async fn recv_from(
-        log: &Logger,
-        metrics: &Metrics,
-        endpoints: UpstreamEndpoints,
-        chain: Arc<FilterChain>,
         receive_socket: &mut RecvHalf,
-        sessions: SessionMap,
-        send_packets: mpsc::Sender<Packet>,
+        args: RecvFromArgs,
     ) -> std::result::Result<(), RecvFromError> {
         let mut buf: Vec<u8> = vec![0; 65535];
         let (size, recv_addr) = receive_socket
             .recv_from(&mut buf)
             .await
             .map_err(RecvFromError)?;
-        let log = log.clone();
-        let metrics = metrics.clone();
         tokio::spawn(async move {
             let packet = &buf[..size];
 
             debug!(
-                log,
+                args.log,
                 "Packet Received from: {}, {}",
                 recv_addr,
                 from_utf8(packet).unwrap()
             );
 
-            let result = chain.on_downstream_receive(DownstreamContext::new(
+            let endpoints = match args.cluster_manager.read().get_all_endpoints() {
+                Some(endpoints) => endpoints,
+                None => {
+                    args.proxy_metrics.packets_dropped_no_endpoints.inc();
+                    return;
+                }
+            };
+
+            let result = args.chain.on_downstream_receive(DownstreamContext::new(
                 endpoints,
                 recv_addr,
                 packet.to_vec(),
@@ -167,21 +227,21 @@ impl Server {
             if let Some(response) = result {
                 for endpoint in response.endpoints.iter() {
                     if let Err(err) = Server::ensure_session(
-                        &log,
-                        &metrics,
-                        chain.clone(),
-                        sessions.clone(),
+                        &args.log,
+                        &args.metrics,
+                        args.chain.clone(),
+                        args.sessions.clone(),
                         recv_addr,
                         endpoint,
-                        send_packets.clone(),
+                        args.send_packets.clone(),
                     )
                     .await
                     {
-                        error!(log, "Error ensuring session exists"; "error" => %err);
+                        error!(args.log, "Error ensuring session exists"; "error" => %err);
                         continue;
                     }
 
-                    let map = sessions.read().await;
+                    let map = args.sessions.read().await;
                     let key = (recv_addr, endpoint.address);
                     match map.get(&key) {
                         Some(mtx) => {
@@ -191,12 +251,12 @@ impl Server {
                                     session.increment_expiration().await;
                                 }
                                 Err(err) => {
-                                    error!(log, "Error sending packet from session"; "error" => %err)
+                                    error!(args.log, "Error sending packet from session"; "error" => %err)
                                 }
                             };
                         }
                         None => warn!(
-                            log,
+                            args.log,
                             "Could not find session for key: ({}:{})",
                             key.0.to_string(),
                             key.1.to_string()
@@ -239,20 +299,6 @@ impl Server {
     /// log_config outputs a log of what is configured
     fn log_config(&self) {
         info!(self.log, "Starting on port {}", self.config.proxy.port);
-        let addresses = match &self.config.source {
-            Source::Static {
-                filters: _,
-                endpoints,
-            } => endpoints.iter().map(|ep| ep.address),
-        };
-        match &self.config.proxy.mode {
-            ProxyMode::Client => {
-                info!(self.log, "Client proxy configuration"; "address" => format!("{:?}", addresses))
-            }
-            ProxyMode::Server => {
-                info!(self.log, "Server proxy configuration"; "endpoints" => addresses.len())
-            }
-        };
     }
 
     /// bind binds the local configured port
@@ -500,15 +546,20 @@ mod tests {
             let endpoint_address = endpoint.addr;
             tokio::spawn(async move {
                 Server::recv_from(
-                    &t.log,
-                    &Metrics::default(),
-                    Endpoints::new(vec![EndPoint::new("".into(), endpoint_address, vec![])])
-                        .unwrap()
-                        .into(),
-                    chain,
                     &mut recv,
-                    sessions_clone,
-                    send_packets.clone(),
+                    RecvFromArgs {
+                        log: t.log.clone(),
+                        metrics: Metrics::default(),
+                        proxy_metrics: ProxyMetrics::new(&Metrics::default().registry).unwrap(),
+                        cluster_manager: ClusterManager::fixed(vec![EndPoint::new(
+                            "".into(),
+                            endpoint_address,
+                            vec![],
+                        )]),
+                        chain,
+                        sessions: sessions_clone,
+                        send_packets: send_packets.clone(),
+                    },
                 )
                 .await
             });
@@ -580,7 +631,7 @@ mod tests {
         let server = Builder::from(config).validate().unwrap().build();
 
         server.run_recv_from(
-            Endpoints::new(vec![EndPoint::new("".into(), endpoint.addr, vec![])]).unwrap(),
+            ClusterManager::fixed(vec![EndPoint::new("".into(), endpoint.addr, vec![])]),
             server.filter_chain.clone(),
             recv,
             &sessions,
