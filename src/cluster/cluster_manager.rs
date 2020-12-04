@@ -33,12 +33,11 @@ use crate::xds::ads_client::{AdsClient, ClusterUpdate, ExecutionResult};
 /// The max size of queue that provides updates from the XDS layer to the [`ClusterManager`].
 const CLUSTER_UPDATE_QUEUE_SIZE: usize = 1000;
 
-type Clusters = HashMap<String, Endpoints>;
 pub type SharedClusterManager = Arc<RwLock<ClusterManager>>;
 
 /// ClusterManager knows about all clusters and endpoints.
 pub struct ClusterManager {
-    clusters: Clusters,
+    endpoints: Option<Endpoints>,
 }
 
 /// InitializeError is returned with an error message if the
@@ -57,40 +56,26 @@ impl fmt::Display for InitializeError {
 impl std::error::Error for InitializeError {}
 
 impl ClusterManager {
-    fn new(clusters: Clusters) -> Self {
-        Self { clusters }
+    fn new(endpoints: Option<Endpoints>) -> Self {
+        Self { endpoints }
     }
 
-    fn update(&mut self, clusters: Clusters) {
-        self.clusters = clusters;
+    fn update(&mut self, endpoints: Option<Endpoints>) {
+        self.endpoints = endpoints;
     }
 
     /// Returns all endpoints known at the time of invocation.
     /// Returns `None` if there are no endpoints.
     pub fn get_all_endpoints(&self) -> Option<UpstreamEndpoints> {
-        // NOTE: We don't currently have support for consuming multiple clusters
-        // so here we assume that there is only a single cluster - Return all
-        // endpoints for _any_ cluster.
-        self.clusters
-            .iter()
-            .next()
-            .map(|(cluster_name, endpoints)| endpoints.clone().into())
+        self.endpoints.clone().map(|ep| ep.into())
     }
 
     /// Returns a ClusterManager backed by the fixed set of clusters provided in the config.
     pub fn fixed(endpoints: Vec<EndPoint>) -> SharedClusterManager {
-        Arc::new(RwLock::new(Self::new(
-            Some("static-cluster".into())
-                .into_iter()
-                .map(|cluster_name| {
-                    (
-                        cluster_name,
-                        Endpoints::new(endpoints.clone())
-                            .expect("endpoints list in config should be validated non-empty"),
-                    )
-                })
-                .collect(),
-        )))
+        Arc::new(RwLock::new(Self::new(Some(
+            Endpoints::new(endpoints)
+                .expect("endpoints list in config should be validated non-empty"),
+        ))))
     }
 
     /// Returns a ClusterManager backed by a set of XDS servers.
@@ -125,7 +110,7 @@ impl ClusterManager {
         let cluster_update =
             Self::receive_initial_cluster_update(&mut cluster_updates_rx, &mut shutdown_rx).await?;
 
-        let cluster_manager = Arc::new(RwLock::new(Self::new(Self::create_clusters_from_update(
+        let cluster_manager = Arc::new(RwLock::new(Self::new(Self::create_endpoints_from_update(
             cluster_update,
         ))));
 
@@ -141,11 +126,14 @@ impl ClusterManager {
         Ok((cluster_manager, execution_result_rx))
     }
 
-    fn create_clusters_from_update(update: ClusterUpdate) -> Clusters {
-        update
+    fn create_endpoints_from_update(update: ClusterUpdate) -> Option<Endpoints> {
+        // NOTE: We don't currently have support for consuming multiple clusters
+        // so here gather all endpoints into the same set, ignoring what cluster they
+        // belong to.
+        let endpoints = update
             .into_iter()
-            .filter_map(|(name, cluster)| {
-                let endpoints = cluster
+            .fold(vec![], |mut endpoints, (_name, cluster)| {
+                let cluster_endpoints = cluster
                     .localities
                     .into_iter()
                     .map(|(_, endpoints)| {
@@ -154,16 +142,16 @@ impl ClusterManager {
                             .into_iter()
                             .map(|ep| EndPoint::new("N/A".into(), ep.address, vec![]))
                     })
-                    .flatten()
-                    .collect::<Vec<_>>();
+                    .flatten();
+                endpoints.extend(cluster_endpoints);
 
-                // If we get an error it means that the list is empty,
-                // in which case we forget the cluster entirely in turn.
-                Endpoints::new(endpoints)
-                    .ok()
-                    .map(|endpoints| (name, endpoints))
-            })
-            .collect()
+                endpoints
+            });
+
+        match Endpoints::new(endpoints) {
+            Ok(endpoints) => Some(endpoints),
+            Err(EmptyListError) => None,
+        }
     }
 
     // Spawns a task that runs an ADS client. Cluster updates from the client
@@ -230,7 +218,7 @@ impl ClusterManager {
                     update = cluster_updates_rx.recv() => {
                         match update {
                             Some(update) => {
-                                let update = Self::create_clusters_from_update(update);
+                                let update = Self::create_endpoints_from_update(update);
                                 debug!(log, "Received a cluster update.");
                                 cluster_manager.write().update(update);
                             }
