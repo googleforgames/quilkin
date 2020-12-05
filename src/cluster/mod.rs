@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+use serde_json::value::Value;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 
@@ -30,6 +31,7 @@ pub(crate) mod cluster_manager {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Endpoint {
     pub address: SocketAddr,
+    pub metadata: Option<Value>,
 }
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
