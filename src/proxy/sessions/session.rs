@@ -16,7 +16,6 @@
 
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::result;
-use std::str::from_utf8;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering::Relaxed;
 use std::sync::Arc;
@@ -29,8 +28,8 @@ use tokio::sync::{mpsc, watch, RwLock};
 use tokio::time::{Duration, Instant};
 
 use crate::config::EndPoint;
+use crate::debug;
 use crate::extensions::{Filter, FilterChain, UpstreamContext};
-
 use crate::proxy::sessions::error::Error;
 use crate::proxy::sessions::metrics::Metrics;
 
@@ -213,7 +212,10 @@ impl Session {
             from,
             to,
         } = packet_ctx;
-        debug!(log, "Received packet"; "from" => from, "endpoint_name" => &endpoint.name, "endpoint_addr" => &endpoint.address, "contents" => from_utf8(packet).unwrap());
+
+        debug!(log, "Received packet"; "from" => from, "endpoint_name" => &endpoint.name,
+            "endpoint_addr" => &endpoint.address, 
+            "contents" => debug::bytes_to_string(packet.to_vec()));
         Session::inc_expiration(expiration).await;
 
         if let Some(response) =
@@ -242,7 +244,9 @@ impl Session {
 
     /// Sends a packet to the Session's dest.
     pub async fn send_to(&mut self, buf: &[u8]) -> Result<Option<usize>> {
-        debug!(self.log, "Sending packet"; "dest_name" => &self.dest.name, "dest_address" => &self.dest.address, "contents" => from_utf8(buf).unwrap());
+        debug!(self.log, "Sending packet"; "dest_name" => &self.dest.name,
+        "dest_address" => &self.dest.address, 
+        "contents" => debug::bytes_to_string(buf.to_vec()));
 
         self.send
             .send_to(buf, &self.dest.address)
@@ -282,6 +286,8 @@ impl Drop for Session {
 
 #[cfg(test)]
 mod tests {
+    use std::str::from_utf8;
+
     use prometheus::Registry;
     use slog::info;
     use tokio::time;

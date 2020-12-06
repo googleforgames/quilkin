@@ -23,6 +23,7 @@
 
 mod cluster;
 pub mod config;
+pub(crate) mod debug;
 pub mod extensions;
 pub mod metrics;
 pub mod proxy;
