@@ -21,23 +21,23 @@
 // and we will need to acquire a read lock with every packet that is processed
 // to be able to capture the current endpoint state and pass it to Filters.
 use parking_lot::RwLock;
-use slog::{debug, warn, Logger};
+use slog::{debug, o, warn, Logger};
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::{fmt, sync::Arc};
 use tokio::sync::{mpsc, oneshot, watch};
 
-use crate::config::{EmptyListError, EndPoint, Endpoints, UpstreamEndpoints};
+use crate::config::{EmptyListError, EndPoint, Endpoints, ManagementServer, UpstreamEndpoints};
 use crate::xds::ads_client::{AdsClient, ClusterUpdate, ExecutionResult};
 
 /// The max size of queue that provides updates from the XDS layer to the [`ClusterManager`].
 const CLUSTER_UPDATE_QUEUE_SIZE: usize = 1000;
 
-type Clusters = HashMap<String, Vec<SocketAddr>>;
+pub type SharedClusterManager = Arc<RwLock<ClusterManager>>;
 
 /// ClusterManager knows about all clusters and endpoints.
 pub struct ClusterManager {
-    clusters: Clusters,
+    endpoints: Option<Endpoints>,
 }
 
 /// InitializeError is returned with an error message if the
@@ -56,72 +56,50 @@ impl fmt::Display for InitializeError {
 impl std::error::Error for InitializeError {}
 
 impl ClusterManager {
-    fn new(clusters: Clusters) -> Self {
-        Self { clusters }
+    fn new(endpoints: Option<Endpoints>) -> Self {
+        Self { endpoints }
     }
 
-    fn update(&mut self, clusters: Clusters) {
-        self.clusters = clusters;
+    fn update(&mut self, endpoints: Option<Endpoints>) {
+        self.endpoints = endpoints;
     }
 
     /// Returns all endpoints known at the time of invocation.
     /// Returns `None` if there are no endpoints.
     pub fn get_all_endpoints(&self) -> Option<UpstreamEndpoints> {
-        let endpoints = self
-            .clusters
-            .iter()
-            .map(|(name, addresses)| {
-                addresses
-                    .iter()
-                    .map(move |addr| EndPoint::new(name.clone(), *addr, vec![]))
-            })
-            .flatten()
-            .collect();
-
-        match Endpoints::new(endpoints) {
-            Ok(endpoints) => Some(endpoints.into()),
-            Err(EmptyListError) => None,
-        }
+        self.endpoints.clone().map(|ep| ep.into())
     }
 
     /// Returns a ClusterManager backed by the fixed set of clusters provided in the config.
-    pub fn fixed(endpoints: &[(String, SocketAddr)]) -> ClusterManager {
-        Self::new(
-            endpoints
-                .iter()
-                .cloned()
-                .map(|(name, addr)| (name, vec![addr]))
-                .collect(),
-        )
+    pub fn fixed(endpoints: Vec<EndPoint>) -> SharedClusterManager {
+        Arc::new(RwLock::new(Self::new(Some(
+            Endpoints::new(endpoints)
+                .expect("endpoints list in config should be validated non-empty"),
+        ))))
     }
 
     /// Returns a ClusterManager backed by a set of XDS servers.
     /// This function starts an XDS client in the background that talks to
     /// one of the provided servers.
-    /// Multiple servers are provided for redundancy - the servers will be
+    /// Multiple management servers can be provided for redundancy - the servers will be
     /// connected to in turn only in the case of failure.
     /// The set of clusters is continuously updated based on responses
     /// from the XDS server.
     /// The returned contains the XDS client's execution result after termination.
-    async fn dynamic<'a>(
-        log: Logger,
-        server_addresses: Vec<String>,
-        xds_node_id: Option<String>,
+    pub async fn from_xds<'a>(
+        base_logger: Logger,
+        management_servers: Vec<ManagementServer>,
+        xds_node_id: String,
         mut shutdown_rx: watch::Receiver<()>,
-    ) -> Result<
-        (
-            Arc<RwLock<ClusterManager>>,
-            oneshot::Receiver<ExecutionResult>,
-        ),
-        InitializeError,
-    > {
+    ) -> Result<(SharedClusterManager, oneshot::Receiver<ExecutionResult>), InitializeError> {
+        let log = base_logger.new(o!("source" => "cluster::ClusterManager"));
         let (cluster_updates_tx, mut cluster_updates_rx) =
             mpsc::channel::<ClusterUpdate>(CLUSTER_UPDATE_QUEUE_SIZE);
         let (execution_result_tx, execution_result_rx) = oneshot::channel::<ExecutionResult>();
         Self::spawn_ads_client(
             log.clone(),
-            xds_node_id.unwrap_or_default(),
-            server_addresses,
+            xds_node_id,
+            management_servers,
             cluster_updates_tx,
             execution_result_tx,
             shutdown_rx.clone(),
@@ -132,7 +110,7 @@ impl ClusterManager {
         let cluster_update =
             Self::receive_initial_cluster_update(&mut cluster_updates_rx, &mut shutdown_rx).await?;
 
-        let cluster_manager = Arc::new(RwLock::new(Self::new(Self::create_clusters_from_update(
+        let cluster_manager = Arc::new(RwLock::new(Self::new(Self::create_endpoints_from_update(
             cluster_update,
         ))));
 
@@ -148,19 +126,32 @@ impl ClusterManager {
         Ok((cluster_manager, execution_result_rx))
     }
 
-    fn create_clusters_from_update(update: ClusterUpdate) -> Clusters {
-        update
+    fn create_endpoints_from_update(update: ClusterUpdate) -> Option<Endpoints> {
+        // NOTE: We don't currently have support for consuming multiple clusters
+        // so here gather all endpoints into the same set, ignoring what cluster they
+        // belong to.
+        let endpoints = update
             .into_iter()
-            .map(|(name, cluster)| {
-                let addresses = cluster
+            .fold(vec![], |mut endpoints, (_name, cluster)| {
+                let cluster_endpoints = cluster
                     .localities
                     .into_iter()
-                    .map(|(_, endpoints)| endpoints.endpoints.into_iter().map(|ep| ep.address))
-                    .flatten()
-                    .collect::<Vec<_>>();
-                (name, addresses)
-            })
-            .collect()
+                    .map(|(_, endpoints)| {
+                        endpoints
+                            .endpoints
+                            .into_iter()
+                            .map(|ep| EndPoint::new("N/A".into(), ep.address, vec![]))
+                    })
+                    .flatten();
+                endpoints.extend(cluster_endpoints);
+
+                endpoints
+            });
+
+        match Endpoints::new(endpoints) {
+            Ok(endpoints) => Some(endpoints),
+            Err(EmptyListError) => None,
+        }
     }
 
     // Spawns a task that runs an ADS client. Cluster updates from the client
@@ -168,7 +159,7 @@ impl ClusterManager {
     fn spawn_ads_client(
         log: Logger,
         node_id: String,
-        server_addresses: Vec<String>,
+        management_servers: Vec<ManagementServer>,
         cluster_updates_tx: mpsc::Sender<ClusterUpdate>,
         execution_result_tx: oneshot::Sender<ExecutionResult>,
         shutdown_rx: watch::Receiver<()>,
@@ -178,7 +169,7 @@ impl ClusterManager {
                 .run(
                     log.clone(),
                     node_id,
-                    server_addresses,
+                    management_servers,
                     cluster_updates_tx,
                     shutdown_rx,
                 )
@@ -227,7 +218,7 @@ impl ClusterManager {
                     update = cluster_updates_rx.recv() => {
                         match update {
                             Some(update) => {
-                                let update = Self::create_clusters_from_update(update);
+                                let update = Self::create_endpoints_from_update(update);
                                 debug!(log, "Received a cluster update.");
                                 cluster_manager.write().update(update);
                             }
