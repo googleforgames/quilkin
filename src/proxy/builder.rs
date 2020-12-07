@@ -16,6 +16,7 @@
 
 use crate::config::{Config, ValidationError};
 use crate::extensions::{default_registry, CreateFilterError, FilterChain, FilterRegistry};
+use crate::proxy::server::metrics::Metrics as ProxyMetrics;
 use crate::proxy::{Metrics, Server};
 use slog::{o, Drain, Logger};
 use std::{
@@ -136,6 +137,8 @@ impl Builder<Validated> {
         Server {
             log: self.log.new(o!("source" => "server::Server")),
             config: self.config,
+            proxy_metrics: ProxyMetrics::new(&self.metrics.registry.clone())
+                .expect("metrics should be setup properly"),
             metrics: self.metrics,
             filter_chain: self.validation_status.0,
         }

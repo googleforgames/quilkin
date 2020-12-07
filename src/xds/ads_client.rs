@@ -27,6 +27,7 @@ use tonic::{
 };
 
 use crate::cluster::Cluster;
+use crate::config::ManagementServer;
 use crate::xds::cluster::ClusterManager;
 use crate::xds::envoy::config::core::v3::Node;
 use crate::xds::envoy::service::discovery::v3::{
@@ -81,7 +82,7 @@ impl AdsClient {
         self,
         base_logger: Logger,
         node_id: String,
-        server_addresses: Vec<String>,
+        management_servers: Vec<ManagementServer>,
         cluster_updates_tx: mpsc::Sender<ClusterUpdate>,
         mut shutdown_rx: watch::Receiver<()>,
     ) -> ExecutionResult {
@@ -101,9 +102,9 @@ impl AdsClient {
 
             // Pick a server to talk to.
             let server_addr = {
-                let server_addr = server_addresses
-                    .get(next_server_index % server_addresses.len())
-                    .cloned()
+                let server_addr = management_servers
+                    .get(next_server_index % management_servers.len())
+                    .map(|server| server.address.clone())
                     // We have previously validated that a config provides at least one
                     // server address so this default value shouldn't be necessary.
                     .unwrap_or_else(|| "127.0.0.1:18000".into());

@@ -21,6 +21,7 @@ use std::net::SocketAddr;
 
 use base64_serde::base64_serde_type;
 use serde::{Deserialize, Serialize};
+use tonic::transport::Endpoint as TonicEndpoint;
 use uuid::Uuid;
 
 mod builder;
@@ -30,8 +31,10 @@ mod error;
 pub use crate::config::endpoints::{
     EmptyListError, Endpoints, UpstreamEndpoints, UpstreamEndpointsIter,
 };
+use crate::config::error::ValueInvalidArgs;
 pub use builder::Builder;
 pub use error::ValidationError;
+use std::convert::TryInto;
 
 base64_serde_type!(Base64Standard, base64::STANDARD);
 
@@ -93,6 +96,11 @@ pub struct Admin {
     address: Option<AdminAddress>,
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+pub struct ManagementServer {
+    pub address: String,
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub enum Source {
     #[serde(rename = "static")]
@@ -101,6 +109,13 @@ pub enum Source {
         filters: Vec<Filter>,
 
         endpoints: Vec<EndPoint>,
+    },
+    #[serde(rename = "dynamic")]
+    Dynamic {
+        #[serde(default)]
+        filters: Vec<Filter>,
+
+        management_servers: Vec<ManagementServer>,
     },
 }
 
@@ -130,18 +145,11 @@ impl Source {
                 filters,
                 endpoints: _,
             } => filters,
+            Source::Dynamic {
+                filters,
+                management_servers: _,
+            } => filters,
         }
-    }
-
-    pub fn get_endpoints(&self) -> Endpoints {
-        let endpoints = match &self {
-            Source::Static {
-                filters: _,
-                endpoints,
-            } => endpoints.clone(),
-        };
-
-        Endpoints::new(endpoints).expect("endpoints list in config should be validated non-empty")
     }
 }
 
@@ -239,6 +247,45 @@ impl Source {
 
                 Ok(())
             }
+            Source::Dynamic {
+                filters: _,
+                management_servers,
+            } => {
+                if management_servers.is_empty() {
+                    return Err(ValidationError::EmptyList(
+                        "dynamic.management_servers".to_string(),
+                    ));
+                }
+
+                if management_servers
+                    .iter()
+                    .map(|server| &server.address)
+                    .collect::<HashSet<_>>()
+                    .len()
+                    != management_servers.len()
+                {
+                    return Err(ValidationError::NotUnique(
+                        "dynamic.management_servers.address".to_string(),
+                    ));
+                }
+
+                for server in management_servers {
+                    let res: Result<TonicEndpoint, _> = server.address.clone().try_into();
+                    if res.is_err() {
+                        return Err(ValidationError::ValueInvalid(ValueInvalidArgs {
+                            field: "dynamic.management_servers.address".into(),
+                            clarification: Some("the provided value must be a valid URI".into()),
+                            examples: Some(vec![
+                                "http://127.0.0.1:8080".into(),
+                                "127.0.0.1:8081".into(),
+                                "example.com".into(),
+                            ]),
+                        }));
+                    }
+                }
+
+                Ok(())
+            }
         }
     }
 }
@@ -247,10 +294,36 @@ impl Source {
 mod tests {
     use serde_yaml::Value;
 
-    use crate::config::{Builder, Config, EndPoint, Endpoints, ProxyMode, ValidationError};
+    use crate::config::{
+        Builder, Config, EndPoint, ManagementServer, ProxyMode, Source, ValidationError,
+    };
 
     fn parse_config(yaml: &str) -> Config {
         Config::from_reader(yaml.as_bytes()).unwrap()
+    }
+
+    fn assert_static_endpoints(source: &Source, expected_endpoints: Vec<EndPoint>) {
+        match source {
+            Source::Static {
+                filters: _,
+                endpoints,
+            } => {
+                assert_eq!(&expected_endpoints, endpoints,);
+            }
+            _ => unreachable!("expected static config source"),
+        }
+    }
+
+    fn assert_management_servers(source: &Source, expected: Vec<ManagementServer>) {
+        match source {
+            Source::Dynamic {
+                filters: _,
+                management_servers,
+            } => {
+                assert_eq!(&expected, management_servers,);
+            }
+            _ => unreachable!("expected dynamic config source"),
+        }
     }
 
     #[test]
@@ -385,14 +458,13 @@ static:
         let config = parse_config(yaml);
 
         assert_eq!(config.proxy.mode, ProxyMode::Client);
-        assert_eq!(
-            config.source.get_endpoints(),
-            Endpoints::new(vec![EndPoint::new(
+        assert_static_endpoints(
+            &config.source,
+            vec![EndPoint::new(
                 "ep-1".into(),
                 "127.0.0.1:25999".parse().unwrap(),
-                vec![]
-            )])
-            .unwrap()
+                vec![],
+            )],
         );
     }
 
@@ -415,9 +487,9 @@ static:
       connection_ids:
         - bmt1eTcweA== #nkuy70x";
         let config = parse_config(yaml);
-        assert_eq!(
-            config.source.get_endpoints(),
-            Endpoints::new(vec![
+        assert_static_endpoints(
+            &config.source,
+            vec![
                 EndPoint::new(
                     "Game Server No. 1".into(),
                     "127.0.0.1:26000".parse().unwrap(),
@@ -428,8 +500,92 @@ static:
                     "127.0.0.1:26001".parse().unwrap(),
                     vec!["nkuy70x".into()],
                 ),
-            ])
-            .unwrap()
+            ],
+        );
+    }
+
+    #[test]
+    fn parse_dynamic_source() {
+        let yaml = "
+version: v1alpha1
+dynamic:
+  filters:
+    - name: quilkin.core.v1.rate-limiter
+      config:
+        map: of arbitrary key value pairs
+        could:
+          - also
+          - be
+          - 27
+          - true
+  management_servers:
+    - address: 127.0.0.1:25999
+    - address: 127.0.0.1:30000
+  ";
+        let config = parse_config(yaml);
+
+        let filter = config.source.get_filters().get(0).unwrap();
+        assert_eq!("quilkin.core.v1.rate-limiter", filter.name);
+        let filter_config = filter.config.as_ref().unwrap().as_mapping().unwrap();
+
+        let key = Value::from("map");
+        assert_eq!(
+            "of arbitrary key value pairs",
+            filter_config.get(&key).unwrap().as_str().unwrap()
+        );
+
+        assert_management_servers(
+            &config.source,
+            vec![
+                ManagementServer {
+                    address: "127.0.0.1:25999".into(),
+                },
+                ManagementServer {
+                    address: "127.0.0.1:30000".into(),
+                },
+            ],
+        );
+    }
+
+    #[test]
+    fn validate_dynamic_source() {
+        let yaml = "
+# Valid management address list.
+version: v1alpha1
+dynamic:
+  management_servers:
+    - address: 127.0.0.1:25999
+    - address: example.com
+    - address: http://127.0.0.1:30000
+  ";
+        assert!(parse_config(yaml).validate().is_ok());
+
+        let yaml = "
+# Invalid management address.
+version: v1alpha1
+dynamic:
+  management_servers:
+    - address: 'not an endpoint address'
+  ";
+        match parse_config(yaml).validate().unwrap_err() {
+            ValidationError::ValueInvalid(args) => {
+                assert_eq!(args.field, "dynamic.management_servers.address".to_string());
+            }
+            err => unreachable!("expected invalid value error: got {}", err),
+        }
+
+        let yaml = "
+# Duplicate management addresses.
+version: v1alpha1
+dynamic:
+  management_servers:
+    - address: 127.0.0.1:25999
+    - address: 127.0.0.1:25999
+  ";
+        assert_eq!(
+            ValidationError::NotUnique("dynamic.management_servers.address".to_string())
+                .to_string(),
+            parse_config(yaml).validate().unwrap_err().to_string()
         );
     }
 
