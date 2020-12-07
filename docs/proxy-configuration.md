@@ -53,6 +53,7 @@ properties:
     type: object
     description: |
       Static configuration of endpoints and filters.
+      NOTE: Exactly one of `static` or `dynamic` can be specified.
     properties:
       filter:
         '$ref': '#/definitions/filterchain'
@@ -60,6 +61,32 @@ properties:
         '$ref': '#/definitions/endpoints'
     required:
       - endpoints
+  dynamic:
+    type: object
+    description: |
+      Dynamic configuration of endpoints and filters.
+      NOTE: Exactly one of `static` or `dynamic` can be specified.
+    properties:
+      filter:
+        '$ref': '#/definitions/filterchain'
+      management_servers:
+        type: array
+        description: |
+          A list of XDS management servers to fetch configuration from.
+          Multiple servers can be provided for redundancy for the proxy to
+          fall back to upon error.
+        items:
+          type: object
+            description: |
+              Configuration for a management server.
+            properties:
+              address:
+                type: string
+                description: |
+                  Address of the management server. This must have the `http(s)` scheme prefix.
+                  Example: `http://example.com`
+    required:
+      - management_servers
 
 required:
   - version
