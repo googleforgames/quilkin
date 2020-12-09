@@ -20,7 +20,7 @@ use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering::Relaxed;
 use std::sync::Arc;
 
-use slog::{debug, error, o, Logger};
+use slog::{debug, error, o, trace, Logger};
 use tokio::net::udp::{RecvHalf, SendHalf};
 use tokio::net::UdpSocket;
 use tokio::select;
@@ -28,10 +28,10 @@ use tokio::sync::{mpsc, watch, RwLock};
 use tokio::time::{Duration, Instant};
 
 use crate::config::EndPoint;
-use crate::debug;
 use crate::extensions::{Filter, FilterChain, UpstreamContext};
 use crate::proxy::sessions::error::Error;
 use crate::proxy::sessions::metrics::Metrics;
+use crate::utils::debug;
 
 type Result<T> = std::result::Result<T, Error>;
 
@@ -213,7 +213,7 @@ impl Session {
             to,
         } = packet_ctx;
 
-        debug!(log, "Received packet"; "from" => from, "endpoint_name" => &endpoint.name,
+        trace!(log, "Received packet"; "from" => from, "endpoint_name" => &endpoint.name,
             "endpoint_addr" => &endpoint.address, 
             "contents" => debug::bytes_to_string(packet.to_vec()));
         Session::inc_expiration(expiration).await;
@@ -244,7 +244,7 @@ impl Session {
 
     /// Sends a packet to the Session's dest.
     pub async fn send_to(&mut self, buf: &[u8]) -> Result<Option<usize>> {
-        debug!(self.log, "Sending packet"; "dest_name" => &self.dest.name,
+        trace!(self.log, "Sending packet"; "dest_name" => &self.dest.name,
         "dest_address" => &self.dest.address, 
         "contents" => debug::bytes_to_string(buf.to_vec()));
 

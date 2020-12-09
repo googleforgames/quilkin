@@ -13,6 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+//!
+//! The `debug` module is for functionality related to realtime debugging of this project.
+//!
 
 /// Attempt to convert a packet into a string, if it is one, otherwise return some human
 /// readable details about the packet.

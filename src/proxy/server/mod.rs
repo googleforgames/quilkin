@@ -18,7 +18,7 @@ use std::collections::HashMap;
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::sync::Arc;
 
-use slog::{debug, error, info, warn, Logger};
+use slog::{debug, error, info, trace, warn, Logger};
 use tokio::net::udp::{RecvHalf, SendHalf};
 use tokio::net::UdpSocket;
 use tokio::sync::{mpsc, watch};
@@ -29,10 +29,10 @@ use metrics::Metrics as ProxyMetrics;
 
 use crate::cluster::cluster_manager::{ClusterManager, SharedClusterManager};
 use crate::config::{Config, EndPoint, Source};
-use crate::debug;
 use crate::extensions::{DownstreamContext, Filter, FilterChain};
 use crate::proxy::server::error::{Error, RecvFromError};
 use crate::proxy::sessions::{Packet, Session, SESSION_TIMEOUT_SECONDS};
+use crate::utils::debug;
 
 use super::metrics::{start_metrics_server, Metrics};
 
@@ -204,7 +204,7 @@ impl Server {
         tokio::spawn(async move {
             let packet = &buf[..size];
 
-            debug!(
+            trace!(
                 args.log,
                 "Packet Received";
                 "from" => recv_addr,

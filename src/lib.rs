@@ -23,11 +23,11 @@
 
 mod cluster;
 pub mod config;
-pub(crate) mod debug;
 pub mod extensions;
 pub mod metrics;
 pub mod proxy;
 pub mod test_utils;
+pub(crate) mod utils;
 pub(crate) mod xds;
 
 #[cfg(doctest)]
