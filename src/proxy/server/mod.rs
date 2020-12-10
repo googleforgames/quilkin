@@ -16,24 +16,25 @@
 
 use std::collections::HashMap;
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
-use std::str::from_utf8;
 use std::sync::Arc;
 
-use slog::{debug, error, info, warn, Logger};
+use slog::{debug, error, info, trace, warn, Logger};
 use tokio::net::udp::{RecvHalf, SendHalf};
 use tokio::net::UdpSocket;
 use tokio::sync::{mpsc, watch};
 use tokio::sync::{Mutex, RwLock};
 use tokio::time::{delay_for, Duration, Instant};
 
+use metrics::Metrics as ProxyMetrics;
+
+use crate::cluster::cluster_manager::{ClusterManager, SharedClusterManager};
 use crate::config::{Config, EndPoint, Source};
 use crate::extensions::{DownstreamContext, Filter, FilterChain};
+use crate::proxy::server::error::{Error, RecvFromError};
 use crate::proxy::sessions::{Packet, Session, SESSION_TIMEOUT_SECONDS};
+use crate::utils::debug;
 
 use super::metrics::{start_metrics_server, Metrics};
-use crate::cluster::cluster_manager::{ClusterManager, SharedClusterManager};
-use crate::proxy::server::error::{Error, RecvFromError};
-use metrics::Metrics as ProxyMetrics;
 
 pub mod error;
 pub(super) mod metrics;
@@ -203,11 +204,11 @@ impl Server {
         tokio::spawn(async move {
             let packet = &buf[..size];
 
-            debug!(
+            trace!(
                 args.log,
-                "Packet Received from: {}, {}",
-                recv_addr,
-                from_utf8(packet).unwrap()
+                "Packet Received";
+                "from" => recv_addr,
+                "contents" => debug::bytes_to_string(packet.to_vec()),
             );
 
             let endpoints = match args.cluster_manager.read().get_all_endpoints() {
@@ -282,7 +283,7 @@ impl Server {
                     log,
                     "Sending packet back to origin";
                     "origin" => packet.dest(),
-                    "contents" => String::from_utf8(packet.contents().clone()).unwrap(),
+                    "contents" => debug::bytes_to_string(packet.contents().clone()),
                 );
 
                 if let Err(err) = send_socket
@@ -384,14 +385,14 @@ mod tests {
 
     use crate::config;
     use crate::config::{Builder as ConfigBuilder, EndPoint, ProxyMode};
+    use crate::extensions::FilterRegistry;
     use crate::proxy::sessions::{Packet, SESSION_TIMEOUT_SECONDS};
+    use crate::proxy::Builder;
     use crate::test_utils::{
         config_with_dummy_endpoint, SplitSocket, TestFilter, TestFilterFactory, TestHelper,
     };
 
     use super::*;
-    use crate::extensions::FilterRegistry;
-    use crate::proxy::Builder;
 
     #[tokio::test]
     async fn run_server() {
