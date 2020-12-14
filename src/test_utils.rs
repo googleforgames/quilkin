@@ -14,10 +14,12 @@
  * limitations under the License.
  */
 
+use std::future::Future;
 /// Common utilities for testing
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::str::from_utf8;
 use std::sync::Arc;
+use std::time::Duration;
 
 use slog::{o, warn, Drain, Logger};
 use slog_term::{FullFormat, PlainSyncDecorator};
@@ -359,6 +361,19 @@ where
     )) {
         None => unreachable!("should return a result"),
         Some(response) => assert_eq!(contents, response.contents),
+    }
+}
+
+/// Awaits the provided future with a timeout.
+/// Returns the future's result or None after the timeout elapses.
+pub async fn await_with_timeout<T>(fut: impl Future<Output = T>, timeout: Duration) -> Option<T> {
+    tokio::select! {
+        result = fut => {
+            Some(result)
+        }
+        _ = tokio::time::delay_for(timeout) => {
+            None
+        }
     }
 }
 
