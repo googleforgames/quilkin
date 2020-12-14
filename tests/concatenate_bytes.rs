@@ -43,11 +43,7 @@ bytes: YWJj #abc
                     name: ConcatBytesFactory::default().name(),
                     config: serde_yaml::from_str(yaml).unwrap(),
                 }],
-                vec![EndPoint {
-                    name: "server".to_string(),
-                    address: echo,
-                    connection_ids: vec![],
-                }],
+                vec![EndPoint::new(echo)],
             )
             .build();
 

@@ -1,5 +1,6 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 
+use crate::config::extract_endpoint_tokens;
 use crate::xds::envoy::config::core::v3::Metadata;
 use prost_types::value::Kind;
 use prost_types::Value as ProstValue;
@@ -7,15 +8,24 @@ use serde_json::map::Map as JsonMap;
 use serde_json::value::Value as JSONValue;
 use serde_json::Number as JSONNumber;
 
-/// Converts an XDS Metadata object into an equivalent JSON object.
-pub fn to_json(metadata: Metadata) -> Result<JSONValue, String> {
+/// Converts an XDS Metadata object into endpoint specific values and JSON values.
+pub fn parse_endpoint_metadata(
+    metadata: Metadata,
+) -> Result<(JSONValue, HashSet<Vec<u8>>), String> {
+    let mut metadata = to_json_map(metadata)?;
+    let tokens = extract_endpoint_tokens(&mut metadata)?;
+    Ok((JSONValue::Object(metadata), tokens))
+}
+
+/// Converts an XDS Metadata object into an equivalent JSON map.
+fn to_json_map(metadata: Metadata) -> Result<JsonMap<String, JSONValue>, String> {
     let mut map = JsonMap::new();
 
     for (key, prost_struct) in metadata.filter_metadata {
         map.insert(key, prost_map_to_json_value(prost_struct.fields)?);
     }
 
-    Ok(JSONValue::Object(map))
+    Ok(map)
 }
 
 fn prost_kind_to_json_value(key: &str, kind: Kind) -> Result<JSONValue, String> {
@@ -60,23 +70,20 @@ fn prost_map_to_json_value(prost_map: BTreeMap<String, ProstValue>) -> Result<JS
 #[cfg(test)]
 mod tests {
     use crate::xds::envoy::config::core::v3::Metadata;
-    use crate::xds::metadata::to_json;
+    use crate::xds::metadata::{parse_endpoint_metadata, to_json_map};
     use prost_types::value::Kind;
     use prost_types::Struct as ProstStruct;
     use prost_types::{ListValue, Value as ProstValue};
     use serde_json::map::Map as JsonMap;
     use serde_json::value::Value as JSONValue;
-    use std::collections::{BTreeMap, HashMap};
+    use std::collections::{BTreeMap, HashMap, HashSet};
 
     #[test]
     fn empty_metadata() {
         let metadata = Metadata {
             filter_metadata: HashMap::new(),
         };
-        assert_eq!(
-            to_json(metadata).unwrap(),
-            JSONValue::Object(JsonMap::new())
-        )
+        assert_eq!(to_json_map(metadata).unwrap(), JsonMap::new())
     }
 
     #[test]
@@ -155,7 +162,7 @@ mod tests {
             .collect(),
         };
 
-        assert_eq!(to_json(metadata).unwrap(), expected);
+        assert_eq!(JSONValue::Object(to_json_map(metadata).unwrap()), expected);
     }
 
     #[test]
@@ -250,6 +257,106 @@ mod tests {
             .collect(),
         };
 
-        assert_eq!(to_json(metadata).unwrap(), expected);
+        assert_eq!(JSONValue::Object(to_json_map(metadata).unwrap()), expected);
+    }
+
+    #[test]
+    fn prost_endpoint_metadata() {
+        let expected = serde_json::json!({
+            "user-field": {}
+        });
+
+        let metadata = Metadata {
+            filter_metadata: vec![
+                (
+                    "user-field".into(),
+                    ProstStruct {
+                        fields: BTreeMap::new(),
+                    },
+                ),
+                (
+                    "quilkin.dev".into(),
+                    ProstStruct {
+                        fields: vec![(
+                            "endpoint.tokens".into(),
+                            ProstValue {
+                                kind: Some(Kind::ListValue(ListValue {
+                                    values: vec![
+                                        ProstValue {
+                                            kind: Some(Kind::StringValue("MXg3aWp5Ng==".into())),
+                                        },
+                                        ProstValue {
+                                            kind: Some(Kind::StringValue("OGdqM3YyaQ==".into())),
+                                        },
+                                    ],
+                                })),
+                            },
+                        )]
+                        .into_iter()
+                        .collect(),
+                    },
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        };
+
+        let (metadata, tokens) = parse_endpoint_metadata(metadata).unwrap();
+
+        assert_eq!(metadata, expected);
+        assert_eq!(
+            tokens,
+            vec!["1x7ijy6".into(), "8gj3v2i".into()]
+                .into_iter()
+                .collect::<HashSet<_>>()
+        );
+    }
+
+    #[test]
+    fn prost_invalid_endpoint_metadata() {
+        let invalid_values = vec![
+            // Not a list.
+            ProstValue {
+                kind: Some(Kind::StringValue("MXg3aWp5Ng==".into())),
+            },
+            // Not a string value
+            ProstValue {
+                kind: Some(Kind::ListValue(ListValue {
+                    values: vec![
+                        ProstValue {
+                            kind: Some(Kind::StringValue("MXg3aWp5Ng==".into())),
+                        },
+                        ProstValue {
+                            kind: Some(Kind::NumberValue(12.0)),
+                        },
+                    ],
+                })),
+            },
+            // Not a base64 string value
+            ProstValue {
+                kind: Some(Kind::ListValue(ListValue {
+                    values: vec![ProstValue {
+                        kind: Some(Kind::StringValue("cat".into())),
+                    }],
+                })),
+            },
+        ];
+
+        for invalid in invalid_values {
+            let metadata = Metadata {
+                filter_metadata: vec![(
+                    "quilkin.dev".into(),
+                    ProstStruct {
+                        fields: vec![("endpoint.tokens".into(), invalid)]
+                            .into_iter()
+                            .collect(),
+                    },
+                )]
+                .into_iter()
+                .collect(),
+            };
+
+            assert!(parse_endpoint_metadata(metadata).is_err());
+        }
     }
 }

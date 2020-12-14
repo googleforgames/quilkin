@@ -27,7 +27,7 @@ use tokio::select;
 use tokio::sync::{mpsc, watch, RwLock};
 use tokio::time::{Duration, Instant};
 
-use crate::config::EndPoint;
+use crate::cluster::Endpoint;
 use crate::extensions::{Filter, FilterChain, UpstreamContext};
 use crate::proxy::sessions::error::Error;
 use crate::proxy::sessions::metrics::Metrics;
@@ -47,7 +47,7 @@ pub struct Session {
     created_at: Instant,
     send: SendHalf,
     /// dest is where to send data to
-    dest: EndPoint,
+    dest: Endpoint,
     /// from is the original sender
     from: SocketAddr,
     /// session expiration timestamp
@@ -62,7 +62,7 @@ pub struct Session {
 struct ReceivedPacketContext<'a> {
     packet: &'a [u8],
     chain: Arc<FilterChain>,
-    endpoint: &'a EndPoint,
+    endpoint: &'a Endpoint,
     from: SocketAddr,
     to: SocketAddr,
 }
@@ -95,10 +95,11 @@ impl Session {
         metrics: Metrics,
         chain: Arc<FilterChain>,
         from: SocketAddr,
-        dest: EndPoint,
+        dest: Endpoint,
         sender: mpsc::Sender<Packet>,
     ) -> Result<Self> {
-        let log = base.new(o!("source" => "proxy::Session", "from" => from, "dest_name" => dest.name.clone(), "dest_address" => dest.address));
+        let log = base
+            .new(o!("source" => "proxy::Session", "from" => from, "dest_address" => dest.address));
         let addr = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 0);
         let (recv, send) = UdpSocket::bind(addr)
             .await
@@ -213,7 +214,7 @@ impl Session {
             to,
         } = packet_ctx;
 
-        trace!(log, "Received packet"; "from" => from, "endpoint_name" => &endpoint.name,
+        trace!(log, "Received packet"; "from" => from,
             "endpoint_addr" => &endpoint.address, 
             "contents" => debug::bytes_to_string(packet.to_vec()));
         Session::inc_expiration(expiration).await;
@@ -244,7 +245,7 @@ impl Session {
 
     /// Sends a packet to the Session's dest.
     pub async fn send_to(&mut self, buf: &[u8]) -> Result<Option<usize>> {
-        trace!(self.log, "Sending packet"; "dest_name" => &self.dest.name,
+        trace!(self.log, "Sending packet";
         "dest_address" => &self.dest.address, 
         "contents" => debug::bytes_to_string(buf.to_vec()));
 
@@ -270,7 +271,7 @@ impl Session {
 
     /// close closes this Session.
     pub fn close(&self) -> result::Result<(), watch::error::SendError<bool>> {
-        debug!(self.log, "Session closed"; "from" => self.from, "dest_name" => &self.dest.name, "dest_address" => &self.dest.address);
+        debug!(self.log, "Session closed"; "from" => self.from, "dest_address" => &self.dest.address);
         self.closer.broadcast(true)
     }
 }
@@ -307,11 +308,7 @@ mod tests {
             mut recv,
             mut send,
         } = t.create_and_split_socket().await;
-        let endpoint = EndPoint {
-            name: "endpoint".to_string(),
-            address: addr,
-            connection_ids: vec![],
-        };
+        let endpoint = Endpoint::from_address(addr);
         let (send_packet, mut recv_packet) = mpsc::channel::<Packet>(5);
 
         let mut sess = Session::new(
@@ -371,11 +368,7 @@ mod tests {
         // without a filter
         let (sender, _) = mpsc::channel::<Packet>(1);
         let ep = t.open_socket_and_recv_single_packet().await;
-        let endpoint = EndPoint {
-            name: "endpoint".to_string(),
-            address: ep.addr,
-            connection_ids: vec![],
-        };
+        let endpoint = Endpoint::from_address(ep.addr);
 
         let mut session = Session::new(
             &t.log,
@@ -402,11 +395,7 @@ mod tests {
 
         let ep = t.open_socket_and_recv_single_packet().await;
         let (send_packet, _) = mpsc::channel::<Packet>(5);
-        let endpoint = EndPoint {
-            name: "endpoint".to_string(),
-            address: ep.addr,
-            connection_ids: vec![],
-        };
+        let endpoint = Endpoint::from_address(ep.addr);
 
         info!(t.log, ">> creating sessions");
         let sess = Session::new(
@@ -448,11 +437,7 @@ mod tests {
         let t = TestHelper::default();
 
         let chain = Arc::new(FilterChain::new(vec![]));
-        let endpoint = EndPoint {
-            name: "endpoint".to_string(),
-            address: "127.0.1.1:80".parse().unwrap(),
-            connection_ids: vec![],
-        };
+        let endpoint = Endpoint::from_address("127.0.1.1:80".parse().unwrap());
         let dest = "127.0.0.1:88".parse().unwrap();
         let (sender, mut receiver) = mpsc::channel::<Packet>(10);
         let expiration = Arc::new(RwLock::new(Instant::now()));
@@ -516,10 +501,7 @@ mod tests {
         assert!(initial_expiration < *expiration.read().await);
         let p = receiver.try_recv().unwrap();
         assert_eq!(
-            format!(
-                "{}:our:{}:{}:{}",
-                msg, endpoint.name, endpoint.address, dest
-            ),
+            format!("{}:our:{}:{}", msg, endpoint.address, dest),
             from_utf8(p.contents.as_slice()).unwrap()
         );
         assert_eq!(dest, p.dest);
@@ -529,11 +511,7 @@ mod tests {
     async fn session_new_metrics() {
         let t = TestHelper::default();
         let ep = t.open_socket_and_recv_single_packet().await;
-        let endpoint = EndPoint {
-            name: "endpoint".to_string(),
-            address: ep.addr,
-            connection_ids: vec![],
-        };
+        let endpoint = Endpoint::from_address(ep.addr);
         let (send_packet, _) = mpsc::channel::<Packet>(5);
 
         let session = Session::new(
@@ -574,11 +552,7 @@ mod tests {
             .unwrap(),
             Arc::new(FilterChain::new(vec![])),
             endpoint.addr,
-            EndPoint {
-                name: "endpoint".to_string(),
-                address: endpoint.addr,
-                connection_ids: vec![],
-            },
+            Endpoint::from_address(endpoint.addr),
             sender,
         )
         .await
@@ -607,11 +581,7 @@ mod tests {
             .unwrap(),
             Arc::new(FilterChain::new(vec![])),
             endpoint.addr,
-            EndPoint {
-                name: "endpoint".to_string(),
-                address: endpoint.addr,
-                connection_ids: vec![],
-            },
+            Endpoint::from_address(endpoint.addr),
             send_packet,
         )
         .await

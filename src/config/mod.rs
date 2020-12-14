@@ -27,13 +27,16 @@ use uuid::Uuid;
 mod builder;
 mod endpoints;
 mod error;
+mod metadata;
 
 pub use crate::config::endpoints::{
     EmptyListError, Endpoints, UpstreamEndpoints, UpstreamEndpointsIter,
 };
 use crate::config::error::ValueInvalidArgs;
 pub use builder::Builder;
+pub use endpoints::{ENDPOINT_METADATA_KEY_PREFIX, ENDPOINT_METADATA_TOKEN_KEY};
 pub use error::ValidationError;
+pub(crate) use metadata::{extract_endpoint_tokens, parse_endpoint_metadata_from_yaml};
 use std::convert::TryInto;
 
 base64_serde_type!(Base64Standard, base64::STANDARD);
@@ -160,38 +163,20 @@ pub struct Filter {
     pub config: Option<serde_yaml::Value>,
 }
 
-/// ConnectionId is the connection auth token value
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct ConnectionId(#[serde(with = "Base64Standard")] Vec<u8>);
-
-impl From<&str> for ConnectionId {
-    fn from(s: &str) -> Self {
-        ConnectionId(s.as_bytes().to_vec())
-    }
-}
-
-impl AsRef<Vec<u8>> for ConnectionId {
-    fn as_ref(&self) -> &Vec<u8> {
-        &self.0
-    }
-}
-
 /// A singular endpoint, to pass on UDP packets to.
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub struct EndPoint {
-    pub name: String,
     pub address: SocketAddr,
-    #[serde(default)]
-    pub connection_ids: Vec<ConnectionId>,
+    pub metadata: Option<serde_yaml::Value>,
 }
 
 impl EndPoint {
-    pub fn new(name: String, address: SocketAddr, connection_ids: Vec<ConnectionId>) -> Self {
-        EndPoint {
-            name,
-            address,
-            connection_ids,
-        }
+    pub fn new(address: SocketAddr) -> Self {
+        EndPoint::with_metadata(address, None)
+    }
+
+    pub fn with_metadata(address: SocketAddr, metadata: Option<serde_yaml::Value>) -> Self {
+        EndPoint { address, metadata }
     }
 }
 
@@ -223,18 +208,6 @@ impl Source {
 
                 if endpoints
                     .iter()
-                    .map(|ep| ep.name.clone())
-                    .collect::<HashSet<_>>()
-                    .len()
-                    != endpoints.len()
-                {
-                    return Err(ValidationError::NotUnique(
-                        "static.endpoints.name".to_string(),
-                    ));
-                }
-
-                if endpoints
-                    .iter()
                     .map(|ep| ep.address)
                     .collect::<HashSet<_>>()
                     .len()
@@ -243,6 +216,18 @@ impl Source {
                     return Err(ValidationError::NotUnique(
                         "static.endpoints.address".to_string(),
                     ));
+                }
+
+                for ep in endpoints {
+                    if let Some(ref metadata) = ep.metadata {
+                        if let Err(err) = parse_endpoint_metadata_from_yaml(metadata.clone()) {
+                            return Err(ValidationError::ValueInvalid(ValueInvalidArgs {
+                                field: "static.endpoints.metadata".into(),
+                                clarification: Some(err),
+                                examples: None,
+                            }));
+                        }
+                    }
                 }
 
                 Ok(())
@@ -297,6 +282,7 @@ mod tests {
     use crate::config::{
         Builder, Config, EndPoint, ManagementServer, ProxyMode, Source, ValidationError,
     };
+    use std::collections::HashMap;
 
     fn parse_config(yaml: &str) -> Config {
         Config::from_reader(yaml.as_bytes()).unwrap()
@@ -332,11 +318,7 @@ mod tests {
             .with_port(7000)
             .with_static(
                 vec![],
-                vec![EndPoint {
-                    name: "test".into(),
-                    address: "127.0.0.1:25999".parse().unwrap(),
-                    connection_ids: vec![],
-                }],
+                vec![EndPoint::new("127.0.0.1:25999".parse().unwrap())],
             )
             .build();
         let _ = serde_yaml::to_string(&config).unwrap();
@@ -349,16 +331,8 @@ mod tests {
             .with_static(
                 vec![],
                 vec![
-                    EndPoint {
-                        name: String::from("No.1"),
-                        address: "127.0.0.1:26000".parse().unwrap(),
-                        connection_ids: vec!["1234".into(), "5678".into()],
-                    },
-                    EndPoint {
-                        name: String::from("No.2"),
-                        address: "127.0.0.1:26001".parse().unwrap(),
-                        connection_ids: vec!["1234".into()],
-                    },
+                    EndPoint::new("127.0.0.1:26000".parse().unwrap()),
+                    EndPoint::new("127.0.0.1:26001".parse().unwrap()),
                 ],
             )
             .build();
@@ -371,8 +345,7 @@ mod tests {
 version: v1alpha1
 static:
   endpoints:
-    - name: ep-1
-      address: 127.0.0.1:25999
+    - address: 127.0.0.1:25999
   ";
         let config = parse_config(yaml);
 
@@ -400,8 +373,7 @@ static:
           - 27
           - true
   endpoints:
-    - name: endpoint-1
-      address: 127.0.0.1:7001
+    - address: 127.0.0.1:7001
         ";
         let config = parse_config(yaml);
 
@@ -434,8 +406,7 @@ proxy:
   port: 7000
 static:
   endpoints:
-    - name: ep-1
-      address: 127.0.0.1:25999
+    - address: 127.0.0.1:25999
   ";
         let config = parse_config(yaml);
 
@@ -460,11 +431,7 @@ static:
         assert_eq!(config.proxy.mode, ProxyMode::Client);
         assert_static_endpoints(
             &config.source,
-            vec![EndPoint::new(
-                "ep-1".into(),
-                "127.0.0.1:25999".parse().unwrap(),
-                vec![],
-            )],
+            vec![EndPoint::new("127.0.0.1:25999".parse().unwrap())],
         );
     }
 
@@ -477,28 +444,40 @@ proxy:
   mode: SERVER
 static:
   endpoints:
-    - name: Game Server No. 1
-      address: 127.0.0.1:26000
-      connection_ids:
-        - MXg3aWp5Ng== #1x7ijy6
-        - OGdqM3YyaQ== #8gj3v2i
-    - name: Game Server No. 2
-      address: 127.0.0.1:26001
-      connection_ids:
-        - bmt1eTcweA== #nkuy70x";
+    - address: 127.0.0.1:26000
+      metadata:
+        tokens:
+          - MXg3aWp5Ng== #1x7ijy6
+          - OGdqM3YyaQ== #8gj3v2i
+    - address: 127.0.0.1:26001
+      metadata:
+        tokens:
+          - bmt1eTcweA== #nkuy70x";
         let config = parse_config(yaml);
         assert_static_endpoints(
             &config.source,
             vec![
-                EndPoint::new(
-                    "Game Server No. 1".into(),
+                EndPoint::with_metadata(
                     "127.0.0.1:26000".parse().unwrap(),
-                    vec!["1x7ijy6".into(), "8gj3v2i".into()],
+                    Some(
+                        serde_yaml::to_value(
+                            vec![("tokens", vec!["MXg3aWp5Ng==", "OGdqM3YyaQ=="])]
+                                .into_iter()
+                                .collect::<HashMap<_, _>>(),
+                        )
+                        .unwrap(),
+                    ),
                 ),
-                EndPoint::new(
-                    String::from("Game Server No. 2"),
+                EndPoint::with_metadata(
                     "127.0.0.1:26001".parse().unwrap(),
-                    vec!["nkuy70x".into()],
+                    Some(
+                        serde_yaml::to_value(
+                            vec![("tokens", vec!["bmt1eTcweA=="])]
+                                .into_iter()
+                                .collect::<HashMap<_, _>>(),
+                        )
+                        .unwrap(),
+                    ),
                 ),
             ],
         );
@@ -630,18 +609,15 @@ static:
         );
 
         let yaml = "
-# Non unique endpoint names.
+# Invalid metadata
 version: v1alpha1
 static:
   endpoints:
-    - name: a
-      address: 127.0.0.1:25998
-    - name: a
-      address: 127.0.0.1:25999
+    - address: 127.0.0.1:25999
+      metadata:
+        quilkin.dev:
+          endpoint.tokens: abc
 ";
-        assert_eq!(
-            ValidationError::NotUnique("static.endpoints.name".to_string()).to_string(),
-            parse_config(yaml).validate().unwrap_err().to_string()
-        );
+        assert!(parse_config(yaml).validate().is_err());
     }
 }

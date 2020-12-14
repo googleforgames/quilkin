@@ -43,11 +43,7 @@ period: 1s
                     name: RateLimitFilterFactory::default().name(),
                     config: serde_yaml::from_str(yaml).unwrap(),
                 }],
-                vec![EndPoint {
-                    name: "server".to_string(),
-                    address: echo,
-                    connection_ids: vec![],
-                }],
+                vec![EndPoint::new(echo)],
             )
             .build();
         t.run_server(server_config);

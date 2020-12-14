@@ -40,14 +40,7 @@ mod tests {
         let server_port = 12346;
         let server_config = ConfigBuilder::empty()
             .with_port(server_port)
-            .with_static(
-                vec![],
-                vec![EndPoint {
-                    name: "server".to_string(),
-                    address: echo,
-                    connection_ids: vec![],
-                }],
-            )
+            .with_static(vec![], vec![EndPoint::new(echo)])
             .build();
         t.run_server_with_metrics(server_config, server_metrics);
 
@@ -57,11 +50,10 @@ mod tests {
             .with_port(client_port)
             .with_static(
                 vec![],
-                vec![EndPoint::new(
-                    "test".into(),
-                    SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port),
-                    vec![],
-                )],
+                vec![EndPoint::new(SocketAddr::new(
+                    IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+                    server_port,
+                ))],
             )
             .build();
         t.run_server(client_config);

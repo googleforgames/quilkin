@@ -14,7 +14,11 @@
  *  limitations under the License.
  */
 
-use crate::config::EndPoint;
+pub const ENDPOINT_METADATA_KEY_PREFIX: &str = "quilkin.dev";
+pub const ENDPOINT_METADATA_TOKEN_KEY: &str = "endpoint.tokens";
+
+// TODO Move endpoint.rs out of config/ into cluster/
+use crate::cluster::Endpoint;
 use std::sync::Arc;
 
 #[derive(Debug)]
@@ -28,7 +32,7 @@ pub struct IndexOutOfRangeError;
 
 /// Endpoints represents the set of all known upstream endpoints.
 #[derive(Clone, Debug, PartialEq)]
-pub struct Endpoints(Arc<Vec<EndPoint>>);
+pub struct Endpoints(Arc<Vec<Endpoint>>);
 
 /// UpstreamEndpoints represents a set of endpoints.
 /// This set is guaranteed to be non-empty - any operation that would
@@ -45,7 +49,7 @@ pub struct UpstreamEndpoints {
 
 impl Endpoints {
     /// Returns an [`Endpoints`] backed by the provided list of endpoints.
-    pub fn new(endpoints: Vec<EndPoint>) -> Result<Self, EmptyListError> {
+    pub fn new(endpoints: Vec<Endpoint>) -> Result<Self, EmptyListError> {
         if endpoints.is_empty() {
             Err(EmptyListError)
         } else {
@@ -98,7 +102,7 @@ impl UpstreamEndpoints {
     /// Returns an error if the predicate returns `false` for all endpoints.
     pub fn retain<F>(&mut self, predicate: F) -> Result<(), AllEndpointsRemovedError>
     where
-        F: Fn(&EndPoint) -> bool,
+        F: Fn(&Endpoint) -> bool,
     {
         match self.subset.as_mut() {
             Some(subset) => {
@@ -151,7 +155,7 @@ pub struct UpstreamEndpointsIter<'a> {
 }
 
 impl<'a> Iterator for UpstreamEndpointsIter<'a> {
-    type Item = &'a EndPoint;
+    type Item = &'a Endpoint;
 
     fn next(&mut self) -> Option<Self::Item> {
         match &self.collection.subset {
@@ -172,14 +176,11 @@ impl<'a> Iterator for UpstreamEndpointsIter<'a> {
 #[cfg(test)]
 mod tests {
     use super::Endpoints;
-    use crate::config::{EndPoint, UpstreamEndpoints};
+    use crate::cluster::Endpoint;
+    use crate::config::UpstreamEndpoints;
 
-    fn ep(id: usize) -> EndPoint {
-        EndPoint::new(
-            format!("ep-{}", id),
-            format!("127.0.0.{}:8080", id).parse().unwrap(),
-            vec![],
-        )
+    fn ep(id: usize) -> Endpoint {
+        Endpoint::from_address(format!("127.0.0.{}:8080", id).parse().unwrap())
     }
 
     #[test]
@@ -215,23 +216,25 @@ mod tests {
 
         let mut up: UpstreamEndpoints = Endpoints::new(initial_endpoints.clone()).unwrap().into();
 
-        up.retain(|ep| ep.name != "ep-2").unwrap();
+        up.retain(|ep| ep.address.to_string().as_str() != "127.0.0.2:8080")
+            .unwrap();
         assert_eq!(up.size(), 3);
         assert_eq!(
             vec![ep(1), ep(3), ep(4)],
             up.iter().cloned().collect::<Vec<_>>()
         );
 
-        up.retain(|ep| ep.name != "ep-3").unwrap();
+        up.retain(|ep| ep.address.to_string().as_str() != "127.0.0.3:8080")
+            .unwrap();
         assert_eq!(up.size(), 2);
         assert_eq!(vec![ep(1), ep(4)], up.iter().cloned().collect::<Vec<_>>());
 
         // test an empty result on retain
-        let result = up.retain(|ep| ep.name == "never");
+        let result = up.retain(|_| false);
         assert!(result.is_err());
 
         let mut up: UpstreamEndpoints = Endpoints::new(initial_endpoints).unwrap().into();
-        let result = up.retain(|ep| ep.name == "never");
+        let result = up.retain(|_| false);
         assert!(result.is_err());
     }
 
