@@ -4,8 +4,6 @@ package quilkin.extensions.filters.debug.v1alpha1;
 
 import "google/protobuf/wrappers.proto";
 
-option go_package = "example";
-
 message Debug {
   google.protobuf.StringValue id = 1;
 }
