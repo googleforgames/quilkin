@@ -132,3 +132,5 @@ pub mod ads_client;
 #[cfg(not(doctest))]
 mod cluster;
 mod error;
+#[cfg(not(doctest))]
+mod metadata;
