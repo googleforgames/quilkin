@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package quilkin.extensions.filters.debug.v1alpha1;
+
+import "google/protobuf/wrappers.proto";
+
+message Debug {
+  google.protobuf.StringValue id = 1;
+}
+
