@@ -15,6 +15,7 @@
  */
 
 pub use capture_bytes::CaptureBytesFactory;
+pub use compression::CompressionFactory;
 pub use concatenate_bytes::ConcatBytesFactory;
 pub use debug::DebugFactory;
 pub use load_balancer::LoadBalancerFilterFactory;
@@ -22,6 +23,7 @@ pub use local_rate_limit::RateLimitFilterFactory;
 pub use token_router::TokenRouterFactory;
 
 mod capture_bytes;
+mod compression;
 mod concatenate_bytes;
 mod debug;
 mod load_balancer;

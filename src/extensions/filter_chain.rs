@@ -70,7 +70,8 @@ impl FilterChain {
             match filter_registry.get(
                 &filter_config.name,
                 CreateFilterArgs::new(filter_config.config.as_ref())
-                    .with_metrics_registry(metrics_registry.clone()),
+                    .with_metrics_registry(metrics_registry.clone())
+                    .with_proxy_mode(config.proxy.mode.clone()),
             ) {
                 Ok(filter) => filters.push(filter),
                 Err(err) => {
