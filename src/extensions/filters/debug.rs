@@ -22,6 +22,21 @@ use crate::extensions::filter_registry::{
 };
 use crate::extensions::Filter;
 
+/// Protobuf config for this filter.
+mod quilkin {
+    pub(crate) mod extensions {
+        pub(crate) mod filters {
+            pub(crate) mod debug {
+                pub(crate) mod v1alpha1 {
+                    #![cfg(not(doctest))]
+                    #![doc(hidden)]
+                    tonic::include_proto!("quilkin.extensions.filters.debug.v1alpha1");
+                }
+            }
+        }
+    }
+}
+
 /// Debug logs all incoming and outgoing packets
 ///
 /// # Configuration
