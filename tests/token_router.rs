@@ -40,7 +40,7 @@ remove: true
 ";
         let endpoint_metadata = "
 quilkin.dev:
-    endpoint.tokens:
+    tokens:
         - YWJj # abc
 ";
         let server_port = 12348;

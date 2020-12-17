@@ -14,9 +14,6 @@
  *  limitations under the License.
  */
 
-pub const ENDPOINT_METADATA_KEY_PREFIX: &str = "quilkin.dev";
-pub const ENDPOINT_METADATA_TOKEN_KEY: &str = "endpoint.tokens";
-
 // TODO Move endpoint.rs out of config/ into cluster/
 use crate::cluster::Endpoint;
 use std::sync::Arc;

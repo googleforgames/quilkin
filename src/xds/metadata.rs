@@ -278,7 +278,7 @@ mod tests {
                     "quilkin.dev".into(),
                     ProstStruct {
                         fields: vec![(
-                            "endpoint.tokens".into(),
+                            "tokens".into(),
                             ProstValue {
                                 kind: Some(Kind::ListValue(ListValue {
                                     values: vec![
@@ -347,9 +347,7 @@ mod tests {
                 filter_metadata: vec![(
                     "quilkin.dev".into(),
                     ProstStruct {
-                        fields: vec![("endpoint.tokens".into(), invalid)]
-                            .into_iter()
-                            .collect(),
+                        fields: vec![("tokens".into(), invalid)].into_iter().collect(),
                     },
                 )]
                 .into_iter()

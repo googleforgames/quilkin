@@ -103,7 +103,7 @@ impl Filter for Debug {
     }
 
     fn on_upstream_receive(&self, ctx: UpstreamContext) -> Option<UpstreamResponse> {
-        info!(self.log, "received endpoint packet";
+        info!(self.log, "received endpoint packet"; "endpoint" => ctx.endpoint.address,
         "from" => ctx.from,
         "to" => ctx.to,
         "contents" => packet_to_string(ctx.contents.clone()));

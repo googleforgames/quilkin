@@ -1,19 +1,26 @@
-use crate::config::{ENDPOINT_METADATA_KEY_PREFIX, ENDPOINT_METADATA_TOKEN_KEY};
 use serde_json::map::Map as JsonMap;
 use serde_json::value::Value as JSONValue;
 use serde_json::Number as JSONNumber;
 use serde_yaml::Value as YamlValue;
 use std::collections::HashSet;
 
+/// METADATA_KEY is the key under which quilkin specific configuration is
+/// placed in an endpoint metadata.
+pub(crate) const METADATA_KEY: &str = "quilkin.dev";
+
+/// ENDPOINT_METADATA_KEY_TOKENS is the key under which tokens for an endpoint
+/// exist in an endpoint metadata.
+pub const ENDPOINT_METADATA_TOKENS: &str = "tokens";
+
 // Returns an empty map if no tokens exist.
 pub fn extract_endpoint_tokens(
     metadata: &mut JsonMap<String, JSONValue>,
 ) -> Result<HashSet<Vec<u8>>, String> {
-    let tokens = metadata.remove(ENDPOINT_METADATA_KEY_PREFIX)
+    let tokens = metadata.remove(METADATA_KEY)
         .map(|raw_value| {
             match raw_value {
                 JSONValue::Object(mut object) => {
-                    match object.remove(ENDPOINT_METADATA_TOKEN_KEY) {
+                    match object.remove(ENDPOINT_METADATA_TOKENS) {
                         Some(JSONValue::Array(raw_tokens)) => {
                             raw_tokens.into_iter().fold(Ok(HashSet::new()), |acc, val| {
                                 let mut tokens = acc?;
@@ -23,13 +30,13 @@ pub fn extract_endpoint_tokens(
                                         base64::decode(token)
                                             .map_err(|err| format!(
                                                 "key {}.{}: failed to decode token as a base64 string:{}",
-                                                ENDPOINT_METADATA_KEY_PREFIX,
-                                                ENDPOINT_METADATA_TOKEN_KEY,
+                                                METADATA_KEY,
+                                                ENDPOINT_METADATA_TOKENS,
                                                 err
                                             )),
                                     _ => Err(format!(
                                         "invalid value in token list for key `{}`: value must a base64 string",
-                                        ENDPOINT_METADATA_TOKEN_KEY
+                                        ENDPOINT_METADATA_TOKENS
                                     ))
                                 };
 
@@ -39,13 +46,13 @@ pub fn extract_endpoint_tokens(
                         },
                         Some(_) => Err(format!(
                             "invalid data type for key `{}.{}`: value must be a list of base64 strings",
-                            ENDPOINT_METADATA_KEY_PREFIX,
-                            ENDPOINT_METADATA_TOKEN_KEY
+                            METADATA_KEY,
+                            ENDPOINT_METADATA_TOKENS
                         )),
                         None => Ok(Default::default()),
                     }
                 }
-                _ => Err(format!("invalid data type for key `{}`: value must be an object", ENDPOINT_METADATA_KEY_PREFIX))
+                _ => Err(format!("invalid data type for key `{}`: value must be an object", METADATA_KEY))
             }
         })
         .transpose()?;
@@ -155,7 +162,7 @@ three:
 user:
     key1: value1
 quilkin.dev:
-    endpoint.tokens:
+    tokens:
         - MXg3aWp5Ng== #1x7ijy6
         - OGdqM3YyaQ== #8gj3v2i
 ";
@@ -180,17 +187,17 @@ quilkin.dev:
     fn yaml_parse_invalid_endpoint_metadata() {
         let not_a_list = "
 quilkin.dev:
-    endpoint.tokens: OGdqM3YyaQ==
+    tokens: OGdqM3YyaQ==
 ";
         let not_a_string_value = "
 quilkin.dev:
-    endpoint.tokens:
+    tokens:
         - OGdqM3YyaQ== #8gj3v2i
         - 300
 ";
         let not_a_base64_string = "
 quilkin.dev:
-    endpoint.tokens:
+    tokens:
         - OGdqM3YyaQ== #8gj3v2i
         - 1x7ijy6
 ";

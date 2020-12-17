@@ -34,7 +34,6 @@ pub use crate::config::endpoints::{
 };
 use crate::config::error::ValueInvalidArgs;
 pub use builder::Builder;
-pub use endpoints::{ENDPOINT_METADATA_KEY_PREFIX, ENDPOINT_METADATA_TOKEN_KEY};
 pub use error::ValidationError;
 pub(crate) use metadata::{extract_endpoint_tokens, parse_endpoint_metadata_from_yaml};
 use std::convert::TryInto;
@@ -616,7 +615,7 @@ static:
     - address: 127.0.0.1:25999
       metadata:
         quilkin.dev:
-          endpoint.tokens: abc
+          tokens: abc
 ";
         assert!(parse_config(yaml).validate().is_err());
     }
