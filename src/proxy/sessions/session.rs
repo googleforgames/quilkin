@@ -16,15 +16,15 @@
 
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::result;
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering::Relaxed;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
 
-use slog::{debug, error, o, trace, Logger};
+use slog::{debug, error, o, trace, warn, Logger};
 use tokio::net::udp::{RecvHalf, SendHalf};
 use tokio::net::UdpSocket;
 use tokio::select;
-use tokio::sync::{mpsc, watch, RwLock};
+use tokio::sync::{mpsc, watch, RwLock as TokioRwLock};
 use tokio::time::{Duration, Instant};
 
 use crate::config::EndPoint;
@@ -38,6 +38,9 @@ type Result<T> = std::result::Result<T, Error>;
 /// SESSION_TIMEOUT_SECONDS is the default session timeout - which is one minute.
 pub const SESSION_TIMEOUT_SECONDS: u64 = 60;
 
+/// SESSION_EXPIRY_POLL_INTERVAL is the default interval to check for expired sessions.
+pub const SESSION_EXPIRY_POLL_INTERVAL: u64 = 60;
+
 /// Session encapsulates a UDP stream session
 pub struct Session {
     log: Logger,
@@ -45,13 +48,13 @@ pub struct Session {
     chain: Arc<FilterChain>,
     /// created_at is time at which the session was created
     created_at: Instant,
-    send: SendHalf,
+    send: TokioRwLock<SendHalf>,
     /// dest is where to send data to
     dest: EndPoint,
     /// from is the original sender
     from: SocketAddr,
-    /// session expiration timestamp
-    expiration: Arc<RwLock<Instant>>,
+    /// The time at which the session is considered expired and can be removed.
+    expiration: Arc<AtomicU64>,
     /// closer is a channel to broadcast on if we are shutting down this Session
     closer: watch::Sender<bool>,
     /// closed is if this Session has closed, and isn't receiving packets anymore
@@ -97,6 +100,7 @@ impl Session {
         from: SocketAddr,
         dest: EndPoint,
         sender: mpsc::Sender<Packet>,
+        ttl: Duration,
     ) -> Result<Self> {
         let log = base.new(o!("source" => "proxy::Session", "from" => from, "dest_name" => dest.name.clone(), "dest_address" => dest.address));
         let addr = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 0);
@@ -105,17 +109,19 @@ impl Session {
             .map_err(Error::BindUdpSocket)?
             .split();
         let (closer, closed) = watch::channel::<bool>(false);
-        let mut s = Session {
+
+        let expiration = Arc::new(AtomicU64::new(0));
+        Self::do_update_expiration(&expiration, ttl)?;
+
+        let s = Session {
             metrics,
             log,
             chain,
-            send,
+            send: TokioRwLock::new(send),
             from,
             dest,
             created_at: Instant::now(),
-            expiration: Arc::new(RwLock::new(
-                Instant::now() + Duration::from_secs(SESSION_TIMEOUT_SECONDS),
-            )),
+            expiration,
             closer,
             is_closed: Arc::new(AtomicBool::new(false)),
         };
@@ -123,20 +129,21 @@ impl Session {
 
         s.metrics.sessions_total.inc();
         s.metrics.active_sessions.inc();
-        s.run(recv, sender, closed);
+        s.run(ttl, recv, sender, closed);
         Ok(s)
     }
 
     /// run starts processing received udp packets on its UdpSocket
     fn run(
-        &mut self,
+        &self,
+        ttl: Duration,
         mut recv: RecvHalf,
-        sender: mpsc::Sender<Packet>,
+        mut sender: mpsc::Sender<Packet>,
         mut closed: watch::Receiver<bool>,
     ) {
         let log = self.log.clone();
         let from = self.from;
-        let expiration_mtx = self.expiration.clone();
+        let expiration = self.expiration.clone();
         let is_closed = self.is_closed.clone();
         let chain = self.chain.clone();
         let endpoint = self.dest.clone();
@@ -158,8 +165,9 @@ impl Session {
                                 Session::process_recv_packet(
                                     &log,
                                     &metrics,
-                                    sender.clone(),
-                                    expiration_mtx.clone(),
+                                    &mut sender,
+                                    &expiration,
+                                    ttl,
                                     ReceivedPacketContext {
                                         chain: chain.clone(),
                                         packet: &buf[..size],
@@ -173,11 +181,11 @@ impl Session {
                     close_request = closed.recv() => {
                         debug!(log, "Attempting to close session"; "result" => format!("{:?}", close_request));
                         if let Some(true) = close_request {
-                            is_closed.store(true, Relaxed);
+                            is_closed.store(true, Ordering::Relaxed);
                             debug!(log, "Closing Session");
                             return;
                         } else if close_request.is_none() {
-                            is_closed.store(true, Relaxed);
+                            is_closed.store(true, Ordering::Relaxed);
                             debug!(log, "Dropping Session");
                             return;
                         }
@@ -188,8 +196,8 @@ impl Session {
     }
 
     /// expiration returns the current expiration Instant value
-    pub async fn expiration(&self) -> Instant {
-        *self.expiration.read().await
+    pub fn expiration(&self) -> u64 {
+        self.expiration.load(std::sync::atomic::Ordering::Relaxed)
     }
 
     /// key returns the key to be used for this session in a SessionMap
@@ -201,8 +209,9 @@ impl Session {
     async fn process_recv_packet(
         log: &Logger,
         metrics: &Metrics,
-        mut sender: mpsc::Sender<Packet>,
-        expiration: Arc<RwLock<Instant>>,
+        sender: &mut mpsc::Sender<Packet>,
+        expiration: &Arc<AtomicU64>,
+        ttl: Duration,
         packet_ctx: ReceivedPacketContext<'_>,
     ) {
         let ReceivedPacketContext {
@@ -216,7 +225,10 @@ impl Session {
         trace!(log, "Received packet"; "from" => from, "endpoint_name" => &endpoint.name,
             "endpoint_addr" => &endpoint.address, 
             "contents" => debug::bytes_to_string(packet.to_vec()));
-        Session::inc_expiration(expiration).await;
+
+        if let Err(err) = Session::do_update_expiration(expiration, ttl) {
+            warn!(log, "Error updating session expiration"; "error" => %err)
+        }
 
         if let Some(response) =
             chain.on_upstream_receive(UpstreamContext::new(endpoint, from, to, packet.to_vec()))
@@ -230,26 +242,41 @@ impl Session {
         }
     }
 
-    /// increment_expiration increments the expiration value by the session timeout
-    pub async fn increment_expiration(&mut self) {
-        let expiration = self.expiration.clone();
-        Session::inc_expiration(expiration).await
+    /// increment_expiration set the increments the expiration value by the session timeout
+    pub fn update_expiration(&self, ttl: Duration) -> Result<()> {
+        Self::do_update_expiration(&self.expiration, ttl)
     }
 
     /// increment_expiration increments the expiration value by the session timeout (internal)
-    async fn inc_expiration(expiration: Arc<RwLock<Instant>>) {
-        let mut expiration = expiration.write().await;
-        *expiration = Instant::now() + Duration::from_secs(SESSION_TIMEOUT_SECONDS);
+    fn do_update_expiration(expiration: &Arc<AtomicU64>, ttl: Duration) -> Result<()> {
+        let new_expiration_time = SystemTime::now()
+            .checked_add(ttl)
+            .ok_or_else(|| {
+                Error::UpdateSessionExpiration(format!(
+                    "checked_add error: expiration ttl {:?} is out of bounds",
+                    ttl
+                ))
+            })?
+            .duration_since(UNIX_EPOCH)
+            .map_err(|_| {
+                Error::UpdateSessionExpiration(
+                    "duration_since was called with time later than the current time".into(),
+                )
+            })?
+            .as_secs();
+
+        expiration.store(new_expiration_time, Ordering::Relaxed);
+
+        Ok(())
     }
 
     /// Sends a packet to the Session's dest.
-    pub async fn send_to(&mut self, buf: &[u8]) -> Result<Option<usize>> {
+    pub async fn send_to(&self, buf: &[u8]) -> Result<Option<usize>> {
         trace!(self.log, "Sending packet"; "dest_name" => &self.dest.name,
         "dest_address" => &self.dest.address, 
         "contents" => debug::bytes_to_string(buf.to_vec()));
 
-        self.send
-            .send_to(buf, &self.dest.address)
+        self.do_send(buf)
             .await
             .map(|size| {
                 self.metrics.tx_packets_total.inc();
@@ -262,10 +289,15 @@ impl Session {
             })
     }
 
+    pub async fn do_send(&self, buf: &[u8]) -> std::result::Result<usize, std::io::Error> {
+        let mut send = self.send.write().await;
+        send.send_to(buf, &self.dest.address).await
+    }
+
     /// is_closed returns if the Session is closed or not.
     #[allow(dead_code)]
     pub fn is_closed(&self) -> bool {
-        self.is_closed.load(Relaxed)
+        self.is_closed.load(Ordering::Relaxed)
     }
 
     /// close closes this Session.
@@ -290,17 +322,15 @@ mod tests {
 
     use prometheus::Registry;
     use slog::info;
-    use tokio::time;
     use tokio::time::delay_for;
 
     use crate::test_utils::{SplitSocket, TestFilter, TestHelper};
 
     use super::*;
+    use std::sync::atomic::Ordering;
 
     #[tokio::test]
     async fn session_new() {
-        time::pause();
-
         let t = TestHelper::default();
         let SplitSocket {
             addr,
@@ -314,26 +344,25 @@ mod tests {
         };
         let (send_packet, mut recv_packet) = mpsc::channel::<Packet>(5);
 
-        let mut sess = Session::new(
+        let sess = Session::new(
             &t.log,
             Metrics::new(&Registry::default(), addr.to_string(), addr.to_string()).unwrap(),
             Arc::new(FilterChain::new(vec![])),
             addr,
             endpoint,
             send_packet,
+            Duration::from_secs(20),
         )
         .await
         .unwrap();
 
-        let initial_expiration: Instant;
-        {
-            initial_expiration = *sess.expiration.read().await;
-        }
-        let diff = initial_expiration.duration_since(Instant::now());
-        assert_eq!(diff.as_secs(), SESSION_TIMEOUT_SECONDS);
-
-        let time_increment = 10;
-        time::advance(Duration::from_secs(time_increment)).await;
+        let initial_expiration_secs = sess.expiration.load(Ordering::Relaxed);
+        let now_secs = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let diff = initial_expiration_secs - now_secs;
+        assert!(diff >= 15 && diff <= 20);
 
         // echo the packet back again
         tokio::spawn(async move {
@@ -352,15 +381,7 @@ mod tests {
         assert_eq!(String::from("hello").into_bytes(), packet.contents);
         assert_eq!(addr, packet.dest);
 
-        let current_expiration = *sess.expiration.read().await;
-        assert!(Instant::now() < current_expiration);
-
-        let diff = current_expiration.duration_since(initial_expiration);
-        info!(t.log, "difference during test"; "duration" => format!("{:?}", diff));
-        assert!(diff.as_secs() >= time_increment);
-
         sess.close().unwrap();
-        time::resume();
     }
 
     #[tokio::test]
@@ -377,7 +398,7 @@ mod tests {
             connection_ids: vec![],
         };
 
-        let mut session = Session::new(
+        let session = Session::new(
             &t.log,
             Metrics::new(
                 &Registry::default(),
@@ -389,6 +410,7 @@ mod tests {
             ep.addr,
             endpoint.clone(),
             sender,
+            Duration::from_millis(1000),
         )
         .await
         .unwrap();
@@ -421,6 +443,7 @@ mod tests {
             ep.addr,
             endpoint,
             send_packet,
+            Duration::from_millis(1000),
         )
         .await
         .unwrap();
@@ -454,12 +477,14 @@ mod tests {
             connection_ids: vec![],
         };
         let dest = "127.0.0.1:88".parse().unwrap();
-        let (sender, mut receiver) = mpsc::channel::<Packet>(10);
-        let expiration = Arc::new(RwLock::new(Instant::now()));
-        let mut initial_expiration: Instant;
-        {
-            initial_expiration = *expiration.read().await;
-        }
+        let (mut sender, mut receiver) = mpsc::channel::<Packet>(10);
+        let expiration = Arc::new(AtomicU64::new(
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
+        ));
+        let initial_expiration = expiration.load(Ordering::Relaxed);
 
         // first test with no filtering
         let msg = "hello";
@@ -471,8 +496,9 @@ mod tests {
                 "127.0.1.1:80".parse().unwrap(),
             )
             .unwrap(),
-            sender.clone(),
-            expiration.clone(),
+            &mut sender,
+            &expiration,
+            Duration::from_secs(10),
             ReceivedPacketContext {
                 packet: msg.as_bytes(),
                 chain,
@@ -483,14 +509,18 @@ mod tests {
         )
         .await;
 
-        assert!(initial_expiration < *expiration.read().await);
+        assert!(initial_expiration < expiration.load(Ordering::Relaxed));
         let p = receiver.try_recv().unwrap();
         assert_eq!(msg, from_utf8(p.contents.as_slice()).unwrap());
         assert_eq!(dest, p.dest);
 
-        {
-            initial_expiration = *expiration.read().await;
-        }
+        let expiration = Arc::new(AtomicU64::new(
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
+        ));
+        let initial_expiration = expiration.load(Ordering::Relaxed);
         // add filter
         let chain = Arc::new(FilterChain::new(vec![Box::new(TestFilter {})]));
         Session::process_recv_packet(
@@ -501,8 +531,9 @@ mod tests {
                 "127.0.1.1:80".parse().unwrap(),
             )
             .unwrap(),
-            sender.clone(),
-            expiration.clone(),
+            &mut sender,
+            &expiration,
+            Duration::from_secs(10),
             ReceivedPacketContext {
                 chain,
                 packet: msg.as_bytes(),
@@ -513,7 +544,7 @@ mod tests {
         )
         .await;
 
-        assert!(initial_expiration < *expiration.read().await);
+        assert!(initial_expiration < expiration.load(Ordering::Relaxed));
         let p = receiver.try_recv().unwrap();
         assert_eq!(
             format!(
@@ -548,6 +579,7 @@ mod tests {
             ep.addr,
             endpoint,
             send_packet,
+            Duration::from_secs(10),
         )
         .await
         .unwrap();
@@ -564,7 +596,7 @@ mod tests {
         let (sender, _) = mpsc::channel::<Packet>(1);
         let endpoint = t.open_socket_and_recv_single_packet().await;
 
-        let mut session = Session::new(
+        let session = Session::new(
             &t.log,
             Metrics::new(
                 &Registry::default(),
@@ -580,6 +612,7 @@ mod tests {
                 connection_ids: vec![],
             },
             sender,
+            Duration::from_secs(10),
         )
         .await
         .unwrap();
@@ -613,6 +646,7 @@ mod tests {
                 connection_ids: vec![],
             },
             send_packet,
+            Duration::from_secs(10),
         )
         .await
         .unwrap();
