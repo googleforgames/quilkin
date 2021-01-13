@@ -118,12 +118,13 @@ mod tests {
     use std::str::from_utf8;
 
     use crate::config;
-    use crate::config::{Builder, EndPoint, Endpoints, ProxyMode, UpstreamEndpoints};
+    use crate::config::{Builder, Endpoints, ProxyMode, UpstreamEndpoints};
     use crate::extensions::filters::DebugFactory;
     use crate::extensions::{default_registry, FilterFactory};
     use crate::test_utils::{ep, logger, TestFilter};
 
     use super::*;
+    use crate::cluster::Endpoint;
 
     #[test]
     fn from_config() {
@@ -162,22 +163,14 @@ mod tests {
         assert!(result.is_err());
     }
 
-    fn endpoints() -> Vec<EndPoint> {
+    fn endpoints() -> Vec<Endpoint> {
         vec![
-            EndPoint {
-                name: "one".to_string(),
-                address: "127.0.0.1:80".parse().unwrap(),
-                connection_ids: vec![],
-            },
-            EndPoint {
-                name: "two".to_string(),
-                address: "127.0.0.1:90".parse().unwrap(),
-                connection_ids: vec![],
-            },
+            Endpoint::from_address("127.0.0.1:80".parse().unwrap()),
+            Endpoint::from_address("127.0.0.1:90".parse().unwrap()),
         ]
     }
 
-    fn upstream_endpoints(endpoints: Vec<EndPoint>) -> UpstreamEndpoints {
+    fn upstream_endpoints(endpoints: Vec<Endpoint>) -> UpstreamEndpoints {
         Endpoints::new(endpoints).unwrap().into()
     }
 
@@ -227,7 +220,7 @@ mod tests {
                 .unwrap()
         );
         assert_eq!(
-            "hello:our:one:127.0.0.1:80:127.0.0.1:70",
+            "hello:our:127.0.0.1:80:127.0.0.1:70",
             from_utf8(response.contents.as_slice()).unwrap()
         );
     }
@@ -271,7 +264,7 @@ mod tests {
             ))
             .unwrap();
         assert_eq!(
-            "hello:our:one:127.0.0.1:80:127.0.0.1:70:our:one:127.0.0.1:80:127.0.0.1:70",
+            "hello:our:127.0.0.1:80:127.0.0.1:70:our:127.0.0.1:80:127.0.0.1:70",
             from_utf8(response.contents.as_slice()).unwrap()
         );
         assert_eq!(

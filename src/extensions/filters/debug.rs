@@ -22,6 +22,21 @@ use crate::extensions::filter_registry::{
 };
 use crate::extensions::Filter;
 
+/// Protobuf config for this filter.
+mod quilkin {
+    pub(crate) mod extensions {
+        pub(crate) mod filters {
+            pub(crate) mod debug {
+                pub(crate) mod v1alpha1 {
+                    #![cfg(not(doctest))]
+                    #![doc(hidden)]
+                    tonic::include_proto!("quilkin.extensions.filters.debug.v1alpha1");
+                }
+            }
+        }
+    }
+}
+
 /// Debug logs all incoming and outgoing packets
 ///
 /// # Configuration
@@ -103,7 +118,7 @@ impl Filter for Debug {
     }
 
     fn on_upstream_receive(&self, ctx: UpstreamContext) -> Option<UpstreamResponse> {
-        info!(self.log, "received endpoint packet"; "endpoint" => ctx.endpoint.name.clone(),
+        info!(self.log, "received endpoint packet"; "endpoint" => ctx.endpoint.address,
         "from" => ctx.from,
         "to" => ctx.to,
         "contents" => packet_to_string(ctx.contents.clone()));

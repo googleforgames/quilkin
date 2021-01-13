@@ -27,6 +27,7 @@ use std::net::SocketAddr;
 use std::{fmt, sync::Arc};
 use tokio::sync::{mpsc, oneshot, watch};
 
+use crate::cluster::Endpoint;
 use crate::config::{EmptyListError, EndPoint, Endpoints, ManagementServer, UpstreamEndpoints};
 use crate::xds::ads_client::{AdsClient, ClusterUpdate, ExecutionResult};
 
@@ -71,7 +72,8 @@ impl ClusterManager {
     }
 
     /// Returns a ClusterManager backed by the fixed set of clusters provided in the config.
-    pub fn fixed(endpoints: Vec<EndPoint>) -> SharedClusterManager {
+    pub fn fixed(endpoints: Vec<Endpoint>) -> SharedClusterManager {
+        // TODO: Return a result rather than unwrap.
         Arc::new(RwLock::new(Self::new(Some(
             Endpoints::new(endpoints)
                 .expect("endpoints list in config should be validated non-empty"),
@@ -140,7 +142,7 @@ impl ClusterManager {
                         endpoints
                             .endpoints
                             .into_iter()
-                            .map(|ep| EndPoint::new("N/A".into(), ep.address, vec![]))
+                            .map(|ep| Endpoint::from_address(ep.address))
                     })
                     .flatten();
                 endpoints.extend(cluster_endpoints);

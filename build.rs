@@ -18,11 +18,17 @@
 // we need for XDS GRPC communication.
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let proto_files = vec![
+        "proto/data-plane-api/envoy/config/accesslog/v3/accesslog.proto",
         "proto/data-plane-api/envoy/config/cluster/v3/cluster.proto",
+        "proto/data-plane-api/envoy/config/listener/v3/listener.proto",
+        "proto/data-plane-api/envoy/config/route/v3/route.proto",
         "proto/data-plane-api/envoy/service/cluster/v3/cds.proto",
         "proto/data-plane-api/envoy/service/discovery/v3/ads.proto",
         "proto/data-plane-api/envoy/service/discovery/v3/discovery.proto",
+        "proto/data-plane-api/envoy/type/metadata/v3/metadata.proto",
+        "proto/data-plane-api/envoy/type/tracing/v3/custom_tag.proto",
         "proto/udpa/udpa/core/v1/resource_name.proto",
+        "proto/quilkin/extensions/filters/debug/v1alpha1/debug.proto",
     ]
     .iter()
     .map(|name| std::env::current_dir().unwrap().join(name))
@@ -33,6 +39,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "proto/udpa",
         "proto/googleapis",
         "proto/protoc-gen-validate",
+        "proto/quilkin",
     ]
     .iter()
     .map(|i| std::env::current_dir().unwrap().join(i))

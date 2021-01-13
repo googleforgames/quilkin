@@ -185,10 +185,11 @@ mod tests {
     use prometheus::Registry;
     use serde_yaml::{Mapping, Value};
 
-    use crate::config::{EndPoint, Endpoints};
+    use crate::config::Endpoints;
     use crate::test_utils::{assert_filter_on_upstream_receive_no_change, logger};
 
     use super::*;
+    use crate::cluster::Endpoint;
 
     const TOKEN_KEY: &str = "TOKEN";
 
@@ -263,11 +264,7 @@ mod tests {
             remove: true,
         };
         let filter = capture_bytes(config);
-        let endpoints = vec![EndPoint {
-            name: "e1".to_string(),
-            address: "127.0.0.1:81".parse().unwrap(),
-            connection_ids: vec![],
-        }];
+        let endpoints = vec![Endpoint::from_address("127.0.0.1:81".parse().unwrap())];
         let response = filter.on_downstream_receive(DownstreamContext::new(
             Endpoints::new(endpoints).unwrap().into(),
             "127.0.0.1:80".parse().unwrap(),
@@ -322,11 +319,7 @@ mod tests {
     where
         F: Filter + ?Sized,
     {
-        let endpoints = vec![EndPoint {
-            name: "e1".to_string(),
-            address: "127.0.0.1:81".parse().unwrap(),
-            connection_ids: vec![],
-        }];
+        let endpoints = vec![Endpoint::from_address("127.0.0.1:81".parse().unwrap())];
         let response = filter
             .on_downstream_receive(DownstreamContext::new(
                 Endpoints::new(endpoints).unwrap().into(),
