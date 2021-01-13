@@ -15,17 +15,15 @@
  */
 
 use core::fmt;
-use std::fmt::Display;
+use std::fmt::{Display, Formatter};
 use std::io;
 
-use serde::export::Formatter;
 use serde::{Deserialize, Serialize};
 use slog::{o, warn, Logger};
 use snap::read::FrameDecoder;
 use snap::write::FrameEncoder;
 
-use crate::config::ProxyMode;
-use crate::extensions::filters::compression::metrics::Metrics;
+use crate::extensions::filters::compress::metrics::Metrics;
 use crate::extensions::{
     CreateFilterArgs, DownstreamContext, DownstreamResponse, Error as RegistryError, Filter,
     FilterFactory, UpstreamContext, UpstreamResponse,
@@ -42,6 +40,17 @@ pub enum Mode {
     Snappy,
 }
 
+/// Compression direction (and decompression goes the other way)
+#[derive(Serialize, Deserialize, Debug)]
+pub enum Direction {
+    /// Compress traffic flowing Upstream - received locally, and sent to endpoint(s)
+    #[serde(rename = "UPSTREAM")]
+    Upstream,
+    /// Compress traffic flowing downstream - received at an endpoint, and being sent to a local connection
+    #[serde(rename = "DOWNSTREAM")]
+    Downstream,
+}
+
 impl Default for Mode {
     fn default() -> Self {
         Mode::Snappy
@@ -49,70 +58,62 @@ impl Default for Mode {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(default)]
 struct Config {
+    #[serde(default)]
     mode: Mode,
+    direction: Direction,
 }
 
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            mode: Mode::default(),
-        }
-    }
-}
-
-pub struct CompressionFactory {
+pub struct CompressFactory {
     log: Logger,
 }
 
-impl CompressionFactory {
+impl CompressFactory {
     pub fn new(base: &Logger) -> Self {
-        CompressionFactory { log: base.clone() }
+        CompressFactory { log: base.clone() }
     }
 }
 
-impl FilterFactory for CompressionFactory {
+impl FilterFactory for CompressFactory {
     fn name(&self) -> String {
-        "quilkin.extensions.filters.compression.v1alpha1.Compression".into()
+        "quilkin.extensions.filters.compress.v1alpha1.Compress".into()
     }
 
     fn create_filter(
         &self,
         args: CreateFilterArgs,
     ) -> std::result::Result<Box<dyn Filter>, RegistryError> {
-        let config: Option<Config> = serde_yaml::to_string(&args.config)
+        let config: Config = serde_yaml::to_string(&args.config)
             .and_then(|raw_config| serde_yaml::from_str(raw_config.as_str()))
             .map_err(|err| RegistryError::DeserializeFailed(err.to_string()))?;
 
-        Ok(Box::new(Compression::new(
+        Ok(Box::new(Compress::new(
             &self.log,
-            config.unwrap_or_default(),
-            args.proxy_mode,
+            config,
             Metrics::new(&args.metrics_registry)?,
         )))
     }
 }
 
 /// Filter for compressing and decompressing packet data
-struct Compression {
+struct Compress {
     log: Logger,
     metrics: Metrics,
     compression_mode: Mode,
-    proxy_mode: ProxyMode,
+    direction: Direction,
     compressor: Box<dyn Compressor + Sync + Send>,
 }
 
-impl Compression {
-    pub fn new(base: &Logger, config: Config, proxy_mode: ProxyMode, metrics: Metrics) -> Self {
+impl Compress {
+    pub fn new(base: &Logger, config: Config, metrics: Metrics) -> Self {
         let compressor = match config.mode {
             Mode::Snappy => Box::new(Snappy {}),
         };
-        Compression {
-            log: base.new(o!("source" => "extensions::Compression")),
+        Compress {
+            log: base.new(o!("source" => "extensions::Compress")),
             metrics,
             compression_mode: config.mode,
-            proxy_mode,
+            direction: config.direction,
             compressor,
         }
     }
@@ -140,11 +141,11 @@ impl Compression {
     }
 }
 
-impl Filter for Compression {
+impl Filter for Compress {
     fn on_downstream_receive(&self, mut ctx: DownstreamContext) -> Option<DownstreamResponse> {
         let original_size = ctx.contents.len();
-        match self.proxy_mode {
-            ProxyMode::Client => match self.compressor.encode(&mut ctx.contents) {
+        match self.direction {
+            Direction::Upstream => match self.compressor.encode(&mut ctx.contents) {
                 Ok(_) => {
                     // Important to convert to i64. Depending on compression algorithm, compressed
                     // values can be larger than the original, and we don't want a panic.
@@ -155,7 +156,7 @@ impl Filter for Compression {
                 }
                 Err(err) => self.failed_compression(err),
             },
-            ProxyMode::Server => match self.compressor.decode(&mut ctx.contents) {
+            Direction::Downstream => match self.compressor.decode(&mut ctx.contents) {
                 Ok(_) => {
                     self.metrics
                         .bytes_diff_decompression
@@ -169,8 +170,8 @@ impl Filter for Compression {
 
     fn on_upstream_receive(&self, mut ctx: UpstreamContext) -> Option<UpstreamResponse> {
         let original_size = ctx.contents.len();
-        match self.proxy_mode {
-            ProxyMode::Client => match self.compressor.decode(&mut ctx.contents) {
+        match self.direction {
+            Direction::Upstream => match self.compressor.decode(&mut ctx.contents) {
                 Ok(_) => {
                     self.metrics
                         .bytes_diff_decompression
@@ -180,7 +181,7 @@ impl Filter for Compression {
 
                 Err(err) => self.failed_decompression(err),
             },
-            ProxyMode::Server => match self.compressor.encode(&mut ctx.contents) {
+            Direction::Downstream => match self.compressor.encode(&mut ctx.contents) {
                 Ok(_) => {
                     self.metrics
                         .bytes_diff_compression
@@ -246,43 +247,56 @@ impl Compressor for Snappy {
 
 #[cfg(test)]
 mod tests {
+    use prometheus::Registry;
     use serde_yaml::{Mapping, Value};
 
     use crate::config::{Endpoints, UpstreamEndpoints};
-    use crate::test_utils::{ep, logger};
+    use crate::test_utils::logger;
 
     use super::*;
-    use prometheus::Registry;
+    use crate::cluster::Endpoint;
 
     #[test]
-    fn default_factory() {
+    fn default_mode_factory() {
         let log = logger();
-        let factory = CompressionFactory::new(&log);
-        let args = CreateFilterArgs::new(None);
-        let filter = factory.create_filter(args).expect("should create a filter");
-        assert_server_mode(filter.as_ref());
+        let factory = CompressFactory::new(&log);
+        let mut map = Mapping::new();
+        map.insert(
+            Value::String("direction".into()),
+            Value::String("DOWNSTREAM".into()),
+        );
+        let filter = factory
+            .create_filter(CreateFilterArgs::new(Some(&Value::Mapping(map))))
+            .expect("should create a filter");
+        assert_downstream_direction(filter.as_ref());
     }
 
     #[test]
     fn config_factory() {
         let log = logger();
-        let factory = CompressionFactory::new(&log);
+        let factory = CompressFactory::new(&log);
         let mut map = Mapping::new();
         map.insert(Value::String("mode".into()), Value::String("SNAPPY".into()));
+        map.insert(
+            Value::String("direction".into()),
+            Value::String("DOWNSTREAM".into()),
+        );
         let config = Value::Mapping(map);
         let args = CreateFilterArgs::new(Some(&config));
 
         let filter = factory.create_filter(args).expect("should create a filter");
-        assert_server_mode(filter.as_ref());
+        assert_downstream_direction(filter.as_ref());
     }
 
     #[test]
-    fn client_proxy_mode() {
+    fn upstream_direction() {
         let log = logger();
-        let compression = Compression::new(
+        let compression = Compress::new(
             &log,
-            Config::default(),
-            ProxyMode::Client,
+            Config {
+                mode: Default::default(),
+                direction: Direction::Upstream,
+            },
             Metrics::new(&Registry::default()).unwrap(),
         );
         let expected = contents_fixture();
@@ -290,7 +304,12 @@ mod tests {
         // on_downstream_receive compress
         let downstream_response = compression
             .on_downstream_receive(DownstreamContext::new(
-                UpstreamEndpoints::from(Endpoints::new(vec![ep(1)]).unwrap()),
+                UpstreamEndpoints::from(
+                    Endpoints::new(vec![Endpoint::from_address(
+                        "127.0.0.1:80".parse().unwrap(),
+                    )])
+                    .unwrap(),
+                ),
                 "127.0.0.1:8080".parse().unwrap(),
                 expected.clone(),
             ))
@@ -307,7 +326,7 @@ mod tests {
         // on_upstream_receive decompress
         let upstream_response = compression
             .on_upstream_receive(UpstreamContext::new(
-                &ep(1),
+                &Endpoint::from_address("127.0.0.1:80".parse().unwrap()),
                 "127.0.0.1:8080".parse().unwrap(),
                 "127.0.0.1:8081".parse().unwrap(),
                 downstream_response.contents.clone(),
@@ -331,15 +350,17 @@ mod tests {
     }
 
     #[test]
-    fn server_proxy_mode() {
+    fn downstream_direction() {
         let log = logger();
-        let compression = Compression::new(
+        let compression = Compress::new(
             &log,
-            Config::default(),
-            ProxyMode::Server,
+            Config {
+                mode: Default::default(),
+                direction: Direction::Downstream,
+            },
             Metrics::new(&Registry::default()).unwrap(),
         );
-        let (original, compressed_content) = assert_server_mode(&compression);
+        let (original, compressed_content) = assert_downstream_direction(&compression);
 
         assert_eq!(0, compression.metrics.packets_dropped_decompression.get());
         assert_eq!(0, compression.metrics.packets_dropped_compression.get());
@@ -357,15 +378,17 @@ mod tests {
     #[test]
     fn failed_decompress() {
         let log = logger();
-        let compression = Compression::new(
+        let compression = Compress::new(
             &log,
-            Config::default(),
-            ProxyMode::Client,
+            Config {
+                mode: Default::default(),
+                direction: Direction::Upstream,
+            },
             Metrics::new(&Registry::default()).unwrap(),
         );
 
         let upstream_response = compression.on_upstream_receive(UpstreamContext::new(
-            &ep(1),
+            &Endpoint::from_address("127.0.0.1:80".parse().unwrap()),
             "127.0.0.1:8080".parse().unwrap(),
             "127.0.0.1:8081".parse().unwrap(),
             b"hello".to_vec(),
@@ -375,15 +398,22 @@ mod tests {
         assert_eq!(1, compression.metrics.packets_dropped_decompression.get());
         assert_eq!(0, compression.metrics.packets_dropped_compression.get());
 
-        let compression = Compression::new(
+        let compression = Compress::new(
             &log,
-            Config::default(),
-            ProxyMode::Server,
+            Config {
+                mode: Default::default(),
+                direction: Direction::Downstream,
+            },
             Metrics::new(&Registry::default()).unwrap(),
         );
 
         let downstream_response = compression.on_downstream_receive(DownstreamContext::new(
-            UpstreamEndpoints::from(Endpoints::new(vec![ep(1)]).unwrap()),
+            UpstreamEndpoints::from(
+                Endpoints::new(vec![Endpoint::from_address(
+                    "127.0.0.1:80".parse().unwrap(),
+                )])
+                .unwrap(),
+            ),
             "127.0.0.1:8080".parse().unwrap(),
             b"hello".to_vec(),
         ));
@@ -434,9 +464,9 @@ mod tests {
             .to_vec()
     }
 
-    /// assert the server mode works.
+    /// assert compression work in a Downstream direction.
     /// Returns the original data packet, and the compressed version
-    fn assert_server_mode<F>(filter: &F) -> (Vec<u8>, Vec<u8>)
+    fn assert_downstream_direction<F>(filter: &F) -> (Vec<u8>, Vec<u8>)
     where
         F: Filter + ?Sized,
     {
@@ -444,7 +474,7 @@ mod tests {
         // on_upstream_receive compress
         let upstream_response = filter
             .on_upstream_receive(UpstreamContext::new(
-                &ep(1),
+                &Endpoint::from_address("127.0.0.1:80".parse().unwrap()),
                 "127.0.0.1:8080".parse().unwrap(),
                 "127.0.0.1:8081".parse().unwrap(),
                 expected.clone(),
@@ -462,7 +492,12 @@ mod tests {
         // on_downstream_receive decompress
         let downstream_response = filter
             .on_downstream_receive(DownstreamContext::new(
-                UpstreamEndpoints::from(Endpoints::new(vec![ep(1)]).unwrap()),
+                UpstreamEndpoints::from(
+                    Endpoints::new(vec![Endpoint::from_address(
+                        "127.0.0.1:80".parse().unwrap(),
+                    )])
+                    .unwrap(),
+                ),
                 "127.0.0.1:8080".parse().unwrap(),
                 upstream_response.contents.clone(),
             ))

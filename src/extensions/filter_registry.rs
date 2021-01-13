@@ -242,8 +242,6 @@ pub struct CreateFilterArgs<'a> {
     pub config: Option<&'a serde_yaml::Value>,
     /// metrics_registry is used to register filter metrics collectors.
     pub metrics_registry: Registry,
-    /// The proxy's current mode: Client or Server.
-    pub proxy_mode: ProxyMode,
 }
 
 impl CreateFilterArgs<'_> {
@@ -251,7 +249,6 @@ impl CreateFilterArgs<'_> {
         CreateFilterArgs {
             config,
             metrics_registry: Registry::default(),
-            proxy_mode: ProxyMode::default(),
         }
     }
 
