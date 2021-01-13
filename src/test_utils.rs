@@ -25,6 +25,7 @@ use tokio::net::udp::{RecvHalf, SendHalf};
 use tokio::net::UdpSocket;
 use tokio::sync::{mpsc, oneshot, watch};
 
+use crate::cluster::Endpoint;
 use crate::config::{Builder as ConfigBuilder, Config, EndPoint, Endpoints, ProxyMode};
 use crate::extensions::{
     default_registry, CreateFilterArgs, DownstreamContext, DownstreamResponse, Error, Filter,
@@ -66,9 +67,8 @@ impl Filter for TestFilter {
             .and_modify(|e| e.downcast_mut::<String>().unwrap().push_str(":receive"))
             .or_insert_with(|| Box::new("receive".to_string()));
 
-        ctx.contents.append(
-            &mut format!(":our:{}:{}:{}", ctx.endpoint.name, ctx.from, ctx.to).into_bytes(),
-        );
+        ctx.contents
+            .append(&mut format!(":our:{}:{}", ctx.from, ctx.to).into_bytes());
         Some(ctx.into())
     }
 }
@@ -315,11 +315,7 @@ pub fn assert_filter_on_downstream_receive_no_change<F>(filter: &F)
 where
     F: Filter,
 {
-    let endpoints = vec![EndPoint {
-        name: "e1".into(),
-        address: "127.0.0.1:80".parse().unwrap(),
-        connection_ids: vec![],
-    }];
+    let endpoints = vec![Endpoint::from_address("127.0.0.1:80".parse().unwrap())];
     let from = "127.0.0.1:90".parse().unwrap();
     let contents = "hello".to_string().into_bytes();
 
@@ -344,11 +340,7 @@ pub fn assert_filter_on_upstream_receive_no_change<F>(filter: &F)
 where
     F: Filter,
 {
-    let endpoint = EndPoint {
-        name: "e1".into(),
-        address: "127.0.0.1:90".parse().unwrap(),
-        connection_ids: vec![],
-    };
+    let endpoint = Endpoint::from_address("127.0.0.1:90".parse().unwrap());
     let contents = "hello".to_string().into_bytes();
 
     match filter.on_upstream_receive(UpstreamContext::new(
@@ -367,20 +359,12 @@ pub fn config_with_dummy_endpoint() -> ConfigBuilder {
         .with_mode(ProxyMode::Server)
         .with_static(
             vec![],
-            vec![EndPoint::new(
-                "test".into(),
-                "127.0.0.1:8080".parse().unwrap(),
-                vec![],
-            )],
+            vec![EndPoint::new("127.0.0.1:8080".parse().unwrap())],
         )
 }
 /// Creates a dummy endpoint with `id` as a suffix.
 pub fn ep(id: u8) -> EndPoint {
-    EndPoint::new(
-        format!("test-{}", id),
-        format!("127.0.0.{:?}:8080", id).parse().unwrap(),
-        vec![],
-    )
+    EndPoint::new(format!("127.0.0.{:?}:8080", id).parse().unwrap())
 }
 
 #[cfg(test)]

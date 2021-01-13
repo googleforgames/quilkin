@@ -38,21 +38,7 @@ mod tests {
         let server_port = 12345;
         let server_config = ConfigBuilder::empty()
             .with_port(server_port)
-            .with_static(
-                vec![],
-                vec![
-                    EndPoint {
-                        name: "server1".to_string(),
-                        address: server1,
-                        connection_ids: vec![],
-                    },
-                    EndPoint {
-                        name: "server2".to_string(),
-                        address: server2,
-                        connection_ids: vec![],
-                    },
-                ],
-            )
+            .with_static(vec![], vec![EndPoint::new(server1), EndPoint::new(server2)])
             .build();
         assert_eq!(Ok(()), server_config.validate());
 
@@ -64,11 +50,10 @@ mod tests {
             .with_port(client_port)
             .with_static(
                 vec![],
-                vec![EndPoint::new(
-                    "test".into(),
-                    SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port),
-                    vec![],
-                )],
+                vec![EndPoint::new(SocketAddr::new(
+                    IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+                    server_port,
+                ))],
             )
             .build();
         assert_eq!(Ok(()), client_config.validate());

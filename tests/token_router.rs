@@ -18,11 +18,10 @@
 mod tests {
     use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
-    use slog::debug;
     use tokio::select;
     use tokio::time::{delay_for, Duration};
 
-    use quilkin::config::{Builder, ConnectionId, EndPoint, Filter};
+    use quilkin::config::{Builder, EndPoint, Filter};
     use quilkin::extensions::filters::{CaptureBytesFactory, TokenRouterFactory};
     use quilkin::extensions::FilterFactory;
     use quilkin::test_utils::{logger, TestHelper};
@@ -39,6 +38,11 @@ mod tests {
 size: 3
 remove: true
 ";
+        let endpoint_metadata = "
+quilkin.dev:
+    tokens:
+        - YWJj # abc
+";
         let server_port = 12348;
         let server_config = Builder::empty()
             .with_port(server_port)
@@ -53,11 +57,10 @@ remove: true
                         config: None,
                     },
                 ],
-                vec![EndPoint {
-                    name: "server".to_string(),
-                    address: echo,
-                    connection_ids: vec![ConnectionId::from("abc")],
-                }],
+                vec![EndPoint::with_metadata(
+                    echo,
+                    Some(serde_yaml::from_str(endpoint_metadata).unwrap()),
+                )],
             )
             .build();
         server_config.validate().unwrap();
@@ -68,7 +71,6 @@ remove: true
 
         let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port);
         let msg = b"helloabc";
-        debug!(log, "sending message"; "content" => format!("{:?}", msg));
         send.send_to(msg, &local_addr).await.unwrap();
 
         select! {
@@ -82,7 +84,6 @@ remove: true
 
         // send an invalid packet
         let msg = b"helloxyz";
-        debug!(log, "sending message"; "content" => format!("{:?}", msg));
         send.send_to(msg, &local_addr).await.unwrap();
 
         select! {

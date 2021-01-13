@@ -57,7 +57,7 @@ policy: ROUND_ROBIN
                 echo_addresses
                     .iter()
                     .enumerate()
-                    .map(|(i, addr)| EndPoint::new(format!("server-{}", i), *addr, vec![]))
+                    .map(|(_, addr)| EndPoint::new(*addr))
                     .collect(),
             )
             .build();

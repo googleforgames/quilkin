@@ -130,7 +130,8 @@ mod tests {
     use std::collections::HashSet;
     use std::net::SocketAddr;
 
-    use crate::config::{EndPoint, Endpoints};
+    use crate::cluster::Endpoint;
+    use crate::config::Endpoints;
     use crate::extensions::filter_registry::DownstreamContext;
     use crate::extensions::filters::load_balancer::LoadBalancerFilterFactory;
     use crate::extensions::{CreateFilterArgs, Filter, FilterFactory};
@@ -153,7 +154,7 @@ mod tests {
                 Endpoints::new(
                     input_addresses
                         .iter()
-                        .map(|addr| EndPoint::new("".into(), *addr, vec![]))
+                        .map(|addr| Endpoint::from_address(*addr))
                         .collect(),
                 )
                 .unwrap()

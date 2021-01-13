@@ -28,13 +28,14 @@ use tokio::time::{delay_for, Duration, Instant};
 use metrics::Metrics as ProxyMetrics;
 
 use crate::cluster::cluster_manager::{ClusterManager, SharedClusterManager};
-use crate::config::{Config, EndPoint, Source};
+use crate::config::{Config, Source};
 use crate::extensions::{DownstreamContext, Filter, FilterChain};
 use crate::proxy::server::error::{Error, RecvFromError};
 use crate::proxy::sessions::{Packet, Session, SESSION_TIMEOUT_SECONDS};
 use crate::utils::debug;
 
 use super::metrics::{start_metrics_server, Metrics};
+use crate::cluster::Endpoint;
 
 pub mod error;
 pub(super) mod metrics;
@@ -104,8 +105,17 @@ impl Server {
         match &self.config.source {
             Source::Static {
                 filters: _,
-                endpoints,
-            } => Ok(ClusterManager::fixed(endpoints.to_vec())),
+                endpoints: config_endpoints,
+            } => {
+                let mut endpoints = Vec::with_capacity(config_endpoints.len());
+                for ep in config_endpoints {
+                    // TODO: We should a validated config type so that we don't need to
+                    //  handle errors when using its values later on since we know it's validated.
+                    endpoints
+                        .push(Endpoint::from_config(ep).map_err(Error::InvalidEndpointConfig)?);
+                }
+                Ok(ClusterManager::fixed(endpoints))
+            }
             Source::Dynamic {
                 filters: _,
                 management_servers,
@@ -315,7 +325,7 @@ impl Server {
         chain: Arc<FilterChain>,
         sessions: SessionMap,
         from: SocketAddr,
-        dest: &EndPoint,
+        dest: &Endpoint,
         sender: mpsc::Sender<Packet>,
     ) -> std::result::Result<(), Box<dyn std::error::Error>> {
         {
@@ -407,18 +417,7 @@ mod tests {
             .with_port(local_addr.port())
             .with_static(
                 vec![],
-                vec![
-                    EndPoint {
-                        name: String::from("e1"),
-                        address: endpoint1.addr,
-                        connection_ids: vec![],
-                    },
-                    EndPoint {
-                        name: String::from("e2"),
-                        address: endpoint2.addr,
-                        connection_ids: vec![],
-                    },
-                ],
+                vec![EndPoint::new(endpoint1.addr), EndPoint::new(endpoint2.addr)],
             )
             .build();
         t.run_server(config);
@@ -443,10 +442,7 @@ mod tests {
         let config = ConfigBuilder::empty()
             .with_mode(ProxyMode::Client)
             .with_port(local_addr.port())
-            .with_static(
-                vec![],
-                vec![EndPoint::new("test".into(), endpoint.addr, vec![])],
-            )
+            .with_static(vec![], vec![EndPoint::new(endpoint.addr)])
             .build();
         t.run_server(config);
 
@@ -476,7 +472,7 @@ mod tests {
                     name: "TestFilter".to_string(),
                     config: None,
                 }],
-                vec![EndPoint::new("test".into(), endpoint.addr, vec![])],
+                vec![EndPoint::new(endpoint.addr)],
             )
             .build();
         t.run_server_with_filter_registry(config, registry);
@@ -552,10 +548,8 @@ mod tests {
                         log: t.log.clone(),
                         metrics: Metrics::default(),
                         proxy_metrics: ProxyMetrics::new(&Metrics::default().registry).unwrap(),
-                        cluster_manager: ClusterManager::fixed(vec![EndPoint::new(
-                            "".into(),
+                        cluster_manager: ClusterManager::fixed(vec![Endpoint::from_address(
                             endpoint_address,
-                            vec![],
                         )]),
                         chain,
                         sessions: sessions_clone,
@@ -632,7 +626,7 @@ mod tests {
         let server = Builder::from(config).validate().unwrap().build();
 
         server.run_recv_from(
-            ClusterManager::fixed(vec![EndPoint::new("".into(), endpoint.addr, vec![])]),
+            ClusterManager::fixed(vec![Endpoint::from_address(endpoint.addr)]),
             server.filter_chain.clone(),
             recv,
             &sessions,
@@ -651,11 +645,7 @@ mod tests {
         let from: SocketAddr = "127.0.0.1:27890".parse().unwrap();
         let dest: SocketAddr = "127.0.0.1:27891".parse().unwrap();
         let (sender, _) = mpsc::channel::<Packet>(1);
-        let endpoint = EndPoint {
-            name: "endpoint".to_string(),
-            address: dest,
-            connection_ids: vec![],
-        };
+        let endpoint = Endpoint::from_address(dest);
 
         // gate
         {
@@ -712,11 +702,7 @@ mod tests {
         let from: SocketAddr = "127.0.0.1:7000".parse().unwrap();
         let to: SocketAddr = "127.0.0.1:7001".parse().unwrap();
         let (send, _recv) = mpsc::channel::<Packet>(1);
-        let endpoint = EndPoint {
-            name: "endpoint".to_string(),
-            address: to,
-            connection_ids: vec![],
-        };
+        let endpoint = Endpoint::from_address(to);
 
         Server::ensure_session(
             &t.log.clone(),
@@ -771,11 +757,7 @@ mod tests {
         let to: SocketAddr = "127.0.0.1:7001".parse().unwrap();
         let (send, _recv) = mpsc::channel::<Packet>(1);
         let key = (from, to);
-        let endpoint = EndPoint {
-            name: "endpoint".to_string(),
-            address: to,
-            connection_ids: vec![],
-        };
+        let endpoint = Endpoint::from_address(to);
 
         let config = Arc::new(config_with_dummy_endpoint().build());
         let server = Builder::from(config).validate().unwrap().build();

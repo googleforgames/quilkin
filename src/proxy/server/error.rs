@@ -22,6 +22,7 @@ pub enum Error {
     Initialize(String),
     Session(SessionError),
     Bind(tokio::io::Error),
+    InvalidEndpointConfig(String),
 }
 
 #[derive(Debug)]
@@ -35,6 +36,9 @@ impl Display for Error {
             Error::Initialize(reason) => write!(f, "failed to startup properly: {}", reason),
             Error::Session(inner) => write!(f, "session error: {}", inner),
             Error::Bind(inner) => write!(f, "failed to bind to port: {}", inner),
+            Error::InvalidEndpointConfig(reason) => {
+                write!(f, "invalid endpoint configuration: {}", reason)
+            }
         }
     }
 }

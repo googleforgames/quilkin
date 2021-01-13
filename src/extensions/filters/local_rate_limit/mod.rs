@@ -197,7 +197,8 @@ mod tests {
     use prometheus::Registry;
     use tokio::time;
 
-    use crate::config::{EndPoint, Endpoints};
+    use crate::cluster::Endpoint;
+    use crate::config::Endpoints;
     use crate::extensions::filter_registry::DownstreamContext;
     use crate::extensions::filters::local_rate_limit::metrics::Metrics;
     use crate::extensions::filters::local_rate_limit::{Config, RateLimitFilter};
@@ -278,10 +279,8 @@ mod tests {
         // Check that we're rate limited.
         assert!(r
             .on_downstream_receive(DownstreamContext::new(
-                Endpoints::new(vec![EndPoint::new(
-                    "ep".into(),
+                Endpoints::new(vec![Endpoint::from_address(
                     "127.0.0.1:8080".parse().unwrap(),
-                    vec![]
                 )])
                 .unwrap()
                 .into(),
@@ -300,10 +299,8 @@ mod tests {
 
         let result = r
             .on_downstream_receive(DownstreamContext::new(
-                Endpoints::new(vec![EndPoint::new(
-                    "ep".into(),
+                Endpoints::new(vec![Endpoint::from_address(
                     "127.0.0.1:8080".parse().unwrap(),
-                    vec![],
                 )])
                 .unwrap()
                 .into(),

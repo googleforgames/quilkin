@@ -99,18 +99,13 @@ impl Filter for TokenRouter {
                 None
             }
             Some(value) => match value.downcast_ref::<Vec<u8>>() {
-                Some(token) => {
-                    match ctx
-                        .endpoints
-                        .retain(|e| e.connection_ids.iter().any(|id| id.as_ref() == token))
-                    {
-                        Ok(_) => Some(ctx.into()),
-                        Err(_) => {
-                            self.metrics.packets_dropped_no_endpoint_match.inc();
-                            None
-                        }
+                Some(token) => match ctx.endpoints.retain(|e| e.tokens.contains(token)) {
+                    Ok(_) => Some(ctx.into()),
+                    Err(_) => {
+                        self.metrics.packets_dropped_no_endpoint_match.inc();
+                        None
                     }
-                }
+                },
                 None => {
                     error!(self.log, "Filter configuration issue: retrieved token is not the correct type (Vec<u8>)";
                         "metadata_key" => self.metadata_key.clone());
@@ -133,10 +128,11 @@ mod tests {
     use prometheus::Registry;
     use serde_yaml::{Mapping, Value};
 
-    use crate::config::{ConnectionId, EndPoint, Endpoints};
+    use crate::config::Endpoints;
     use crate::test_utils::{assert_filter_on_upstream_receive_no_change, logger};
 
     use super::*;
+    use crate::cluster::Endpoint;
 
     const TOKEN_KEY: &str = "TOKEN";
 
@@ -236,15 +232,15 @@ mod tests {
     }
 
     fn new_ctx() -> DownstreamContext {
-        let endpoint1 = EndPoint::new(
-            "one".into(),
+        let endpoint1 = Endpoint::new(
             "127.0.0.1:80".parse().unwrap(),
-            vec![ConnectionId::from("123")],
+            vec!["123".into()].into_iter().collect(),
+            None,
         );
-        let endpoint2 = EndPoint::new(
-            "two".into(),
+        let endpoint2 = Endpoint::new(
             "127.0.0.1:90".parse().unwrap(),
-            vec![ConnectionId::from("456")],
+            vec!["456".into()].into_iter().collect(),
+            None,
         );
 
         DownstreamContext::new(
@@ -262,13 +258,5 @@ mod tests {
 
         assert_eq!(b"hello".to_vec(), result.contents);
         assert_eq!(1, result.endpoints.size());
-        assert_eq!(
-            vec!["one"],
-            result
-                .endpoints
-                .iter()
-                .map(|i| i.name.clone())
-                .collect::<Vec<_>>()
-        );
     }
 }
