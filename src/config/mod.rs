@@ -46,24 +46,8 @@ pub enum Version {
     V1Alpha1,
 }
 
-#[derive(Debug, Deserialize, Serialize, PartialEq)]
-pub enum ProxyMode {
-    #[serde(rename = "CLIENT")]
-    Client,
-    #[serde(rename = "SERVER")]
-    Server,
-}
-
-impl Default for ProxyMode {
-    fn default() -> Self {
-        ProxyMode::Server
-    }
-}
-
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Proxy {
-    #[serde(default)]
-    pub mode: ProxyMode,
     #[serde(default = "default_proxy_id")]
     pub id: String,
     #[serde(default = "default_proxy_port")]
@@ -81,7 +65,6 @@ fn default_proxy_port() -> u16 {
 impl Default for Proxy {
     fn default() -> Self {
         Proxy {
-            mode: Default::default(),
             id: default_proxy_id(),
             port: default_proxy_port(),
         }
@@ -278,9 +261,7 @@ impl Source {
 mod tests {
     use serde_yaml::Value;
 
-    use crate::config::{
-        Builder, Config, EndPoint, ManagementServer, ProxyMode, Source, ValidationError,
-    };
+    use crate::config::{Builder, Config, EndPoint, ManagementServer, Source, ValidationError};
     use std::collections::HashMap;
 
     fn parse_config(yaml: &str) -> Config {
@@ -348,7 +329,6 @@ static:
   ";
         let config = parse_config(yaml);
 
-        assert_eq!(config.proxy.mode, ProxyMode::Server);
         assert_eq!(config.proxy.port, 7000);
         assert_eq!(config.proxy.id.len(), 36);
     }
@@ -358,7 +338,6 @@ static:
         let yaml = "
 version: v1alpha1
 proxy:
-  mode: CLIENT
   id: client-proxy
   port: 7000 # the port to receive traffic to locally
 static:
@@ -400,7 +379,6 @@ static:
         let yaml = "
 version: v1alpha1
 proxy:
-  mode: CLIENT
   id: server-proxy
   port: 7000
 static:
@@ -409,7 +387,6 @@ static:
   ";
         let config = parse_config(yaml);
 
-        assert_eq!(config.proxy.mode, ProxyMode::Client);
         assert_eq!(config.proxy.port, 7000);
         assert_eq!(config.proxy.id.as_str(), "server-proxy");
     }
@@ -418,8 +395,6 @@ static:
     fn parse_client() {
         let yaml = "
 version: v1alpha1
-proxy:
-  mode: CLIENT
 static:
   endpoints:
     - name: ep-1
@@ -427,7 +402,6 @@ static:
   ";
         let config = parse_config(yaml);
 
-        assert_eq!(config.proxy.mode, ProxyMode::Client);
         assert_static_endpoints(
             &config.source,
             vec![EndPoint::new("127.0.0.1:25999".parse().unwrap())],
@@ -439,8 +413,6 @@ static:
         let yaml = "
 ---
 version: v1alpha1
-proxy:
-  mode: SERVER
 static:
   endpoints:
     - address: 127.0.0.1:26000
