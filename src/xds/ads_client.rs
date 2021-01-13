@@ -369,7 +369,6 @@ mod tests {
     use super::AdsClient;
     use crate::config::ManagementServer;
     use crate::proxy::logger;
-    use crate::test_utils::await_with_timeout;
     use tokio::sync::{mpsc, watch};
 
     #[tokio::test]
@@ -392,7 +391,8 @@ mod tests {
             shutdown_rx,
         );
 
-        let execution_result = await_with_timeout(run, std::time::Duration::from_millis(100)).await;
+        let execution_result =
+            tokio::time::timeout(std::time::Duration::from_millis(100), run).await;
         assert!(execution_result
             .expect("client should bail out immediately")
             .is_err());
