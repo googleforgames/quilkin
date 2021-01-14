@@ -22,7 +22,8 @@ use std::net::SocketAddr;
 
 use prometheus::{Error as MetricsError, Registry};
 
-use crate::config::{EndPoint, UpstreamEndpoints, ValidationError};
+use crate::cluster::Endpoint;
+use crate::config::{UpstreamEndpoints, ValidationError};
 
 /// Contains the input arguments to [on_downstream_receive](crate::extensions::filter_registry::Filter::on_downstream_receive)
 pub struct DownstreamContext {
@@ -62,7 +63,7 @@ pub struct DownstreamResponse {
 /// Contains the input arguments to [on_upstream_receive](crate::extensions::filter_registry::Filter::on_upstream_receive)
 pub struct UpstreamContext<'a> {
     /// The upstream endpoint that we're expecting packets from.
-    pub endpoint: &'a EndPoint,
+    pub endpoint: &'a Endpoint,
     /// The source of the received packet.
     pub from: SocketAddr,
     /// The destination of the received packet.
@@ -132,7 +133,7 @@ impl From<DownstreamContext> for DownstreamResponse {
 impl UpstreamContext<'_> {
     /// Creates a new [`UpstreamContext`]
     pub fn new(
-        endpoint: &EndPoint,
+        endpoint: &Endpoint,
         from: SocketAddr,
         to: SocketAddr,
         contents: Vec<u8>,
@@ -149,7 +150,7 @@ impl UpstreamContext<'_> {
 
     /// Creates a new [`UpstreamContext`] from a [`UpstreamResponse`]
     pub fn with_response(
-        endpoint: &EndPoint,
+        endpoint: &Endpoint,
         from: SocketAddr,
         to: SocketAddr,
         response: UpstreamResponse,
@@ -308,6 +309,7 @@ mod tests {
     use crate::test_utils::TestFilterFactory;
 
     use super::*;
+    use crate::cluster::Endpoint;
     use crate::config::Endpoints;
 
     struct TestFilter {}
@@ -341,18 +343,12 @@ mod tests {
             .unwrap();
 
         let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080);
-        let endpoint = EndPoint {
-            name: "".to_string(),
-            address: addr,
-            connection_ids: vec![],
-        };
+        let endpoint = Endpoint::from_address(addr);
 
         assert!(filter
             .on_downstream_receive(DownstreamContext::new(
-                Endpoints::new(vec![EndPoint::new(
-                    "foo".into(),
+                Endpoints::new(vec![Endpoint::from_address(
                     "127.0.0.1:8080".parse().unwrap(),
-                    vec![]
                 )])
                 .unwrap()
                 .into(),

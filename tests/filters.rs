@@ -44,11 +44,7 @@ mod tests {
                     name: "TestFilter".to_string(),
                     config: None,
                 }],
-                vec![EndPoint {
-                    name: "server".to_string(),
-                    address: echo,
-                    connection_ids: vec![],
-                }],
+                vec![EndPoint::new(echo)],
             )
             .build();
         assert_eq!(Ok(()), server_config.validate());
@@ -67,11 +63,10 @@ mod tests {
                     name: "TestFilter".to_string(),
                     config: None,
                 }],
-                vec![EndPoint::new(
-                    "test".into(),
-                    SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port),
-                    vec![],
-                )],
+                vec![EndPoint::new(SocketAddr::new(
+                    IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+                    server_port,
+                ))],
             )
             .build();
         assert_eq!(Ok(()), client_config.validate());
@@ -129,11 +124,7 @@ mod tests {
                     name: factory.name(),
                     config: Some(serde_yaml::Value::Mapping(map)),
                 }],
-                vec![EndPoint {
-                    name: "server".to_string(),
-                    address: echo,
-                    connection_ids: vec![],
-                }],
+                vec![EndPoint::new(echo)],
             )
             .build();
         t.run_server(server_config);
@@ -149,11 +140,10 @@ mod tests {
                     name: factory.name(),
                     config: Some(serde_yaml::Value::Mapping(map)),
                 }],
-                vec![EndPoint::new(
-                    "test".into(),
-                    SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port),
-                    vec![],
-                )],
+                vec![EndPoint::new(SocketAddr::new(
+                    IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+                    server_port,
+                ))],
             )
             .build();
         t.run_server(client_config);

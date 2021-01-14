@@ -38,21 +38,37 @@ use crate::xds::{CLUSTER_TYPE, ENDPOINT_TYPE};
 /// AdsClient is a client that can talk to an XDS server using the ADS protocol.
 pub struct AdsClient;
 
+/// Contains the components that handle XDS responses for supported resources.
+struct ResourceHandlers {
+    cluster_manager: ClusterManager,
+}
+
+impl ResourceHandlers {
+    // Clear any stale state before (re)connecting.
+    pub fn on_reconnect(&mut self) {
+        self.cluster_manager.on_reconnect();
+    }
+}
+
 /// Represents the required arguments to start an rpc session with a server.
 struct RpcSessionArgs<'a> {
     log: Logger,
     server_addr: String,
     node_id: String,
-    cluster_manager: ClusterManager,
+    resource_handlers: ResourceHandlers,
     backoff: ExponentialBackoff<SystemClock>,
     discovery_req_rx: &'a mut mpsc::Receiver<DiscoveryRequest>,
     shutdown_rx: watch::Receiver<()>,
 }
 
 enum RpcSessionError {
-    InitialConnect(ClusterManager, ExponentialBackoff<SystemClock>, TonicError),
+    InitialConnect(
+        ResourceHandlers,
+        ExponentialBackoff<SystemClock>,
+        TonicError,
+    ),
     Receive(
-        ClusterManager,
+        ResourceHandlers,
         ExponentialBackoff<SystemClock>,
         tonic::Status,
     ),
@@ -60,7 +76,9 @@ enum RpcSessionError {
 }
 
 /// Represents the outcome of an rpc session with a server.
-type RpcSessionResult = Result<ClusterManager, RpcSessionError>;
+/// We return the resource handlers back so that they can be reused
+/// without running into any lifetime issues.
+type RpcSessionResult = Result<ResourceHandlers, RpcSessionError>;
 
 /// Represents an error encountered during a client execution.
 #[derive(Debug)]
@@ -90,15 +108,16 @@ impl AdsClient {
         let mut backoff = ExponentialBackoff::<SystemClock>::default();
 
         let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel::<DiscoveryRequest>(100);
-        let mut cluster_manager =
+        let cluster_manager =
             ClusterManager::new(log.clone(), cluster_updates_tx, discovery_req_tx);
+        let mut resource_handlers = ResourceHandlers { cluster_manager };
 
         // Run the client in a loop.
         // If the connection fails, we retry (with another server if available).
         let mut next_server_index = 0;
         loop {
             // Clear any stale state before (re)connecting.
-            cluster_manager.on_reconnect();
+            resource_handlers.on_reconnect();
 
             // Pick a server to talk to.
             let server_addr = {
@@ -116,7 +135,7 @@ impl AdsClient {
                 log: log.clone(),
                 server_addr: server_addr.clone(),
                 node_id: node_id.clone(),
-                cluster_manager,
+                resource_handlers,
                 backoff,
                 discovery_req_rx: &mut discovery_req_rx,
                 shutdown_rx: shutdown_rx.clone(),
@@ -130,17 +149,23 @@ impl AdsClient {
                             error!(log, "{}", msg);
                             return Err(ExecutionError::Message(format!("{:?}", err)));
                         }
-                        Err(RpcSessionError::InitialConnect(cm, bk_off, err)) => {
-                            cluster_manager = cm;
+                        Err(RpcSessionError::InitialConnect(handlers, bk_off, err)) => {
+                            resource_handlers = handlers;
                             backoff = bk_off;
+
+                            // Do not retry if this is an invalid URL error that we cannot recover from.
+                            if err.to_string().to_lowercase().contains("invalid url") {
+                                return Err(ExecutionError::Message(format!("{:?}", err)));
+                            }
+
                             Self::log_error_and_backoff(
                                 &log,
                                 format!("unable to connect to the XDS server at {}: {:?}", server_addr, err),
                                 &mut backoff
                             ).await?;
                         }
-                        Err(RpcSessionError::Receive(cm, bk_off, status)) => {
-                            cluster_manager = cm;
+                        Err(RpcSessionError::Receive(handlers, bk_off, status)) => {
+                            resource_handlers = handlers;
                             backoff = bk_off;
                             Self::log_error_and_backoff(
                                 &log,
@@ -170,7 +195,7 @@ impl AdsClient {
             log,
             server_addr,
             node_id,
-            cluster_manager,
+            resource_handlers,
             backoff,
             discovery_req_rx,
             shutdown_rx,
@@ -179,7 +204,7 @@ impl AdsClient {
             Ok(client) => client,
             Err(err) => {
                 return Err(RpcSessionError::InitialConnect(
-                    cluster_manager,
+                    resource_handlers,
                     backoff,
                     err,
                 ))
@@ -193,7 +218,7 @@ impl AdsClient {
             log.clone(),
             client,
             rpc_rx,
-            cluster_manager,
+            resource_handlers,
             backoff,
             shutdown_rx,
         );
@@ -276,7 +301,7 @@ impl AdsClient {
         log: Logger,
         mut client: AggregatedDiscoveryServiceClient<TonicChannel>,
         rpc_rx: mpsc::Receiver<DiscoveryRequest>,
-        mut cluster_manager: ClusterManager,
+        mut resource_handlers: ResourceHandlers,
         mut backoff: ExponentialBackoff<SystemClock>,
         mut shutdown_rx: watch::Receiver<()>,
     ) -> JoinHandle<RpcSessionResult> {
@@ -286,7 +311,7 @@ impl AdsClient {
                 .await
             {
                 Ok(response) => response.into_inner(),
-                Err(err) => return Err(RpcSessionError::Receive(cluster_manager, backoff, err)),
+                Err(err) => return Err(RpcSessionError::Receive(resource_handlers, backoff, err)),
             };
 
             loop {
@@ -296,9 +321,9 @@ impl AdsClient {
                             Ok(None) => {
                                 // No more messages on the connection.
                                 info!(log, "exiting receive loop - response stream closed.");
-                                return Ok(cluster_manager)
+                                return Ok(resource_handlers)
                             },
-                            Err(err) => return Err(RpcSessionError::Receive(cluster_manager, backoff, err)),
+                            Err(err) => return Err(RpcSessionError::Receive(resource_handlers, backoff, err)),
                             Ok(Some(response)) => response
                         };
 
@@ -307,9 +332,9 @@ impl AdsClient {
                         backoff.reset();
 
                         if response.type_url == CLUSTER_TYPE {
-                            cluster_manager.on_cluster_response(response).await;
+                            resource_handlers.cluster_manager.on_cluster_response(response).await;
                         } else if response.type_url == ENDPOINT_TYPE {
-                            cluster_manager.on_cluster_load_assignment_response(response).await;
+                            resource_handlers.cluster_manager.on_cluster_load_assignment_response(response).await;
                         } else {
                             error!(log, "Unexpected resource with type_url={:?}", response.type_url);
                         }
@@ -317,7 +342,7 @@ impl AdsClient {
 
                     _ = shutdown_rx.recv() => {
                         info!(log, "exiting receive loop - received shutdown signal.");
-                        return Ok(cluster_manager)
+                        return Ok(resource_handlers)
                     }
                 }
             }
@@ -336,5 +361,40 @@ impl AdsClient {
         info!(log, "retrying in {:?}", delay);
         tokio::time::delay_for(delay).await;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::AdsClient;
+    use crate::config::ManagementServer;
+    use crate::proxy::logger;
+    use tokio::sync::{mpsc, watch};
+
+    #[tokio::test]
+    async fn invalid_url() {
+        // If we get an invalid URL, we should return immediately rather
+        // than backoff or retry.
+
+        let (_shutdown_tx, mut shutdown_rx) = watch::channel::<()>(());
+        // Remove initial value from channel.
+        shutdown_rx.recv().await;
+
+        let (cluster_updates_tx, _) = mpsc::channel(10);
+        let run = AdsClient.run(
+            logger(),
+            "test-id".into(),
+            vec![ManagementServer {
+                address: "localhost:18000".into(),
+            }],
+            cluster_updates_tx,
+            shutdown_rx,
+        );
+
+        let execution_result =
+            tokio::time::timeout(std::time::Duration::from_millis(100), run).await;
+        assert!(execution_result
+            .expect("client should bail out immediately")
+            .is_err());
     }
 }

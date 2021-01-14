@@ -307,25 +307,27 @@ impl ClusterManager {
                     })?;
 
                 // Extract any metadata associated with the endpoint.
-                let metadata = if let Some(metadata) = metadata {
-                    Some(metadata::to_json(metadata).map_err(Error::new)?)
+                let (metadata, tokens) = if let Some(metadata) = metadata {
+                    let (metadata, tokens) =
+                        metadata::parse_endpoint_metadata(metadata).map_err(Error::new)?;
+                    (Some(metadata), tokens)
                 } else {
-                    None
+                    (None, Default::default())
                 };
 
-                processed_endpoints.push((address, metadata));
+                processed_endpoints.push((address, tokens, metadata));
             }
 
             let mut endpoints = vec![];
-            for ((addr, port), metadata) in processed_endpoints.into_iter() {
-                endpoints.push(Endpoint {
-                    metadata,
+            for ((addr, port), tokens, metadata) in processed_endpoints.into_iter() {
+                endpoints.push(Endpoint::new(
                     // We only support IP addresses so anything else is an error.
-                    address: addr
-                        .parse::<std::net::IpAddr>()
+                    addr.parse::<std::net::IpAddr>()
                         .map_err(|err| Error::new(format!("invalid ip address: {}", err)))
                         .map(|ip_addr| SocketAddr::new(ip_addr, port))?,
-                });
+                    tokens,
+                    metadata,
+                ));
             }
 
             existing_endpoints.insert(locality, LocalityEndpoints { endpoints });
@@ -550,10 +552,7 @@ mod tests {
                     .get(&None)
                     .unwrap()
                     .endpoints,
-                vec![ProxyEndpoint {
-                    address: expected_socket_addr,
-                    metadata: None,
-                }]
+                vec![ProxyEndpoint::from_address(expected_socket_addr)]
             );
             assert_eq!(
                 cm.clusters
@@ -563,10 +562,9 @@ mod tests {
                     .get(&None)
                     .unwrap()
                     .endpoints,
-                vec![ProxyEndpoint {
-                    address: "127.0.0.1:2020".parse().unwrap(),
-                    metadata: None,
-                }]
+                vec![ProxyEndpoint::from_address(
+                    "127.0.0.1:2020".parse().unwrap(),
+                )]
             );
         }
     }
