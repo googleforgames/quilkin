@@ -242,12 +242,12 @@ impl Session {
         }
     }
 
-    /// increment_expiration set the increments the expiration value by the session timeout
+    /// update_expiration set the increments the expiration value by the session timeout
     pub fn update_expiration(&self, ttl: Duration) -> Result<()> {
         Self::do_update_expiration(&self.expiration, ttl)
     }
 
-    /// increment_expiration increments the expiration value by the session timeout (internal)
+    /// do_update_expiration increments the expiration value by the session timeout (internal)
     fn do_update_expiration(expiration: &Arc<AtomicU64>, ttl: Duration) -> Result<()> {
         let new_expiration_time = SystemTime::now()
             .checked_add(ttl)
@@ -271,7 +271,7 @@ impl Session {
     }
 
     /// Sends a packet to the Session's dest.
-    pub async fn send_to(&self, buf: &[u8]) -> Result<Option<usize>> {
+    pub async fn send(&self, buf: &[u8]) -> Result<Option<usize>> {
         trace!(self.log, "Sending packet"; "dest_name" => &self.dest.name,
         "dest_address" => &self.dest.address, 
         "contents" => debug::bytes_to_string(buf.to_vec()));
@@ -372,7 +372,7 @@ mod tests {
             send.send_to(&buf[..size], &recv_addr).await.unwrap();
         });
 
-        sess.send_to(b"hello").await.unwrap();
+        sess.send(b"hello").await.unwrap();
 
         let packet = recv_packet
             .recv()
@@ -414,7 +414,7 @@ mod tests {
         )
         .await
         .unwrap();
-        session.send_to(msg.as_bytes()).await.unwrap();
+        session.send(msg.as_bytes()).await.unwrap();
         assert_eq!(msg, ep.packet_rx.await.unwrap());
     }
 
@@ -616,7 +616,7 @@ mod tests {
         )
         .await
         .unwrap();
-        session.send_to(b"hello").await.unwrap();
+        session.send(b"hello").await.unwrap();
         endpoint.packet_rx.await.unwrap();
 
         assert_eq!(session.metrics.tx_bytes_total.get(), 5);

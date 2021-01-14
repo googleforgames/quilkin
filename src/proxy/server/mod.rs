@@ -31,7 +31,7 @@ use tokio::time::{delay_for, Duration};
 use metrics::Metrics as ProxyMetrics;
 
 use crate::cluster::cluster_manager::{ClusterManager, SharedClusterManager};
-use crate::config::{Config, Source};
+use crate::config::{Config, EndPoint, Source};
 use crate::extensions::{DownstreamContext, Filter, FilterChain};
 use crate::proxy::server::error::{Error, RecvFromError};
 use crate::proxy::sessions::{
@@ -257,118 +257,128 @@ impl Server {
                 packet.to_vec(),
             ));
 
-            // A helper function to push a session's packet on its socket.
-            async fn send_packet(log: &Logger, session: &Session, packet: &[u8], ttl: Duration) {
-                match session.send_to(packet).await {
-                    Ok(_) => {
-                        if let Err(err) = session.update_expiration(ttl) {
-                            warn!(log, "Error updating session expiration"; "error" => %err)
-                        }
-                    }
-                    Err(err) => error!(log, "Error sending packet from session"; "error" => %err),
-                };
-            }
-
             if let Some(response) = result {
                 for endpoint in response.endpoints.iter() {
-                    let session_key = (recv_addr, endpoint.address);
-
-                    // Grab a read lock and find the session.
-                    let guard = args.sessions.read().await;
-                    if let Some(session) = guard.get(&session_key) {
-                        // If it exists then send the packet, we're done.
-                        send_packet(
-                            &args.log,
-                            session,
-                            response.contents.as_slice(),
-                            args.session_ttl,
-                        )
-                        .await
-                    } else {
-                        // If it does not exist, grab a write lock so that we can create it.
-                        //
-                        // NOTE: We must drop the lock guard to release the lock before
-                        // trying to acquire a write lock since these lock aren't reentrant,
-                        // otherwise we will deadlock with our self.
-                        drop(guard);
-
-                        // Grab a write lock.
-                        let mut guard = args.sessions.write().await;
-
-                        // Although we have the write lock now, check whether some other thread
-                        // managed to create the session in-between our dropping the read
-                        // lock and grabbing the write lock.
-                        if let Some(session) = guard.get(&session_key) {
-                            // If the session now exists then we have less work to do,
-                            // simply send the packet.
-                            send_packet(
-                                &args.log,
-                                session,
-                                response.contents.as_slice(),
-                                args.session_ttl,
-                            )
-                            .await;
-                        } else {
-                            // Otherwise, create the session and insert into the map.
-                            match args
-                                .metrics
-                                .new_session_metrics(&session_key.0, &session_key.1)
-                            {
-                                Ok(metrics) => {
-                                    match Session::new(
-                                        &args.log,
-                                        metrics,
-                                        args.chain.clone(),
-                                        session_key.0,
-                                        endpoint.clone(),
-                                        args.send_packets.clone(),
-                                        args.session_ttl,
-                                    )
-                                    .await
-                                    {
-                                        Ok(session) => {
-                                            // Insert the session into the map and release the write lock
-                                            // immediately since we don't want to block other threads while we send
-                                            // the packet. Instead, re-acquire a read lock and send the packet.
-                                            guard.insert(session.key(), session);
-
-                                            // Release the write lock.
-                                            drop(guard);
-
-                                            // Grab a read lock to send the packet.
-                                            let guard = args.sessions.read().await;
-                                            if let Some(session) = guard.get(&session_key) {
-                                                send_packet(
-                                                    &args.log,
-                                                    &session,
-                                                    response.contents.as_slice(),
-                                                    args.session_ttl,
-                                                )
-                                                .await;
-                                            } else {
-                                                warn!(
-                                                    args.log,
-                                                    "Could not find session for key: ({}:{})",
-                                                    session_key.0.to_string(),
-                                                    session_key.1.to_string()
-                                                )
-                                            }
-                                        }
-                                        Err(err) => {
-                                            error!(args.log, "failed to ensure session exists"; "error" => %err);
-                                        }
-                                    }
-                                }
-                                Err(err) => {
-                                    error!(args.log, "failed to create session metrics"; "error" => %err);
-                                }
-                            }
-                        }
-                    }
+                    Self::session_send_packet(
+                        &response.contents.as_slice(),
+                        recv_addr,
+                        endpoint,
+                        &args,
+                    )
+                    .await;
                 }
             }
         });
         Ok(())
+    }
+
+    /// Send a packet received from `recv_addr` to an endpoint.
+    async fn session_send_packet(
+        packet: &[u8],
+        recv_addr: SocketAddr,
+        endpoint: &EndPoint,
+        args: &RecvFromArgs,
+    ) {
+        let session_key = (recv_addr, endpoint.address);
+
+        // Grab a read lock and find the session.
+        let guard = args.sessions.read().await;
+        if let Some(session) = guard.get(&session_key) {
+            // If it exists then send the packet, we're done.
+            Self::session_send_packet_helper(&args.log, session, packet, args.session_ttl).await
+        } else {
+            // If it does not exist, grab a write lock so that we can create it.
+            //
+            // NOTE: We must drop the lock guard to release the lock before
+            // trying to acquire a write lock since these lock aren't reentrant,
+            // otherwise we will deadlock with our self.
+            drop(guard);
+
+            // Grab a write lock.
+            let mut guard = args.sessions.write().await;
+
+            // Although we have the write lock now, check whether some other thread
+            // managed to create the session in-between our dropping the read
+            // lock and grabbing the write lock.
+            if let Some(session) = guard.get(&session_key) {
+                // If the session now exists then we have less work to do,
+                // simply send the packet.
+                Self::session_send_packet_helper(&args.log, session, packet, args.session_ttl)
+                    .await;
+            } else {
+                // Otherwise, create the session and insert into the map.
+                match args
+                    .metrics
+                    .new_session_metrics(&session_key.0, &session_key.1)
+                {
+                    Ok(metrics) => {
+                        match Session::new(
+                            &args.log,
+                            metrics,
+                            args.chain.clone(),
+                            session_key.0,
+                            endpoint.clone(),
+                            args.send_packets.clone(),
+                            args.session_ttl,
+                        )
+                        .await
+                        {
+                            Ok(session) => {
+                                // Insert the session into the map and release the write lock
+                                // immediately since we don't want to block other threads while we send
+                                // the packet. Instead, re-acquire a read lock and send the packet.
+                                guard.insert(session.key(), session);
+
+                                // Release the write lock.
+                                drop(guard);
+
+                                // Grab a read lock to send the packet.
+                                let guard = args.sessions.read().await;
+                                if let Some(session) = guard.get(&session_key) {
+                                    Self::session_send_packet_helper(
+                                        &args.log,
+                                        &session,
+                                        packet,
+                                        args.session_ttl,
+                                    )
+                                    .await;
+                                } else {
+                                    warn!(
+                                        args.log,
+                                        "Could not find session for key: ({}:{})",
+                                        session_key.0.to_string(),
+                                        session_key.1.to_string()
+                                    )
+                                }
+                            }
+                            Err(err) => {
+                                error!(args.log, "failed to ensure session exists"; "error" => %err);
+                            }
+                        }
+                    }
+                    Err(err) => {
+                        error!(args.log, "failed to create session metrics"; "error" => %err);
+                    }
+                }
+            }
+        }
+    }
+
+    // A helper function to push a session's packet on its socket.
+    async fn session_send_packet_helper(
+        log: &Logger,
+        session: &Session,
+        packet: &[u8],
+        ttl: Duration,
+    ) {
+        match session.send(packet).await {
+            Ok(_) => {
+                if let Err(err) = session.update_expiration(ttl) {
+                    warn!(log, "Error updating session expiration"; "error" => %err)
+                }
+            }
+            Err(err) => error!(log, "Error sending packet from session"; "error" => %err),
+        };
     }
 
     /// run_receive_packet is a non-blocking loop on receive_packets.recv() channel
