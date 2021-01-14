@@ -26,14 +26,6 @@ properties:
         description: |
           The listening port for the proxy.
         default: 7000
-      mode:
-      type: string
-      description: |
-        The mode in which the proxy should run.
-      enum:
-        - SERVER
-        - CLIENT
-      default: SERVER
   admin:
     type: object
     description: |

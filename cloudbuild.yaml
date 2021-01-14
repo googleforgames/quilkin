@@ -18,13 +18,13 @@ steps:
     args:
     - '-c'
     - |
-      git clone --depth 800 https://github.com/envoyproxy/data-plane-api.git proto/data-plane-api
+      git clone --depth 1000 https://github.com/envoyproxy/data-plane-api.git proto/data-plane-api
       git -C proto/data-plane-api checkout b84d3bea45b59abc3fd21fba26140a379461fc67
-      git clone --depth 800 https://github.com/cncf/udpa.git proto/udpa
+      git clone --depth 1000 https://github.com/cncf/udpa.git proto/udpa
       git -C proto/udpa checkout efcf912fb35470672231c7b7bef620f3d17f655a
-      git clone --depth 800 https://github.com/envoyproxy/protoc-gen-validate.git proto/protoc-gen-validate
+      git clone --depth 1000 https://github.com/envoyproxy/protoc-gen-validate.git proto/protoc-gen-validate
       git -C proto/protoc-gen-validate checkout e84d38a1a4c27d4662779c31a06528cdbc6b4b4f
-      git clone --depth 800 https://github.com/googleapis/googleapis.git proto/googleapis
+      git clone --depth 1000 https://github.com/googleapis/googleapis.git proto/googleapis
       git -C proto/googleapis checkout 2db5725bf898b544a0cf951e1694d3b0fce5eda3
     id: fetch-git-submodules
   # clippy tends to rely on cached results from other cargo sub-commands so
