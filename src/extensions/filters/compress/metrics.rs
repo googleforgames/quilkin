@@ -13,9 +13,9 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-use prometheus::core::{AtomicI64, GenericCounter, GenericGauge};
+use prometheus::core::{AtomicI64, GenericCounter};
+use prometheus::Registry;
 use prometheus::{IntCounterVec, Result as MetricsResult};
-use prometheus::{IntGaugeVec, Registry};
 
 use crate::metrics::{filter_opts, CollectorExt};
 
@@ -23,33 +23,43 @@ use crate::metrics::{filter_opts, CollectorExt};
 pub(super) struct Metrics {
     pub(super) packets_dropped_compression: GenericCounter<AtomicI64>,
     pub(super) packets_dropped_decompression: GenericCounter<AtomicI64>,
-    // Important to use a Gauge. Depending on compression algorithm, compressed values can be
-    // larger than the original packets - so we want to be able to represent that via metrics.
-    pub(super) bytes_diff_compression: GenericGauge<AtomicI64>,
-    pub(super) bytes_diff_decompression: GenericGauge<AtomicI64>,
+    pub(super) received_compressed_bytes_total: GenericCounter<AtomicI64>,
+    pub(super) received_expanded_bytes_total: GenericCounter<AtomicI64>,
+    pub(super) sent_compressed_bytes_total: GenericCounter<AtomicI64>,
+    pub(super) sent_expanded_bytes_total: GenericCounter<AtomicI64>,
 }
 
 impl Metrics {
     pub(super) fn new(registry: &Registry) -> MetricsResult<Self> {
-        let label_names = vec!["operation"];
+        let operation_labels = vec!["operation"];
         let dropped_metric = IntCounterVec::new(
             filter_opts(
                 "packets_dropped",
-                "Compression",
-                "Total number of packets dropped as they could not be processed. labels: operation.",
+                "Compress",
+                "Total number of packets dropped as they could not be processed. Labels: operation.",
             ),
-            &label_names,
+            &operation_labels,
         )?
         .register(registry)?;
 
-        let diff_metric = IntGaugeVec::new(
+        let event_labels = vec!["event"];
+        let expanded_bytes_total = IntCounterVec::new(
             filter_opts(
-                "bytes_diff",
-                "Compression",
-                "Number of bytes difference between original and processed packet. \
-                        Negative numbers indicate a packet growth. labels: operation.",
+                "expanded_bytes_total",
+                "Compress",
+                "Total number of expanded bytes either received or sent. Labels: event",
             ),
-            &label_names,
+            &event_labels,
+        )?
+        .register(registry)?;
+
+        let compressed_bytes_total = IntCounterVec::new(
+            filter_opts(
+                "compressed_bytes_total",
+                "Compress",
+                "Total number of expanded bytes either received or sent. Labels: event",
+            ),
+            &event_labels,
         )?
         .register(registry)?;
 
@@ -58,10 +68,14 @@ impl Metrics {
                 .get_metric_with_label_values(vec!["Compression"].as_slice())?,
             packets_dropped_decompression: dropped_metric
                 .get_metric_with_label_values(vec!["Decompression"].as_slice())?,
-            bytes_diff_compression: diff_metric
-                .get_metric_with_label_values(vec!["Compression"].as_slice())?,
-            bytes_diff_decompression: diff_metric
-                .get_metric_with_label_values(vec!["Decompression"].as_slice())?,
+            received_compressed_bytes_total: compressed_bytes_total
+                .get_metric_with_label_values(vec!["Received"].as_slice())?,
+            received_expanded_bytes_total: expanded_bytes_total
+                .get_metric_with_label_values(vec!["Received"].as_slice())?,
+            sent_compressed_bytes_total: compressed_bytes_total
+                .get_metric_with_label_values(vec!["Sent"].as_slice())?,
+            sent_expanded_bytes_total: expanded_bytes_total
+                .get_metric_with_label_values(vec!["Sent"].as_slice())?,
         })
     }
 }
