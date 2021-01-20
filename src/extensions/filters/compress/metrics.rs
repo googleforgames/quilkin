@@ -21,12 +21,12 @@ use crate::metrics::{filter_opts, CollectorExt};
 
 /// Register and manage metrics for this filter
 pub(super) struct Metrics {
-    pub(super) packets_dropped_compression: GenericCounter<AtomicI64>,
-    pub(super) packets_dropped_decompression: GenericCounter<AtomicI64>,
+    pub(super) packets_dropped_compress: GenericCounter<AtomicI64>,
+    pub(super) packets_dropped_decompress: GenericCounter<AtomicI64>,
     pub(super) received_compressed_bytes_total: GenericCounter<AtomicI64>,
-    pub(super) received_expanded_bytes_total: GenericCounter<AtomicI64>,
+    pub(super) received_decompressed_bytes_total: GenericCounter<AtomicI64>,
     pub(super) sent_compressed_bytes_total: GenericCounter<AtomicI64>,
-    pub(super) sent_expanded_bytes_total: GenericCounter<AtomicI64>,
+    pub(super) sent_decompressed_bytes_total: GenericCounter<AtomicI64>,
 }
 
 impl Metrics {
@@ -34,7 +34,7 @@ impl Metrics {
         let operation_labels = vec!["operation"];
         let dropped_metric = IntCounterVec::new(
             filter_opts(
-                "packets_dropped",
+                "packets_dropped_total",
                 "Compress",
                 "Total number of packets dropped as they could not be processed. Labels: operation.",
             ),
@@ -43,11 +43,11 @@ impl Metrics {
         .register(registry)?;
 
         let event_labels = vec!["event"];
-        let expanded_bytes_total = IntCounterVec::new(
+        let decompressed_bytes_total = IntCounterVec::new(
             filter_opts(
-                "expanded_bytes_total",
+                "decompressed_bytes_total",
                 "Compress",
-                "Total number of expanded bytes either received or sent. Labels: event",
+                "Total number of bytes after being decompressed when received or sent. Labels: event",
             ),
             &event_labels,
         )?
@@ -57,24 +57,24 @@ impl Metrics {
             filter_opts(
                 "compressed_bytes_total",
                 "Compress",
-                "Total number of expanded bytes either received or sent. Labels: event",
+                "Total number of bytes after being compressed when received or sent. Labels: event",
             ),
             &event_labels,
         )?
         .register(registry)?;
 
         Ok(Metrics {
-            packets_dropped_compression: dropped_metric
-                .get_metric_with_label_values(vec!["Compression"].as_slice())?,
-            packets_dropped_decompression: dropped_metric
-                .get_metric_with_label_values(vec!["Decompression"].as_slice())?,
+            packets_dropped_compress: dropped_metric
+                .get_metric_with_label_values(vec!["Compress"].as_slice())?,
+            packets_dropped_decompress: dropped_metric
+                .get_metric_with_label_values(vec!["Decompress"].as_slice())?,
             received_compressed_bytes_total: compressed_bytes_total
                 .get_metric_with_label_values(vec!["Received"].as_slice())?,
-            received_expanded_bytes_total: expanded_bytes_total
+            received_decompressed_bytes_total: decompressed_bytes_total
                 .get_metric_with_label_values(vec!["Received"].as_slice())?,
             sent_compressed_bytes_total: compressed_bytes_total
                 .get_metric_with_label_values(vec!["Sent"].as_slice())?,
-            sent_expanded_bytes_total: expanded_bytes_total
+            sent_decompressed_bytes_total: decompressed_bytes_total
                 .get_metric_with_label_values(vec!["Sent"].as_slice())?,
         })
     }

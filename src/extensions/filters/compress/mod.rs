@@ -120,23 +120,23 @@ impl Compress {
 
     /// track a failed attempt at compression
     fn failed_compression<T>(&self, err: Error) -> Option<T> {
-        if self.metrics.packets_dropped_compression.get() % 1000 == 0 {
-            warn!(self.log, "Could not compress packet, dropping"; 
+        if self.metrics.packets_dropped_compress.get() % 1000 == 0 {
+            warn!(self.log, "Packets are being dropped as they could not be compressed"; 
                             "mode" => format!("{:?}", self.compression_mode), "error" => format!("{}", err), 
-                            "count" => self.metrics.packets_dropped_compression.get());
+                            "count" => self.metrics.packets_dropped_compress.get());
         }
-        self.metrics.packets_dropped_compression.inc();
+        self.metrics.packets_dropped_compress.inc();
         None
     }
 
     /// track a failed attempt at decompression
     fn failed_decompression<T>(&self, err: Error) -> Option<T> {
-        if self.metrics.packets_dropped_decompression.get() % 1000 == 0 {
-            warn!(self.log, "Could not decompress packet, dropping"; 
+        if self.metrics.packets_dropped_decompress.get() % 1000 == 0 {
+            warn!(self.log, "Packets are being dropped as they could not be decompressed"; 
                             "mode" => format!("{:?}", self.compression_mode), "error" => format!("{}", err), 
-                            "count" => self.metrics.packets_dropped_decompression.get());
+                            "count" => self.metrics.packets_dropped_decompress.get());
         }
-        self.metrics.packets_dropped_decompression.inc();
+        self.metrics.packets_dropped_decompress.inc();
         None
     }
 }
@@ -146,9 +146,9 @@ impl Filter for Compress {
         let original_size = ctx.contents.len();
         match self.direction {
             Direction::Upstream => match self.compressor.encode(&mut ctx.contents) {
-                Ok(_) => {
+                Ok(()) => {
                     self.metrics
-                        .received_expanded_bytes_total
+                        .received_decompressed_bytes_total
                         .inc_by(original_size as i64);
                     self.metrics
                         .sent_compressed_bytes_total
@@ -158,12 +158,12 @@ impl Filter for Compress {
                 Err(err) => self.failed_compression(err),
             },
             Direction::Downstream => match self.compressor.decode(&mut ctx.contents) {
-                Ok(_) => {
+                Ok(()) => {
                     self.metrics
                         .received_compressed_bytes_total
                         .inc_by(original_size as i64);
                     self.metrics
-                        .sent_expanded_bytes_total
+                        .sent_decompressed_bytes_total
                         .inc_by(ctx.contents.len() as i64);
                     Some(ctx.into())
                 }
@@ -181,7 +181,7 @@ impl Filter for Compress {
                         .received_compressed_bytes_total
                         .inc_by(original_size as i64);
                     self.metrics
-                        .sent_expanded_bytes_total
+                        .sent_decompressed_bytes_total
                         .inc_by(ctx.contents.len() as i64);
                     Some(ctx.into())
                 }
@@ -191,7 +191,7 @@ impl Filter for Compress {
             Direction::Downstream => match self.compressor.encode(&mut ctx.contents) {
                 Ok(_) => {
                     self.metrics
-                        .received_expanded_bytes_total
+                        .received_decompressed_bytes_total
                         .inc_by(original_size as i64);
                     self.metrics
                         .sent_compressed_bytes_total
@@ -331,7 +331,7 @@ mod tests {
         );
         assert_eq!(
             expected.len() as i64,
-            compress.metrics.received_expanded_bytes_total.get()
+            compress.metrics.received_decompressed_bytes_total.get()
         );
         assert_eq!(
             downstream_response.contents.len() as i64,
@@ -350,15 +350,15 @@ mod tests {
 
         assert_eq!(expected, upstream_response.contents);
 
-        assert_eq!(0, compress.metrics.packets_dropped_decompression.get());
-        assert_eq!(0, compress.metrics.packets_dropped_compression.get());
+        assert_eq!(0, compress.metrics.packets_dropped_decompress.get());
+        assert_eq!(0, compress.metrics.packets_dropped_compress.get());
         assert_eq!(
             downstream_response.contents.len() as i64,
             compress.metrics.received_compressed_bytes_total.get()
         );
         assert_eq!(
             expected.len() as i64,
-            compress.metrics.sent_expanded_bytes_total.get()
+            compress.metrics.sent_decompressed_bytes_total.get()
         );
     }
 
@@ -378,15 +378,15 @@ mod tests {
 
         assert_eq!(
             expected.len() as i64,
-            compress.metrics.received_expanded_bytes_total.get()
+            compress.metrics.received_decompressed_bytes_total.get()
         );
         assert_eq!(
             upstream_response.len() as i64,
             compress.metrics.sent_compressed_bytes_total.get()
         );
 
-        assert_eq!(0, compress.metrics.packets_dropped_decompression.get());
-        assert_eq!(0, compress.metrics.packets_dropped_compression.get());
+        assert_eq!(0, compress.metrics.packets_dropped_decompress.get());
+        assert_eq!(0, compress.metrics.packets_dropped_compress.get());
 
         assert_eq!(
             upstream_response.len() as i64,
@@ -394,7 +394,7 @@ mod tests {
         );
         assert_eq!(
             expected.len() as i64,
-            compress.metrics.sent_expanded_bytes_total.get()
+            compress.metrics.sent_decompressed_bytes_total.get()
         );
     }
 
@@ -418,8 +418,8 @@ mod tests {
         ));
 
         assert!(upstream_response.is_none());
-        assert_eq!(1, compression.metrics.packets_dropped_decompression.get());
-        assert_eq!(0, compression.metrics.packets_dropped_compression.get());
+        assert_eq!(1, compression.metrics.packets_dropped_decompress.get());
+        assert_eq!(0, compression.metrics.packets_dropped_compress.get());
 
         let compression = Compress::new(
             &log,
@@ -442,8 +442,8 @@ mod tests {
         ));
 
         assert!(downstream_response.is_none());
-        assert_eq!(1, compression.metrics.packets_dropped_decompression.get());
-        assert_eq!(0, compression.metrics.packets_dropped_compression.get());
+        assert_eq!(1, compression.metrics.packets_dropped_decompress.get());
+        assert_eq!(0, compression.metrics.packets_dropped_compress.get());
         // TOXO: replace this test
         // assert_eq!(0, compression.metrics.bytes_diff_decompression.get());
         // assert_eq!(0, compression.metrics.bytes_diff_compression.get());
