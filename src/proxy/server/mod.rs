@@ -17,13 +17,16 @@
 use std::collections::HashMap;
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
 
+use futures_intrusive::sync::{GenericSharedSemaphore, GenericSharedSemaphoreReleaser};
+use parking_lot::RawMutex;
 use slog::{debug, error, info, trace, warn, Logger};
 use tokio::net::udp::{RecvHalf, SendHalf};
 use tokio::net::UdpSocket;
+use tokio::sync::RwLock;
 use tokio::sync::{mpsc, watch};
-use tokio::sync::{Mutex, RwLock};
-use tokio::time::{delay_for, Duration, Instant};
+use tokio::time::{delay_for, Duration};
 
 use metrics::Metrics as ProxyMetrics;
 
@@ -31,7 +34,9 @@ use crate::cluster::cluster_manager::{ClusterManager, SharedClusterManager};
 use crate::config::{Config, Source};
 use crate::extensions::{DownstreamContext, Filter, FilterChain};
 use crate::proxy::server::error::{Error, RecvFromError};
-use crate::proxy::sessions::{Packet, Session, SESSION_TIMEOUT_SECONDS};
+use crate::proxy::sessions::{
+    Packet, Session, SESSION_EXPIRY_POLL_INTERVAL, SESSION_TIMEOUT_SECONDS,
+};
 use crate::utils::debug;
 
 use super::metrics::{start_metrics_server, Metrics};
@@ -40,7 +45,7 @@ use crate::cluster::Endpoint;
 pub mod error;
 pub(super) mod metrics;
 
-type SessionMap = Arc<RwLock<HashMap<(SocketAddr, SocketAddr), Mutex<Session>>>>;
+type SessionMap = Arc<RwLock<HashMap<(SocketAddr, SocketAddr), Session>>>;
 
 type Result<T> = std::result::Result<T, Error>;
 
@@ -61,6 +66,7 @@ struct RecvFromArgs {
     cluster_manager: SharedClusterManager,
     chain: Arc<FilterChain>,
     sessions: SessionMap,
+    session_ttl: Duration,
     send_packets: mpsc::Sender<Packet>,
 }
 
@@ -84,13 +90,17 @@ impl Server {
         let sessions: SessionMap = Arc::new(RwLock::new(HashMap::new()));
         let (send_packets, receive_packets) = mpsc::channel::<Packet>(1024);
 
+        let session_ttl = Duration::from_secs(SESSION_TIMEOUT_SECONDS);
+        let poll_interval = Duration::from_secs(SESSION_EXPIRY_POLL_INTERVAL);
+
         self.run_receive_packet(send_socket, receive_packets);
-        self.run_prune_sessions(&sessions);
+        self.run_prune_sessions(&sessions, poll_interval);
         self.run_recv_from(
             self.create_cluster_manager(shutdown_rx.clone()).await?,
             self.filter_chain.clone(),
             receive_socket,
             &sessions,
+            session_ttl,
             send_packets,
         );
 
@@ -152,12 +162,13 @@ impl Server {
     /// SESSION_TIMEOUT_SECONDS, via a tokio::spawn, i.e. it's non-blocking.
     /// Pruning will occur ~ every interval period. So the timeout expiration may sometimes
     /// exceed the expected, but we don't have to write lock the SessionMap as often to clean up.
-    fn run_prune_sessions(&self, sessions: &SessionMap) {
+    fn run_prune_sessions(&self, sessions: &SessionMap, poll_interval: Duration) {
         let log = self.log.clone();
         let sessions = sessions.clone();
         tokio::spawn(async move {
+            // TODO: Add a shutdown channel to this task.
             loop {
-                delay_for(Duration::from_secs(SESSION_TIMEOUT_SECONDS)).await;
+                delay_for(poll_interval).await;
                 debug!(log, "Attempting to Prune Sessions");
                 Server::prune_sessions(&log, sessions.clone()).await;
             }
@@ -172,16 +183,31 @@ impl Server {
         chain: Arc<FilterChain>,
         mut receive_socket: RecvHalf,
         sessions: &SessionMap,
+        session_ttl: Duration,
         send_packets: mpsc::Sender<Packet>,
     ) {
         let sessions = sessions.clone();
         let log = self.log.clone();
         let metrics = self.metrics.clone();
         let proxy_metrics = self.proxy_metrics.clone();
+
+        // Limits the maximum number of tasks that are processing packets
+        // at any given time.
+        // We don't want to set to this a large number since otherwise the tasks
+        // would likely spend too much time contending for locks. (Also it seems to
+        // trigger a weird Tokio bug where spawning a large number of tasks
+        // (e.g 1024) allocates a large amount of memory that is never reclaimed).
+        // The current value is set based on local tests.
+        let max_concurrent_packets = 16;
+        let semaphore: GenericSharedSemaphore<RawMutex> =
+            GenericSharedSemaphore::new(false, max_concurrent_packets);
+
         tokio::spawn(async move {
             loop {
+                let permit = semaphore.acquire(1).await;
                 if let Err(err) = Server::recv_from(
                     &mut receive_socket,
+                    permit,
                     RecvFromArgs {
                         log: log.clone(),
                         metrics: metrics.clone(),
@@ -189,6 +215,7 @@ impl Server {
                         cluster_manager: cluster_manager.clone(),
                         chain: chain.clone(),
                         sessions: sessions.clone(),
+                        session_ttl,
                         send_packets: send_packets.clone(),
                     },
                 )
@@ -204,6 +231,7 @@ impl Server {
     /// processes them to send them out to endpoints.
     async fn recv_from(
         receive_socket: &mut RecvHalf,
+        permit: GenericSharedSemaphoreReleaser<RawMutex>,
         args: RecvFromArgs,
     ) -> std::result::Result<(), RecvFromError> {
         let mut buf: Vec<u8> = vec![0; 65535];
@@ -211,7 +239,11 @@ impl Server {
             .recv_from(&mut buf)
             .await
             .map_err(RecvFromError)?;
+
         tokio::spawn(async move {
+            // Do not let the semaphore permit go out of scope until we're done.
+            let _permit = permit;
+
             let packet = &buf[..size];
 
             trace!(
@@ -237,46 +269,126 @@ impl Server {
 
             if let Some(response) = result {
                 for endpoint in response.endpoints.iter() {
-                    if let Err(err) = Server::ensure_session(
-                        &args.log,
-                        &args.metrics,
-                        args.chain.clone(),
-                        args.sessions.clone(),
+                    Self::session_send_packet(
+                        &response.contents.as_slice(),
                         recv_addr,
                         endpoint,
-                        args.send_packets.clone(),
+                        &args,
                     )
-                    .await
-                    {
-                        error!(args.log, "Error ensuring session exists"; "error" => %err);
-                        continue;
-                    }
-
-                    let map = args.sessions.read().await;
-                    let key = (recv_addr, endpoint.address);
-                    match map.get(&key) {
-                        Some(mtx) => {
-                            let mut session = mtx.lock().await;
-                            match session.send_to(response.contents.as_slice()).await {
-                                Ok(_) => {
-                                    session.increment_expiration().await;
-                                }
-                                Err(err) => {
-                                    error!(args.log, "Error sending packet from session"; "error" => %err)
-                                }
-                            };
-                        }
-                        None => warn!(
-                            args.log,
-                            "Could not find session for key: ({}:{})",
-                            key.0.to_string(),
-                            key.1.to_string()
-                        ),
-                    }
+                    .await;
                 }
             }
         });
         Ok(())
+    }
+
+    /// Send a packet received from `recv_addr` to an endpoint.
+    async fn session_send_packet(
+        packet: &[u8],
+        recv_addr: SocketAddr,
+        endpoint: &Endpoint,
+        args: &RecvFromArgs,
+    ) {
+        let session_key = (recv_addr, endpoint.address);
+
+        // Grab a read lock and find the session.
+        let guard = args.sessions.read().await;
+        if let Some(session) = guard.get(&session_key) {
+            // If it exists then send the packet, we're done.
+            Self::session_send_packet_helper(&args.log, session, packet, args.session_ttl).await
+        } else {
+            // If it does not exist, grab a write lock so that we can create it.
+            //
+            // NOTE: We must drop the lock guard to release the lock before
+            // trying to acquire a write lock since these lock aren't reentrant,
+            // otherwise we will deadlock with our self.
+            drop(guard);
+
+            // Grab a write lock.
+            let mut guard = args.sessions.write().await;
+
+            // Although we have the write lock now, check whether some other thread
+            // managed to create the session in-between our dropping the read
+            // lock and grabbing the write lock.
+            if let Some(session) = guard.get(&session_key) {
+                // If the session now exists then we have less work to do,
+                // simply send the packet.
+                Self::session_send_packet_helper(&args.log, session, packet, args.session_ttl)
+                    .await;
+            } else {
+                // Otherwise, create the session and insert into the map.
+                match args
+                    .metrics
+                    .new_session_metrics(&session_key.0, &session_key.1)
+                {
+                    Ok(metrics) => {
+                        match Session::new(
+                            &args.log,
+                            metrics,
+                            args.chain.clone(),
+                            session_key.0,
+                            endpoint.clone(),
+                            args.send_packets.clone(),
+                            args.session_ttl,
+                        )
+                        .await
+                        {
+                            Ok(session) => {
+                                // Insert the session into the map and release the write lock
+                                // immediately since we don't want to block other threads while we send
+                                // the packet. Instead, re-acquire a read lock and send the packet.
+                                guard.insert(session.key(), session);
+
+                                // Release the write lock.
+                                drop(guard);
+
+                                // Grab a read lock to send the packet.
+                                let guard = args.sessions.read().await;
+                                if let Some(session) = guard.get(&session_key) {
+                                    Self::session_send_packet_helper(
+                                        &args.log,
+                                        &session,
+                                        packet,
+                                        args.session_ttl,
+                                    )
+                                    .await;
+                                } else {
+                                    warn!(
+                                        args.log,
+                                        "Could not find session for key: ({}:{})",
+                                        session_key.0.to_string(),
+                                        session_key.1.to_string()
+                                    )
+                                }
+                            }
+                            Err(err) => {
+                                error!(args.log, "failed to ensure session exists"; "error" => %err);
+                            }
+                        }
+                    }
+                    Err(err) => {
+                        error!(args.log, "failed to create session metrics"; "error" => %err);
+                    }
+                }
+            }
+        }
+    }
+
+    // A helper function to push a session's packet on its socket.
+    async fn session_send_packet_helper(
+        log: &Logger,
+        session: &Session,
+        packet: &[u8],
+        ttl: Duration,
+    ) {
+        match session.send(packet).await {
+            Ok(_) => {
+                if let Err(err) = session.update_expiration(ttl) {
+                    warn!(log, "Error updating session expiration"; "error" => %err)
+                }
+            }
+            Err(err) => error!(log, "Error sending packet from session"; "error" => %err),
+        };
     }
 
     /// run_receive_packet is a non-blocking loop on receive_packets.recv() channel
@@ -318,61 +430,39 @@ impl Server {
         UdpSocket::bind(addr).await.map_err(Error::Bind)
     }
 
-    /// ensure_session makes sure there is a value session for the name in the sessions map
-    async fn ensure_session(
-        log: &Logger,
-        metrics: &Metrics,
-        chain: Arc<FilterChain>,
-        sessions: SessionMap,
-        from: SocketAddr,
-        dest: &Endpoint,
-        sender: mpsc::Sender<Packet>,
-    ) -> std::result::Result<(), Box<dyn std::error::Error>> {
-        {
-            let map = sessions.read().await;
-            if map.contains_key(&(from, dest.address)) {
-                return Ok(());
-            }
-        }
-        let s = Session::new(
-            log,
-            metrics.new_session_metrics(&from, &dest.address)?,
-            chain,
-            from,
-            dest.clone(),
-            sender,
-        )
-        .await?;
-        {
-            let mut map = sessions.write().await;
-            map.insert(s.key(), Mutex::new(s));
-        }
-        Ok(())
-    }
-
     /// prune_sessions removes expired Sessions from the SessionMap.
     /// Should be run on a time interval.
     /// This will lock the SessionMap if it finds expired sessions
     async fn prune_sessions(log: &Logger, sessions: SessionMap) {
-        let mut remove_keys = Vec::<(SocketAddr, SocketAddr)>::new();
+        let now = if let Ok(now) = SystemTime::now().duration_since(UNIX_EPOCH) {
+            now.as_secs()
+        } else {
+            warn!(log, "failed to get current time when pruning sessions");
+            return;
+        };
+
+        let mut expired_keys = Vec::<(SocketAddr, SocketAddr)>::new();
         {
-            let now = Instant::now();
             let map = sessions.read().await;
-            for (k, v) in map.iter() {
-                let session = v.lock().await;
-                let expiration = session.expiration().await;
-                if expiration.lt(&now) {
-                    remove_keys.push(*k);
+            for (key, session) in map.iter() {
+                let expiration = session.expiration();
+                if expiration <= now {
+                    expired_keys.push(*key);
                 }
             }
         }
 
-        if !remove_keys.is_empty() {
+        if !expired_keys.is_empty() {
             let mut map = sessions.write().await;
-            for key in remove_keys.iter() {
+            for key in expired_keys.iter() {
                 if let Some(session) = map.get(key) {
-                    let sess = session.lock().await;
-                    if let Err(err) = sess.close() {
+                    // If the session has been updated since we marked it
+                    // for removal then its still valid so ignore it.
+                    if session.expiration() > now {
+                        continue;
+                    }
+
+                    if let Err(err) = session.close() {
                         error!(log, "Error closing Session"; "error" => %err)
                     }
                 }
@@ -388,21 +478,24 @@ mod tests {
     use std::net::{IpAddr, Ipv4Addr, SocketAddr};
     use std::sync::Arc;
 
+    use futures_intrusive::sync::GenericSharedSemaphore;
+    use parking_lot::RawMutex;
     use slog::info;
     use tokio::sync::{mpsc, RwLock};
     use tokio::time;
-    use tokio::time::{Duration, Instant};
+    use tokio::time::Duration;
 
     use crate::config;
     use crate::config::{Builder as ConfigBuilder, EndPoint};
     use crate::extensions::FilterRegistry;
-    use crate::proxy::sessions::{Packet, SESSION_TIMEOUT_SECONDS};
+    use crate::proxy::sessions::Packet;
     use crate::proxy::Builder;
     use crate::test_utils::{
         config_with_dummy_endpoint, SplitSocket, TestFilter, TestFilterFactory, TestHelper,
     };
 
     use super::*;
+    use std::ops::Add;
 
     #[tokio::test]
     async fn run_server() {
@@ -538,9 +631,12 @@ mod tests {
             time::advance(Duration::from_secs(time_increment)).await;
 
             let endpoint_address = endpoint.addr;
+            let semaphore: GenericSharedSemaphore<RawMutex> =
+                GenericSharedSemaphore::new(false, 10);
             tokio::spawn(async move {
                 Server::recv_from(
                     &mut recv,
+                    semaphore.acquire(1).await,
                     RecvFromArgs {
                         log: t.log.clone(),
                         metrics: Metrics::default(),
@@ -551,6 +647,7 @@ mod tests {
                         chain,
                         sessions: sessions_clone,
                         send_packets: send_packets.clone(),
+                        session_ttl: Duration::from_secs(10),
                     },
                 )
                 .await
@@ -569,15 +666,13 @@ mod tests {
             receive_addr_local.set_ip("127.0.0.1".parse().unwrap());
             let build_key = (receive_addr_local, endpoint.addr);
             assert!(map.contains_key(&build_key));
-            let session = map.get(&build_key).unwrap().lock().await;
-            assert_eq!(
-                SESSION_TIMEOUT_SECONDS,
-                session
-                    .expiration()
-                    .await
-                    .duration_since(Instant::now())
-                    .as_secs(),
-            );
+            let session = map.get(&build_key).unwrap();
+            let now_secs = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs();
+            let diff = session.expiration() - now_secs;
+            assert!(diff >= 5 && diff <= 10);
 
             Result {
                 msg: result,
@@ -627,46 +722,13 @@ mod tests {
             server.filter_chain.clone(),
             recv,
             &sessions,
+            Duration::from_secs(10),
             send_packets,
         );
 
         send.send_to(msg.as_bytes(), &addr).await.unwrap();
         assert_eq!(msg, endpoint.packet_rx.await.unwrap());
         recv_packets.close();
-    }
-
-    #[tokio::test]
-    async fn ensure_session() {
-        let t = TestHelper::default();
-        let map: SessionMap = Arc::new(RwLock::new(HashMap::new()));
-        let from: SocketAddr = "127.0.0.1:27890".parse().unwrap();
-        let dest: SocketAddr = "127.0.0.1:27891".parse().unwrap();
-        let (sender, _) = mpsc::channel::<Packet>(1);
-        let endpoint = Endpoint::from_address(dest);
-
-        // gate
-        {
-            assert!(map.read().await.is_empty());
-        }
-        Server::ensure_session(
-            &t.log,
-            &Metrics::default(),
-            Arc::new(FilterChain::new(vec![])),
-            map.clone(),
-            from,
-            &endpoint,
-            sender,
-        )
-        .await
-        .unwrap();
-
-        let rmap = map.read().await;
-        let key = (from, dest);
-        assert!(rmap.contains_key(&key));
-
-        let sess = rmap.get(&key).unwrap().lock().await;
-        assert_eq!(key, sess.key());
-        assert_eq!(1, rmap.keys().len());
     }
 
     #[tokio::test]
@@ -693,7 +755,6 @@ mod tests {
 
     #[tokio::test]
     async fn prune_sessions() {
-        time::pause();
         let t = TestHelper::default();
         let sessions: SessionMap = Arc::new(RwLock::new(HashMap::new()));
         let from: SocketAddr = "127.0.0.1:7000".parse().unwrap();
@@ -701,29 +762,37 @@ mod tests {
         let (send, _recv) = mpsc::channel::<Packet>(1);
         let endpoint = Endpoint::from_address(to);
 
-        Server::ensure_session(
-            &t.log.clone(),
-            &Metrics::default(),
-            Arc::new(FilterChain::new(vec![])),
-            sessions.clone(),
-            from,
-            &endpoint,
-            send,
-        )
-        .await
-        .unwrap();
-
         let key = (from, to);
-        // gate, to ensure valid state
+        let ttl = Duration::from_secs(1);
+
+        {
+            let mut sessions = sessions.write().await;
+            sessions.insert(
+                key,
+                Session::new(
+                    &t.log,
+                    Metrics::default()
+                        .new_session_metrics(&from, &endpoint.address)
+                        .unwrap(),
+                    Arc::new(FilterChain::new(vec![])),
+                    from,
+                    endpoint.clone(),
+                    send,
+                    ttl,
+                )
+                .await
+                .unwrap(),
+            );
+        }
+
+        // Insert key.
         {
             let map = sessions.read().await;
-
             assert!(map.contains_key(&key));
             assert_eq!(1, map.len());
         }
 
         // session map should be the same since, we haven't passed expiry
-        time::advance(Duration::new(SESSION_TIMEOUT_SECONDS / 2, 0)).await;
         Server::prune_sessions(&t.log, sessions.clone()).await;
         {
             let map = sessions.read().await;
@@ -731,7 +800,9 @@ mod tests {
             assert_eq!(1, map.len());
         }
 
-        time::advance(Duration::new(2 * SESSION_TIMEOUT_SECONDS, 0)).await;
+        // Wait until the key has expired.
+        time::delay_until(time::Instant::now().add(ttl)).await;
+
         Server::prune_sessions(&t.log, sessions.clone()).await;
         {
             let map = sessions.read().await;
@@ -742,48 +813,62 @@ mod tests {
             assert_eq!(0, map.len(), "len should be 0, bit is {}", map.len());
         }
         info!(t.log, "test complete");
-        time::resume();
     }
 
     #[tokio::test]
     async fn run_prune_sessions() {
-        time::pause();
         let t = TestHelper::default();
         let sessions: SessionMap = Arc::new(RwLock::new(HashMap::new()));
         let from: SocketAddr = "127.0.0.1:7000".parse().unwrap();
         let to: SocketAddr = "127.0.0.1:7001".parse().unwrap();
         let (send, _recv) = mpsc::channel::<Packet>(1);
-        let key = (from, to);
+
         let endpoint = Endpoint::from_address(to);
+
+        let ttl = Duration::from_secs(1);
+        let poll_interval = Duration::from_millis(1);
 
         let config = Arc::new(config_with_dummy_endpoint().build());
         let server = Builder::from(config).validate().unwrap().build();
-        server.run_prune_sessions(&sessions);
-        Server::ensure_session(
-            &t.log,
-            &Metrics::default(),
-            Arc::new(FilterChain::new(vec![])),
-            sessions.clone(),
-            from,
-            &endpoint,
-            send,
-        )
-        .await
-        .unwrap();
+        server.run_prune_sessions(&sessions, poll_interval);
+
+        let key = (from, to);
+
+        // Insert key.
+        {
+            let mut sessions = sessions.write().await;
+            sessions.insert(
+                key,
+                Session::new(
+                    &t.log,
+                    Metrics::default()
+                        .new_session_metrics(&from, &endpoint.address)
+                        .unwrap(),
+                    Arc::new(FilterChain::new(vec![])),
+                    from,
+                    endpoint.clone(),
+                    send,
+                    ttl,
+                )
+                .await
+                .unwrap(),
+            );
+        }
 
         // session map should be the same since, we haven't passed expiry
-        time::advance(Duration::new(SESSION_TIMEOUT_SECONDS / 2, 0)).await;
         {
             let map = sessions.read().await;
 
             assert!(map.contains_key(&key));
             assert_eq!(1, map.len());
         }
-        time::advance(Duration::new(2 * SESSION_TIMEOUT_SECONDS, 0)).await;
+
+        // Wait until the key has expired.
+        time::delay_until(time::Instant::now().add(ttl)).await;
 
         // poll, since cleanup is async, and may not have happened yet
-        for _ in 1..10 {
-            time::delay_for(Duration::from_secs(1)).await;
+        for _ in 1..10000 {
+            time::delay_for(Duration::from_millis(1)).await;
             let map = sessions.read().await;
             if !map.contains_key(&key) && map.len() == 0 {
                 break;
