@@ -486,7 +486,7 @@ mod tests {
     use tokio::time::Duration;
 
     use crate::config;
-    use crate::config::{Builder as ConfigBuilder, EndPoint, ProxyMode};
+    use crate::config::{Builder as ConfigBuilder, EndPoint};
     use crate::extensions::FilterRegistry;
     use crate::proxy::sessions::Packet;
     use crate::proxy::Builder;
@@ -506,7 +506,6 @@ mod tests {
 
         let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12358);
         let config = ConfigBuilder::empty()
-            .with_mode(ProxyMode::Server)
             .with_port(local_addr.port())
             .with_static(
                 vec![],
@@ -533,7 +532,6 @@ mod tests {
 
         let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12357);
         let config = ConfigBuilder::empty()
-            .with_mode(ProxyMode::Client)
             .with_port(local_addr.port())
             .with_static(vec![], vec![EndPoint::new(endpoint.addr)])
             .build();
@@ -558,7 +556,6 @@ mod tests {
         let mut endpoint = t.open_socket_and_recv_single_packet().await;
         let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12367);
         let config = ConfigBuilder::empty()
-            .with_mode(ProxyMode::Client)
             .with_port(local_addr.port())
             .with_static(
                 vec![config::Filter {

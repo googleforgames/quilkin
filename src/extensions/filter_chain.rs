@@ -118,7 +118,7 @@ mod tests {
     use std::str::from_utf8;
 
     use crate::config;
-    use crate::config::{Builder, Endpoints, ProxyMode, UpstreamEndpoints};
+    use crate::config::{Builder, Endpoints, UpstreamEndpoints};
     use crate::extensions::filters::DebugFactory;
     use crate::extensions::{default_registry, FilterFactory};
     use crate::test_utils::{ep, logger, TestFilter};
@@ -133,7 +133,6 @@ mod tests {
 
         // everything is fine
         let config = Builder::empty()
-            .with_mode(ProxyMode::Client)
             .with_static(
                 vec![config::Filter {
                     name: provider.name(),
@@ -150,7 +149,6 @@ mod tests {
 
         // uh oh, something went wrong
         let config = Builder::empty()
-            .with_mode(ProxyMode::Client)
             .with_static(
                 vec![config::Filter {
                     name: "this is so wrong".to_string(),

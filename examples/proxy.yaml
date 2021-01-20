@@ -20,7 +20,6 @@
 
 version: v1alpha1
 proxy:
-  mode: SERVER # Run the proxy in server mode.
   id: my-proxy # An identifier for the proxy instance.
   port: 7001 # the port to receive traffic to locally
 static: # Provide static configuration of endpoints
