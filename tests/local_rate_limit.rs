@@ -20,6 +20,8 @@ extern crate quilkin;
 mod tests {
     use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
+    use tokio::time::{timeout, Duration};
+
     use quilkin::config::{Builder as ConfigBuilder, EndPoint, Filter};
     use quilkin::extensions::filters::RateLimitFilterFactory;
     use quilkin::extensions::FilterFactory;
@@ -48,12 +50,12 @@ period: 1s
             .build();
         t.run_server(server_config);
 
-        let (mut recv_chan, mut send) = t.open_socket_and_recv_multiple_packets().await;
+        let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
 
         let server_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port);
 
         for _ in 0..3 {
-            send.send_to(b"hello", &server_addr).await.unwrap();
+            socket.send_to(b"hello", &server_addr).await.unwrap();
         }
 
         for _ in 0..2 {
@@ -61,8 +63,10 @@ period: 1s
         }
 
         // Allow enough time to have received any response.
-        tokio::time::delay_for(std::time::Duration::from_millis(100)).await;
+        tokio::time::sleep(Duration::from_millis(100)).await;
         // Check that we do not get any response.
-        assert!(recv_chan.try_recv().is_err());
+        assert!(timeout(Duration::from_secs(1), recv_chan.recv())
+            .await
+            .is_err());
     }
 }

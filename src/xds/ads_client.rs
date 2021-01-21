@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
+use std::collections::HashMap;
+
 use backoff::{backoff::Backoff, exponential::ExponentialBackoff, Clock, SystemClock};
 use slog::{error, info, o, Logger};
-use std::collections::HashMap;
 use tokio::{
     sync::{mpsc, watch},
     task::JoinHandle,
@@ -34,6 +35,7 @@ use crate::xds::envoy::service::discovery::v3::{
     aggregated_discovery_service_client::AggregatedDiscoveryServiceClient, DiscoveryRequest,
 };
 use crate::xds::{CLUSTER_TYPE, ENDPOINT_TYPE};
+use tokio_stream::wrappers::ReceiverStream;
 
 /// AdsClient is a client that can talk to an XDS server using the ADS protocol.
 pub struct AdsClient;
@@ -176,8 +178,8 @@ impl AdsClient {
                     }
                 },
 
-                _ = shutdown_rx.recv() => {
-                    info!(log, "stopping client execution - received shutdown signal.");
+                _ = shutdown_rx.changed() => {
+                    info!(log, "Stopping client execution - received shutdown signal.");
                     return Ok(())
                 },
             }
@@ -263,6 +265,7 @@ impl AdsClient {
         })
     }
 
+    #[allow(deprecated)]
     async fn send_initial_cds_request(
         node_id: String,
         rpc_tx: &mut mpsc::Sender<DiscoveryRequest>,
@@ -307,7 +310,7 @@ impl AdsClient {
     ) -> JoinHandle<RpcSessionResult> {
         tokio::spawn(async move {
             let mut response_stream = match client
-                .stream_aggregated_resources(Request::new(rpc_rx))
+                .stream_aggregated_resources(Request::new(ReceiverStream::new(rpc_rx)))
                 .await
             {
                 Ok(response) => response.into_inner(),
@@ -340,7 +343,7 @@ impl AdsClient {
                         }
                     }
 
-                    _ = shutdown_rx.recv() => {
+                    _ = shutdown_rx.changed() => {
                         info!(log, "exiting receive loop - received shutdown signal.");
                         return Ok(resource_handlers)
                     }
@@ -359,27 +362,26 @@ impl AdsClient {
             .next_backoff()
             .ok_or_else(|| ExecutionError::BackoffLimitExceeded)?;
         info!(log, "retrying in {:?}", delay);
-        tokio::time::delay_for(delay).await;
+        tokio::time::sleep(delay).await;
         Ok(())
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::AdsClient;
+    use tokio::sync::{mpsc, watch};
+
     use crate::config::ManagementServer;
     use crate::proxy::logger;
-    use tokio::sync::{mpsc, watch};
+
+    use super::AdsClient;
 
     #[tokio::test]
     async fn invalid_url() {
         // If we get an invalid URL, we should return immediately rather
         // than backoff or retry.
 
-        let (_shutdown_tx, mut shutdown_rx) = watch::channel::<()>(());
-        // Remove initial value from channel.
-        shutdown_rx.recv().await;
-
+        let (_shutdown_tx, shutdown_rx) = watch::channel::<()>(());
         let (cluster_updates_tx, _) = mpsc::channel(10);
         let run = AdsClient.run(
             logger(),

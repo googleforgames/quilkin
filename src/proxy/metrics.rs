@@ -55,7 +55,7 @@ pub fn start_metrics_server(
     });
 
     let (_, server) = warp::serve(metrics_route).bind_with_graceful_shutdown(addr, async move {
-        let _ = shutdown_rx.recv().await;
+        let _ = shutdown_rx.changed().await;
     });
 
     tokio::spawn(server);

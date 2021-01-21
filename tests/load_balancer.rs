@@ -64,10 +64,10 @@ policy: ROUND_ROBIN
         t.run_server(server_config);
         let server_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port);
 
-        let (mut recv_chan, mut send) = t.open_socket_and_recv_multiple_packets().await;
+        let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
 
         for addr in echo_addresses {
-            send.send_to(b"hello", &server_addr).await.unwrap();
+            socket.send_to(b"hello", &server_addr).await.unwrap();
             assert_eq!(recv_chan.recv().await.unwrap(), "hello");
 
             assert_eq!(addr, selected_endpoint.lock().unwrap().take().unwrap());

@@ -902,6 +902,7 @@ mod tests {
         }
     }
 
+    #[allow(deprecated)]
     fn create_cluster_resource(name: &str) -> Cluster {
         Cluster {
             name: name.into(),

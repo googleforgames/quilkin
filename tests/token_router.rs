@@ -18,8 +18,7 @@
 mod tests {
     use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
-    use tokio::select;
-    use tokio::time::{delay_for, Duration};
+    use tokio::time::{timeout, Duration};
 
     use quilkin::config::{Builder, EndPoint, Filter};
     use quilkin::extensions::filters::{CaptureBytesFactory, TokenRouterFactory};
@@ -67,30 +66,25 @@ quilkin.dev:
         t.run_server(server_config);
 
         // valid packet
-        let (mut recv_chan, mut send) = t.open_socket_and_recv_multiple_packets().await;
+        let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
 
         let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port);
         let msg = b"helloabc";
-        send.send_to(msg, &local_addr).await.unwrap();
+        socket.send_to(msg, &local_addr).await.unwrap();
 
-        select! {
-            res = recv_chan.recv() => {
-                assert_eq!("hello", res.unwrap());
-            }
-            _ = delay_for(Duration::from_secs(5)) => {
-                unreachable!("should have received a packet");
-            }
-        };
+        assert_eq!(
+            "hello",
+            timeout(Duration::from_secs(5), recv_chan.recv())
+                .await
+                .expect("should have received a packet")
+                .unwrap()
+        );
 
         // send an invalid packet
         let msg = b"helloxyz";
-        send.send_to(msg, &local_addr).await.unwrap();
+        socket.send_to(msg, &local_addr).await.unwrap();
 
-        select! {
-            _ = recv_chan.recv() => {
-                unreachable!("should not have received a packet")
-            }
-            _ = delay_for(Duration::from_secs(3)) => {}
-        };
+        let result = timeout(Duration::from_secs(3), recv_chan.recv()).await;
+        assert!(result.is_err(), "should not have received a packet");
     }
 }

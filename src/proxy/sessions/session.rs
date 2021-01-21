@@ -21,10 +21,9 @@ use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use slog::{debug, error, o, trace, warn, Logger};
-use tokio::net::udp::{RecvHalf, SendHalf};
 use tokio::net::UdpSocket;
 use tokio::select;
-use tokio::sync::{mpsc, watch, RwLock as TokioRwLock};
+use tokio::sync::{mpsc, watch};
 use tokio::time::{Duration, Instant};
 
 use crate::cluster::Endpoint;
@@ -48,15 +47,15 @@ pub struct Session {
     chain: Arc<FilterChain>,
     /// created_at is time at which the session was created
     created_at: Instant,
-    send: TokioRwLock<SendHalf>,
+    socket: Arc<UdpSocket>,
     /// dest is where to send data to
     dest: Endpoint,
     /// from is the original sender
     from: SocketAddr,
     /// The time at which the session is considered expired and can be removed.
     expiration: Arc<AtomicU64>,
-    /// closer is a channel to broadcast on if we are shutting down this Session
-    closer: watch::Sender<bool>,
+    /// a channel to broadcast on if we are shutting down this Session
+    shutdown_tx: watch::Sender<()>,
     /// closed is if this Session has closed, and isn't receiving packets anymore
     is_closed: Arc<AtomicBool>,
 }
@@ -105,11 +104,8 @@ impl Session {
         let log = base
             .new(o!("source" => "proxy::Session", "from" => from, "dest_address" => dest.address));
         let addr = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 0);
-        let (recv, send) = UdpSocket::bind(addr)
-            .await
-            .map_err(Error::BindUdpSocket)?
-            .split();
-        let (closer, closed) = watch::channel::<bool>(false);
+        let socket = Arc::new(UdpSocket::bind(addr).await.map_err(Error::BindUdpSocket)?);
+        let (shutdown_tx, shutdown_rx) = watch::channel::<()>(());
 
         let expiration = Arc::new(AtomicU64::new(0));
         Self::do_update_expiration(&expiration, ttl)?;
@@ -118,19 +114,19 @@ impl Session {
             metrics,
             log,
             chain,
-            send: TokioRwLock::new(send),
+            socket: socket.clone(),
             from,
             dest,
             created_at: Instant::now(),
             expiration,
-            closer,
+            shutdown_tx,
             is_closed: Arc::new(AtomicBool::new(false)),
         };
         debug!(s.log, "Session created");
 
         s.metrics.sessions_total.inc();
         s.metrics.active_sessions.inc();
-        s.run(ttl, recv, sender, closed);
+        s.run(ttl, socket, sender, shutdown_rx);
         Ok(s)
     }
 
@@ -138,9 +134,9 @@ impl Session {
     fn run(
         &self,
         ttl: Duration,
-        mut recv: RecvHalf,
+        socket: Arc<UdpSocket>,
         mut sender: mpsc::Sender<Packet>,
-        mut closed: watch::Receiver<bool>,
+        mut shutdown_rx: watch::Receiver<()>,
     ) {
         let log = self.log.clone();
         let from = self.from;
@@ -154,7 +150,7 @@ impl Session {
             loop {
                 debug!(log, "Awaiting incoming packet");
                 select! {
-                    received = recv.recv_from(&mut buf) => {
+                    received = socket.recv_from(&mut buf) => {
                         match received {
                             Err(err) => {
                                 metrics.rx_errors_total.inc();
@@ -179,17 +175,10 @@ impl Session {
                             }
                         };
                     }
-                    close_request = closed.recv() => {
-                        debug!(log, "Attempting to close session"; "result" => format!("{:?}", close_request));
-                        if let Some(true) = close_request {
-                            is_closed.store(true, Ordering::Relaxed);
-                            debug!(log, "Closing Session");
-                            return;
-                        } else if close_request.is_none() {
-                            is_closed.store(true, Ordering::Relaxed);
-                            debug!(log, "Dropping Session");
-                            return;
-                        }
+                    _ = shutdown_rx.changed() => {
+                        is_closed.store(true, Ordering::Relaxed);
+                        debug!(log, "Closing Session");
+                        return;
                     }
                 };
             }
@@ -291,8 +280,7 @@ impl Session {
     }
 
     pub async fn do_send(&self, buf: &[u8]) -> std::result::Result<usize, std::io::Error> {
-        let mut send = self.send.write().await;
-        send.send_to(buf, &self.dest.address).await
+        self.socket.send_to(buf, &self.dest.address).await
     }
 
     /// is_closed returns if the Session is closed or not.
@@ -302,9 +290,9 @@ impl Session {
     }
 
     /// close closes this Session.
-    pub fn close(&self) -> result::Result<(), watch::error::SendError<bool>> {
+    pub fn close(&self) -> result::Result<(), watch::error::SendError<()>> {
         debug!(self.log, "Session closed"; "from" => self.from, "dest_address" => &self.dest.address);
-        self.closer.broadcast(true)
+        self.shutdown_tx.send(())
     }
 }
 
@@ -320,24 +308,21 @@ impl Drop for Session {
 #[cfg(test)]
 mod tests {
     use std::str::from_utf8;
+    use std::sync::atomic::Ordering;
 
     use prometheus::Registry;
     use slog::info;
-    use tokio::time::delay_for;
+    use tokio::time::{sleep, timeout};
 
-    use crate::test_utils::{SplitSocket, TestFilter, TestHelper};
+    use crate::test_utils::{TestFilter, TestHelper};
 
     use super::*;
-    use std::sync::atomic::Ordering;
 
     #[tokio::test]
     async fn session_new() {
         let t = TestHelper::default();
-        let SplitSocket {
-            addr,
-            mut recv,
-            mut send,
-        } = t.create_and_split_socket().await;
+        let socket = t.create_socket().await;
+        let addr = socket.local_addr().unwrap();
         let endpoint = Endpoint::from_address(addr);
         let (send_packet, mut recv_packet) = mpsc::channel::<Packet>(5);
 
@@ -364,9 +349,9 @@ mod tests {
         // echo the packet back again
         tokio::spawn(async move {
             let mut buf = vec![0; 1024];
-            let (size, recv_addr) = recv.recv_from(&mut buf).await.unwrap();
+            let (size, recv_addr) = socket.recv_from(&mut buf).await.unwrap();
             assert_eq!("hello", from_utf8(&buf[..size]).unwrap());
-            send.send_to(&buf[..size], &recv_addr).await.unwrap();
+            socket.send_to(&buf[..size], &recv_addr).await.unwrap();
         });
 
         sess.send(b"hello").await.unwrap();
@@ -389,18 +374,14 @@ mod tests {
         // without a filter
         let (sender, _) = mpsc::channel::<Packet>(1);
         let ep = t.open_socket_and_recv_single_packet().await;
-        let endpoint = Endpoint::from_address(ep.addr);
+        let addr = ep.socket.local_addr().unwrap();
+        let endpoint = Endpoint::from_address(addr);
 
         let session = Session::new(
             &t.log,
-            Metrics::new(
-                &Registry::default(),
-                ep.addr.to_string(),
-                ep.addr.to_string(),
-            )
-            .unwrap(),
+            Metrics::new(&Registry::default(), addr.to_string(), addr.to_string()).unwrap(),
             Arc::new(FilterChain::new(vec![])),
-            ep.addr,
+            addr,
             endpoint.clone(),
             sender,
             Duration::from_millis(1000),
@@ -417,19 +398,15 @@ mod tests {
 
         let ep = t.open_socket_and_recv_single_packet().await;
         let (send_packet, _) = mpsc::channel::<Packet>(5);
-        let endpoint = Endpoint::from_address(ep.addr);
+        let addr = ep.socket.local_addr().unwrap();
+        let endpoint = Endpoint::from_address(addr);
 
         info!(t.log, ">> creating sessions");
         let sess = Session::new(
             &t.log,
-            Metrics::new(
-                &Registry::default(),
-                ep.addr.to_string(),
-                ep.addr.to_string(),
-            )
-            .unwrap(),
+            Metrics::new(&Registry::default(), addr.to_string(), addr.to_string()).unwrap(),
             Arc::new(FilterChain::new(vec![])),
-            ep.addr,
+            addr,
             endpoint,
             send_packet,
             Duration::from_millis(1000),
@@ -449,7 +426,7 @@ mod tests {
                 break;
             }
 
-            delay_for(Duration::from_millis(10)).await;
+            sleep(Duration::from_millis(10)).await;
         }
 
         assert!(sess.is_closed(), "session should be closed");
@@ -495,7 +472,10 @@ mod tests {
         .await;
 
         assert!(initial_expiration < expiration.load(Ordering::Relaxed));
-        let p = receiver.try_recv().unwrap();
+        let p = timeout(Duration::from_secs(5), receiver.recv())
+            .await
+            .expect("Should receive a packet")
+            .unwrap();
         assert_eq!(msg, from_utf8(p.contents.as_slice()).unwrap());
         assert_eq!(dest, p.dest);
 
@@ -530,7 +510,10 @@ mod tests {
         .await;
 
         assert!(initial_expiration < expiration.load(Ordering::Relaxed));
-        let p = receiver.try_recv().unwrap();
+        let p = timeout(Duration::from_secs(5), receiver.recv())
+            .await
+            .expect("Should receive a packet")
+            .unwrap();
         assert_eq!(
             format!("{}:our:{}:{}", msg, endpoint.address, dest),
             from_utf8(p.contents.as_slice()).unwrap()
@@ -542,19 +525,15 @@ mod tests {
     async fn session_new_metrics() {
         let t = TestHelper::default();
         let ep = t.open_socket_and_recv_single_packet().await;
-        let endpoint = Endpoint::from_address(ep.addr);
+        let addr = ep.socket.local_addr().unwrap();
+        let endpoint = Endpoint::from_address(addr);
         let (send_packet, _) = mpsc::channel::<Packet>(5);
 
         let session = Session::new(
             &t.log,
-            Metrics::new(
-                &Registry::default(),
-                ep.addr.to_string(),
-                ep.addr.to_string(),
-            )
-            .unwrap(),
+            Metrics::new(&Registry::default(), addr.to_string(), addr.to_string()).unwrap(),
             Arc::new(FilterChain::new(vec![])),
-            ep.addr,
+            addr,
             endpoint,
             send_packet,
             Duration::from_secs(10),
@@ -573,18 +552,13 @@ mod tests {
 
         let (sender, _) = mpsc::channel::<Packet>(1);
         let endpoint = t.open_socket_and_recv_single_packet().await;
-
+        let addr = endpoint.socket.local_addr().unwrap();
         let session = Session::new(
             &t.log,
-            Metrics::new(
-                &Registry::default(),
-                endpoint.addr.to_string(),
-                endpoint.addr.to_string(),
-            )
-            .unwrap(),
+            Metrics::new(&Registry::default(), addr.to_string(), addr.to_string()).unwrap(),
             Arc::new(FilterChain::new(vec![])),
-            endpoint.addr,
-            Endpoint::from_address(endpoint.addr),
+            addr,
+            Endpoint::from_address(addr),
             sender,
             Duration::from_secs(10),
         )
@@ -603,18 +577,13 @@ mod tests {
         let t = TestHelper::default();
         let (send_packet, _) = mpsc::channel::<Packet>(5);
         let endpoint = t.open_socket_and_recv_single_packet().await;
-
+        let addr = endpoint.socket.local_addr().unwrap();
         let session = Session::new(
             &t.log,
-            Metrics::new(
-                &Registry::default(),
-                endpoint.addr.to_string(),
-                endpoint.addr.to_string(),
-            )
-            .unwrap(),
+            Metrics::new(&Registry::default(), addr.to_string(), addr.to_string()).unwrap(),
             Arc::new(FilterChain::new(vec![])),
-            endpoint.addr,
-            Endpoint::from_address(endpoint.addr),
+            addr,
+            Endpoint::from_address(addr),
             send_packet,
             Duration::from_secs(10),
         )
