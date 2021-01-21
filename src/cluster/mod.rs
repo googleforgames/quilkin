@@ -27,6 +27,7 @@ pub(crate) mod cluster_manager;
 pub(crate) mod cluster_manager {
     pub struct ClusterManager;
     pub struct SharedClusterManager;
+    pub struct InitializeError;
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

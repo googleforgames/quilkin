@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+use bytes::Bytes;
+use prost::Message;
 use slog::{info, o, Logger};
 
 use crate::extensions::filter_registry::{
@@ -108,6 +110,22 @@ impl FilterFactory for DebugFactory {
                 Some(prefix) => Ok(Box::new(Debug::new(&self.log, Some(prefix.to_string())))),
             },
         }
+    }
+
+    fn create_filter_from_xds_config(
+        &self,
+        config: Option<prost_types::Any>,
+    ) -> Result<Box<dyn Filter>, Error> {
+        let config = config.ok_or_else(|| Error::MissingConfig)?;
+        let config =
+            quilkin::extensions::filters::debug::v1alpha1::Debug::decode(Bytes::from(config.value))
+                .map_err(|err| {
+                    Error::DeserializeFailed(format!(
+                        "debug filter config decode error: {}",
+                        err.to_string()
+                    ))
+                })?;
+        Ok(Box::new(Debug::new(&self.log, config.id)))
     }
 }
 

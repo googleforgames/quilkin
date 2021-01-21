@@ -23,6 +23,7 @@ pub use filter_registry::{
     FilterRegistry, UpstreamContext, UpstreamResponse,
 };
 
+pub(crate) mod filter_manager;
 mod filter_registry;
 pub mod filters;
 
