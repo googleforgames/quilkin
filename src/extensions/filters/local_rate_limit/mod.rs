@@ -236,7 +236,7 @@ mod tests {
         assert_eq!(r.acquire_token(), None);
 
         // Wait for refill
-        time::delay_for(Duration::from_millis(110)).await;
+        time::sleep(Duration::from_millis(110)).await;
 
         // Exhaust tokens again.
         assert_eq!(r.acquire_token(), Some(()));
@@ -257,7 +257,7 @@ mod tests {
         assert_eq!(r.acquire_token(), Some(()));
 
         // Wait for refill
-        time::delay_for(Duration::from_millis(110)).await;
+        time::sleep(Duration::from_millis(110)).await;
 
         // Refill should not go over max token limit.
         assert_eq!(r.acquire_token(), Some(()));

@@ -59,15 +59,12 @@ async fn main() {
         .unwrap()
         .build();
 
-    let (shutdown_tx, mut shutdown_rx) = watch::channel::<()>(());
-    // Remove the init value from the channel - ensuring that the channel is
-    // empty so that we can terminate once we receive any value from it.
-    shutdown_rx.recv().await;
+    let (shutdown_tx, shutdown_rx) = watch::channel::<()>(());
     tokio::spawn(async move {
         // Don't unwrap in order to ensure that we execute
         // any subsequent shutdown tasks.
         signal::ctrl_c().await.ok();
-        shutdown_tx.broadcast(()).ok();
+        shutdown_tx.send(()).ok();
     });
 
     server.run(shutdown_rx).await.unwrap();

@@ -200,7 +200,7 @@ impl ClusterManager {
                     }
                 }
             }
-            _ = shutdown_rx.recv() => {
+            _ = shutdown_rx.changed() => {
                 Err(InitializeError::Message("failed to receive initial cluster - received shutdown signal".into()))
             },
         }
@@ -230,7 +230,7 @@ impl ClusterManager {
                             }
                         }
                     }
-                    _ = shutdown_rx.recv() => {
+                    _ = shutdown_rx.changed() => {
                         debug!(log, "Exiting cluster update receive loop because a shutdown signal was received.");
                         return;
                     },

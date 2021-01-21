@@ -77,12 +77,12 @@ mod tests {
         t.run_server_with_filter_registry(client_config, registry);
 
         // let's send the packet
-        let (mut recv_chan, mut send) = t.open_socket_and_recv_multiple_packets().await;
+        let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
 
         // game_client
         let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), client_port);
         info!(t.log, "Sending hello"; "addr" => local_addr);
-        send.send_to(b"hello", &local_addr).await.unwrap();
+        socket.send_to(b"hello", &local_addr).await.unwrap();
 
         let result = recv_chan.recv().await.unwrap();
         // since we don't know the ephemeral ip addresses in use, we'll search for
@@ -149,12 +149,12 @@ mod tests {
         t.run_server(client_config);
 
         // let's send the packet
-        let (mut recv_chan, mut send) = t.open_socket_and_recv_multiple_packets().await;
+        let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
 
         // game client
         let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), client_port);
         info!(t.log, "Sending hello"; "addr" => local_addr);
-        send.send_to(b"hello", &local_addr).await.unwrap();
+        socket.send_to(b"hello", &local_addr).await.unwrap();
 
         // since the debug filter doesn't change the data, it should be exactly the same
         assert_eq!("hello", recv_chan.recv().await.unwrap());

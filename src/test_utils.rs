@@ -21,7 +21,6 @@ use std::sync::Arc;
 
 use slog::{o, warn, Drain, Logger};
 use slog_term::{FullFormat, PlainSyncDecorator};
-use tokio::net::udp::{RecvHalf, SendHalf};
 use tokio::net::UdpSocket;
 use tokio::sync::{mpsc, oneshot, watch};
 
@@ -90,22 +89,10 @@ pub struct TestHelper {
 
 /// Returned from [creating a socket](TestHelper::open_socket_and_recv_single_packet)
 pub struct OpenSocketRecvPacket {
-    /// The local address that the opened socket is bound to.
-    pub addr: SocketAddr,
-    /// The sender side, after splitting the opened socket.
-    pub send: SendHalf,
+    /// The opened socket
+    pub socket: Arc<UdpSocket>,
     /// A channel on which the received packet will be forwarded.
     pub packet_rx: oneshot::Receiver<String>,
-}
-
-/// Returned from [creating a socket](TestHelper::create_and_split_socket)
-pub struct SplitSocket {
-    /// The local address that the opened socket is bound to.
-    pub addr: SocketAddr,
-    /// The receiver side, after splitting the opened socket.
-    pub recv: RecvHalf,
-    /// The sender side, after splitting the opened socket.
-    pub send: SendHalf,
 }
 
 impl Drop for TestHelper {
@@ -118,7 +105,7 @@ impl Drop for TestHelper {
             .flatten()
         {
             shutdown_tx
-                .broadcast(())
+                .send(())
                 .map_err(|err| {
                     warn!(
                         log,
@@ -129,7 +116,7 @@ impl Drop for TestHelper {
         }
 
         if let Some((shutdown_tx, _)) = self.shutdown_ch.take() {
-            shutdown_tx.broadcast(()).unwrap();
+            shutdown_tx.send(()).unwrap();
         }
     }
 }
@@ -164,49 +151,37 @@ impl TestHelper {
     }
 
     /// Opens a new socket bound to an ephemeral port
-    pub async fn create_socket(&self) -> UdpSocket {
+    pub async fn create_socket(&self) -> Arc<UdpSocket> {
         let addr = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 0);
-        UdpSocket::bind(addr).await.unwrap()
-    }
-
-    /// Helper function to opens a new socket and split it immediately.
-    pub async fn create_and_split_socket(&self) -> SplitSocket {
-        let socket = self.create_socket().await;
-        let addr = socket.local_addr().unwrap();
-        let (recv, send) = socket.split();
-        SplitSocket { addr, recv, send }
+        Arc::new(UdpSocket::bind(addr).await.unwrap())
     }
 
     /// Opens a socket, listening for a packet. Once a packet is received, it
     /// is forwarded over the returned channel.
     pub async fn open_socket_and_recv_single_packet(&self) -> OpenSocketRecvPacket {
         let socket = self.create_socket().await;
-        let addr = socket.local_addr().unwrap();
-        let (mut recv, send) = socket.split();
         let (packet_tx, packet_rx) = oneshot::channel::<String>();
+        let socket_recv = socket.clone();
         tokio::spawn(async move {
             let mut buf = vec![0; 1024];
-            let size = recv.recv(&mut buf).await.unwrap();
+            let size = socket_recv.recv(&mut buf).await.unwrap();
             packet_tx
                 .send(from_utf8(&buf[..size]).unwrap().to_string())
                 .unwrap();
         });
-        OpenSocketRecvPacket {
-            addr,
-            send,
-            packet_rx,
-        }
+        OpenSocketRecvPacket { socket, packet_rx }
     }
 
     /// Opens a socket, listening for packets. Received packets are forwarded over the
     /// returned channel.
     pub async fn open_socket_and_recv_multiple_packets(
         &mut self,
-    ) -> (mpsc::Receiver<String>, SendHalf) {
-        let (mut packet_tx, packet_rx) = mpsc::channel::<String>(10);
-        let (mut socket_recv, socket_send) = self.create_socket().await.split();
+    ) -> (mpsc::Receiver<String>, Arc<UdpSocket>) {
+        let (packet_tx, packet_rx) = mpsc::channel::<String>(10);
+        let socket = self.create_socket().await;
         let log = self.log.clone();
         let mut shutdown_rx = self.get_shutdown_subscriber().await;
+        let socket_recv = socket.clone();
         tokio::spawn(async move {
             let mut buf = vec![0; 1024];
             loop {
@@ -222,13 +197,13 @@ impl TestHelper {
                             }
                         };
                     },
-                    _ = shutdown_rx.recv() => {
+                    _ = shutdown_rx.changed() => {
                         return;
                     }
                 }
             }
         });
-        (packet_rx, socket_send)
+        (packet_rx, socket)
     }
 
     /// Runs a simple UDP server that echos back payloads.
@@ -244,7 +219,7 @@ impl TestHelper {
     where
         F: Fn(SocketAddr, &[u8], SocketAddr) + Send + 'static,
     {
-        let mut socket = self.create_socket().await;
+        let socket = self.create_socket().await;
         let addr = socket.local_addr().unwrap();
         let mut shutdown = self.get_shutdown_subscriber().await;
         let local_addr = addr;
@@ -258,7 +233,7 @@ impl TestHelper {
                         tap(sender, packet, local_addr);
                         socket.send_to(packet, sender).await.unwrap();
                     },
-                    _ = shutdown.recv() => {
+                    _ = shutdown.changed() => {
                         return;
                     }
                 }
@@ -274,12 +249,9 @@ impl TestHelper {
         filter_registry: FilterRegistry,
         metrics: Metrics,
     ) {
-        let (shutdown_tx, mut shutdown_rx) = watch::channel::<()>(());
+        let (shutdown_tx, shutdown_rx) = watch::channel::<()>(());
         self.server_shutdown_tx.push(Some(shutdown_tx));
         tokio::spawn(async move {
-            // Remove the init value from the channel - ensuring that the channel is
-            // empty so that we can terminate once we receive any value from it.
-            let _ = shutdown_rx.recv().await;
             Builder::from(Arc::new(config))
                 .with_filter_registry(filter_registry)
                 .with_metrics(metrics)
@@ -298,10 +270,7 @@ impl TestHelper {
         match self.shutdown_ch {
             Some((_, ref rx)) => rx.clone(),
             None => {
-                let mut ch = watch::channel(());
-                // Remove the init value from the channel so that we can later
-                // shutdown as soon as we receive any value from the channel.
-                let _ = ch.1.recv().await;
+                let ch = watch::channel(());
                 let recv = ch.1.clone();
                 self.shutdown_ch = Some(ch);
                 recv
@@ -373,10 +342,10 @@ mod tests {
     async fn test_echo_server() {
         let mut t = TestHelper::default();
         let echo_addr = t.run_echo_server().await;
-        let mut endpoint = t.open_socket_and_recv_single_packet().await;
+        let endpoint = t.open_socket_and_recv_single_packet().await;
         let msg = "hello";
         endpoint
-            .send
+            .socket
             .send_to(msg.as_bytes(), &echo_addr)
             .await
             .unwrap();

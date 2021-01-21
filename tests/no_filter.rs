@@ -21,7 +21,7 @@ mod tests {
     use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
     use tokio::select;
-    use tokio::time::{delay_for, Duration};
+    use tokio::time::{sleep, Duration};
 
     use quilkin::config::{Builder as ConfigBuilder, EndPoint};
     use quilkin::test_utils::TestHelper;
@@ -61,11 +61,11 @@ mod tests {
         t.run_server(client_config);
 
         // let's send the packet
-        let (mut recv_chan, mut send) = t.open_socket_and_recv_multiple_packets().await;
+        let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
 
         // game_client
         let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), client_port);
-        send.send_to(b"hello", &local_addr).await.unwrap();
+        socket.send_to(b"hello", &local_addr).await.unwrap();
 
         assert_eq!("hello", recv_chan.recv().await.unwrap());
         assert_eq!("hello", recv_chan.recv().await.unwrap());
@@ -75,7 +75,7 @@ mod tests {
             res = recv_chan.recv() => {
                 unreachable!("Should not receive a third packet: {}", res.unwrap());
             }
-            _ = delay_for(Duration::from_secs(2)) => {}
+            _ = sleep(Duration::from_secs(2)) => {}
         };
     }
 }
