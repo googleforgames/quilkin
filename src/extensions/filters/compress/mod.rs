@@ -14,8 +14,6 @@
  *  limitations under the License.
  */
 
-use core::fmt;
-use std::fmt::{Display, Formatter};
 use std::io;
 
 use serde::{Deserialize, Serialize};
@@ -43,10 +41,10 @@ pub enum Mode {
 /// Compression direction (and decompression goes the other way)
 #[derive(Serialize, Deserialize, Debug)]
 pub enum Direction {
-    /// Compress traffic flowing Upstream - received locally, and sent to endpoint(s)
+    /// Compress traffic flowing upstream (received locally, and sent to endpoint(s))
     #[serde(rename = "UPSTREAM")]
     Upstream,
-    /// Compress traffic flowing downstream - received at an endpoint, and being sent to a local connection
+    /// Compress traffic flowing downstream (received at an endpoint, and being sent to a local connection)
     #[serde(rename = "DOWNSTREAM")]
     Downstream,
 }
@@ -118,8 +116,8 @@ impl Compress {
         }
     }
 
-    /// track a failed attempt at compression
-    fn failed_compression<T>(&self, err: Error) -> Option<T> {
+    /// Track a failed attempt at compression
+    fn failed_compression<T>(&self, err: Box<dyn std::error::Error>) -> Option<T> {
         if self.metrics.packets_dropped_compress.get() % 1000 == 0 {
             warn!(self.log, "Packets are being dropped as they could not be compressed"; 
                             "mode" => format!("{:?}", self.compression_mode), "error" => format!("{}", err), 
@@ -129,8 +127,8 @@ impl Compress {
         None
     }
 
-    /// track a failed attempt at decompression
-    fn failed_decompression<T>(&self, err: Error) -> Option<T> {
+    /// Track a failed attempt at decompression
+    fn failed_decompression<T>(&self, err: Box<dyn std::error::Error>) -> Option<T> {
         if self.metrics.packets_dropped_decompress.get() % 1000 == 0 {
             warn!(self.log, "Packets are being dropped as they could not be decompressed"; 
                             "mode" => format!("{:?}", self.compression_mode), "error" => format!("{}", err), 
@@ -176,7 +174,7 @@ impl Filter for Compress {
         let original_size = ctx.contents.len();
         match self.direction {
             Direction::Upstream => match self.compressor.decode(&mut ctx.contents) {
-                Ok(_) => {
+                Ok(()) => {
                     self.metrics
                         .received_compressed_bytes_total
                         .inc_by(original_size as i64);
@@ -204,33 +202,15 @@ impl Filter for Compress {
     }
 }
 
-pub enum Error {
-    IO(io::Error),
-}
+type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
-impl std::convert::From<io::Error> for Error {
-    fn from(err: io::Error) -> Self {
-        Error::IO(err)
-    }
-}
-
-impl Display for Error {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            Error::IO(inner) => write!(f, "io error: {}", inner),
-        }
-    }
-}
-
-type Result<T> = std::result::Result<T, Error>;
-
-/// Trait provides a compression and decompression strategy for this filter.
+/// A trait that provides a compression and decompression strategy for this filter.
 /// Conversion takes place on a mutable Vec, to ensure the most performant compression or
 /// decompression operation can occur.
 trait Compressor {
-    /// Take the contents of the Vec, and compress it - overwriting the original `contents` Vec
+    /// Compress the contents of the Vec - overwriting the original content.
     fn encode(&self, contents: &mut Vec<u8>) -> Result<()>;
-    /// Take the contents of the Vec, and decompress it - overwriting the original `contents` Vec
+    /// Decompress the contents of the Vec - overwriting the original content.
     fn decode(&self, contents: &mut Vec<u8>) -> Result<()>;
 }
 
