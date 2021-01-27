@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+use serde::{Deserialize, Serialize};
 use slog::{info, o, Logger};
 
 use crate::extensions::filter_registry::{
@@ -73,6 +74,12 @@ impl Debug {
     }
 }
 
+/// A Debug filter's configuration.
+#[derive(Serialize, Deserialize, Debug)]
+struct Config {
+    id: Option<String>,
+}
+
 /// Factory for the Debug
 pub struct DebugFactory {
     log: Logger,
@@ -90,24 +97,11 @@ impl FilterFactory for DebugFactory {
     }
 
     fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
-        // pull out the Option<&Value>
-        let prefix = match args.config {
-            Some(serde_yaml::Value::Mapping(map)) => map.get(&serde_yaml::Value::from("id")),
-            _ => None,
-        };
-
-        match prefix {
-            // if no config value supplied, then no prefix, which is fine
-            None => Ok(Box::new(Debug::new(&self.log, None))),
-            // return an Error if the id exists but is not a string.
-            Some(value) => match value.as_str() {
-                None => Err(Error::FieldInvalid {
-                    field: "config.id".to_string(),
-                    reason: "id value should be a string".to_string(),
-                }),
-                Some(prefix) => Ok(Box::new(Debug::new(&self.log, Some(prefix.to_string())))),
-            },
-        }
+        let config: Option<Config> = args.parse_config()?;
+        Ok(Box::new(Debug::new(
+            &self.log,
+            config.and_then(|cfg| cfg.id),
+        )))
     }
 }
 
@@ -189,19 +183,9 @@ mod tests {
         let mut map = Mapping::new();
         let factory = DebugFactory::new(&log);
 
-        map.insert(Value::from("id"), Value::from(false));
-        match factory.create_filter(CreateFilterArgs::new(Some(&Value::Mapping(map)))) {
-            Ok(_) => unreachable!("should be an error"),
-            Err(err) => {
-                assert_eq!(
-                    Error::FieldInvalid {
-                        field: "config.id".to_string(),
-                        reason: "id value should be a string".to_string()
-                    }
-                    .to_string(),
-                    err.to_string()
-                );
-            }
-        }
+        map.insert(Value::from("id"), Value::Sequence(vec![]));
+        assert!(factory
+            .create_filter(CreateFilterArgs::new(Some(&Value::Mapping(map))))
+            .is_err());
     }
 }

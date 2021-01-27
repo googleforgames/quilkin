@@ -258,6 +258,12 @@ impl CreateFilterArgs<'_> {
             ..self
         }
     }
+
+    pub fn parse_config<T: for<'de> serde::Deserialize<'de>>(&self) -> Result<T, Error> {
+        serde_yaml::to_string(&self.config)
+            .and_then(|raw_config| serde_yaml::from_str(raw_config.as_str()))
+            .map_err(|err| Error::DeserializeFailed(err.to_string()))
+    }
 }
 
 /// FilterFactory provides the name and creation function for a given Filter.
