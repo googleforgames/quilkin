@@ -44,6 +44,7 @@ futures-intrusive = "0.4.0"
 base64-serde = "0.5.1"
 tonic = "0.4.0"
 uuid = {version = "0.8.1", default-features = false, features = ["v4"]}
+snap = "1.0.3"
 tokio-stream = "0.1.2"
 
 [dev-dependencies]
