@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 use prometheus::core::{AtomicI64, GenericCounter};
-use prometheus::Registry;
+use prometheus::{IntCounter, Registry};
 use prometheus::{IntCounterVec, Result as MetricsResult};
 
 use crate::metrics::{filter_opts, CollectorExt};
@@ -23,10 +23,8 @@ use crate::metrics::{filter_opts, CollectorExt};
 pub(super) struct Metrics {
     pub(super) packets_dropped_compress: GenericCounter<AtomicI64>,
     pub(super) packets_dropped_decompress: GenericCounter<AtomicI64>,
-    pub(super) received_compressed_bytes_total: GenericCounter<AtomicI64>,
-    pub(super) received_decompressed_bytes_total: GenericCounter<AtomicI64>,
-    pub(super) sent_compressed_bytes_total: GenericCounter<AtomicI64>,
-    pub(super) sent_decompressed_bytes_total: GenericCounter<AtomicI64>,
+    pub(super) compressed_bytes_total: GenericCounter<AtomicI64>,
+    pub(super) decompressed_bytes_total: GenericCounter<AtomicI64>,
 }
 
 impl Metrics {
@@ -42,25 +40,18 @@ impl Metrics {
         )?
         .register(registry)?;
 
-        let event_labels = vec!["event"];
-        let decompressed_bytes_total = IntCounterVec::new(
-            filter_opts(
-                "decompressed_bytes_total",
-                "Compress",
-                "Total number of bytes after being decompressed when received or sent. Labels: event",
-            ),
-            &event_labels,
-        )?
+        let decompressed_bytes_total = IntCounter::with_opts(filter_opts(
+            "decompressed_bytes_total",
+            "Compress",
+            "Total number of decompressed bytes either received or sent.",
+        ))?
         .register(registry)?;
 
-        let compressed_bytes_total = IntCounterVec::new(
-            filter_opts(
-                "compressed_bytes_total",
-                "Compress",
-                "Total number of bytes after being compressed when received or sent. Labels: event",
-            ),
-            &event_labels,
-        )?
+        let compressed_bytes_total = IntCounter::with_opts(filter_opts(
+            "compressed_bytes_total",
+            "Compress",
+            "Total number of compressed bytes either received or sent.",
+        ))?
         .register(registry)?;
 
         Ok(Metrics {
@@ -68,14 +59,8 @@ impl Metrics {
                 .get_metric_with_label_values(vec!["Compress"].as_slice())?,
             packets_dropped_decompress: dropped_metric
                 .get_metric_with_label_values(vec!["Decompress"].as_slice())?,
-            received_compressed_bytes_total: compressed_bytes_total
-                .get_metric_with_label_values(vec!["Received"].as_slice())?,
-            received_decompressed_bytes_total: decompressed_bytes_total
-                .get_metric_with_label_values(vec!["Received"].as_slice())?,
-            sent_compressed_bytes_total: compressed_bytes_total
-                .get_metric_with_label_values(vec!["Sent"].as_slice())?,
-            sent_decompressed_bytes_total: decompressed_bytes_total
-                .get_metric_with_label_values(vec!["Sent"].as_slice())?,
+            compressed_bytes_total,
+            decompressed_bytes_total,
         })
     }
 }
