@@ -80,13 +80,9 @@ impl FilterFactory for CaptureBytesFactory {
     }
 
     fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
-        let config: Config = serde_yaml::to_string(&args.config)
-            .and_then(|raw_config| serde_yaml::from_str(raw_config.as_str()))
-            .map_err(|err| Error::DeserializeFailed(err.to_string()))?;
-
         Ok(Box::new(CaptureBytes::new(
             &self.log,
-            config,
+            args.parse_config()?,
             Metrics::new(&args.metrics_registry)?,
         )))
     }

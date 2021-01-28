@@ -92,9 +92,7 @@ impl FilterFactory for RateLimitFilterFactory {
     }
 
     fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
-        let config: Config = serde_yaml::to_string(&args.config)
-            .and_then(|raw_config| serde_yaml::from_str(raw_config.as_str()))
-            .map_err(|err| Error::DeserializeFailed(err.to_string()))?;
+        let config: Config = args.parse_config()?;
 
         match config.period {
             Some(period) if period.lt(&Duration::from_millis(100)) => Err(Error::FieldInvalid {

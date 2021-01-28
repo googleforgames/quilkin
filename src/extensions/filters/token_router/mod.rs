@@ -67,9 +67,7 @@ impl FilterFactory for TokenRouterFactory {
     }
 
     fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
-        let config: Option<Config> = serde_yaml::to_string(&args.config)
-            .and_then(|raw_config| serde_yaml::from_str(raw_config.as_str()))
-            .map_err(|err| Error::DeserializeFailed(err.to_string()))?;
+        let config: Option<Config> = args.parse_config()?;
 
         Ok(Box::new(TokenRouter::new(
             &self.log,
