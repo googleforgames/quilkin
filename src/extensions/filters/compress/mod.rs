@@ -81,13 +81,9 @@ impl FilterFactory for CompressFactory {
         &self,
         args: CreateFilterArgs,
     ) -> std::result::Result<Box<dyn Filter>, RegistryError> {
-        let config: Config = serde_yaml::to_string(&args.config)
-            .and_then(|raw_config| serde_yaml::from_str(raw_config.as_str()))
-            .map_err(|err| RegistryError::DeserializeFailed(err.to_string()))?;
-
         Ok(Box::new(Compress::new(
             &self.log,
-            config,
+            args.parse_config()?,
             Metrics::new(&args.metrics_registry)?,
         )))
     }
