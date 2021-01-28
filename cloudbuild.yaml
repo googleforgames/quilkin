@@ -34,9 +34,6 @@ steps:
     args: ["clippy", "--tests"]
     id: clippy
   - name: gcr.io/$PROJECT_ID/ci
-    args: ["check", "--tests"]
-    id: check-tests
-  - name: gcr.io/$PROJECT_ID/ci
     args: ["fmt", "--", "--check"]
     id: fmt-check
   - name: gcr.io/$PROJECT_ID/ci
@@ -45,5 +42,9 @@ steps:
   - name: gcr.io/$PROJECT_ID/ci
     args: ["+nightly", "test", "--doc"]
     id: external-doc-test
+options:
+  env:
+    - "CARGO_HOME=/workspace/.cargo"
+  machineType: N1_HIGHCPU_8
 timeout: 30m
 logsBucket: "gs://quilkin-build-logs"
