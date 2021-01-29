@@ -43,4 +43,5 @@ pub mod external_doc_tests {
     #![doc(include = "../docs/extensions/filters/concatenate_bytes.md")]
     #![doc(include = "../docs/extensions/filters/capture_bytes.md")]
     #![doc(include = "../docs/extensions/filters/token_router.md")]
+    #![doc(include = "../docs/extensions/filters/compress.md")]
 }
