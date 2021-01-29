@@ -234,10 +234,21 @@ mod tests {
         assert_eq!(r.acquire_token(), None);
 
         // Wait for refill
-        time::sleep(Duration::from_millis(110)).await;
+        let mut num_iterations = 0;
+        let first_token = loop {
+            let token = r.acquire_token();
+            if token.is_some() {
+                break token;
+            }
+            num_iterations += 1;
+            if num_iterations >= 1000 {
+                unreachable!("timed-out waiting for token refill");
+            }
+            time::sleep(Duration::from_millis(10)).await;
+        };
 
         // Exhaust tokens again.
-        assert_eq!(r.acquire_token(), Some(()));
+        assert_eq!(first_token, Some(()));
         assert_eq!(r.acquire_token(), Some(()));
         assert_eq!(r.acquire_token(), None);
     }
@@ -248,7 +259,7 @@ mod tests {
 
         let r = rate_limiter(Config {
             max_packets: 3,
-            period: Some(Duration::from_millis(100)),
+            period: Some(Duration::from_millis(30)),
         });
 
         // Use up some of the tokens.
