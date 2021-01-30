@@ -69,7 +69,17 @@ impl FilterFactory for ConcatBytesFactory {
     }
 
     fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
-        Ok(Box::new(ConcatenateBytes::new(args.parse_config()?)))
+        #[derive(Clone, PartialEq, ::prost::Message)]
+        pub struct TODO;
+        impl From<TODO> for Config {
+            fn from(_: TODO) -> Self {
+                unimplemented!()
+            }
+        }
+        Ok(Box::new(ConcatenateBytes::new(
+            self.require_config(args.config)?
+                .deserialize::<Config, TODO>(self.name().as_str())?,
+        )))
     }
 }
 
@@ -118,7 +128,7 @@ mod tests {
         );
 
         let filter = factory
-            .create_filter(CreateFilterArgs::new(Some(&Value::Mapping(map.clone()))))
+            .create_filter(CreateFilterArgs::fixed(Some(&Value::Mapping(map.clone()))))
             .unwrap();
         assert_with_filter(filter.as_ref(), "abchello");
 
@@ -129,7 +139,7 @@ mod tests {
         );
 
         let filter = factory
-            .create_filter(CreateFilterArgs::new(Some(&Value::Mapping(map.clone()))))
+            .create_filter(CreateFilterArgs::fixed(Some(&Value::Mapping(map.clone()))))
             .unwrap();
         assert_with_filter(filter.as_ref(), "abchello");
 
@@ -140,7 +150,7 @@ mod tests {
         );
 
         let filter = factory
-            .create_filter(CreateFilterArgs::new(Some(&Value::Mapping(map))))
+            .create_filter(CreateFilterArgs::fixed(Some(&Value::Mapping(map))))
             .unwrap();
 
         assert_with_filter(filter.as_ref(), "helloabc");
@@ -152,7 +162,7 @@ mod tests {
         let mut map = Mapping::new();
 
         let result =
-            factory.create_filter(CreateFilterArgs::new(Some(&Value::Mapping(map.clone()))));
+            factory.create_filter(CreateFilterArgs::fixed(Some(&Value::Mapping(map.clone()))));
         assert!(result.is_err());
 
         // broken strategy
@@ -161,7 +171,7 @@ mod tests {
             Value::String("WRONG".into()),
         );
 
-        let result = factory.create_filter(CreateFilterArgs::new(Some(&Value::Mapping(map))));
+        let result = factory.create_filter(CreateFilterArgs::fixed(Some(&Value::Mapping(map))));
         assert!(result.is_err());
     }
 

@@ -29,7 +29,6 @@ mod quilkin {
         pub(crate) mod filters {
             pub(crate) mod debug {
                 pub(crate) mod v1alpha1 {
-                    #![cfg(not(doctest))]
                     #![doc(hidden)]
                     tonic::include_proto!("quilkin.extensions.filters.debug.v1alpha1");
                 }
@@ -37,6 +36,7 @@ mod quilkin {
         }
     }
 }
+use self::quilkin::extensions::filters::debug::v1alpha1::Debug as ProtoDebug;
 
 /// Debug logs all incoming and outgoing packets
 ///
@@ -80,6 +80,12 @@ struct Config {
     id: Option<String>,
 }
 
+impl From<ProtoDebug> for Config {
+    fn from(p: ProtoDebug) -> Self {
+        Config { id: p.id }
+    }
+}
+
 /// Factory for the Debug
 pub struct DebugFactory {
     log: Logger,
@@ -97,7 +103,10 @@ impl FilterFactory for DebugFactory {
     }
 
     fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
-        let config: Option<Config> = args.parse_config()?;
+        let config: Option<Config> = args
+            .config
+            .map(|config| config.deserialize::<Config, ProtoDebug>(self.name().as_str()))
+            .transpose()?;
         Ok(Box::new(Debug::new(
             &self.log,
             config.and_then(|cfg| cfg.id),
@@ -161,7 +170,7 @@ mod tests {
 
         map.insert(Value::from("id"), Value::from("name"));
         assert!(factory
-            .create_filter(CreateFilterArgs::new(Some(&Value::Mapping(map)),))
+            .create_filter(CreateFilterArgs::fixed(Some(&Value::Mapping(map)),))
             .is_ok());
     }
 
@@ -173,7 +182,7 @@ mod tests {
 
         map.insert(Value::from("id"), Value::from("name"));
         assert!(factory
-            .create_filter(CreateFilterArgs::new(Some(&Value::Mapping(map)),))
+            .create_filter(CreateFilterArgs::fixed(Some(&Value::Mapping(map)),))
             .is_ok());
     }
 
@@ -185,7 +194,7 @@ mod tests {
 
         map.insert(Value::from("id"), Value::Sequence(vec![]));
         assert!(factory
-            .create_filter(CreateFilterArgs::new(Some(&Value::Mapping(map))))
+            .create_filter(CreateFilterArgs::fixed(Some(&Value::Mapping(map))))
             .is_err());
     }
 }
