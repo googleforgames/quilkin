@@ -101,7 +101,7 @@ impl Filter for FilterChain {
         let endpoint = ctx.endpoint;
         let from = ctx.from;
         let to = ctx.to;
-        for f in &self.filters {
+        for f in self.filters.iter().rev() {
             match f.write(ctx) {
                 None => return None,
                 Some(response) => {
