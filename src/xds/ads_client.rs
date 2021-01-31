@@ -53,7 +53,6 @@ impl ResourceHandlers {
     // Clear any stale state before (re)connecting.
     pub fn on_reconnect(&mut self) {
         self.cluster_manager.on_reconnect();
-        self.listener_manager.on_reconnect();
     }
 }
 
@@ -433,7 +432,13 @@ mod tests {
     use crate::extensions::FilterRegistry;
     use crate::proxy::logger;
     use crate::xds::ads_client::ListenerManagerArgs;
+    use crate::xds::envoy::service::discovery::v3::DiscoveryRequest;
+    use crate::xds::google::rpc::Status as GrpcStatus;
+    use crate::xds::CLUSTER_TYPE;
+
     use std::sync::Arc;
+    use std::time::Duration;
+
     use tokio::sync::{mpsc, watch};
 
     #[tokio::test]
@@ -460,5 +465,43 @@ mod tests {
         assert!(execution_result
             .expect("client should bail out immediately")
             .is_err());
+    }
+
+    #[tokio::test]
+    async fn send_discovery_request() {
+        let (mut discovery_req_tx, mut discovery_req_rx) = mpsc::channel(10);
+
+        for error_message in vec![Some("Boo!".into()), None] {
+            super::send_discovery_req(
+                logger(),
+                CLUSTER_TYPE,
+                "101".into(),
+                "nonce-101".into(),
+                error_message.clone(),
+                vec!["resource-1".into(), "resource-2".into()],
+                &mut discovery_req_tx,
+            )
+            .await;
+
+            let result = tokio::time::timeout(Duration::from_secs(5), discovery_req_rx.recv())
+                .await
+                .unwrap()
+                .unwrap();
+            assert_eq!(
+                DiscoveryRequest {
+                    version_info: "101".into(),
+                    response_nonce: "nonce-101".into(),
+                    type_url: CLUSTER_TYPE.into(),
+                    resource_names: vec!["resource-1".into(), "resource-2".into()],
+                    node: None,
+                    error_detail: error_message.map(|message| GrpcStatus {
+                        code: 2,
+                        message,
+                        details: vec![],
+                    }),
+                },
+                result
+            );
+        }
     }
 }

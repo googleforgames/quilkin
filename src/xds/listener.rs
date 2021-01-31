@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Google LLC All Rights Reserved.
+ * Copyright 2021 Google LLC All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -72,7 +72,6 @@ impl ListenerManager {
             .await
             .map_err(|err| err.message);
 
-        println!("processed listener reponse: is ok? = {:?}", result.is_ok());
         let error_message = match result {
             Ok(filter_chain) => {
                 self.filter_chain_updates_tx
@@ -176,9 +175,513 @@ impl ListenerManager {
         )
         .await
     }
+}
 
-    // Notify that we are about to reconnect the GRPC stream.
-    pub(in crate::xds) fn on_reconnect(&mut self) {
-        // Nothing to do.
+#[cfg(test)]
+mod tests {
+    use super::ListenerManager;
+    use crate::extensions::filter_manager::ListenerManagerArgs;
+    use crate::extensions::{
+        CreateFilterArgs, DownstreamContext, DownstreamResponse, Error, Filter, FilterFactory,
+        FilterRegistry,
+    };
+    use crate::test_utils::logger;
+    use crate::xds::envoy::config::listener::v3::{
+        filter::ConfigType, Filter as LdsFilter, FilterChain as LdsFilterChain, Listener,
+    };
+    use crate::xds::envoy::service::discovery::v3::{DiscoveryRequest, DiscoveryResponse};
+
+    use std::sync::Arc;
+    use std::time::Duration;
+
+    use crate::cluster::Endpoint;
+    use crate::config::{Endpoints, UpstreamEndpoints};
+    use crate::xds::LISTENER_TYPE;
+    use bytes::Bytes;
+    use prost::Message;
+    use tokio::sync::mpsc;
+    use tokio::time;
+
+    // A simple filter that will be used in the following tests.
+    // It appends a string to each payload.
+    const APPEND_TYPE_URL: &str = "filter.append";
+    #[derive(Clone, PartialEq, prost::Message)]
+    pub struct Append {
+        #[prost(message, optional, tag = "1")]
+        pub value: Option<prost::alloc::string::String>,
+    }
+
+    impl Filter for Append {
+        fn on_downstream_receive(&self, mut ctx: DownstreamContext) -> Option<DownstreamResponse> {
+            ctx.contents = format!(
+                "{}{}",
+                String::from_utf8(ctx.contents).unwrap(),
+                self.value.as_ref().unwrap()
+            )
+            .into_bytes();
+            Some(ctx.into())
+        }
+    }
+
+    struct AppendFactory;
+    impl FilterFactory for AppendFactory {
+        fn name(&self) -> String {
+            APPEND_TYPE_URL.into()
+        }
+
+        fn create_filter(&self, _: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
+            unimplemented!()
+        }
+
+        fn create_filter_from_xds_config(
+            &self,
+            config: Option<prost_types::Any>,
+        ) -> Result<Box<dyn Filter>, Error> {
+            let filter = Append::decode(Bytes::from(config.unwrap().value)).unwrap();
+            if filter.value.as_ref().unwrap() == "reject" {
+                Err(Error::FieldInvalid {
+                    field: "value".into(),
+                    reason: "reject requested".into(),
+                })
+            } else {
+                Ok(Box::new(filter))
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn listener_manager_create_filter_chain_from_lds_listener() {
+        // Test that we can feed the manager a Listener resource containing
+        // LDS filters and it can build up a filter chain from it.
+
+        // Prepare a filter registry with the filter factories we need for the test.
+        let filter_registry = {
+            let mut f = FilterRegistry::default();
+            f.insert(AppendFactory);
+            f
+        };
+        let filter_registry = Arc::new(filter_registry);
+        let (filter_chain_updates_tx, mut filter_chain_updates_rx) = mpsc::channel(10);
+        let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel(10);
+        let mut manager = ListenerManager::new(
+            logger(),
+            ListenerManagerArgs::new(filter_registry, filter_chain_updates_tx),
+            discovery_req_tx,
+        );
+
+        // Create two LDS filters forming the filter chain.
+        let filters = vec!["world", "!"]
+            .into_iter()
+            .map(|value| LdsFilter {
+                name: APPEND_TYPE_URL.into(),
+                config_type: Some(ConfigType::TypedConfig({
+                    let mut buf = vec![];
+                    Append {
+                        value: Some(value.into()),
+                    }
+                    .encode(&mut buf)
+                    .unwrap();
+                    prost_types::Any {
+                        type_url: APPEND_TYPE_URL.into(),
+                        value: buf,
+                    }
+                })),
+            })
+            .collect();
+
+        // Create Listener proto message.
+        let lds_listener = create_lds_listener(
+            "test-listener".into(),
+            vec![create_lds_filter_chain(filters)],
+        );
+
+        let mut buf = vec![];
+        lds_listener.encode(&mut buf).unwrap();
+        let lds_resource = prost_types::Any {
+            type_url: LISTENER_TYPE.into(),
+            value: buf,
+        };
+
+        // Send the proto message as a DiscoveryResponse to the manager.
+        manager
+            .on_listener_response(DiscoveryResponse {
+                version_info: "test-version".into(),
+                resources: vec![lds_resource],
+                canary: false,
+                type_url: LISTENER_TYPE.into(),
+                nonce: "test-nonce".into(),
+                control_plane: None,
+            })
+            .await;
+
+        // Expect an ACK DiscoveryRequest from the manager.
+        let discovery_req = time::timeout(Duration::from_secs(5), discovery_req_rx.recv())
+            .await
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(
+            DiscoveryRequest {
+                version_info: "test-version".into(),
+                response_nonce: "test-nonce".into(),
+                type_url: LISTENER_TYPE.into(),
+                resource_names: vec![],
+                node: None,
+                error_detail: None,
+            },
+            discovery_req,
+        );
+
+        // Expect a filter chain update from the manager.
+        let filter_chain = time::timeout(Duration::from_secs(5), filter_chain_updates_rx.recv())
+            .await
+            .unwrap()
+            .unwrap();
+
+        // Test the new filter chain's functionality. It should append to payloads.
+        let response = filter_chain
+            .on_downstream_receive(DownstreamContext::new(
+                UpstreamEndpoints::from(
+                    Endpoints::new(vec![Endpoint::from_address(
+                        "127.0.0.1:8080".parse().unwrap(),
+                    )])
+                    .unwrap(),
+                ),
+                "127.0.0.1:8081".parse().unwrap(),
+                "hello-".into(),
+            ))
+            .unwrap();
+
+        assert_eq!(
+            "hello-world!",
+            String::from_utf8(response.contents).unwrap()
+        );
+    }
+
+    #[tokio::test]
+    async fn listener_manager_create_empty_filter_chain() {
+        // Test that we send an empty filter chain update if the LDS Listener resource feed the manager a Listener resource containing
+        // contains no filter chain.
+
+        // Prepare a filter registry with the filter factories we need for the test.
+        let filter_registry = {
+            let mut f = FilterRegistry::default();
+            f.insert(AppendFactory);
+            f
+        };
+        let filter_registry = Arc::new(filter_registry);
+        let (filter_chain_updates_tx, mut filter_chain_updates_rx) = mpsc::channel(10);
+        let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel(10);
+        let mut manager = ListenerManager::new(
+            logger(),
+            ListenerManagerArgs::new(filter_registry, filter_chain_updates_tx),
+            discovery_req_tx,
+        );
+
+        let test_cases = vec![
+            (
+                vec![LdsFilter {
+                    name: APPEND_TYPE_URL.into(),
+                    config_type: Some(ConfigType::TypedConfig({
+                        let mut buf = vec![];
+                        Append {
+                            value: Some("world".into()),
+                        }
+                        .encode(&mut buf)
+                        .unwrap();
+                        prost_types::Any {
+                            type_url: APPEND_TYPE_URL.into(),
+                            value: buf,
+                        }
+                    })),
+                }],
+                "hello-world",
+            ),
+            (vec![], "hello-"),
+        ];
+
+        for (i, (filter, expected_payload)) in test_cases.into_iter().enumerate() {
+            // Send a response with a filter chain.
+            let lds_listener = create_lds_listener(
+                format!("test-listener-{}", i),
+                vec![create_lds_filter_chain(filter)],
+            );
+            let mut buf = vec![];
+            lds_listener.encode(&mut buf).unwrap();
+            let lds_resource = prost_types::Any {
+                type_url: LISTENER_TYPE.into(),
+                value: buf,
+            };
+
+            let (version_info, nonce) = (format!("version-{}", i), format!("nonce-{}", i));
+            // Send the proto message as a DiscoveryResponse to the manager.
+            manager
+                .on_listener_response(DiscoveryResponse {
+                    version_info: version_info.clone(),
+                    resources: vec![lds_resource],
+                    canary: false,
+                    type_url: LISTENER_TYPE.into(),
+                    nonce: nonce.clone(),
+                    control_plane: None,
+                })
+                .await;
+
+            // Expect an ACK DiscoveryRequest from the manager.
+            let discovery_req = time::timeout(Duration::from_secs(5), discovery_req_rx.recv())
+                .await
+                .unwrap()
+                .unwrap();
+
+            assert_eq!(
+                DiscoveryRequest {
+                    version_info,
+                    response_nonce: nonce,
+                    type_url: LISTENER_TYPE.into(),
+                    resource_names: vec![],
+                    node: None,
+                    error_detail: None,
+                },
+                discovery_req,
+            );
+
+            // Expect a filter chain update from the manager.
+            let filter_chain =
+                time::timeout(Duration::from_secs(5), filter_chain_updates_rx.recv())
+                    .await
+                    .unwrap()
+                    .unwrap();
+
+            // Test the new filter chain's functionality.
+            let response = filter_chain
+                .on_downstream_receive(DownstreamContext::new(
+                    UpstreamEndpoints::from(
+                        Endpoints::new(vec![Endpoint::from_address(
+                            "127.0.0.1:8080".parse().unwrap(),
+                        )])
+                        .unwrap(),
+                    ),
+                    "127.0.0.1:8081".parse().unwrap(),
+                    "hello-".into(),
+                ))
+                .unwrap();
+
+            assert_eq!(
+                expected_payload,
+                String::from_utf8(response.contents).unwrap()
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn listener_manager_reject_updates() {
+        // Test that the manager returns NACK DiscoveryRequests for updates it failed to process.
+
+        let filter_registry = {
+            let mut f = FilterRegistry::default();
+            f.insert(AppendFactory);
+            f
+        };
+        let filter_registry = Arc::new(filter_registry);
+        let (filter_chain_updates_tx, _filter_chain_updates_rx) = mpsc::channel(10);
+        let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel(10);
+        let mut manager = ListenerManager::new(
+            logger(),
+            ListenerManagerArgs::new(filter_registry, filter_chain_updates_tx),
+            discovery_req_tx,
+        );
+
+        let test_cases = vec![
+            (
+                // The filter is explicitly configured to reject
+                // config with this value.
+                vec![create_lds_filter_chain(vec![LdsFilter {
+                    name: APPEND_TYPE_URL.into(),
+                    config_type: Some(ConfigType::TypedConfig({
+                        let mut buf = vec![];
+                        Append {
+                            value: Some("reject".into()),
+                        }
+                        .encode(&mut buf)
+                        .unwrap();
+                        prost_types::Any {
+                            type_url: APPEND_TYPE_URL.into(),
+                            value: buf,
+                        }
+                    })),
+                }])],
+                "reject requested",
+            ),
+            (
+                // Filter does not exist in the filter registry.
+                vec![create_lds_filter_chain(vec![LdsFilter {
+                    name: "MissingFilter".into(),
+                    config_type: Some(ConfigType::TypedConfig(prost_types::Any {
+                        type_url: "MissingFilter".into(),
+                        value: vec![],
+                    })),
+                }])],
+                "no such filter",
+            ),
+            (
+                // Multiple filter chains.
+                (0..2)
+                    .into_iter()
+                    .map(|_| {
+                        create_lds_filter_chain(vec![LdsFilter {
+                            name: "MissingFilter".into(),
+                            config_type: Some(ConfigType::TypedConfig(prost_types::Any {
+                                type_url: "MissingFilter".into(),
+                                value: vec![],
+                            })),
+                        }])
+                    })
+                    .collect(),
+                "at most 1 filter chain can be provided: got 2",
+            ),
+        ];
+        for (filter_chains, error_message) in test_cases {
+            let lds_listener = create_lds_listener("test-listener".into(), filter_chains);
+
+            let mut buf = vec![];
+            lds_listener.encode(&mut buf).unwrap();
+            let lds_resource = prost_types::Any {
+                type_url: LISTENER_TYPE.into(),
+                value: buf,
+            };
+
+            manager
+                .on_listener_response(DiscoveryResponse {
+                    version_info: "test-version".into(),
+                    resources: vec![lds_resource],
+                    canary: false,
+                    type_url: LISTENER_TYPE.into(),
+                    nonce: "test-nonce".into(),
+                    control_plane: None,
+                })
+                .await;
+
+            let mut discovery_req = time::timeout(Duration::from_secs(5), discovery_req_rx.recv())
+                .await
+                .unwrap()
+                .unwrap();
+
+            let error_detail = discovery_req.error_detail.take().expect("expected error");
+            assert_eq!(
+                DiscoveryRequest {
+                    version_info: "test-version".into(),
+                    response_nonce: "test-nonce".into(),
+                    type_url: LISTENER_TYPE.into(),
+                    resource_names: vec![],
+                    node: None,
+                    error_detail: None,
+                },
+                discovery_req,
+            );
+
+            assert!(error_detail.message.contains(error_message));
+        }
+    }
+
+    #[tokio::test]
+    async fn listener_manager_reject_multiple_listeners() {
+        // Test that the manager returns NACK DiscoveryRequests for updates with multiple listeners.
+
+        let (filter_chain_updates_tx, _filter_chain_updates_rx) = mpsc::channel(10);
+        let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel(10);
+        let mut manager = ListenerManager::new(
+            logger(),
+            ListenerManagerArgs::new(Arc::new(FilterRegistry::default()), filter_chain_updates_tx),
+            discovery_req_tx,
+        );
+        let lds_listener = create_lds_listener(
+            "test-listener".into(),
+            vec![create_lds_filter_chain(vec![LdsFilter {
+                name: "MissingFilter".into(),
+                config_type: Some(ConfigType::TypedConfig(prost_types::Any {
+                    type_url: "MissingFilter".into(),
+                    value: vec![],
+                })),
+            }])],
+        );
+
+        let mut buf = vec![];
+        lds_listener.encode(&mut buf).unwrap();
+        let lds_resource = prost_types::Any {
+            type_url: LISTENER_TYPE.into(),
+            value: buf,
+        };
+
+        manager
+            .on_listener_response(DiscoveryResponse {
+                version_info: "test-version".into(),
+                resources: vec![lds_resource.clone(), lds_resource],
+                canary: false,
+                type_url: LISTENER_TYPE.into(),
+                nonce: "test-nonce".into(),
+                control_plane: None,
+            })
+            .await;
+
+        let mut discovery_req = time::timeout(Duration::from_secs(5), discovery_req_rx.recv())
+            .await
+            .unwrap()
+            .unwrap();
+
+        let error_detail = discovery_req.error_detail.take().expect("expected error");
+        assert_eq!(
+            DiscoveryRequest {
+                version_info: "test-version".into(),
+                response_nonce: "test-nonce".into(),
+                type_url: LISTENER_TYPE.into(),
+                resource_names: vec![],
+                node: None,
+                error_detail: None,
+            },
+            discovery_req,
+        );
+
+        assert_eq!(
+            error_detail.message,
+            "at most 1 listener can be specified: got 2"
+        );
+    }
+
+    fn create_lds_filter_chain(filters: Vec<LdsFilter>) -> LdsFilterChain {
+        LdsFilterChain {
+            filter_chain_match: None,
+            filters,
+            use_proxy_proto: None,
+            metadata: None,
+            transport_socket: None,
+            name: "test-lds-filter-chain".into(),
+            on_demand_configuration: None,
+        }
+    }
+
+    fn create_lds_listener(name: String, filter_chains: Vec<LdsFilterChain>) -> Listener {
+        Listener {
+            name,
+            address: None,
+            filter_chains,
+            per_connection_buffer_limit_bytes: None,
+            metadata: None,
+            deprecated_v1: None,
+            drain_type: 0,
+            listener_filters: vec![],
+            listener_filters_timeout: None,
+            continue_on_listener_filters_timeout: false,
+            transparent: None,
+            freebind: None,
+            socket_options: vec![],
+            tcp_fast_open_queue_length: None,
+            traffic_direction: 0,
+            udp_listener_config: None,
+            api_listener: None,
+            connection_balance_config: None,
+            reuse_port: false,
+            access_log: vec![],
+            udp_writer_config: None,
+            tcp_backlog_size: None,
+        }
     }
 }

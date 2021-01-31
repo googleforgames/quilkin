@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Google LLC All Rights Reserved.
+ * Copyright 2021 Google LLC All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ use crate::config::ManagementServer;
 use crate::extensions::filter_manager::{FilterManager, ListenerManagerArgs, SharedFilterManager};
 use crate::extensions::{FilterChain, FilterRegistry};
 use crate::xds::ads_client::{AdsClient, ClusterUpdate, ExecutionResult};
-use slog::{info, o, warn, Logger};
+use slog::{debug, o, warn, Logger};
 use std::sync::Arc;
 use tokio::sync::{mpsc, oneshot, watch};
 
@@ -86,33 +86,33 @@ impl DynamicResourceManagers {
 
         // Initial cluster warming - wait to receive the initial LDS and CDS resources
         // from the XDS server before we start receiving any traffic.
-        info!(log, "Waiting to receive initial cluster update.");
+        debug!(log, "Waiting to receive initial cluster update.");
         let (cluster_update, execution_result_rx) = Self::receive_update(
             &mut cluster_updates_rx,
             execution_result_rx,
             &mut shutdown_rx,
         )
         .await?;
-        info!(log, "Received initial cluster update.");
+        debug!(log, "Received initial cluster update.");
 
-        info!(log, "Waiting to receive initial filter chain update.");
+        debug!(log, "Waiting to receive initial filter chain update.");
         let (filter_chain_update, execution_result_rx) = Self::receive_update(
             &mut filter_chain_updates_rx,
             execution_result_rx,
             &mut shutdown_rx,
         )
         .await?;
-        info!(log, "Received initial filter chain update.");
+        debug!(log, "Received initial filter chain update.");
 
         let cluster_manager = ClusterManager::dynamic(
-            base_logger.clone(),
+            base_logger.new(o!("source" => "ClusterManager")),
             cluster_update,
             cluster_updates_rx,
             shutdown_rx.clone(),
         );
 
         let filter_manager = FilterManager::dynamic(
-            base_logger.clone(),
+            base_logger.new(o!("source" => "FilterManager")),
             filter_chain_update,
             filter_chain_updates_rx,
             shutdown_rx.clone(),
@@ -197,5 +197,145 @@ impl DynamicResourceManagers {
         mpsc::Receiver<Arc<FilterChain>>,
     ) {
         mpsc::channel(FILTER_CHAIN_UPDATE_QUEUE_SIZE)
+    }
+}
+#[cfg(test)]
+mod tests {
+
+    use super::DynamicResourceManagers;
+    use crate::cluster::cluster_manager::InitializeError;
+    use crate::config::ManagementServer;
+    use crate::extensions::filter_manager::ListenerManagerArgs;
+    use crate::extensions::FilterRegistry;
+    use crate::test_utils::logger;
+    use crate::xds::ads_client::ExecutionError;
+
+    use std::sync::Arc;
+    use std::time::Duration;
+
+    use tokio::sync::mpsc;
+    use tokio::sync::oneshot;
+    use tokio::sync::watch;
+    use tokio::time;
+
+    #[tokio::test]
+    async fn dynamic_resource_manager_receive_update() {
+        let (updates_tx, mut updates_rx) = mpsc::channel(10);
+        let (_shutdown_tx, mut shutdown_rx) = watch::channel(());
+        let (_execution_tx, execution_result_rx) = oneshot::channel();
+
+        updates_tx.send(42).await.unwrap();
+
+        let (result, _) = DynamicResourceManagers::receive_update(
+            &mut updates_rx,
+            execution_result_rx,
+            &mut shutdown_rx,
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(42, result);
+    }
+
+    #[tokio::test]
+    async fn dynamic_resource_manager_shutdown_task_on_system_shutdown() {
+        // If a shutdown is triggered, shutdown the task.
+        let (_updates_tx, mut updates_rx) = mpsc::channel::<usize>(10);
+        let (shutdown_tx, mut shutdown_rx) = watch::channel(());
+        let (_execution_tx, execution_result_rx) = oneshot::channel();
+
+        // Send a shutdown signal.
+        shutdown_tx.send(()).unwrap();
+
+        // We should exit with an error.
+        let result = DynamicResourceManagers::receive_update(
+            &mut updates_rx,
+            execution_result_rx,
+            &mut shutdown_rx,
+        )
+        .await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn dynamic_resource_manager_shutdown_task_on_sender_half_closed() {
+        // If the sender half of the updates channel is dropped, shutdown the task
+        // since we can never receive an update after that.
+        let (updates_tx, mut updates_rx) = mpsc::channel::<usize>(10);
+        let (_shutdown_tx, mut shutdown_rx) = watch::channel(());
+        let (_execution_tx, execution_result_rx) = oneshot::channel();
+
+        // Drop the sender half.
+        drop(updates_tx);
+
+        // We should exit with an error since we now can never receive an update.
+        let result = DynamicResourceManagers::receive_update(
+            &mut updates_rx,
+            execution_result_rx,
+            &mut shutdown_rx,
+        )
+        .await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn dynamic_resource_manager_return_execution_error_on_sender_half_closed() {
+        // If the sender half of the updates channel is dropped, check the ExecutionResult
+        // channel for any error that might hint at why it was dropped and if one exists,
+        // return it.
+        let (updates_tx, mut updates_rx) = mpsc::channel::<usize>(10);
+        let (_shutdown_tx, mut shutdown_rx) = watch::channel(());
+        let (execution_result_tx, execution_result_rx) = oneshot::channel();
+
+        // Leave an error ExecutionResult before dropping the updates channel.
+        execution_result_tx
+            .send(Err(ExecutionError::Message("Boo!".into())))
+            .unwrap();
+
+        // Drop the sender half of the updates channel.
+        drop(updates_tx);
+
+        // When exiting due to the sending channel being dropped, we first check
+        // for an execution result error and return that instead.
+        match DynamicResourceManagers::receive_update(
+            &mut updates_rx,
+            execution_result_rx,
+            &mut shutdown_rx,
+        )
+        .await
+        {
+            Err(InitializeError::Message(msg)) if msg.contains("Boo!") => {}
+            unexpected => unreachable!(format!("{:?}", unexpected)),
+        }
+    }
+
+    #[tokio::test]
+    async fn dynamic_resource_manager_return_execution_error() {
+        // Check that we can return ExecutionResults on the channel.
+        // In this case, the client failed to start due to a malformed server address.
+        let (filter_chain_updates_tx, _filter_chain_updates_rx) = mpsc::channel(10);
+        let (cluster_updates_tx, _cluster_updates_rx) = mpsc::channel(10);
+        let (execution_result_tx, execution_result_rx) = oneshot::channel();
+        let (_shutdown_tx, shutdown_rx) = watch::channel(());
+
+        DynamicResourceManagers::spawn_ads_client(
+            logger(),
+            "id".into(),
+            vec![ManagementServer {
+                address: "invalid-address".into(),
+            }],
+            cluster_updates_tx,
+            ListenerManagerArgs::new(Arc::new(FilterRegistry::default()), filter_chain_updates_tx),
+            execution_result_tx,
+            shutdown_rx,
+        );
+
+        let err = time::timeout(Duration::from_secs(5), execution_result_rx)
+            .await
+            .unwrap()
+            .unwrap()
+            .unwrap_err();
+
+        assert!(format!("{:?}", err).to_lowercase().contains("invalid url"));
     }
 }

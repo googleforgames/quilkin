@@ -19,6 +19,8 @@ use prost::Message;
 use serde::{Deserialize, Serialize};
 use slog::{info, o, Logger};
 
+use self::quilkin::extensions::filters::debug::v1alpha1::Debug as ProtoDebug;
+
 use crate::extensions::filter_registry::{
     CreateFilterArgs, DownstreamContext, DownstreamResponse, Error, FilterFactory, UpstreamContext,
     UpstreamResponse,
@@ -31,7 +33,6 @@ mod quilkin {
         pub(crate) mod filters {
             pub(crate) mod debug {
                 pub(crate) mod v1alpha1 {
-                    #![cfg(not(doctest))]
                     #![doc(hidden)]
                     tonic::include_proto!("quilkin.extensions.filters.debug.v1alpha1");
                 }
@@ -110,16 +111,21 @@ impl FilterFactory for DebugFactory {
         &self,
         config: Option<prost_types::Any>,
     ) -> Result<Box<dyn Filter>, Error> {
-        let config = config.ok_or_else(|| Error::MissingConfig)?;
-        let config =
-            quilkin::extensions::filters::debug::v1alpha1::Debug::decode(Bytes::from(config.value))
-                .map_err(|err| {
+        let config: Option<ProtoDebug> = config
+            .map(|config| {
+                ProtoDebug::decode(Bytes::from(config.value)).map_err(|err| {
                     Error::DeserializeFailed(format!(
                         "debug filter config decode error: {}",
                         err.to_string()
                     ))
-                })?;
-        Ok(Box::new(Debug::new(&self.log, config.id)))
+                })
+            })
+            .transpose()?;
+
+        Ok(Box::new(Debug::new(
+            &self.log,
+            config.and_then(|cfg| cfg.id),
+        )))
     }
 }
 

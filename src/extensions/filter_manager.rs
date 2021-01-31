@@ -145,15 +145,16 @@ mod tests {
     use crate::test_utils::logger;
 
     use std::sync::Arc;
+    use std::time::Duration;
 
     use crate::cluster::Endpoint;
     use crate::config::{Endpoints, UpstreamEndpoints};
     use tokio::sync::mpsc;
     use tokio::sync::watch;
+    use tokio::time::sleep;
 
-    #[ignore]
     #[tokio::test]
-    async fn spawn_updater() {
+    async fn dynamic_filter_manager_update_filter_chain() {
         let filter_manager = FilterManager::fixed(logger(), Arc::new(FilterChain::new(vec![])));
         let (filter_chain_updates_tx, filter_chain_updates_rx) = mpsc::channel(10);
         let (_shutdown_tx, shutdown_rx) = watch::channel(());
@@ -165,8 +166,10 @@ mod tests {
             shutdown_rx,
         );
 
-        let manager_guard = filter_manager.read();
-        let filter_chain = manager_guard.get_filter_chain().as_ref().unwrap();
+        let filter_chain = {
+            let manager_guard = filter_manager.read();
+            manager_guard.get_filter_chain().clone().unwrap()
+        };
 
         let test_endpoints = Endpoints::new(vec![Endpoint::from_address(
             "127.0.0.1:8080".parse().unwrap(),
@@ -179,13 +182,13 @@ mod tests {
         ));
         assert!(response.is_some());
 
+        // A simple test filter that drops all packets flowing upstream.
         struct Drop;
         impl Filter for Drop {
             fn on_downstream_receive(&self, _: DownstreamContext) -> Option<DownstreamResponse> {
                 None
             }
         }
-
         let filter_chain = Arc::new(FilterChain::new(vec![Box::new(Drop)]));
         assert!(filter_chain_updates_tx.send(filter_chain).await.is_ok());
 
@@ -193,8 +196,10 @@ mod tests {
         loop {
             // Wait for the new filter chain to be applied.
             // The new filter chain drops packets instead.
-            let manager_guard = filter_manager.read();
-            let filter_chain = manager_guard.get_filter_chain().as_ref().unwrap();
+            let filter_chain = {
+                let manager_guard = filter_manager.read();
+                manager_guard.get_filter_chain().clone().unwrap()
+            };
             if filter_chain
                 .on_downstream_receive(DownstreamContext::new(
                     UpstreamEndpoints::from(test_endpoints.clone()),
@@ -211,9 +216,39 @@ mod tests {
                 unreachable!("timed-out waiting for new filter chain to be applied");
             }
 
-            println!("sleep start");
-            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
-            println!("sleep end");
+            sleep(Duration::from_millis(10)).await;
         }
+    }
+
+    #[tokio::test]
+    async fn dynamic_filter_manager_shutdown_task_on_shutdown_signal() {
+        // Test that we shut down the background task if we receive a shutdown signal.
+
+        let filter_manager = FilterManager::fixed(logger(), Arc::new(FilterChain::new(vec![])));
+        let (filter_chain_updates_tx, filter_chain_updates_rx) = mpsc::channel(10);
+        let (shutdown_tx, shutdown_rx) = watch::channel(());
+
+        FilterManager::spawn_updater(
+            logger(),
+            filter_manager.clone(),
+            filter_chain_updates_rx,
+            shutdown_rx,
+        );
+
+        // Send a shutdown signal.
+        shutdown_tx.send(()).unwrap();
+
+        // Wait a bit for the signal to be processed.
+        sleep(Duration::from_millis(10)).await;
+
+        // Send a filter chain update on the channel. This should fail
+        // since the listening task should have shut down.
+        let filter_chain = {
+            let manager_guard = filter_manager.read();
+            manager_guard.get_filter_chain().clone().unwrap()
+        };
+
+        let filter_chain = Arc::new(FilterChain::new(vec![]));
+        assert!(filter_chain_updates_tx.send(filter_chain).await.is_err());
     }
 }
