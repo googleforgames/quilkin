@@ -81,9 +81,17 @@ impl FilterFactory for CompressFactory {
         &self,
         args: CreateFilterArgs,
     ) -> std::result::Result<Box<dyn Filter>, RegistryError> {
+        #[derive(Clone, PartialEq, ::prost::Message)]
+        pub struct TODO;
+        impl From<TODO> for Config {
+            fn from(_: TODO) -> Self {
+                unimplemented!()
+            }
+        }
         Ok(Box::new(Compress::new(
             &self.log,
-            args.parse_config()?,
+            self.require_config(args.config)?
+                .deserialize::<Config, TODO>(self.name().as_str())?,
             Metrics::new(&args.metrics_registry)?,
         )))
     }
@@ -249,7 +257,7 @@ mod tests {
             Value::String("DOWNSTREAM".into()),
         );
         let filter = factory
-            .create_filter(CreateFilterArgs::new(Some(&Value::Mapping(map))))
+            .create_filter(CreateFilterArgs::fixed(Some(&Value::Mapping(map))))
             .expect("should create a filter");
         assert_downstream_direction(filter.as_ref());
     }
@@ -265,7 +273,7 @@ mod tests {
             Value::String("DOWNSTREAM".into()),
         );
         let config = Value::Mapping(map);
-        let args = CreateFilterArgs::new(Some(&config));
+        let args = CreateFilterArgs::fixed(Some(&config));
 
         let filter = factory.create_filter(args).expect("should create a filter");
         assert_downstream_direction(filter.as_ref());
