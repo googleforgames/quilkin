@@ -15,8 +15,10 @@
  */
 
 use crate::extensions::filter_manager::ListenerManagerArgs;
-use crate::extensions::{FilterChain as ProxyFilterChain, FilterRegistry};
-use crate::xds::envoy::config::listener::v3::{filter::ConfigType, FilterChain, Listener};
+use crate::extensions::{CreateFilterArgs, FilterChain as ProxyFilterChain, FilterRegistry};
+use crate::xds::envoy::config::listener::v3::{
+    filter::ConfigType as LdsConfigType, FilterChain, Listener,
+};
 use crate::xds::envoy::service::discovery::v3::{DiscoveryRequest, DiscoveryResponse};
 use crate::xds::error::Error;
 use crate::xds::LISTENER_TYPE;
@@ -25,6 +27,7 @@ use std::sync::Arc;
 
 use crate::xds::ads_client::send_discovery_req;
 use bytes::Bytes;
+use prometheus::Registry;
 use prost::Message;
 use slog::{debug, warn, Logger};
 use tokio::sync::mpsc;
@@ -34,6 +37,8 @@ use tokio::sync::mpsc;
 /// to the caller whenever the filter chain changes.
 pub(crate) struct ListenerManager {
     log: Logger,
+
+    metrics_registry: Registry,
 
     // Registry to lookup filter factories by name.
     filter_registry: Arc<FilterRegistry>,
@@ -53,6 +58,7 @@ impl ListenerManager {
     ) -> Self {
         ListenerManager {
             log,
+            metrics_registry: args.metrics_registry,
             filter_registry: args.filter_registry,
             discovery_req_tx,
             filter_chain_updates_tx: args.filter_chain_updates_tx,
@@ -139,14 +145,15 @@ impl ListenerManager {
     ) -> Result<ProxyFilterChain, Error> {
         let mut filters = vec![];
         for filter in lds_filter_chain.filters {
-            let config = match filter.config_type {
-                Some(ConfigType::TypedConfig(config)) => Some(config),
-                None => None,
-            };
+            let config = filter.config_type.map(|config| match config {
+                LdsConfigType::TypedConfig(config) => config,
+            });
+            let create_filter_args =
+                CreateFilterArgs::dynamic(self.metrics_registry.clone(), config);
 
             let filter = self
                 .filter_registry
-                .get_from_xds_config(&filter.name, config)
+                .get(&filter.name, create_filter_args)
                 .map_err(|err| Error::new(format!("{}", err)))?;
 
             filters.push(filter);
@@ -197,15 +204,16 @@ mod tests {
     use crate::cluster::Endpoint;
     use crate::config::{Endpoints, UpstreamEndpoints};
     use crate::xds::LISTENER_TYPE;
-    use bytes::Bytes;
+    use prometheus::Registry;
     use prost::Message;
+    use serde::{Deserialize, Serialize};
     use tokio::sync::mpsc;
     use tokio::time;
 
     // A simple filter that will be used in the following tests.
     // It appends a string to each payload.
     const APPEND_TYPE_URL: &str = "filter.append";
-    #[derive(Clone, PartialEq, prost::Message)]
+    #[derive(Clone, PartialEq, Serialize, Deserialize, prost::Message)]
     pub struct Append {
         #[prost(message, optional, tag = "1")]
         pub value: Option<prost::alloc::string::String>,
@@ -229,15 +237,12 @@ mod tests {
             APPEND_TYPE_URL.into()
         }
 
-        fn create_filter(&self, _: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
-            unimplemented!()
-        }
-
-        fn create_filter_from_xds_config(
-            &self,
-            config: Option<prost_types::Any>,
-        ) -> Result<Box<dyn Filter>, Error> {
-            let filter = Append::decode(Bytes::from(config.unwrap().value)).unwrap();
+        fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
+            let filter = args
+                .config
+                .map(|config| config.deserialize::<Append, Append>(self.name().as_str()))
+                .transpose()?
+                .unwrap();
             if filter.value.as_ref().unwrap() == "reject" {
                 Err(Error::FieldInvalid {
                     field: "value".into(),
@@ -265,7 +270,11 @@ mod tests {
         let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel(10);
         let mut manager = ListenerManager::new(
             logger(),
-            ListenerManagerArgs::new(filter_registry, filter_chain_updates_tx),
+            ListenerManagerArgs::new(
+                Registry::default(),
+                filter_registry,
+                filter_chain_updates_tx,
+            ),
             discovery_req_tx,
         );
 
@@ -374,7 +383,11 @@ mod tests {
         let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel(10);
         let mut manager = ListenerManager::new(
             logger(),
-            ListenerManagerArgs::new(filter_registry, filter_chain_updates_tx),
+            ListenerManagerArgs::new(
+                Registry::default(),
+                filter_registry,
+                filter_chain_updates_tx,
+            ),
             discovery_req_tx,
         );
 
@@ -486,7 +499,11 @@ mod tests {
         let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel(10);
         let mut manager = ListenerManager::new(
             logger(),
-            ListenerManagerArgs::new(filter_registry, filter_chain_updates_tx),
+            ListenerManagerArgs::new(
+                Registry::default(),
+                filter_registry,
+                filter_chain_updates_tx,
+            ),
             discovery_req_tx,
         );
 
@@ -520,7 +537,7 @@ mod tests {
                         value: vec![],
                     })),
                 }])],
-                "no such filter",
+                "filter MissingFilter is not found",
             ),
             (
                 // Multiple filter chains.
@@ -590,7 +607,11 @@ mod tests {
         let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel(10);
         let mut manager = ListenerManager::new(
             logger(),
-            ListenerManagerArgs::new(Arc::new(FilterRegistry::default()), filter_chain_updates_tx),
+            ListenerManagerArgs::new(
+                Registry::default(),
+                Arc::new(FilterRegistry::default()),
+                filter_chain_updates_tx,
+            ),
             discovery_req_tx,
         );
         let lds_listener = create_lds_listener(

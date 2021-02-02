@@ -67,11 +67,22 @@ impl FilterFactory for TokenRouterFactory {
     }
 
     fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
-        let config: Option<Config> = args.parse_config()?;
+        #[derive(Clone, PartialEq, ::prost::Message)]
+        pub struct TODO;
+        impl From<TODO> for Config {
+            fn from(_: TODO) -> Self {
+                unimplemented!()
+            }
+        }
+        let config: Config = args
+            .config
+            .map(|config| config.deserialize::<Config, TODO>(self.name().as_str()))
+            .transpose()?
+            .unwrap_or_default();
 
         Ok(Box::new(TokenRouter::new(
             &self.log,
-            config.unwrap_or_default(),
+            config,
             Metrics::new(&args.metrics_registry)?,
         )))
     }
@@ -152,7 +163,7 @@ mod tests {
         );
 
         let filter = factory
-            .create_filter(CreateFilterArgs::new(Some(&Value::Mapping(map))))
+            .create_filter(CreateFilterArgs::fixed(Some(&Value::Mapping(map))))
             .unwrap();
         let mut ctx = new_ctx();
         ctx.metadata
@@ -166,7 +177,7 @@ mod tests {
         let map = Mapping::new();
 
         let filter = factory
-            .create_filter(CreateFilterArgs::new(Some(&Value::Mapping(map))))
+            .create_filter(CreateFilterArgs::fixed(Some(&Value::Mapping(map))))
             .unwrap();
         let mut ctx = new_ctx();
         ctx.metadata
@@ -178,7 +189,9 @@ mod tests {
     fn factory_no_config() {
         let factory = TokenRouterFactory::new(&logger());
 
-        let filter = factory.create_filter(CreateFilterArgs::new(None)).unwrap();
+        let filter = factory
+            .create_filter(CreateFilterArgs::fixed(None))
+            .unwrap();
         let mut ctx = new_ctx();
         ctx.metadata
             .insert(CAPTURED_BYTES.into(), Box::new(b"123".to_vec()));

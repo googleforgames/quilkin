@@ -152,6 +152,7 @@ impl Server {
                 let manager = DynamicResourceManagers::new(
                     self.log.clone(),
                     self.config.proxy.id.clone(),
+                    self.metrics.registry.clone(),
                     self.filter_registry.clone(),
                     management_servers.to_vec(),
                     shutdown_rx,

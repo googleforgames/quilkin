@@ -14,12 +14,8 @@
  * limitations under the License.
  */
 
-use bytes::Bytes;
-use prost::Message;
 use serde::{Deserialize, Serialize};
 use slog::{info, o, Logger};
-
-use self::quilkin::extensions::filters::debug::v1alpha1::Debug as ProtoDebug;
 
 use crate::extensions::filter_registry::{
     CreateFilterArgs, DownstreamContext, DownstreamResponse, Error, FilterFactory, UpstreamContext,
@@ -40,6 +36,7 @@ mod quilkin {
         }
     }
 }
+use self::quilkin::extensions::filters::debug::v1alpha1::Debug as ProtoDebug;
 
 /// Debug logs all incoming and outgoing packets
 ///
@@ -83,6 +80,12 @@ struct Config {
     id: Option<String>,
 }
 
+impl From<ProtoDebug> for Config {
+    fn from(p: ProtoDebug) -> Self {
+        Config { id: p.id }
+    }
+}
+
 /// Factory for the Debug
 pub struct DebugFactory {
     log: Logger,
@@ -100,28 +103,10 @@ impl FilterFactory for DebugFactory {
     }
 
     fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
-        let config: Option<Config> = args.parse_config()?;
-        Ok(Box::new(Debug::new(
-            &self.log,
-            config.and_then(|cfg| cfg.id),
-        )))
-    }
-
-    fn create_filter_from_xds_config(
-        &self,
-        config: Option<prost_types::Any>,
-    ) -> Result<Box<dyn Filter>, Error> {
-        let config: Option<ProtoDebug> = config
-            .map(|config| {
-                ProtoDebug::decode(Bytes::from(config.value)).map_err(|err| {
-                    Error::DeserializeFailed(format!(
-                        "debug filter config decode error: {}",
-                        err.to_string()
-                    ))
-                })
-            })
+        let config: Option<Config> = args
+            .config
+            .map(|config| config.deserialize::<Config, ProtoDebug>(self.name().as_str()))
             .transpose()?;
-
         Ok(Box::new(Debug::new(
             &self.log,
             config.and_then(|cfg| cfg.id),
@@ -185,7 +170,7 @@ mod tests {
 
         map.insert(Value::from("id"), Value::from("name"));
         assert!(factory
-            .create_filter(CreateFilterArgs::new(Some(&Value::Mapping(map)),))
+            .create_filter(CreateFilterArgs::fixed(Some(&Value::Mapping(map)),))
             .is_ok());
     }
 
@@ -197,7 +182,7 @@ mod tests {
 
         map.insert(Value::from("id"), Value::from("name"));
         assert!(factory
-            .create_filter(CreateFilterArgs::new(Some(&Value::Mapping(map)),))
+            .create_filter(CreateFilterArgs::fixed(Some(&Value::Mapping(map)),))
             .is_ok());
     }
 
@@ -209,7 +194,7 @@ mod tests {
 
         map.insert(Value::from("id"), Value::Sequence(vec![]));
         assert!(factory
-            .create_filter(CreateFilterArgs::new(Some(&Value::Mapping(map))))
+            .create_filter(CreateFilterArgs::fixed(Some(&Value::Mapping(map))))
             .is_err());
     }
 }

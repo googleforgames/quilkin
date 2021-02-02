@@ -22,6 +22,7 @@ use crate::extensions::{FilterChain, FilterRegistry};
 use std::sync::Arc;
 
 use parking_lot::RwLock;
+use prometheus::Registry;
 use slog::{debug, o, warn, Logger};
 use tokio::sync::mpsc;
 use tokio::sync::watch;
@@ -42,14 +43,17 @@ pub struct FilterManager {
 pub(crate) struct ListenerManagerArgs {
     pub filter_registry: Arc<FilterRegistry>,
     pub filter_chain_updates_tx: mpsc::Sender<Arc<FilterChain>>,
+    pub metrics_registry: Registry,
 }
 
 impl ListenerManagerArgs {
     pub fn new(
+        metrics_registry: Registry,
         filter_registry: Arc<FilterRegistry>,
         filter_chain_updates_tx: mpsc::Sender<Arc<FilterChain>>,
     ) -> ListenerManagerArgs {
         ListenerManagerArgs {
+            metrics_registry,
             filter_registry,
             filter_chain_updates_tx,
         }

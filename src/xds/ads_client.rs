@@ -439,6 +439,7 @@ mod tests {
     use std::sync::Arc;
     use std::time::Duration;
 
+    use prometheus::Registry;
     use tokio::sync::{mpsc, watch};
 
     #[tokio::test]
@@ -456,7 +457,11 @@ mod tests {
                 address: "localhost:18000".into(),
             }],
             cluster_updates_tx,
-            ListenerManagerArgs::new(Arc::new(FilterRegistry::default()), filter_chain_updates_tx),
+            ListenerManagerArgs::new(
+                Registry::default(),
+                Arc::new(FilterRegistry::default()),
+                filter_chain_updates_tx,
+            ),
             shutdown_rx,
         );
 

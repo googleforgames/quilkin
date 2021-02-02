@@ -105,7 +105,16 @@ impl FilterFactory for LoadBalancerFilterFactory {
     }
 
     fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
-        let config: Config = args.parse_config()?;
+        #[derive(Clone, PartialEq, ::prost::Message)]
+        pub struct TODO;
+        impl From<TODO> for Config {
+            fn from(_: TODO) -> Self {
+                unimplemented!()
+            }
+        }
+        let config: Config = self
+            .require_config(args.config)?
+            .deserialize::<Config, TODO>(self.name().as_str())?;
 
         let endpoint_chooser: Box<dyn EndpointChooser> = match config.policy {
             Policy::RoundRobin => Box::new(RoundRobinEndpointChooser::new()),
@@ -137,7 +146,7 @@ mod tests {
     fn create_filter(config: &str) -> Box<dyn Filter> {
         let factory = LoadBalancerFilterFactory;
         factory
-            .create_filter(CreateFilterArgs::new(Some(
+            .create_filter(CreateFilterArgs::fixed(Some(
                 &serde_yaml::from_str(config).unwrap(),
             )))
             .unwrap()

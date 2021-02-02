@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+use bytes::Bytes;
 use std::any::Any;
 use std::collections::HashMap;
 use std::fmt;
@@ -203,9 +204,8 @@ pub trait Filter: Send + Sync {
 #[derive(Debug, PartialEq)]
 /// Error is an error when attempting to create a Filter from_config() from a FilterFactory
 pub enum Error {
-    DynamicConfigNotSupported,
-    MissingConfig,
     NotFound(String),
+    MissingConfig(String),
     FieldInvalid { field: String, reason: String },
     DeserializeFailed(String),
     InitializeMetricsFailed(String),
@@ -214,12 +214,10 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Error::NotFound(key) => write!(f, "no such filter {}", key),
-            Error::MissingConfig => write!(f, "the filter requires a configuration"),
-            Error::DynamicConfigNotSupported => write!(
-                f,
-                "the filter does not support dynamic instantiation via proto messages"
-            ),
+            Error::NotFound(key) => write!(f, "filter {} is not found", key),
+            Error::MissingConfig(filter_name) => {
+                write!(f, "filter `{}` requires a configuration", filter_name)
+            }
             Error::FieldInvalid { field, reason } => {
                 write!(f, "field {} is invalid: {}", field, reason)
             }
@@ -243,19 +241,58 @@ impl From<MetricsError> for Error {
     }
 }
 
+pub enum ConfigType<'a> {
+    Static(&'a serde_yaml::Value),
+    Dynamic(prost_types::Any),
+}
+
+impl ConfigType<'_> {
+    /// Deserializes a config based on the input type.
+    pub fn deserialize<T, P>(self, filter_name: &str) -> Result<T, Error>
+    where
+        P: prost::Message + Default,
+        T: for<'de> serde::Deserialize<'de> + From<P>,
+    {
+        match self {
+            ConfigType::Static(config) => serde_yaml::to_string(config)
+                .and_then(|raw_config| serde_yaml::from_str(raw_config.as_str()))
+                .map_err(|err| Error::DeserializeFailed(err.to_string())),
+            ConfigType::Dynamic(config) => prost::Message::decode(Bytes::from(config.value))
+                .map(T::from)
+                .map_err(|err| {
+                    Error::DeserializeFailed(format!(
+                        "filter `{}`: config decode error: {}",
+                        filter_name,
+                        err.to_string()
+                    ))
+                }),
+        }
+    }
+}
+
 /// Arguments needed to create a new filter.
 pub struct CreateFilterArgs<'a> {
     /// Configuration for the filter.
-    pub config: Option<&'a serde_yaml::Value>,
+    pub config: Option<ConfigType<'a>>,
     /// metrics_registry is used to register filter metrics collectors.
     pub metrics_registry: Registry,
 }
 
 impl CreateFilterArgs<'_> {
-    pub fn new(config: Option<&serde_yaml::Value>) -> CreateFilterArgs {
+    pub fn fixed(config: Option<&serde_yaml::Value>) -> CreateFilterArgs {
         CreateFilterArgs {
-            config,
+            config: config.map(|config| ConfigType::Static(config)),
             metrics_registry: Registry::default(),
+        }
+    }
+
+    pub fn dynamic(
+        metrics_registry: Registry,
+        config: Option<prost_types::Any>,
+    ) -> CreateFilterArgs<'static> {
+        CreateFilterArgs {
+            config: config.map(ConfigType::Dynamic),
+            metrics_registry,
         }
     }
 
@@ -264,12 +301,6 @@ impl CreateFilterArgs<'_> {
             metrics_registry,
             ..self
         }
-    }
-
-    pub fn parse_config<T: for<'de> serde::Deserialize<'de>>(&self) -> Result<T, Error> {
-        serde_yaml::to_string(&self.config)
-            .and_then(|raw_config| serde_yaml::from_str(raw_config.as_str()))
-            .map_err(|err| Error::DeserializeFailed(err.to_string()))
     }
 }
 
@@ -289,12 +320,13 @@ pub trait FilterFactory: Sync + Send {
     /// Returns a filter based on the provided arguments.
     fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error>;
 
-    /// Creates a filter from its XDS config.
-    fn create_filter_from_xds_config(
-        &self,
-        _config: Option<prost_types::Any>,
-    ) -> Result<Box<dyn Filter>, Error> {
-        Err(Error::DynamicConfigNotSupported)
+    /// Returns the [`ConfigType`] from the provided Option, otherwise it returns
+    /// Error::MissingConfig if the Option is None.
+    fn require_config<'a, 'b>(
+        &'a self,
+        config: Option<ConfigType<'b>>,
+    ) -> Result<ConfigType<'b>, Error> {
+        config.ok_or_else(|| Error::MissingConfig(self.name()))
     }
 }
 
@@ -320,18 +352,6 @@ impl FilterRegistry {
             None => Err(Error::NotFound(key.into())),
             Some(filter) => filter,
         }
-    }
-
-    /// Returns an instance of the specified filter from the provided XDS filter config.
-    pub fn get_from_xds_config(
-        &self,
-        filter_name: &str,
-        config: Option<prost_types::Any>,
-    ) -> Result<Box<dyn Filter>, Error> {
-        self.registry
-            .get(filter_name)
-            .map(|p| p.create_filter_from_xds_config(config))
-            .ok_or_else(|| Error::NotFound(filter_name.into()))?
     }
 }
 
@@ -362,17 +382,17 @@ mod tests {
         let mut reg = FilterRegistry::default();
         reg.insert(TestFilterFactory {});
 
-        match reg.get(&String::from("not.found"), CreateFilterArgs::new(None)) {
+        match reg.get(&String::from("not.found"), CreateFilterArgs::fixed(None)) {
             Ok(_) => unreachable!("should not be filter"),
             Err(err) => assert_eq!(Error::NotFound("not.found".to_string()), err),
         };
 
         assert!(reg
-            .get(&String::from("TestFilter"), CreateFilterArgs::new(None))
+            .get(&String::from("TestFilter"), CreateFilterArgs::fixed(None))
             .is_ok());
 
         let filter = reg
-            .get(&String::from("TestFilter"), CreateFilterArgs::new(None))
+            .get(&String::from("TestFilter"), CreateFilterArgs::fixed(None))
             .unwrap();
 
         let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080);

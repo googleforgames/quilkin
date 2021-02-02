@@ -20,6 +20,7 @@ use crate::config::ManagementServer;
 use crate::extensions::filter_manager::{FilterManager, ListenerManagerArgs, SharedFilterManager};
 use crate::extensions::{FilterChain, FilterRegistry};
 use crate::xds::ads_client::{AdsClient, ClusterUpdate, ExecutionResult};
+use prometheus::Registry;
 use slog::{debug, o, warn, Logger};
 use std::sync::Arc;
 use tokio::sync::{mpsc, oneshot, watch};
@@ -60,6 +61,7 @@ impl DynamicResourceManagers {
     pub(super) async fn new(
         base_logger: Logger,
         xds_node_id: String,
+        metrics_registry: Registry,
         filter_registry: Arc<FilterRegistry>,
         management_servers: Vec<ManagementServer>,
         mut shutdown_rx: watch::Receiver<()>,
@@ -71,7 +73,7 @@ impl DynamicResourceManagers {
             Self::filter_chain_updates_channel();
 
         let listener_manager_args =
-            ListenerManagerArgs::new(filter_registry, filter_chain_updates_tx);
+            ListenerManagerArgs::new(metrics_registry, filter_registry, filter_chain_updates_tx);
 
         let (execution_result_tx, execution_result_rx) = oneshot::channel::<ExecutionResult>();
         Self::spawn_ads_client(
@@ -213,6 +215,7 @@ mod tests {
     use std::sync::Arc;
     use std::time::Duration;
 
+    use prometheus::Registry;
     use tokio::sync::mpsc;
     use tokio::sync::oneshot;
     use tokio::sync::watch;
@@ -325,7 +328,11 @@ mod tests {
                 address: "invalid-address".into(),
             }],
             cluster_updates_tx,
-            ListenerManagerArgs::new(Arc::new(FilterRegistry::default()), filter_chain_updates_tx),
+            ListenerManagerArgs::new(
+                Registry::default(),
+                Arc::new(FilterRegistry::default()),
+                filter_chain_updates_tx,
+            ),
             execution_result_tx,
             shutdown_rx,
         );

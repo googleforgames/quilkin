@@ -80,9 +80,17 @@ impl FilterFactory for CaptureBytesFactory {
     }
 
     fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
+        #[derive(Clone, PartialEq, ::prost::Message)]
+        pub struct TODO;
+        impl From<TODO> for Config {
+            fn from(_: TODO) -> Self {
+                unimplemented!()
+            }
+        }
         Ok(Box::new(CaptureBytes::new(
             &self.log,
-            args.parse_config()?,
+            self.require_config(args.config)?
+                .deserialize::<Config, TODO>(self.name().as_str())?,
             Metrics::new(&args.metrics_registry)?,
         )))
     }
@@ -213,7 +221,7 @@ mod tests {
         map.insert(Value::String("remove".into()), Value::Bool(true));
 
         let filter = factory
-            .create_filter(CreateFilterArgs::new(Some(&Value::Mapping(map))))
+            .create_filter(CreateFilterArgs::fixed(Some(&Value::Mapping(map))))
             .unwrap();
         assert_end_strategy(filter.as_ref(), TOKEN_KEY, true);
     }
@@ -224,7 +232,7 @@ mod tests {
         let mut map = Mapping::new();
         map.insert(Value::String("size".into()), Value::Number(3.into()));
         let filter = factory
-            .create_filter(CreateFilterArgs::new(Some(&Value::Mapping(map))))
+            .create_filter(CreateFilterArgs::fixed(Some(&Value::Mapping(map))))
             .unwrap();
         assert_end_strategy(filter.as_ref(), CAPTURED_BYTES, false);
     }
@@ -235,7 +243,7 @@ mod tests {
         let mut map = Mapping::new();
         map.insert(Value::String("size".into()), Value::String("WRONG".into()));
 
-        let result = factory.create_filter(CreateFilterArgs::new(Some(&Value::Mapping(map))));
+        let result = factory.create_filter(CreateFilterArgs::fixed(Some(&Value::Mapping(map))));
         assert!(result.is_err(), "Should be an error");
     }
 
