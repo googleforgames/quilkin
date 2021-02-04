@@ -19,15 +19,7 @@ use serde_json::value::Value;
 use std::collections::{HashMap, HashSet};
 use std::net::SocketAddr;
 
-#[cfg(not(doctest))]
 pub(crate) mod cluster_manager;
-
-// Stub module to work-around not including cluster_manager in doc tests.
-#[cfg(doctest)]
-pub(crate) mod cluster_manager {
-    pub struct ClusterManager;
-    pub struct SharedClusterManager;
-}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Endpoint {

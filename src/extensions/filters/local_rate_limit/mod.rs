@@ -92,7 +92,16 @@ impl FilterFactory for RateLimitFilterFactory {
     }
 
     fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
-        let config: Config = args.parse_config()?;
+        #[derive(Clone, PartialEq, ::prost::Message)]
+        pub struct TODO;
+        impl From<TODO> for Config {
+            fn from(_: TODO) -> Self {
+                unimplemented!()
+            }
+        }
+        let config: Config = self
+            .require_config(args.config)?
+            .deserialize::<Config, TODO>(self.name().as_str())?;
 
         match config.period {
             Some(period) if period.lt(&Duration::from_millis(100)) => Err(Error::FieldInvalid {

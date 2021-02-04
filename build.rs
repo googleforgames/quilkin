@@ -45,16 +45,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     .map(|i| std::env::current_dir().unwrap().join(i))
     .collect::<Vec<_>>();
 
-    tonic_build::configure().build_server(false).compile(
-        &proto_files
-            .iter()
-            .map(|path| path.to_str().unwrap())
-            .collect::<Vec<_>>(),
-        &include_dirs
-            .iter()
-            .map(|p| p.to_str().unwrap())
-            .collect::<Vec<_>>(),
-    )?;
+    let config = {
+        let mut c = prost_build::Config::new();
+        c.disable_comments(Some("."));
+        c
+    };
+    tonic_build::configure()
+        .build_server(false)
+        .compile_with_config(
+            config,
+            &proto_files
+                .iter()
+                .map(|path| path.to_str().unwrap())
+                .collect::<Vec<_>>(),
+            &include_dirs
+                .iter()
+                .map(|p| p.to_str().unwrap())
+                .collect::<Vec<_>>(),
+        )?;
 
     // This tells cargo to re-run this build script only when the proto files
     // we're interested in change or the any of the proto directories were updated.
