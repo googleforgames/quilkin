@@ -247,7 +247,29 @@ pub enum ConfigType<'a> {
 }
 
 impl ConfigType<'_> {
-    /// Deserializes a config based on the input type.
+    /// Deserializes a config based on the input type. Requires a proto definition for the model.
+    /// TODO: rename to `deserialize` when all the previous config models have been switch to protobuf
+    pub fn deserialize_config<T>(self, filter_name: &str) -> Result<T, Error>
+    where
+        T: for<'de> serde::Deserialize<'de> + prost::Message + Default,
+    {
+        match self {
+            ConfigType::Static(config) => serde_yaml::to_string(config)
+                .and_then(|raw_config| serde_yaml::from_str(raw_config.as_str()))
+                .map_err(|err| Error::DeserializeFailed(err.to_string())),
+            ConfigType::Dynamic(config) => prost::Message::decode(Bytes::from(config.value))
+                .map_err(|err| {
+                    Error::DeserializeFailed(format!(
+                        "filter `{}`: config decode error: {}",
+                        filter_name,
+                        err.to_string()
+                    ))
+                }),
+        }
+    }
+
+    /// Deserializes a config based on the input type
+    /// (deprecated, use deserialize_config with an accompanying protobuf definition)
     pub fn deserialize<T, P>(self, filter_name: &str) -> Result<T, Error>
     where
         P: prost::Message + Default,

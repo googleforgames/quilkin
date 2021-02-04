@@ -51,6 +51,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         c
     };
     tonic_build::configure()
+        .type_attribute(
+            ".quilkin.extensions.filters",
+            "#[derive(serde::Serialize, serde::Deserialize)]",
+        )
+        .type_attribute(
+            ".quilkin.extensions.filters",
+            "#[serde(rename_all = \"camelCase\")]",
+        )
         .build_server(false)
         .compile_with_config(
             config,

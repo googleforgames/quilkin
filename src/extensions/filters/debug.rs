@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-use serde::{Deserialize, Serialize};
 use slog::{info, o, Logger};
 
 use crate::extensions::filter_registry::{
@@ -36,7 +35,7 @@ mod quilkin {
         }
     }
 }
-use self::quilkin::extensions::filters::debug::v1alpha1::Debug as ProtoDebug;
+use self::quilkin::extensions::filters::debug::v1alpha1::Debug as Config;
 
 /// Debug logs all incoming and outgoing packets
 ///
@@ -74,18 +73,6 @@ impl Debug {
     }
 }
 
-/// A Debug filter's configuration.
-#[derive(Serialize, Deserialize, Debug)]
-struct Config {
-    id: Option<String>,
-}
-
-impl From<ProtoDebug> for Config {
-    fn from(p: ProtoDebug) -> Self {
-        Config { id: p.id }
-    }
-}
-
 /// Factory for the Debug
 pub struct DebugFactory {
     log: Logger,
@@ -105,7 +92,7 @@ impl FilterFactory for DebugFactory {
     fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
         let config: Option<Config> = args
             .config
-            .map(|config| config.deserialize::<Config, ProtoDebug>(self.name().as_str()))
+            .map(|config| config.deserialize_config::<Config>(self.name().as_str()))
             .transpose()?;
         Ok(Box::new(Debug::new(
             &self.log,
