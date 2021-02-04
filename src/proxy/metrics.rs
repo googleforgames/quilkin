@@ -15,11 +15,13 @@
  */
 
 use crate::proxy::sessions::metrics::Metrics as SessionMetrics;
+use hyper::service::{make_service_fn, service_fn};
+use hyper::{Body, Method, Response, Server as HyperServer, StatusCode};
 use prometheus::{Encoder, Registry, Result as MetricsResult, TextEncoder};
-use slog::{info, warn, Logger};
+use slog::{error, info, warn, Logger};
+use std::convert::Infallible;
 use std::net::SocketAddr;
 use tokio::sync::watch::Receiver;
-use warp::Filter as WarpFilter;
 
 /// Metrics contains metrics configuration for the server.
 #[derive(Clone)]
@@ -40,25 +42,72 @@ pub fn start_metrics_server(
 ) {
     info!(log, "starting metrics endpoint at {}", addr.to_string());
 
-    let metrics_route = warp::path!("metrics").map(move || {
-        let mut buffer = vec![];
-        let encoder = TextEncoder::new();
-        encoder
-            .encode(&registry.gather(), &mut buffer)
-            .map_err(|err| warn!(log, "failed to encode metrics: {:?}", err))
-            .and_then(|_| {
-                String::from_utf8(buffer).map_err(|err| {
-                    warn!(log, "failed to convert metrics to utf8: {:?}", err);
-                })
-            })
-            .unwrap_or_else(|_| "# failed to gather metrics".to_string())
+    let handler_log = log.clone();
+    let make_svc = make_service_fn(move |_conn| {
+        let registry = registry.clone();
+        let handler_log = handler_log.clone();
+        async move {
+            let registry = registry.clone();
+            let handler_log = handler_log.clone();
+            Ok::<_, Infallible>(service_fn(move |req| {
+                let registry = registry.clone();
+                let handler_log = handler_log.clone();
+                async move {
+                    Ok::<_, Infallible>(handle_request(
+                        handler_log,
+                        req.method(),
+                        req.uri().path(),
+                        registry,
+                    ))
+                }
+            }))
+        }
     });
 
-    let (_, server) = warp::serve(metrics_route).bind_with_graceful_shutdown(addr, async move {
-        let _ = shutdown_rx.changed().await;
-    });
+    let server = HyperServer::bind(&addr)
+        .serve(make_svc)
+        .with_graceful_shutdown(async move {
+            shutdown_rx.changed().await.ok();
+        });
 
-    tokio::spawn(server);
+    tokio::spawn(async move {
+        if let Err(err) = server.await {
+            error!(log, "metrics server exited with an error: {}", err);
+        }
+    });
+}
+
+fn handle_request(log: Logger, method: &Method, path: &str, registry: Registry) -> Response<Body> {
+    let mut response = Response::new(Body::empty());
+
+    match (method, path) {
+        (&Method::GET, "/metrics") => {
+            let mut buffer = vec![];
+            let encoder = TextEncoder::new();
+            let body = encoder
+                .encode(&registry.gather(), &mut buffer)
+                .map_err(|err| warn!(log, "failed to encode metrics: {:?}", err))
+                .and_then(|_| {
+                    String::from_utf8(buffer)
+                        .map(Body::from)
+                        .map_err(|err| warn!(log, "failed to convert metrics to utf8: {:?}", err))
+                });
+
+            match body {
+                Ok(body) => {
+                    *response.body_mut() = body;
+                }
+                Err(_) => {
+                    *response.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
+                }
+            }
+        }
+        _ => {
+            *response.status_mut() = StatusCode::NOT_FOUND;
+        }
+    };
+
+    response
 }
 
 impl Default for Metrics {
