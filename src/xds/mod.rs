@@ -17,7 +17,6 @@
 mod udpa {
     pub mod core {
         pub mod v1 {
-            #![cfg(not(doctest))]
             #![doc(hidden)]
             tonic::include_proto!("udpa.core.v1");
         }
@@ -28,27 +27,23 @@ mod envoy {
     pub mod r#type {
         pub mod matcher {
             pub mod v3 {
-                #![cfg(not(doctest))]
                 #![doc(hidden)]
                 tonic::include_proto!("envoy.r#type.matcher.v3");
             }
         }
         pub mod metadata {
             pub mod v3 {
-                #![cfg(not(doctest))]
                 #![doc(hidden)]
                 tonic::include_proto!("envoy.r#type.metadata.v3");
             }
         }
         pub mod tracing {
             pub mod v3 {
-                #![cfg(not(doctest))]
                 #![doc(hidden)]
                 tonic::include_proto!("envoy.r#type.tracing.v3");
             }
         }
         pub mod v3 {
-            #![cfg(not(doctest))]
             #![doc(hidden)]
             tonic::include_proto!("envoy.r#type.v3");
         }
@@ -56,14 +51,12 @@ mod envoy {
     pub mod config {
         pub mod accesslog {
             pub mod v3 {
-                #![cfg(not(doctest))]
                 #![doc(hidden)]
                 tonic::include_proto!("envoy.config.accesslog.v3");
             }
         }
         pub mod cluster {
             pub mod v3 {
-                #![cfg(not(doctest))]
                 #![doc(hidden)]
                 tonic::include_proto!("envoy.config.cluster.v3");
             }
@@ -71,28 +64,24 @@ mod envoy {
         pub mod core {
             pub mod v3 {
                 #![allow(clippy::large_enum_variant)]
-                #![cfg(not(doctest))]
                 #![doc(hidden)]
                 tonic::include_proto!("envoy.config.core.v3");
             }
         }
         pub mod endpoint {
             pub mod v3 {
-                #![cfg(not(doctest))]
                 #![doc(hidden)]
                 tonic::include_proto!("envoy.config.endpoint.v3");
             }
         }
         pub mod listener {
             pub mod v3 {
-                #![cfg(not(doctest))]
                 #![doc(hidden)]
                 tonic::include_proto!("envoy.config.listener.v3");
             }
         }
         pub mod route {
             pub mod v3 {
-                #![cfg(not(doctest))]
                 #![doc(hidden)]
                 tonic::include_proto!("envoy.config.route.v3");
             }
@@ -101,14 +90,12 @@ mod envoy {
     pub mod service {
         pub mod discovery {
             pub mod v3 {
-                #![cfg(not(doctest))]
                 #![doc(hidden)]
                 tonic::include_proto!("envoy.service.discovery.v3");
             }
         }
         pub mod cluster {
             pub mod v3 {
-                #![cfg(not(doctest))]
                 #![doc(hidden)]
                 tonic::include_proto!("envoy.service.cluster.v3");
             }
@@ -118,7 +105,6 @@ mod envoy {
 
 mod google {
     pub mod rpc {
-        #![cfg(not(doctest))]
         #![doc(hidden)]
         tonic::include_proto!("google.rpc");
     }
@@ -127,10 +113,7 @@ mod google {
 const ENDPOINT_TYPE: &str = "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment";
 const CLUSTER_TYPE: &str = "type.googleapis.com/envoy.config.cluster.v3.Cluster";
 
-#[cfg(not(doctest))]
 pub mod ads_client;
-#[cfg(not(doctest))]
 mod cluster;
 mod error;
-#[cfg(not(doctest))]
 mod metadata;
