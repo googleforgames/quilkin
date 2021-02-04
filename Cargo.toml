@@ -26,6 +26,7 @@ bytes = "1.0.1"
 clap = "2.33.0"
 humantime-serde = "1.0.0"
 hyper = "0.14.2"
+num_cpus = "1.13.0"
 parking_lot = "0.11.0"
 prometheus = { version = "0.9", default-features = false }
 prost = "0.7.0"
@@ -40,7 +41,6 @@ tokio = { version = "1.1.0", features = ["rt-multi-thread", "signal", "test-util
 slog-term = "2.5.0"
 rand = "0.7.3"
 base64 = "0.12.3"
-futures-intrusive = "0.4.0"
 base64-serde = "0.5.1"
 tonic = "0.4.0"
 uuid = {version = "0.8.1", default-features = false, features = ["v4"]}
