@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package quilkin.extensions.filters.concatenate_bytes.v1alpha1;
+
+import "google/protobuf/wrappers.proto";
+
+message ConcatenateBytes {
+    enum Strategy {
+        APPEND = 0;
+        PREPEND = 1;
+    }
+    Strategy strategy = 1;
+    bytes bytes = 2;
+}
+

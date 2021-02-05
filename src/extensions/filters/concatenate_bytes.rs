@@ -14,39 +14,55 @@
  * limitations under the License.
  */
 
-use base64_serde::base64_serde_type;
-use serde::{Deserialize, Serialize};
+// use base64_serde::base64_serde_type;
 
 use crate::extensions::{
     CreateFilterArgs, DownstreamContext, DownstreamResponse, Error, Filter, FilterFactory,
 };
 
-base64_serde_type!(Base64Standard, base64::STANDARD);
-
-#[derive(Serialize, Deserialize, Debug)]
-enum Strategy {
-    #[serde(rename = "APPEND")]
-    Append,
-    #[serde(rename = "PREPEND")]
-    Prepend,
-}
-
-/// Config represents ConcatToken's configuration
-#[derive(Serialize, Deserialize, Debug)]
-struct Config {
-    /// Whether or not to `append` or `prepend` the value to the filtered packet
-    #[serde(default)]
-    strategy: Strategy,
-
-    #[serde(with = "Base64Standard")]
-    bytes: Vec<u8>,
-}
-
-impl Default for Strategy {
-    fn default() -> Self {
-        Strategy::Append
+/// Protobuf config for this filter.
+mod quilkin {
+    pub(crate) mod extensions {
+        pub(crate) mod filters {
+            pub(crate) mod concatenate_bytes {
+                pub(crate) mod v1alpha1 {
+                    #![doc(hidden)]
+                    tonic::include_proto!("quilkin.extensions.filters.concatenate_bytes.v1alpha1");
+                }
+            }
+        }
     }
 }
+use self::quilkin::extensions::filters::concatenate_bytes::v1alpha1::concatenate_bytes::Strategy;
+use self::quilkin::extensions::filters::concatenate_bytes::v1alpha1::ConcatenateBytes as Config;
+
+//
+// base64_serde_type!(Base64Standard, base64::STANDARD);
+//
+// #[derive(Serialize, Deserialize, Debug)]
+// enum Strategy {
+//     #[serde(rename = "APPEND")]
+//     Append,
+//     #[serde(rename = "PREPEND")]
+//     Prepend,
+// }
+//
+// /// Config represents ConcatToken's configuration
+// #[derive(Serialize, Deserialize, Debug)]
+// struct Config {
+//     /// Whether or not to `append` or `prepend` the value to the filtered packet
+//     #[serde(default)]
+//     strategy: Strategy,
+//
+//     #[serde(with = "Base64Standard")]
+//     bytes: Vec<u8>,
+// }
+//
+// impl Default for Strategy {
+//     fn default() -> Self {
+//         Strategy::Append
+//     }
+// }
 
 /// The `ConcatenateBytes` filter's job is to add a byte packet to either the beginning or end of each UDP packet that passes
 /// through. This is commonly used to provide an auth token to each packet, so they can be routed appropriately.
@@ -69,16 +85,9 @@ impl FilterFactory for ConcatBytesFactory {
     }
 
     fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
-        #[derive(Clone, PartialEq, ::prost::Message)]
-        pub struct TODO;
-        impl From<TODO> for Config {
-            fn from(_: TODO) -> Self {
-                unimplemented!()
-            }
-        }
         Ok(Box::new(ConcatenateBytes::new(
             self.require_config(args.config)?
-                .deserialize::<Config, TODO>(self.name().as_str())?,
+                .deserialize_config::<Config>(self.name().as_str())?,
         )))
     }
 }
@@ -86,7 +95,7 @@ impl FilterFactory for ConcatBytesFactory {
 impl ConcatenateBytes {
     pub fn new(config: Config) -> Self {
         ConcatenateBytes {
-            strategy: config.strategy,
+            strategy: Strategy::from_i32(config.strategy).unwrap_or(Strategy::Append),
             bytes: config.bytes,
         }
     }
@@ -192,7 +201,7 @@ mod tests {
     #[test]
     fn on_upstream_receive() {
         let config = Config {
-            strategy: Default::default(),
+            strategy: Strategy::Append as i32,
             bytes: vec![],
         };
         let filter = ConcatenateBytes::new(config);
@@ -202,7 +211,7 @@ mod tests {
     fn assert_create_filter(strategy: Strategy, expected: &str) {
         let contents = b"hello".to_vec();
         let config = Config {
-            strategy,
+            strategy: strategy as i32,
             bytes: contents,
         };
         let filter = ConcatenateBytes::new(config);
