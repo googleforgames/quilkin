@@ -22,6 +22,8 @@ use crate::extensions::filter_registry::{
 };
 use crate::extensions::Filter;
 
+use self::quilkin::extensions::filters::debug::v1alpha1::Config;
+
 /// Protobuf config for this filter.
 mod quilkin {
     pub(crate) mod extensions {
@@ -35,7 +37,6 @@ mod quilkin {
         }
     }
 }
-use self::quilkin::extensions::filters::debug::v1alpha1::Debug as Config;
 
 /// Debug logs all incoming and outgoing packets
 ///

@@ -20,6 +20,8 @@ use crate::extensions::{
     CreateFilterArgs, DownstreamContext, DownstreamResponse, Error, Filter, FilterFactory,
 };
 
+use self::quilkin::extensions::filters::concatenate_bytes::v1alpha1::{Config, Strategy};
+
 /// Protobuf config for this filter.
 mod quilkin {
     pub(crate) mod extensions {
@@ -33,9 +35,6 @@ mod quilkin {
         }
     }
 }
-use self::quilkin::extensions::filters::concatenate_bytes::v1alpha1::concatenate_bytes::Strategy;
-use self::quilkin::extensions::filters::concatenate_bytes::v1alpha1::ConcatenateBytes as Config;
-
 // base64_serde_type!(Base64Standard, base64::STANDARD);
 
 //
@@ -119,12 +118,13 @@ impl Filter for ConcatenateBytes {
 
 #[cfg(test)]
 mod tests {
-    use crate::config::Endpoints;
-    use crate::test_utils::assert_filter_on_downstream_receive_no_change;
     use serde_yaml::{Mapping, Value};
 
-    use super::*;
     use crate::cluster::Endpoint;
+    use crate::config::Endpoints;
+    use crate::test_utils::assert_filter_on_downstream_receive_no_change;
+
+    use super::*;
 
     #[test]
     fn factory_valid_config() {
