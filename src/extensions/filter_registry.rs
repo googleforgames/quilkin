@@ -286,6 +286,16 @@ impl CreateFilterArgs<'_> {
         }
     }
 
+    pub fn dynamic(
+        metrics_registry: Registry,
+        config: Option<prost_types::Any>,
+    ) -> CreateFilterArgs<'static> {
+        CreateFilterArgs {
+            config: config.map(ConfigType::Dynamic),
+            metrics_registry,
+        }
+    }
+
     pub fn with_metrics_registry(self, metrics_registry: Registry) -> Self {
         CreateFilterArgs {
             metrics_registry,

@@ -141,6 +141,7 @@ impl Builder<Validated> {
                 .expect("metrics should be setup properly"),
             metrics: self.metrics,
             filter_chain: self.validation_status.0,
+            filter_registry: Arc::new(self.filter_registry),
         }
     }
 }

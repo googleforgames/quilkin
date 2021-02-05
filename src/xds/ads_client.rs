@@ -16,12 +16,14 @@
 
 use std::collections::HashMap;
 
+use crate::xds::google::rpc::Status as GrpcStatus;
 use backoff::{backoff::Backoff, exponential::ExponentialBackoff, Clock, SystemClock};
-use slog::{error, info, o, Logger};
+use slog::{error, info, o, warn, Logger};
 use tokio::{
     sync::{mpsc, watch},
     task::JoinHandle,
 };
+use tokio_stream::wrappers::ReceiverStream;
 use tonic::{
     transport::{channel::Channel as TonicChannel, Error as TonicError},
     Request,
@@ -29,20 +31,22 @@ use tonic::{
 
 use crate::cluster::Cluster;
 use crate::config::ManagementServer;
+use crate::extensions::filter_manager::ListenerManagerArgs;
 use crate::xds::cluster::ClusterManager;
 use crate::xds::envoy::config::core::v3::Node;
 use crate::xds::envoy::service::discovery::v3::{
     aggregated_discovery_service_client::AggregatedDiscoveryServiceClient, DiscoveryRequest,
 };
-use crate::xds::{CLUSTER_TYPE, ENDPOINT_TYPE};
-use tokio_stream::wrappers::ReceiverStream;
+use crate::xds::listener::ListenerManager;
+use crate::xds::{CLUSTER_TYPE, ENDPOINT_TYPE, LISTENER_TYPE};
 
 /// AdsClient is a client that can talk to an XDS server using the ADS protocol.
-pub struct AdsClient;
+pub(crate) struct AdsClient;
 
 /// Contains the components that handle XDS responses for supported resources.
 struct ResourceHandlers {
     cluster_manager: ClusterManager,
+    listener_manager: ListenerManager,
 }
 
 impl ResourceHandlers {
@@ -104,6 +108,7 @@ impl AdsClient {
         node_id: String,
         management_servers: Vec<ManagementServer>,
         cluster_updates_tx: mpsc::Sender<ClusterUpdate>,
+        listener_manager_args: ListenerManagerArgs,
         mut shutdown_rx: watch::Receiver<()>,
     ) -> ExecutionResult {
         let log = base_logger.new(o!("source" => "xds::AdsClient", "node_id" => node_id.clone()));
@@ -111,8 +116,14 @@ impl AdsClient {
 
         let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel::<DiscoveryRequest>(100);
         let cluster_manager =
-            ClusterManager::new(log.clone(), cluster_updates_tx, discovery_req_tx);
-        let mut resource_handlers = ResourceHandlers { cluster_manager };
+            ClusterManager::new(log.clone(), cluster_updates_tx, discovery_req_tx.clone());
+        let listener_manager =
+            ListenerManager::new(log.clone(), listener_manager_args, discovery_req_tx);
+
+        let mut resource_handlers = ResourceHandlers {
+            cluster_manager,
+            listener_manager,
+        };
 
         // Run the client in a loop.
         // If the connection fails, we retry (with another server if available).
@@ -159,7 +170,6 @@ impl AdsClient {
                             if err.to_string().to_lowercase().contains("invalid url") {
                                 return Err(ExecutionError::Message(format!("{:?}", err)));
                             }
-
                             Self::log_error_and_backoff(
                                 &log,
                                 format!("unable to connect to the XDS server at {}: {:?}", server_addr, err),
@@ -225,8 +235,8 @@ impl AdsClient {
             shutdown_rx,
         );
 
-        // Fetch the initial set of clusters.
-        Self::send_initial_cds_request(node_id, &mut rpc_tx).await?;
+        // Fetch the initial set of resources.
+        Self::send_initial_cds_and_lds_request(node_id, &mut rpc_tx).await?;
 
         // Run the send loop on the current task.
         loop {
@@ -266,37 +276,45 @@ impl AdsClient {
     }
 
     #[allow(deprecated)]
-    async fn send_initial_cds_request(
+    async fn send_initial_cds_and_lds_request(
         node_id: String,
         rpc_tx: &mut mpsc::Sender<DiscoveryRequest>,
     ) -> Result<(), RpcSessionError> {
-        rpc_tx
-            .send(DiscoveryRequest {
-                version_info: "".into(),
-                node: Some(Node {
-                    id: node_id,
-                    cluster: "".into(),
-                    metadata: None,
-                    locality: None,
-                    user_agent_name: "quilkin".into(),
-                    extensions: vec![],
-                    client_features: vec![],
-                    listening_addresses: vec![],
-                    user_agent_version_type: None,
-                }),
-                resource_names: vec![], // Wildcard mode.
-                type_url: CLUSTER_TYPE.into(),
-                response_nonce: "".into(),
-                error_detail: None,
-            })
-            .await
-            .map_err(|err|
-                // An error sending means we have no listener on the other side which
-                // would likely be a bug if we're not already shutting down.
-                RpcSessionError::NonRecoverable(
-                    "failed to send initial CDS discovery request on channel",
-                    Box::new(err),
-                ))
+        for resource_type in &[CLUSTER_TYPE, LISTENER_TYPE] {
+            let send_result = rpc_tx
+                .send(DiscoveryRequest {
+                    version_info: "".into(),
+                    node: Some(Node {
+                        id: node_id.clone(),
+                        cluster: "".into(),
+                        metadata: None,
+                        locality: None,
+                        user_agent_name: "quilkin".into(),
+                        extensions: vec![],
+                        client_features: vec![],
+                        listening_addresses: vec![],
+                        user_agent_version_type: None,
+                    }),
+                    resource_names: vec![], // Wildcard mode.
+                    type_url: (*resource_type).into(),
+                    response_nonce: "".into(),
+                    error_detail: None,
+                })
+                .await
+                .map_err(|err|
+                    // An error sending means we have no listener on the other side which
+                    // would likely be a bug if we're not already shutting down.
+                    RpcSessionError::NonRecoverable(
+                        "failed to send initial discovery request for resource on channel",
+                        Box::new(err),
+                    ));
+
+            if let err @ Err(_) = send_result {
+                return err;
+            }
+        }
+
+        Ok(())
     }
 
     // Spawns a task that runs a receive loop.
@@ -338,6 +356,8 @@ impl AdsClient {
                             resource_handlers.cluster_manager.on_cluster_response(response).await;
                         } else if response.type_url == ENDPOINT_TYPE {
                             resource_handlers.cluster_manager.on_cluster_load_assignment_response(response).await;
+                        } else if response.type_url == LISTENER_TYPE {
+                            resource_handlers.listener_manager.on_listener_response(response).await;
                         } else {
                             error!(log, "Unexpected resource with type_url={:?}", response.type_url);
                         }
@@ -367,14 +387,60 @@ impl AdsClient {
     }
 }
 
+// Send a Discovery request with the provided arguments on the channel.
+pub(super) async fn send_discovery_req(
+    log: Logger,
+    type_url: &'static str,
+    version_info: String,
+    response_nonce: String,
+    error_message: Option<String>,
+    resource_names: Vec<String>,
+    discovery_req_tx: &mut mpsc::Sender<DiscoveryRequest>,
+) {
+    discovery_req_tx
+        .send(DiscoveryRequest {
+            version_info,
+            response_nonce,
+            type_url: type_url.into(),
+            resource_names,
+            node: None,
+            error_detail: error_message.map(|message| GrpcStatus {
+                code: 2, // 2 is rpc Unknown error
+                message,
+                details: vec![],
+            }),
+        })
+        .await
+        .map_err(|err| {
+            warn!(
+                log,
+                "Failed to send discovery request of type `{}`: {}",
+                type_url,
+                err.to_string()
+            )
+        })
+        // ok is safe here since an error would mean that we've dropped/closed the receiving
+        // side and are no longer sending RPC requests to the server - which only happens
+        // when we're shutting down in which case there's nothing we can do here.
+        .ok();
+}
+
 #[cfg(test)]
 mod tests {
-    use tokio::sync::{mpsc, watch};
-
-    use crate::config::ManagementServer;
-    use crate::proxy::logger;
-
     use super::AdsClient;
+    use crate::config::ManagementServer;
+    use crate::extensions::FilterRegistry;
+    use crate::proxy::logger;
+    use crate::xds::ads_client::ListenerManagerArgs;
+    use crate::xds::envoy::service::discovery::v3::DiscoveryRequest;
+    use crate::xds::google::rpc::Status as GrpcStatus;
+    use crate::xds::CLUSTER_TYPE;
+
+    use std::sync::Arc;
+    use std::time::Duration;
+
+    use prometheus::Registry;
+    use tokio::sync::{mpsc, watch};
 
     #[tokio::test]
     async fn invalid_url() {
@@ -383,6 +449,7 @@ mod tests {
 
         let (_shutdown_tx, shutdown_rx) = watch::channel::<()>(());
         let (cluster_updates_tx, _) = mpsc::channel(10);
+        let (filter_chain_updates_tx, _) = mpsc::channel(10);
         let run = AdsClient.run(
             logger(),
             "test-id".into(),
@@ -390,6 +457,11 @@ mod tests {
                 address: "localhost:18000".into(),
             }],
             cluster_updates_tx,
+            ListenerManagerArgs::new(
+                Registry::default(),
+                Arc::new(FilterRegistry::default()),
+                filter_chain_updates_tx,
+            ),
             shutdown_rx,
         );
 
@@ -398,5 +470,43 @@ mod tests {
         assert!(execution_result
             .expect("client should bail out immediately")
             .is_err());
+    }
+
+    #[tokio::test]
+    async fn send_discovery_request() {
+        let (mut discovery_req_tx, mut discovery_req_rx) = mpsc::channel(10);
+
+        for error_message in vec![Some("Boo!".into()), None] {
+            super::send_discovery_req(
+                logger(),
+                CLUSTER_TYPE,
+                "101".into(),
+                "nonce-101".into(),
+                error_message.clone(),
+                vec!["resource-1".into(), "resource-2".into()],
+                &mut discovery_req_tx,
+            )
+            .await;
+
+            let result = tokio::time::timeout(Duration::from_secs(5), discovery_req_rx.recv())
+                .await
+                .unwrap()
+                .unwrap();
+            assert_eq!(
+                DiscoveryRequest {
+                    version_info: "101".into(),
+                    response_nonce: "nonce-101".into(),
+                    type_url: CLUSTER_TYPE.into(),
+                    resource_names: vec!["resource-1".into(), "resource-2".into()],
+                    node: None,
+                    error_detail: error_message.map(|message| GrpcStatus {
+                        code: 2,
+                        message,
+                        details: vec![],
+                    }),
+                },
+                result
+            );
+        }
     }
 }

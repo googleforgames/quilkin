@@ -21,7 +21,7 @@
 // and we will need to acquire a read lock with every packet that is processed
 // to be able to capture the current endpoint state and pass it to Filters.
 use parking_lot::RwLock;
-use slog::{debug, o, warn, Logger};
+use slog::{debug, info, o, warn, Logger};
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::{fmt, sync::Arc};
@@ -29,15 +29,17 @@ use tokio::sync::{mpsc, oneshot, watch};
 
 use crate::cluster::Endpoint;
 use crate::config::{EmptyListError, EndPoint, Endpoints, ManagementServer, UpstreamEndpoints};
+use crate::extensions::filter_manager::ListenerManagerArgs;
+use crate::extensions::FilterRegistry;
 use crate::xds::ads_client::{AdsClient, ClusterUpdate, ExecutionResult};
 
 /// The max size of queue that provides updates from the XDS layer to the [`ClusterManager`].
 const CLUSTER_UPDATE_QUEUE_SIZE: usize = 1000;
 
-pub type SharedClusterManager = Arc<RwLock<ClusterManager>>;
+pub(crate) type SharedClusterManager = Arc<RwLock<ClusterManager>>;
 
 /// ClusterManager knows about all clusters and endpoints.
-pub struct ClusterManager {
+pub(crate) struct ClusterManager {
     endpoints: Option<Endpoints>,
 }
 
@@ -88,44 +90,28 @@ impl ClusterManager {
     /// The set of clusters is continuously updated based on responses
     /// from the XDS server.
     /// The returned contains the XDS client's execution result after termination.
-    pub async fn from_xds<'a>(
+    pub fn dynamic(
         base_logger: Logger,
-        management_servers: Vec<ManagementServer>,
-        xds_node_id: String,
-        mut shutdown_rx: watch::Receiver<()>,
-    ) -> Result<(SharedClusterManager, oneshot::Receiver<ExecutionResult>), InitializeError> {
+        cluster_update: ClusterUpdate,
+        cluster_updates_rx: mpsc::Receiver<ClusterUpdate>,
+        shutdown_rx: watch::Receiver<()>,
+    ) -> SharedClusterManager {
         let log = base_logger.new(o!("source" => "cluster::ClusterManager"));
-        let (cluster_updates_tx, mut cluster_updates_rx) =
-            mpsc::channel::<ClusterUpdate>(CLUSTER_UPDATE_QUEUE_SIZE);
-        let (execution_result_tx, execution_result_rx) = oneshot::channel::<ExecutionResult>();
-        Self::spawn_ads_client(
-            log.clone(),
-            xds_node_id,
-            management_servers,
-            cluster_updates_tx,
-            execution_result_tx,
-            shutdown_rx.clone(),
-        );
-
-        // Initial cluster warming - wait to receive the first set of clusters
-        // from the server before we start receiving any traffic.
-        let cluster_update =
-            Self::receive_initial_cluster_update(&mut cluster_updates_rx, &mut shutdown_rx).await?;
 
         let cluster_manager = Arc::new(RwLock::new(Self::new(Self::create_endpoints_from_update(
             cluster_update,
         ))));
 
-        // Start a task in the background to receive future cluster updates
+        // Start a task in the background to receive cluster updates
         // and update the cluster manager's cluster set in turn.
         Self::spawn_updater(
             log.clone(),
             cluster_manager.clone(),
             cluster_updates_rx,
-            shutdown_rx.clone(),
+            shutdown_rx,
         );
 
-        Ok((cluster_manager, execution_result_rx))
+        cluster_manager
     }
 
     fn create_endpoints_from_update(update: ClusterUpdate) -> Option<Endpoints> {
@@ -163,6 +149,7 @@ impl ClusterManager {
         node_id: String,
         management_servers: Vec<ManagementServer>,
         cluster_updates_tx: mpsc::Sender<ClusterUpdate>,
+        listener_manager_args: ListenerManagerArgs,
         execution_result_tx: oneshot::Sender<ExecutionResult>,
         shutdown_rx: watch::Receiver<()>,
     ) {
@@ -173,6 +160,7 @@ impl ClusterManager {
                     node_id,
                     management_servers,
                     cluster_updates_tx,
+                    listener_manager_args,
                     shutdown_rx,
                 )
                 .await;
@@ -181,29 +169,6 @@ impl ClusterManager {
                 .map_err(|_err| warn!(log, "failed to send ADS client execution result on channel"))
                 .ok();
         });
-    }
-
-    // Waits until it receives a cluster update from the given channel.
-    async fn receive_initial_cluster_update(
-        cluster_updates_rx: &mut mpsc::Receiver<ClusterUpdate>,
-        shutdown_rx: &mut watch::Receiver<()>,
-    ) -> Result<ClusterUpdate, InitializeError> {
-        tokio::select! {
-            update = cluster_updates_rx.recv() => {
-                match update {
-                    Some(update) => {
-                        Ok(update)
-                    }
-                    None => {
-                        // Sender has dropped - so we can't initialize properly.
-                        Err(InitializeError::Message("failed to receive initial cluster - sender dropped the channel".into()))
-                    }
-                }
-            }
-            _ = shutdown_rx.changed() => {
-                Err(InitializeError::Message("failed to receive initial cluster - received shutdown signal".into()))
-            },
-        }
     }
 
     /// Spawns a task to run a loop that receives cluster updates
@@ -225,7 +190,7 @@ impl ClusterManager {
                                 cluster_manager.write().update(update);
                             }
                             None => {
-                                debug!(log, "Exiting cluster update receive loop because the sender dropped the channel.");
+                                warn!(log, "Exiting cluster update receive loop because the sender dropped the channel.");
                                 return;
                             }
                         }

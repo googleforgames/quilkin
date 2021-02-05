@@ -112,8 +112,10 @@ mod google {
 
 const ENDPOINT_TYPE: &str = "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment";
 const CLUSTER_TYPE: &str = "type.googleapis.com/envoy.config.cluster.v3.Cluster";
+const LISTENER_TYPE: &str = "type.googleapis.com/envoy.config.listener.v3.Listener";
 
-pub mod ads_client;
-mod cluster;
-mod error;
-mod metadata;
+pub(crate) mod ads_client;
+pub(crate) mod cluster;
+pub(crate) mod error;
+pub(crate) mod listener;
+pub(crate) mod metadata;

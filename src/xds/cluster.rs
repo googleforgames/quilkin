@@ -21,10 +21,10 @@ use crate::xds::envoy::config::cluster::v3::{cluster, Cluster};
 use crate::xds::envoy::config::core::v3::{address, socket_address};
 use crate::xds::envoy::config::endpoint::v3::{lb_endpoint, ClusterLoadAssignment};
 use crate::xds::envoy::service::discovery::v3::{DiscoveryRequest, DiscoveryResponse};
-use crate::xds::google::rpc::Status;
 use crate::xds::metadata;
 use crate::xds::{CLUSTER_TYPE, ENDPOINT_TYPE};
 
+use crate::xds::ads_client::send_discovery_req;
 use crate::xds::error::Error;
 use bytes::Bytes;
 use prost::Message;
@@ -386,32 +386,16 @@ impl ClusterManager {
         error_message: Option<String>,
         resource_names: Vec<String>,
     ) {
-        self.discovery_req_tx
-            .send(DiscoveryRequest {
-                version_info,
-                response_nonce,
-                type_url: type_url.into(),
-                resource_names,
-                node: None,
-                error_detail: error_message.map(|message| Status {
-                    code: 2, // 2 is rpc Unknown error
-                    message,
-                    details: vec![],
-                }),
-            })
-            .await
-            .map_err(|err| {
-                warn!(
-                    self.log,
-                    "Sending discovery request of type {} failed: {}",
-                    type_url,
-                    err.to_string()
-                )
-            })
-            // ok is safe here since an error would mean that we've dropped/closed the receiving
-            // side and are no longer sending RPC requests to the server - which only happens
-            // when we're shutting down in which case there's nothing we can do here.
-            .ok();
+        send_discovery_req(
+            self.log.clone(),
+            type_url,
+            version_info,
+            response_nonce,
+            error_message,
+            resource_names,
+            &mut self.discovery_req_tx,
+        )
+        .await
     }
 }
 

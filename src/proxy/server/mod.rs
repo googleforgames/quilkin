@@ -29,10 +29,10 @@ use tokio::time::{sleep, Duration};
 
 use metrics::Metrics as ProxyMetrics;
 
-use crate::cluster::cluster_manager::{ClusterManager, SharedClusterManager};
+use crate::cluster::cluster_manager::SharedClusterManager;
 use crate::cluster::Endpoint;
 use crate::config::{Config, Source};
-use crate::extensions::{DownstreamContext, Filter, FilterChain};
+use crate::extensions::{DownstreamContext, Filter, FilterChain, FilterRegistry};
 use crate::proxy::server::error::{Error, RecvFromError};
 use crate::proxy::sessions::{
     Packet, Session, SESSION_EXPIRY_POLL_INTERVAL, SESSION_TIMEOUT_SECONDS,
@@ -40,9 +40,21 @@ use crate::proxy::sessions::{
 use crate::utils::debug;
 
 use super::metrics::{start_metrics_server, Metrics};
+use crate::extensions::filter_manager::SharedFilterManager;
+use resource_manager::{DynamicResourceManagers, StaticResourceManagers};
 
 pub mod error;
 pub(super) mod metrics;
+
+#[cfg(not(doctest))]
+mod resource_manager;
+
+// Stub module to work-around not including XDS generated code in doc tests.
+#[cfg(doctest)]
+mod resource_manager {
+    pub struct DynamicResourceManagers;
+    pub struct StaticResourceManagers;
+}
 
 type SessionMap = Arc<RwLock<HashMap<(SocketAddr, SocketAddr), Session>>>;
 
@@ -56,6 +68,7 @@ pub struct Server {
     pub(super) filter_chain: Arc<FilterChain>,
     pub(super) metrics: Metrics,
     pub(super) proxy_metrics: ProxyMetrics,
+    pub(super) filter_registry: Arc<FilterRegistry>,
 }
 
 struct RecvFromArgs {
@@ -92,10 +105,12 @@ impl Server {
         let session_ttl = Duration::from_secs(SESSION_TIMEOUT_SECONDS);
         let poll_interval = Duration::from_secs(SESSION_EXPIRY_POLL_INTERVAL);
 
+        let (cluster_manager, _filter_manager) =
+            self.create_resource_managers(shutdown_rx.clone()).await?;
         self.run_receive_packet(socket.clone(), receive_packets);
         self.run_prune_sessions(&sessions, poll_interval);
         self.run_recv_from(
-            self.create_cluster_manager(shutdown_rx.clone()).await?,
+            cluster_manager,
             self.filter_chain.clone(),
             socket,
             &sessions,
@@ -107,10 +122,10 @@ impl Server {
         Ok(())
     }
 
-    async fn create_cluster_manager(
+    async fn create_resource_managers(
         &self,
         shutdown_rx: watch::Receiver<()>,
-    ) -> Result<SharedClusterManager> {
+    ) -> Result<(SharedClusterManager, SharedFilterManager)> {
         match &self.config.source {
             Source::Static {
                 filters: _,
@@ -123,21 +138,29 @@ impl Server {
                     endpoints
                         .push(Endpoint::from_config(ep).map_err(Error::InvalidEndpointConfig)?);
                 }
-                Ok(ClusterManager::fixed(endpoints))
+                let manager = StaticResourceManagers::new(
+                    self.log.clone(),
+                    endpoints,
+                    self.filter_chain.clone(),
+                );
+                Ok((manager.cluster_manager, manager.filter_manager))
             }
             Source::Dynamic {
                 filters: _,
                 management_servers,
             } => {
-                let (cm, execution_result_rx) = ClusterManager::from_xds(
+                let manager = DynamicResourceManagers::new(
                     self.log.clone(),
-                    management_servers.to_vec(),
                     self.config.proxy.id.clone(),
+                    self.metrics.registry.clone(),
+                    self.filter_registry.clone(),
+                    management_servers.to_vec(),
                     shutdown_rx,
                 )
                 .await
                 .map_err(|err| Error::Initialize(format!("{}", err)))?;
 
+                let execution_result_rx = manager.execution_result_rx;
                 // Spawn a task to check for an error if the XDS client
                 // terminates and forward the error upstream.
                 let log = self.log.clone();
@@ -152,7 +175,7 @@ impl Server {
                     }
                 });
 
-                Ok(cm)
+                Ok((manager.cluster_manager, manager.filter_manager))
             }
         }
     }
@@ -483,6 +506,7 @@ mod tests {
     use tokio::time::timeout;
     use tokio::time::Duration;
 
+    use crate::cluster::cluster_manager::ClusterManager;
     use crate::config;
     use crate::config::{Builder as ConfigBuilder, EndPoint};
     use crate::extensions::FilterRegistry;
