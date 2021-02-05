@@ -36,8 +36,9 @@ mod quilkin {
 use self::quilkin::extensions::filters::concatenate_bytes::v1alpha1::concatenate_bytes::Strategy;
 use self::quilkin::extensions::filters::concatenate_bytes::v1alpha1::ConcatenateBytes as Config;
 
-//
 // base64_serde_type!(Base64Standard, base64::STANDARD);
+
+//
 //
 // #[derive(Serialize, Deserialize, Debug)]
 // enum Strategy {

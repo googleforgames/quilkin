@@ -14,4 +14,8 @@
  *  limitations under the License.
  */
 
+use base64_serde::base64_serde_type;
+
 pub(crate) mod debug;
+
+base64_serde_type!(pub Base64Standard, base64::STANDARD);

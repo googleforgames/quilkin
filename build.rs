@@ -46,6 +46,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     .map(|i| std::env::current_dir().unwrap().join(i))
     .collect::<Vec<_>>();
 
+    /*
+    // Match a specific field in a message type.
+    config.btree_map(&[".my_messages.MyMessageType.my_map_field"]);
+    [−][src]Enum
+    */
+
     let config = {
         let mut c = prost_build::Config::new();
         c.disable_comments(Some("."));
@@ -59,6 +65,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .type_attribute(
             ".quilkin.extensions.filters",
             "#[serde(rename_all = \"camelCase\")]",
+        )
+        .field_attribute(
+            ".quilkin.extensions.filters.concatenate_bytes.v1alpha1.ConcatenateBytes.bytes",
+            "#[serde(with = \"crate::utils::Base64Standard\")]",
         )
         .build_server(false)
         .compile_with_config(
