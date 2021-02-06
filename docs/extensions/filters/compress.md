@@ -3,28 +3,6 @@
 The `Compress` filter's job is to provide a variety of compression implementations for compression 
 and subsequent decompression of UDP data when sent between systems, such as a game client and game server.
 
-Depending on the `direction` configuration option, the proxy expects data to be sent to it either compressed or 
-decompressed (i.e. its original format), where it will be subsequently compressed or decompressed respectively when 
-being sent back out. 
-
-The order and direction of compression and decompression of data based on the `direction` configuration is as follows:
-
-| Direction   | Listening port expects ➡ Endpoint sends | Endpoint expects ➡ Listening port sends | 
-| ----------- | ----------------------------------- | ------------------------------------ |
-| UPSTREAM    | Decompressed ➡ Compressed           | Compressed ➡ Decompressed            |
-| DOWNSTREAM  | Compressed ➡ Decompressed           | Decompressed ➡ Compressed            |
-
-A common use case would be that a game client sending data to a locally running proxy, would be configured with the 
-`UPSTREAM` direction (as compressed data is moving "upstream"), and a proxy that sat in front of a dedicated game 
-server would have the`DOWNSTREAM` direction configuration (as compressed data is moving "downstream").
-
-When configuring your filters, it will be important to note the order in which the `Compress` filter is placed in 
-your [Filter configuration](filters.md) as it does mutate the packet data.
-
-Currently, this filter only provides the Snappy ([original](https://github.com/google/snappy),
-[rust](https://github.com/BurntSushi/rust-snappy)) compression method, but more will be
-provided in the future.
-
 #### Filter name
 ```text
 quilkin.extensions.filters.compress.v1alpha1.Compress
@@ -38,42 +16,74 @@ static:
   filters:
     - name: quilkin.extensions.filters.compress.v1alpha1.Compress
       config:
+          on_read: COMPRESS
+          on_write: DECOMPRESS
           mode: SNAPPY
-          direction: DOWNSTREAM
   endpoints:
     - name: server-1
       address: 127.0.0.1:7001
 # ";
 # let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-# assert_eq!(config.source.get_filters().len(), 1);
+# assert_eq!(config.source.get_static_filters().unwrap().len(), 1);
 # quilkin::proxy::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
 ```
+
+The above example shows a proxy that could be used with a typical game client, where the original client data is 
+sent to the local listening port and then compressed when heading up to a dedicated game server, and then 
+decompressed when traffic is returned from the dedicated game server before being handed back to game client. 
+
+> It is worth noting that since the Compress filter modifies the *entire packet*, it is worth paying special
+  attention to the order it is placed in your [Filter configuration](filters.md). Most of the time it will likely be
+  the first or last Filter configured to ensure it is compressing the entire set of data being sent.
 
 ### Configuration Options
 
 ```yaml
 properties:
-  required:
-    - direction
-  direction:
-    type: string
-    enum:
-      - UPSTREAM
-      - DOWNSTREAM
+  on_read:
+    '$ref': '#/definitions/action'
     description: |
-      Compression direction (and decompression goes the other way).
+      Whether to compress, decompress or do nothing when reading packets from the local listening port
+  on_write:
+    '$ref': '#/definitions/action'
+    description: |
+      Whether to compress, decompress or do nothing when writing packets to the local listening port
   mode:
     type: string
     description: |
-      The compression implementation to use on the incoming and outgoing packets.
-    default: "SNAPPY"
-    enum: 
+      The compression implementation to use on the incoming and outgoing packets. See "Compression Modes" for details.
+    enum:
       - SNAPPY
+    default: SNAPPY
+
+definitions:
+  action:
+    type: string
+    enum:
+      - DO_NOTHING
+      - COMPRESS
+      - DECOMPRESS
+    default: DO_NOTHING
 ```
+
+#### Compression Modes
+
+##### Snappy
+
+> Snappy is a compression/decompression library. It does not aim for maximum compression, or compatibility with any 
+> other compression library; instead, it aims for very high speeds and reasonable compression.
+
+Currently, this filter only provides the [Snappy](http://google.github.io/snappy/) compression format via the
+[rust-snappy](https://github.com/BurntSushi/rust-snappy) crate, but more will be
+provided in the future.
 
 ### Metrics
 * `quilkin_filter_Compress_packets_dropped_total`
-  Total number of packets dropped as they could not be processed. Labels: operation.
+  Total number of packets dropped as they could not be processed.  
+    * Labels:
+      * `action`: The action that could not be completed successfully, thereby causing the packet to be dropped.
+        * `Compress`: Compressing the packet with the configured `mode` was attempted.
+        * `Decompress` Decompressing the packet with the configured `mode` was attempted.
 * `quilkin_filter_Compress_decompressed_bytes_total`
   Total number of decompressed bytes either received or sent.
 * `quilkin_filter_Compress_compressed_bytes_total`
