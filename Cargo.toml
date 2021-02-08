@@ -17,7 +17,7 @@
 [package]
 name = "quilkin"
 version = "0.1.0"
-authors = ["Mark Mandel <markmandel@google.com>"]
+authors = ["Mark Mandel <markmandel@google.com>", "Ifeanyi Ubah <ifeanyi.ubah@embark-studios.com>"]
 edition = "2018"
 
 [dependencies]
