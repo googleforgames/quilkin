@@ -47,7 +47,7 @@ impl FilterFactory for TestFilterFactory {
 pub struct TestFilter {}
 
 impl Filter for TestFilter {
-    fn on_downstream_receive(&self, mut ctx: DownstreamContext) -> Option<DownstreamResponse> {
+    fn on_upstream(&self, mut ctx: UpstreamContext) -> Option<UpstreamResponse> {
         // append values on each run
         ctx.metadata
             .entry("downstream".into())
@@ -59,7 +59,7 @@ impl Filter for TestFilter {
         Some(ctx.into())
     }
 
-    fn on_upstream_receive(&self, mut ctx: UpstreamContext) -> Option<UpstreamResponse> {
+    fn on_downstream(&self, mut ctx: DownstreamContext) -> Option<DownstreamResponse> {
         // append values on each run
         ctx.metadata
             .entry("upstream".into())
@@ -279,8 +279,8 @@ impl TestHelper {
     }
 }
 
-/// assert that on_downstream_receive makes no changes
-pub fn assert_filter_on_downstream_receive_no_change<F>(filter: &F)
+/// assert that on_upstream makes no changes
+pub fn assert_filter_on_upstream_no_change<F>(filter: &F)
 where
     F: Filter,
 {
@@ -288,7 +288,7 @@ where
     let from = "127.0.0.1:90".parse().unwrap();
     let contents = "hello".to_string().into_bytes();
 
-    match filter.on_downstream_receive(DownstreamContext::new(
+    match filter.on_upstream(UpstreamContext::new(
         Endpoints::new(endpoints.clone()).unwrap().into(),
         from,
         contents.clone(),
@@ -304,15 +304,15 @@ where
     }
 }
 
-/// assert that on_upstream_receive makes no changes
-pub fn assert_filter_on_upstream_receive_no_change<F>(filter: &F)
+/// assert that on_downstream makes no changes
+pub fn assert_filter_on_downstream_no_change<F>(filter: &F)
 where
     F: Filter,
 {
     let endpoint = Endpoint::from_address("127.0.0.1:90".parse().unwrap());
     let contents = "hello".to_string().into_bytes();
 
-    match filter.on_upstream_receive(UpstreamContext::new(
+    match filter.on_downstream(DownstreamContext::new(
         &endpoint,
         endpoint.address,
         "127.0.0.1:70".parse().unwrap(),

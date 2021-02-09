@@ -145,7 +145,7 @@ impl FilterManager {
 #[cfg(test)]
 mod tests {
     use super::FilterManager;
-    use crate::extensions::{DownstreamContext, DownstreamResponse, Filter, FilterChain};
+    use crate::extensions::{Filter, FilterChain, UpstreamContext, UpstreamResponse};
     use crate::test_utils::logger;
 
     use std::sync::Arc;
@@ -179,7 +179,7 @@ mod tests {
             "127.0.0.1:8080".parse().unwrap(),
         )])
         .unwrap();
-        let response = filter_chain.on_downstream_receive(DownstreamContext::new(
+        let response = filter_chain.on_upstream(UpstreamContext::new(
             UpstreamEndpoints::from(test_endpoints.clone()),
             "127.0.0.1:8081".parse().unwrap(),
             vec![],
@@ -189,7 +189,7 @@ mod tests {
         // A simple test filter that drops all packets flowing upstream.
         struct Drop;
         impl Filter for Drop {
-            fn on_downstream_receive(&self, _: DownstreamContext) -> Option<DownstreamResponse> {
+            fn on_upstream(&self, _: UpstreamContext) -> Option<UpstreamResponse> {
                 None
             }
         }
@@ -205,7 +205,7 @@ mod tests {
                 manager_guard.get_filter_chain().clone().unwrap()
             };
             if filter_chain
-                .on_downstream_receive(DownstreamContext::new(
+                .on_upstream(UpstreamContext::new(
                     UpstreamEndpoints::from(test_endpoints.clone()),
                     "127.0.0.1:8081".parse().unwrap(),
                     vec![],

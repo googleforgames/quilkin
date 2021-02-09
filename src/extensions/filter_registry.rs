@@ -26,8 +26,8 @@ use prometheus::{Error as MetricsError, Registry};
 use crate::cluster::Endpoint;
 use crate::config::{UpstreamEndpoints, ValidationError};
 
-/// Contains the input arguments to [on_downstream_receive](crate::extensions::filter_registry::Filter::on_downstream_receive)
-pub struct DownstreamContext {
+/// Contains the input arguments to [on_upstream](crate::extensions::filter_registry::Filter::on_upstream)
+pub struct UpstreamContext {
     /// The upstream endpoints that the packet will be forwarded to.
     pub endpoints: UpstreamEndpoints,
     /// The source of the received packet.
@@ -40,17 +40,17 @@ pub struct DownstreamContext {
     phantom: PhantomData<()>,
 }
 
-/// Contains the output of [on_downstream_receive](crate::extensions::filter_registry::Filter::on_downstream_receive)
+/// Contains the output of [on_upstream](crate::extensions::filter_registry::Filter::on_upstream)
 ///
-/// New instances are created from a [`DownstreamContext`]
+/// New instances are created from a [`UpstreamContext`]
 ///
 /// ```rust
-/// # use quilkin::extensions::{DownstreamContext, DownstreamResponse};
-///   fn on_downstream_receive(ctx: DownstreamContext) -> Option<DownstreamResponse> {
+/// # use quilkin::extensions::{UpstreamContext, UpstreamResponse};
+///   fn on_upstream(ctx: UpstreamContext) -> Option<UpstreamResponse> {
 ///       Some(ctx.into())
 ///   }
 /// ```
-pub struct DownstreamResponse {
+pub struct UpstreamResponse {
     /// The upstream endpoints that the packet should be forwarded to.
     pub endpoints: UpstreamEndpoints,
     /// Contents of the packet to be forwarded.
@@ -61,9 +61,9 @@ pub struct DownstreamResponse {
     phantom: PhantomData<()>,
 }
 
-/// Contains the input arguments to [on_upstream_receive](crate::extensions::filter_registry::Filter::on_upstream_receive)
-pub struct UpstreamContext<'a> {
-    /// The upstream endpoint that we're expecting packets from.
+/// Contains the input arguments to [on_downstream](crate::extensions::filter_registry::Filter::on_downstream)
+pub struct DownstreamContext<'a> {
+    /// The endpoint that we've received packets from.
     pub endpoint: &'a Endpoint,
     /// The source of the received packet.
     pub from: SocketAddr,
@@ -77,17 +77,17 @@ pub struct UpstreamContext<'a> {
     phantom: PhantomData<()>,
 }
 
-/// Contains the output of [on_upstream_receive](crate::extensions::filter_registry::Filter::on_upstream_receive)
+/// Contains the output of [on_downstream](crate::extensions::filter_registry::Filter::on_downstream)
 ///
-/// New instances are created from an [`UpstreamContext`]
+/// New instances are created from an [`DownstreamContext`]
 ///
 /// ```rust
-/// # use quilkin::extensions::{UpstreamContext, UpstreamResponse};
-///   fn on_upstream_receive(ctx: UpstreamContext) -> Option<UpstreamResponse> {
+/// # use quilkin::extensions::{DownstreamContext, DownstreamResponse};
+///   fn on_downstream(ctx: DownstreamContext) -> Option<DownstreamResponse> {
 ///       Some(ctx.into())
 ///   }
 /// ```
-pub struct UpstreamResponse {
+pub struct DownstreamResponse {
     /// Contents of the packet to be sent back to the original sender.
     pub contents: Vec<u8>,
     /// Arbitrary values that can be passed from one filter to another
@@ -96,8 +96,8 @@ pub struct UpstreamResponse {
     phantom: PhantomData<()>,
 }
 
-impl DownstreamContext {
-    /// Creates a new [`DownstreamContext`]
+impl UpstreamContext {
+    /// Creates a new [`UpstreamContext`]
     pub fn new(endpoints: UpstreamEndpoints, from: SocketAddr, contents: Vec<u8>) -> Self {
         Self {
             endpoints,
@@ -108,8 +108,8 @@ impl DownstreamContext {
         }
     }
 
-    /// Creates a new [`DownstreamContext`] from a [`DownstreamResponse`]
-    pub fn with_response(from: SocketAddr, response: DownstreamResponse) -> Self {
+    /// Creates a new [`UpstreamContext`] from a [`UpstreamResponse`]
+    pub fn with_response(from: SocketAddr, response: UpstreamResponse) -> Self {
         Self {
             endpoints: response.endpoints,
             from,
@@ -120,8 +120,8 @@ impl DownstreamContext {
     }
 }
 
-impl From<DownstreamContext> for DownstreamResponse {
-    fn from(ctx: DownstreamContext) -> Self {
+impl From<UpstreamContext> for UpstreamResponse {
+    fn from(ctx: UpstreamContext) -> Self {
         Self {
             endpoints: ctx.endpoints,
             contents: ctx.contents,
@@ -131,15 +131,15 @@ impl From<DownstreamContext> for DownstreamResponse {
     }
 }
 
-impl UpstreamContext<'_> {
-    /// Creates a new [`UpstreamContext`]
+impl DownstreamContext<'_> {
+    /// Creates a new [`DownstreamContext`]
     pub fn new(
         endpoint: &Endpoint,
         from: SocketAddr,
         to: SocketAddr,
         contents: Vec<u8>,
-    ) -> UpstreamContext {
-        UpstreamContext {
+    ) -> DownstreamContext {
+        DownstreamContext {
             endpoint,
             from,
             to,
@@ -149,14 +149,14 @@ impl UpstreamContext<'_> {
         }
     }
 
-    /// Creates a new [`UpstreamContext`] from a [`UpstreamResponse`]
+    /// Creates a new [`DownstreamContext`] from a [`DownstreamResponse`]
     pub fn with_response(
         endpoint: &Endpoint,
         from: SocketAddr,
         to: SocketAddr,
-        response: UpstreamResponse,
-    ) -> UpstreamContext {
-        UpstreamContext {
+        response: DownstreamResponse,
+    ) -> DownstreamContext {
+        DownstreamContext {
             endpoint,
             from,
             to,
@@ -167,8 +167,8 @@ impl UpstreamContext<'_> {
     }
 }
 
-impl From<UpstreamContext<'_>> for UpstreamResponse {
-    fn from(ctx: UpstreamContext) -> Self {
+impl From<DownstreamContext<'_>> for DownstreamResponse {
+    fn from(ctx: DownstreamContext) -> Self {
         Self {
             contents: ctx.contents,
             phantom: ctx.phantom,
@@ -179,24 +179,24 @@ impl From<UpstreamContext<'_>> for UpstreamResponse {
 
 /// Filter is a trait for routing and manipulating packets.
 pub trait Filter: Send + Sync {
-    /// on_downstream_receive filters packets received from the local port, and potentially sends them
+    /// on_upstream filters packets received from the listening port, and potentially sends them
     /// to configured endpoints.
-    /// This function should return a [`DownstreamResponse`] containing the array of
+    /// This function should return a [`UpstreamResponse`] containing the array of
     /// endpoints that the packet should be sent to and the packet that should be
     /// sent (which may be manipulated) as well.
     /// If the packet should be rejected, return None.
     /// By default, passes the context through unchanged
-    fn on_downstream_receive(&self, ctx: DownstreamContext) -> Option<DownstreamResponse> {
+    fn on_upstream(&self, ctx: UpstreamContext) -> Option<UpstreamResponse> {
         Some(ctx.into())
     }
 
-    /// on_upstream_receive filters packets received upstream and destined
-    /// for a given endpoint, that are going back to the original sender.
-    /// This function should return an [`UpstreamResponse`] containing the packet to
+    /// on_downstream filters packets received at a given endpoint,
+    /// and are then sent to the original sender via the listening port.
+    /// This function should return an [`DownstreamResponse`] containing the packet to
     /// be sent (which may be manipulated).
     /// If the packet should be rejected, return None.
     /// By default, passes the context through unchanged
-    fn on_upstream_receive(&self, ctx: UpstreamContext) -> Option<UpstreamResponse> {
+    fn on_downstream(&self, ctx: DownstreamContext) -> Option<DownstreamResponse> {
         Some(ctx.into())
     }
 }
@@ -368,11 +368,11 @@ mod tests {
     struct TestFilter {}
 
     impl Filter for TestFilter {
-        fn on_downstream_receive(&self, _: DownstreamContext) -> Option<DownstreamResponse> {
+        fn on_upstream(&self, _: UpstreamContext) -> Option<UpstreamResponse> {
             None
         }
 
-        fn on_upstream_receive(&self, _: UpstreamContext) -> Option<UpstreamResponse> {
+        fn on_downstream(&self, _: DownstreamContext) -> Option<DownstreamResponse> {
             None
         }
     }
@@ -399,7 +399,7 @@ mod tests {
         let endpoint = Endpoint::from_address(addr);
 
         assert!(filter
-            .on_downstream_receive(DownstreamContext::new(
+            .on_upstream(UpstreamContext::new(
                 Endpoints::new(vec![Endpoint::from_address(
                     "127.0.0.1:8080".parse().unwrap(),
                 )])
@@ -410,7 +410,7 @@ mod tests {
             ))
             .is_some());
         assert!(filter
-            .on_upstream_receive(UpstreamContext::new(&endpoint, addr, addr, vec![],))
+            .on_downstream(DownstreamContext::new(&endpoint, addr, addr, vec![],))
             .is_some());
     }
 }

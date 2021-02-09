@@ -144,7 +144,7 @@ impl Compress {
 }
 
 impl Filter for Compress {
-    fn on_downstream_receive(&self, mut ctx: DownstreamContext) -> Option<DownstreamResponse> {
+    fn on_upstream(&self, mut ctx: UpstreamContext) -> Option<UpstreamResponse> {
         let original_size = ctx.contents.len();
         match self.direction {
             Direction::Upstream => match self.compressor.encode(&mut ctx.contents) {
@@ -174,7 +174,7 @@ impl Filter for Compress {
         }
     }
 
-    fn on_upstream_receive(&self, mut ctx: UpstreamContext) -> Option<UpstreamResponse> {
+    fn on_downstream(&self, mut ctx: DownstreamContext) -> Option<DownstreamResponse> {
         let original_size = ctx.contents.len();
         match self.direction {
             Direction::Upstream => match self.compressor.decode(&mut ctx.contents) {
@@ -292,9 +292,9 @@ mod tests {
         );
         let expected = contents_fixture();
 
-        // on_downstream_receive compress
+        // on_upstream compress
         let downstream_response = compress
-            .on_downstream_receive(DownstreamContext::new(
+            .on_upstream(UpstreamContext::new(
                 UpstreamEndpoints::from(
                     Endpoints::new(vec![Endpoint::from_address(
                         "127.0.0.1:80".parse().unwrap(),
@@ -322,9 +322,9 @@ mod tests {
             compress.metrics.compressed_bytes_total.get()
         );
 
-        // on_upstream_receive decompress
+        // on_downstream decompress
         let upstream_response = compress
-            .on_upstream_receive(UpstreamContext::new(
+            .on_downstream(DownstreamContext::new(
                 &Endpoint::from_address("127.0.0.1:80".parse().unwrap()),
                 "127.0.0.1:8080".parse().unwrap(),
                 "127.0.0.1:8081".parse().unwrap(),
@@ -387,7 +387,7 @@ mod tests {
             Metrics::new(&Registry::default()).unwrap(),
         );
 
-        let upstream_response = compression.on_upstream_receive(UpstreamContext::new(
+        let upstream_response = compression.on_downstream(DownstreamContext::new(
             &Endpoint::from_address("127.0.0.1:80".parse().unwrap()),
             "127.0.0.1:8080".parse().unwrap(),
             "127.0.0.1:8081".parse().unwrap(),
@@ -407,7 +407,7 @@ mod tests {
             Metrics::new(&Registry::default()).unwrap(),
         );
 
-        let downstream_response = compression.on_downstream_receive(DownstreamContext::new(
+        let downstream_response = compression.on_upstream(UpstreamContext::new(
             UpstreamEndpoints::from(
                 Endpoints::new(vec![Endpoint::from_address(
                     "127.0.0.1:80".parse().unwrap(),
@@ -471,9 +471,9 @@ mod tests {
         F: Filter + ?Sized,
     {
         let expected = contents_fixture();
-        // on_upstream_receive compress
+        // on_downstream compress
         let upstream_response = filter
-            .on_upstream_receive(UpstreamContext::new(
+            .on_downstream(DownstreamContext::new(
                 &Endpoint::from_address("127.0.0.1:80".parse().unwrap()),
                 "127.0.0.1:8080".parse().unwrap(),
                 "127.0.0.1:8081".parse().unwrap(),
@@ -489,9 +489,9 @@ mod tests {
             upstream_response.contents.len()
         );
 
-        // on_downstream_receive decompress
+        // on_upstream decompress
         let downstream_response = filter
-            .on_downstream_receive(DownstreamContext::new(
+            .on_upstream(UpstreamContext::new(
                 UpstreamEndpoints::from(
                     Endpoints::new(vec![Endpoint::from_address(
                         "127.0.0.1:80".parse().unwrap(),

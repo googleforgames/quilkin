@@ -24,7 +24,7 @@ use tokio::time::{self, Instant};
 
 use metrics::Metrics;
 
-use crate::extensions::filter_registry::{CreateFilterArgs, DownstreamContext, DownstreamResponse};
+use crate::extensions::filter_registry::{CreateFilterArgs, UpstreamContext, UpstreamResponse};
 use crate::extensions::{Error, Filter, FilterFactory};
 
 mod metrics;
@@ -189,7 +189,7 @@ impl Drop for RateLimitFilter {
 }
 
 impl Filter for RateLimitFilter {
-    fn on_downstream_receive(&self, ctx: DownstreamContext) -> Option<DownstreamResponse> {
+    fn on_upstream(&self, ctx: UpstreamContext) -> Option<UpstreamResponse> {
         self.acquire_token().map(|()| ctx.into()).or_else(|| {
             self.metrics.packets_dropped_total.inc();
             None
@@ -206,11 +206,11 @@ mod tests {
 
     use crate::cluster::Endpoint;
     use crate::config::Endpoints;
-    use crate::extensions::filter_registry::DownstreamContext;
+    use crate::extensions::filter_registry::UpstreamContext;
     use crate::extensions::filters::local_rate_limit::metrics::Metrics;
     use crate::extensions::filters::local_rate_limit::{Config, RateLimitFilter};
     use crate::extensions::Filter;
-    use crate::test_utils::assert_filter_on_upstream_receive_no_change;
+    use crate::test_utils::assert_filter_on_downstream_no_change;
 
     fn rate_limiter(config: Config) -> RateLimitFilter {
         RateLimitFilter::new(config, Metrics::new(&Registry::default()).unwrap())
@@ -292,11 +292,11 @@ mod tests {
         });
 
         // Check that other routes are not affected.
-        assert_filter_on_upstream_receive_no_change(&r);
+        assert_filter_on_downstream_no_change(&r);
 
         // Check that we're rate limited.
         assert!(r
-            .on_downstream_receive(DownstreamContext::new(
+            .on_upstream(UpstreamContext::new(
                 Endpoints::new(vec![Endpoint::from_address(
                     "127.0.0.1:8080".parse().unwrap(),
                 )])
@@ -316,7 +316,7 @@ mod tests {
         });
 
         let result = r
-            .on_downstream_receive(DownstreamContext::new(
+            .on_upstream(UpstreamContext::new(
                 Endpoints::new(vec![Endpoint::from_address(
                     "127.0.0.1:8080".parse().unwrap(),
                 )])
@@ -331,6 +331,6 @@ mod tests {
         assert_eq!(None, r.acquire_token());
 
         // Check that other routes are not affected.
-        assert_filter_on_upstream_receive_no_change(&r);
+        assert_filter_on_downstream_no_change(&r);
     }
 }

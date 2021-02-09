@@ -27,7 +27,7 @@ use tokio::sync::{mpsc, watch};
 use tokio::time::{Duration, Instant};
 
 use crate::cluster::Endpoint;
-use crate::extensions::{Filter, FilterChain, UpstreamContext};
+use crate::extensions::{DownstreamContext, Filter, FilterChain};
 use crate::proxy::sessions::error::Error;
 use crate::proxy::sessions::metrics::Metrics;
 use crate::utils::debug;
@@ -221,7 +221,7 @@ impl Session {
         }
 
         if let Some(response) =
-            chain.on_upstream_receive(UpstreamContext::new(endpoint, from, to, packet.to_vec()))
+            chain.on_downstream(DownstreamContext::new(endpoint, from, to, packet.to_vec()))
         {
             if let Err(err) = sender.send(Packet::new(to, response.contents)).await {
                 metrics.rx_errors_total.inc();

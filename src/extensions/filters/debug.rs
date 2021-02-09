@@ -115,12 +115,12 @@ impl FilterFactory for DebugFactory {
 }
 
 impl Filter for Debug {
-    fn on_downstream_receive(&self, ctx: DownstreamContext) -> Option<DownstreamResponse> {
+    fn on_upstream(&self, ctx: UpstreamContext) -> Option<UpstreamResponse> {
         info!(self.log, "on local receive"; "from" => ctx.from, "contents" => packet_to_string(ctx.contents.clone()));
         Some(ctx.into())
     }
 
-    fn on_upstream_receive(&self, ctx: UpstreamContext) -> Option<UpstreamResponse> {
+    fn on_downstream(&self, ctx: DownstreamContext) -> Option<DownstreamResponse> {
         info!(self.log, "received endpoint packet"; "endpoint" => ctx.endpoint.address,
         "from" => ctx.from,
         "to" => ctx.to,
@@ -144,22 +144,21 @@ mod tests {
     use serde_yaml::Value;
 
     use crate::test_utils::{
-        assert_filter_on_downstream_receive_no_change, assert_filter_on_upstream_receive_no_change,
-        logger,
+        assert_filter_on_downstream_no_change, assert_filter_on_upstream_no_change, logger,
     };
 
     use super::*;
 
     #[test]
-    fn on_downstream_receive() {
+    fn on_upstream() {
         let df = Debug::new(&logger(), None);
-        assert_filter_on_downstream_receive_no_change(&df);
+        assert_filter_on_upstream_no_change(&df);
     }
 
     #[test]
-    fn on_upstream_receive() {
+    fn on_downstream() {
         let df = Debug::new(&logger(), None);
-        assert_filter_on_upstream_receive_no_change(&df);
+        assert_filter_on_downstream_no_change(&df);
     }
 
     #[test]

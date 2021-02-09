@@ -99,7 +99,7 @@ impl TokenRouter {
 }
 
 impl Filter for TokenRouter {
-    fn on_downstream_receive(&self, mut ctx: DownstreamContext) -> Option<DownstreamResponse> {
+    fn on_upstream(&self, mut ctx: UpstreamContext) -> Option<UpstreamResponse> {
         match ctx.metadata.get(self.metadata_key.as_str()) {
             None => {
                 error!(self.log, "Filter configuration issue: token not found";
@@ -125,7 +125,7 @@ impl Filter for TokenRouter {
         }
     }
 
-    fn on_upstream_receive(&self, ctx: UpstreamContext) -> Option<UpstreamResponse> {
+    fn on_downstream(&self, ctx: DownstreamContext) -> Option<DownstreamResponse> {
         Some(ctx.into())
     }
 }
@@ -138,7 +138,7 @@ mod tests {
     use serde_yaml::{Mapping, Value};
 
     use crate::config::Endpoints;
-    use crate::test_utils::{assert_filter_on_upstream_receive_no_change, logger};
+    use crate::test_utils::{assert_filter_on_downstream_no_change, logger};
 
     use super::*;
     use crate::cluster::Endpoint;
@@ -168,7 +168,7 @@ mod tests {
         let mut ctx = new_ctx();
         ctx.metadata
             .insert(TOKEN_KEY.into(), Box::new(b"123".to_vec()));
-        assert_on_downstream_receive(filter.deref(), ctx);
+        assert_on_upstream(filter.deref(), ctx);
     }
 
     #[test]
@@ -182,7 +182,7 @@ mod tests {
         let mut ctx = new_ctx();
         ctx.metadata
             .insert(CAPTURED_BYTES.into(), Box::new(b"123".to_vec()));
-        assert_on_downstream_receive(filter.deref(), ctx);
+        assert_on_upstream(filter.deref(), ctx);
     }
 
     #[test]
@@ -195,7 +195,7 @@ mod tests {
         let mut ctx = new_ctx();
         ctx.metadata
             .insert(CAPTURED_BYTES.into(), Box::new(b"123".to_vec()));
-        assert_on_downstream_receive(filter.deref(), ctx);
+        assert_on_upstream(filter.deref(), ctx);
     }
 
     #[test]
@@ -209,40 +209,40 @@ mod tests {
         let mut ctx = new_ctx();
         ctx.metadata
             .insert(CAPTURED_BYTES.into(), Box::new(b"123".to_vec()));
-        assert_on_downstream_receive(&filter, ctx);
+        assert_on_upstream(&filter, ctx);
 
         // invalid key
         let mut ctx = new_ctx();
         ctx.metadata
             .insert(CAPTURED_BYTES.into(), Box::new(b"567".to_vec()));
 
-        let option = filter.on_downstream_receive(ctx);
+        let option = filter.on_upstream(ctx);
         assert!(option.is_none());
         assert_eq!(1, filter.metrics.packets_dropped_no_endpoint_match.get());
 
         // no key
         let ctx = new_ctx();
-        assert!(filter.on_downstream_receive(ctx).is_none());
+        assert!(filter.on_upstream(ctx).is_none());
         assert_eq!(1, filter.metrics.packets_dropped_no_token_found.get());
 
         // wrong type key
         let mut ctx = new_ctx();
         ctx.metadata
             .insert(CAPTURED_BYTES.into(), Box::new(String::from("wrong")));
-        assert!(filter.on_downstream_receive(ctx).is_none());
+        assert!(filter.on_upstream(ctx).is_none());
         assert_eq!(1, filter.metrics.packets_dropped_invalid_token.get());
     }
 
     #[test]
-    fn on_upstream_receive() {
+    fn on_downstream() {
         let config = Config {
             metadata_key: CAPTURED_BYTES.into(),
         };
         let filter = router(config);
-        assert_filter_on_upstream_receive_no_change(&filter);
+        assert_filter_on_downstream_no_change(&filter);
     }
 
-    fn new_ctx() -> DownstreamContext {
+    fn new_ctx() -> UpstreamContext {
         let endpoint1 = Endpoint::new(
             "127.0.0.1:80".parse().unwrap(),
             vec!["123".into()].into_iter().collect(),
@@ -254,18 +254,18 @@ mod tests {
             None,
         );
 
-        DownstreamContext::new(
+        UpstreamContext::new(
             Endpoints::new(vec![endpoint1, endpoint2]).unwrap().into(),
             "127.0.0.1:100".parse().unwrap(),
             b"hello".to_vec(),
         )
     }
 
-    fn assert_on_downstream_receive<F>(filter: &F, ctx: DownstreamContext)
+    fn assert_on_upstream<F>(filter: &F, ctx: UpstreamContext)
     where
         F: Filter + ?Sized,
     {
-        let result = filter.on_downstream_receive(ctx).unwrap();
+        let result = filter.on_upstream(ctx).unwrap();
 
         assert_eq!(b"hello".to_vec(), result.contents);
         assert_eq!(1, result.endpoints.size());

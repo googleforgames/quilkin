@@ -21,7 +21,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::config::UpstreamEndpoints;
 use crate::extensions::{
-    CreateFilterArgs, DownstreamContext, DownstreamResponse, Error, Filter, FilterFactory,
+    CreateFilterArgs, Error, Filter, FilterFactory, UpstreamContext, UpstreamResponse,
 };
 
 /// Policy represents how a [`LoadBalancerFilter`] distributes
@@ -126,7 +126,7 @@ impl FilterFactory for LoadBalancerFilterFactory {
 }
 
 impl Filter for LoadBalancerFilter {
-    fn on_downstream_receive(&self, mut ctx: DownstreamContext) -> Option<DownstreamResponse> {
+    fn on_upstream(&self, mut ctx: UpstreamContext) -> Option<UpstreamResponse> {
         self.endpoint_chooser.choose_endpoints(&mut ctx.endpoints);
         Some(ctx.into())
     }
@@ -139,7 +139,7 @@ mod tests {
 
     use crate::cluster::Endpoint;
     use crate::config::Endpoints;
-    use crate::extensions::filter_registry::DownstreamContext;
+    use crate::extensions::filter_registry::UpstreamContext;
     use crate::extensions::filters::load_balancer::LoadBalancerFilterFactory;
     use crate::extensions::{CreateFilterArgs, Filter, FilterFactory};
 
@@ -157,7 +157,7 @@ mod tests {
         input_addresses: &[SocketAddr],
     ) -> Vec<SocketAddr> {
         filter
-            .on_downstream_receive(DownstreamContext::new(
+            .on_upstream(UpstreamContext::new(
                 Endpoints::new(
                     input_addresses
                         .iter()
