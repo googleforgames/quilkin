@@ -15,11 +15,10 @@
  */
 
 use std::fmt::{self, Formatter};
-use std::sync::Arc;
 
 use prometheus::Registry;
 
-use crate::config::{Config, ValidationError};
+use crate::config::{Filter as FilterConfig, ValidationError};
 use crate::extensions::{
     CreateFilterArgs, DownstreamContext, DownstreamResponse, Filter, FilterRegistry,
     UpstreamContext, UpstreamResponse,
@@ -31,6 +30,7 @@ use crate::extensions::{
 /// Each filter implementation loops around all the filters stored in the FilterChain, passing the results of each filter to the next in the chain.
 /// The filter implementation returns the results of data that has gone through each of the filters in the chain.
 /// If any of the Filters in the chain return a None, then the chain is broken, and nothing is returned.
+#[derive(Default)]
 pub struct FilterChain {
     filters: Vec<Box<dyn Filter>>,
 }
@@ -61,12 +61,12 @@ impl FilterChain {
     /// Validates the filter configurations in the provided config and constructs
     /// a FilterChain if all configurations are valid.
     pub fn try_create(
-        config: Arc<Config>,
+        filter_configs: Vec<FilterConfig>,
         filter_registry: &FilterRegistry,
         metrics_registry: &Registry,
     ) -> std::result::Result<FilterChain, CreateFilterError> {
         let mut filters = Vec::<Box<dyn Filter>>::new();
-        for filter_config in config.source.get_filters() {
+        for filter_config in filter_configs {
             match filter_registry.get(
                 &filter_config.name,
                 CreateFilterArgs::fixed(filter_config.config.as_ref())
@@ -118,10 +118,10 @@ mod tests {
     use std::str::from_utf8;
 
     use crate::config;
-    use crate::config::{Builder, Endpoints, UpstreamEndpoints};
+    use crate::config::{Endpoints, UpstreamEndpoints};
     use crate::extensions::filters::DebugFactory;
     use crate::extensions::{default_registry, FilterFactory};
-    use crate::test_utils::{ep, logger, TestFilter};
+    use crate::test_utils::{logger, TestFilter};
 
     use super::*;
     use crate::cluster::Endpoint;
@@ -132,32 +132,23 @@ mod tests {
         let provider = DebugFactory::new(&log);
 
         // everything is fine
-        let config = Builder::empty()
-            .with_static(
-                vec![config::Filter {
-                    name: provider.name(),
-                    config: Default::default(),
-                }],
-                vec![ep(1)],
-            )
-            .build();
+        let filter_configs = vec![config::Filter {
+            name: provider.name(),
+            config: Default::default(),
+        }];
 
         let registry = default_registry(&log);
         let chain =
-            FilterChain::try_create(Arc::new(config), &registry, &Registry::default()).unwrap();
+            FilterChain::try_create(filter_configs.clone(), &registry, &Registry::default())
+                .unwrap();
         assert_eq!(1, chain.filters.len());
 
         // uh oh, something went wrong
-        let config = Builder::empty()
-            .with_static(
-                vec![config::Filter {
-                    name: "this is so wrong".to_string(),
-                    config: Default::default(),
-                }],
-                vec![ep(1)],
-            )
-            .build();
-        let result = FilterChain::try_create(Arc::new(config), &registry, &Registry::default());
+        let filter_configs = vec![config::Filter {
+            name: "this is so wrong".into(),
+            config: Default::default(),
+        }];
+        let result = FilterChain::try_create(filter_configs, &registry, &Registry::default());
         assert!(result.is_err());
     }
 

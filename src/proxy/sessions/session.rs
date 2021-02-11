@@ -27,7 +27,8 @@ use tokio::sync::{mpsc, watch};
 use tokio::time::{Duration, Instant};
 
 use crate::cluster::Endpoint;
-use crate::extensions::{Filter, FilterChain, UpstreamContext};
+use crate::extensions::filter_manager::SharedFilterManager;
+use crate::extensions::{Filter, UpstreamContext};
 use crate::proxy::sessions::error::Error;
 use crate::proxy::sessions::metrics::Metrics;
 use crate::utils::debug;
@@ -44,7 +45,7 @@ pub const SESSION_EXPIRY_POLL_INTERVAL: u64 = 60;
 pub struct Session {
     log: Logger,
     metrics: Metrics,
-    chain: Arc<FilterChain>,
+    filter_manager: SharedFilterManager,
     /// created_at is time at which the session was created
     created_at: Instant,
     socket: Arc<UdpSocket>,
@@ -63,7 +64,7 @@ pub struct Session {
 /// ReceivedPacketContext contains state needed to process a received packet.
 struct ReceivedPacketContext<'a> {
     packet: &'a [u8],
-    chain: Arc<FilterChain>,
+    filter_manager: SharedFilterManager,
     endpoint: &'a Endpoint,
     from: SocketAddr,
     to: SocketAddr,
@@ -95,7 +96,7 @@ impl Session {
     pub async fn new(
         base: &Logger,
         metrics: Metrics,
-        chain: Arc<FilterChain>,
+        filter_manager: SharedFilterManager,
         from: SocketAddr,
         dest: Endpoint,
         sender: mpsc::Sender<Packet>,
@@ -113,7 +114,7 @@ impl Session {
         let s = Session {
             metrics,
             log,
-            chain,
+            filter_manager,
             socket: socket.clone(),
             from,
             dest,
@@ -142,7 +143,7 @@ impl Session {
         let from = self.from;
         let expiration = self.expiration.clone();
         let is_closed = self.is_closed.clone();
-        let chain = self.chain.clone();
+        let filter_manager = self.filter_manager.clone();
         let endpoint = self.dest.clone();
         let metrics = self.metrics.clone();
         tokio::spawn(async move {
@@ -166,7 +167,7 @@ impl Session {
                                     &expiration,
                                     ttl,
                                     ReceivedPacketContext {
-                                        chain: chain.clone(),
+                                        filter_manager: filter_manager.clone(),
                                         packet: &buf[..size],
                                         endpoint: &endpoint,
                                         from: recv_addr,
@@ -206,7 +207,7 @@ impl Session {
     ) {
         let ReceivedPacketContext {
             packet,
-            chain,
+            filter_manager,
             endpoint,
             from,
             to,
@@ -220,9 +221,16 @@ impl Session {
             warn!(log, "Error updating session expiration"; "error" => %err)
         }
 
-        if let Some(response) =
-            chain.on_upstream_receive(UpstreamContext::new(endpoint, from, to, packet.to_vec()))
-        {
+        let filter_chain = {
+            let filter_manager_guard = filter_manager.read();
+            filter_manager_guard.get_filter_chain()
+        };
+        if let Some(response) = filter_chain.on_upstream_receive(UpstreamContext::new(
+            endpoint,
+            from,
+            to,
+            packet.to_vec(),
+        )) {
             if let Err(err) = sender.send(Packet::new(to, response.contents)).await {
                 metrics.rx_errors_total.inc();
                 error!(log, "Error sending packet to channel"; "error" => %err);
@@ -308,15 +316,23 @@ impl Drop for Session {
 #[cfg(test)]
 mod tests {
     use std::str::from_utf8;
-    use std::sync::atomic::Ordering;
+    use std::sync::atomic::{AtomicU64, Ordering};
+    use std::sync::Arc;
+    use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+    use super::{Metrics, Packet, Session};
 
     use prometheus::Registry;
     use slog::info;
     use tokio::time::{sleep, timeout};
 
+    use crate::extensions::FilterChain;
     use crate::test_utils::{TestFilter, TestHelper};
 
-    use super::*;
+    use crate::cluster::Endpoint;
+    use crate::extensions::filter_manager::FilterManager;
+    use crate::proxy::sessions::session::ReceivedPacketContext;
+    use tokio::sync::mpsc;
 
     #[tokio::test]
     async fn session_new() {
@@ -329,7 +345,7 @@ mod tests {
         let sess = Session::new(
             &t.log,
             Metrics::new(&Registry::default(), addr.to_string(), addr.to_string()).unwrap(),
-            Arc::new(FilterChain::new(vec![])),
+            FilterManager::fixed(t.log.clone(), Arc::new(FilterChain::new(vec![]))),
             addr,
             endpoint,
             send_packet,
@@ -380,7 +396,7 @@ mod tests {
         let session = Session::new(
             &t.log,
             Metrics::new(&Registry::default(), addr.to_string(), addr.to_string()).unwrap(),
-            Arc::new(FilterChain::new(vec![])),
+            FilterManager::fixed(t.log.clone(), Arc::new(FilterChain::new(vec![]))),
             addr,
             endpoint.clone(),
             sender,
@@ -405,7 +421,7 @@ mod tests {
         let sess = Session::new(
             &t.log,
             Metrics::new(&Registry::default(), addr.to_string(), addr.to_string()).unwrap(),
-            Arc::new(FilterChain::new(vec![])),
+            FilterManager::fixed(t.log.clone(), Arc::new(FilterChain::new(vec![]))),
             addr,
             endpoint,
             send_packet,
@@ -463,7 +479,7 @@ mod tests {
             Duration::from_secs(10),
             ReceivedPacketContext {
                 packet: msg.as_bytes(),
-                chain,
+                filter_manager: FilterManager::fixed(t.log.clone(), chain),
                 endpoint: &endpoint,
                 from: endpoint.address,
                 to: dest,
@@ -500,7 +516,7 @@ mod tests {
             &expiration,
             Duration::from_secs(10),
             ReceivedPacketContext {
-                chain,
+                filter_manager: FilterManager::fixed(t.log.clone(), chain),
                 packet: msg.as_bytes(),
                 endpoint: &endpoint,
                 from: endpoint.address,
@@ -532,7 +548,7 @@ mod tests {
         let session = Session::new(
             &t.log,
             Metrics::new(&Registry::default(), addr.to_string(), addr.to_string()).unwrap(),
-            Arc::new(FilterChain::new(vec![])),
+            FilterManager::fixed(t.log.clone(), Arc::new(FilterChain::new(vec![]))),
             addr,
             endpoint,
             send_packet,
@@ -556,7 +572,7 @@ mod tests {
         let session = Session::new(
             &t.log,
             Metrics::new(&Registry::default(), addr.to_string(), addr.to_string()).unwrap(),
-            Arc::new(FilterChain::new(vec![])),
+            FilterManager::fixed(t.log.clone(), Arc::new(FilterChain::new(vec![]))),
             addr,
             Endpoint::from_address(addr),
             sender,
@@ -581,7 +597,7 @@ mod tests {
         let session = Session::new(
             &t.log,
             Metrics::new(&Registry::default(), addr.to_string(), addr.to_string()).unwrap(),
-            Arc::new(FilterChain::new(vec![])),
+            FilterManager::fixed(t.log.clone(), Arc::new(FilterChain::new(vec![]))),
             addr,
             Endpoint::from_address(addr),
             send_packet,
