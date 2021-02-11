@@ -139,8 +139,7 @@ mod tests {
 
         let registry = default_registry(&log);
         let chain =
-            FilterChain::try_create(filter_configs, &registry, &Registry::default())
-                .unwrap();
+            FilterChain::try_create(filter_configs, &registry, &Registry::default()).unwrap();
         assert_eq!(1, chain.filters.len());
 
         // uh oh, something went wrong
