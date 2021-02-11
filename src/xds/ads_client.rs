@@ -380,7 +380,7 @@ impl AdsClient {
         error!(log, "{}", error_msg);
         let delay = backoff
             .next_backoff()
-            .ok_or_else(|| ExecutionError::BackoffLimitExceeded)?;
+            .ok_or(ExecutionError::BackoffLimitExceeded)?;
         info!(log, "retrying in {:?}", delay);
         tokio::time::sleep(delay).await;
         Ok(())
