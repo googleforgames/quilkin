@@ -25,9 +25,6 @@ pub enum Error {
     InvalidEndpointConfig(String),
 }
 
-#[derive(Debug)]
-pub(super) struct RecvFromError(pub tokio::io::Error);
-
 impl std::error::Error for Error {}
 
 impl Display for Error {
@@ -40,11 +37,5 @@ impl Display for Error {
                 write!(f, "invalid endpoint configuration: {}", reason)
             }
         }
-    }
-}
-
-impl Display for RecvFromError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "recv_from error: {}", self.0)
     }
 }
