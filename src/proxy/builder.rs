@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-use crate::config::{Config, ValidationError};
+use crate::config::{Config, Source, ValidationError};
 use crate::extensions::{default_registry, CreateFilterError, FilterChain, FilterRegistry};
 use crate::proxy::server::metrics::Metrics as ProxyMetrics;
 use crate::proxy::{Metrics, Server};
@@ -117,17 +117,34 @@ impl Builder<PendingValidation> {
     // Validates the builder's config and filter configurations.
     pub fn validate(self) -> Result<Builder<Validated>, Error> {
         let _ = self.config.validate()?;
-        let filter_chain = Arc::new(FilterChain::try_create(
-            self.config.clone(),
-            &self.filter_registry,
-            &self.metrics.registry,
-        )?);
+        let filter_chain = match &self.config.source {
+            Source::Static {
+                filters,
+                endpoints: _,
+            } => FilterChain::try_create(
+                filters.clone(),
+                &self.filter_registry,
+                &self.metrics.registry,
+            )?,
+            Source::Dynamic {
+                management_servers: _,
+            } => {
+                // Set a dummy value since this value won't be used for now.
+                // TODO: Get rid of this work-around while fixing
+                //  https://github.com/googleforgames/quilkin/issues/172
+                //  the Server should rather take in  a validated Static or Dynamic
+                //  source rather than a filter chain (since those don't exist for
+                //  the dynamic case)
+                FilterChain::default()
+            }
+        };
+
         Ok(Builder {
             log: self.log,
             config: self.config,
             metrics: self.metrics,
             filter_registry: self.filter_registry,
-            validation_status: Validated(filter_chain),
+            validation_status: Validated(Arc::new(filter_chain)),
         })
     }
 }

@@ -97,9 +97,6 @@ pub enum Source {
     },
     #[serde(rename = "dynamic")]
     Dynamic {
-        #[serde(default)]
-        filters: Vec<Filter>,
-
         management_servers: Vec<ManagementServer>,
     },
 }
@@ -124,16 +121,17 @@ pub struct Config {
 }
 
 impl Source {
-    pub fn get_filters(&self) -> &[Filter] {
+    /// Returns the list of filters if the config is a static config and None otherwise.
+    /// This is a convenience function and should only be used for doc tests and tests.
+    pub fn get_static_filters(&self) -> Option<&[Filter]> {
         match self {
             Source::Static {
                 filters,
                 endpoints: _,
-            } => filters,
+            } => Some(filters),
             Source::Dynamic {
-                filters,
                 management_servers: _,
-            } => filters,
+            } => None,
         }
     }
 }
@@ -214,10 +212,7 @@ impl Source {
 
                 Ok(())
             }
-            Source::Dynamic {
-                filters: _,
-                management_servers,
-            } => {
+            Source::Dynamic { management_servers } => {
                 if management_servers.is_empty() {
                     return Err(ValidationError::EmptyList(
                         "dynamic.management_servers".to_string(),
@@ -282,10 +277,7 @@ mod tests {
 
     fn assert_management_servers(source: &Source, expected: Vec<ManagementServer>) {
         match source {
-            Source::Dynamic {
-                filters: _,
-                management_servers,
-            } => {
+            Source::Dynamic { management_servers } => {
                 assert_eq!(&expected, management_servers,);
             }
             _ => unreachable!("expected dynamic config source"),
@@ -355,7 +347,7 @@ static:
         ";
         let config = parse_config(yaml);
 
-        let filter = config.source.get_filters().get(0).unwrap();
+        let filter = config.source.get_static_filters().unwrap().get(0).unwrap();
         assert_eq!("quilkin.core.v1.rate-limiter", filter.name);
         let config = filter.config.as_ref().unwrap();
         let filter_config = config.as_mapping().unwrap();
@@ -473,16 +465,6 @@ dynamic:
     - address: 127.0.0.1:30000
   ";
         let config = parse_config(yaml);
-
-        let filter = config.source.get_filters().get(0).unwrap();
-        assert_eq!("quilkin.core.v1.rate-limiter", filter.name);
-        let filter_config = filter.config.as_ref().unwrap().as_mapping().unwrap();
-
-        let key = Value::from("map");
-        assert_eq!(
-            "of arbitrary key value pairs",
-            filter_config.get(&key).unwrap().as_str().unwrap()
-        );
 
         assert_management_servers(
             &config.source,

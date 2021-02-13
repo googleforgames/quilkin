@@ -43,16 +43,7 @@ use resource_manager::{DynamicResourceManagers, StaticResourceManagers};
 
 pub mod error;
 pub(super) mod metrics;
-
-#[cfg(not(doctest))]
 mod resource_manager;
-
-// Stub module to work-around not including XDS generated code in doc tests.
-#[cfg(doctest)]
-mod resource_manager {
-    pub struct DynamicResourceManagers;
-    pub struct StaticResourceManagers;
-}
 
 type SessionMap = Arc<RwLock<HashMap<(SocketAddr, SocketAddr), Session>>>;
 
@@ -72,7 +63,7 @@ pub struct Server {
 /// Represents arguments to the `Server::run_recv_from` method.
 struct RunRecvFromArgs {
     cluster_manager: SharedClusterManager,
-    chain: Arc<FilterChain>,
+    filter_manager: SharedFilterManager,
     socket: Arc<UdpSocket>,
     sessions: SessionMap,
     session_ttl: Duration,
@@ -100,7 +91,7 @@ struct ProcessDownstreamReceiveConfig {
     metrics: Metrics,
     proxy_metrics: ProxyMetrics,
     cluster_manager: SharedClusterManager,
-    chain: Arc<FilterChain>,
+    filter_manager: SharedFilterManager,
     sessions: SessionMap,
     session_ttl: Duration,
     send_packets: mpsc::Sender<Packet>,
@@ -129,13 +120,13 @@ impl Server {
         let session_ttl = Duration::from_secs(SESSION_TIMEOUT_SECONDS);
         let poll_interval = Duration::from_secs(SESSION_EXPIRY_POLL_INTERVAL);
 
-        let (cluster_manager, _filter_manager) =
+        let (cluster_manager, filter_manager) =
             self.create_resource_managers(shutdown_rx.clone()).await?;
         self.run_receive_packet(socket.clone(), receive_packets);
         self.run_prune_sessions(&sessions, poll_interval);
         self.run_recv_from(RunRecvFromArgs {
             cluster_manager,
-            chain: self.filter_chain.clone(),
+            filter_manager,
             socket,
             sessions: sessions.clone(),
             session_ttl,
@@ -170,10 +161,7 @@ impl Server {
                 );
                 Ok((manager.cluster_manager, manager.filter_manager))
             }
-            Source::Dynamic {
-                filters: _,
-                management_servers,
-            } => {
+            Source::Dynamic { management_servers } => {
                 let manager = DynamicResourceManagers::new(
                     self.log.clone(),
                     self.config.proxy.id.clone(),
@@ -253,7 +241,7 @@ impl Server {
                     metrics: metrics.clone(),
                     proxy_metrics: proxy_metrics.clone(),
                     cluster_manager: args.cluster_manager.clone(),
-                    chain: args.chain.clone(),
+                    filter_manager: args.filter_manager.clone(),
                     sessions: sessions.clone(),
                     session_ttl: args.session_ttl,
                     send_packets: args.send_packets.clone(),
@@ -359,7 +347,11 @@ impl Server {
             }
         };
 
-        let result = args.chain.on_downstream_receive(DownstreamContext::new(
+        let filter_chain = {
+            let filter_manager_guard = args.filter_manager.read();
+            filter_manager_guard.get_filter_chain()
+        };
+        let result = filter_chain.on_downstream_receive(DownstreamContext::new(
             endpoints,
             recv_addr,
             packet.to_vec(),
@@ -421,7 +413,7 @@ impl Server {
                         match Session::new(
                             &args.log,
                             metrics,
-                            args.chain.clone(),
+                            args.filter_manager.clone(),
                             session_key.0,
                             endpoint.clone(),
                             args.send_packets.clone(),
@@ -592,6 +584,7 @@ mod tests {
     };
 
     use super::*;
+    use crate::extensions::filter_manager::FilterManager;
 
     #[tokio::test]
     async fn run_server() {
@@ -742,6 +735,7 @@ mod tests {
 
             let cluster_manager =
                 ClusterManager::fixed(vec![Endpoint::from_address(endpoint_address)]);
+            let filter_manager = FilterManager::fixed(t.log.clone(), chain.clone());
             for worker_id in 0..num_workers {
                 let (packet_tx, packet_rx) = mpsc::channel(num_workers);
                 packet_txs.push(packet_tx);
@@ -755,7 +749,7 @@ mod tests {
                         metrics: Metrics::default(),
                         proxy_metrics: ProxyMetrics::new(&Metrics::default().registry).unwrap(),
                         cluster_manager: cluster_manager.clone(),
-                        chain: chain.clone(),
+                        filter_manager: filter_manager.clone(),
                         sessions: sessions.clone(),
                         session_ttl: Duration::from_secs(10),
                         send_packets: send_packets.clone(),
@@ -841,7 +835,7 @@ mod tests {
             cluster_manager: ClusterManager::fixed(vec![Endpoint::from_address(
                 endpoint.socket.local_addr().unwrap(),
             )]),
-            chain: server.filter_chain.clone(),
+            filter_manager: FilterManager::fixed(t.log.clone(), Arc::new(FilterChain::new(vec![]))),
             socket: socket.clone(),
             sessions: sessions.clone(),
             session_ttl: Duration::from_secs(10),
@@ -908,7 +902,7 @@ mod tests {
                     Metrics::default()
                         .new_session_metrics(&from, &endpoint.address)
                         .unwrap(),
-                    Arc::new(FilterChain::new(vec![])),
+                    FilterManager::fixed(t.log.clone(), Arc::new(FilterChain::new(vec![]))),
                     from,
                     endpoint.clone(),
                     send,
@@ -978,7 +972,7 @@ mod tests {
                     Metrics::default()
                         .new_session_metrics(&from, &endpoint.address)
                         .unwrap(),
-                    Arc::new(FilterChain::new(vec![])),
+                    FilterManager::fixed(t.log.clone(), Arc::new(FilterChain::new(vec![]))),
                     from,
                     endpoint.clone(),
                     send,
