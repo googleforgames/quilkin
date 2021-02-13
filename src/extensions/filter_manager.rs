@@ -36,7 +36,7 @@ pub type SharedFilterManager = Arc<RwLock<FilterManager>>;
 pub struct FilterManager {
     log: Logger,
     /// The current filter chain.
-    filter_chain: Option<Arc<FilterChain>>,
+    filter_chain: Arc<FilterChain>,
 }
 
 /// ListenerManagerArgs contains arguments when invoking the LDS resource manager.
@@ -62,18 +62,18 @@ impl ListenerManagerArgs {
 
 impl FilterManager {
     fn update(&mut self, filter_chain: Arc<FilterChain>) {
-        self.filter_chain = Some(filter_chain);
+        self.filter_chain = filter_chain;
     }
 
     /// Returns the current filter chain.
-    pub fn get_filter_chain(&self) -> &Option<Arc<FilterChain>> {
-        &self.filter_chain
+    pub fn get_filter_chain(&self) -> Arc<FilterChain> {
+        self.filter_chain.clone()
     }
 
     /// Returns a new instance backed only by the provided filter chain.
     pub fn fixed(base_logger: Logger, filter_chain: Arc<FilterChain>) -> SharedFilterManager {
         Arc::new(RwLock::new(FilterManager {
-            filter_chain: Some(filter_chain),
+            filter_chain,
             log: Self::create_logger(base_logger),
         }))
     }
@@ -89,7 +89,8 @@ impl FilterManager {
         let log = Self::create_logger(base_logger);
 
         let filter_manager = Arc::new(RwLock::new(FilterManager {
-            filter_chain: None,
+            // Start out with an empty filter chain.
+            filter_chain: Arc::new(FilterChain::default()),
             log: log.clone(),
         }));
 
@@ -172,7 +173,7 @@ mod tests {
 
         let filter_chain = {
             let manager_guard = filter_manager.read();
-            manager_guard.get_filter_chain().clone().unwrap()
+            manager_guard.get_filter_chain().clone()
         };
 
         let test_endpoints = Endpoints::new(vec![Endpoint::from_address(
@@ -202,7 +203,7 @@ mod tests {
             // The new filter chain drops packets instead.
             let filter_chain = {
                 let manager_guard = filter_manager.read();
-                manager_guard.get_filter_chain().clone().unwrap()
+                manager_guard.get_filter_chain().clone()
             };
             if filter_chain
                 .on_downstream_receive(DownstreamContext::new(
@@ -249,7 +250,7 @@ mod tests {
         // since the listening task should have shut down.
         let filter_chain = {
             let manager_guard = filter_manager.read();
-            manager_guard.get_filter_chain().clone().unwrap()
+            manager_guard.get_filter_chain().clone()
         };
 
         let filter_chain = Arc::new(FilterChain::new(vec![]));

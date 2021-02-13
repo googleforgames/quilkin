@@ -59,8 +59,6 @@ properties:
       Dynamic configuration of endpoints and filters.
       NOTE: Exactly one of `static` or `dynamic` can be specified.
     properties:
-      filter:
-        '$ref': '#/definitions/filterchain'
       management_servers:
         type: array
         description: |

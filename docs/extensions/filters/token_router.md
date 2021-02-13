@@ -32,7 +32,7 @@ static:
         - bmt1eTcweA==
 # ";
 # let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-# assert_eq!(config.source.get_filters().len(), 1);
+# assert_eq!(config.source.get_static_filters().unwrap().len(), 1);
 # quilkin::proxy::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
 ```
 
@@ -95,7 +95,7 @@ static:
         - bmt1eTcweA==
 # ";
 # let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-# assert_eq!(config.source.get_filters().len(), 2);
+# assert_eq!(config.source.get_static_filters().unwrap().len(), 2);
 # quilkin::proxy::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
 ```
 
