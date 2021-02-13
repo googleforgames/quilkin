@@ -21,7 +21,7 @@ use metrics::Metrics;
 
 use crate::extensions::filters::CAPTURED_BYTES;
 use crate::extensions::{
-    CreateFilterArgs, DownstreamContext, DownstreamResponse, Error, Filter, FilterFactory,
+    CreateFilterArgs, Error, Filter, FilterFactory, ReadContext, ReadResponse,
 };
 
 mod metrics;
@@ -125,7 +125,7 @@ impl CaptureBytes {
 }
 
 impl Filter for CaptureBytes {
-    fn on_downstream_receive(&self, mut ctx: DownstreamContext) -> Option<DownstreamResponse> {
+    fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
         // if the capture size is bigger than the packet size, then we drop the packet,
         // and occasionally warn
         if ctx.contents.len() < self.size {
@@ -190,7 +190,7 @@ mod tests {
     use serde_yaml::{Mapping, Value};
 
     use crate::config::Endpoints;
-    use crate::test_utils::{assert_filter_on_upstream_receive_no_change, logger};
+    use crate::test_utils::{assert_write_no_change, logger};
 
     use super::*;
     use crate::cluster::Endpoint;
@@ -248,7 +248,7 @@ mod tests {
     }
 
     #[test]
-    fn on_downstream_receive() {
+    fn read() {
         let config = Config {
             strategy: Strategy::Suffix,
             metadata_key: TOKEN_KEY.into(),
@@ -260,7 +260,7 @@ mod tests {
     }
 
     #[test]
-    fn on_downstream_receive_overflow_capture_size() {
+    fn read_overflow_capture_size() {
         let config = Config {
             strategy: Strategy::Suffix,
             metadata_key: TOKEN_KEY.into(),
@@ -269,7 +269,7 @@ mod tests {
         };
         let filter = capture_bytes(config);
         let endpoints = vec![Endpoint::from_address("127.0.0.1:81".parse().unwrap())];
-        let response = filter.on_downstream_receive(DownstreamContext::new(
+        let response = filter.read(ReadContext::new(
             Endpoints::new(endpoints).unwrap().into(),
             "127.0.0.1:80".parse().unwrap(),
             "abc".to_string().into_bytes(),
@@ -281,7 +281,7 @@ mod tests {
     }
 
     #[test]
-    fn on_upstream_receive() {
+    fn write() {
         let config = Config {
             strategy: Strategy::Suffix,
             metadata_key: TOKEN_KEY.into(),
@@ -289,7 +289,7 @@ mod tests {
             remove: false,
         };
         let filter = capture_bytes(config);
-        assert_filter_on_upstream_receive_no_change(&filter);
+        assert_write_no_change(&filter);
     }
 
     #[test]
@@ -325,7 +325,7 @@ mod tests {
     {
         let endpoints = vec![Endpoint::from_address("127.0.0.1:81".parse().unwrap())];
         let response = filter
-            .on_downstream_receive(DownstreamContext::new(
+            .read(ReadContext::new(
                 Endpoints::new(endpoints).unwrap().into(),
                 "127.0.0.1:80".parse().unwrap(),
                 "helloabc".to_string().into_bytes(),

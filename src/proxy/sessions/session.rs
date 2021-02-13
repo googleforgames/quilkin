@@ -28,7 +28,7 @@ use tokio::time::{Duration, Instant};
 
 use crate::cluster::Endpoint;
 use crate::extensions::filter_manager::SharedFilterManager;
-use crate::extensions::{Filter, UpstreamContext};
+use crate::extensions::{Filter, WriteContext};
 use crate::proxy::sessions::error::Error;
 use crate::proxy::sessions::metrics::Metrics;
 use crate::utils::debug;
@@ -225,12 +225,9 @@ impl Session {
             let filter_manager_guard = filter_manager.read();
             filter_manager_guard.get_filter_chain()
         };
-        if let Some(response) = filter_chain.on_upstream_receive(UpstreamContext::new(
-            endpoint,
-            from,
-            to,
-            packet.to_vec(),
-        )) {
+        if let Some(response) =
+            filter_chain.write(WriteContext::new(endpoint, from, to, packet.to_vec()))
+        {
             if let Err(err) = sender.send(Packet::new(to, response.contents)).await {
                 metrics.rx_errors_total.inc();
                 error!(log, "Error sending packet to channel"; "error" => %err);

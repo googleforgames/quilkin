@@ -18,8 +18,7 @@ use serde::{Deserialize, Serialize};
 use slog::{info, o, Logger};
 
 use crate::extensions::filter_registry::{
-    CreateFilterArgs, DownstreamContext, DownstreamResponse, Error, FilterFactory, UpstreamContext,
-    UpstreamResponse,
+    CreateFilterArgs, Error, FilterFactory, ReadContext, ReadResponse, WriteContext, WriteResponse,
 };
 use crate::extensions::Filter;
 
@@ -115,12 +114,12 @@ impl FilterFactory for DebugFactory {
 }
 
 impl Filter for Debug {
-    fn on_downstream_receive(&self, ctx: DownstreamContext) -> Option<DownstreamResponse> {
+    fn read(&self, ctx: ReadContext) -> Option<ReadResponse> {
         info!(self.log, "on local receive"; "from" => ctx.from, "contents" => packet_to_string(ctx.contents.clone()));
         Some(ctx.into())
     }
 
-    fn on_upstream_receive(&self, ctx: UpstreamContext) -> Option<UpstreamResponse> {
+    fn write(&self, ctx: WriteContext) -> Option<WriteResponse> {
         info!(self.log, "received endpoint packet"; "endpoint" => ctx.endpoint.address,
         "from" => ctx.from,
         "to" => ctx.to,
@@ -143,23 +142,20 @@ mod tests {
     use serde_yaml::Mapping;
     use serde_yaml::Value;
 
-    use crate::test_utils::{
-        assert_filter_on_downstream_receive_no_change, assert_filter_on_upstream_receive_no_change,
-        logger,
-    };
+    use crate::test_utils::{assert_filter_read_no_change, assert_write_no_change, logger};
 
     use super::*;
 
     #[test]
-    fn on_downstream_receive() {
+    fn read() {
         let df = Debug::new(&logger(), None);
-        assert_filter_on_downstream_receive_no_change(&df);
+        assert_filter_read_no_change(&df);
     }
 
     #[test]
-    fn on_upstream_receive() {
+    fn write() {
         let df = Debug::new(&logger(), None);
-        assert_filter_on_upstream_receive_no_change(&df);
+        assert_write_no_change(&df);
     }
 
     #[test]

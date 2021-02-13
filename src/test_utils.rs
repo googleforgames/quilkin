@@ -27,8 +27,8 @@ use tokio::sync::{mpsc, oneshot, watch};
 use crate::cluster::Endpoint;
 use crate::config::{Builder as ConfigBuilder, Config, EndPoint, Endpoints};
 use crate::extensions::{
-    default_registry, CreateFilterArgs, DownstreamContext, DownstreamResponse, Error, Filter,
-    FilterFactory, FilterRegistry, UpstreamContext, UpstreamResponse,
+    default_registry, CreateFilterArgs, Error, Filter, FilterFactory, FilterRegistry, ReadContext,
+    ReadResponse, WriteContext, WriteResponse,
 };
 use crate::proxy::{Builder, Metrics};
 
@@ -47,7 +47,7 @@ impl FilterFactory for TestFilterFactory {
 pub struct TestFilter {}
 
 impl Filter for TestFilter {
-    fn on_downstream_receive(&self, mut ctx: DownstreamContext) -> Option<DownstreamResponse> {
+    fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
         // append values on each run
         ctx.metadata
             .entry("downstream".into())
@@ -59,7 +59,7 @@ impl Filter for TestFilter {
         Some(ctx.into())
     }
 
-    fn on_upstream_receive(&self, mut ctx: UpstreamContext) -> Option<UpstreamResponse> {
+    fn write(&self, mut ctx: WriteContext) -> Option<WriteResponse> {
         // append values on each run
         ctx.metadata
             .entry("upstream".into())
@@ -279,8 +279,8 @@ impl TestHelper {
     }
 }
 
-/// assert that on_downstream_receive makes no changes
-pub fn assert_filter_on_downstream_receive_no_change<F>(filter: &F)
+/// assert that read makes no changes
+pub fn assert_filter_read_no_change<F>(filter: &F)
 where
     F: Filter,
 {
@@ -288,7 +288,7 @@ where
     let from = "127.0.0.1:90".parse().unwrap();
     let contents = "hello".to_string().into_bytes();
 
-    match filter.on_downstream_receive(DownstreamContext::new(
+    match filter.read(ReadContext::new(
         Endpoints::new(endpoints.clone()).unwrap().into(),
         from,
         contents.clone(),
@@ -304,15 +304,15 @@ where
     }
 }
 
-/// assert that on_upstream_receive makes no changes
-pub fn assert_filter_on_upstream_receive_no_change<F>(filter: &F)
+/// assert that write makes no changes
+pub fn assert_write_no_change<F>(filter: &F)
 where
     F: Filter,
 {
     let endpoint = Endpoint::from_address("127.0.0.1:90".parse().unwrap());
     let contents = "hello".to_string().into_bytes();
 
-    match filter.on_upstream_receive(UpstreamContext::new(
+    match filter.write(WriteContext::new(
         &endpoint,
         endpoint.address,
         "127.0.0.1:70".parse().unwrap(),
