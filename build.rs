@@ -29,6 +29,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "proto/data-plane-api/envoy/type/tracing/v3/custom_tag.proto",
         "proto/udpa/udpa/core/v1/resource_name.proto",
         "proto/quilkin/extensions/filters/debug/v1alpha1/debug.proto",
+        "proto/quilkin/extensions/filters/capture_bytes/v1alpha1/capture_bytes.proto",
+        "proto/quilkin/extensions/filters/compress/v1alpha1/compress.proto",
+        "proto/quilkin/extensions/filters/concatenate_bytes/v1alpha1/concatenate_bytes.proto",
+        "proto/quilkin/extensions/filters/load_balancer/v1alpha1/load_balancer.proto",
+        "proto/quilkin/extensions/filters/local_rate_limit/v1alpha1/local_rate_limit.proto",
+        "proto/quilkin/extensions/filters/token_router/v1alpha1/token_router.proto",
     ]
     .iter()
     .map(|name| std::env::current_dir().unwrap().join(name))

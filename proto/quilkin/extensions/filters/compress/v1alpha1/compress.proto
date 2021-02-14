@@ -1,0 +1,16 @@
+syntax = "proto2";
+
+package quilkin.extensions.filters.compress.v1alpha1;
+
+message Compress {
+  enum Mode {
+    Snappy = 0;
+  }
+  enum Direction {
+    Upstream = 0;
+    Downstream = 1;
+  }
+  optional Mode mode = 1;
+  required Direction direction = 2;
+}
+

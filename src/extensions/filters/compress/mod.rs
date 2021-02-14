@@ -14,6 +14,7 @@
  *  limitations under the License.
  */
 
+use std::convert::TryFrom;
 use std::io;
 
 use serde::{Deserialize, Serialize};
@@ -22,15 +23,21 @@ use snap::read::FrameDecoder;
 use snap::write::FrameEncoder;
 
 use crate::extensions::filters::compress::metrics::Metrics;
+use crate::extensions::filters::ConvertProtoConfigError;
 use crate::extensions::{
     CreateFilterArgs, DownstreamContext, DownstreamResponse, Error as RegistryError, Filter,
     FilterFactory, UpstreamContext, UpstreamResponse,
 };
+use crate::map_proto_enum;
+use proto::quilkin::extensions::filters::compress::v1alpha1::{
+    compress::Direction as ProtoDirection, compress::Mode as ProtoMode, Compress as ProtoConfig,
+};
 
 mod metrics;
+mod proto;
 
 /// The library to use when compressing
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub enum Mode {
     // we only support one mode for now, but adding in the config option to provide the
     // option to expand for later.
@@ -39,7 +46,7 @@ pub enum Mode {
 }
 
 /// Compression direction (and decompression goes the other way)
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub enum Direction {
     /// Compress traffic flowing upstream (received by the proxy listening port, and sent to endpoint(s))
     #[serde(rename = "UPSTREAM")]
@@ -55,11 +62,40 @@ impl Default for Mode {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 struct Config {
     #[serde(default)]
     mode: Mode,
     direction: Direction,
+}
+
+impl TryFrom<ProtoConfig> for Config {
+    type Error = ConvertProtoConfigError;
+
+    fn try_from(p: ProtoConfig) -> std::result::Result<Self, Self::Error> {
+        let mode = p
+            .mode
+            .map(|mode| {
+                map_proto_enum!(
+                    value = mode,
+                    field = "mode",
+                    proto_enum_type = ProtoMode,
+                    target_enum_type = Mode,
+                    variants = [Snappy]
+                )
+            })
+            .transpose()?
+            .unwrap_or_else(Mode::default);
+
+        let direction = map_proto_enum!(
+            value = p.direction,
+            field = "direction",
+            proto_enum_type = ProtoDirection,
+            target_enum_type = Direction,
+            variants = [Upstream, Downstream]
+        )?;
+        Ok(Self { mode, direction })
+    }
 }
 
 pub struct CompressFactory {
@@ -81,17 +117,10 @@ impl FilterFactory for CompressFactory {
         &self,
         args: CreateFilterArgs,
     ) -> std::result::Result<Box<dyn Filter>, RegistryError> {
-        #[derive(Clone, PartialEq, ::prost::Message)]
-        pub struct TODO;
-        impl From<TODO> for Config {
-            fn from(_: TODO) -> Self {
-                unimplemented!()
-            }
-        }
         Ok(Box::new(Compress::new(
             &self.log,
             self.require_config(args.config)?
-                .deserialize::<Config, TODO>(self.name().as_str())?,
+                .deserialize::<Config, ProtoConfig>(self.name().as_str())?,
             Metrics::new(&args.metrics_registry)?,
         )))
     }
@@ -238,14 +267,79 @@ impl Compressor for Snappy {
 
 #[cfg(test)]
 mod tests {
+    use std::convert::TryFrom;
+
     use prometheus::Registry;
     use serde_yaml::{Mapping, Value};
 
     use crate::config::{Endpoints, UpstreamEndpoints};
     use crate::test_utils::logger;
 
-    use super::*;
+    use super::{
+        Compress, CompressFactory, Config, Direction, Metrics, Mode, ProtoConfig, ProtoDirection,
+        ProtoMode, Snappy,
+    };
     use crate::cluster::Endpoint;
+    use crate::extensions::filters::compress::Compressor;
+    use crate::extensions::{
+        CreateFilterArgs, DownstreamContext, Filter, FilterFactory, UpstreamContext,
+    };
+
+    #[test]
+    fn convert_proto_config() {
+        let test_cases = vec![
+            (
+                "should succeed when all valid values are provided",
+                ProtoConfig {
+                    mode: Some(ProtoMode::Snappy as i32),
+                    direction: ProtoDirection::Upstream as i32,
+                },
+                Some(Config {
+                    mode: Mode::Snappy,
+                    direction: Direction::Upstream,
+                }),
+            ),
+            (
+                "should fail when invalid mode is provided",
+                ProtoConfig {
+                    mode: Some(42),
+                    direction: ProtoDirection::Upstream as i32,
+                },
+                None,
+            ),
+            (
+                "should fail when invalid direction is provided",
+                ProtoConfig {
+                    mode: Some(ProtoMode::Snappy as i32),
+                    direction: 42,
+                },
+                None,
+            ),
+            (
+                "should use correct default values",
+                ProtoConfig {
+                    mode: None,
+                    direction: ProtoDirection::Downstream as i32,
+                },
+                Some(Config {
+                    mode: Mode::default(),
+                    direction: Direction::Downstream,
+                }),
+            ),
+        ];
+        for (name, proto_config, expected) in test_cases {
+            let result = Config::try_from(proto_config);
+            assert_eq!(
+                result.is_err(),
+                expected.is_none(),
+                "{}: error expectation does not match",
+                name
+            );
+            if let Some(expected) = expected {
+                assert_eq!(expected, result.unwrap(), "{}", name);
+            }
+        }
+    }
 
     #[test]
     fn default_mode_factory() {

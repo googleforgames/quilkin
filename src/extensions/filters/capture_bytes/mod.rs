@@ -14,19 +14,27 @@
  * limitations under the License.
  */
 
+use std::convert::TryFrom;
+
 use serde::{Deserialize, Serialize};
 use slog::{o, warn, Logger};
 
 use metrics::Metrics;
 
+use crate::extensions::filters::ConvertProtoConfigError;
 use crate::extensions::filters::CAPTURED_BYTES;
 use crate::extensions::{
     CreateFilterArgs, DownstreamContext, DownstreamResponse, Error, Filter, FilterFactory,
 };
+use crate::map_proto_enum;
+use proto::quilkin::extensions::filters::capture_bytes::v1alpha1::{
+    capture_bytes::Strategy as ProtoStrategy, CaptureBytes as ProtoConfig,
+};
 
 mod metrics;
+mod proto;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 /// Strategy to apply for acquiring a set of bytes in the UDP packet
 enum Strategy {
     #[serde(rename = "PREFIX")]
@@ -37,7 +45,7 @@ enum Strategy {
     Suffix,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 struct Config {
     #[serde(default)]
     strategy: Strategy,
@@ -49,8 +57,13 @@ struct Config {
     #[serde(default = "default_metadata_key")]
     metadata_key: String,
     /// whether or not to remove the set of the bytes from the packet once captured
-    #[serde(default)]
+    #[serde(default = "default_remove")]
     remove: bool,
+}
+
+/// default value for [`Config::remove`].
+fn default_remove() -> bool {
+    false
 }
 
 /// default value for the context key in the Config
@@ -61,6 +74,33 @@ fn default_metadata_key() -> String {
 impl Default for Strategy {
     fn default() -> Self {
         Strategy::Suffix
+    }
+}
+
+impl TryFrom<ProtoConfig> for Config {
+    type Error = ConvertProtoConfigError;
+
+    fn try_from(p: ProtoConfig) -> Result<Self, Self::Error> {
+        let strategy = p
+            .strategy
+            .map(|strategy| {
+                map_proto_enum!(
+                    value = strategy,
+                    field = "strategy",
+                    proto_enum_type = ProtoStrategy,
+                    target_enum_type = Strategy,
+                    variants = [Suffix, Prefix]
+                )
+            })
+            .transpose()?
+            .unwrap_or_else(Strategy::default);
+
+        Ok(Self {
+            strategy,
+            size: p.size as usize,
+            metadata_key: p.metadata_key.unwrap_or_else(default_metadata_key),
+            remove: p.remove.unwrap_or_else(default_remove),
+        })
     }
 }
 
@@ -80,17 +120,10 @@ impl FilterFactory for CaptureBytesFactory {
     }
 
     fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
-        #[derive(Clone, PartialEq, ::prost::Message)]
-        pub struct TODO;
-        impl From<TODO> for Config {
-            fn from(_: TODO) -> Self {
-                unimplemented!()
-            }
-        }
         Ok(Box::new(CaptureBytes::new(
             &self.log,
             self.require_config(args.config)?
-                .deserialize::<Config, TODO>(self.name().as_str())?,
+                .deserialize::<Config, ProtoConfig>(self.name().as_str())?,
             Metrics::new(&args.metrics_registry)?,
         )))
     }
@@ -186,14 +219,21 @@ impl Capture for Prefix {
 
 #[cfg(test)]
 mod tests {
+    use std::convert::TryFrom;
+
     use prometheus::Registry;
     use serde_yaml::{Mapping, Value};
 
     use crate::config::Endpoints;
     use crate::test_utils::{assert_filter_on_upstream_receive_no_change, logger};
 
-    use super::*;
+    use super::{
+        default_metadata_key, default_remove, Capture, CaptureBytes, CaptureBytesFactory, Config,
+        Metrics, Prefix, ProtoConfig, ProtoStrategy, Strategy, Suffix,
+    };
     use crate::cluster::Endpoint;
+    use crate::extensions::filters::CAPTURED_BYTES;
+    use crate::extensions::{CreateFilterArgs, DownstreamContext, Filter, FilterFactory};
 
     const TOKEN_KEY: &str = "TOKEN";
 
@@ -203,6 +243,64 @@ mod tests {
             config,
             Metrics::new(&Registry::default()).unwrap(),
         )
+    }
+
+    #[test]
+    fn convert_proto_config() {
+        let test_cases = vec![
+            (
+                "should succeed when all valid values are provided",
+                ProtoConfig {
+                    strategy: Some(ProtoStrategy::Suffix as i32),
+                    size: 42,
+                    metadata_key: Some("foobar".into()),
+                    remove: Some(true),
+                },
+                Some(Config {
+                    strategy: Strategy::Suffix,
+                    size: 42,
+                    metadata_key: "foobar".into(),
+                    remove: true,
+                }),
+            ),
+            (
+                "should fail when invalid strategy is provided",
+                ProtoConfig {
+                    strategy: Some(42),
+                    size: 42,
+                    metadata_key: Some("foobar".into()),
+                    remove: Some(true),
+                },
+                None,
+            ),
+            (
+                "should use correct default values",
+                ProtoConfig {
+                    strategy: None,
+                    size: 42,
+                    metadata_key: None,
+                    remove: None,
+                },
+                Some(Config {
+                    strategy: Strategy::default(),
+                    size: 42,
+                    metadata_key: default_metadata_key(),
+                    remove: default_remove(),
+                }),
+            ),
+        ];
+        for (name, proto_config, expected) in test_cases {
+            let result = Config::try_from(proto_config);
+            assert_eq!(
+                result.is_err(),
+                expected.is_none(),
+                "{}: error expectation does not match",
+                name
+            );
+            if let Some(expected) = expected {
+                assert_eq!(expected, result.unwrap(), "{}", name);
+            }
+        }
     }
 
     #[test]

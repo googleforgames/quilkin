@@ -1,0 +1,8 @@
+syntax = "proto2";
+
+package quilkin.extensions.filters.token_router.v1alpha1;
+
+message TokenRouter {
+  optional string metadata_key = 1;
+}
+

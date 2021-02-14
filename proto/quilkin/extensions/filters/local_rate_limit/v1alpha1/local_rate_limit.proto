@@ -1,0 +1,11 @@
+syntax = "proto2";
+
+package quilkin.extensions.filters.local_rate_limit.v1alpha1;
+
+import "google/protobuf/duration.proto";
+
+message LocalRateLimit {
+  required uint64 max_packets = 1;
+  optional google.protobuf.Duration period = 2;
+}
+

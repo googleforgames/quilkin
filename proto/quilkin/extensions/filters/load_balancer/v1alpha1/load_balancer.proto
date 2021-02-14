@@ -1,0 +1,12 @@
+syntax = "proto2";
+
+package quilkin.extensions.filters.load_balancer.v1alpha1;
+
+message LoadBalancer {
+  enum Policy {
+    RoundRobin = 0;
+    Random = 1;
+  }
+  optional Policy policy = 1;
+}
+

@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+use std::convert::{TryFrom, TryInto};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
@@ -25,46 +26,49 @@ use tokio::time::{self, Instant};
 use metrics::Metrics;
 
 use crate::extensions::filter_registry::{CreateFilterArgs, DownstreamContext, DownstreamResponse};
+use crate::extensions::filters::ConvertProtoConfigError;
 use crate::extensions::{Error, Filter, FilterFactory};
+use proto::quilkin::extensions::filters::local_rate_limit::v1alpha1::LocalRateLimit as ProtoConfig;
 
 mod metrics;
-
-/// RateLimitFilter applies rate limiting to packets flowing through the proxy
-///
-/// # Configuration
-///
-/// ```yaml
-/// local:
-///   port: 7000 # the port to receive traffic to locally
-/// filters:
-///   - name: quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit
-///     config:
-///       max_packets: 10
-///       period: 500ms
-/// client:
-///   addresses:
-///     - 127.0.0.1:7001
-/// ```
-///  `config.max_packets` is the maximum number of packets allowed
-///  to be forwarded by the rate limiter in a given duration.
-///  `config.period` (optional) is the duration during which config.max_packets applies.
-///  If none is provided, it defaults to 1 second.
-///
-/// # Metrics
-///
-/// `quilkin_filter_LocalRateLimit_packets_dropped`: Total number of packets dropped due to rate limiting
-///
+mod proto;
 
 /// Config represents a RateLimitFilter's configuration.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 struct Config {
     /// max_packets is the maximum number of packets allowed
     /// to be forwarded by the rate limiter in a given duration.
     max_packets: usize,
     /// period is the duration during which max_packets applies.
     /// If none is provided, it defaults to 1 second.
-    #[serde(with = "humantime_serde")]
-    period: Option<Duration>,
+    #[serde(with = "humantime_serde", default = "default_period")]
+    period: Duration,
+}
+
+/// default value for [`Config::period`]
+fn default_period() -> Duration {
+    Duration::from_secs(1)
+}
+impl TryFrom<ProtoConfig> for Config {
+    type Error = ConvertProtoConfigError;
+
+    fn try_from(p: ProtoConfig) -> Result<Self, Self::Error> {
+        Ok(Self {
+            max_packets: p.max_packets as usize,
+            period: p
+                .period
+                .map(|period| {
+                    period.try_into().map_err(|err| {
+                        ConvertProtoConfigError::new(
+                            format!("invalid duration: {:?}", err),
+                            Some("period".into()),
+                        )
+                    })
+                })
+                .transpose()?
+                .unwrap_or_else(default_period),
+        })
+    }
 }
 
 /// Creates instances of RateLimitFilter.
@@ -92,26 +96,20 @@ impl FilterFactory for RateLimitFilterFactory {
     }
 
     fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
-        #[derive(Clone, PartialEq, ::prost::Message)]
-        pub struct TODO;
-        impl From<TODO> for Config {
-            fn from(_: TODO) -> Self {
-                unimplemented!()
-            }
-        }
         let config: Config = self
             .require_config(args.config)?
-            .deserialize::<Config, TODO>(self.name().as_str())?;
+            .deserialize::<Config, ProtoConfig>(self.name().as_str())?;
 
-        match config.period {
-            Some(period) if period.lt(&Duration::from_millis(100)) => Err(Error::FieldInvalid {
+        if config.period.lt(&Duration::from_millis(100)) {
+            Err(Error::FieldInvalid {
                 field: "period".into(),
                 reason: "value must be at least 100ms".into(),
-            }),
-            _ => Ok(Box::new(RateLimitFilter::new(
+            })
+        } else {
+            Ok(Box::new(RateLimitFilter::new(
                 config,
                 Metrics::new(&args.metrics_registry)?,
-            ))),
+            )))
         }
     }
 }
@@ -125,7 +123,7 @@ impl RateLimitFilter {
         let tokens = Arc::new(AtomicUsize::new(config.max_packets));
 
         let max_tokens = config.max_packets;
-        let period = config.period.unwrap_or_else(|| Duration::from_secs(1));
+        let period = config.period;
         let available_tokens = tokens.clone();
         let _ = tokio::spawn(async move {
             let mut interval = time::interval_at(Instant::now() + period, period);
@@ -199,11 +197,13 @@ impl Filter for RateLimitFilter {
 
 #[cfg(test)]
 mod tests {
+    use std::convert::TryFrom;
     use std::time::Duration;
 
     use prometheus::Registry;
     use tokio::time;
 
+    use super::ProtoConfig;
     use crate::cluster::Endpoint;
     use crate::config::Endpoints;
     use crate::extensions::filter_registry::DownstreamContext;
@@ -216,12 +216,52 @@ mod tests {
         RateLimitFilter::new(config, Metrics::new(&Registry::default()).unwrap())
     }
 
+    #[test]
+    fn convert_proto_config() {
+        let test_cases = vec![
+            (
+                "should succeed when all valid values are provided",
+                ProtoConfig {
+                    max_packets: 10,
+                    period: Some(Duration::from_secs(2).into()),
+                },
+                Some(Config {
+                    max_packets: 10,
+                    period: Duration::from_secs(2),
+                }),
+            ),
+            (
+                "should use correct default values",
+                ProtoConfig {
+                    max_packets: 10,
+                    period: None,
+                },
+                Some(Config {
+                    max_packets: 10,
+                    period: Duration::from_secs(1),
+                }),
+            ),
+        ];
+        for (name, proto_config, expected) in test_cases {
+            let result = Config::try_from(proto_config);
+            assert_eq!(
+                result.is_err(),
+                expected.is_none(),
+                "{}: error expectation does not match",
+                name
+            );
+            if let Some(expected) = expected {
+                assert_eq!(expected, result.unwrap(), "{}", name);
+            }
+        }
+    }
+
     #[tokio::test]
     async fn initially_available_tokens() {
         // Test that we always start with the max number of tokens available.
         let r = rate_limiter(Config {
             max_packets: 3,
-            period: Some(Duration::from_millis(100)),
+            period: Duration::from_millis(100),
         });
 
         assert_eq!(r.acquire_token(), Some(()));
@@ -234,7 +274,7 @@ mod tests {
     async fn token_exhaustion_and_refill() {
         let r = rate_limiter(Config {
             max_packets: 2,
-            period: Some(Duration::from_millis(100)),
+            period: Duration::from_millis(100),
         });
 
         // Exhaust tokens
@@ -268,7 +308,7 @@ mod tests {
 
         let r = rate_limiter(Config {
             max_packets: 3,
-            period: Some(Duration::from_millis(30)),
+            period: Duration::from_millis(30),
         });
 
         // Use up some of the tokens.
@@ -288,7 +328,7 @@ mod tests {
     async fn filter_with_no_available_tokens() {
         let r = rate_limiter(Config {
             max_packets: 0,
-            period: Some(Duration::from_millis(100)),
+            period: Duration::from_millis(100),
         });
 
         // Check that other routes are not affected.
@@ -312,7 +352,7 @@ mod tests {
     async fn filter_with_available_tokens() {
         let r = rate_limiter(Config {
             max_packets: 1,
-            period: Some(Duration::from_millis(100)),
+            period: Duration::from_millis(100),
         });
 
         let result = r

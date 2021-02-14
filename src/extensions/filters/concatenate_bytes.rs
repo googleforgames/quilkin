@@ -14,16 +14,36 @@
  * limitations under the License.
  */
 
+use std::convert::TryFrom;
+
 use base64_serde::base64_serde_type;
 use serde::{Deserialize, Serialize};
 
+use crate::extensions::filters::ConvertProtoConfigError;
 use crate::extensions::{
     CreateFilterArgs, DownstreamContext, DownstreamResponse, Error, Filter, FilterFactory,
+};
+use crate::map_proto_enum;
+
+mod quilkin {
+    pub(crate) mod extensions {
+        pub(crate) mod filters {
+            pub(crate) mod concatenate_bytes {
+                pub(crate) mod v1alpha1 {
+                    #![doc(hidden)]
+                    tonic::include_proto!("quilkin.extensions.filters.concatenate_bytes.v1alpha1");
+                }
+            }
+        }
+    }
+}
+use self::quilkin::extensions::filters::concatenate_bytes::v1alpha1::{
+    concatenate_bytes::Strategy as ProtoStrategy, ConcatenateBytes as ProtoConfig,
 };
 
 base64_serde_type!(Base64Standard, base64::STANDARD);
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 enum Strategy {
     #[serde(rename = "APPEND")]
     Append,
@@ -31,8 +51,8 @@ enum Strategy {
     Prepend,
 }
 
-/// Config represents ConcatToken's configuration
-#[derive(Serialize, Deserialize, Debug)]
+/// Config represents a [`ConcatenateBytes`] filter configuration
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 struct Config {
     /// Whether or not to `append` or `prepend` the value to the filtered packet
     #[serde(default)]
@@ -45,6 +65,31 @@ struct Config {
 impl Default for Strategy {
     fn default() -> Self {
         Strategy::Append
+    }
+}
+
+impl TryFrom<ProtoConfig> for Config {
+    type Error = ConvertProtoConfigError;
+
+    fn try_from(p: ProtoConfig) -> Result<Self, Self::Error> {
+        let strategy = p
+            .strategy
+            .map(|strategy| {
+                map_proto_enum!(
+                    value = strategy,
+                    field = "strategy",
+                    proto_enum_type = ProtoStrategy,
+                    target_enum_type = Strategy,
+                    variants = [Append, Prepend]
+                )
+            })
+            .transpose()?
+            .unwrap_or_else(Strategy::default);
+
+        Ok(Self {
+            strategy,
+            bytes: p.bytes,
+        })
     }
 }
 
@@ -69,16 +114,9 @@ impl FilterFactory for ConcatBytesFactory {
     }
 
     fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
-        #[derive(Clone, PartialEq, ::prost::Message)]
-        pub struct TODO;
-        impl From<TODO> for Config {
-            fn from(_: TODO) -> Self {
-                unimplemented!()
-            }
-        }
         Ok(Box::new(ConcatenateBytes::new(
             self.require_config(args.config)?
-                .deserialize::<Config, TODO>(self.name().as_str())?,
+                .deserialize::<Config, ProtoConfig>(self.name().as_str())?,
         )))
     }
 }
@@ -109,12 +147,65 @@ impl Filter for ConcatenateBytes {
 
 #[cfg(test)]
 mod tests {
+    use std::convert::TryFrom;
+
     use crate::config::Endpoints;
     use crate::test_utils::assert_filter_on_downstream_receive_no_change;
     use serde_yaml::{Mapping, Value};
 
-    use super::*;
+    use super::{
+        ConcatBytesFactory, ConcatenateBytes, Config, ProtoConfig, ProtoStrategy, Strategy,
+    };
     use crate::cluster::Endpoint;
+    use crate::extensions::{CreateFilterArgs, DownstreamContext, Filter, FilterFactory};
+
+    #[test]
+    fn convert_proto_config() {
+        let test_cases = vec![
+            (
+                "should succeed when all valid values are provided",
+                ProtoConfig {
+                    strategy: Some(ProtoStrategy::Append as i32),
+                    bytes: "abc".into(),
+                },
+                Some(Config {
+                    strategy: Strategy::Append,
+                    bytes: "abc".into(),
+                }),
+            ),
+            (
+                "should fail when invalid strategy is provided",
+                ProtoConfig {
+                    strategy: Some(42),
+                    bytes: "abc".into(),
+                },
+                None,
+            ),
+            (
+                "should use correct default values",
+                ProtoConfig {
+                    strategy: None,
+                    bytes: "abc".into(),
+                },
+                Some(Config {
+                    strategy: Strategy::default(),
+                    bytes: "abc".into(),
+                }),
+            ),
+        ];
+        for (name, proto_config, expected) in test_cases {
+            let result = Config::try_from(proto_config);
+            assert_eq!(
+                result.is_err(),
+                expected.is_none(),
+                "{}: error expectation does not match",
+                name
+            );
+            if let Some(expected) = expected {
+                assert_eq!(expected, result.unwrap(), "{}", name);
+            }
+        }
+    }
 
     #[test]
     fn factory_valid_config() {

@@ -1,0 +1,13 @@
+syntax = "proto2";
+
+package quilkin.extensions.filters.concatenate_bytes.v1alpha1;
+
+message ConcatenateBytes {
+  enum Strategy {
+    Append = 0;
+    Prepend = 1;
+  }
+  optional Strategy strategy = 1;
+  required bytes bytes = 2;
+}
+

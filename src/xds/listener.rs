@@ -203,20 +203,32 @@ mod tests {
 
     use crate::cluster::Endpoint;
     use crate::config::{Endpoints, UpstreamEndpoints};
+    use crate::extensions::filters::ConvertProtoConfigError;
     use crate::xds::LISTENER_TYPE;
     use prometheus::Registry;
     use prost::Message;
     use serde::{Deserialize, Serialize};
+    use std::convert::TryFrom;
     use tokio::sync::mpsc;
     use tokio::time;
 
     // A simple filter that will be used in the following tests.
     // It appends a string to each payload.
     const APPEND_TYPE_URL: &str = "filter.append";
-    #[derive(Clone, PartialEq, Serialize, Deserialize, prost::Message)]
+    #[derive(Clone, PartialEq, Serialize, Deserialize)]
     pub struct Append {
+        pub value: Option<prost::alloc::string::String>,
+    }
+    #[derive(Clone, PartialEq, prost::Message)]
+    pub struct ProtoAppend {
         #[prost(message, optional, tag = "1")]
         pub value: Option<prost::alloc::string::String>,
+    }
+    impl TryFrom<ProtoAppend> for Append {
+        type Error = ConvertProtoConfigError;
+        fn try_from(p: ProtoAppend) -> std::result::Result<Self, Self::Error> {
+            Ok(Self { value: p.value })
+        }
     }
 
     impl Filter for Append {
@@ -240,7 +252,7 @@ mod tests {
         fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
             let filter = args
                 .config
-                .map(|config| config.deserialize::<Append, Append>(self.name().as_str()))
+                .map(|config| config.deserialize::<Append, ProtoAppend>(self.name().as_str()))
                 .transpose()?
                 .unwrap();
             if filter.value.as_ref().unwrap() == "reject" {
@@ -285,7 +297,7 @@ mod tests {
                 name: APPEND_TYPE_URL.into(),
                 config_type: Some(ConfigType::TypedConfig({
                     let mut buf = vec![];
-                    Append {
+                    ProtoAppend {
                         value: Some(value.into()),
                     }
                     .encode(&mut buf)
@@ -397,7 +409,7 @@ mod tests {
                     name: APPEND_TYPE_URL.into(),
                     config_type: Some(ConfigType::TypedConfig({
                         let mut buf = vec![];
-                        Append {
+                        ProtoAppend {
                             value: Some("world".into()),
                         }
                         .encode(&mut buf)
@@ -515,7 +527,7 @@ mod tests {
                     name: APPEND_TYPE_URL.into(),
                     config_type: Some(ConfigType::TypedConfig({
                         let mut buf = vec![];
-                        Append {
+                        ProtoAppend {
                             value: Some("reject".into()),
                         }
                         .encode(&mut buf)

@@ -1,0 +1,15 @@
+syntax = "proto2";
+
+package quilkin.extensions.filters.capture_bytes.v1alpha1;
+
+message CaptureBytes {
+  enum Strategy {
+    Prefix = 0;
+    Suffix = 1;
+  }
+  optional Strategy strategy = 1;
+  required uint32 size = 2;
+  optional string metadata_key = 3;
+  optional bool remove = 4;
+}
+

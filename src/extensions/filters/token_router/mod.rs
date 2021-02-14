@@ -18,27 +18,46 @@ use serde::{Deserialize, Serialize};
 use slog::{error, o, Logger};
 
 use crate::extensions::filters::token_router::metrics::Metrics;
+use crate::extensions::filters::ConvertProtoConfigError;
 use crate::extensions::filters::CAPTURED_BYTES;
 use crate::extensions::{
     CreateFilterArgs, DownstreamContext, DownstreamResponse, Error, Filter, FilterFactory,
     UpstreamContext, UpstreamResponse,
 };
+use proto::quilkin::extensions::filters::token_router::v1alpha1::TokenRouter as ProtoConfig;
+use std::convert::TryFrom;
 
 mod metrics;
+mod proto;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(default)]
 struct Config {
     /// the key to use when retrieving the token from the Filter's dynamic metadata
-    #[serde(rename = "metadataKey")]
+    #[serde(rename = "metadataKey", default = "default_metadata_key")]
     metadata_key: String,
+}
+
+/// Default value for [`Config::metadata_key`]
+fn default_metadata_key() -> String {
+    CAPTURED_BYTES.into()
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
-            metadata_key: CAPTURED_BYTES.into(),
+            metadata_key: default_metadata_key(),
         }
+    }
+}
+
+impl TryFrom<ProtoConfig> for Config {
+    type Error = ConvertProtoConfigError;
+
+    fn try_from(p: ProtoConfig) -> Result<Self, Self::Error> {
+        Ok(Self {
+            metadata_key: p.metadata_key.unwrap_or_else(default_metadata_key),
+        })
     }
 }
 
@@ -67,16 +86,9 @@ impl FilterFactory for TokenRouterFactory {
     }
 
     fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
-        #[derive(Clone, PartialEq, ::prost::Message)]
-        pub struct TODO;
-        impl From<TODO> for Config {
-            fn from(_: TODO) -> Self {
-                unimplemented!()
-            }
-        }
         let config: Config = args
             .config
-            .map(|config| config.deserialize::<Config, TODO>(self.name().as_str()))
+            .map(|config| config.deserialize::<Config, ProtoConfig>(self.name().as_str()))
             .transpose()?
             .unwrap_or_default();
 
@@ -132,6 +144,7 @@ impl Filter for TokenRouter {
 
 #[cfg(test)]
 mod tests {
+    use std::convert::TryFrom;
     use std::ops::Deref;
 
     use prometheus::Registry;
@@ -140,8 +153,12 @@ mod tests {
     use crate::config::Endpoints;
     use crate::test_utils::{assert_filter_on_upstream_receive_no_change, logger};
 
-    use super::*;
+    use super::{
+        default_metadata_key, Config, Metrics, ProtoConfig, TokenRouter, TokenRouterFactory,
+    };
     use crate::cluster::Endpoint;
+    use crate::extensions::filters::CAPTURED_BYTES;
+    use crate::extensions::{CreateFilterArgs, DownstreamContext, Filter, FilterFactory};
 
     const TOKEN_KEY: &str = "TOKEN";
 
@@ -151,6 +168,40 @@ mod tests {
             config,
             Metrics::new(&Registry::default()).unwrap(),
         )
+    }
+
+    #[test]
+    fn convert_proto_config() {
+        let test_cases = vec![
+            (
+                "should succeed when all valid values are provided",
+                ProtoConfig {
+                    metadata_key: Some("foobar".into()),
+                },
+                Some(Config {
+                    metadata_key: "foobar".into(),
+                }),
+            ),
+            (
+                "should use correct default values",
+                ProtoConfig { metadata_key: None },
+                Some(Config {
+                    metadata_key: default_metadata_key(),
+                }),
+            ),
+        ];
+        for (name, proto_config, expected) in test_cases {
+            let result = Config::try_from(proto_config);
+            assert_eq!(
+                result.is_err(),
+                expected.is_none(),
+                "{}: error expectation does not match",
+                name
+            );
+            if let Some(expected) = expected {
+                assert_eq!(expected, result.unwrap(), "{}", name);
+            }
+        }
     }
 
     #[test]
