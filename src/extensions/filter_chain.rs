@@ -20,8 +20,8 @@ use prometheus::Registry;
 
 use crate::config::{Filter as FilterConfig, ValidationError};
 use crate::extensions::{
-    CreateFilterArgs, DownstreamContext, DownstreamResponse, Filter, FilterRegistry,
-    UpstreamContext, UpstreamResponse,
+    CreateFilterArgs, Filter, FilterRegistry, ReadContext, ReadResponse, WriteContext,
+    WriteResponse,
 };
 
 /// FilterChain implements a chain of Filters amd the implementation
@@ -86,26 +86,26 @@ impl FilterChain {
 }
 
 impl Filter for FilterChain {
-    fn on_downstream_receive(&self, mut ctx: DownstreamContext) -> Option<DownstreamResponse> {
+    fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
         let from = ctx.from;
         for f in &self.filters {
-            match f.on_downstream_receive(ctx) {
+            match f.read(ctx) {
                 None => return None,
-                Some(response) => ctx = DownstreamContext::with_response(from, response),
+                Some(response) => ctx = ReadContext::with_response(from, response),
             }
         }
         Some(ctx.into())
     }
 
-    fn on_upstream_receive(&self, mut ctx: UpstreamContext) -> Option<UpstreamResponse> {
+    fn write(&self, mut ctx: WriteContext) -> Option<WriteResponse> {
         let endpoint = ctx.endpoint;
         let from = ctx.from;
         let to = ctx.to;
         for f in &self.filters {
-            match f.on_upstream_receive(ctx) {
+            match f.write(ctx) {
                 None => return None,
                 Some(response) => {
-                    ctx = UpstreamContext::with_response(endpoint, from, to, response);
+                    ctx = WriteContext::with_response(endpoint, from, to, response);
                 }
             }
         }
@@ -169,7 +169,7 @@ mod tests {
         let endpoints_fixture = endpoints();
 
         let response = chain
-            .on_downstream_receive(DownstreamContext::new(
+            .read(ReadContext::new(
                 upstream_endpoints(endpoints_fixture.clone()),
                 "127.0.0.1:70".parse().unwrap(),
                 b"hello".to_vec(),
@@ -193,7 +193,7 @@ mod tests {
         );
 
         let response = chain
-            .on_upstream_receive(UpstreamContext::new(
+            .write(WriteContext::new(
                 &endpoints_fixture[0],
                 endpoints_fixture[0].address,
                 "127.0.0.1:70".parse().unwrap(),
@@ -220,7 +220,7 @@ mod tests {
         let endpoints_fixture = endpoints();
 
         let response = chain
-            .on_downstream_receive(DownstreamContext::new(
+            .read(ReadContext::new(
                 upstream_endpoints(endpoints_fixture.clone()),
                 "127.0.0.1:70".parse().unwrap(),
                 b"hello".to_vec(),
@@ -244,7 +244,7 @@ mod tests {
         );
 
         let response = chain
-            .on_upstream_receive(UpstreamContext::new(
+            .write(WriteContext::new(
                 &endpoints_fixture[0],
                 endpoints_fixture[0].address,
                 "127.0.0.1:70".parse().unwrap(),

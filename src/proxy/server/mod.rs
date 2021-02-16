@@ -30,7 +30,7 @@ use metrics::Metrics as ProxyMetrics;
 use crate::cluster::cluster_manager::SharedClusterManager;
 use crate::cluster::Endpoint;
 use crate::config::{Config, Source};
-use crate::extensions::{DownstreamContext, Filter, FilterChain, FilterRegistry};
+use crate::extensions::{Filter, FilterChain, FilterRegistry, ReadContext};
 use crate::proxy::server::error::Error;
 use crate::proxy::sessions::{
     Packet, Session, SESSION_EXPIRY_POLL_INTERVAL, SESSION_TIMEOUT_SECONDS,
@@ -351,11 +351,7 @@ impl Server {
             let filter_manager_guard = args.filter_manager.read();
             filter_manager_guard.get_filter_chain()
         };
-        let result = filter_chain.on_downstream_receive(DownstreamContext::new(
-            endpoints,
-            recv_addr,
-            packet.to_vec(),
-        ));
+        let result = filter_chain.read(ReadContext::new(endpoints, recv_addr, packet.to_vec()));
 
         if let Some(response) = result {
             for endpoint in response.endpoints.iter() {
