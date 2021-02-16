@@ -91,13 +91,13 @@ mod tests {
         assert_eq!(
             2,
             result.matches("odr").count(),
-            "Should be 2 on_downstream_receive calls in {}",
+            "Should be 2 read calls in {}",
             result
         );
         assert_eq!(
             2,
             result.matches("our").count(),
-            "Should be 2 on_upstream_receive calls in {}",
+            "Should be 2 write calls in {}",
             result
         );
     }

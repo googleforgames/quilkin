@@ -25,8 +25,8 @@ use snap::write::FrameEncoder;
 use crate::extensions::filters::compress::metrics::Metrics;
 use crate::extensions::filters::ConvertProtoConfigError;
 use crate::extensions::{
-    CreateFilterArgs, DownstreamContext, DownstreamResponse, Error as RegistryError, Filter,
-    FilterFactory, UpstreamContext, UpstreamResponse,
+    CreateFilterArgs, Error as RegistryError, Filter, FilterFactory, ReadContext, ReadResponse,
+    WriteContext, WriteResponse,
 };
 use crate::map_proto_enum;
 use proto::quilkin::extensions::filters::compress::v1alpha1::{
@@ -173,7 +173,7 @@ impl Compress {
 }
 
 impl Filter for Compress {
-    fn on_downstream_receive(&self, mut ctx: DownstreamContext) -> Option<DownstreamResponse> {
+    fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
         let original_size = ctx.contents.len();
         match self.direction {
             Direction::Upstream => match self.compressor.encode(&mut ctx.contents) {
@@ -203,7 +203,7 @@ impl Filter for Compress {
         }
     }
 
-    fn on_upstream_receive(&self, mut ctx: UpstreamContext) -> Option<UpstreamResponse> {
+    fn write(&self, mut ctx: WriteContext) -> Option<WriteResponse> {
         let original_size = ctx.contents.len();
         match self.direction {
             Direction::Upstream => match self.compressor.decode(&mut ctx.contents) {
@@ -281,9 +281,7 @@ mod tests {
     };
     use crate::cluster::Endpoint;
     use crate::extensions::filters::compress::Compressor;
-    use crate::extensions::{
-        CreateFilterArgs, DownstreamContext, Filter, FilterFactory, UpstreamContext,
-    };
+    use crate::extensions::{CreateFilterArgs, Filter, FilterFactory, ReadContext, WriteContext};
 
     #[test]
     fn convert_proto_config() {
@@ -386,9 +384,9 @@ mod tests {
         );
         let expected = contents_fixture();
 
-        // on_downstream_receive compress
-        let downstream_response = compress
-            .on_downstream_receive(DownstreamContext::new(
+        // read compress
+        let read_response = compress
+            .read(ReadContext::new(
                 UpstreamEndpoints::from(
                     Endpoints::new(vec![Endpoint::from_address(
                         "127.0.0.1:80".parse().unwrap(),
@@ -400,39 +398,39 @@ mod tests {
             ))
             .expect("should compress");
 
-        assert_ne!(expected, downstream_response.contents);
+        assert_ne!(expected, read_response.contents);
         assert!(
-            expected.len() > downstream_response.contents.len(),
+            expected.len() > read_response.contents.len(),
             "Original: {}. Compressed: {}",
             expected.len(),
-            downstream_response.contents.len()
+            read_response.contents.len()
         );
         assert_eq!(
             expected.len() as i64,
             compress.metrics.decompressed_bytes_total.get()
         );
         assert_eq!(
-            downstream_response.contents.len() as i64,
+            read_response.contents.len() as i64,
             compress.metrics.compressed_bytes_total.get()
         );
 
-        // on_upstream_receive decompress
-        let upstream_response = compress
-            .on_upstream_receive(UpstreamContext::new(
+        // write decompress
+        let write_response = compress
+            .write(WriteContext::new(
                 &Endpoint::from_address("127.0.0.1:80".parse().unwrap()),
                 "127.0.0.1:8080".parse().unwrap(),
                 "127.0.0.1:8081".parse().unwrap(),
-                downstream_response.contents.clone(),
+                read_response.contents.clone(),
             ))
             .expect("should decompress");
 
-        assert_eq!(expected, upstream_response.contents);
+        assert_eq!(expected, write_response.contents);
 
         assert_eq!(0, compress.metrics.packets_dropped_decompress.get());
         assert_eq!(0, compress.metrics.packets_dropped_compress.get());
         // multiply by two, because data was sent both upstream and downstream
         assert_eq!(
-            (downstream_response.contents.len() * 2) as i64,
+            (read_response.contents.len() * 2) as i64,
             compress.metrics.compressed_bytes_total.get()
         );
         assert_eq!(
@@ -481,7 +479,7 @@ mod tests {
             Metrics::new(&Registry::default()).unwrap(),
         );
 
-        let upstream_response = compression.on_upstream_receive(UpstreamContext::new(
+        let upstream_response = compression.write(WriteContext::new(
             &Endpoint::from_address("127.0.0.1:80".parse().unwrap()),
             "127.0.0.1:8080".parse().unwrap(),
             "127.0.0.1:8081".parse().unwrap(),
@@ -501,7 +499,7 @@ mod tests {
             Metrics::new(&Registry::default()).unwrap(),
         );
 
-        let downstream_response = compression.on_downstream_receive(DownstreamContext::new(
+        let downstream_response = compression.read(ReadContext::new(
             UpstreamEndpoints::from(
                 Endpoints::new(vec![Endpoint::from_address(
                     "127.0.0.1:80".parse().unwrap(),
@@ -565,9 +563,9 @@ mod tests {
         F: Filter + ?Sized,
     {
         let expected = contents_fixture();
-        // on_upstream_receive compress
-        let upstream_response = filter
-            .on_upstream_receive(UpstreamContext::new(
+        // write compress
+        let write_response = filter
+            .write(WriteContext::new(
                 &Endpoint::from_address("127.0.0.1:80".parse().unwrap()),
                 "127.0.0.1:8080".parse().unwrap(),
                 "127.0.0.1:8081".parse().unwrap(),
@@ -575,17 +573,17 @@ mod tests {
             ))
             .expect("should compress");
 
-        assert_ne!(expected, upstream_response.contents);
+        assert_ne!(expected, write_response.contents);
         assert!(
-            expected.len() > upstream_response.contents.len(),
+            expected.len() > write_response.contents.len(),
             "Original: {}. Compressed: {}",
             expected.len(),
-            upstream_response.contents.len()
+            write_response.contents.len()
         );
 
-        // on_downstream_receive decompress
-        let downstream_response = filter
-            .on_downstream_receive(DownstreamContext::new(
+        // read decompress
+        let read_response = filter
+            .read(ReadContext::new(
                 UpstreamEndpoints::from(
                     Endpoints::new(vec![Endpoint::from_address(
                         "127.0.0.1:80".parse().unwrap(),
@@ -593,11 +591,11 @@ mod tests {
                     .unwrap(),
                 ),
                 "127.0.0.1:8080".parse().unwrap(),
-                upstream_response.contents.clone(),
+                write_response.contents.clone(),
             ))
             .expect("should decompress");
 
-        assert_eq!(expected, downstream_response.contents);
-        (expected, upstream_response.contents)
+        assert_eq!(expected, read_response.contents);
+        (expected, write_response.contents)
     }
 }

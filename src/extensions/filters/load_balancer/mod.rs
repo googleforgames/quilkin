@@ -23,7 +23,7 @@ use serde::{Deserialize, Serialize};
 use crate::config::UpstreamEndpoints;
 use crate::extensions::filters::ConvertProtoConfigError;
 use crate::extensions::{
-    CreateFilterArgs, DownstreamContext, DownstreamResponse, Error, Filter, FilterFactory,
+    CreateFilterArgs, Error, Filter, FilterFactory, ReadContext, ReadResponse,
 };
 use crate::map_proto_enum;
 use proto::quilkin::extensions::filters::load_balancer::v1alpha1::{
@@ -147,7 +147,7 @@ impl FilterFactory for LoadBalancerFilterFactory {
 }
 
 impl Filter for LoadBalancerFilter {
-    fn on_downstream_receive(&self, mut ctx: DownstreamContext) -> Option<DownstreamResponse> {
+    fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
         self.endpoint_chooser.choose_endpoints(&mut ctx.endpoints);
         Some(ctx.into())
     }
@@ -161,7 +161,7 @@ mod tests {
     use super::{Config, Policy, ProtoConfig, ProtoPolicy};
     use crate::cluster::Endpoint;
     use crate::config::Endpoints;
-    use crate::extensions::filter_registry::DownstreamContext;
+    use crate::extensions::filter_registry::ReadContext;
     use crate::extensions::filters::load_balancer::LoadBalancerFilterFactory;
     use crate::extensions::{CreateFilterArgs, Filter, FilterFactory};
     use std::convert::TryFrom;
@@ -180,7 +180,7 @@ mod tests {
         input_addresses: &[SocketAddr],
     ) -> Vec<SocketAddr> {
         filter
-            .on_downstream_receive(DownstreamContext::new(
+            .read(ReadContext::new(
                 Endpoints::new(
                     input_addresses
                         .iter()

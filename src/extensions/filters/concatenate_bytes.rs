@@ -21,7 +21,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::extensions::filters::ConvertProtoConfigError;
 use crate::extensions::{
-    CreateFilterArgs, DownstreamContext, DownstreamResponse, Error, Filter, FilterFactory,
+    CreateFilterArgs, Error, Filter, FilterFactory, ReadContext, ReadResponse,
 };
 use crate::map_proto_enum;
 
@@ -131,7 +131,7 @@ impl ConcatenateBytes {
 }
 
 impl Filter for ConcatenateBytes {
-    fn on_downstream_receive(&self, mut ctx: DownstreamContext) -> Option<DownstreamResponse> {
+    fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
         match self.strategy {
             Strategy::Append => {
                 ctx.contents.extend(self.bytes.iter());
@@ -150,14 +150,14 @@ mod tests {
     use std::convert::TryFrom;
 
     use crate::config::Endpoints;
-    use crate::test_utils::assert_filter_on_downstream_receive_no_change;
+    use crate::test_utils::assert_filter_read_no_change;
     use serde_yaml::{Mapping, Value};
 
     use super::{
         ConcatBytesFactory, ConcatenateBytes, Config, ProtoConfig, ProtoStrategy, Strategy,
     };
     use crate::cluster::Endpoint;
-    use crate::extensions::{CreateFilterArgs, DownstreamContext, Filter, FilterFactory};
+    use crate::extensions::{CreateFilterArgs, Filter, FilterFactory, ReadContext};
 
     #[test]
     fn convert_proto_config() {
@@ -267,27 +267,27 @@ mod tests {
     }
 
     #[test]
-    fn on_downstream_receive_append() {
+    fn write_append() {
         let strategy = Strategy::Append;
         let expected = "abchello";
         assert_create_filter(strategy, expected);
     }
 
     #[test]
-    fn on_downstream_receive_prepend() {
+    fn write_prepend() {
         let strategy = Strategy::Prepend;
         let expected = "helloabc";
         assert_create_filter(strategy, expected);
     }
 
     #[test]
-    fn on_upstream_receive() {
+    fn read() {
         let config = Config {
             strategy: Default::default(),
             bytes: vec![],
         };
         let filter = ConcatenateBytes::new(config);
-        assert_filter_on_downstream_receive_no_change(&filter);
+        assert_filter_read_no_change(&filter);
     }
 
     fn assert_create_filter(strategy: Strategy, expected: &str) {
@@ -307,7 +307,7 @@ mod tests {
     {
         let endpoints = vec![Endpoint::from_address("127.0.0.1:81".parse().unwrap())];
         let response = filter
-            .on_downstream_receive(DownstreamContext::new(
+            .read(ReadContext::new(
                 Endpoints::new(endpoints.clone()).unwrap().into(),
                 "127.0.0.1:80".parse().unwrap(),
                 "abc".to_string().into_bytes(),

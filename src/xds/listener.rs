@@ -189,8 +189,7 @@ mod tests {
     use super::ListenerManager;
     use crate::extensions::filter_manager::ListenerManagerArgs;
     use crate::extensions::{
-        CreateFilterArgs, DownstreamContext, DownstreamResponse, Error, Filter, FilterFactory,
-        FilterRegistry,
+        CreateFilterArgs, Error, Filter, FilterFactory, FilterRegistry, ReadContext, ReadResponse,
     };
     use crate::test_utils::logger;
     use crate::xds::envoy::config::listener::v3::{
@@ -232,7 +231,7 @@ mod tests {
     }
 
     impl Filter for Append {
-        fn on_downstream_receive(&self, mut ctx: DownstreamContext) -> Option<DownstreamResponse> {
+        fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
             ctx.contents = format!(
                 "{}{}",
                 String::from_utf8(ctx.contents).unwrap(),
@@ -361,7 +360,7 @@ mod tests {
 
         // Test the new filter chain's functionality. It should append to payloads.
         let response = filter_chain
-            .on_downstream_receive(DownstreamContext::new(
+            .read(ReadContext::new(
                 UpstreamEndpoints::from(
                     Endpoints::new(vec![Endpoint::from_address(
                         "127.0.0.1:8080".parse().unwrap(),
@@ -478,7 +477,7 @@ mod tests {
 
             // Test the new filter chain's functionality.
             let response = filter_chain
-                .on_downstream_receive(DownstreamContext::new(
+                .read(ReadContext::new(
                     UpstreamEndpoints::from(
                         Endpoints::new(vec![Endpoint::from_address(
                             "127.0.0.1:8080".parse().unwrap(),
