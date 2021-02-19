@@ -1,4 +1,4 @@
-syntax = "proto2";
+syntax = "proto3";
 
 package quilkin.extensions.filters.concatenate_bytes.v1alpha1;
 
@@ -7,7 +7,12 @@ message ConcatenateBytes {
     Append = 0;
     Prepend = 1;
   }
-  optional Strategy strategy = 1;
-  required bytes bytes = 2;
+
+  message StrategyValue {
+    Strategy value = 1;
+  }
+
+  StrategyValue strategy = 1;
+  bytes bytes = 2;
 }
 

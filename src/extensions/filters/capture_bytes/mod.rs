@@ -85,7 +85,7 @@ impl TryFrom<ProtoConfig> for Config {
             .strategy
             .map(|strategy| {
                 map_proto_enum!(
-                    value = strategy,
+                    value = strategy.value,
                     field = "strategy",
                     proto_enum_type = ProtoStrategy,
                     target_enum_type = Strategy,
@@ -229,7 +229,12 @@ mod tests {
 
     use super::{
         default_metadata_key, default_remove, Capture, CaptureBytes, CaptureBytesFactory, Config,
-        Metrics, Prefix, ProtoConfig, ProtoStrategy, Strategy, Suffix,
+        Metrics, Prefix, Strategy, Suffix,
+    };
+
+    use super::proto::quilkin::extensions::filters::capture_bytes::v1alpha1::{
+        capture_bytes::{Strategy as ProtoStrategy, StrategyValue},
+        CaptureBytes as ProtoConfig,
     };
     use crate::cluster::Endpoint;
     use crate::extensions::filters::CAPTURED_BYTES;
@@ -251,7 +256,9 @@ mod tests {
             (
                 "should succeed when all valid values are provided",
                 ProtoConfig {
-                    strategy: Some(ProtoStrategy::Suffix as i32),
+                    strategy: Some(StrategyValue {
+                        value: ProtoStrategy::Suffix as i32,
+                    }),
                     size: 42,
                     metadata_key: Some("foobar".into()),
                     remove: Some(true),
@@ -266,7 +273,7 @@ mod tests {
             (
                 "should fail when invalid strategy is provided",
                 ProtoConfig {
-                    strategy: Some(42),
+                    strategy: Some(StrategyValue { value: 42 }),
                     size: 42,
                     metadata_key: Some("foobar".into()),
                     remove: Some(true),

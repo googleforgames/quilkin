@@ -77,7 +77,7 @@ impl TryFrom<ProtoConfig> for Config {
             .mode
             .map(|mode| {
                 map_proto_enum!(
-                    value = mode,
+                    value = mode.value,
                     field = "mode",
                     proto_enum_type = ProtoMode,
                     target_enum_type = Mode,
@@ -275,10 +275,12 @@ mod tests {
     use crate::config::{Endpoints, UpstreamEndpoints};
     use crate::test_utils::logger;
 
-    use super::{
-        Compress, CompressFactory, Config, Direction, Metrics, Mode, ProtoConfig, ProtoDirection,
-        ProtoMode, Snappy,
+    use super::proto::quilkin::extensions::filters::compress::v1alpha1::{
+        compress::Direction as ProtoDirection,
+        compress::{Mode as ProtoMode, ModeValue},
+        Compress as ProtoConfig,
     };
+    use super::{Compress, CompressFactory, Config, Direction, Metrics, Mode, Snappy};
     use crate::cluster::Endpoint;
     use crate::extensions::filters::compress::Compressor;
     use crate::extensions::{CreateFilterArgs, Filter, FilterFactory, ReadContext, WriteContext};
@@ -289,7 +291,9 @@ mod tests {
             (
                 "should succeed when all valid values are provided",
                 ProtoConfig {
-                    mode: Some(ProtoMode::Snappy as i32),
+                    mode: Some(ModeValue {
+                        value: ProtoMode::Snappy as i32,
+                    }),
                     direction: ProtoDirection::Upstream as i32,
                 },
                 Some(Config {
@@ -300,7 +304,7 @@ mod tests {
             (
                 "should fail when invalid mode is provided",
                 ProtoConfig {
-                    mode: Some(42),
+                    mode: Some(ModeValue { value: 42 }),
                     direction: ProtoDirection::Upstream as i32,
                 },
                 None,
@@ -308,7 +312,9 @@ mod tests {
             (
                 "should fail when invalid direction is provided",
                 ProtoConfig {
-                    mode: Some(ProtoMode::Snappy as i32),
+                    mode: Some(ModeValue {
+                        value: ProtoMode::Snappy as i32,
+                    }),
                     direction: 42,
                 },
                 None,

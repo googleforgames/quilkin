@@ -1,15 +1,22 @@
-syntax = "proto2";
+syntax = "proto3";
 
 package quilkin.extensions.filters.capture_bytes.v1alpha1;
+
+import "google/protobuf/wrappers.proto";
 
 message CaptureBytes {
   enum Strategy {
     Prefix = 0;
     Suffix = 1;
   }
-  optional Strategy strategy = 1;
-  required uint32 size = 2;
-  optional string metadata_key = 3;
-  optional bool remove = 4;
+
+  message StrategyValue {
+    Strategy value = 1;
+  }
+
+  StrategyValue strategy = 1;
+  uint32 size = 2;
+  google.protobuf.StringValue metadata_key = 3;
+  google.protobuf.BoolValue remove = 4;
 }
 

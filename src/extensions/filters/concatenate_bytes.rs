@@ -76,7 +76,7 @@ impl TryFrom<ProtoConfig> for Config {
             .strategy
             .map(|strategy| {
                 map_proto_enum!(
-                    value = strategy,
+                    value = strategy.value,
                     field = "strategy",
                     proto_enum_type = ProtoStrategy,
                     target_enum_type = Strategy,
@@ -153,9 +153,11 @@ mod tests {
     use crate::test_utils::assert_filter_read_no_change;
     use serde_yaml::{Mapping, Value};
 
-    use super::{
-        ConcatBytesFactory, ConcatenateBytes, Config, ProtoConfig, ProtoStrategy, Strategy,
+    use super::quilkin::extensions::filters::concatenate_bytes::v1alpha1::{
+        concatenate_bytes::{Strategy as ProtoStrategy, StrategyValue},
+        ConcatenateBytes as ProtoConfig,
     };
+    use super::{ConcatBytesFactory, ConcatenateBytes, Config, Strategy};
     use crate::cluster::Endpoint;
     use crate::extensions::{CreateFilterArgs, Filter, FilterFactory, ReadContext};
 
@@ -165,7 +167,9 @@ mod tests {
             (
                 "should succeed when all valid values are provided",
                 ProtoConfig {
-                    strategy: Some(ProtoStrategy::Append as i32),
+                    strategy: Some(StrategyValue {
+                        value: ProtoStrategy::Append as i32,
+                    }),
                     bytes: "abc".into(),
                 },
                 Some(Config {
@@ -176,7 +180,7 @@ mod tests {
             (
                 "should fail when invalid strategy is provided",
                 ProtoConfig {
-                    strategy: Some(42),
+                    strategy: Some(StrategyValue { value: 42 }),
                     bytes: "abc".into(),
                 },
                 None,

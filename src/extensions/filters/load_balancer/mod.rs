@@ -64,7 +64,7 @@ impl TryFrom<ProtoConfig> for Config {
             .policy
             .map(|policy| {
                 map_proto_enum!(
-                    value = policy,
+                    value = policy.value,
                     field = "policy",
                     proto_enum_type = ProtoPolicy,
                     target_enum_type = Policy,
@@ -156,15 +156,19 @@ impl Filter for LoadBalancerFilter {
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;
+    use std::convert::TryFrom;
     use std::net::SocketAddr;
 
-    use super::{Config, Policy, ProtoConfig, ProtoPolicy};
+    use super::proto::quilkin::extensions::filters::load_balancer::v1alpha1::{
+        load_balancer::{Policy as ProtoPolicy, PolicyValue},
+        LoadBalancer as ProtoConfig,
+    };
+    use super::{Config, Policy};
     use crate::cluster::Endpoint;
     use crate::config::Endpoints;
     use crate::extensions::filter_registry::ReadContext;
     use crate::extensions::filters::load_balancer::LoadBalancerFilterFactory;
     use crate::extensions::{CreateFilterArgs, Filter, FilterFactory};
-    use std::convert::TryFrom;
 
     fn create_filter(config: &str) -> Box<dyn Filter> {
         let factory = LoadBalancerFilterFactory;
@@ -205,7 +209,9 @@ mod tests {
             (
                 "RandomPolicy",
                 ProtoConfig {
-                    policy: Some(ProtoPolicy::Random as i32),
+                    policy: Some(PolicyValue {
+                        value: ProtoPolicy::Random as i32,
+                    }),
                 },
                 Some(Config {
                     policy: Policy::Random,
@@ -214,7 +220,9 @@ mod tests {
             (
                 "RoundRobinPolicy",
                 ProtoConfig {
-                    policy: Some(ProtoPolicy::RoundRobin as i32),
+                    policy: Some(PolicyValue {
+                        value: ProtoPolicy::RoundRobin as i32,
+                    }),
                 },
                 Some(Config {
                     policy: Policy::RoundRobin,
@@ -222,7 +230,9 @@ mod tests {
             ),
             (
                 "should fail when invalid policy is provided",
-                ProtoConfig { policy: Some(42) },
+                ProtoConfig {
+                    policy: Some(PolicyValue { value: 42 }),
+                },
                 None,
             ),
             (
