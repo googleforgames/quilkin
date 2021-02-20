@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package quilkin.extensions.filters.compress.v1alpha1;
+
+message Compress {
+  enum Mode {
+    Snappy = 0;
+  }
+
+  message ModeValue {
+    Mode value = 1;
+  }
+
+  enum Direction {
+    Upstream = 0;
+    Downstream = 1;
+  }
+
+  ModeValue mode = 1;
+
+  Direction direction = 2;
+}
+

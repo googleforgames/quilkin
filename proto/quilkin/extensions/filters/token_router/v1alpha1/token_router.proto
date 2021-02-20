@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package quilkin.extensions.filters.token_router.v1alpha1;
+
+import "google/protobuf/wrappers.proto";
+
+message TokenRouter {
+  google.protobuf.StringValue metadata_key = 1;
+}
+

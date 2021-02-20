@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+use std::convert::TryFrom;
+
 use serde::{Deserialize, Serialize};
 use slog::{info, o, Logger};
 
@@ -36,26 +38,9 @@ mod quilkin {
     }
 }
 use self::quilkin::extensions::filters::debug::v1alpha1::Debug as ProtoDebug;
+use crate::extensions::filters::ConvertProtoConfigError;
 
 /// Debug logs all incoming and outgoing packets
-///
-/// # Configuration
-///
-/// ```yaml
-/// local:
-///   port: 7000 # the port to receive traffic to locally
-/// filters:
-///   - name: quilkin.extensions.filters.debug.v1alpha1.Debug
-///     config:
-///       id: "debug-1"
-/// client:
-///   addresses:
-///     - 127.0.0.1:7001
-/// ```
-///  `config.id` (optional) adds a "id" field with a given value to each log line.
-///     This can be useful to identify debug log positioning within a filter config if you have
-///     multiple Debug configured.
-///
 pub struct Debug {
     log: Logger,
 }
@@ -79,9 +64,11 @@ struct Config {
     id: Option<String>,
 }
 
-impl From<ProtoDebug> for Config {
-    fn from(p: ProtoDebug) -> Self {
-        Config { id: p.id }
+impl TryFrom<ProtoDebug> for Config {
+    type Error = ConvertProtoConfigError;
+
+    fn try_from(p: ProtoDebug) -> Result<Self, Self::Error> {
+        Ok(Config { id: p.id })
     }
 }
 

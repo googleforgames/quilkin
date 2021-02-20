@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package quilkin.extensions.filters.concatenate_bytes.v1alpha1;
+
+message ConcatenateBytes {
+  enum Strategy {
+    Append = 0;
+    Prepend = 1;
+  }
+
+  message StrategyValue {
+    Strategy value = 1;
+  }
+
+  StrategyValue strategy = 1;
+  bytes bytes = 2;
+}
+

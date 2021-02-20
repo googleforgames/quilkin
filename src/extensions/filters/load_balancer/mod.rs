@@ -14,15 +14,23 @@
  * limitations under the License.
  */
 
+use std::convert::TryFrom;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 
 use crate::config::UpstreamEndpoints;
+use crate::extensions::filters::ConvertProtoConfigError;
 use crate::extensions::{
     CreateFilterArgs, Error, Filter, FilterFactory, ReadContext, ReadResponse,
 };
+use crate::map_proto_enum;
+use proto::quilkin::extensions::filters::load_balancer::v1alpha1::{
+    load_balancer::Policy as ProtoPolicy, LoadBalancer as ProtoConfig,
+};
+
+mod proto;
 
 /// Policy represents how a [`LoadBalancerFilter`] distributes
 /// packets across endpoints.
@@ -43,10 +51,30 @@ impl Default for Policy {
 }
 
 /// Config represents configuration for a [`LoadBalancerFilter`].
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 struct Config {
     #[serde(default)]
     policy: Policy,
+}
+impl TryFrom<ProtoConfig> for Config {
+    type Error = ConvertProtoConfigError;
+
+    fn try_from(p: ProtoConfig) -> Result<Self, Self::Error> {
+        let policy = p
+            .policy
+            .map(|policy| {
+                map_proto_enum!(
+                    value = policy.value,
+                    field = "policy",
+                    proto_enum_type = ProtoPolicy,
+                    target_enum_type = Policy,
+                    variants = [RoundRobin, Random]
+                )
+            })
+            .transpose()?
+            .unwrap_or_else(Policy::default);
+        Ok(Self { policy })
+    }
 }
 
 /// EndpointChooser chooses from a set of endpoints that a proxy is connected to.
@@ -105,16 +133,9 @@ impl FilterFactory for LoadBalancerFilterFactory {
     }
 
     fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
-        #[derive(Clone, PartialEq, ::prost::Message)]
-        pub struct TODO;
-        impl From<TODO> for Config {
-            fn from(_: TODO) -> Self {
-                unimplemented!()
-            }
-        }
         let config: Config = self
             .require_config(args.config)?
-            .deserialize::<Config, TODO>(self.name().as_str())?;
+            .deserialize::<Config, ProtoConfig>(self.name().as_str())?;
 
         let endpoint_chooser: Box<dyn EndpointChooser> = match config.policy {
             Policy::RoundRobin => Box::new(RoundRobinEndpointChooser::new()),
@@ -135,8 +156,14 @@ impl Filter for LoadBalancerFilter {
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;
+    use std::convert::TryFrom;
     use std::net::SocketAddr;
 
+    use super::proto::quilkin::extensions::filters::load_balancer::v1alpha1::{
+        load_balancer::{Policy as ProtoPolicy, PolicyValue},
+        LoadBalancer as ProtoConfig,
+    };
+    use super::{Config, Policy};
     use crate::cluster::Endpoint;
     use crate::config::Endpoints;
     use crate::extensions::filter_registry::ReadContext;
@@ -174,6 +201,60 @@ mod tests {
             .iter()
             .map(|ep| ep.address)
             .collect::<Vec<_>>()
+    }
+
+    #[test]
+    fn convert_proto_config() {
+        let test_cases = vec![
+            (
+                "RandomPolicy",
+                ProtoConfig {
+                    policy: Some(PolicyValue {
+                        value: ProtoPolicy::Random as i32,
+                    }),
+                },
+                Some(Config {
+                    policy: Policy::Random,
+                }),
+            ),
+            (
+                "RoundRobinPolicy",
+                ProtoConfig {
+                    policy: Some(PolicyValue {
+                        value: ProtoPolicy::RoundRobin as i32,
+                    }),
+                },
+                Some(Config {
+                    policy: Policy::RoundRobin,
+                }),
+            ),
+            (
+                "should fail when invalid policy is provided",
+                ProtoConfig {
+                    policy: Some(PolicyValue { value: 42 }),
+                },
+                None,
+            ),
+            (
+                "should use correct default values",
+                ProtoConfig { policy: None },
+                Some(Config {
+                    policy: Policy::default(),
+                }),
+            ),
+        ];
+        for (name, proto_config, expected) in test_cases {
+            let result = Config::try_from(proto_config);
+            assert_eq!(
+                result.is_err(),
+                expected.is_none(),
+                "{}: error expectation does not match",
+                name
+            );
+            if let Some(expected) = expected {
+                assert_eq!(expected, result.unwrap(), "{}", name);
+            }
+        }
     }
 
     #[test]

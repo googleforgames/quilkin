@@ -14,17 +14,19 @@
  * limitations under the License.
  */
 
-use bytes::Bytes;
 use std::any::Any;
 use std::collections::HashMap;
+use std::convert::TryFrom;
 use std::fmt;
 use std::marker::PhantomData;
 use std::net::SocketAddr;
 
+use bytes::Bytes;
 use prometheus::{Error as MetricsError, Registry};
 
 use crate::cluster::Endpoint;
 use crate::config::{UpstreamEndpoints, ValidationError};
+use crate::extensions::filters::ConvertProtoConfigError;
 
 /// Contains the input arguments to [read](crate::extensions::filter_registry::Filter::read)
 pub struct ReadContext {
@@ -209,6 +211,7 @@ pub enum Error {
     FieldInvalid { field: String, reason: String },
     DeserializeFailed(String),
     InitializeMetricsFailed(String),
+    ConvertProtoConfig(ConvertProtoConfigError),
 }
 
 impl fmt::Display for Error {
@@ -225,6 +228,7 @@ impl fmt::Display for Error {
             Error::InitializeMetricsFailed(reason) => {
                 write!(f, "failed to initialize metrics: {}", reason)
             }
+            Error::ConvertProtoConfig(inner) => write!(f, "{}", inner),
         }
     }
 }
@@ -251,21 +255,21 @@ impl ConfigType<'_> {
     pub fn deserialize<T, P>(self, filter_name: &str) -> Result<T, Error>
     where
         P: prost::Message + Default,
-        T: for<'de> serde::Deserialize<'de> + From<P>,
+        T: for<'de> serde::Deserialize<'de> + TryFrom<P, Error = ConvertProtoConfigError>,
     {
         match self {
             ConfigType::Static(config) => serde_yaml::to_string(config)
                 .and_then(|raw_config| serde_yaml::from_str(raw_config.as_str()))
                 .map_err(|err| Error::DeserializeFailed(err.to_string())),
             ConfigType::Dynamic(config) => prost::Message::decode(Bytes::from(config.value))
-                .map(T::from)
                 .map_err(|err| {
                     Error::DeserializeFailed(format!(
                         "filter `{}`: config decode error: {}",
                         filter_name,
                         err.to_string()
                     ))
-                }),
+                })
+                .and_then(|config| T::try_from(config).map_err(Error::ConvertProtoConfig)),
         }
     }
 }
