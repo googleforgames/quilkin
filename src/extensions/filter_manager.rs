@@ -14,9 +14,6 @@
  * limitations under the License.
  */
 
-// TODO: Allow unused variables since this module is WIP.
-#![allow(unused)]
-
 use crate::extensions::{FilterChain, FilterRegistry};
 
 use std::sync::Arc;
@@ -27,14 +24,10 @@ use slog::{debug, o, warn, Logger};
 use tokio::sync::mpsc;
 use tokio::sync::watch;
 
-/// The max size of queue that provides updates from the XDS layer to the [`ClusterManager`].
-const FILTER_CHAIN_UPDATE_QUEUE_SIZE: usize = 1000;
-
 pub type SharedFilterManager = Arc<RwLock<FilterManager>>;
 
 /// FilterManager creates and updates the filter chain.
 pub struct FilterManager {
-    log: Logger,
     /// The current filter chain.
     filter_chain: Arc<FilterChain>,
 }
@@ -71,11 +64,8 @@ impl FilterManager {
     }
 
     /// Returns a new instance backed only by the provided filter chain.
-    pub fn fixed(base_logger: Logger, filter_chain: Arc<FilterChain>) -> SharedFilterManager {
-        Arc::new(RwLock::new(FilterManager {
-            filter_chain,
-            log: Self::create_logger(base_logger),
-        }))
+    pub fn fixed(filter_chain: Arc<FilterChain>) -> SharedFilterManager {
+        Arc::new(RwLock::new(FilterManager { filter_chain }))
     }
 
     /// Returns a new instance backed by a stream of filter chain updates.
@@ -90,8 +80,7 @@ impl FilterManager {
 
         let filter_manager = Arc::new(RwLock::new(FilterManager {
             // Start out with an empty filter chain.
-            filter_chain: Arc::new(FilterChain::default()),
-            log: log.clone(),
+            filter_chain: filter_chain_update,
         }));
 
         // Start a task in the background to receive LDS updates
@@ -160,7 +149,7 @@ mod tests {
 
     #[tokio::test]
     async fn dynamic_filter_manager_update_filter_chain() {
-        let filter_manager = FilterManager::fixed(logger(), Arc::new(FilterChain::new(vec![])));
+        let filter_manager = FilterManager::fixed(Arc::new(FilterChain::new(vec![])));
         let (filter_chain_updates_tx, filter_chain_updates_rx) = mpsc::channel(10);
         let (_shutdown_tx, shutdown_rx) = watch::channel(());
 
@@ -229,7 +218,7 @@ mod tests {
     async fn dynamic_filter_manager_shutdown_task_on_shutdown_signal() {
         // Test that we shut down the background task if we receive a shutdown signal.
 
-        let filter_manager = FilterManager::fixed(logger(), Arc::new(FilterChain::new(vec![])));
+        let filter_manager = FilterManager::fixed(Arc::new(FilterChain::new(vec![])));
         let (filter_chain_updates_tx, filter_chain_updates_rx) = mpsc::channel(10);
         let (shutdown_tx, shutdown_rx) = watch::channel(());
 
@@ -248,11 +237,6 @@ mod tests {
 
         // Send a filter chain update on the channel. This should fail
         // since the listening task should have shut down.
-        let filter_chain = {
-            let manager_guard = filter_manager.read();
-            manager_guard.get_filter_chain().clone()
-        };
-
         let filter_chain = Arc::new(FilterChain::new(vec![]));
         assert!(filter_chain_updates_tx.send(filter_chain).await.is_err());
     }

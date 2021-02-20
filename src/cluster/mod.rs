@@ -20,6 +20,7 @@ use std::collections::{HashMap, HashSet};
 use std::net::SocketAddr;
 
 pub(crate) mod cluster_manager;
+mod metrics;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Endpoint {

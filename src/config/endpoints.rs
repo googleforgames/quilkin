@@ -55,6 +55,13 @@ impl Endpoints {
     }
 }
 
+/// Provides a read-only view into the underlying endpoints.
+impl AsRef<Vec<Endpoint>> for Endpoints {
+    fn as_ref(&self) -> &Vec<Endpoint> {
+        self.0.as_ref()
+    }
+}
+
 impl From<Endpoints> for UpstreamEndpoints {
     fn from(endpoints: Endpoints) -> Self {
         UpstreamEndpoints {

@@ -23,6 +23,7 @@ pub enum Error {
     Session(SessionError),
     Bind(tokio::io::Error),
     InvalidEndpointConfig(String),
+    RecvLoop(String),
 }
 
 impl std::error::Error for Error {}
@@ -36,6 +37,7 @@ impl Display for Error {
             Error::InvalidEndpointConfig(reason) => {
                 write!(f, "invalid endpoint configuration: {}", reason)
             }
+            Error::RecvLoop(reason) => write!(f, "receive loop exited with an error: {}", reason),
         }
     }
 }

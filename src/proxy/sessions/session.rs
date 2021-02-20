@@ -342,7 +342,7 @@ mod tests {
         let sess = Session::new(
             &t.log,
             Metrics::new(&Registry::default(), addr.to_string(), addr.to_string()).unwrap(),
-            FilterManager::fixed(t.log.clone(), Arc::new(FilterChain::new(vec![]))),
+            FilterManager::fixed(Arc::new(FilterChain::new(vec![]))),
             addr,
             endpoint,
             send_packet,
@@ -393,7 +393,7 @@ mod tests {
         let session = Session::new(
             &t.log,
             Metrics::new(&Registry::default(), addr.to_string(), addr.to_string()).unwrap(),
-            FilterManager::fixed(t.log.clone(), Arc::new(FilterChain::new(vec![]))),
+            FilterManager::fixed(Arc::new(FilterChain::new(vec![]))),
             addr,
             endpoint.clone(),
             sender,
@@ -418,7 +418,7 @@ mod tests {
         let sess = Session::new(
             &t.log,
             Metrics::new(&Registry::default(), addr.to_string(), addr.to_string()).unwrap(),
-            FilterManager::fixed(t.log.clone(), Arc::new(FilterChain::new(vec![]))),
+            FilterManager::fixed(Arc::new(FilterChain::new(vec![]))),
             addr,
             endpoint,
             send_packet,
@@ -476,7 +476,7 @@ mod tests {
             Duration::from_secs(10),
             ReceivedPacketContext {
                 packet: msg.as_bytes(),
-                filter_manager: FilterManager::fixed(t.log.clone(), chain),
+                filter_manager: FilterManager::fixed(chain),
                 endpoint: &endpoint,
                 from: endpoint.address,
                 to: dest,
@@ -513,7 +513,7 @@ mod tests {
             &expiration,
             Duration::from_secs(10),
             ReceivedPacketContext {
-                filter_manager: FilterManager::fixed(t.log.clone(), chain),
+                filter_manager: FilterManager::fixed(chain),
                 packet: msg.as_bytes(),
                 endpoint: &endpoint,
                 from: endpoint.address,
@@ -545,7 +545,7 @@ mod tests {
         let session = Session::new(
             &t.log,
             Metrics::new(&Registry::default(), addr.to_string(), addr.to_string()).unwrap(),
-            FilterManager::fixed(t.log.clone(), Arc::new(FilterChain::new(vec![]))),
+            FilterManager::fixed(Arc::new(FilterChain::new(vec![]))),
             addr,
             endpoint,
             send_packet,
@@ -569,7 +569,7 @@ mod tests {
         let session = Session::new(
             &t.log,
             Metrics::new(&Registry::default(), addr.to_string(), addr.to_string()).unwrap(),
-            FilterManager::fixed(t.log.clone(), Arc::new(FilterChain::new(vec![]))),
+            FilterManager::fixed(Arc::new(FilterChain::new(vec![]))),
             addr,
             Endpoint::from_address(addr),
             sender,
@@ -594,7 +594,7 @@ mod tests {
         let session = Session::new(
             &t.log,
             Metrics::new(&Registry::default(), addr.to_string(), addr.to_string()).unwrap(),
-            FilterManager::fixed(t.log.clone(), Arc::new(FilterChain::new(vec![]))),
+            FilterManager::fixed(Arc::new(FilterChain::new(vec![]))),
             addr,
             Endpoint::from_address(addr),
             send_packet,

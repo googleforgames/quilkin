@@ -14,32 +14,27 @@
  * limitations under the License.
  */
 
-// TODO: Allow unused variables since this module is WIP.
-#![allow(unused)]
-
 // We use a parking_lot since it's significantly faster under low contention
 // and we will need to acquire a read lock with every packet that is processed
 // to be able to capture the current endpoint state and pass it to Filters.
 use parking_lot::RwLock;
-use slog::{debug, info, o, warn, Logger};
-use std::collections::HashMap;
-use std::net::SocketAddr;
+use slog::{debug, o, warn, Logger};
 use std::{fmt, sync::Arc};
-use tokio::sync::{mpsc, oneshot, watch};
+
+use prometheus::{Registry, Result as MetricsResult};
+use tokio::sync::{mpsc, watch};
 
 use crate::cluster::Endpoint;
-use crate::config::{EmptyListError, EndPoint, Endpoints, ManagementServer, UpstreamEndpoints};
-use crate::extensions::filter_manager::ListenerManagerArgs;
-use crate::extensions::FilterRegistry;
-use crate::xds::ads_client::{AdsClient, ClusterUpdate, ExecutionResult};
+use crate::config::{Endpoints, UpstreamEndpoints};
+use crate::xds::ads_client::ClusterUpdate;
 
-/// The max size of queue that provides updates from the XDS layer to the [`ClusterManager`].
-const CLUSTER_UPDATE_QUEUE_SIZE: usize = 1000;
+use super::metrics::Metrics;
 
 pub(crate) type SharedClusterManager = Arc<RwLock<ClusterManager>>;
 
 /// ClusterManager knows about all clusters and endpoints.
 pub(crate) struct ClusterManager {
+    metrics: Metrics,
     endpoints: Option<Endpoints>,
 }
 
@@ -59,8 +54,9 @@ impl fmt::Display for InitializeError {
 impl std::error::Error for InitializeError {}
 
 impl ClusterManager {
-    fn new(endpoints: Option<Endpoints>) -> Self {
-        Self { endpoints }
+    fn new(metrics_registry: &Registry, endpoints: Option<Endpoints>) -> MetricsResult<Self> {
+        let metrics = Metrics::new(metrics_registry)?;
+        Ok(Self { metrics, endpoints })
     }
 
     fn update(&mut self, endpoints: Option<Endpoints>) {
@@ -74,12 +70,26 @@ impl ClusterManager {
     }
 
     /// Returns a ClusterManager backed by the fixed set of clusters provided in the config.
-    pub fn fixed(endpoints: Vec<Endpoint>) -> SharedClusterManager {
-        // TODO: Return a result rather than unwrap.
-        Arc::new(RwLock::new(Self::new(Some(
-            Endpoints::new(endpoints)
-                .expect("endpoints list in config should be validated non-empty"),
-        ))))
+    pub fn fixed(
+        metrics_registry: &Registry,
+        endpoints: Vec<Endpoint>,
+    ) -> MetricsResult<SharedClusterManager> {
+        let cm = Self::new(
+            metrics_registry,
+            Some(
+                Endpoints::new(endpoints)
+                    // TODO: Return a result rather than unwrap.
+                    .expect("endpoints list in config should be validated non-empty"),
+            ),
+        )?;
+        // Set the endpoints count metrics.
+        cm.metrics.active_endpoints.set(
+            cm.endpoints
+                .as_ref()
+                .map(|ep| ep.as_ref().len())
+                .unwrap_or_default() as i64,
+        );
+        Ok(Arc::new(RwLock::new(cm)))
     }
 
     /// Returns a ClusterManager backed by a set of XDS servers.
@@ -92,42 +102,58 @@ impl ClusterManager {
     /// The returned contains the XDS client's execution result after termination.
     pub fn dynamic(
         base_logger: Logger,
+        metrics_registry: &Registry,
         cluster_update: ClusterUpdate,
         cluster_updates_rx: mpsc::Receiver<ClusterUpdate>,
         shutdown_rx: watch::Receiver<()>,
-    ) -> SharedClusterManager {
+    ) -> MetricsResult<SharedClusterManager> {
         let log = base_logger.new(o!("source" => "cluster::ClusterManager"));
 
-        let cluster_manager = Arc::new(RwLock::new(Self::new(Self::create_endpoints_from_update(
-            cluster_update,
-        ))));
+        let cluster_manager = Self::new(
+            metrics_registry,
+            Self::create_endpoints_from_update(&cluster_update),
+        )?;
+        let metrics = cluster_manager.metrics.clone();
+        let cluster_manager = Arc::new(RwLock::new(cluster_manager));
+
+        Self::update_cluster_update_metrics(&metrics, &cluster_update);
 
         // Start a task in the background to receive cluster updates
         // and update the cluster manager's cluster set in turn.
         Self::spawn_updater(
             log.clone(),
+            metrics,
             cluster_manager.clone(),
             cluster_updates_rx,
             shutdown_rx,
         );
 
-        cluster_manager
+        Ok(cluster_manager)
     }
 
-    fn create_endpoints_from_update(update: ClusterUpdate) -> Option<Endpoints> {
+    fn update_cluster_update_metrics(metrics: &Metrics, update: &ClusterUpdate) {
+        metrics.active_clusters.set(update.len() as i64);
+        metrics.active_endpoints.set(
+            Self::create_endpoints_from_update(update)
+                .map(|ep| ep.as_ref().len() as i64)
+                .unwrap_or_default(),
+        )
+    }
+
+    fn create_endpoints_from_update(update: &ClusterUpdate) -> Option<Endpoints> {
         // NOTE: We don't currently have support for consuming multiple clusters
         // so here gather all endpoints into the same set, ignoring what cluster they
         // belong to.
         let endpoints = update
-            .into_iter()
+            .iter()
             .fold(vec![], |mut endpoints, (_name, cluster)| {
                 let cluster_endpoints = cluster
                     .localities
-                    .into_iter()
+                    .iter()
                     .map(|(_, endpoints)| {
                         endpoints
                             .endpoints
-                            .into_iter()
+                            .iter()
                             .map(|ep| Endpoint::from_address(ep.address))
                     })
                     .flatten();
@@ -138,43 +164,15 @@ impl ClusterManager {
 
         match Endpoints::new(endpoints) {
             Ok(endpoints) => Some(endpoints),
-            Err(EmptyListError) => None,
+            Err(_empty_list_error) => None,
         }
-    }
-
-    // Spawns a task that runs an ADS client. Cluster updates from the client
-    // as well as execution result after termination are sent on the provided channels.
-    fn spawn_ads_client(
-        log: Logger,
-        node_id: String,
-        management_servers: Vec<ManagementServer>,
-        cluster_updates_tx: mpsc::Sender<ClusterUpdate>,
-        listener_manager_args: ListenerManagerArgs,
-        execution_result_tx: oneshot::Sender<ExecutionResult>,
-        shutdown_rx: watch::Receiver<()>,
-    ) {
-        tokio::spawn(async move {
-            let result = AdsClient
-                .run(
-                    log.clone(),
-                    node_id,
-                    management_servers,
-                    cluster_updates_tx,
-                    listener_manager_args,
-                    shutdown_rx,
-                )
-                .await;
-            execution_result_tx
-                .send(result)
-                .map_err(|_err| warn!(log, "failed to send ADS client execution result on channel"))
-                .ok();
-        });
     }
 
     /// Spawns a task to run a loop that receives cluster updates
     /// and updates the ClusterManager's state in turn.
     fn spawn_updater(
         log: Logger,
+        metrics: Metrics,
         cluster_manager: Arc<RwLock<ClusterManager>>,
         mut cluster_updates_rx: mpsc::Receiver<ClusterUpdate>,
         mut shutdown_rx: watch::Receiver<()>,
@@ -185,7 +183,8 @@ impl ClusterManager {
                     update = cluster_updates_rx.recv() => {
                         match update {
                             Some(update) => {
-                                let update = Self::create_endpoints_from_update(update);
+                                Self::update_cluster_update_metrics(&metrics, &update);
+                                let update = Self::create_endpoints_from_update(&update);
                                 debug!(log, "Received a cluster update.");
                                 cluster_manager.write().update(update);
                             }
@@ -202,5 +201,127 @@ impl ClusterManager {
                 }
             }
         });
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::ClusterManager;
+    use crate::cluster::{Cluster, Endpoint, LocalityEndpoints};
+    use crate::test_utils::logger;
+    use prometheus::Registry;
+    use tokio::sync::{mpsc, watch};
+
+    #[test]
+    fn static_cluster_manager_metrics() {
+        let cm = ClusterManager::fixed(
+            &Registry::default(),
+            vec![
+                Endpoint::from_address("127.0.0.1:80".parse().unwrap()),
+                Endpoint::from_address("127.0.0.1:81".parse().unwrap()),
+            ],
+        )
+        .unwrap();
+        let metrics = &cm.read().metrics;
+        assert_eq!(2, metrics.active_endpoints.get());
+        assert_eq!(0, metrics.active_clusters.get());
+    }
+
+    #[tokio::test]
+    async fn dynamic_cluster_manager_metrics() {
+        let (update_tx, update_rx) = mpsc::channel(3);
+        let (_shutdown_tx, shutdown_rx) = watch::channel(());
+        let cm = ClusterManager::dynamic(
+            logger(),
+            &Registry::default(),
+            vec![(
+                "cluster-1".into(),
+                Cluster {
+                    localities: vec![(
+                        None,
+                        LocalityEndpoints {
+                            endpoints: vec![
+                                Endpoint::from_address("127.0.0.1:80".parse().unwrap()),
+                                Endpoint::from_address("127.0.0.1:81".parse().unwrap()),
+                            ],
+                        },
+                    )]
+                    .into_iter()
+                    .collect(),
+                },
+            )]
+            .into_iter()
+            .collect(),
+            update_rx,
+            shutdown_rx,
+        )
+        .unwrap();
+
+        // Initialization metrics
+        {
+            let metrics = &cm.read().metrics;
+            assert_eq!(2, metrics.active_endpoints.get());
+            assert_eq!(1, metrics.active_clusters.get());
+        }
+
+        let update = vec![
+            (
+                "cluster-1".into(),
+                Cluster {
+                    localities: vec![(
+                        None,
+                        LocalityEndpoints {
+                            endpoints: vec![Endpoint::from_address(
+                                "127.0.0.1:80".parse().unwrap(),
+                            )],
+                        },
+                    )]
+                    .into_iter()
+                    .collect(),
+                },
+            ),
+            (
+                "cluster-2".into(),
+                Cluster {
+                    localities: vec![(
+                        None,
+                        LocalityEndpoints {
+                            endpoints: vec![
+                                Endpoint::from_address("127.0.0.1:82".parse().unwrap()),
+                                Endpoint::from_address("127.0.0.1:83".parse().unwrap()),
+                            ],
+                        },
+                    )]
+                    .into_iter()
+                    .collect(),
+                },
+            ),
+        ]
+        .into_iter()
+        .collect();
+        update_tx.send(update).await.unwrap();
+
+        // Check updated metrics
+        tokio::time::timeout(std::time::Duration::from_secs(3), async move {
+            // Wait for the update to be processed. Here just poll until there's
+            // a change we expect (or we will timeout from the enclosing future eventually.
+            loop {
+                {
+                    let metrics = &cm.read().metrics;
+                    if metrics.active_endpoints.get() == 3 {
+                        break;
+                    }
+                }
+                tokio::time::sleep(std::time::Duration::from_millis(3)).await;
+            }
+
+            // Verify the new metrics are correct.
+            {
+                let metrics = &cm.read().metrics;
+                assert_eq!(3, metrics.active_endpoints.get());
+                assert_eq!(2, metrics.active_clusters.get());
+            }
+        })
+        .await
+        .unwrap();
     }
 }

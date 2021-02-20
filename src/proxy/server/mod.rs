@@ -16,6 +16,7 @@
 
 use std::collections::HashMap;
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
+use std::result::Result as StdResult;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -23,6 +24,7 @@ use slog::{debug, error, info, trace, warn, Logger};
 use tokio::net::UdpSocket;
 use tokio::sync::RwLock;
 use tokio::sync::{mpsc, watch};
+use tokio::task::JoinHandle;
 use tokio::time::{sleep, Duration};
 
 use metrics::Metrics as ProxyMetrics;
@@ -124,7 +126,7 @@ impl Server {
             self.create_resource_managers(shutdown_rx.clone()).await?;
         self.run_receive_packet(socket.clone(), receive_packets);
         self.run_prune_sessions(&sessions, poll_interval);
-        self.run_recv_from(RunRecvFromArgs {
+        let recv_loop = self.run_recv_from(RunRecvFromArgs {
             cluster_manager,
             filter_manager,
             socket,
@@ -134,8 +136,16 @@ impl Server {
             shutdown_rx: shutdown_rx.clone(),
         });
 
-        let _ = shutdown_rx.changed().await;
-        Ok(())
+        tokio::select! {
+            join_result = recv_loop => {
+                join_result
+                    .map_err(|join_err| Error::RecvLoop(format!("{}", join_err)))
+                    .and_then(|inner| inner.map_err(Error::RecvLoop))
+            }
+            _ = shutdown_rx.changed() => {
+                Ok(())
+            }
+        }
     }
 
     async fn create_resource_managers(
@@ -155,10 +165,11 @@ impl Server {
                         .push(Endpoint::from_config(ep).map_err(Error::InvalidEndpointConfig)?);
                 }
                 let manager = StaticResourceManagers::new(
-                    self.log.clone(),
+                    &self.metrics.registry,
                     endpoints,
                     self.filter_chain.clone(),
-                );
+                )
+                .map_err(|err| Error::Initialize(format!("{}", err)))?;
                 Ok((manager.cluster_manager, manager.filter_manager))
             }
             Source::Dynamic { management_servers } => {
@@ -215,7 +226,7 @@ impl Server {
     /// This function also spawns the set of worker tasks responsible for consuming packets
     /// off the aforementioned queue and processing them through the filter chain and session
     /// pipeline.
-    fn run_recv_from(&self, args: RunRecvFromArgs) {
+    fn run_recv_from(&self, args: RunRecvFromArgs) -> JoinHandle<StdResult<(), String>> {
         let sessions = args.sessions;
         let log = self.log.clone();
         let metrics = self.metrics.clone();
@@ -275,15 +286,23 @@ impl Server {
                             .await
                             .is_err()
                         {
-                            error!(log, "failed to send received packet over channel to worker");
+                            // We cannot recover from this error since
+                            // it implies that the receiver has been dropped.
+                            let reason =
+                                "failed to send received packet over channel to worker".into();
+                            error!(log, "{}", reason);
+                            return Err(reason);
                         }
                     }
                     err => {
-                        error!(log, "error processing receive socket: {:?}", err);
+                        // Socket error, we cannot recover from this so return an error instead.
+                        let reason = format!("error processing receive socket: {:?}", err);
+                        error!(log, "{}", reason);
+                        return Err(reason);
                     }
                 }
             }
-        });
+        })
     }
 
     // For each worker config provided, spawn a background task that sits in a
@@ -318,7 +337,6 @@ impl Server {
                         debug!(log, "worker-{} exiting: received shutdown signal.", worker_id);
                         return;
                       }
-
                     }
                 }
             });
@@ -581,6 +599,7 @@ mod tests {
 
     use super::*;
     use crate::extensions::filter_manager::FilterManager;
+    use prometheus::Registry;
 
     #[tokio::test]
     async fn run_server() {
@@ -729,9 +748,12 @@ mod tests {
             let mut packet_txs = Vec::with_capacity(num_workers);
             let mut worker_configs = Vec::with_capacity(num_workers);
 
-            let cluster_manager =
-                ClusterManager::fixed(vec![Endpoint::from_address(endpoint_address)]);
-            let filter_manager = FilterManager::fixed(t.log.clone(), chain.clone());
+            let cluster_manager = ClusterManager::fixed(
+                &Registry::default(),
+                vec![Endpoint::from_address(endpoint_address)],
+            )
+            .unwrap();
+            let filter_manager = FilterManager::fixed(chain.clone());
             for worker_id in 0..num_workers {
                 let (packet_tx, packet_rx) = mpsc::channel(num_workers);
                 packet_txs.push(packet_tx);
@@ -828,10 +850,14 @@ mod tests {
 
         let (_shutdown_tx, shutdown_rx) = watch::channel(());
         server.run_recv_from(RunRecvFromArgs {
-            cluster_manager: ClusterManager::fixed(vec![Endpoint::from_address(
-                endpoint.socket.local_addr().unwrap(),
-            )]),
-            filter_manager: FilterManager::fixed(t.log.clone(), Arc::new(FilterChain::new(vec![]))),
+            cluster_manager: ClusterManager::fixed(
+                &Registry::default(),
+                vec![Endpoint::from_address(
+                    endpoint.socket.local_addr().unwrap(),
+                )],
+            )
+            .unwrap(),
+            filter_manager: FilterManager::fixed(Arc::new(FilterChain::new(vec![]))),
             socket: socket.clone(),
             sessions: sessions.clone(),
             session_ttl: Duration::from_secs(10),
@@ -898,7 +924,7 @@ mod tests {
                     Metrics::default()
                         .new_session_metrics(&from, &endpoint.address)
                         .unwrap(),
-                    FilterManager::fixed(t.log.clone(), Arc::new(FilterChain::new(vec![]))),
+                    FilterManager::fixed(Arc::new(FilterChain::new(vec![]))),
                     from,
                     endpoint.clone(),
                     send,
@@ -968,7 +994,7 @@ mod tests {
                     Metrics::default()
                         .new_session_metrics(&from, &endpoint.address)
                         .unwrap(),
-                    FilterManager::fixed(t.log.clone(), Arc::new(FilterChain::new(vec![]))),
+                    FilterManager::fixed(Arc::new(FilterChain::new(vec![]))),
                     from,
                     endpoint.clone(),
                     send,

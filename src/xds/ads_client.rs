@@ -18,7 +18,8 @@ use std::collections::HashMap;
 
 use crate::xds::google::rpc::Status as GrpcStatus;
 use backoff::{backoff::Backoff, exponential::ExponentialBackoff, Clock, SystemClock};
-use slog::{error, info, o, warn, Logger};
+use prometheus::{Registry, Result as MetricsResult};
+use slog::{debug, error, info, o, warn, Logger};
 use tokio::{
     sync::{mpsc, watch},
     task::JoinHandle,
@@ -38,10 +39,16 @@ use crate::xds::envoy::service::discovery::v3::{
     aggregated_discovery_service_client::AggregatedDiscoveryServiceClient, DiscoveryRequest,
 };
 use crate::xds::listener::ListenerManager;
+use crate::xds::metrics::Metrics;
 use crate::xds::{CLUSTER_TYPE, ENDPOINT_TYPE, LISTENER_TYPE};
+use prometheus::core::{AtomicI64, GenericGauge};
+use tokio::sync::mpsc::error::SendError;
 
 /// AdsClient is a client that can talk to an XDS server using the ADS protocol.
-pub(crate) struct AdsClient;
+pub(crate) struct AdsClient {
+    log: Logger,
+    metrics: Metrics,
+}
 
 /// Contains the components that handle XDS responses for supported resources.
 struct ResourceHandlers {
@@ -59,6 +66,7 @@ impl ResourceHandlers {
 /// Represents the required arguments to start an rpc session with a server.
 struct RpcSessionArgs<'a> {
     log: Logger,
+    metrics: Metrics,
     server_addr: String,
     node_id: String,
     resource_handlers: ResourceHandlers,
@@ -100,19 +108,24 @@ pub type ClusterUpdate = HashMap<String, Cluster>;
 pub type ExecutionResult = Result<(), ExecutionError>;
 
 impl AdsClient {
+    pub fn new(base_logger: Logger, metrics_registry: &Registry) -> MetricsResult<Self> {
+        let log = base_logger.new(o!("source" => "xds::AdsClient"));
+        let metrics = Metrics::new(metrics_registry)?;
+        Ok(Self { log, metrics })
+    }
     /// Continuously tracks CDS and EDS resources on an ADS server,
     /// sending summarized cluster updates on the provided channel.
     pub async fn run(
         self,
-        base_logger: Logger,
         node_id: String,
         management_servers: Vec<ManagementServer>,
         cluster_updates_tx: mpsc::Sender<ClusterUpdate>,
         listener_manager_args: ListenerManagerArgs,
         mut shutdown_rx: watch::Receiver<()>,
     ) -> ExecutionResult {
-        let log = base_logger.new(o!("source" => "xds::AdsClient", "node_id" => node_id.clone()));
         let mut backoff = ExponentialBackoff::<SystemClock>::default();
+        let log = self.log;
+        let metrics = self.metrics;
 
         let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel::<DiscoveryRequest>(100);
         let cluster_manager =
@@ -146,6 +159,7 @@ impl AdsClient {
 
             let args = RpcSessionArgs {
                 log: log.clone(),
+                metrics: metrics.clone(),
                 server_addr: server_addr.clone(),
                 node_id: node_id.clone(),
                 resource_handlers,
@@ -205,6 +219,7 @@ impl AdsClient {
     async fn run_rpc_session(args: RpcSessionArgs<'_>) -> RpcSessionResult {
         let RpcSessionArgs {
             log,
+            metrics,
             server_addr,
             node_id,
             resource_handlers,
@@ -228,6 +243,7 @@ impl AdsClient {
         // Spawn a task that runs the receive loop.
         let mut recv_loop_join_handle = Self::run_receive_loop(
             log.clone(),
+            metrics.clone(),
             client,
             rpc_rx,
             resource_handlers,
@@ -236,7 +252,7 @@ impl AdsClient {
         );
 
         // Fetch the initial set of resources.
-        Self::send_initial_cds_and_lds_request(node_id, &mut rpc_tx).await?;
+        Self::send_initial_cds_and_lds_request(&log, &metrics, node_id, &mut rpc_tx).await?;
 
         // Run the send loop on the current task.
         loop {
@@ -250,13 +266,12 @@ impl AdsClient {
 
                 req = discovery_req_rx.recv() => {
                     if let Some(req) = req {
-                        info!(log, "sending rpc discovery request {:?}", req);
-                        rpc_tx.send(req)
-                            .await
-                            .map_err(|err| RpcSessionError::NonRecoverable(
-                                "failed to send discovery request on channel",
-                                Box::new(err))
-                            )?;
+                    Self::send_discovery_request(&log, &metrics, req, &mut rpc_tx)
+                        .await
+                        .map_err(|err| RpcSessionError::NonRecoverable(
+                            "failed to send discovery request on channel",
+                            Box::new(err))
+                        )?;
                     } else {
                         info!(log, "exiting send loop");
                         break;
@@ -277,12 +292,16 @@ impl AdsClient {
 
     #[allow(deprecated)]
     async fn send_initial_cds_and_lds_request(
+        log: &Logger,
+        metrics: &Metrics,
         node_id: String,
         rpc_tx: &mut mpsc::Sender<DiscoveryRequest>,
     ) -> Result<(), RpcSessionError> {
         for resource_type in &[CLUSTER_TYPE, LISTENER_TYPE] {
-            let send_result = rpc_tx
-                .send(DiscoveryRequest {
+            let send_result = Self::send_discovery_request(
+                log,
+                metrics,
+                DiscoveryRequest {
                     version_info: "".into(),
                     node: Some(Node {
                         id: node_id.clone(),
@@ -299,9 +318,11 @@ impl AdsClient {
                     type_url: (*resource_type).into(),
                     response_nonce: "".into(),
                     error_detail: None,
-                })
-                .await
-                .map_err(|err|
+                },
+                rpc_tx,
+            )
+            .await
+            .map_err(|err|
                     // An error sending means we have no listener on the other side which
                     // would likely be a bug if we're not already shutting down.
                     RpcSessionError::NonRecoverable(
@@ -320,6 +341,7 @@ impl AdsClient {
     // Spawns a task that runs a receive loop.
     fn run_receive_loop(
         log: Logger,
+        metrics: Metrics,
         mut client: AggregatedDiscoveryServiceClient<TonicChannel>,
         rpc_rx: mpsc::Receiver<DiscoveryRequest>,
         mut resource_handlers: ResourceHandlers,
@@ -334,6 +356,25 @@ impl AdsClient {
                 Ok(response) => response.into_inner(),
                 Err(err) => return Err(RpcSessionError::Receive(resource_handlers, backoff, err)),
             };
+
+            // This updates metrics for connection state. It updates the metric to 1 upon
+            // creation and back to 0 once it goes out of scope (i.e when the function returns,
+            // we are no longer connected since the client must have been dropped as well).
+            struct ConnectionState(GenericGauge<AtomicI64>);
+            impl ConnectionState {
+                fn connected(metric: GenericGauge<AtomicI64>) -> Self {
+                    metric.set(1);
+                    Self(metric)
+                }
+            }
+            impl Drop for ConnectionState {
+                fn drop(&mut self) {
+                    self.0.set(0);
+                }
+            }
+
+            // We are now connected to the server.
+            let _connected_state = ConnectionState::connected(metrics.connected_state);
 
             loop {
                 tokio::select! {
@@ -352,6 +393,7 @@ impl AdsClient {
                         // successfully reached the server.
                         backoff.reset();
 
+                        metrics.update_attempt_total.inc();
                         if response.type_url == CLUSTER_TYPE {
                             resource_handlers.cluster_manager.on_cluster_response(response).await;
                         } else if response.type_url == ENDPOINT_TYPE {
@@ -359,6 +401,7 @@ impl AdsClient {
                         } else if response.type_url == LISTENER_TYPE {
                             resource_handlers.listener_manager.on_listener_response(response).await;
                         } else {
+                            metrics.update_failure_total.inc();
                             error!(log, "Unexpected resource with type_url={:?}", response.type_url);
                         }
                     }
@@ -370,6 +413,24 @@ impl AdsClient {
                 }
             }
         })
+    }
+
+    async fn send_discovery_request(
+        log: &Logger,
+        metrics: &Metrics,
+        req: DiscoveryRequest,
+        req_tx: &mut mpsc::Sender<DiscoveryRequest>,
+    ) -> Result<(), SendError<DiscoveryRequest>> {
+        if req.error_detail.is_some() {
+            metrics.update_failure_total.inc();
+        } else {
+            metrics.update_success_total.inc();
+        }
+        metrics.requests_total.inc();
+
+        debug!(log, "sending rpc discovery request {:?}", req);
+
+        req_tx.send(req).await
     }
 
     async fn log_error_and_backoff<C: Clock>(
@@ -450,8 +511,7 @@ mod tests {
         let (_shutdown_tx, shutdown_rx) = watch::channel::<()>(());
         let (cluster_updates_tx, _) = mpsc::channel(10);
         let (filter_chain_updates_tx, _) = mpsc::channel(10);
-        let run = AdsClient.run(
-            logger(),
+        let run = AdsClient::new(logger(), &Registry::default()).unwrap().run(
             "test-id".into(),
             vec![ManagementServer {
                 address: "localhost:18000".into(),
