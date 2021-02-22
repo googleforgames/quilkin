@@ -11,13 +11,18 @@ message Compress {
     Mode value = 1;
   }
 
-  enum Direction {
-    Upstream = 0;
-    Downstream = 1;
+  enum Action {
+    DoNothing = 0;
+    Compress = 1;
+    Decompress = 2;
+  }
+
+  message ActionValue {
+    Action value = 1;
   }
 
   ModeValue mode = 1;
-
-  Direction direction = 2;
+  ActionValue on_read = 2;
+  ActionValue on_write = 3;
 }
 

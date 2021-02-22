@@ -22,6 +22,10 @@ use slog::{o, warn, Logger};
 use snap::read::FrameDecoder;
 use snap::write::FrameEncoder;
 
+use proto::quilkin::extensions::filters::compress::v1alpha1::{
+    compress::Action as ProtoAction, compress::Mode as ProtoMode, Compress as ProtoConfig,
+};
+
 use crate::extensions::filters::compress::metrics::Metrics;
 use crate::extensions::filters::ConvertProtoConfigError;
 use crate::extensions::{
@@ -29,9 +33,6 @@ use crate::extensions::{
     WriteContext, WriteResponse,
 };
 use crate::map_proto_enum;
-use proto::quilkin::extensions::filters::compress::v1alpha1::{
-    compress::Direction as ProtoDirection, compress::Mode as ProtoMode, Compress as ProtoConfig,
-};
 
 mod metrics;
 mod proto;
@@ -45,20 +46,26 @@ pub enum Mode {
     Snappy,
 }
 
-/// Compression direction (and decompression goes the other way)
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-pub enum Direction {
-    /// Compress traffic flowing upstream (received by the proxy listening port, and sent to endpoint(s))
-    #[serde(rename = "UPSTREAM")]
-    Upstream,
-    /// Compress traffic flowing downstream (received by an endpoint, and sent to the proxy listening port)
-    #[serde(rename = "DOWNSTREAM")]
-    Downstream,
-}
-
 impl Default for Mode {
     fn default() -> Self {
         Mode::Snappy
+    }
+}
+
+/// Whether to do nothing, compress or decompress the packet.
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+enum Action {
+    #[serde(rename = "DO_NOTHING")]
+    DoNothing,
+    #[serde(rename = "COMPRESS")]
+    Compress,
+    #[serde(rename = "DECOMPRESS")]
+    Decompress,
+}
+
+impl Default for Action {
+    fn default() -> Self {
+        Action::DoNothing
     }
 }
 
@@ -66,7 +73,8 @@ impl Default for Mode {
 struct Config {
     #[serde(default)]
     mode: Mode,
-    direction: Direction,
+    on_read: Action,
+    on_write: Action,
 }
 
 impl TryFrom<ProtoConfig> for Config {
@@ -87,14 +95,39 @@ impl TryFrom<ProtoConfig> for Config {
             .transpose()?
             .unwrap_or_else(Mode::default);
 
-        let direction = map_proto_enum!(
-            value = p.direction,
-            field = "direction",
-            proto_enum_type = ProtoDirection,
-            target_enum_type = Direction,
-            variants = [Upstream, Downstream]
-        )?;
-        Ok(Self { mode, direction })
+        let on_read = p
+            .on_read
+            .map(|on_read| {
+                map_proto_enum!(
+                    value = on_read.value,
+                    field = "on_read",
+                    proto_enum_type = ProtoAction,
+                    target_enum_type = Action,
+                    variants = [DoNothing, Compress, Decompress]
+                )
+            })
+            .transpose()?
+            .unwrap_or_else(Action::default);
+
+        let on_write = p
+            .on_write
+            .map(|on_write| {
+                map_proto_enum!(
+                    value = on_write.value,
+                    field = "on_write",
+                    proto_enum_type = ProtoAction,
+                    target_enum_type = Action,
+                    variants = [DoNothing, Compress, Decompress]
+                )
+            })
+            .transpose()?
+            .unwrap_or_else(Action::default);
+
+        Ok(Self {
+            mode,
+            on_read,
+            on_write,
+        })
     }
 }
 
@@ -131,7 +164,8 @@ struct Compress {
     log: Logger,
     metrics: Metrics,
     compression_mode: Mode,
-    direction: Direction,
+    on_read: Action,
+    on_write: Action,
     compressor: Box<dyn Compressor + Sync + Send>,
 }
 
@@ -144,7 +178,8 @@ impl Compress {
             log: base.new(o!("source" => "extensions::Compress")),
             metrics,
             compression_mode: config.mode,
-            direction: config.direction,
+            on_read: config.on_read,
+            on_write: config.on_write,
             compressor,
         }
     }
@@ -175,8 +210,9 @@ impl Compress {
 impl Filter for Compress {
     fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
         let original_size = ctx.contents.len();
-        match self.direction {
-            Direction::Upstream => match self.compressor.encode(&mut ctx.contents) {
+
+        match self.on_read {
+            Action::Compress => match self.compressor.encode(&mut ctx.contents) {
                 Ok(()) => {
                     self.metrics
                         .decompressed_bytes_total
@@ -188,7 +224,7 @@ impl Filter for Compress {
                 }
                 Err(err) => self.failed_compression(err),
             },
-            Direction::Downstream => match self.compressor.decode(&mut ctx.contents) {
+            Action::Decompress => match self.compressor.decode(&mut ctx.contents) {
                 Ok(()) => {
                     self.metrics
                         .compressed_bytes_total
@@ -200,13 +236,26 @@ impl Filter for Compress {
                 }
                 Err(err) => self.failed_decompression(err),
             },
+            Action::DoNothing => Some(ctx.into()),
         }
     }
 
     fn write(&self, mut ctx: WriteContext) -> Option<WriteResponse> {
         let original_size = ctx.contents.len();
-        match self.direction {
-            Direction::Upstream => match self.compressor.decode(&mut ctx.contents) {
+        match self.on_write {
+            Action::Compress => match self.compressor.encode(&mut ctx.contents) {
+                Ok(()) => {
+                    self.metrics
+                        .decompressed_bytes_total
+                        .inc_by(original_size as i64);
+                    self.metrics
+                        .compressed_bytes_total
+                        .inc_by(ctx.contents.len() as i64);
+                    Some(ctx.into())
+                }
+                Err(err) => self.failed_compression(err),
+            },
+            Action::Decompress => match self.compressor.decode(&mut ctx.contents) {
                 Ok(()) => {
                     self.metrics
                         .compressed_bytes_total
@@ -219,18 +268,7 @@ impl Filter for Compress {
 
                 Err(err) => self.failed_decompression(err),
             },
-            Direction::Downstream => match self.compressor.encode(&mut ctx.contents) {
-                Ok(()) => {
-                    self.metrics
-                        .decompressed_bytes_total
-                        .inc_by(original_size as i64);
-                    self.metrics
-                        .compressed_bytes_total
-                        .inc_by(ctx.contents.len() as i64);
-                    Some(ctx.into())
-                }
-                Err(err) => self.failed_compression(err),
-            },
+            Action::DoNothing => Some(ctx.into()),
         }
     }
 }
@@ -272,18 +310,17 @@ mod tests {
     use prometheus::Registry;
     use serde_yaml::{Mapping, Value};
 
+    use crate::cluster::Endpoint;
     use crate::config::{Endpoints, UpstreamEndpoints};
+    use crate::extensions::filters::compress::Compressor;
+    use crate::extensions::{CreateFilterArgs, Filter, FilterFactory, ReadContext, WriteContext};
     use crate::test_utils::logger;
 
     use super::proto::quilkin::extensions::filters::compress::v1alpha1::{
-        compress::Direction as ProtoDirection,
-        compress::{Mode as ProtoMode, ModeValue},
+        compress::{Action as ProtoAction, ActionValue, Mode as ProtoMode, ModeValue},
         Compress as ProtoConfig,
     };
-    use super::{Compress, CompressFactory, Config, Direction, Metrics, Mode, Snappy};
-    use crate::cluster::Endpoint;
-    use crate::extensions::filters::compress::Compressor;
-    use crate::extensions::{CreateFilterArgs, Filter, FilterFactory, ReadContext, WriteContext};
+    use super::{Action, Compress, CompressFactory, Config, Metrics, Mode, Snappy};
 
     #[test]
     fn convert_proto_config() {
@@ -294,28 +331,55 @@ mod tests {
                     mode: Some(ModeValue {
                         value: ProtoMode::Snappy as i32,
                     }),
-                    direction: ProtoDirection::Upstream as i32,
+                    on_read: Some(ActionValue {
+                        value: ProtoAction::Compress as i32,
+                    }),
+                    on_write: Some(ActionValue {
+                        value: ProtoAction::Decompress as i32,
+                    }),
                 },
                 Some(Config {
                     mode: Mode::Snappy,
-                    direction: Direction::Upstream,
+                    on_read: Action::Compress,
+                    on_write: Action::Decompress,
                 }),
             ),
             (
                 "should fail when invalid mode is provided",
                 ProtoConfig {
                     mode: Some(ModeValue { value: 42 }),
-                    direction: ProtoDirection::Upstream as i32,
+                    on_read: Some(ActionValue {
+                        value: ProtoAction::Compress as i32,
+                    }),
+                    on_write: Some(ActionValue {
+                        value: ProtoAction::Decompress as i32,
+                    }),
                 },
                 None,
             ),
             (
-                "should fail when invalid direction is provided",
+                "should fail when invalid on_read is provided",
                 ProtoConfig {
                     mode: Some(ModeValue {
                         value: ProtoMode::Snappy as i32,
                     }),
-                    direction: 42,
+                    on_read: Some(ActionValue { value: 73 }),
+                    on_write: Some(ActionValue {
+                        value: ProtoAction::Decompress as i32,
+                    }),
+                },
+                None,
+            ),
+            (
+                "should fail when invalid on_write is provided",
+                ProtoConfig {
+                    mode: Some(ModeValue {
+                        value: ProtoMode::Snappy as i32,
+                    }),
+                    on_read: Some(ActionValue {
+                        value: ProtoAction::Decompress as i32,
+                    }),
+                    on_write: Some(ActionValue { value: 73 }),
                 },
                 None,
             ),
@@ -323,11 +387,13 @@ mod tests {
                 "should use correct default values",
                 ProtoConfig {
                     mode: None,
-                    direction: ProtoDirection::Downstream as i32,
+                    on_read: None,
+                    on_write: None,
                 },
                 Some(Config {
                     mode: Mode::default(),
-                    direction: Direction::Downstream,
+                    on_read: Action::default(),
+                    on_write: Action::default(),
                 }),
             ),
         ];
@@ -351,13 +417,17 @@ mod tests {
         let factory = CompressFactory::new(&log);
         let mut map = Mapping::new();
         map.insert(
-            Value::String("direction".into()),
-            Value::String("DOWNSTREAM".into()),
+            Value::String("on_read".into()),
+            Value::String("DECOMPRESS".into()),
+        );
+        map.insert(
+            Value::String("on_write".into()),
+            Value::String("COMPRESS".into()),
         );
         let filter = factory
             .create_filter(CreateFilterArgs::fixed(Some(&Value::Mapping(map))))
             .expect("should create a filter");
-        assert_downstream_direction(filter.as_ref());
+        assert_downstream(filter.as_ref());
     }
 
     #[test]
@@ -367,24 +437,29 @@ mod tests {
         let mut map = Mapping::new();
         map.insert(Value::String("mode".into()), Value::String("SNAPPY".into()));
         map.insert(
-            Value::String("direction".into()),
-            Value::String("DOWNSTREAM".into()),
+            Value::String("on_read".into()),
+            Value::String("DECOMPRESS".into()),
+        );
+        map.insert(
+            Value::String("on_write".into()),
+            Value::String("COMPRESS".into()),
         );
         let config = Value::Mapping(map);
         let args = CreateFilterArgs::fixed(Some(&config));
 
         let filter = factory.create_filter(args).expect("should create a filter");
-        assert_downstream_direction(filter.as_ref());
+        assert_downstream(filter.as_ref());
     }
 
     #[test]
-    fn upstream_direction() {
+    fn upstream() {
         let log = logger();
         let compress = Compress::new(
             &log,
             Config {
                 mode: Default::default(),
-                direction: Direction::Upstream,
+                on_read: Action::Compress,
+                on_write: Action::Decompress,
             },
             Metrics::new(&Registry::default()).unwrap(),
         );
@@ -446,22 +521,23 @@ mod tests {
     }
 
     #[test]
-    fn downstream_direction() {
+    fn downstream() {
         let log = logger();
         let compress = Compress::new(
             &log,
             Config {
                 mode: Default::default(),
-                direction: Direction::Downstream,
+                on_read: Action::Decompress,
+                on_write: Action::Compress,
             },
             Metrics::new(&Registry::default()).unwrap(),
         );
 
-        let (expected, upstream_response) = assert_downstream_direction(&compress);
+        let (expected, compressed) = assert_downstream(&compress);
 
         // multiply by two, because data was sent both downstream and upstream
         assert_eq!(
-            (upstream_response.len() * 2) as i64,
+            (compressed.len() * 2) as i64,
             compress.metrics.compressed_bytes_total.get()
         );
         assert_eq!(
@@ -480,19 +556,20 @@ mod tests {
             &log,
             Config {
                 mode: Default::default(),
-                direction: Direction::Upstream,
+                on_read: Action::Compress,
+                on_write: Action::Decompress,
             },
             Metrics::new(&Registry::default()).unwrap(),
         );
 
-        let upstream_response = compression.write(WriteContext::new(
+        let write_response = compression.write(WriteContext::new(
             &Endpoint::from_address("127.0.0.1:80".parse().unwrap()),
             "127.0.0.1:8080".parse().unwrap(),
             "127.0.0.1:8081".parse().unwrap(),
             b"hello".to_vec(),
         ));
 
-        assert!(upstream_response.is_none());
+        assert!(write_response.is_none());
         assert_eq!(1, compression.metrics.packets_dropped_decompress.get());
         assert_eq!(0, compression.metrics.packets_dropped_compress.get());
 
@@ -500,12 +577,13 @@ mod tests {
             &log,
             Config {
                 mode: Default::default(),
-                direction: Direction::Downstream,
+                on_read: Action::Decompress,
+                on_write: Action::Compress,
             },
             Metrics::new(&Registry::default()).unwrap(),
         );
 
-        let downstream_response = compression.read(ReadContext::new(
+        let read_response = compression.read(ReadContext::new(
             UpstreamEndpoints::from(
                 Endpoints::new(vec![Endpoint::from_address(
                     "127.0.0.1:80".parse().unwrap(),
@@ -516,11 +594,46 @@ mod tests {
             b"hello".to_vec(),
         ));
 
-        assert!(downstream_response.is_none());
+        assert!(read_response.is_none());
         assert_eq!(1, compression.metrics.packets_dropped_decompress.get());
         assert_eq!(0, compression.metrics.packets_dropped_compress.get());
         assert_eq!(0, compression.metrics.compressed_bytes_total.get());
         assert_eq!(0, compression.metrics.decompressed_bytes_total.get());
+    }
+
+    #[test]
+    fn do_nothing() {
+        let log = logger();
+        let compression = Compress::new(
+            &log,
+            Config {
+                mode: Default::default(),
+                on_read: Action::default(),
+                on_write: Action::default(),
+            },
+            Metrics::new(&Registry::default()).unwrap(),
+        );
+
+        let read_response = compression.read(ReadContext::new(
+            UpstreamEndpoints::from(
+                Endpoints::new(vec![Endpoint::from_address(
+                    "127.0.0.1:80".parse().unwrap(),
+                )])
+                .unwrap(),
+            ),
+            "127.0.0.1:8080".parse().unwrap(),
+            b"hello".to_vec(),
+        ));
+        assert_eq!(b"hello".to_vec(), read_response.unwrap().contents);
+
+        let write_response = compression.write(WriteContext::new(
+            &Endpoint::from_address("127.0.0.1:80".parse().unwrap()),
+            "127.0.0.1:8080".parse().unwrap(),
+            "127.0.0.1:8081".parse().unwrap(),
+            b"hello".to_vec(),
+        ));
+
+        assert_eq!(b"hello".to_vec(), write_response.unwrap().contents)
     }
 
     #[test]
@@ -562,9 +675,9 @@ mod tests {
             .to_vec()
     }
 
-    /// assert compression work in a Downstream direction.
+    /// assert compression work with decompress on read and compress on write
     /// Returns the original data packet, and the compressed version
-    fn assert_downstream_direction<F>(filter: &F) -> (Vec<u8>, Vec<u8>)
+    fn assert_downstream<F>(filter: &F) -> (Vec<u8>, Vec<u8>)
     where
         F: Filter + ?Sized,
     {

@@ -35,7 +35,8 @@ mod tests {
         // create server configuration as
         let server_port = 12356;
         let yaml = "
-direction: DOWNSTREAM
+on_read: DECOMPRESS
+on_write: COMPRESS
 ";
         let server_config = Builder::empty()
             .with_port(server_port)
@@ -54,7 +55,8 @@ direction: DOWNSTREAM
         // create a local client
         let client_port = 12357;
         let yaml = "
-direction: UPSTREAM
+on_read: COMPRESS
+on_write: DECOMPRESS
 ";
         let client_config = Builder::empty()
             .with_port(client_port)
