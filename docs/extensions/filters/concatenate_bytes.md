@@ -16,7 +16,8 @@ static:
   filters:
     - name: quilkin.extensions.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
       config:
-          strategy: APPEND
+          on_read: APPEND
+          on_write: DO_NOTHING
           bytes: MXg3aWp5Ng==
   endpoints:
     - name: server-1
@@ -31,16 +32,22 @@ static:
 
 ```yaml
 properties:
-  strategy:
+  on_read:
     type: string
     description: |
-      Either append or prepend the `bytes` data to each packet filtered.
-    default: "APPEND"
-    enum: ['APPEND', 'PREPEND']
+      Either append or prepend the `bytes` data to each packet filtered on read of the listening port.
+    default: DO_NOTHING
+    enum: ['DO_NOTHING', 'APPEND', 'PREPEND']
+  on_write:
+    type: string
+    description: |
+      Either append or prepend the `bytes` data to each packet filtered on write of the listening port.
+    default: DO_NOTHING
+    enum: ['DO_NOTHING', 'APPEND', 'PREPEND']    
   bytes:
     type: string
     description: |
-      Base64 encoded string of the byte array to add to each packet as it is filtered.  
+      Base64 encoded string of the byte array to add to each packet as it is filtered.
 ```
 
 ### Metrics

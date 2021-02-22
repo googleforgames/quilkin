@@ -21,9 +21,14 @@ use serde::{Deserialize, Serialize};
 
 use crate::extensions::filters::ConvertProtoConfigError;
 use crate::extensions::{
-    CreateFilterArgs, Error, Filter, FilterFactory, ReadContext, ReadResponse,
+    CreateFilterArgs, Error, Filter, FilterFactory, ReadContext, ReadResponse, WriteContext,
+    WriteResponse,
 };
 use crate::map_proto_enum;
+
+use self::quilkin::extensions::filters::concatenate_bytes::v1alpha1::{
+    concatenate_bytes::Strategy as ProtoStrategy, ConcatenateBytes as ProtoConfig,
+};
 
 mod quilkin {
     pub(crate) mod extensions {
@@ -37,10 +42,6 @@ mod quilkin {
         }
     }
 }
-use self::quilkin::extensions::filters::concatenate_bytes::v1alpha1::{
-    concatenate_bytes::Strategy as ProtoStrategy, ConcatenateBytes as ProtoConfig,
-};
-
 base64_serde_type!(Base64Standard, base64::STANDARD);
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
@@ -49,45 +50,65 @@ enum Strategy {
     Append,
     #[serde(rename = "PREPEND")]
     Prepend,
+    #[serde(rename = "DO_NOTHING")]
+    DoNothing,
+}
+
+impl Default for Strategy {
+    fn default() -> Self {
+        Strategy::DoNothing
+    }
 }
 
 /// Config represents a [`ConcatenateBytes`] filter configuration
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 struct Config {
-    /// Whether or not to `append` or `prepend` the value to the filtered packet
+    /// Whether or not to `append` or `prepend` or `do nothing` on Filter `Read`
     #[serde(default)]
-    strategy: Strategy,
+    on_read: Strategy,
+    /// Whether or not to `append` or `prepend` or `do nothing` on Filter `Write`
+    #[serde(default)]
+    on_write: Strategy,
 
     #[serde(with = "Base64Standard")]
     bytes: Vec<u8>,
-}
-
-impl Default for Strategy {
-    fn default() -> Self {
-        Strategy::Append
-    }
 }
 
 impl TryFrom<ProtoConfig> for Config {
     type Error = ConvertProtoConfigError;
 
     fn try_from(p: ProtoConfig) -> Result<Self, Self::Error> {
-        let strategy = p
-            .strategy
+        let on_read = p
+            .on_read
             .map(|strategy| {
                 map_proto_enum!(
                     value = strategy.value,
-                    field = "strategy",
+                    field = "on_read",
                     proto_enum_type = ProtoStrategy,
                     target_enum_type = Strategy,
-                    variants = [Append, Prepend]
+                    variants = [DoNothing, Append, Prepend]
+                )
+            })
+            .transpose()?
+            .unwrap_or_else(Strategy::default);
+
+        let on_write = p
+            .on_write
+            .map(|strategy| {
+                map_proto_enum!(
+                    value = strategy.value,
+                    field = "on_write",
+                    proto_enum_type = ProtoStrategy,
+                    target_enum_type = Strategy,
+                    variants = [DoNothing, Append, Prepend]
                 )
             })
             .transpose()?
             .unwrap_or_else(Strategy::default);
 
         Ok(Self {
-            strategy,
+            on_read,
+            on_write,
             bytes: p.bytes,
         })
     }
@@ -96,7 +117,8 @@ impl TryFrom<ProtoConfig> for Config {
 /// The `ConcatenateBytes` filter's job is to add a byte packet to either the beginning or end of each UDP packet that passes
 /// through. This is commonly used to provide an auth token to each packet, so they can be routed appropriately.
 struct ConcatenateBytes {
-    strategy: Strategy,
+    on_read: Strategy,
+    on_write: Strategy,
     bytes: Vec<u8>,
 }
 
@@ -124,7 +146,8 @@ impl FilterFactory for ConcatBytesFactory {
 impl ConcatenateBytes {
     pub fn new(config: Config) -> Self {
         ConcatenateBytes {
-            strategy: config.strategy,
+            on_read: config.on_read,
+            on_write: config.on_write,
             bytes: config.bytes,
         }
     }
@@ -132,13 +155,28 @@ impl ConcatenateBytes {
 
 impl Filter for ConcatenateBytes {
     fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
-        match self.strategy {
+        match self.on_read {
             Strategy::Append => {
                 ctx.contents.extend(self.bytes.iter());
             }
             Strategy::Prepend => {
                 ctx.contents.splice(..0, self.bytes.iter().cloned());
             }
+            Strategy::DoNothing => {}
+        }
+
+        Some(ctx.into())
+    }
+
+    fn write(&self, mut ctx: WriteContext) -> Option<WriteResponse> {
+        match self.on_write {
+            Strategy::Append => {
+                ctx.contents.extend(self.bytes.iter());
+            }
+            Strategy::Prepend => {
+                ctx.contents.splice(..0, self.bytes.iter().cloned());
+            }
+            Strategy::DoNothing => {}
         }
 
         Some(ctx.into())
@@ -149,17 +187,18 @@ impl Filter for ConcatenateBytes {
 mod tests {
     use std::convert::TryFrom;
 
-    use crate::config::Endpoints;
-    use crate::test_utils::assert_filter_read_no_change;
     use serde_yaml::{Mapping, Value};
+
+    use crate::cluster::Endpoint;
+    use crate::config::Endpoints;
+    use crate::extensions::{CreateFilterArgs, Filter, FilterFactory, ReadContext, WriteContext};
+    use crate::test_utils::{assert_filter_read_no_change, assert_write_no_change};
 
     use super::quilkin::extensions::filters::concatenate_bytes::v1alpha1::{
         concatenate_bytes::{Strategy as ProtoStrategy, StrategyValue},
         ConcatenateBytes as ProtoConfig,
     };
     use super::{ConcatBytesFactory, ConcatenateBytes, Config, Strategy};
-    use crate::cluster::Endpoint;
-    use crate::extensions::{CreateFilterArgs, Filter, FilterFactory, ReadContext};
 
     #[test]
     fn convert_proto_config() {
@@ -167,20 +206,25 @@ mod tests {
             (
                 "should succeed when all valid values are provided",
                 ProtoConfig {
-                    strategy: Some(StrategyValue {
+                    on_write: Some(StrategyValue {
                         value: ProtoStrategy::Append as i32,
+                    }),
+                    on_read: Some(StrategyValue {
+                        value: ProtoStrategy::DoNothing as i32,
                     }),
                     bytes: "abc".into(),
                 },
                 Some(Config {
-                    strategy: Strategy::Append,
+                    on_write: Strategy::Append,
+                    on_read: Strategy::DoNothing,
                     bytes: "abc".into(),
                 }),
             ),
             (
                 "should fail when invalid strategy is provided",
                 ProtoConfig {
-                    strategy: Some(StrategyValue { value: 42 }),
+                    on_read: Some(StrategyValue { value: 42 }),
+                    on_write: None,
                     bytes: "abc".into(),
                 },
                 None,
@@ -188,11 +232,13 @@ mod tests {
             (
                 "should use correct default values",
                 ProtoConfig {
-                    strategy: None,
+                    on_write: None,
+                    on_read: None,
                     bytes: "abc".into(),
                 },
                 Some(Config {
-                    strategy: Strategy::default(),
+                    on_write: Strategy::default(),
+                    on_read: Strategy::default(),
                     bytes: "abc".into(),
                 }),
             ),
@@ -225,22 +271,21 @@ mod tests {
         let filter = factory
             .create_filter(CreateFilterArgs::fixed(Some(&Value::Mapping(map.clone()))))
             .unwrap();
-        assert_with_filter(filter.as_ref(), "abchello");
+        assert_read_with_filter(filter.as_ref(), "abc");
+        assert_write_with_filter(filter.as_ref(), "abc");
 
-        // specific append
         map.insert(
-            Value::String("strategy".into()),
+            Value::String("on_read".into()),
             Value::String("APPEND".into()),
         );
 
         let filter = factory
             .create_filter(CreateFilterArgs::fixed(Some(&Value::Mapping(map.clone()))))
             .unwrap();
-        assert_with_filter(filter.as_ref(), "abchello");
+        assert_read_with_filter(filter.as_ref(), "abchello");
 
-        // specific prepend
         map.insert(
-            Value::String("strategy".into()),
+            Value::String("on_read".into()),
             Value::String("PREPEND".into()),
         );
 
@@ -248,7 +293,31 @@ mod tests {
             .create_filter(CreateFilterArgs::fixed(Some(&Value::Mapping(map))))
             .unwrap();
 
-        assert_with_filter(filter.as_ref(), "helloabc");
+        assert_read_with_filter(filter.as_ref(), "helloabc");
+
+        let mut map = Mapping::new();
+        map.insert(
+            Value::String("bytes".into()),
+            Value::String(base64::encode(b"hello")),
+        );
+        map.insert(
+            Value::String("on_write".into()),
+            Value::String("APPEND".into()),
+        );
+        let filter = factory
+            .create_filter(CreateFilterArgs::fixed(Some(&Value::Mapping(map.clone()))))
+            .unwrap();
+
+        assert_write_with_filter(filter.as_ref(), "abchello");
+
+        map.insert(
+            Value::String("on_write".into()),
+            Value::String("PREPEND".into()),
+        );
+        let filter = factory
+            .create_filter(CreateFilterArgs::fixed(Some(&Value::Mapping(map))))
+            .unwrap();
+        assert_write_with_filter(filter.as_ref(), "helloabc");
     }
 
     #[test]
@@ -271,41 +340,76 @@ mod tests {
     }
 
     #[test]
-    fn write_append() {
-        let strategy = Strategy::Append;
+    fn write_create_append() {
+        let on_read = Strategy::Append;
         let expected = "abchello";
-        assert_create_filter(strategy, expected);
+        assert_create_read_filter(on_read, expected);
+    }
+
+    #[test]
+    fn write_create_prepend() {
+        let on_read = Strategy::Prepend;
+        let expected = "helloabc";
+        assert_create_read_filter(on_read, expected);
+    }
+
+    #[test]
+    fn write_append() {
+        let config = Config {
+            on_read: Default::default(),
+            on_write: Strategy::Append,
+            bytes: b"hello".to_vec(),
+        };
+        let filter = ConcatenateBytes::new(config);
+        assert_write_with_filter(&filter, "abchello");
     }
 
     #[test]
     fn write_prepend() {
-        let strategy = Strategy::Prepend;
-        let expected = "helloabc";
-        assert_create_filter(strategy, expected);
+        let config = Config {
+            on_read: Default::default(),
+            on_write: Strategy::Prepend,
+            bytes: b"hello".to_vec(),
+        };
+        let filter = ConcatenateBytes::new(config);
+        assert_write_with_filter(&filter, "helloabc");
     }
 
     #[test]
-    fn read() {
+    fn read_noop() {
         let config = Config {
-            strategy: Default::default(),
+            on_read: Default::default(),
+            on_write: Default::default(),
             bytes: vec![],
         };
         let filter = ConcatenateBytes::new(config);
         assert_filter_read_no_change(&filter);
     }
 
-    fn assert_create_filter(strategy: Strategy, expected: &str) {
+    #[test]
+    fn write_noop() {
+        let config = Config {
+            on_read: Default::default(),
+            on_write: Default::default(),
+            bytes: vec![],
+        };
+        let filter = ConcatenateBytes::new(config);
+        assert_write_no_change(&filter);
+    }
+
+    fn assert_create_read_filter(on_read: Strategy, expected: &str) {
         let contents = b"hello".to_vec();
         let config = Config {
-            strategy,
+            on_read,
+            on_write: Default::default(),
             bytes: contents,
         };
         let filter = ConcatenateBytes::new(config);
 
-        assert_with_filter(&filter, expected);
+        assert_read_with_filter(&filter, expected);
     }
 
-    fn assert_with_filter<F>(filter: &F, expected: &str)
+    fn assert_read_with_filter<F>(filter: &F, expected: &str)
     where
         F: Filter + ?Sized,
     {
@@ -322,6 +426,22 @@ mod tests {
             endpoints,
             response.endpoints.iter().cloned().collect::<Vec<_>>()
         );
+        assert_eq!(expected.to_string().into_bytes(), response.contents);
+    }
+
+    fn assert_write_with_filter<F>(filter: &F, expected: &str)
+    where
+        F: Filter + ?Sized,
+    {
+        let response = filter
+            .write(WriteContext::new(
+                &Endpoint::from_address("127.0.0.1:81".parse().unwrap()),
+                "127.0.0.1:80".parse().unwrap(),
+                "127.0.0.1:82".parse().unwrap(),
+                b"abc".to_vec(),
+            ))
+            .unwrap();
+
         assert_eq!(expected.to_string().into_bytes(), response.contents);
     }
 }

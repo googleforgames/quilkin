@@ -4,15 +4,17 @@ package quilkin.extensions.filters.concatenate_bytes.v1alpha1;
 
 message ConcatenateBytes {
   enum Strategy {
-    Append = 0;
-    Prepend = 1;
+    DoNothing = 0;
+    Append = 1;
+    Prepend = 2;
   }
 
   message StrategyValue {
     Strategy value = 1;
   }
 
-  StrategyValue strategy = 1;
-  bytes bytes = 2;
+  StrategyValue on_write = 1;
+  StrategyValue on_read = 2;
+  bytes bytes = 3;
 }
 

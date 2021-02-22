@@ -29,7 +29,7 @@ mod tests {
     async fn concatenate_bytes() {
         let mut t = TestHelper::default();
         let yaml = "
-strategy: APPEND
+on_read: APPEND
 bytes: YWJj #abc
 ";
         let echo = t.run_echo_server().await;
