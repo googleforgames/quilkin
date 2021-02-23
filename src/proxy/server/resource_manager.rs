@@ -46,15 +46,28 @@ pub(super) struct DynamicResourceManagers {
 
 impl StaticResourceManagers {
     pub(super) fn new(
-        base_logger: Logger,
+        metrics_registry: &Registry,
         endpoints: Vec<Endpoint>,
         filter_chain: Arc<FilterChain>,
-    ) -> StaticResourceManagers {
-        Self {
-            cluster_manager: ClusterManager::fixed(endpoints),
-            filter_manager: FilterManager::fixed(base_logger, filter_chain),
-        }
+    ) -> Result<StaticResourceManagers, InitializeError> {
+        Ok(Self {
+            cluster_manager: ClusterManager::fixed(metrics_registry, endpoints)
+                .map_err(|err| InitializeError::Message(format!("{:?}", err)))?,
+            filter_manager: FilterManager::fixed(filter_chain),
+        })
     }
+}
+
+/// Contains arguments to the `spawn_ads_client` function.
+struct SpawnAdsClient {
+    log: Logger,
+    metrics_registry: Registry,
+    node_id: String,
+    management_servers: Vec<ManagementServer>,
+    cluster_updates_tx: mpsc::Sender<ClusterUpdate>,
+    listener_manager_args: ListenerManagerArgs,
+    execution_result_tx: oneshot::Sender<ExecutionResult>,
+    shutdown_rx: watch::Receiver<()>,
 }
 
 impl DynamicResourceManagers {
@@ -72,19 +85,23 @@ impl DynamicResourceManagers {
         let (filter_chain_updates_tx, mut filter_chain_updates_rx) =
             Self::filter_chain_updates_channel();
 
-        let listener_manager_args =
-            ListenerManagerArgs::new(metrics_registry, filter_registry, filter_chain_updates_tx);
+        let listener_manager_args = ListenerManagerArgs::new(
+            metrics_registry.clone(),
+            filter_registry,
+            filter_chain_updates_tx,
+        );
 
         let (execution_result_tx, execution_result_rx) = oneshot::channel::<ExecutionResult>();
-        Self::spawn_ads_client(
-            log.clone(),
-            xds_node_id,
+        Self::spawn_ads_client(SpawnAdsClient {
+            log: log.clone(),
+            metrics_registry: metrics_registry.clone(),
+            node_id: xds_node_id,
             management_servers,
             cluster_updates_tx,
             listener_manager_args,
             execution_result_tx,
-            shutdown_rx.clone(),
-        );
+            shutdown_rx: shutdown_rx.clone(),
+        })?;
 
         // Initial cluster warming - wait to receive the initial LDS and CDS resources
         // from the XDS server before we start receiving any traffic.
@@ -108,10 +125,12 @@ impl DynamicResourceManagers {
 
         let cluster_manager = ClusterManager::dynamic(
             base_logger.new(o!("source" => "ClusterManager")),
+            &metrics_registry,
             cluster_update,
             cluster_updates_rx,
             shutdown_rx.clone(),
-        );
+        )
+        .map_err(|err| InitializeError::Message(format!("{:?}", err)))?;
 
         let filter_manager = FilterManager::dynamic(
             base_logger.new(o!("source" => "FilterManager")),
@@ -130,19 +149,24 @@ impl DynamicResourceManagers {
     // Spawns a task that runs an ADS client.
     // Cluster and Filter updates from the client
     // as well as execution result after termination are sent on the passed-in channels.
-    fn spawn_ads_client(
-        log: Logger,
-        node_id: String,
-        management_servers: Vec<ManagementServer>,
-        cluster_updates_tx: mpsc::Sender<ClusterUpdate>,
-        listener_manager_args: ListenerManagerArgs,
-        execution_result_tx: oneshot::Sender<ExecutionResult>,
-        shutdown_rx: watch::Receiver<()>,
-    ) {
+    fn spawn_ads_client(args: SpawnAdsClient) -> Result<(), InitializeError> {
+        let SpawnAdsClient {
+            log,
+            metrics_registry,
+            node_id,
+            management_servers,
+            cluster_updates_tx,
+            listener_manager_args,
+            execution_result_tx,
+            shutdown_rx,
+        } = args;
+
+        let client = AdsClient::new(log.clone(), &metrics_registry).map_err(|err| {
+            InitializeError::Message(format!("failed to initialize xDS client: {:?}", err))
+        })?;
         tokio::spawn(async move {
-            let result = AdsClient
+            let result = client
                 .run(
-                    log.clone(),
                     node_id,
                     management_servers,
                     cluster_updates_tx,
@@ -155,6 +179,8 @@ impl DynamicResourceManagers {
                 .map_err(|_err| warn!(log, "failed to send ADS client execution result on channel"))
                 .ok();
         });
+
+        Ok(())
     }
 
     // Waits until it receives a cluster update from the given channel.
@@ -215,6 +241,7 @@ mod tests {
     use std::sync::Arc;
     use std::time::Duration;
 
+    use crate::proxy::server::resource_manager::SpawnAdsClient;
     use prometheus::Registry;
     use tokio::sync::mpsc;
     use tokio::sync::oneshot;
@@ -321,21 +348,23 @@ mod tests {
         let (execution_result_tx, execution_result_rx) = oneshot::channel();
         let (_shutdown_tx, shutdown_rx) = watch::channel(());
 
-        DynamicResourceManagers::spawn_ads_client(
-            logger(),
-            "id".into(),
-            vec![ManagementServer {
+        DynamicResourceManagers::spawn_ads_client(SpawnAdsClient {
+            log: logger(),
+            metrics_registry: Registry::default(),
+            node_id: "id".into(),
+            management_servers: vec![ManagementServer {
                 address: "invalid-address".into(),
             }],
             cluster_updates_tx,
-            ListenerManagerArgs::new(
+            listener_manager_args: ListenerManagerArgs::new(
                 Registry::default(),
                 Arc::new(FilterRegistry::default()),
                 filter_chain_updates_tx,
             ),
             execution_result_tx,
             shutdown_rx,
-        );
+        })
+        .unwrap();
 
         let err = time::timeout(Duration::from_secs(5), execution_result_rx)
             .await

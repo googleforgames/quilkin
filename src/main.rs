@@ -15,6 +15,7 @@
  */
 
 use std::fs::File;
+use std::process;
 use std::sync::Arc;
 
 use clap::App;
@@ -67,6 +68,13 @@ async fn main() {
         shutdown_tx.send(()).ok();
     });
 
-    server.run(shutdown_rx).await.unwrap();
-    info!(log, "Shutting down");
+    match server.run(shutdown_rx).await {
+        Ok(()) => {
+            info!(log, "Shutting down");
+        }
+        Err(err) => {
+            info!(log, "Shutting down with error: {}", err);
+            process::exit(1);
+        }
+    }
 }
