@@ -29,7 +29,7 @@ pub(super) struct Metrics {
 
 impl Metrics {
     pub(super) fn new(registry: &Registry) -> MetricsResult<Self> {
-        let operation_labels = vec!["operation"];
+        let operation_labels = vec!["action"];
         let dropped_metric = IntCounterVec::new(
             filter_opts(
                 "packets_dropped_total",
