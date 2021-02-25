@@ -68,6 +68,7 @@ Quilkin includes several filters out of the box.
 | [ConcatenateBytes](./concatenate_bytes.md) | Add authentication tokens to packets. |
 | [CaptureBytes](capture_bytes.md) | Capture specific bytes from a packet and store them in filter dynamic metadata. |
 | [TokenRouter](token_router.md) | Send packets to endpoints based on metadata. |
+| [Compress](./compress.md) | Compress and decompress packets data. |
 
 ### FilterConfig <a name="filter-config"></a>
 Represents configuration for a filter instance.
