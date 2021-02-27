@@ -15,5 +15,6 @@
 #
 
 .*
-!.dockerignore
-target
+target/*/deps
+target/*/incremental
+target/*/build

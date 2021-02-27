@@ -36,6 +36,18 @@ steps:
     entrypoint: cross
     args: ['--version']
   - name: builder
+    id: cargo-about
+    entrypoint: bash
+    args:
+      - '-c'
+      - 'cargo about generate license.html.hbs > license.html'
+  - name: builder
+    id: dependencies-src.zip
+    entrypoint: bash
+    args:
+      - '-c'
+      - './build/release/archive_dependencies.sh'
+  - name: builder
     id: x86_64-unknown-linux-gnu-debug
     entrypoint: cross
     args: ['build', '--target', 'x86_64-unknown-linux-gnu']
@@ -43,6 +55,18 @@ steps:
     id: x86_64-unknown-linux-gnu-release
     entrypoint: cross
     args: ['build', '--target', 'x86_64-unknown-linux-gnu', '--release']
+  - name: builder
+    id: docker-linux-debug
+    entrypoint: bash
+    args:
+      - '-c'
+      - 'docker build -t $_LOCATION-docker.pkg.dev/$PROJECT_ID/$_REPOSITORY/quilkin:$(cat ./version)-debug --build-arg PROFILE=debug -f ./build/release/Dockerfile.release .'
+  - name: builder
+    id: docker-linux-release
+    entrypoint: bash
+    args:
+      - '-c'
+      - 'docker build -t $_LOCATION-docker.pkg.dev/$PROJECT_ID/$_REPOSITORY/quilkin:$(cat ./version) --build-arg PROFILE=release -f ./build/release/Dockerfile.release .'
   - name: builder
     id: x86_64-pc-windows-gnu-debug
     entrypoint: cross
@@ -58,15 +82,20 @@ steps:
       - 'zip quilkin-$(cat ./version).zip target/x86_64-unknown-linux-gnu/debug/quilkin ./target/x86_64-unknown-linux-gnu/release/quilkin ./target/x86_64-pc-windows-gnu/debug/quilkin.exe ./target/x86_64-pc-windows-gnu/release/quilkin.exe'
 artifacts:
   objects:
-    location: 'gs://$PROJECT_ID-quilkin-releases/'
+    location: '$_STORAGE'
     paths:
       - '*.zip'
+      - 'license.html'
+  images:
+    - $_LOCATION-docker.pkg.dev/$PROJECT_ID/$_REPOSITORY/quilkin
 options:
   env:
     - "CARGO_HOME=/workspace/.cargo"
     - "RUST_BACKTRACE=1"
   machineType: N1_HIGHCPU_8
+  dynamic_substitutions: true
 substitutions:
-  _STORAGE: gs://$PROJECT_ID-quilkin-releases
-
+  _STORAGE: gs://${PROJECT_ID}-quilkin-releases
+  _LOCATION: us
+  _REPOSITORY: release
 timeout: 1800s
