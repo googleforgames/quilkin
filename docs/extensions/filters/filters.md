@@ -25,7 +25,8 @@ There are a few things we note here:
 
 * Although we have in this example, a filter called `drop`, every filter in the filter chain has the same ability to *drop* or *update* a packet - if any filter drops a packet then no more work needs to be done regarding that packet so the next filter in the pipeline never has any knowledge that the dropped packet ever existed.
 
-* The filter chain is consulted for every received packet, in the same order regardless of the direction of the packet - a packet received downstream will be fed into `append` and the result from `drop` is forwarded upstream - a packet received upstream will be fed into `append` and the result from `drop` is forwarded downstream.
+* The filter chain is consulted for every received packet, and its filters are traversed in reverse order for packets travelling in the opposite direction.
+  A packet received downstream will be fed into `append` and the result from `drop` is forwarded upstream - a packet received upstream will be fed into `drop` and the result from `append` is forwarded downstream.
 
 * Exactly one filter chain is specified and used to process all packets that flow through Quilkin.
 
