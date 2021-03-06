@@ -30,16 +30,16 @@ steps:
   # clippy tends to rely on cached results from other cargo sub-commands so
   # that it skips checking some files that were built previously. As a result
   # we run it before other cargo sub-commands to ensure that it checks all files.
-  - name: gcr.io/$PROJECT_ID/ci
+  - name: us-docker.pkg.dev/$PROJECT_ID/ci/cargo
     args: ["clippy", "--tests"]
     id: clippy
-  - name: gcr.io/$PROJECT_ID/ci
+  - name: us-docker.pkg.dev/$PROJECT_ID/ci/cargo
     args: ["fmt", "--", "--check"]
     id: fmt-check
-  - name: gcr.io/$PROJECT_ID/ci
+  - name: us-docker.pkg.dev/$PROJECT_ID/ci/cargo
     args: ["test", "--tests"]
     id: test
-  - name: gcr.io/$PROJECT_ID/ci
+  - name: us-docker.pkg.dev/$PROJECT_ID/ci/cargo
     args: ["+nightly", "test", "--doc"]
     id: external-doc-test
 options:
