@@ -3,8 +3,8 @@
 The `TokenRouter` filter's job is to provide a mechanism to declare which Endpoints a packet should be sent to.   
 
 This Filter provides this functionality by comparing a byte array token found in the
-[Filter dynamic metadata]`(TODO: add link to dynamic metadata docs)` from a previous Filter, and comparing it to
-Endpoint's connection_id values, and sending packets to those Endpoints only if there is a match.
+[Filter Dynamic Metadata][filter-dynamic-metadata] from a previous Filter, and comparing it to
+[Endpoint's tokens][endpoint-tokens], and sending packets to those Endpoints only if there is a match.
 
 #### Filter name
 ```text
@@ -101,3 +101,6 @@ static:
 
 On the game client side the [ConcatenateBytes](./concatenate_bytes.md) filter could also be used to add authentication
 tokens to outgoing packets.
+
+[filter-dynamic-metadata]: ./filter.md#filter-dynamic-metadata
+[endpoint-tokens]: ../../proxy#upstream-endpoint
