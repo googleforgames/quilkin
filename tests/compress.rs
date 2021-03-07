@@ -48,7 +48,6 @@ on_write: COMPRESS
                 vec![EndPoint::new(echo)],
             )
             .build();
-        assert_eq!(Ok(()), server_config.validate());
         // Run server proxy.
         t.run_server(server_config);
 
@@ -70,7 +69,6 @@ on_write: DECOMPRESS
                 )],
             )
             .build();
-        assert_eq!(Ok(()), client_config.validate());
         // Run client proxy.
         t.run_server(client_config);
 

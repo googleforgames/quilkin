@@ -33,11 +33,15 @@ There are a few things we note here:
 ### Configuration Examples ###
 
 ```rust
+# // Wrap this example within an async main function since the
+# // local_rate_limit filter spawns a task on initialization
+# #[tokio::main]
+# async fn main() {
 # let yaml = "
 version: v1alpha1
 static:
   filters:
-    - name: quilkin.extensions.filters.debug_filter.v1alpha1.Debug
+    - name: quilkin.extensions.filters.debug.v1alpha1.Debug
       config:
         id: debug-1
     - name: quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit
@@ -49,8 +53,9 @@ static:
       address: 127.0.0.1:7001
 # ";
 # let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-# assert_eq!(config.validate().unwrap(), ());
 # assert_eq!(config.source.get_static_filters().unwrap().len(), 2);
+# quilkin::proxy::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
+}
 ```
 
 We specify our filter chain in the `.filters` section of the proxy's configuration which has takes a sequence of [FilterConfig](#filter-config) objects. Each object describes all information necessary to create a single filter.
