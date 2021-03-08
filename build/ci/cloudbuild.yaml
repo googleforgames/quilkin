@@ -14,6 +14,6 @@
 
 steps:
   - name: gcr.io/cloud-builders/docker
-    args: ['build', '-t', 'gcr.io/$PROJECT_ID/ci', '.']
-images: ['gcr.io/$PROJECT_ID/ci']
+    args: ['build', '-t', 'us-docker.pkg.dev/$PROJECT_ID/ci/cargo', '.']
+images: ['us-docker.pkg.dev/$PROJECT_ID/ci/cargo']
 tags: ['ci']
