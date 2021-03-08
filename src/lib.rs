@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-// Fail the build if clippy finds any warnings.
-#![deny(warnings)]
 // Running external documentation tests depends on the
 // `external_doc` unstable feature only available on a
 // nightly compiler. So we enable the feature only when needed.
