@@ -9,7 +9,7 @@ It is represented by an IP address and port. An upstream endpoint can optionally
 
 ###### Endpoint Metadata
 
-Arbitrary key value pairs that is associated with the endpoint.
+Arbitrary key value pairs that are associated with the endpoint.
 These are visible to Filters when processing packets and can be used to provide more context about endpoints (e.g whether or not to route a packet to an endpoint).
 Keys must be of type string otherwise the configuration is rejected.
 
