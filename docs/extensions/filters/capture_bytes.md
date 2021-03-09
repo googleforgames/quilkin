@@ -1,7 +1,7 @@
 # CaptureBytes
 
 The `CaptureBytes` filter's job is to find a series of bytes within a packet, and capture it into
-[Filter dynamic metadata]`(TODO: add link to dynamic metadata docs)`, so that it can be utilised by filters further
+[Filter Dynamic Metadata][filter-dynamic-metadata], so that it can be utilised by filters further
 down the chain.
 
 This is often used as a way of retrieving authentication tokens from a packet, and used in combination with
@@ -71,3 +71,6 @@ properties:
 * `quilkin_filter_CaptureBytes_packets_dropped`  
   A counter of the total number of packets that have been dropped due to their length being less than the configured
   `size`.
+
+
+[filter-dynamic-metadata]: ./filter.md#filter-dynamic-metadata
