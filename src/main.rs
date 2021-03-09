@@ -29,13 +29,24 @@ use tokio::sync::watch;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
+#[cfg(debug_assertions)]
+fn version() -> String {
+    format!("{}+debug", VERSION)
+}
+
+#[cfg(not(debug_assertions))]
+fn version() -> String {
+    VERSION.into()
+}
+
 #[tokio::main]
 async fn main() {
+    let version = version();
     let base_logger = logger();
     let log = base_logger.new(o!("source" => "main"));
 
     let matches = App::new("Quilkin Proxy")
-        .version("0.1.0")
+        .version(version.as_str())
         .about("Quilkin is a non-transparent UDP proxy specifically designed for use with large scale multiplayer dedicated game servers")
         .arg(clap::Arg::with_name("filename")
             .short("f")
@@ -47,7 +58,7 @@ async fn main() {
         .get_matches();
 
     let filename = matches.value_of("filename").unwrap();
-    info!(log, "Starting Quilkin"; "version" => VERSION);
+    info!(log, "Starting Quilkin"; "version" => version);
 
     let config = Arc::new(Config::from_reader(File::open(filename).unwrap()).unwrap());
     let server = Builder::from(config)
