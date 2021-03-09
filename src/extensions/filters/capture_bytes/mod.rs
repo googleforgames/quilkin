@@ -326,7 +326,10 @@ mod tests {
         map.insert(Value::String("remove".into()), Value::Bool(true));
 
         let filter = factory
-            .create_filter(CreateFilterArgs::fixed(Some(&Value::Mapping(map))))
+            .create_filter(CreateFilterArgs::fixed(
+                Registry::default(),
+                Some(&Value::Mapping(map)),
+            ))
             .unwrap();
         assert_end_strategy(filter.as_ref(), TOKEN_KEY, true);
     }
@@ -337,7 +340,10 @@ mod tests {
         let mut map = Mapping::new();
         map.insert(Value::String("size".into()), Value::Number(3.into()));
         let filter = factory
-            .create_filter(CreateFilterArgs::fixed(Some(&Value::Mapping(map))))
+            .create_filter(CreateFilterArgs::fixed(
+                Registry::default(),
+                Some(&Value::Mapping(map)),
+            ))
             .unwrap();
         assert_end_strategy(filter.as_ref(), CAPTURED_BYTES, false);
     }
@@ -348,7 +354,10 @@ mod tests {
         let mut map = Mapping::new();
         map.insert(Value::String("size".into()), Value::String("WRONG".into()));
 
-        let result = factory.create_filter(CreateFilterArgs::fixed(Some(&Value::Mapping(map))));
+        let result = factory.create_filter(CreateFilterArgs::fixed(
+            Registry::default(),
+            Some(&Value::Mapping(map)),
+        ));
         assert!(result.is_err(), "Should be an error");
     }
 

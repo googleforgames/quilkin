@@ -214,7 +214,10 @@ mod tests {
         );
 
         let filter = factory
-            .create_filter(CreateFilterArgs::fixed(Some(&Value::Mapping(map))))
+            .create_filter(CreateFilterArgs::fixed(
+                Registry::default(),
+                Some(&Value::Mapping(map)),
+            ))
             .unwrap();
         let mut ctx = new_ctx();
         ctx.metadata
@@ -228,7 +231,10 @@ mod tests {
         let map = Mapping::new();
 
         let filter = factory
-            .create_filter(CreateFilterArgs::fixed(Some(&Value::Mapping(map))))
+            .create_filter(CreateFilterArgs::fixed(
+                Registry::default(),
+                Some(&Value::Mapping(map)),
+            ))
             .unwrap();
         let mut ctx = new_ctx();
         ctx.metadata
@@ -241,7 +247,7 @@ mod tests {
         let factory = TokenRouterFactory::new(&logger());
 
         let filter = factory
-            .create_filter(CreateFilterArgs::fixed(None))
+            .create_filter(CreateFilterArgs::fixed(Registry::default(), None))
             .unwrap();
         let mut ctx = new_ctx();
         ctx.metadata
