@@ -283,10 +283,13 @@ pub struct CreateFilterArgs<'a> {
 }
 
 impl CreateFilterArgs<'_> {
-    pub fn fixed(config: Option<&serde_yaml::Value>) -> CreateFilterArgs {
+    pub fn fixed(
+        metrics_registry: Registry,
+        config: Option<&serde_yaml::Value>,
+    ) -> CreateFilterArgs {
         CreateFilterArgs {
             config: config.map(|config| ConfigType::Static(config)),
-            metrics_registry: Registry::default(),
+            metrics_registry,
         }
     }
 
@@ -386,17 +389,26 @@ mod tests {
         let mut reg = FilterRegistry::default();
         reg.insert(TestFilterFactory {});
 
-        match reg.get(&String::from("not.found"), CreateFilterArgs::fixed(None)) {
+        match reg.get(
+            &String::from("not.found"),
+            CreateFilterArgs::fixed(Registry::default(), None),
+        ) {
             Ok(_) => unreachable!("should not be filter"),
             Err(err) => assert_eq!(Error::NotFound("not.found".to_string()), err),
         };
 
         assert!(reg
-            .get(&String::from("TestFilter"), CreateFilterArgs::fixed(None))
+            .get(
+                &String::from("TestFilter"),
+                CreateFilterArgs::fixed(Registry::default(), None)
+            )
             .is_ok());
 
         let filter = reg
-            .get(&String::from("TestFilter"), CreateFilterArgs::fixed(None))
+            .get(
+                &String::from("TestFilter"),
+                CreateFilterArgs::fixed(Registry::default(), None),
+            )
             .unwrap();
 
         let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080);

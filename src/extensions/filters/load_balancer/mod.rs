@@ -169,13 +169,15 @@ mod tests {
     use crate::extensions::filter_registry::ReadContext;
     use crate::extensions::filters::load_balancer::LoadBalancerFilterFactory;
     use crate::extensions::{CreateFilterArgs, Filter, FilterFactory};
+    use prometheus::Registry;
 
     fn create_filter(config: &str) -> Box<dyn Filter> {
         let factory = LoadBalancerFilterFactory;
         factory
-            .create_filter(CreateFilterArgs::fixed(Some(
-                &serde_yaml::from_str(config).unwrap(),
-            )))
+            .create_filter(CreateFilterArgs::fixed(
+                Registry::default(),
+                Some(&serde_yaml::from_str(config).unwrap()),
+            ))
             .unwrap()
     }
 
