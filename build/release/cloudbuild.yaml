@@ -1,0 +1,72 @@
+# Copyright 2021 Google LLC All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+steps:
+  - name: gcr.io/cloud-builders/gsutil
+    id: create-bucket
+    entrypoint: bash
+    args:
+      - '-c'
+      - 'gsutil mb $_STORAGE || true'
+  - name: gcr.io/cloud-builders/docker
+    id: build-builder
+    args: [ 'build', '-f', 'Dockerfile.builder', '-t', 'builder', '.' ] # make sure we always have the latest docker with rust, cargo and cross
+    dir: ./build/release
+  - name: builder
+    id: capture-version
+    entrypoint: bash
+    args: ['-c', "grep version -m 1 Cargo.toml | awk '{ print $3 }' | sed s/\\\"//g > version"]
+  - name: builder
+    id: echo-version
+    entrypoint: cat
+    args: ['./version']
+  - name: builder
+    id: cross-version
+    entrypoint: cross
+    args: ['--version']
+  - name: builder
+    id: x86_64-unknown-linux-gnu-debug
+    entrypoint: cross
+    args: ['build', '--target', 'x86_64-unknown-linux-gnu']
+  - name: builder
+    id: x86_64-unknown-linux-gnu-release
+    entrypoint: cross
+    args: ['build', '--target', 'x86_64-unknown-linux-gnu', '--release']
+  - name: builder
+    id: x86_64-pc-windows-gnu-debug
+    entrypoint: cross
+    args: ['build', '--target', 'x86_64-pc-windows-gnu']
+  - name: builder
+    id: x86_64-pc-windows-gnu-release
+    entrypoint: cross
+    args: ['build', '--target', 'x86_64-pc-windows-gnu', '--release']
+  - name: builder
+    entrypoint: bash
+    args:
+      - '-c'
+      - 'zip quilkin-$(cat ./version).zip target/x86_64-unknown-linux-gnu/debug/quilkin ./target/x86_64-unknown-linux-gnu/release/quilkin ./target/x86_64-pc-windows-gnu/debug/quilkin.exe ./target/x86_64-pc-windows-gnu/release/quilkin.exe'
+artifacts:
+  objects:
+    location: 'gs://$PROJECT_ID-quilkin-releases/'
+    paths:
+      - '*.zip'
+options:
+  env:
+    - "CARGO_HOME=/workspace/.cargo"
+    - "RUST_BACKTRACE=1"
+  machineType: N1_HIGHCPU_8
+substitutions:
+  _STORAGE: gs://$PROJECT_ID-quilkin-releases
+
+timeout: 1800s
