@@ -57,7 +57,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         c
     };
     tonic_build::configure()
-        .build_server(false)
+        .build_server(true)
         .compile_with_config(
             config,
             &proto_files
