@@ -15,8 +15,7 @@
  */
 
 use crate::cluster::cluster_manager::{ClusterManager, InitializeError, SharedClusterManager};
-use crate::cluster::Endpoint;
-use crate::config::ManagementServer;
+use crate::config::{Endpoints, ManagementServer};
 use crate::extensions::filter_manager::{FilterManager, ListenerManagerArgs, SharedFilterManager};
 use crate::extensions::{FilterChain, FilterRegistry};
 use crate::xds::ads_client::{AdsClient, ClusterUpdate, ExecutionResult};
@@ -47,7 +46,7 @@ pub(super) struct DynamicResourceManagers {
 impl StaticResourceManagers {
     pub(super) fn new(
         metrics_registry: &Registry,
-        endpoints: Vec<Endpoint>,
+        endpoints: Endpoints,
         filter_chain: Arc<FilterChain>,
     ) -> Result<StaticResourceManagers, InitializeError> {
         Ok(Self {

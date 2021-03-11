@@ -31,8 +31,7 @@ use metrics::Metrics as ProxyMetrics;
 
 use crate::cluster::cluster_manager::SharedClusterManager;
 use crate::cluster::Endpoint;
-use crate::config::{Config, Source};
-use crate::extensions::{Filter, FilterChain, FilterRegistry, ReadContext};
+use crate::extensions::{Filter, FilterRegistry, ReadContext};
 use crate::proxy::server::error::Error;
 use crate::proxy::sessions::{
     Packet, Session, SESSION_EXPIRY_POLL_INTERVAL, SESSION_TIMEOUT_SECONDS,
@@ -41,6 +40,7 @@ use crate::utils::debug;
 
 use super::metrics::{start_metrics_server, Metrics};
 use crate::extensions::filter_manager::SharedFilterManager;
+use crate::proxy::builder::{ValidatedConfig, ValidatedSource};
 use resource_manager::{DynamicResourceManagers, StaticResourceManagers};
 
 pub mod error;
@@ -55,8 +55,7 @@ type Result<T> = std::result::Result<T, Error>;
 pub struct Server {
     // We use pub(super) to limit instantiation only to the Builder.
     pub(super) log: Logger,
-    pub(super) config: Arc<Config>,
-    pub(super) filter_chain: Arc<FilterChain>,
+    pub(super) config: Arc<ValidatedConfig>,
     pub(super) metrics: Metrics,
     pub(super) proxy_metrics: ProxyMetrics,
     pub(super) filter_registry: Arc<FilterRegistry>,
@@ -114,7 +113,7 @@ impl Server {
             );
         }
 
-        let socket = Arc::new(Server::bind(&self.config).await?);
+        let socket = Arc::new(Server::bind(self.config.proxy.port).await?);
         // HashMap key is from,destination addresses as a tuple.
         let sessions: SessionMap = Arc::new(RwLock::new(HashMap::new()));
         let (send_packets, receive_packets) = mpsc::channel::<Packet>(1024);
@@ -153,26 +152,19 @@ impl Server {
         shutdown_rx: watch::Receiver<()>,
     ) -> Result<(SharedClusterManager, SharedFilterManager)> {
         match &self.config.source {
-            Source::Static {
-                filters: _,
-                endpoints: config_endpoints,
+            ValidatedSource::Static {
+                filter_chain,
+                endpoints,
             } => {
-                let mut endpoints = Vec::with_capacity(config_endpoints.len());
-                for ep in config_endpoints {
-                    // TODO: We should a validated config type so that we don't need to
-                    //  handle errors when using its values later on since we know it's validated.
-                    endpoints
-                        .push(Endpoint::from_config(ep).map_err(Error::InvalidEndpointConfig)?);
-                }
                 let manager = StaticResourceManagers::new(
                     &self.metrics.registry,
-                    endpoints,
-                    self.filter_chain.clone(),
+                    endpoints.clone(),
+                    filter_chain.clone(),
                 )
                 .map_err(|err| Error::Initialize(format!("{}", err)))?;
                 Ok((manager.cluster_manager, manager.filter_manager))
             }
-            Source::Dynamic { management_servers } => {
+            ValidatedSource::Dynamic { management_servers } => {
                 let manager = DynamicResourceManagers::new(
                     self.log.clone(),
                     self.config.proxy.id.clone(),
@@ -527,8 +519,8 @@ impl Server {
     }
 
     /// bind binds the local configured port
-    async fn bind(config: &Config) -> Result<UdpSocket> {
-        let addr = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), config.proxy.port);
+    async fn bind(port: u16) -> Result<UdpSocket> {
+        let addr = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), port);
         UdpSocket::bind(addr).await.map_err(Error::Bind)
     }
 
@@ -589,8 +581,8 @@ mod tests {
 
     use crate::cluster::cluster_manager::ClusterManager;
     use crate::config;
-    use crate::config::{Builder as ConfigBuilder, EndPoint};
-    use crate::extensions::FilterRegistry;
+    use crate::config::{Builder as ConfigBuilder, EndPoint, Endpoints};
+    use crate::extensions::{FilterChain, FilterRegistry};
     use crate::proxy::sessions::Packet;
     use crate::proxy::Builder;
     use crate::test_utils::{
@@ -699,8 +691,7 @@ mod tests {
 
     #[tokio::test]
     async fn bind() {
-        let config = config_with_dummy_endpoint().with_port(12345).build();
-        let socket = Server::bind(&config).await.unwrap();
+        let socket = Server::bind(12345).await.unwrap();
         let addr = socket.local_addr().unwrap();
 
         let expected = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12345);
@@ -750,7 +741,7 @@ mod tests {
 
             let cluster_manager = ClusterManager::fixed(
                 &Registry::default(),
-                vec![Endpoint::from_address(endpoint_address)],
+                Endpoints::new(vec![Endpoint::from_address(endpoint_address)]).unwrap(),
             )
             .unwrap();
             let filter_manager = FilterManager::fixed(chain.clone());
@@ -852,9 +843,10 @@ mod tests {
         server.run_recv_from(RunRecvFromArgs {
             cluster_manager: ClusterManager::fixed(
                 &Registry::default(),
-                vec![Endpoint::from_address(
+                Endpoints::new(vec![Endpoint::from_address(
                     endpoint.socket.local_addr().unwrap(),
-                )],
+                )])
+                .unwrap(),
             )
             .unwrap(),
             filter_manager: FilterManager::fixed(Arc::new(FilterChain::new(vec![]))),

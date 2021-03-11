@@ -40,7 +40,6 @@ mod tests {
             .with_port(server_port)
             .with_static(vec![], vec![EndPoint::new(server1), EndPoint::new(server2)])
             .build();
-        assert_eq!(Ok(()), server_config.validate());
 
         t.run_server(server_config);
 
@@ -56,7 +55,6 @@ mod tests {
                 ))],
             )
             .build();
-        assert_eq!(Ok(()), client_config.validate());
 
         t.run_server(client_config);
 
