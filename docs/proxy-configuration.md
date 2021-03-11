@@ -92,6 +92,23 @@ definitions:
     type: array
     description: |
       A list of upstream endpoints to forward packets to.
+    items:
+      type: object
+        description: |
+          An upstream endpoint
+        properties:
+          address:
+            type: string
+            description: |
+              Socket address of the endpoint. This must be of the ´IP:Port` form e.g `192.168.1.1:7001`
+            metadata:
+              type: object
+              description: |
+                Arbitrary key value pairs that is associated with the endpoint.
+                These are visible to Filters when processing packets and can be used to provide more context about endpoints (e.g whether or not to route a packet to an endpoint).
+                Keys must be of type string otherwise the configuration is rejected.
+      required:
+        - address
 ```
 
 [examples]: ../examples

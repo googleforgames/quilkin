@@ -16,7 +16,7 @@
 
 [package]
 name = "quilkin"
-version = "0.1.0"
+version = "0.1.0-dev"
 authors = ["Mark Mandel <markmandel@google.com>", "Ifeanyi Ubah <ifeanyi.ubah@embark-studios.com>"]
 edition = "2018"
 

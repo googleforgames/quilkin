@@ -132,6 +132,7 @@ mod tests {
     use crate::test_utils::{assert_filter_read_no_change, assert_write_no_change, logger};
 
     use super::*;
+    use prometheus::Registry;
 
     #[test]
     fn read() {
@@ -153,7 +154,10 @@ mod tests {
 
         map.insert(Value::from("id"), Value::from("name"));
         assert!(factory
-            .create_filter(CreateFilterArgs::fixed(Some(&Value::Mapping(map)),))
+            .create_filter(CreateFilterArgs::fixed(
+                Registry::default(),
+                Some(&Value::Mapping(map)),
+            ))
             .is_ok());
     }
 
@@ -165,7 +169,10 @@ mod tests {
 
         map.insert(Value::from("id"), Value::from("name"));
         assert!(factory
-            .create_filter(CreateFilterArgs::fixed(Some(&Value::Mapping(map)),))
+            .create_filter(CreateFilterArgs::fixed(
+                Registry::default(),
+                Some(&Value::Mapping(map)),
+            ))
             .is_ok());
     }
 
@@ -177,7 +184,10 @@ mod tests {
 
         map.insert(Value::from("id"), Value::Sequence(vec![]));
         assert!(factory
-            .create_filter(CreateFilterArgs::fixed(Some(&Value::Mapping(map))))
+            .create_filter(CreateFilterArgs::fixed(
+                Registry::default(),
+                Some(&Value::Mapping(map))
+            ))
             .is_err());
     }
 }

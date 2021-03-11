@@ -199,6 +199,7 @@ mod tests {
         ConcatenateBytes as ProtoConfig,
     };
     use super::{ConcatBytesFactory, ConcatenateBytes, Config, Strategy};
+    use prometheus::Registry;
 
     #[test]
     fn convert_proto_config() {
@@ -269,7 +270,10 @@ mod tests {
         );
 
         let filter = factory
-            .create_filter(CreateFilterArgs::fixed(Some(&Value::Mapping(map.clone()))))
+            .create_filter(CreateFilterArgs::fixed(
+                Registry::default(),
+                Some(&Value::Mapping(map.clone())),
+            ))
             .unwrap();
         assert_read_with_filter(filter.as_ref(), "abc");
         assert_write_with_filter(filter.as_ref(), "abc");
@@ -280,7 +284,10 @@ mod tests {
         );
 
         let filter = factory
-            .create_filter(CreateFilterArgs::fixed(Some(&Value::Mapping(map.clone()))))
+            .create_filter(CreateFilterArgs::fixed(
+                Registry::default(),
+                Some(&Value::Mapping(map.clone())),
+            ))
             .unwrap();
         assert_read_with_filter(filter.as_ref(), "abchello");
 
@@ -290,7 +297,10 @@ mod tests {
         );
 
         let filter = factory
-            .create_filter(CreateFilterArgs::fixed(Some(&Value::Mapping(map))))
+            .create_filter(CreateFilterArgs::fixed(
+                Registry::default(),
+                Some(&Value::Mapping(map)),
+            ))
             .unwrap();
 
         assert_read_with_filter(filter.as_ref(), "helloabc");
@@ -305,7 +315,10 @@ mod tests {
             Value::String("APPEND".into()),
         );
         let filter = factory
-            .create_filter(CreateFilterArgs::fixed(Some(&Value::Mapping(map.clone()))))
+            .create_filter(CreateFilterArgs::fixed(
+                Registry::default(),
+                Some(&Value::Mapping(map.clone())),
+            ))
             .unwrap();
 
         assert_write_with_filter(filter.as_ref(), "abchello");
@@ -315,7 +328,10 @@ mod tests {
             Value::String("PREPEND".into()),
         );
         let filter = factory
-            .create_filter(CreateFilterArgs::fixed(Some(&Value::Mapping(map))))
+            .create_filter(CreateFilterArgs::fixed(
+                Registry::default(),
+                Some(&Value::Mapping(map)),
+            ))
             .unwrap();
         assert_write_with_filter(filter.as_ref(), "helloabc");
     }
@@ -325,8 +341,10 @@ mod tests {
         let factory = ConcatBytesFactory::default();
         let mut map = Mapping::new();
 
-        let result =
-            factory.create_filter(CreateFilterArgs::fixed(Some(&Value::Mapping(map.clone()))));
+        let result = factory.create_filter(CreateFilterArgs::fixed(
+            Registry::default(),
+            Some(&Value::Mapping(map.clone())),
+        ));
         assert!(result.is_err());
 
         // broken strategy
@@ -335,7 +353,10 @@ mod tests {
             Value::String("WRONG".into()),
         );
 
-        let result = factory.create_filter(CreateFilterArgs::fixed(Some(&Value::Mapping(map))));
+        let result = factory.create_filter(CreateFilterArgs::fixed(
+            Registry::default(),
+            Some(&Value::Mapping(map)),
+        ));
         assert!(result.is_err());
     }
 

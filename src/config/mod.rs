@@ -321,13 +321,15 @@ static:
   endpoints:
     - address: 127.0.0.1:26000
       metadata:
-        tokens:
-          - MXg3aWp5Ng== #1x7ijy6
-          - OGdqM3YyaQ== #8gj3v2i
+        quilkin.dev:
+          tokens:
+            - MXg3aWp5Ng== #1x7ijy6
+            - OGdqM3YyaQ== #8gj3v2i
     - address: 127.0.0.1:26001
       metadata:
-        tokens:
-          - bmt1eTcweA== #nkuy70x";
+        quilkin.dev:
+          tokens:
+            - bmt1eTcweA== #nkuy70x";
         let config = parse_config(yaml);
         assert_static_endpoints(
             &config.source,
@@ -336,9 +338,14 @@ static:
                     "127.0.0.1:26000".parse().unwrap(),
                     Some(
                         serde_yaml::to_value(
-                            vec![("tokens", vec!["MXg3aWp5Ng==", "OGdqM3YyaQ=="])]
-                                .into_iter()
-                                .collect::<HashMap<_, _>>(),
+                            vec![(
+                                "quilkin.dev",
+                                vec![("tokens", vec!["MXg3aWp5Ng==", "OGdqM3YyaQ=="])]
+                                    .into_iter()
+                                    .collect::<HashMap<_, _>>(),
+                            )]
+                            .into_iter()
+                            .collect::<HashMap<_, _>>(),
                         )
                         .unwrap(),
                     ),
@@ -347,9 +354,14 @@ static:
                     "127.0.0.1:26001".parse().unwrap(),
                     Some(
                         serde_yaml::to_value(
-                            vec![("tokens", vec!["bmt1eTcweA=="])]
-                                .into_iter()
-                                .collect::<HashMap<_, _>>(),
+                            vec![(
+                                "quilkin.dev",
+                                vec![("tokens", vec!["bmt1eTcweA=="])]
+                                    .into_iter()
+                                    .collect::<HashMap<_, _>>(),
+                            )]
+                            .into_iter()
+                            .collect::<HashMap<_, _>>(),
                         )
                         .unwrap(),
                     ),

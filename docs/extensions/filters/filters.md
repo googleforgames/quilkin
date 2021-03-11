@@ -64,6 +64,27 @@ The above example creates a filter chain comprising a [Debug](debug.md) filter f
 
 > The sequence determines the filter chain order so its ordering matters - the chain starts with the filter corresponding the first filter config and ends with the filter corresponding the last filter config in the sequence.
 
+### Filter Dynamic Metadata
+
+A filter within the filter chain can share data within another filter further along in the filter chain by propagating the desired data alongside the packet being processed.
+This enables sharing dynamic information at runtime, e.g information about the current packet that might be useful to other filters that process that packet.
+
+At packet processing time each packet is associated with _filter dynamic metadata_ (a set of key-value pairs). Each key is a unique string while value is an arbitrary value.
+When a filter processes a packet, it can choose to consult the associated dynamic metadata for more information or itself add/update or remove key-values from the set.
+
+As an example, the built-in [CaptureBytes] filter is one such filter that populates a packet's filter metadata.
+[CaptureBytes] extracts information (a configurable byte sequence) from each packet and appends it to the packet's dynamic metadata for other filters to leverage.
+On the other hand, the built-in [TokenRouter] filter selects what endpoint to route a packet by consulting the packet's dynamic metadata for a routing token.
+Consequently, we can build a filter chain with a [CaptureBytes] filter preceeding a [TokenRouter] filter, both configured to write and read the same key in the dynamic metadata entry. The effect would be that packets are routed to upstream endpoints based on token information extracted from their contents.
+
+#### Well Known Dynamic Metadata
+
+The following metadata are currently used by Quilkin core and built-in filters.
+
+| Name | Type | Description |
+|------|------|-------------|
+| `quilkin.dev/captured_bytes` | `Vec<u8>` | The default key under which the [CaptureBytes] filter puts the byte slices it extracts from each packet. |
+
 ### Built-in filters <a name="built-in-filters"></a>
 Quilkin includes several filters out of the box.
 
@@ -96,3 +117,6 @@ properties:
 
 required: [ 'name', 'config' ]
 ```
+
+[CaptureBytes]: ./capture_bytes.md
+[TokenRouter]: ./token_router.md

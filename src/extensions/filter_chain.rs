@@ -69,7 +69,7 @@ impl FilterChain {
         for filter_config in filter_configs {
             match filter_registry.get(
                 &filter_config.name,
-                CreateFilterArgs::fixed(filter_config.config.as_ref())
+                CreateFilterArgs::fixed(metrics_registry.clone(), filter_config.config.as_ref())
                     .with_metrics_registry(metrics_registry.clone()),
             ) {
                 Ok(filter) => filters.push(filter),

@@ -14,4 +14,4 @@
 
 # build: creates the project Cloud Build custom build step and hosts it on gcr.io
 build:
-	gcloud builds submit . --config=cloudbuild.yaml
+	gcloud builds submit . --config=cloudbuild.yaml $(ARGS)
