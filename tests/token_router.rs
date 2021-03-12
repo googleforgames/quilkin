@@ -62,7 +62,6 @@ quilkin.dev:
                 )],
             )
             .build();
-        server_config.validate().unwrap();
         t.run_server(server_config);
 
         // valid packet

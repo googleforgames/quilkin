@@ -72,16 +72,9 @@ impl ClusterManager {
     /// Returns a ClusterManager backed by the fixed set of clusters provided in the config.
     pub fn fixed(
         metrics_registry: &Registry,
-        endpoints: Vec<Endpoint>,
+        endpoints: Endpoints,
     ) -> MetricsResult<SharedClusterManager> {
-        let cm = Self::new(
-            metrics_registry,
-            Some(
-                Endpoints::new(endpoints)
-                    // TODO: Return a result rather than unwrap.
-                    .expect("endpoints list in config should be validated non-empty"),
-            ),
-        )?;
+        let cm = Self::new(metrics_registry, Some(endpoints))?;
         // Set the endpoints count metrics.
         cm.metrics.active_endpoints.set(
             cm.endpoints
@@ -203,10 +196,12 @@ impl ClusterManager {
         });
     }
 }
+
 #[cfg(test)]
 mod tests {
     use super::ClusterManager;
     use crate::cluster::{Cluster, Endpoint, LocalityEndpoints};
+    use crate::config::Endpoints;
     use crate::test_utils::logger;
     use prometheus::Registry;
     use tokio::sync::{mpsc, watch};
@@ -215,10 +210,11 @@ mod tests {
     fn static_cluster_manager_metrics() {
         let cm = ClusterManager::fixed(
             &Registry::default(),
-            vec![
+            Endpoints::new(vec![
                 Endpoint::from_address("127.0.0.1:80".parse().unwrap()),
                 Endpoint::from_address("127.0.0.1:81".parse().unwrap()),
-            ],
+            ])
+            .unwrap(),
         )
         .unwrap();
         let metrics = &cm.read().metrics;

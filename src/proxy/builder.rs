@@ -14,15 +14,42 @@
  *  limitations under the License.
  */
 
-use crate::config::{Config, Source, ValidationError};
+use crate::cluster::Endpoint;
+use crate::config::{
+    parse_endpoint_metadata_from_yaml, Admin, Config, Endpoints, ManagementServer, Proxy, Source,
+    ValidationError, ValueInvalidArgs, Version,
+};
 use crate::extensions::{default_registry, CreateFilterError, FilterChain, FilterRegistry};
 use crate::proxy::server::metrics::Metrics as ProxyMetrics;
 use crate::proxy::{Metrics, Server};
 use slog::{o, Drain, Logger};
+use std::collections::HashSet;
+use std::convert::TryInto;
+use std::marker::PhantomData;
 use std::{
     fmt::{self, Formatter},
     sync::Arc,
 };
+use tonic::transport::Endpoint as TonicEndpoint;
+
+pub(super) enum ValidatedSource {
+    Static {
+        filter_chain: Arc<FilterChain>,
+        endpoints: Endpoints,
+    },
+    Dynamic {
+        management_servers: Vec<ManagementServer>,
+    },
+}
+
+pub(super) struct ValidatedConfig {
+    pub version: Version,
+    pub proxy: Proxy,
+    pub admin: Option<Admin>,
+    pub source: ValidatedSource,
+    // Limit struct creation to the builder.
+    pub phantom: PhantomData<()>,
+}
 
 /// Represents an error that occurred while validating and building a server.
 #[derive(Debug)]
@@ -65,9 +92,9 @@ trait ValidationStatus {
 }
 
 /// Marks a ServerBuild as having validated successfully.
-pub struct Validated(Arc<FilterChain>);
+pub struct Validated(ValidatedConfig);
 impl ValidationStatus for Validated {
-    type Output = Arc<FilterChain>;
+    type Output = ValidatedConfig;
 }
 
 /// Marks a ServerBuild as not yet validated.
@@ -98,6 +125,118 @@ impl From<Arc<Config>> for Builder<PendingValidation> {
     }
 }
 
+impl ValidatedConfig {
+    fn validate(
+        config: Arc<Config>,
+        filter_registry: &FilterRegistry,
+        metrics: &Metrics,
+    ) -> Result<Self, Error> {
+        let validated_source = match &config.source {
+            Source::Static {
+                filters,
+                endpoints: config_endpoints,
+            } => {
+                if config_endpoints
+                    .iter()
+                    .map(|ep| ep.address)
+                    .collect::<HashSet<_>>()
+                    .len()
+                    != config_endpoints.len()
+                {
+                    return Err(
+                        ValidationError::NotUnique("static.endpoints.address".to_string()).into(),
+                    );
+                }
+
+                let mut endpoints = Vec::with_capacity(config_endpoints.len());
+                for ep in config_endpoints {
+                    endpoints.push(Endpoint::from_config(ep).map_err(|err| {
+                        ValidationError::ValueInvalid(ValueInvalidArgs {
+                            field: "static.endpoints".to_string(),
+                            clarification: Some(format!("invalid endpoint config: {}", err)),
+                            examples: None,
+                        })
+                    })?);
+                }
+                let endpoints = Endpoints::new(endpoints).map_err(|_empty_list_error| {
+                    ValidationError::EmptyList("static.endpoints".into())
+                })?;
+
+                for ep in config_endpoints {
+                    if let Some(ref metadata) = ep.metadata {
+                        if let Err(err) = parse_endpoint_metadata_from_yaml(metadata.clone()) {
+                            return Err(ValidationError::ValueInvalid(ValueInvalidArgs {
+                                field: "static.endpoints.metadata".into(),
+                                clarification: Some(err),
+                                examples: None,
+                            })
+                            .into());
+                        }
+                    }
+                }
+
+                ValidatedSource::Static {
+                    filter_chain: Arc::new(FilterChain::try_create(
+                        filters.clone(),
+                        filter_registry,
+                        &metrics.registry,
+                    )?),
+                    endpoints,
+                }
+            }
+            Source::Dynamic { management_servers } => {
+                if management_servers.is_empty() {
+                    return Err(ValidationError::EmptyList(
+                        "dynamic.management_servers".to_string(),
+                    )
+                    .into());
+                }
+
+                if management_servers
+                    .iter()
+                    .map(|server| &server.address)
+                    .collect::<HashSet<_>>()
+                    .len()
+                    != management_servers.len()
+                {
+                    return Err(ValidationError::NotUnique(
+                        "dynamic.management_servers.address".to_string(),
+                    )
+                    .into());
+                }
+
+                for server in management_servers {
+                    let res: Result<TonicEndpoint, _> = server.address.clone().try_into();
+                    if res.is_err() {
+                        return Err(ValidationError::ValueInvalid(ValueInvalidArgs {
+                            field: "dynamic.management_servers.address".into(),
+                            clarification: Some("the provided value must be a valid URI".into()),
+                            examples: Some(vec![
+                                "http://127.0.0.1:8080".into(),
+                                "127.0.0.1:8081".into(),
+                                "example.com".into(),
+                            ]),
+                        })
+                        .into());
+                    }
+                }
+
+                ValidatedSource::Dynamic {
+                    management_servers: management_servers.clone(),
+                }
+            }
+        };
+
+        Ok(ValidatedConfig {
+            version: config.version.clone(),
+            proxy: config.proxy.clone(),
+            admin: config.admin.clone(),
+            source: validated_source,
+            phantom: Default::default(),
+        })
+    }
+}
+
 impl Builder<PendingValidation> {
     pub fn with_log(self, log: Logger) -> Self {
         Self { log, ..self }
@@ -116,35 +255,15 @@ impl Builder<PendingValidation> {
 
     // Validates the builder's config and filter configurations.
     pub fn validate(self) -> Result<Builder<Validated>, Error> {
-        let _ = self.config.validate()?;
-        let filter_chain = match &self.config.source {
-            Source::Static {
-                filters,
-                endpoints: _,
-            } => FilterChain::try_create(
-                filters.clone(),
-                &self.filter_registry,
-                &self.metrics.registry,
-            )?,
-            Source::Dynamic {
-                management_servers: _,
-            } => {
-                // Set a dummy value since this value won't be used for now.
-                // TODO: Get rid of this work-around while fixing
-                //  https://github.com/googleforgames/quilkin/issues/172
-                //  the Server should rather take in  a validated Static or Dynamic
-                //  source rather than a filter chain (since those don't exist for
-                //  the dynamic case)
-                FilterChain::default()
-            }
-        };
+        let validated_config =
+            ValidatedConfig::validate(self.config.clone(), &self.filter_registry, &self.metrics)?;
 
         Ok(Builder {
             log: self.log,
             config: self.config,
             metrics: self.metrics,
             filter_registry: self.filter_registry,
-            validation_status: Validated(Arc::new(filter_chain)),
+            validation_status: Validated(validated_config),
         })
     }
 }
@@ -153,11 +272,10 @@ impl Builder<Validated> {
     pub fn build(self) -> Server {
         Server {
             log: self.log.new(o!("source" => "server::Server")),
-            config: self.config,
+            config: Arc::new(self.validation_status.0),
             proxy_metrics: ProxyMetrics::new(&self.metrics.registry.clone())
                 .expect("metrics should be setup properly"),
             metrics: self.metrics,
-            filter_chain: self.validation_status.0,
             filter_registry: Arc::new(self.filter_registry),
         }
     }
@@ -171,4 +289,130 @@ pub fn logger() -> Logger {
         .fuse();
     let drain = slog_async::Async::new(drain).build().fuse();
     slog::Logger::root(drain, o!())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Builder, Error};
+    use crate::config::{Config, ValidationError};
+    use crate::proxy::builder::Validated;
+    use std::convert::TryFrom;
+    use std::sync::Arc;
+
+    fn parse_config(yaml: &str) -> Config {
+        Config::from_reader(yaml.as_bytes()).unwrap()
+    }
+
+    fn validate_unwrap_ok(yaml: &'static str) -> Builder<Validated> {
+        Builder::try_from(Arc::new(parse_config(yaml)))
+            .unwrap()
+            .validate()
+            .unwrap()
+    }
+
+    fn validate_unwrap_err(yaml: &'static str) -> ValidationError {
+        match Builder::try_from(Arc::new(parse_config(yaml)))
+            .unwrap()
+            .validate()
+        {
+            Err(Error::InvalidConfig(err)) => err,
+            Err(err) => unreachable!(format!("expected ValidationError, got {}", err)),
+            Ok(_) => unreachable!("config validation should have failed!"),
+        }
+    }
+
+    #[test]
+    fn validate_dynamic_source() {
+        let yaml = "
+# Valid management address list.
+version: v1alpha1
+dynamic:
+  management_servers:
+    - address: 127.0.0.1:25999
+    - address: example.com
+    - address: http://127.0.0.1:30000
+  ";
+        let _ = validate_unwrap_ok(yaml);
+
+        let yaml = "
+# Invalid management address.
+version: v1alpha1
+dynamic:
+  management_servers:
+    - address: 'not an endpoint address'
+  ";
+        match validate_unwrap_err(yaml) {
+            ValidationError::ValueInvalid(args) => {
+                assert_eq!(args.field, "dynamic.management_servers.address".to_string());
+            }
+            err => unreachable!("expected invalid value error: got {}", err),
+        }
+
+        let yaml = "
+# Duplicate management addresses.
+version: v1alpha1
+dynamic:
+  management_servers:
+    - address: 127.0.0.1:25999
+    - address: 127.0.0.1:25999
+  ";
+        assert_eq!(
+            ValidationError::NotUnique("dynamic.management_servers.address".to_string())
+                .to_string(),
+            validate_unwrap_err(yaml).to_string()
+        );
+    }
+
+    #[test]
+    fn validate() {
+        // client - valid
+        let yaml = "
+version: v1alpha1
+static:
+  endpoints:
+    - name: a
+      address: 127.0.0.1:25999
+    - name: b
+      address: 127.0.0.1:25998
+";
+        let _ = validate_unwrap_ok(yaml);
+
+        let yaml = "
+# Non unique addresses.
+version: v1alpha1
+static:
+  endpoints:
+    - name: a
+      address: 127.0.0.1:25999
+    - name: b
+      address: 127.0.0.1:25999
+";
+        assert_eq!(
+            ValidationError::NotUnique("static.endpoints.address".to_string()).to_string(),
+            validate_unwrap_err(yaml).to_string()
+        );
+
+        let yaml = "
+# Empty endpoints list
+version: v1alpha1
+static:
+  endpoints: []
+";
+        assert_eq!(
+            ValidationError::EmptyList("static.endpoints".to_string()).to_string(),
+            validate_unwrap_err(yaml).to_string()
+        );
+
+        let yaml = "
+# Invalid metadata
+version: v1alpha1
+static:
+  endpoints:
+    - address: 127.0.0.1:25999
+      metadata:
+        quilkin.dev:
+          tokens: abc
+";
+        let _ = validate_unwrap_err(yaml);
+    }
 }

@@ -47,7 +47,6 @@ mod tests {
                 vec![EndPoint::new(echo)],
             )
             .build();
-        assert_eq!(Ok(()), server_config.validate());
 
         // Run server proxy.
         let mut registry = default_registry(&t.log);
@@ -69,7 +68,6 @@ mod tests {
                 ))],
             )
             .build();
-        assert_eq!(Ok(()), client_config.validate());
 
         // Run client proxy.
         let mut registry = default_registry(&t.log);

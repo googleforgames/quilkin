@@ -14,14 +14,12 @@
  * limitations under the License.
  */
 
-use std::collections::HashSet;
 use std::io;
 use std::marker::PhantomData;
 use std::net::SocketAddr;
 
 use base64_serde::base64_serde_type;
 use serde::{Deserialize, Serialize};
-use tonic::transport::Endpoint as TonicEndpoint;
 use uuid::Uuid;
 
 mod builder;
@@ -32,21 +30,20 @@ mod metadata;
 pub use crate::config::endpoints::{
     EmptyListError, Endpoints, UpstreamEndpoints, UpstreamEndpointsIter,
 };
-use crate::config::error::ValueInvalidArgs;
+pub(crate) use crate::config::error::ValueInvalidArgs;
 pub use builder::Builder;
 pub use error::ValidationError;
 pub(crate) use metadata::{extract_endpoint_tokens, parse_endpoint_metadata_from_yaml};
-use std::convert::TryInto;
 
 base64_serde_type!(Base64Standard, base64::STANDARD);
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum Version {
     #[serde(rename = "v1alpha1")]
     V1Alpha1,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Proxy {
     #[serde(default = "default_proxy_id")]
     pub id: String,
@@ -71,12 +68,12 @@ impl Default for Proxy {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct AdminAddress {
     port: u16,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Admin {
     address: Option<AdminAddress>,
 }
@@ -86,7 +83,7 @@ pub struct ManagementServer {
     pub address: String,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum Source {
     #[serde(rename = "static")]
     Static {
@@ -102,7 +99,7 @@ pub enum Source {
 }
 
 /// Config is the configuration for either a Client or Server proxy
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Config {
     pub version: Version,
 
@@ -165,98 +162,13 @@ impl Config {
     pub fn from_reader<R: io::Read>(input: R) -> Result<Config, serde_yaml::Error> {
         serde_yaml::from_reader(input)
     }
-
-    /// validates the current Config.
-    pub fn validate(&self) -> Result<(), ValidationError> {
-        self.source.validate()?;
-
-        Ok(())
-    }
-}
-
-impl Source {
-    /// Validates the source configuration.
-    fn validate(&self) -> Result<(), ValidationError> {
-        match &self {
-            Source::Static {
-                filters: _,
-                endpoints,
-            } => {
-                if endpoints.is_empty() {
-                    return Err(ValidationError::EmptyList("static.endpoints".to_string()));
-                }
-
-                if endpoints
-                    .iter()
-                    .map(|ep| ep.address)
-                    .collect::<HashSet<_>>()
-                    .len()
-                    != endpoints.len()
-                {
-                    return Err(ValidationError::NotUnique(
-                        "static.endpoints.address".to_string(),
-                    ));
-                }
-
-                for ep in endpoints {
-                    if let Some(ref metadata) = ep.metadata {
-                        if let Err(err) = parse_endpoint_metadata_from_yaml(metadata.clone()) {
-                            return Err(ValidationError::ValueInvalid(ValueInvalidArgs {
-                                field: "static.endpoints.metadata".into(),
-                                clarification: Some(err),
-                                examples: None,
-                            }));
-                        }
-                    }
-                }
-
-                Ok(())
-            }
-            Source::Dynamic { management_servers } => {
-                if management_servers.is_empty() {
-                    return Err(ValidationError::EmptyList(
-                        "dynamic.management_servers".to_string(),
-                    ));
-                }
-
-                if management_servers
-                    .iter()
-                    .map(|server| &server.address)
-                    .collect::<HashSet<_>>()
-                    .len()
-                    != management_servers.len()
-                {
-                    return Err(ValidationError::NotUnique(
-                        "dynamic.management_servers.address".to_string(),
-                    ));
-                }
-
-                for server in management_servers {
-                    let res: Result<TonicEndpoint, _> = server.address.clone().try_into();
-                    if res.is_err() {
-                        return Err(ValidationError::ValueInvalid(ValueInvalidArgs {
-                            field: "dynamic.management_servers.address".into(),
-                            clarification: Some("the provided value must be a valid URI".into()),
-                            examples: Some(vec![
-                                "http://127.0.0.1:8080".into(),
-                                "127.0.0.1:8081".into(),
-                                "example.com".into(),
-                            ]),
-                        }));
-                    }
-                }
-
-                Ok(())
-            }
-        }
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use serde_yaml::Value;
 
-    use crate::config::{Builder, Config, EndPoint, ManagementServer, Source, ValidationError};
+    use crate::config::{Builder, Config, EndPoint, ManagementServer, Source};
     use std::collections::HashMap;
 
     fn parse_config(yaml: &str) -> Config {
@@ -489,100 +401,5 @@ dynamic:
                 },
             ],
         );
-    }
-
-    #[test]
-    fn validate_dynamic_source() {
-        let yaml = "
-# Valid management address list.
-version: v1alpha1
-dynamic:
-  management_servers:
-    - address: 127.0.0.1:25999
-    - address: example.com
-    - address: http://127.0.0.1:30000
-  ";
-        assert!(parse_config(yaml).validate().is_ok());
-
-        let yaml = "
-# Invalid management address.
-version: v1alpha1
-dynamic:
-  management_servers:
-    - address: 'not an endpoint address'
-  ";
-        match parse_config(yaml).validate().unwrap_err() {
-            ValidationError::ValueInvalid(args) => {
-                assert_eq!(args.field, "dynamic.management_servers.address".to_string());
-            }
-            err => unreachable!("expected invalid value error: got {}", err),
-        }
-
-        let yaml = "
-# Duplicate management addresses.
-version: v1alpha1
-dynamic:
-  management_servers:
-    - address: 127.0.0.1:25999
-    - address: 127.0.0.1:25999
-  ";
-        assert_eq!(
-            ValidationError::NotUnique("dynamic.management_servers.address".to_string())
-                .to_string(),
-            parse_config(yaml).validate().unwrap_err().to_string()
-        );
-    }
-
-    #[test]
-    fn validate() {
-        // client - valid
-        let yaml = "
-version: v1alpha1
-static:
-  endpoints:
-    - name: a
-      address: 127.0.0.1:25999
-    - name: b
-      address: 127.0.0.1:25998
-";
-        assert!(parse_config(yaml).validate().is_ok());
-
-        let yaml = "
-# Non unique addresses.
-version: v1alpha1
-static:
-  endpoints:
-    - name: a
-      address: 127.0.0.1:25999
-    - name: b
-      address: 127.0.0.1:25999
-";
-        assert_eq!(
-            ValidationError::NotUnique("static.endpoints.address".to_string()).to_string(),
-            parse_config(yaml).validate().unwrap_err().to_string()
-        );
-
-        let yaml = "
-# Empty endpoints list
-version: v1alpha1
-static:
-  endpoints: []
-";
-        assert_eq!(
-            ValidationError::EmptyList("static.endpoints".to_string()).to_string(),
-            parse_config(yaml).validate().unwrap_err().to_string()
-        );
-
-        let yaml = "
-# Invalid metadata
-version: v1alpha1
-static:
-  endpoints:
-    - address: 127.0.0.1:25999
-      metadata:
-        quilkin.dev:
-          tokens: abc
-";
-        assert!(parse_config(yaml).validate().is_err());
     }
 }
