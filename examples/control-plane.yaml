@@ -25,4 +25,4 @@ proxy:
 dynamic: # Provide configuration of endpoints using an XDS management server
   management_servers: # array of management servers to configure the proxy with.
                       # Multiple servers can be provided for redundancy.
-    - address: 127.0.0.1:26000
+    - address: http://127.0.0.1:26000
