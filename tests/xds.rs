@@ -233,7 +233,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn work() {
+    async fn send_cds_and_lds_updates() {
         let mut t = TestHelper::default();
 
         let config = "
@@ -247,7 +247,6 @@ dynamic:
 ";
 
         let config: Arc<Config> = Arc::new(serde_yaml::from_str(config).unwrap());
-        config.validate().unwrap();
         let server = Builder::from(config)
             .with_log(logger())
             .validate()
