@@ -26,6 +26,7 @@ use crate::extensions::{
 };
 use proto::quilkin::extensions::filters::token_router::v1alpha1::TokenRouter as ProtoConfig;
 use std::convert::TryFrom;
+use std::sync::Arc;
 
 mod metrics;
 mod proto;
@@ -65,7 +66,7 @@ impl TryFrom<ProtoConfig> for Config {
 /// connection_id to the token stored in the Filter's dynamic metadata.
 struct TokenRouter {
     log: Logger,
-    metadata_key: String,
+    metadata_key: Arc<String>,
     metrics: Metrics,
 }
 
@@ -104,7 +105,7 @@ impl TokenRouter {
     fn new(base: &Logger, config: Config, metrics: Metrics) -> Self {
         Self {
             log: base.new(o!("source" => "extensions::TokenRouter")),
-            metadata_key: config.metadata_key,
+            metadata_key: Arc::new(config.metadata_key),
             metrics,
         }
     }
@@ -112,7 +113,7 @@ impl TokenRouter {
 
 impl Filter for TokenRouter {
     fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
-        match ctx.metadata.get(self.metadata_key.as_str()) {
+        match ctx.metadata.get(self.metadata_key.as_ref()) {
             None => {
                 error!(self.log, "Filter configuration issue: token not found";
                     "metadata_key" => self.metadata_key.clone());
@@ -146,6 +147,7 @@ impl Filter for TokenRouter {
 mod tests {
     use std::convert::TryFrom;
     use std::ops::Deref;
+    use std::sync::Arc;
 
     use prometheus::Registry;
     use serde_yaml::{Mapping, Value};
@@ -221,7 +223,7 @@ mod tests {
             .unwrap();
         let mut ctx = new_ctx();
         ctx.metadata
-            .insert(TOKEN_KEY.into(), Box::new(b"123".to_vec()));
+            .insert(Arc::new(TOKEN_KEY.into()), Box::new(b"123".to_vec()));
         assert_read(filter.deref(), ctx);
     }
 
@@ -238,7 +240,7 @@ mod tests {
             .unwrap();
         let mut ctx = new_ctx();
         ctx.metadata
-            .insert(CAPTURED_BYTES.into(), Box::new(b"123".to_vec()));
+            .insert(Arc::new(CAPTURED_BYTES.into()), Box::new(b"123".to_vec()));
         assert_read(filter.deref(), ctx);
     }
 
@@ -251,7 +253,7 @@ mod tests {
             .unwrap();
         let mut ctx = new_ctx();
         ctx.metadata
-            .insert(CAPTURED_BYTES.into(), Box::new(b"123".to_vec()));
+            .insert(Arc::new(CAPTURED_BYTES.into()), Box::new(b"123".to_vec()));
         assert_read(filter.deref(), ctx);
     }
 
@@ -265,13 +267,13 @@ mod tests {
 
         let mut ctx = new_ctx();
         ctx.metadata
-            .insert(CAPTURED_BYTES.into(), Box::new(b"123".to_vec()));
+            .insert(Arc::new(CAPTURED_BYTES.into()), Box::new(b"123".to_vec()));
         assert_read(&filter, ctx);
 
         // invalid key
         let mut ctx = new_ctx();
         ctx.metadata
-            .insert(CAPTURED_BYTES.into(), Box::new(b"567".to_vec()));
+            .insert(Arc::new(CAPTURED_BYTES.into()), Box::new(b"567".to_vec()));
 
         let option = filter.read(ctx);
         assert!(option.is_none());
@@ -284,8 +286,10 @@ mod tests {
 
         // wrong type key
         let mut ctx = new_ctx();
-        ctx.metadata
-            .insert(CAPTURED_BYTES.into(), Box::new(String::from("wrong")));
+        ctx.metadata.insert(
+            Arc::new(CAPTURED_BYTES.into()),
+            Box::new(String::from("wrong")),
+        );
         assert!(filter.read(ctx).is_none());
         assert_eq!(1, filter.metrics.packets_dropped_invalid_token.get());
     }
