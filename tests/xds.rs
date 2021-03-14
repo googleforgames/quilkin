@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-mod udpa {
+#[allow(clippy::module_inception)]
+mod xds {
     pub mod core {
-        pub mod v1 {
+        pub mod v3 {
             #![doc(hidden)]
-            tonic::include_proto!("udpa.core.v1");
+            tonic::include_proto!("xds.core.v3");
         }
     }
 }
@@ -76,6 +77,7 @@ mod envoy {
         }
         pub mod listener {
             pub mod v3 {
+                #![allow(clippy::large_enum_variant)]
                 #![doc(hidden)]
                 tonic::include_proto!("envoy.config.listener.v3");
             }
@@ -456,7 +458,7 @@ dynamic:
             track_timeout_budgets: false,
             upstream_config: None,
             track_cluster_stats: None,
-            prefetch_policy: None,
+            preconnect_policy: None,
             connection_pool_per_downstream_connection: false,
             cluster_discovery_type: Some(ClusterDiscoveryType::Type(0)),
             lb_config: None,
@@ -497,6 +499,7 @@ dynamic:
         }
     }
 
+    #[allow(deprecated)]
     fn create_lds_filter_chain(filters: Vec<LdsFilter>) -> LdsFilterChain {
         LdsFilterChain {
             filter_chain_match: None,
@@ -504,16 +507,20 @@ dynamic:
             use_proxy_proto: None,
             metadata: None,
             transport_socket: None,
+            transport_socket_connect_timeout: None,
             name: "test-lds-filter-chain".into(),
             on_demand_configuration: None,
         }
     }
 
+    #[allow(deprecated)]
     fn create_lds_listener(name: String, filter_chains: Vec<LdsFilterChain>) -> Listener {
         Listener {
             name,
             address: None,
             filter_chains,
+            default_filter_chain: None,
+            use_original_dst: None,
             per_connection_buffer_limit_bytes: None,
             metadata: None,
             deprecated_v1: None,
@@ -533,6 +540,8 @@ dynamic:
             access_log: vec![],
             udp_writer_config: None,
             tcp_backlog_size: None,
+            bind_to_port: None,
+            listener_specifier: None,
         }
     }
 }

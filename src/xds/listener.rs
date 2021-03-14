@@ -145,9 +145,16 @@ impl ListenerManager {
     ) -> Result<ProxyFilterChain, Error> {
         let mut filters = vec![];
         for filter in lds_filter_chain.filters {
-            let config = filter.config_type.map(|config| match config {
-                LdsConfigType::TypedConfig(config) => config,
-            });
+            let config = filter
+                .config_type
+                .map(|config| match config {
+                    LdsConfigType::TypedConfig(config) => Ok(config),
+                    invalid => Err(Error::new(format!(
+                        "unsupported filter.config_type: {:?}",
+                        invalid
+                    ))),
+                })
+                .transpose()?;
             let create_filter_args =
                 CreateFilterArgs::dynamic(self.metrics_registry.clone(), config);
 
@@ -678,6 +685,7 @@ mod tests {
         );
     }
 
+    #[allow(deprecated)]
     fn create_lds_filter_chain(filters: Vec<LdsFilter>) -> LdsFilterChain {
         LdsFilterChain {
             filter_chain_match: None,
@@ -685,16 +693,20 @@ mod tests {
             use_proxy_proto: None,
             metadata: None,
             transport_socket: None,
+            transport_socket_connect_timeout: None,
             name: "test-lds-filter-chain".into(),
             on_demand_configuration: None,
         }
     }
 
+    #[allow(deprecated)]
     fn create_lds_listener(name: String, filter_chains: Vec<LdsFilterChain>) -> Listener {
         Listener {
             name,
             address: None,
             filter_chains,
+            default_filter_chain: None,
+            use_original_dst: None,
             per_connection_buffer_limit_bytes: None,
             metadata: None,
             deprecated_v1: None,
@@ -714,6 +726,8 @@ mod tests {
             access_log: vec![],
             udp_writer_config: None,
             tcp_backlog_size: None,
+            bind_to_port: None,
+            listener_specifier: None,
         }
     }
 }

@@ -298,9 +298,10 @@ impl ClusterManager {
                                     Err(Error::new("no port specifier was provided".into()))
                                 })
                         }
-                        address::Address::Pipe(_) => {
-                            Err(Error::new("pipe addresses are not supported".into()))
-                        }
+                        invalid => Err(Error::new(format!(
+                            "unsupported endpoint address type: {:?}",
+                            invalid
+                        ))),
                     })
                     .unwrap_or_else(|| {
                         Err(Error::new("received `Endpoint` with no `address`".into()))
@@ -928,7 +929,7 @@ mod tests {
             track_timeout_budgets: false,
             upstream_config: None,
             track_cluster_stats: None,
-            prefetch_policy: None,
+            preconnect_policy: None,
             connection_pool_per_downstream_connection: false,
             cluster_discovery_type: Some(ClusterDiscoveryType::Type(0)),
             lb_config: None,

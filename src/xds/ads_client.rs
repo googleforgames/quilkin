@@ -307,6 +307,7 @@ impl AdsClient {
                         id: node_id.clone(),
                         cluster: "".into(),
                         metadata: None,
+                        dynamic_parameters: Default::default(),
                         locality: None,
                         user_agent_name: "quilkin".into(),
                         extensions: vec![],

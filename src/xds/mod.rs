@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-mod udpa {
+#[allow(clippy::module_inception)]
+mod xds {
     pub mod core {
-        pub mod v1 {
+        pub mod v3 {
             #![doc(hidden)]
-            tonic::include_proto!("udpa.core.v1");
+            tonic::include_proto!("xds.core.v3");
         }
     }
 }
@@ -76,6 +77,7 @@ mod envoy {
         }
         pub mod listener {
             pub mod v3 {
+                #![allow(clippy::large_enum_variant)]
                 #![doc(hidden)]
                 tonic::include_proto!("envoy.config.listener.v3");
             }
