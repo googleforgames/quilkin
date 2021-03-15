@@ -27,7 +27,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "proto/data-plane-api/envoy/service/discovery/v3/discovery.proto",
         "proto/data-plane-api/envoy/type/metadata/v3/metadata.proto",
         "proto/data-plane-api/envoy/type/tracing/v3/custom_tag.proto",
-        "proto/udpa/udpa/core/v1/resource_name.proto",
+        "proto/udpa/xds/core/v3/resource_name.proto",
         "proto/quilkin/extensions/filters/debug/v1alpha1/debug.proto",
         "proto/quilkin/extensions/filters/capture_bytes/v1alpha1/capture_bytes.proto",
         "proto/quilkin/extensions/filters/compress/v1alpha1/compress.proto",

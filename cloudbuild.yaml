@@ -19,13 +19,13 @@ steps:
     - '-c'
     - |
       git clone --depth 1000 https://github.com/envoyproxy/data-plane-api.git proto/data-plane-api
-      git -C proto/data-plane-api checkout b84d3bea45b59abc3fd21fba26140a379461fc67
+      git -C proto/data-plane-api checkout c5f1620aa47b4dfdefebb5271c3135ef33029a0e
       git clone --depth 1000 https://github.com/cncf/udpa.git proto/udpa
-      git -C proto/udpa checkout efcf912fb35470672231c7b7bef620f3d17f655a
+      git -C proto/udpa checkout bff43e8824d093cb64afdc901266cfab5a9777f0
       git clone --depth 1000 https://github.com/envoyproxy/protoc-gen-validate.git proto/protoc-gen-validate
-      git -C proto/protoc-gen-validate checkout e84d38a1a4c27d4662779c31a06528cdbc6b4b4f
+      git -C proto/protoc-gen-validate checkout 12afc6dcd71f00ea08deee4df84173aed4cc7f97
       git clone --depth 1000 https://github.com/googleapis/googleapis.git proto/googleapis
-      git -C proto/googleapis checkout 2db5725bf898b544a0cf951e1694d3b0fce5eda3
+      git -C proto/googleapis checkout a0d282daa691e95ec51131c81c3777fc95abf7f8
     id: fetch-git-submodules
   # clippy tends to rely on cached results from other cargo sub-commands so
   # that it skips checking some files that were built previously. As a result
