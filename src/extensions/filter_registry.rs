@@ -27,6 +27,10 @@ use prometheus::{Error as MetricsError, Registry};
 use crate::cluster::Endpoint;
 use crate::config::{UpstreamEndpoints, ValidationError};
 use crate::extensions::filters::ConvertProtoConfigError;
+use std::sync::Arc;
+
+/// DynamicMetadata contains shared state between filters during processing for a single packet.
+type DynamicMetadata = HashMap<Arc<String>, Box<dyn Any + Send>>;
 
 /// Contains the input arguments to [read](crate::extensions::filter_registry::Filter::read)
 pub struct ReadContext {
@@ -37,7 +41,7 @@ pub struct ReadContext {
     /// Contents of the received packet.
     pub contents: Vec<u8>,
     /// Arbitrary values that can be passed from one filter to another
-    pub metadata: HashMap<String, Box<dyn Any + Send>>,
+    pub metadata: DynamicMetadata,
     // Enforce using constructor to create this struct.
     phantom: PhantomData<()>,
 }
@@ -58,7 +62,7 @@ pub struct ReadResponse {
     /// Contents of the packet to be forwarded.
     pub contents: Vec<u8>,
     /// Arbitrary values that can be passed from one filter to another
-    pub metadata: HashMap<String, Box<dyn Any + Send>>,
+    pub metadata: DynamicMetadata,
     // Enforce using constructor to create this struct.
     phantom: PhantomData<()>,
 }
