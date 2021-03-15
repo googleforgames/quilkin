@@ -50,7 +50,7 @@ impl Filter for TestFilter {
     fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
         // append values on each run
         ctx.metadata
-            .entry("downstream".into())
+            .entry(Arc::new("downstream".into()))
             .and_modify(|e| e.downcast_mut::<String>().unwrap().push_str(":receive"))
             .or_insert_with(|| Box::new("receive".to_string()));
 

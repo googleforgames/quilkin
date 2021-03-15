@@ -15,6 +15,7 @@
  */
 
 use std::convert::TryFrom;
+use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 use slog::{o, warn, Logger};
@@ -134,7 +135,7 @@ struct CaptureBytes {
     capture: Box<dyn Capture + Sync + Send>,
     /// metrics reporter for this filter.
     metrics: Metrics,
-    metadata_key: String,
+    metadata_key: Arc<String>,
     size: usize,
     remove: bool,
 }
@@ -150,7 +151,7 @@ impl CaptureBytes {
             log: base.new(o!("source" => "extensions::CaptureBytes")),
             capture,
             metrics,
-            metadata_key: config.metadata_key,
+            metadata_key: Arc::new(config.metadata_key),
             size: config.size,
             remove: config.remove,
         }
@@ -220,6 +221,7 @@ impl Capture for Prefix {
 #[cfg(test)]
 mod tests {
     use std::convert::TryFrom;
+    use std::sync::Arc;
 
     use prometheus::Registry;
     use serde_yaml::{Mapping, Value};
@@ -454,7 +456,7 @@ mod tests {
 
         let token = response
             .metadata
-            .get(key)
+            .get(&Arc::new(key.into()))
             .unwrap()
             .downcast_ref::<Vec<u8>>()
             .unwrap();
