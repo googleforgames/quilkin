@@ -102,12 +102,12 @@ impl FilterFactory for DebugFactory {
 
 impl Filter for Debug {
     fn read(&self, ctx: ReadContext) -> Option<ReadResponse> {
-        info!(self.log, "on local receive"; "from" => ctx.from, "contents" => packet_to_string(ctx.contents.clone()));
+        info!(self.log, "Read filter event"; "from" => ctx.from, "contents" => packet_to_string(ctx.contents.clone()));
         Some(ctx.into())
     }
 
     fn write(&self, ctx: WriteContext) -> Option<WriteResponse> {
-        info!(self.log, "Received endpoint packet"; "endpoint" => ctx.endpoint.address,
+        info!(self.log, "Write filter event"; "endpoint" => ctx.endpoint.address,
         "from" => ctx.from,
         "to" => ctx.to,
         "contents" => packet_to_string(ctx.contents.clone()));
