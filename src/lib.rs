@@ -24,6 +24,7 @@ pub mod config;
 pub mod extensions;
 pub mod metrics;
 pub mod proxy;
+pub mod runner;
 pub mod test_utils;
 pub(crate) mod utils;
 pub(crate) mod xds;
