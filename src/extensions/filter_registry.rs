@@ -348,12 +348,19 @@ pub struct FilterRegistry {
 }
 
 impl FilterRegistry {
-    /// insert registers a Filter under the provider's given name.
-    pub fn insert<P: 'static>(&mut self, provider: P)
+    /// insert adds a [`FilterFactory`] to this filter registry.
+    pub fn insert<T: 'static>(&mut self, factory: T)
     where
-        P: FilterFactory,
+        T: FilterFactory,
     {
-        self.registry.insert(provider.name(), Box::new(provider));
+        self.registry.insert(factory.name(), Box::new(factory));
+    }
+
+    /// insert_all adds the provided [`FilterFactory`]s to this filter registry.
+    pub fn insert_all(&mut self, factories: Vec<Box<dyn FilterFactory>>) {
+        for factory in factories {
+            self.registry.insert(factory.name(), factory);
+        }
     }
 
     /// get returns an instance of a filter for a given Key. Returns Error if not found,
