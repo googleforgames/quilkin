@@ -48,7 +48,7 @@ pub struct Error(String);
 pub async fn run(filter_factories: Vec<Box<dyn FilterFactory>>) -> Result<(), Error> {
     let version = version();
     let base_logger = logger();
-    let log = base_logger.new(o!("source" => "main"));
+    let log = base_logger.new(o!("source" => "run"));
 
     let matches = App::new("Quilkin Proxy")
         .version(version.as_str())
