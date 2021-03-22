@@ -210,7 +210,7 @@ mod tests {
                         source_response = source_discovery_response_rx.recv() => {
                             match source_response {
                                 None => {
-                                    info!(log, "stopping updates to client: source was dropped");
+                                    info!(log, "Stopping updates to client: source was dropped");
                                     return;
                                 },
                                 Some(result) => {

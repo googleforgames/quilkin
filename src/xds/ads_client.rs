@@ -184,18 +184,18 @@ impl AdsClient {
                             if err.to_string().to_lowercase().contains("invalid url") {
                                 return Err(ExecutionError::Message(format!("{:?}", err)));
                             }
-                            Self::log_error_and_backoff(
+                            error!(log, "Unable to connect to the XDS server"; "addr" => server_addr, "error" => %err);
+                            Self::backoff(
                                 &log,
-                                format!("unable to connect to the XDS server at {}: {:?}", server_addr, err),
                                 &mut backoff
                             ).await?;
                         }
                         Err(RpcSessionError::Receive(handlers, bk_off, status)) => {
                             resource_handlers = handlers;
                             backoff = bk_off;
-                            Self::log_error_and_backoff(
+                            error!(log, "Failed to receive from XDS server"; "addr" => server_addr, "status" => #?status);
+                            Self::backoff(
                                 &log,
-                                format!("failed to receive from XDS server {}: {:?}", server_addr,status),
                                 &mut backoff
                             ).await?;
                         }
@@ -273,7 +273,7 @@ impl AdsClient {
                             Box::new(err))
                         )?;
                     } else {
-                        info!(log, "exiting send loop");
+                        info!(log, "Exiting send loop");
                         break;
                     }
                 }
@@ -383,7 +383,7 @@ impl AdsClient {
                         let response = match response {
                             Ok(None) => {
                                 // No more messages on the connection.
-                                info!(log, "exiting receive loop - response stream closed.");
+                                info!(log, "Exiting receive loop - response stream closed.");
                                 return Ok(resource_handlers)
                             },
                             Err(err) => return Err(RpcSessionError::Receive(resource_handlers, backoff, err)),
@@ -403,12 +403,12 @@ impl AdsClient {
                             resource_handlers.listener_manager.on_listener_response(response).await;
                         } else {
                             metrics.update_failure_total.inc();
-                            error!(log, "Unexpected resource with type_url={:?}", response.type_url);
+                            error!(log, "Unexpected resource"; "type" => response.type_url);
                         }
                     }
 
                     _ = shutdown_rx.changed() => {
-                        info!(log, "exiting receive loop - received shutdown signal.");
+                        info!(log, "Exiting receive loop - received shutdown signal");
                         return Ok(resource_handlers)
                     }
                 }
@@ -429,21 +429,19 @@ impl AdsClient {
         }
         metrics.requests_total.inc();
 
-        debug!(log, "sending rpc discovery request {:?}", req);
+        debug!(log, "Sending rpc discovery"; "request" => #?req);
 
         req_tx.send(req).await
     }
 
-    async fn log_error_and_backoff<C: Clock>(
+    async fn backoff<C: Clock>(
         log: &Logger,
-        error_msg: String,
         backoff: &mut ExponentialBackoff<C>,
     ) -> Result<(), ExecutionError> {
-        error!(log, "{}", error_msg);
         let delay = backoff
             .next_backoff()
             .ok_or(ExecutionError::BackoffLimitExceeded)?;
-        info!(log, "retrying in {:?}", delay);
+        info!(log, "Retrying"; "delay" => #?delay);
         tokio::time::sleep(delay).await;
         Ok(())
     }
@@ -476,9 +474,8 @@ pub(super) async fn send_discovery_req(
         .map_err(|err| {
             warn!(
                 log,
-                "Failed to send discovery request of type `{}`: {}",
-                type_url,
-                err.to_string()
+                "Failed to send discovery request";
+                "type" => %type_url, "error" => %err
             )
         })
         // ok is safe here since an error would mean that we've dropped/closed the receiving

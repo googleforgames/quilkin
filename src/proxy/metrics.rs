@@ -40,7 +40,7 @@ pub fn start_metrics_server(
     mut shutdown_rx: Receiver<()>,
     log: Logger,
 ) {
-    info!(log, "starting metrics endpoint at {}", addr.to_string());
+    info!(log, "Starting metrics"; "addr" => %addr);
 
     let handler_log = log.clone();
     let make_svc = make_service_fn(move |_conn| {
@@ -72,7 +72,7 @@ pub fn start_metrics_server(
 
     tokio::spawn(async move {
         if let Err(err) = server.await {
-            error!(log, "metrics server exited with an error: {}", err);
+            error!(log, "Metrics server exited with an error"; "error" => %err);
         }
     });
 }
@@ -86,11 +86,11 @@ fn handle_request(log: Logger, method: &Method, path: &str, registry: Registry) 
             let encoder = TextEncoder::new();
             let body = encoder
                 .encode(&registry.gather(), &mut buffer)
-                .map_err(|err| warn!(log, "failed to encode metrics: {:?}", err))
+                .map_err(|err| warn!(log, "Failed to encode metrics"; "error" => %err))
                 .and_then(|_| {
-                    String::from_utf8(buffer)
-                        .map(Body::from)
-                        .map_err(|err| warn!(log, "failed to convert metrics to utf8: {:?}", err))
+                    String::from_utf8(buffer).map(Body::from).map_err(
+                        |err| warn!(log, "Failed to convert metrics to utf8";  "error" => %err),
+                    )
                 });
 
             match body {

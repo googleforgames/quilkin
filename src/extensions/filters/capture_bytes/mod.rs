@@ -166,7 +166,7 @@ impl Filter for CaptureBytes {
             if self.metrics.packets_dropped_total.get() % 1000 == 0 {
                 warn!(
                     self.log,
-                    "packets are being dropped due to their length being less than {} bytes",
+                    "Packets are being dropped due to their length being less than {} bytes",
                     self.size; "count" => self.metrics.packets_dropped_total.get()
                 );
             }

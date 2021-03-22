@@ -175,7 +175,7 @@ impl DynamicResourceManagers {
                 .await;
             execution_result_tx
                 .send(result)
-                .map_err(|_err| warn!(log, "failed to send ADS client execution result on channel"))
+                .map_err(|_err| warn!(log, "Failed to send ADS client execution result on channel"))
                 .ok();
         });
 

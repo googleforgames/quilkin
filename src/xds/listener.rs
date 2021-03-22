@@ -84,7 +84,7 @@ impl ListenerManager {
                     .send(Arc::new(filter_chain))
                     .await
                     .map_err(|err| {
-                        warn!(self.log, "failed to send filter chain update on channel");
+                        warn!(self.log, "Failed to send filter chain update on channel");
                         err
                     })
                     // ok is safe here because an error can only be due to the consumer dropping
