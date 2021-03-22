@@ -15,13 +15,14 @@
  */
 
 use super::{Config, Filter};
-use crate::config::{EndPoint, Proxy, Source, Version};
+use crate::config::{Admin, EndPoint, Proxy, Source, Version};
 
 /// Builder for a [`Config`]
 #[derive(Debug)]
 pub struct Builder {
     pub port: u16,
     pub source: Source,
+    pub admin: Admin,
 }
 
 impl Builder {
@@ -29,6 +30,7 @@ impl Builder {
     pub fn empty() -> Self {
         Builder {
             port: 0,
+            admin: Admin::default(),
             source: Source::Static {
                 filters: vec![],
                 endpoints: vec![],
@@ -52,7 +54,7 @@ impl Builder {
                 id: "test".into(),
                 port: self.port,
             },
-            admin: None,
+            admin: self.admin,
             source: self.source,
             phantom: None,
         }

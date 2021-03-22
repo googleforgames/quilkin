@@ -29,18 +29,13 @@ properties:
   admin:
     type: object
     description: |
-      Configuration of operational proxy behavior.
+      Configuration of proxy admin HTTP interface.
     properties:
-      metrics:
-      type: object
+      address:
+      type: string
       description: |
-        Metrics related configuration.
-      properties:
-        port:
-          type: integer
-          description: |
-            Port on which to expose metrics.
-          default: 9091
+        Socket Address and port to bind the administration interface to.
+      default: [::]:9091
   static:
     type: object
     description: |
