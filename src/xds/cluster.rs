@@ -28,7 +28,7 @@ use crate::xds::ads_client::send_discovery_req;
 use crate::xds::error::Error;
 use bytes::Bytes;
 use prost::Message;
-use slog::{debug, warn, Logger};
+use slog::{debug, o, warn, Logger};
 use std::collections::{HashMap, HashSet};
 use std::net::SocketAddr;
 use tokio::sync::mpsc;
@@ -61,12 +61,12 @@ impl ClusterManager {
     /// ACKs/NACKs are sent on the provided channel to be forwarded to the XDS
     /// server.
     pub(in crate::xds) fn new(
-        log: Logger,
+        base: Logger,
         cluster_updates_tx: mpsc::Sender<HashMap<String, ProxyCluster>>,
         discovery_req_tx: mpsc::Sender<DiscoveryRequest>,
     ) -> Self {
         ClusterManager {
-            log,
+            log: base.new(o!("source" => "xds::ClusterManager")),
             discovery_req_tx,
             cluster_updates_tx,
             clusters: HashMap::new(),
