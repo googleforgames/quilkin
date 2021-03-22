@@ -98,7 +98,7 @@ pub enum Source {
     },
 }
 
-/// Config is the configuration for either a Client or Server proxy
+/// Config is the configuration of a proxy
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Config {
     pub version: Version,
