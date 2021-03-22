@@ -14,78 +14,9 @@
  * limitations under the License.
  */
 
-use std::fs::File;
-use std::process;
-use std::sync::Arc;
-
-use clap::App;
-use slog::{info, o};
-
-use prometheus::Registry;
-use quilkin::config::Config;
-use quilkin::proxy::{logger, Builder, Metrics};
-use tokio::signal;
-use tokio::sync::watch;
-
-const VERSION: &str = env!("CARGO_PKG_VERSION");
-
-#[cfg(debug_assertions)]
-fn version() -> String {
-    format!("{}+debug", VERSION)
-}
-
-#[cfg(not(debug_assertions))]
-fn version() -> String {
-    VERSION.into()
-}
+use quilkin::runner::run;
 
 #[tokio::main]
 async fn main() {
-    let version = version();
-    let base_logger = logger();
-    let log = base_logger.new(o!("source" => "main"));
-
-    let matches = App::new("Quilkin Proxy")
-        .version(version.as_str())
-        .about("Quilkin is a non-transparent UDP proxy specifically designed for use with large scale multiplayer dedicated game servers")
-        .arg(clap::Arg::with_name("filename")
-            .short("f")
-            .long("filename")
-            .value_name("FILE")
-            .help("The yaml configuration file")
-            .required(true)
-            .takes_value(true))
-        .get_matches();
-
-    let filename = matches.value_of("filename").unwrap();
-    info!(log, "Starting Quilkin"; "version" => version);
-
-    let config = Arc::new(Config::from_reader(File::open(filename).unwrap()).unwrap());
-    let server = Builder::from(config)
-        .with_log(base_logger)
-        .with_metrics(Metrics::new(
-            Some("[::]:9091".parse().unwrap()),
-            Registry::default(),
-        ))
-        .validate()
-        .unwrap()
-        .build();
-
-    let (shutdown_tx, shutdown_rx) = watch::channel::<()>(());
-    tokio::spawn(async move {
-        // Don't unwrap in order to ensure that we execute
-        // any subsequent shutdown tasks.
-        signal::ctrl_c().await.ok();
-        shutdown_tx.send(()).ok();
-    });
-
-    match server.run(shutdown_rx).await {
-        Ok(()) => {
-            info!(log, "Shutting down");
-        }
-        Err(err) => {
-            info!(log, "Shutting down with error: {}", err);
-            process::exit(1);
-        }
-    }
+    run(vec![]).await.unwrap()
 }
