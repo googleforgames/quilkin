@@ -40,7 +40,7 @@ pub fn start_metrics_server(
     mut shutdown_rx: Receiver<()>,
     log: Logger,
 ) {
-    info!(log, "Starting metrics"; "addr" => %addr);
+    info!(log, "Starting metrics"; "address" => %addr);
 
     let handler_log = log.clone();
     let make_svc = make_service_fn(move |_conn| {

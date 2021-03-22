@@ -184,7 +184,7 @@ impl AdsClient {
                             if err.to_string().to_lowercase().contains("invalid url") {
                                 return Err(ExecutionError::Message(format!("{:?}", err)));
                             }
-                            error!(log, "Unable to connect to the XDS server"; "addr" => server_addr, "error" => %err);
+                            error!(log, "Unable to connect to the XDS server"; "address" => server_addr, "error" => %err);
                             Self::backoff(
                                 &log,
                                 &mut backoff
@@ -193,7 +193,7 @@ impl AdsClient {
                         Err(RpcSessionError::Receive(handlers, bk_off, status)) => {
                             resource_handlers = handlers;
                             backoff = bk_off;
-                            error!(log, "Failed to receive from XDS server"; "addr" => server_addr, "status" => #?status);
+                            error!(log, "Failed to receive from XDS server"; "address" => server_addr, "status" => #?status);
                             Self::backoff(
                                 &log,
                                 &mut backoff

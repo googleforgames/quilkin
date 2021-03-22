@@ -77,7 +77,7 @@ on_write: DECOMPRESS
 
         // game_client
         let local_addr: SocketAddr = format!("127.0.0.1:{}", client_port).parse().unwrap();
-        info!(t.log, "Sending hello"; "addr" => local_addr);
+        info!(t.log, "Sending hello"; "address" => local_addr);
         tx.send_to(b"hello", &local_addr).await.unwrap();
 
         let expected = timeout(Duration::from_secs(5), rx.recv())
