@@ -21,7 +21,8 @@ use crate::config::{
 };
 use crate::extensions::{default_registry, CreateFilterError, FilterChain, FilterRegistry};
 use crate::proxy::server::metrics::Metrics as ProxyMetrics;
-use crate::proxy::{Metrics, Server};
+use crate::proxy::{Admin as ProxyAdmin, Metrics, Server};
+use prometheus::Registry;
 use slog::{o, Drain, Logger};
 use std::collections::HashSet;
 use std::convert::TryInto;
@@ -108,17 +109,21 @@ pub struct Builder<V> {
     log: Logger,
     config: Arc<Config>,
     filter_registry: FilterRegistry,
-    metrics: Metrics,
+    admin: Option<ProxyAdmin>,
+    metrics: Arc<Metrics>,
     validation_status: V,
 }
 
 impl From<Arc<Config>> for Builder<PendingValidation> {
     fn from(config: Arc<Config>) -> Self {
         let log = logger();
+        let metrics = Arc::new(Metrics::new(&log, Registry::default()));
+        let admin = ProxyAdmin::new(&log, config.admin.address, metrics.clone());
         Builder {
             config,
             filter_registry: default_registry(&log),
-            metrics: Metrics::default(),
+            admin: Some(admin),
+            metrics,
             log,
             validation_status: PendingValidation,
         }
@@ -249,8 +254,12 @@ impl Builder<PendingValidation> {
         }
     }
 
-    pub fn with_metrics(self, metrics: Metrics) -> Self {
-        Self { metrics, ..self }
+    /// Disable the admin interface
+    pub fn with_disabled_admin(self) -> Self {
+        Self {
+            admin: None,
+            ..self
+        }
     }
 
     // Validates the builder's config and filter configurations.
@@ -261,6 +270,7 @@ impl Builder<PendingValidation> {
         Ok(Builder {
             log: self.log,
             config: self.config,
+            admin: self.admin,
             metrics: self.metrics,
             filter_registry: self.filter_registry,
             validation_status: Validated(validated_config),
@@ -275,6 +285,7 @@ impl Builder<Validated> {
             config: Arc::new(self.validation_status.0),
             proxy_metrics: ProxyMetrics::new(&self.metrics.registry.clone())
                 .expect("metrics should be setup properly"),
+            admin: self.admin,
             metrics: self.metrics,
             filter_registry: Arc::new(self.filter_registry),
         }

@@ -30,7 +30,7 @@ use crate::extensions::{
     default_registry, CreateFilterArgs, Error, Filter, FilterFactory, FilterRegistry, ReadContext,
     ReadResponse, WriteContext, WriteResponse,
 };
-use crate::proxy::{Builder, Metrics};
+use crate::proxy::Builder;
 
 pub struct TestFilterFactory {}
 impl FilterFactory for TestFilterFactory {
@@ -132,24 +132,6 @@ impl Default for TestHelper {
 }
 
 impl TestHelper {
-    /// Creates a [`Server`] and runs it. The server is shutdown once `self`
-    /// goes out of scope.
-    pub fn run_server(&mut self, config: Config) {
-        self.run_server_with_filter_registry(config, default_registry(&self.log))
-    }
-
-    pub fn run_server_with_filter_registry(
-        &mut self,
-        config: Config,
-        filter_registry: FilterRegistry,
-    ) {
-        self.run_server_with_arguments(config, filter_registry, Metrics::default())
-    }
-
-    pub fn run_server_with_metrics(&mut self, config: Config, metrics: Metrics) {
-        self.run_server_with_arguments(config, default_registry(&self.log), metrics)
-    }
-
     /// Opens a new socket bound to an ephemeral port
     pub async fn create_socket(&self) -> Arc<UdpSocket> {
         let addr = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 0);
@@ -242,19 +224,39 @@ impl TestHelper {
         addr
     }
 
+    /// Creates a [`Server`] and runs it. The server is shutdown once `self`
+    /// goes out of scope.
+    pub fn run_server(&mut self, config: Config) {
+        self.run_server_with_filter_registry(config, default_registry(&self.log))
+    }
+
+    pub fn run_server_with_filter_registry(
+        &mut self,
+        config: Config,
+        filter_registry: FilterRegistry,
+    ) {
+        self.run_server_with_arguments(config, filter_registry, true)
+    }
+
+    pub fn run_server_with_admin(&mut self, config: Config) {
+        self.run_server_with_arguments(config, default_registry(&self.log), false)
+    }
+
     /// Create and run a server.
     fn run_server_with_arguments(
         &mut self,
         config: Config,
         filter_registry: FilterRegistry,
-        metrics: Metrics,
+        disable_admin: bool,
     ) {
         let (shutdown_tx, shutdown_rx) = watch::channel::<()>(());
         self.server_shutdown_tx.push(Some(shutdown_tx));
         tokio::spawn(async move {
-            Builder::from(Arc::new(config))
-                .with_filter_registry(filter_registry)
-                .with_metrics(metrics)
+            let mut builder = Builder::from(Arc::new(config)).with_filter_registry(filter_registry);
+            if disable_admin {
+                builder = builder.with_disabled_admin();
+            }
+            builder
                 .validate()
                 .unwrap()
                 .build()

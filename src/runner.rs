@@ -18,14 +18,13 @@ use std::fs::File;
 use std::sync::Arc;
 
 use clap::App;
-use prometheus::Registry;
 use slog::{info, o, Logger};
 use tokio::signal;
 use tokio::sync::watch;
 
 use crate::config::Config;
 use crate::extensions::{default_registry, FilterFactory, FilterRegistry};
-use crate::proxy::{logger, Builder, Metrics};
+use crate::proxy::{logger, Builder};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -73,14 +72,6 @@ pub async fn run(filter_factories: Vec<Box<dyn FilterFactory>>) -> Result<(), Er
     );
     let server = Builder::from(config)
         .with_log(base_logger)
-        .with_metrics(Metrics::new(
-            Some(
-                "[::]:9091"
-                    .parse()
-                    .map_err(|err| Error(format!("failed to create metrics address: {}", err)))?,
-            ),
-            Registry::default(),
-        ))
         .with_filter_registry(create_filter_registry(&log, filter_factories))
         .validate()
         .map_err(|err| Error(format!("{:?}", err)))?

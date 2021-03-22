@@ -14,10 +14,12 @@
  * limitations under the License.
  */
 
+pub use admin::Admin;
 pub use builder::{logger, Builder};
 pub use metrics::Metrics;
 pub use server::Server;
 
+mod admin;
 mod builder;
 mod metrics;
 mod server;

@@ -28,20 +28,21 @@ use tokio::task::JoinHandle;
 use tokio::time::{sleep, Duration};
 
 use metrics::Metrics as ProxyMetrics;
+use resource_manager::{DynamicResourceManagers, StaticResourceManagers};
 
 use crate::cluster::cluster_manager::SharedClusterManager;
 use crate::cluster::Endpoint;
+use crate::extensions::filter_manager::SharedFilterManager;
 use crate::extensions::{Filter, FilterRegistry, ReadContext};
+use crate::proxy::builder::{ValidatedConfig, ValidatedSource};
 use crate::proxy::server::error::Error;
 use crate::proxy::sessions::{
     Packet, Session, SESSION_EXPIRY_POLL_INTERVAL, SESSION_TIMEOUT_SECONDS,
 };
 use crate::utils::debug;
 
-use super::metrics::{start_metrics_server, Metrics};
-use crate::extensions::filter_manager::SharedFilterManager;
-use crate::proxy::builder::{ValidatedConfig, ValidatedSource};
-use resource_manager::{DynamicResourceManagers, StaticResourceManagers};
+use super::metrics::Metrics;
+use crate::proxy::Admin;
 
 pub mod error;
 pub(super) mod metrics;
@@ -56,7 +57,9 @@ pub struct Server {
     // We use pub(super) to limit instantiation only to the Builder.
     pub(super) log: Logger,
     pub(super) config: Arc<ValidatedConfig>,
-    pub(super) metrics: Metrics,
+    // Admin may be turned off, primarily for testing.
+    pub(super) admin: Option<Admin>,
+    pub(super) metrics: Arc<Metrics>,
     pub(super) proxy_metrics: ProxyMetrics,
     pub(super) filter_registry: Arc<FilterRegistry>,
 }
@@ -89,7 +92,7 @@ struct DownstreamReceiveWorkerConfig {
 /// filter chain and session pipeline.
 struct ProcessDownstreamReceiveConfig {
     log: Logger,
-    metrics: Metrics,
+    metrics: Arc<Metrics>,
     proxy_metrics: ProxyMetrics,
     cluster_manager: SharedClusterManager,
     filter_manager: SharedFilterManager,
@@ -104,13 +107,8 @@ impl Server {
     pub async fn run(self, mut shutdown_rx: watch::Receiver<()>) -> Result<()> {
         self.log_config();
 
-        if let Some(addr) = self.metrics.addr {
-            start_metrics_server(
-                addr,
-                self.metrics.registry.clone(),
-                shutdown_rx.clone(),
-                self.log.clone(),
-            );
+        if let Some(admin) = &self.admin {
+            admin.run(shutdown_rx.clone());
         }
 
         let socket = Arc::new(Server::bind(self.config.proxy.port).await?);
@@ -571,6 +569,7 @@ mod tests {
     use std::ops::Add;
     use std::sync::Arc;
 
+    use prometheus::Registry;
     use slog::info;
     use tokio::sync::{mpsc, RwLock};
     use tokio::time;
@@ -580,6 +579,7 @@ mod tests {
     use crate::cluster::cluster_manager::ClusterManager;
     use crate::config;
     use crate::config::{Builder as ConfigBuilder, EndPoint, Endpoints};
+    use crate::extensions::filter_manager::FilterManager;
     use crate::extensions::{FilterChain, FilterRegistry};
     use crate::proxy::sessions::Packet;
     use crate::proxy::Builder;
@@ -588,8 +588,6 @@ mod tests {
     };
 
     use super::*;
-    use crate::extensions::filter_manager::FilterManager;
-    use prometheus::Registry;
 
     #[tokio::test]
     async fn run_server() {
@@ -747,14 +745,16 @@ mod tests {
                 let (packet_tx, packet_rx) = mpsc::channel(num_workers);
                 packet_txs.push(packet_tx);
 
+                let metrics = Arc::new(Metrics::new(&t.log, Registry::default()));
+                let proxy_metrics = ProxyMetrics::new(&metrics.registry).unwrap();
                 worker_configs.push(DownstreamReceiveWorkerConfig {
                     worker_id,
                     packet_rx,
                     shutdown_rx: shutdown_rx.clone(),
                     receive_config: ProcessDownstreamReceiveConfig {
                         log: t.log.clone(),
-                        metrics: Metrics::default(),
-                        proxy_metrics: ProxyMetrics::new(&Metrics::default().registry).unwrap(),
+                        metrics,
+                        proxy_metrics,
                         cluster_manager: cluster_manager.clone(),
                         filter_manager: filter_manager.clone(),
                         sessions: sessions.clone(),
@@ -911,7 +911,7 @@ mod tests {
                 key,
                 Session::new(
                     &t.log,
-                    Metrics::default()
+                    Metrics::new(&t.log, Registry::default())
                         .new_session_metrics(&from, &endpoint.address)
                         .unwrap(),
                     FilterManager::fixed(Arc::new(FilterChain::new(vec![]))),
@@ -981,7 +981,7 @@ mod tests {
                 key,
                 Session::new(
                     &t.log,
-                    Metrics::default()
+                    Metrics::new(&t.log, Registry::default())
                         .new_session_metrics(&from, &endpoint.address)
                         .unwrap(),
                     FilterManager::fixed(Arc::new(FilterChain::new(vec![]))),
