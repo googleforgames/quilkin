@@ -100,7 +100,7 @@ pub async fn run(filter_factories: Vec<Box<dyn FilterFactory>>) -> Result<(), Er
             Ok(())
         }
         Err(err) => {
-            info!(log, "Shutting down with error: {}", err);
+            info!(log, "Shutting down with error"; "error" => %err);
             Err(Error(format!("{:?}", err)))
         }
     }

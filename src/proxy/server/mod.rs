@@ -289,7 +289,7 @@ impl Server {
                     err => {
                         // Socket error, we cannot recover from this so return an error instead.
                         error!(log, "Error processing receive socket"; "error" => #?err);
-                        return Err(format!("Error processing receive socket: {:?}", err));
+                        return Err(format!("error processing receive socket: {:?}", err));
                     }
                 }
             }
