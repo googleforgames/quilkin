@@ -45,7 +45,7 @@ pub(super) enum ValidatedSource {
 pub(super) struct ValidatedConfig {
     pub version: Version,
     pub proxy: Proxy,
-    pub admin: Option<Admin>,
+    pub admin: Admin,
     pub source: ValidatedSource,
     // Limit struct creation to the builder.
     pub phantom: PhantomData<()>,

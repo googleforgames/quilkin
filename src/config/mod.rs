@@ -69,13 +69,16 @@ impl Default for Proxy {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct AdminAddress {
-    port: u16,
+pub struct Admin {
+    pub address: SocketAddr,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct Admin {
-    address: Option<AdminAddress>,
+impl Default for Admin {
+    fn default() -> Self {
+        Admin {
+            address: "[::]:9091".parse().unwrap(),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -106,7 +109,8 @@ pub struct Config {
     #[serde(default)]
     pub proxy: Proxy,
 
-    pub admin: Option<Admin>,
+    #[serde(default)]
+    pub admin: Admin,
 
     #[serde(flatten)]
     pub source: Source,
