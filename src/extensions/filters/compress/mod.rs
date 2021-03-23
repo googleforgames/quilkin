@@ -188,7 +188,7 @@ impl Compress {
     fn failed_compression<T>(&self, err: Box<dyn std::error::Error>) -> Option<T> {
         if self.metrics.packets_dropped_compress.get() % 1000 == 0 {
             warn!(self.log, "Packets are being dropped as they could not be compressed"; 
-                            "mode" => format!("{:?}", self.compression_mode), "error" => format!("{}", err), 
+                            "mode" => #?self.compression_mode, "error" => %err, 
                             "count" => self.metrics.packets_dropped_compress.get());
         }
         self.metrics.packets_dropped_compress.inc();
@@ -199,7 +199,7 @@ impl Compress {
     fn failed_decompression<T>(&self, err: Box<dyn std::error::Error>) -> Option<T> {
         if self.metrics.packets_dropped_decompress.get() % 1000 == 0 {
             warn!(self.log, "Packets are being dropped as they could not be decompressed"; 
-                            "mode" => format!("{:?}", self.compression_mode), "error" => format!("{}", err), 
+                            "mode" => #?self.compression_mode, "error" => %err, 
                             "count" => self.metrics.packets_dropped_decompress.get());
         }
         self.metrics.packets_dropped_decompress.inc();

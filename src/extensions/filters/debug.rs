@@ -107,7 +107,7 @@ impl Filter for Debug {
     }
 
     fn write(&self, ctx: WriteContext) -> Option<WriteResponse> {
-        info!(self.log, "received endpoint packet"; "endpoint" => ctx.endpoint.address,
+        info!(self.log, "Received endpoint packet"; "endpoint" => ctx.endpoint.address,
         "from" => ctx.from,
         "to" => ctx.to,
         "contents" => packet_to_string(ctx.contents.clone()));

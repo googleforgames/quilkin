@@ -434,7 +434,6 @@ mod tests {
         // Poll the state to wait for the change, because everything is async
         for _ in 1..1000 {
             let is_closed = sess.is_closed();
-            info!(t.log, "session closed?"; "closed" => is_closed);
             if is_closed {
                 break;
             }

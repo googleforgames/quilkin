@@ -281,16 +281,15 @@ impl Server {
                             // We cannot recover from this error since
                             // it implies that the receiver has been dropped.
                             let reason =
-                                "failed to send received packet over channel to worker".into();
+                                "Failed to send received packet over channel to worker".into();
                             error!(log, "{}", reason);
                             return Err(reason);
                         }
                     }
                     err => {
                         // Socket error, we cannot recover from this so return an error instead.
-                        let reason = format!("error processing receive socket: {:?}", err);
-                        error!(log, "{}", reason);
-                        return Err(reason);
+                        error!(log, "Error processing receive socket"; "error" => #?err);
+                        return Err(format!("error processing receive socket: {:?}", err));
                     }
                 }
             }
@@ -320,13 +319,13 @@ impl Server {
                         match packet {
                           Some((recv_addr, packet)) => Self::process_downstream_received_packet((recv_addr, packet), &receive_config).await,
                           None => {
-                            debug!(log, "worker-{} exiting: work sender channel was closed.", worker_id);
+                            debug!(log, "Worker-{} exiting: work sender channel was closed.", worker_id);
                             return;
                           }
                         }
                       }
                       _ = shutdown_rx.changed() => {
-                        debug!(log, "worker-{} exiting: received shutdown signal.", worker_id);
+                        debug!(log, "Worker-{} exiting: received shutdown signal.", worker_id);
                         return;
                       }
                     }
@@ -449,19 +448,18 @@ impl Server {
                                 } else {
                                     warn!(
                                         args.log,
-                                        "Could not find session for key: ({}:{})",
-                                        session_key.0.to_string(),
-                                        session_key.1.to_string()
+                                        "Could not find session";
+                                        "key" => format!("({}:{})", session_key.0.to_string(), session_key.1.to_string())
                                     )
                                 }
                             }
                             Err(err) => {
-                                error!(args.log, "failed to ensure session exists"; "error" => %err);
+                                error!(args.log, "Failed to ensure session exists"; "error" => %err);
                             }
                         }
                     }
                     Err(err) => {
-                        error!(args.log, "failed to create session metrics"; "error" => %err);
+                        error!(args.log, "Failed to create session metrics"; "error" => %err);
                     }
                 }
             }
@@ -515,7 +513,7 @@ impl Server {
 
     /// log_config outputs a log of what is configured
     fn log_config(&self) {
-        info!(self.log, "Starting on port {}", self.config.proxy.port);
+        info!(self.log, "Starting"; "port" => self.config.proxy.port);
     }
 
     /// bind binds the local configured port
@@ -531,7 +529,7 @@ impl Server {
         let now = if let Ok(now) = SystemTime::now().duration_since(UNIX_EPOCH) {
             now.as_secs()
         } else {
-            warn!(log, "failed to get current time when pruning sessions");
+            warn!(log, "Failed to get current time when pruning sessions");
             return;
         };
 

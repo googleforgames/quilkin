@@ -109,7 +109,7 @@ impl Drop for TestHelper {
                 .map_err(|err| {
                     warn!(
                         log,
-                        "failed to send server shutdown over channel: {:?}", err
+                        "Failed to send server shutdown over channel"; "error" => %err
                     )
                 })
                 .ok();

@@ -210,7 +210,7 @@ impl ClusterManager {
                     // the cluster has been deleted since ADS handles resource ordering.
                     warn!(
                         self.log,
-                        "Got endpoint for non-existing cluster {}", assignment.cluster_name
+                        "Got endpoint for non-existing cluster"; "name" => assignment.cluster_name
                     );
                 }
             }
@@ -228,7 +228,7 @@ impl ClusterManager {
             .send(self.clusters.clone())
             .await
             .map_err(|err| {
-                warn!(self.log, "failed to send cluster updates downstream");
+                warn!(self.log, "Failed to send cluster updates downstream");
                 err
             })
             // ok is safe here because an error can only be due to downstream dropping
