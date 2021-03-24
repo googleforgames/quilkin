@@ -14,6 +14,18 @@
  *  limitations under the License.
  */
 
+use std::collections::HashSet;
+use std::convert::TryInto;
+use std::marker::PhantomData;
+use std::{
+    fmt::{self, Formatter},
+    sync::Arc,
+};
+
+use prometheus::Registry;
+use slog::{o, Drain, Logger};
+use tonic::transport::Endpoint as TonicEndpoint;
+
 use crate::cluster::Endpoint;
 use crate::config::{
     parse_endpoint_metadata_from_yaml, Admin, Config, Endpoints, ManagementServer, Proxy, Source,
@@ -22,16 +34,6 @@ use crate::config::{
 use crate::extensions::{default_registry, CreateFilterError, FilterChain, FilterRegistry};
 use crate::proxy::server::metrics::Metrics as ProxyMetrics;
 use crate::proxy::{Admin as ProxyAdmin, Metrics, Server};
-use prometheus::Registry;
-use slog::{o, Drain, Logger};
-use std::collections::HashSet;
-use std::convert::TryInto;
-use std::marker::PhantomData;
-use std::{
-    fmt::{self, Formatter},
-    sync::Arc,
-};
-use tonic::transport::Endpoint as TonicEndpoint;
 
 pub(super) enum ValidatedSource {
     Static {
@@ -255,7 +257,7 @@ impl Builder<PendingValidation> {
     }
 
     /// Disable the admin interface
-    pub fn with_disabled_admin(self) -> Self {
+    pub fn disable_admin(self) -> Self {
         Self {
             admin: None,
             ..self
@@ -304,11 +306,13 @@ pub fn logger() -> Logger {
 
 #[cfg(test)]
 mod tests {
-    use super::{Builder, Error};
-    use crate::config::{Config, ValidationError};
-    use crate::proxy::builder::Validated;
     use std::convert::TryFrom;
     use std::sync::Arc;
+
+    use crate::config::{Config, ValidationError};
+    use crate::proxy::builder::Validated;
+
+    use super::{Builder, Error};
 
     fn parse_config(yaml: &str) -> Config {
         Config::from_reader(yaml.as_bytes()).unwrap()

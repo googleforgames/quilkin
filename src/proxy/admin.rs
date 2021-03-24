@@ -73,7 +73,7 @@ impl Admin {
 
 fn handle_request(request: Request<Body>, metrics: Arc<Metrics>) -> Response<Body> {
     match (request.method(), request.uri().path()) {
-        (&Method::GET, "/metrics") => metrics.admin_response(),
+        (&Method::GET, "/metrics") => metrics.collect_metrics(),
         (_, _) => {
             let mut response = Response::new(Body::empty());
             *response.status_mut() = StatusCode::NOT_FOUND;

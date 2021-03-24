@@ -49,7 +49,7 @@ impl Metrics {
         )
     }
 
-    pub fn admin_response(&self) -> Response<Body> {
+    pub fn collect_metrics(&self) -> Response<Body> {
         let mut response = Response::new(Body::empty());
         let mut buffer = vec![];
         let encoder = TextEncoder::new();
@@ -84,10 +84,10 @@ mod tests {
     use crate::test_utils::logger;
 
     #[tokio::test]
-    async fn admin_response() {
+    async fn collect_metrics() {
         let log = logger();
         let metrics = Metrics::new(&log, Registry::default());
-        let response = metrics.admin_response();
+        let response = metrics.collect_metrics();
         assert_eq!(response.status(), StatusCode::OK);
     }
 }
