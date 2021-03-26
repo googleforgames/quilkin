@@ -24,7 +24,9 @@ mod tests {
     use quilkin::config::{Builder, EndPoint, Filter};
     use quilkin::extensions::filters::CompressFactory;
     use quilkin::extensions::FilterFactory;
+    use quilkin::proxy::Builder as ProxyBuilder;
     use quilkin::test_utils::{logger, TestHelper};
+    use std::sync::Arc;
 
     #[tokio::test]
     async fn client_and_server() {
@@ -49,7 +51,7 @@ on_write: COMPRESS
             )
             .build();
         // Run server proxy.
-        t.run_server(server_config);
+        t.run_server(ProxyBuilder::from(Arc::new(server_config)).disable_admin());
 
         // create a local client
         let client_port = 12357;
@@ -70,7 +72,7 @@ on_write: DECOMPRESS
             )
             .build();
         // Run client proxy.
-        t.run_server(client_config);
+        t.run_server(ProxyBuilder::from(Arc::new(client_config)).disable_admin());
 
         // let's send the packet
         let (mut rx, tx) = t.open_socket_and_recv_multiple_packets().await;

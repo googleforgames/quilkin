@@ -607,7 +607,7 @@ mod tests {
                 ],
             )
             .build();
-        t.run_server(config);
+        t.run_server(Builder::from(Arc::new(config)).disable_admin());
 
         let msg = "hello";
         endpoint1
@@ -633,7 +633,7 @@ mod tests {
                 vec![EndPoint::new(endpoint.socket.local_addr().unwrap())],
             )
             .build();
-        t.run_server(config);
+        t.run_server(Builder::from(Arc::new(config)).disable_admin());
 
         let msg = "hello";
         endpoint
@@ -663,7 +663,11 @@ mod tests {
                 vec![EndPoint::new(endpoint.socket.local_addr().unwrap())],
             )
             .build();
-        t.run_server_with_filter_registry(config, registry);
+        t.run_server(
+            Builder::from(Arc::new(config))
+                .with_filter_registry(registry)
+                .disable_admin(),
+        );
 
         let msg = "hello";
         endpoint

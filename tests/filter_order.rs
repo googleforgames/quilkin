@@ -25,8 +25,10 @@ mod tests {
     use quilkin::config::{Builder, EndPoint, Filter};
     use quilkin::extensions::filters::{CompressFactory, ConcatBytesFactory};
     use quilkin::extensions::FilterFactory;
+    use quilkin::proxy::Builder as ProxyBuilder;
     use quilkin::test_utils::TestHelper;
     use std::str::from_utf8;
+    use std::sync::Arc;
 
     #[tokio::test]
     async fn filter_order() {
@@ -78,7 +80,7 @@ on_write: DECOMPRESS
             )
             .build();
 
-        t.run_server(server_config);
+        t.run_server(ProxyBuilder::from(Arc::new(server_config)).disable_admin());
 
         // let's send the packet
         let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;

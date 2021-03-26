@@ -24,7 +24,9 @@ mod tests {
     use tokio::time::{sleep, Duration};
 
     use quilkin::config::{Builder as ConfigBuilder, EndPoint};
+    use quilkin::proxy::Builder;
     use quilkin::test_utils::TestHelper;
+    use std::sync::Arc;
 
     #[tokio::test]
     async fn echo() {
@@ -41,7 +43,7 @@ mod tests {
             .with_static(vec![], vec![EndPoint::new(server1), EndPoint::new(server2)])
             .build();
 
-        t.run_server(server_config);
+        t.run_server(Builder::from(Arc::new(server_config)).disable_admin());
 
         // create a local client
         let client_port = 12344;
@@ -56,7 +58,7 @@ mod tests {
             )
             .build();
 
-        t.run_server(client_config);
+        t.run_server(Builder::from(Arc::new(client_config)).disable_admin());
 
         // let's send the packet
         let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;

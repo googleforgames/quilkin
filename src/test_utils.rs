@@ -25,10 +25,10 @@ use tokio::net::UdpSocket;
 use tokio::sync::{mpsc, oneshot, watch};
 
 use crate::cluster::Endpoint;
-use crate::config::{Builder as ConfigBuilder, Config, EndPoint, Endpoints};
+use crate::config::{Builder as ConfigBuilder, EndPoint, Endpoints};
 use crate::extensions::{
-    default_registry, CreateFilterArgs, Error, Filter, FilterFactory, FilterRegistry, ReadContext,
-    ReadResponse, WriteContext, WriteResponse,
+    CreateFilterArgs, Error, Filter, FilterFactory, ReadContext, ReadResponse, WriteContext,
+    WriteResponse,
 };
 use crate::proxy::{Builder, PendingValidation};
 
@@ -224,35 +224,7 @@ impl TestHelper {
         addr
     }
 
-    /// Creates a [`Server`] and runs it. The server is shutdown once `self`
-    /// goes out of scope.
-    pub fn run_server(&mut self, config: Config) {
-        self.run_server_with_filter_registry(config, default_registry(&self.log))
-    }
-
-    pub fn run_server_with_filter_registry(
-        &mut self,
-        config: Config,
-        filter_registry: FilterRegistry,
-    ) {
-        self.run_server_with_arguments(config, filter_registry)
-    }
-
-    /// Create and run a server with the admin interface enabled.
-    pub fn run_server_with_admin(&mut self, config: Config) {
-        let builder = Builder::from(Arc::new(config));
-        self.run_server_with_builder(builder);
-    }
-
-    /// Create and run a server (no admin)
-    fn run_server_with_arguments(&mut self, config: Config, filter_registry: FilterRegistry) {
-        let builder = Builder::from(Arc::new(config))
-            .with_filter_registry(filter_registry)
-            .disable_admin();
-        self.run_server_with_builder(builder);
-    }
-
-    fn run_server_with_builder(&mut self, builder: Builder<PendingValidation>) {
+    pub fn run_server(&mut self, builder: Builder<PendingValidation>) {
         let (shutdown_tx, shutdown_rx) = watch::channel::<()>(());
         self.server_shutdown_tx.push(Some(shutdown_tx));
         tokio::spawn(async move {

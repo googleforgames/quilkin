@@ -23,7 +23,9 @@ mod tests {
     use quilkin::config::{Builder, EndPoint, Filter};
     use quilkin::extensions::filters::{CaptureBytesFactory, TokenRouterFactory};
     use quilkin::extensions::FilterFactory;
+    use quilkin::proxy::Builder as ProxyBuilder;
     use quilkin::test_utils::{logger, TestHelper};
+    use std::sync::Arc;
 
     /// This test covers both token_router and capture_bytes filters,
     /// since they work in concert together.
@@ -62,7 +64,7 @@ quilkin.dev:
                 )],
             )
             .build();
-        t.run_server(server_config);
+        t.run_server(ProxyBuilder::from(Arc::new(server_config)).disable_admin());
 
         // valid packet
         let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
