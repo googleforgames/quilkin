@@ -25,7 +25,7 @@ use tokio::net::UdpSocket;
 use tokio::sync::{mpsc, oneshot, watch};
 
 use crate::cluster::Endpoint;
-use crate::config::{Builder as ConfigBuilder, EndPoint, Endpoints};
+use crate::config::{Builder as ConfigBuilder, Config, EndPoint, Endpoints};
 use crate::extensions::{
     CreateFilterArgs, Error, Filter, FilterFactory, ReadContext, ReadResponse, WriteContext,
     WriteResponse,
@@ -224,7 +224,14 @@ impl TestHelper {
         addr
     }
 
-    pub fn run_server(&mut self, builder: Builder<PendingValidation>) {
+    /// Run a proxy server with a supplied config.
+    /// Admin is disabled for this method, as the majority of tests will not need it, and it makes it
+    /// easier to avoid issues with port collisions.
+    pub fn run_server_with_config(&mut self, config: Config) {
+        self.run_server_with_builder(Builder::from(Arc::new(config)).disable_admin());
+    }
+
+    pub fn run_server_with_builder(&mut self, builder: Builder<PendingValidation>) {
         let (shutdown_tx, shutdown_rx) = watch::channel::<()>(());
         self.server_shutdown_tx.push(Some(shutdown_tx));
         tokio::spawn(async move {

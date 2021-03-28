@@ -44,7 +44,7 @@ mod tests {
                 address: "[::]:9092".parse().unwrap(),
             })
             .build();
-        t.run_server(Builder::from(Arc::new(server_config)));
+        t.run_server_with_builder(Builder::from(Arc::new(server_config)));
 
         // create a local client
         let client_port = 12347;
@@ -58,7 +58,7 @@ mod tests {
                 ))],
             )
             .build();
-        t.run_server(Builder::from(Arc::new(client_config)));
+        t.run_server_with_builder(Builder::from(Arc::new(client_config)));
 
         // let's send the packet
         let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;

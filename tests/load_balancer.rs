@@ -24,7 +24,6 @@ mod tests {
     use quilkin::config::{Builder as ConfigBuilder, EndPoint, Filter};
     use quilkin::extensions::filters::LoadBalancerFilterFactory;
     use quilkin::extensions::FilterFactory;
-    use quilkin::proxy::Builder;
     use quilkin::test_utils::TestHelper;
 
     #[tokio::test]
@@ -62,7 +61,7 @@ policy: ROUND_ROBIN
                     .collect(),
             )
             .build();
-        t.run_server(Builder::from(Arc::new(server_config)).disable_admin());
+        t.run_server_with_config(server_config);
         let server_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port);
 
         let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;

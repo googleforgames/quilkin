@@ -53,7 +53,7 @@ mod tests {
         // Run server proxy.
         let mut registry = default_registry(&t.log);
         registry.insert(TestFilterFactory {});
-        t.run_server(
+        t.run_server_with_builder(
             ProxyBuilder::from(Arc::new(server_config))
                 .with_filter_registry(registry)
                 .disable_admin(),
@@ -78,7 +78,7 @@ mod tests {
         // Run client proxy.
         let mut registry = default_registry(&t.log);
         registry.insert(TestFilterFactory {});
-        t.run_server(
+        t.run_server_with_builder(
             ProxyBuilder::from(Arc::new(client_config))
                 .with_filter_registry(registry)
                 .disable_admin(),
@@ -135,7 +135,7 @@ mod tests {
                 vec![EndPoint::new(echo)],
             )
             .build();
-        t.run_server(ProxyBuilder::from(Arc::new(server_config)).disable_admin());
+        t.run_server_with_config(server_config);
 
         let mut map = Mapping::new();
         map.insert(Value::from("id"), Value::from("client"));
@@ -154,7 +154,7 @@ mod tests {
                 ))],
             )
             .build();
-        t.run_server(ProxyBuilder::from(Arc::new(client_config)).disable_admin());
+        t.run_server_with_config(client_config);
 
         // let's send the packet
         let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;

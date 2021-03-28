@@ -25,9 +25,7 @@ mod tests {
     use quilkin::config::{Builder as ConfigBuilder, EndPoint, Filter};
     use quilkin::extensions::filters::RateLimitFilterFactory;
     use quilkin::extensions::FilterFactory;
-    use quilkin::proxy::Builder;
     use quilkin::test_utils::TestHelper;
-    use std::sync::Arc;
 
     #[tokio::test]
     async fn local_rate_limit_filter() {
@@ -50,7 +48,7 @@ period: 1s
                 vec![EndPoint::new(echo)],
             )
             .build();
-        t.run_server(Builder::from(Arc::new(server_config)).disable_admin());
+        t.run_server_with_config(server_config);
 
         let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
 
