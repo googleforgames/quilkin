@@ -49,7 +49,7 @@ on_write: COMPRESS
             )
             .build();
         // Run server proxy.
-        t.run_server(server_config);
+        t.run_server_with_config(server_config);
 
         // create a local client
         let client_port = 12357;
@@ -70,7 +70,7 @@ on_write: DECOMPRESS
             )
             .build();
         // Run client proxy.
-        t.run_server(client_config);
+        t.run_server_with_config(client_config);
 
         // let's send the packet
         let (mut rx, tx) = t.open_socket_and_recv_multiple_packets().await;

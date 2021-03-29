@@ -35,6 +35,7 @@ Not to be used in production systems.
 * See the [proxy configuration reference](./docs/proxy-configuration.md) for all the configuration options. 
 * See the [Session documentation](./docs/session.md) for an overview of quilkin sessions and metrics.
 * See [Filter documentation](./docs/extensions/filters/filters.md) for a list of filters, and their configuration options.
+* The [Administration interface](./docs/admin.md) provides access to health and metrics endpoints.
 
 ## Code of Conduct
 

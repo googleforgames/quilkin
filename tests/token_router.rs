@@ -62,7 +62,7 @@ quilkin.dev:
                 )],
             )
             .build();
-        t.run_server(server_config);
+        t.run_server_with_config(server_config);
 
         // valid packet
         let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;

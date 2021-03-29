@@ -45,8 +45,7 @@ bytes: YWJj #abc
                 vec![EndPoint::new(echo)],
             )
             .build();
-
-        t.run_server(server_config);
+        t.run_server_with_config(server_config);
 
         // let's send the packet
         let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;

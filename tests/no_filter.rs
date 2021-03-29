@@ -41,7 +41,7 @@ mod tests {
             .with_static(vec![], vec![EndPoint::new(server1), EndPoint::new(server2)])
             .build();
 
-        t.run_server(server_config);
+        t.run_server_with_config(server_config);
 
         // create a local client
         let client_port = 12344;
@@ -55,8 +55,7 @@ mod tests {
                 ))],
             )
             .build();
-
-        t.run_server(client_config);
+        t.run_server_with_config(client_config);
 
         // let's send the packet
         let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;

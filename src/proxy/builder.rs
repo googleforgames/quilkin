@@ -14,15 +14,6 @@
  *  limitations under the License.
  */
 
-use crate::cluster::Endpoint;
-use crate::config::{
-    parse_endpoint_metadata_from_yaml, Admin, Config, Endpoints, ManagementServer, Proxy, Source,
-    ValidationError, ValueInvalidArgs, Version,
-};
-use crate::extensions::{default_registry, CreateFilterError, FilterChain, FilterRegistry};
-use crate::proxy::server::metrics::Metrics as ProxyMetrics;
-use crate::proxy::{Metrics, Server};
-use slog::{o, Drain, Logger};
 use std::collections::HashSet;
 use std::convert::TryInto;
 use std::marker::PhantomData;
@@ -30,7 +21,19 @@ use std::{
     fmt::{self, Formatter},
     sync::Arc,
 };
+
+use prometheus::Registry;
+use slog::{o, Drain, Logger};
 use tonic::transport::Endpoint as TonicEndpoint;
+
+use crate::cluster::Endpoint;
+use crate::config::{
+    parse_endpoint_metadata_from_yaml, Admin, Config, Endpoints, ManagementServer, Proxy, Source,
+    ValidationError, ValueInvalidArgs, Version,
+};
+use crate::extensions::{default_registry, CreateFilterError, FilterChain, FilterRegistry};
+use crate::proxy::server::metrics::Metrics as ProxyMetrics;
+use crate::proxy::{Admin as ProxyAdmin, Metrics, Server};
 
 pub(super) enum ValidatedSource {
     Static {
@@ -108,17 +111,21 @@ pub struct Builder<V> {
     log: Logger,
     config: Arc<Config>,
     filter_registry: FilterRegistry,
-    metrics: Metrics,
+    admin: Option<ProxyAdmin>,
+    metrics: Arc<Metrics>,
     validation_status: V,
 }
 
 impl From<Arc<Config>> for Builder<PendingValidation> {
     fn from(config: Arc<Config>) -> Self {
         let log = logger();
+        let metrics = Arc::new(Metrics::new(&log, Registry::default()));
+        let admin = ProxyAdmin::new(&log, config.admin.address, metrics.clone());
         Builder {
             config,
             filter_registry: default_registry(&log),
-            metrics: Metrics::default(),
+            admin: Some(admin),
+            metrics,
             log,
             validation_status: PendingValidation,
         }
@@ -249,8 +256,12 @@ impl Builder<PendingValidation> {
         }
     }
 
-    pub fn with_metrics(self, metrics: Metrics) -> Self {
-        Self { metrics, ..self }
+    /// Disable the admin interface
+    pub fn disable_admin(self) -> Self {
+        Self {
+            admin: None,
+            ..self
+        }
     }
 
     // Validates the builder's config and filter configurations.
@@ -261,6 +272,7 @@ impl Builder<PendingValidation> {
         Ok(Builder {
             log: self.log,
             config: self.config,
+            admin: self.admin,
             metrics: self.metrics,
             filter_registry: self.filter_registry,
             validation_status: Validated(validated_config),
@@ -275,6 +287,7 @@ impl Builder<Validated> {
             config: Arc::new(self.validation_status.0),
             proxy_metrics: ProxyMetrics::new(&self.metrics.registry.clone())
                 .expect("metrics should be setup properly"),
+            admin: self.admin,
             metrics: self.metrics,
             filter_registry: Arc::new(self.filter_registry),
         }
@@ -293,11 +306,13 @@ pub fn logger() -> Logger {
 
 #[cfg(test)]
 mod tests {
-    use super::{Builder, Error};
-    use crate::config::{Config, ValidationError};
-    use crate::proxy::builder::Validated;
     use std::convert::TryFrom;
     use std::sync::Arc;
+
+    use crate::config::{Config, ValidationError};
+    use crate::proxy::builder::Validated;
+
+    use super::{Builder, Error};
 
     fn parse_config(yaml: &str) -> Config {
         Config::from_reader(yaml.as_bytes()).unwrap()

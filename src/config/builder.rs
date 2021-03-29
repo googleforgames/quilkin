@@ -47,6 +47,10 @@ impl Builder {
         Builder { source, ..self }
     }
 
+    pub fn with_admin(self, admin: Admin) -> Self {
+        Self { admin, ..self }
+    }
+
     pub fn build(self) -> Config {
         Config {
             version: Version::V1Alpha1,

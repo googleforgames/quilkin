@@ -26,7 +26,9 @@ mod tests {
     use quilkin::config::{Builder as ConfigBuilder, EndPoint, Filter};
     use quilkin::extensions::filters::DebugFactory;
     use quilkin::extensions::{default_registry, FilterFactory};
+    use quilkin::proxy::Builder as ProxyBuilder;
     use quilkin::test_utils::{TestFilterFactory, TestHelper};
+    use std::sync::Arc;
 
     #[tokio::test]
     async fn test_filter() {
@@ -51,7 +53,11 @@ mod tests {
         // Run server proxy.
         let mut registry = default_registry(&t.log);
         registry.insert(TestFilterFactory {});
-        t.run_server_with_filter_registry(server_config, registry);
+        t.run_server_with_builder(
+            ProxyBuilder::from(Arc::new(server_config))
+                .with_filter_registry(registry)
+                .disable_admin(),
+        );
 
         // create a local client
         let client_port = 12347;
@@ -72,7 +78,11 @@ mod tests {
         // Run client proxy.
         let mut registry = default_registry(&t.log);
         registry.insert(TestFilterFactory {});
-        t.run_server_with_filter_registry(client_config, registry);
+        t.run_server_with_builder(
+            ProxyBuilder::from(Arc::new(client_config))
+                .with_filter_registry(registry)
+                .disable_admin(),
+        );
 
         // let's send the packet
         let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
@@ -125,7 +135,7 @@ mod tests {
                 vec![EndPoint::new(echo)],
             )
             .build();
-        t.run_server(server_config);
+        t.run_server_with_config(server_config);
 
         let mut map = Mapping::new();
         map.insert(Value::from("id"), Value::from("client"));
@@ -144,7 +154,7 @@ mod tests {
                 ))],
             )
             .build();
-        t.run_server(client_config);
+        t.run_server_with_config(client_config);
 
         // let's send the packet
         let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
