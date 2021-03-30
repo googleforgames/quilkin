@@ -14,6 +14,13 @@ admin:
 
 The admin interface provides the following endpoints:
 
+## /live
+
+This provides a liveness probe endpoint, most commonly used in 
+[Kubernetes based systems](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-command).
+
+Will return an HTTP status of 200 when all health checks pass.
+
 ## /metrics
 
 Outputs [Prometheus](https://prometheus.io/) formatted metrics for this proxy.
