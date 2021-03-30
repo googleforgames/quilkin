@@ -33,7 +33,7 @@ use crate::config::{
 };
 use crate::extensions::{default_registry, CreateFilterError, FilterChain, FilterRegistry};
 use crate::proxy::server::metrics::Metrics as ProxyMetrics;
-use crate::proxy::{Admin as ProxyAdmin, Metrics, Server};
+use crate::proxy::{Admin as ProxyAdmin, Health, Metrics, Server};
 
 pub(super) enum ValidatedSource {
     Static {
@@ -120,7 +120,8 @@ impl From<Arc<Config>> for Builder<PendingValidation> {
     fn from(config: Arc<Config>) -> Self {
         let log = logger();
         let metrics = Arc::new(Metrics::new(&log, Registry::default()));
-        let admin = ProxyAdmin::new(&log, config.admin.address, metrics.clone());
+        let health = Health::new(&log);
+        let admin = ProxyAdmin::new(&log, config.admin.address, metrics.clone(), health);
         Builder {
             config,
             filter_registry: default_registry(&log),

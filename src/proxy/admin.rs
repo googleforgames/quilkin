@@ -23,21 +23,23 @@ use hyper::{Body, Method, Request, Response, Server as HyperServer, StatusCode};
 use slog::{error, info, o, Logger};
 use tokio::sync::watch;
 
-use crate::proxy::Metrics;
+use crate::proxy::{Health, Metrics};
 
 pub struct Admin {
     log: Logger,
     /// The address that the Admin server starts on
     addr: SocketAddr,
     metrics: Arc<Metrics>,
+    health: Arc<Health>,
 }
 
 impl Admin {
-    pub fn new(base: &Logger, addr: SocketAddr, metrics: Arc<Metrics>) -> Self {
+    pub fn new(base: &Logger, addr: SocketAddr, metrics: Arc<Metrics>, heath: Health) -> Self {
         Admin {
             log: base.new(o!("source" => "proxy::Admin")),
             addr,
             metrics,
+            health: Arc::new(heath),
         }
     }
 
@@ -45,13 +47,17 @@ impl Admin {
         info!(self.log, "Starting admin endpoint"; "address" => self.addr.to_string());
 
         let metrics = self.metrics.clone();
+        let health = self.health.clone();
         let make_svc = make_service_fn(move |_conn| {
             let metrics = metrics.clone();
+            let health = health.clone();
             async move {
                 let metrics = metrics.clone();
+                let health = health.clone();
                 Ok::<_, Infallible>(service_fn(move |req| {
                     let metrics = metrics.clone();
-                    async move { Ok::<_, Infallible>(handle_request(req, metrics)) }
+                    let health = health.clone();
+                    async move { Ok::<_, Infallible>(handle_request(req, metrics, health)) }
                 }))
             }
         });
@@ -71,9 +77,14 @@ impl Admin {
     }
 }
 
-fn handle_request(request: Request<Body>, metrics: Arc<Metrics>) -> Response<Body> {
+fn handle_request(
+    request: Request<Body>,
+    metrics: Arc<Metrics>,
+    health: Arc<Health>,
+) -> Response<Body> {
     match (request.method(), request.uri().path()) {
         (&Method::GET, "/metrics") => metrics.collect_metrics(),
+        (&Method::GET, "/live") => health.check_healthy(),
         (_, _) => {
             let mut response = Response::new(Body::empty());
             *response.status_mut() = StatusCode::NOT_FOUND;
