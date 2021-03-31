@@ -13,7 +13,7 @@ It is designed to be used behind game clients as well as in front of dedicated g
 - [x] Basic non-transparent UDP forwarding from Server Proxy to all Endpoints
 - [x] UDP Filtering design and implementation
 - [x] Simple UDP routing Filter (Client and Server Proxy implementation)
-- [ ] gRPC configuration management control plane API
+- [x] gRPC configuration management control plane API
 - [x] Metrics tracking and export
 - [ ] Documentation
 - [ ] Examples (standalone, Agones)
