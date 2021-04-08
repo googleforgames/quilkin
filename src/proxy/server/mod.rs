@@ -14,18 +14,15 @@
  * limitations under the License.
  */
 
-use std::collections::HashMap;
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::result::Result as StdResult;
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use slog::{debug, error, info, trace, warn, Logger};
 use tokio::net::UdpSocket;
-use tokio::sync::RwLock;
 use tokio::sync::{mpsc, watch};
 use tokio::task::JoinHandle;
-use tokio::time::{sleep, Duration};
+use tokio::time::Duration;
 
 use metrics::Metrics as ProxyMetrics;
 use resource_manager::{DynamicResourceManagers, StaticResourceManagers};
@@ -36,19 +33,16 @@ use crate::extensions::filter_manager::SharedFilterManager;
 use crate::extensions::{Filter, FilterRegistry, ReadContext};
 use crate::proxy::builder::{ValidatedConfig, ValidatedSource};
 use crate::proxy::server::error::Error;
-use crate::proxy::sessions::{
-    Packet, Session, SESSION_EXPIRY_POLL_INTERVAL, SESSION_TIMEOUT_SECONDS,
-};
+use crate::proxy::sessions::{Packet, Session, SESSION_TIMEOUT_SECONDS};
 use crate::utils::debug;
 
 use super::metrics::Metrics;
+use crate::proxy::sessions::session_manager::SessionManager;
 use crate::proxy::Admin;
 
 pub mod error;
 pub(super) mod metrics;
 mod resource_manager;
-
-type SessionMap = Arc<RwLock<HashMap<(SocketAddr, SocketAddr), Session>>>;
 
 type Result<T> = std::result::Result<T, Error>;
 
@@ -69,7 +63,7 @@ struct RunRecvFromArgs {
     cluster_manager: SharedClusterManager,
     filter_manager: SharedFilterManager,
     socket: Arc<UdpSocket>,
-    sessions: SessionMap,
+    session_manager: SessionManager,
     session_ttl: Duration,
     send_packets: mpsc::Sender<Packet>,
     shutdown_rx: watch::Receiver<()>,
@@ -96,7 +90,7 @@ struct ProcessDownstreamReceiveConfig {
     proxy_metrics: ProxyMetrics,
     cluster_manager: SharedClusterManager,
     filter_manager: SharedFilterManager,
-    sessions: SessionMap,
+    session_manager: SessionManager,
     session_ttl: Duration,
     send_packets: mpsc::Sender<Packet>,
 }
@@ -112,22 +106,19 @@ impl Server {
         }
 
         let socket = Arc::new(Server::bind(self.config.proxy.port).await?);
-        // HashMap key is from,destination addresses as a tuple.
-        let sessions: SessionMap = Arc::new(RwLock::new(HashMap::new()));
+        let session_manager = SessionManager::new(self.log.clone());
         let (send_packets, receive_packets) = mpsc::channel::<Packet>(1024);
 
         let session_ttl = Duration::from_secs(SESSION_TIMEOUT_SECONDS);
-        let poll_interval = Duration::from_secs(SESSION_EXPIRY_POLL_INTERVAL);
 
         let (cluster_manager, filter_manager) =
             self.create_resource_managers(shutdown_rx.clone()).await?;
         self.run_receive_packet(socket.clone(), receive_packets);
-        self.run_prune_sessions(&sessions, poll_interval);
         let recv_loop = self.run_recv_from(RunRecvFromArgs {
             cluster_manager,
             filter_manager,
             socket,
-            sessions: sessions.clone(),
+            session_manager,
             session_ttl,
             send_packets,
             shutdown_rx: shutdown_rx.clone(),
@@ -194,30 +185,13 @@ impl Server {
         }
     }
 
-    /// run_prune_sessions starts the timer for pruning sessions and runs prune_sessions every
-    /// SESSION_TIMEOUT_SECONDS, via a tokio::spawn, i.e. it's non-blocking.
-    /// Pruning will occur ~ every interval period. So the timeout expiration may sometimes
-    /// exceed the expected, but we don't have to write lock the SessionMap as often to clean up.
-    fn run_prune_sessions(&self, sessions: &SessionMap, poll_interval: Duration) {
-        let log = self.log.clone();
-        let sessions = sessions.clone();
-        tokio::spawn(async move {
-            // TODO: Add a shutdown channel to this task.
-            loop {
-                sleep(poll_interval).await;
-                debug!(log, "Attempting to Prune Sessions");
-                Server::prune_sessions(&log, sessions.clone()).await;
-            }
-        });
-    }
-
     /// Spawns a background task that sits in a loop, receiving packets from the passed in socket.
     /// Each received packet is placed on a queue to be processed by a worker task.
     /// This function also spawns the set of worker tasks responsible for consuming packets
     /// off the aforementioned queue and processing them through the filter chain and session
     /// pipeline.
     fn run_recv_from(&self, args: RunRecvFromArgs) -> JoinHandle<StdResult<(), String>> {
-        let sessions = args.sessions;
+        let session_manager = args.session_manager;
         let log = self.log.clone();
         let metrics = self.metrics.clone();
         let proxy_metrics = self.proxy_metrics.clone();
@@ -243,7 +217,7 @@ impl Server {
                     proxy_metrics: proxy_metrics.clone(),
                     cluster_manager: args.cluster_manager.clone(),
                     filter_manager: args.filter_manager.clone(),
-                    sessions: sessions.clone(),
+                    session_manager: session_manager.clone(),
                     session_ttl: args.session_ttl,
                     send_packets: args.send_packets.clone(),
                 },
@@ -383,7 +357,7 @@ impl Server {
         let session_key = (recv_addr, endpoint.address);
 
         // Grab a read lock and find the session.
-        let guard = args.sessions.read().await;
+        let guard = args.session_manager.get_sessions().await;
         if let Some(session) = guard.get(&session_key) {
             // If it exists then send the packet, we're done.
             Self::session_send_packet_helper(&args.log, session, packet, args.session_ttl).await
@@ -396,7 +370,7 @@ impl Server {
             drop(guard);
 
             // Grab a write lock.
-            let mut guard = args.sessions.write().await;
+            let mut guard = args.session_manager.get_sessions_mut().await;
 
             // Although we have the write lock now, check whether some other thread
             // managed to create the session in-between our dropping the read
@@ -434,7 +408,7 @@ impl Server {
                                 drop(guard);
 
                                 // Grab a read lock to send the packet.
-                                let guard = args.sessions.read().await;
+                                let guard = args.session_manager.get_sessions().await;
                                 if let Some(session) = guard.get(&session_key) {
                                     Self::session_send_packet_helper(
                                         &args.log,
@@ -519,59 +493,17 @@ impl Server {
         let addr = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), port);
         UdpSocket::bind(addr).await.map_err(Error::Bind)
     }
-
-    /// prune_sessions removes expired Sessions from the SessionMap.
-    /// Should be run on a time interval.
-    /// This will lock the SessionMap if it finds expired sessions
-    async fn prune_sessions(log: &Logger, sessions: SessionMap) {
-        let now = if let Ok(now) = SystemTime::now().duration_since(UNIX_EPOCH) {
-            now.as_secs()
-        } else {
-            warn!(log, "Failed to get current time when pruning sessions");
-            return;
-        };
-
-        let mut expired_keys = Vec::<(SocketAddr, SocketAddr)>::new();
-        {
-            let map = sessions.read().await;
-            for (key, session) in map.iter() {
-                let expiration = session.expiration();
-                if expiration <= now {
-                    expired_keys.push(*key);
-                }
-            }
-        }
-
-        if !expired_keys.is_empty() {
-            let mut map = sessions.write().await;
-            for key in expired_keys.iter() {
-                if let Some(session) = map.get(key) {
-                    // If the session has been updated since we marked it
-                    // for removal then its still valid so ignore it.
-                    if session.expiration() > now {
-                        continue;
-                    }
-
-                    if let Err(err) = session.close() {
-                        error!(log, "Error closing Session"; "error" => %err)
-                    }
-                }
-                map.remove(key);
-            }
-        }
-    }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
     use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-    use std::ops::Add;
     use std::sync::Arc;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     use prometheus::Registry;
     use slog::info;
-    use tokio::sync::{mpsc, RwLock};
+    use tokio::sync::mpsc;
     use tokio::time;
     use tokio::time::timeout;
     use tokio::time::Duration;
@@ -727,7 +659,7 @@ mod tests {
             // need to switch to 127.0.0.1, as the request comes locally
             receive_addr.set_ip("127.0.0.1".parse().unwrap());
 
-            let sessions: SessionMap = Arc::new(RwLock::new(HashMap::new()));
+            let session_manager = SessionManager::new(t.log.clone());
             let (send_packets, mut recv_packets) = mpsc::channel::<Packet>(1);
 
             let time_increment = 10;
@@ -761,7 +693,7 @@ mod tests {
                         proxy_metrics,
                         cluster_manager: cluster_manager.clone(),
                         filter_manager: filter_manager.clone(),
-                        sessions: sessions.clone(),
+                        session_manager: session_manager.clone(),
                         session_ttl: Duration::from_secs(10),
                         send_packets: send_packets.clone(),
                     },
@@ -782,7 +714,7 @@ mod tests {
             let result = endpoint.packet_rx.await.unwrap();
             recv_packets.close();
 
-            let map = sessions.read().await;
+            let map = session_manager.get_sessions().await;
             assert_eq!(expected.session_len, map.len());
             let build_key = (receive_addr, endpoint.socket.local_addr().unwrap());
             assert!(map.contains_key(&build_key));
@@ -792,7 +724,7 @@ mod tests {
                 .unwrap()
                 .as_secs();
             let diff = session.expiration() - now_secs;
-            assert!(diff >= 5 && diff <= 10);
+            assert!((5..11).contains(&diff));
 
             Result {
                 msg: result,
@@ -835,7 +767,7 @@ mod tests {
         let msg = "hello";
         let endpoint = t.open_socket_and_recv_single_packet().await;
         let socket = t.create_socket().await;
-        let sessions: SessionMap = Arc::new(RwLock::new(HashMap::new()));
+        let session_manager = SessionManager::new(t.log.clone());
         let (send_packets, mut recv_packets) = mpsc::channel::<Packet>(1);
 
         let config = Arc::new(config_with_dummy_endpoint().build());
@@ -853,7 +785,7 @@ mod tests {
             .unwrap(),
             filter_manager: FilterManager::fixed(Arc::new(FilterChain::new(vec![]))),
             socket: socket.clone(),
-            sessions: sessions.clone(),
+            session_manager: session_manager.clone(),
             session_ttl: Duration::from_secs(10),
             send_packets,
             shutdown_rx,
@@ -895,137 +827,5 @@ mod tests {
         let server = Builder::from(config).validate().unwrap().build();
         server.run_receive_packet(endpoint.socket, recv_packet);
         assert_eq!(msg, endpoint.packet_rx.await.unwrap());
-    }
-
-    #[tokio::test]
-    async fn prune_sessions() {
-        let t = TestHelper::default();
-        let sessions: SessionMap = Arc::new(RwLock::new(HashMap::new()));
-        let from: SocketAddr = "127.0.0.1:7000".parse().unwrap();
-        let to: SocketAddr = "127.0.0.1:7001".parse().unwrap();
-        let (send, _recv) = mpsc::channel::<Packet>(1);
-        let endpoint = Endpoint::from_address(to);
-
-        let key = (from, to);
-        let ttl = Duration::from_secs(1);
-
-        {
-            let mut sessions = sessions.write().await;
-            sessions.insert(
-                key,
-                Session::new(
-                    &t.log,
-                    Metrics::new(&t.log, Registry::default())
-                        .new_session_metrics(&from, &endpoint.address)
-                        .unwrap(),
-                    FilterManager::fixed(Arc::new(FilterChain::new(vec![]))),
-                    from,
-                    endpoint.clone(),
-                    send,
-                    ttl,
-                )
-                .await
-                .unwrap(),
-            );
-        }
-
-        // Insert key.
-        {
-            let map = sessions.read().await;
-            assert!(map.contains_key(&key));
-            assert_eq!(1, map.len());
-        }
-
-        // session map should be the same since, we haven't passed expiry
-        Server::prune_sessions(&t.log, sessions.clone()).await;
-        {
-            let map = sessions.read().await;
-            assert!(map.contains_key(&key));
-            assert_eq!(1, map.len());
-        }
-
-        // Wait until the key has expired.
-        time::sleep_until(time::Instant::now().add(ttl)).await;
-
-        Server::prune_sessions(&t.log, sessions.clone()).await;
-        {
-            let map = sessions.read().await;
-            assert!(
-                !map.contains_key(&key),
-                "should not contain the key after prune"
-            );
-            assert_eq!(0, map.len(), "len should be 0, bit is {}", map.len());
-        }
-        info!(t.log, "test complete");
-    }
-
-    #[tokio::test]
-    async fn run_prune_sessions() {
-        let t = TestHelper::default();
-        let sessions: SessionMap = Arc::new(RwLock::new(HashMap::new()));
-        let from: SocketAddr = "127.0.0.1:7000".parse().unwrap();
-        let to: SocketAddr = "127.0.0.1:7001".parse().unwrap();
-        let (send, _recv) = mpsc::channel::<Packet>(1);
-
-        let endpoint = Endpoint::from_address(to);
-
-        let ttl = Duration::from_secs(1);
-        let poll_interval = Duration::from_millis(1);
-
-        let config = Arc::new(config_with_dummy_endpoint().build());
-        let server = Builder::from(config).validate().unwrap().build();
-        server.run_prune_sessions(&sessions, poll_interval);
-
-        let key = (from, to);
-
-        // Insert key.
-        {
-            let mut sessions = sessions.write().await;
-            sessions.insert(
-                key,
-                Session::new(
-                    &t.log,
-                    Metrics::new(&t.log, Registry::default())
-                        .new_session_metrics(&from, &endpoint.address)
-                        .unwrap(),
-                    FilterManager::fixed(Arc::new(FilterChain::new(vec![]))),
-                    from,
-                    endpoint.clone(),
-                    send,
-                    ttl,
-                )
-                .await
-                .unwrap(),
-            );
-        }
-
-        // session map should be the same since, we haven't passed expiry
-        {
-            let map = sessions.read().await;
-
-            assert!(map.contains_key(&key));
-            assert_eq!(1, map.len());
-        }
-
-        // Wait until the key has expired.
-        time::sleep_until(time::Instant::now().add(ttl)).await;
-
-        // poll, since cleanup is async, and may not have happened yet
-        for _ in 1..10000 {
-            time::sleep(Duration::from_millis(1)).await;
-            let map = sessions.read().await;
-            if !map.contains_key(&key) && map.len() == 0 {
-                break;
-            }
-        }
-        // do final assertion
-        {
-            let map = sessions.read().await;
-            assert!(
-                !map.contains_key(&key),
-                "should not contain the key after prune"
-            );
-            assert_eq!(0, map.len(), "len should be 0, bit is {}", map.len());
-        }
     }
 }

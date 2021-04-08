@@ -14,8 +14,10 @@
  * limitations under the License.
  */
 
-pub use session::{Packet, Session, SESSION_EXPIRY_POLL_INTERVAL, SESSION_TIMEOUT_SECONDS};
+pub use session::{Packet, Session};
+pub use session_manager::SESSION_TIMEOUT_SECONDS;
 
 pub(crate) mod error;
 pub(crate) mod metrics;
 mod session;
+pub mod session_manager;

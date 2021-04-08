@@ -35,12 +35,6 @@ use crate::utils::debug;
 
 type Result<T> = std::result::Result<T, Error>;
 
-/// SESSION_TIMEOUT_SECONDS is the default session timeout - which is one minute.
-pub const SESSION_TIMEOUT_SECONDS: u64 = 60;
-
-/// SESSION_EXPIRY_POLL_INTERVAL is the default interval to check for expired sessions.
-pub const SESSION_EXPIRY_POLL_INTERVAL: u64 = 60;
-
 /// Session encapsulates a UDP stream session
 pub struct Session {
     log: Logger,
@@ -357,7 +351,7 @@ mod tests {
             .unwrap()
             .as_secs();
         let diff = initial_expiration_secs - now_secs;
-        assert!(diff >= 15 && diff <= 20);
+        assert!((15..21).contains(&diff));
 
         // echo the packet back again
         tokio::spawn(async move {
