@@ -20,4 +20,4 @@ pub use session_manager::SESSION_TIMEOUT_SECONDS;
 pub(crate) mod error;
 pub(crate) mod metrics;
 mod session;
-pub mod session_manager;
+pub(crate) mod session_manager;
