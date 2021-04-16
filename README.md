@@ -17,7 +17,7 @@ It is designed to be used behind game clients as well as in front of dedicated g
 - [x] Metrics tracking and export
 - [ ] Documentation
 - [ ] Examples (standalone, Agones)
-- [ ] Release process with binaries and images
+- [x] Release process with binaries and images
 
 ## Project State
 

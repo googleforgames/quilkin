@@ -96,6 +96,12 @@ To gain access to the details of a specific Cloud Build, join the
 See the [Google Cloud Build documentation](https://cloud.google.com/cloud-build/docs/) for more details on
 how to edit and expand the build process.
 
+## Releases
+
+* At the monthly community meeting it will be decided if a release should be built.
+* To release, create an issue from the [release issue template](./build/templates/release-issue.md), tag it as
+  `kind/release` and follow each of the steps.
+
 ### Additional Resources
 
 #### Coding and Development
