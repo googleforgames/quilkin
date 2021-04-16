@@ -18,7 +18,7 @@ This `cloudbuild.yaml` assumes several things are set up in the project:
 ## Docker container repository
 
 There needs to be a docker container repository called `release` already created in your 
-project, and the releae images will create the Docker images therein. The images will be tagged with both ${version} 
+project, and the release images will create the Docker images therein. The images will be tagged with both ${version} 
 and ${version}-debug where the version is the version stored in Cargo.toml.
 
 The ${version}-debug tagged version runs the debug binary of Quilkin, where the ${version} tag runs the production 
