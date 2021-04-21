@@ -18,8 +18,12 @@
 set -eo pipefail
 set +x
 
-QUILKIN_PATH="${QUILKIN_PATH:-../../target/release/quilkin}"
-CONFIG="${CONFIG:-$(dirname "$0")/proxy.yaml}"
+path=$(dirname "$0")
+
+QUILKIN_PATH="${QUILKIN_PATH:-$path/../../target/release/quilkin}"
+CONFIG="${CONFIG:-$path/proxy.yaml}"
+PARALLEL="${PARALLEL:-50}"
+BANDWIDTH="${BANDWIDTH:-3M}"
 
 # This tunnel is needed because iperf3 requires a tcp handshake before starting the UDP load test
 echo "Starting socat tcp tunnel..."
@@ -35,7 +39,9 @@ sleep 5
 
 echo "Running iperf3 client..."
 
-iperf3 --client 127.0.0.1 --port 8000 --parallel 100 --bandwidth 3M --time 60 --udp | tee client.log
+set -x
+iperf3 --client 127.0.0.1 --port 8000 --parallel $PARALLEL --bidir --bandwidth $BANDWIDTH --time 60 --udp | tee client.log
+set +x
 
 echo "Taking a snapshot of Quilkin metrics..."
 wget -O metrics.json http://localhost:9091/metrics
