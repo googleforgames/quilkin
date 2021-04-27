@@ -39,6 +39,6 @@ Quilkin incorporates these abilities:
 
 ## What Next?
 
+* Read the [usage guide](./using.md)
 * Have a look at the [example configurations](../examples) for basic configuration examples.
 * Check out the [example integration patterns](./integrations.md).
-* Review the [set of filters](./extensions/filters/filters.md) that are available.

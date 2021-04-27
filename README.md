@@ -27,9 +27,8 @@ Not to be used in production systems.
 
 ## Usage
 
-`quilkin --filename="configuration.yaml"`
-
 * Start with our [Project Overview](./docs/README.md).
+* See how to [use Quilkin](./docs/using.md).
 * View [example integration architectures](./docs/integrations.md).
 * Quickstart: [Quilkin with netcat](docs/quickstart-netcat.md).
 * See the [examples](./examples) folder for configuration and usage examples.
@@ -47,21 +46,6 @@ Participation in this project comes under the [Contributor Covenant Code of Cond
 Please read the [contributing](CONTRIBUTING.md) guide for directions on writing code and submitting Pull Requests.
 
 Quilkin is in active development - we would love your help in shaping its future!
-
-## Building
-
-To build a binary of Quilkin on your operating system of choice, first clone the repository.
-
-```shell script
-git clone https://github.com/googleforgames/quilkin.git
-cd quilkin
-git submodule update --init --recursive
-```
-We use several submodules, so make sure you have them downloaded and updated.
-
-To build a production release version of the binary:
-
-`cargo build --release`
 
 ## Community
 
