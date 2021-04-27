@@ -79,6 +79,7 @@ Congratulations! You have successfully routed a UDP packet and back again with Q
 
 What's next?
 
+* Run through the [Quilkin with Agones quickstart](./quickstart-agones-xonotic.md).
 * Have a look at some of [the examples](../examples) we have.
 * Check out the [proxy configuration reference](./proxy-configuration.md) to what other configuration options are 
   available.
