@@ -2,13 +2,19 @@
 
 ## Just how fast is Quilkin? What sort of performance can I expect?
 
-The project is still in alpha state right now, so no major optimisations for performance have been performed at this 
-stage, but for right now it is _fast enough_ for this release.
+Our current testing shows that on Quilkin shows that it process packets _quite fast_!
 
-We plan on working more on performance in upcoming releases, both from an optimisation and observability perspective.
+We won't be publishing performance benchmarks, as performance will always
+change depending on the underlying hardware, number of filters, configurations and more.
 
-We will always recommend you run your own load tests on your platform and configuration, as performance will always 
-change depending on the underlying hardware, number of filters and configurations and more.
+We highly recommend you run your own load tests on your platform and configuration, matching your production 
+workload and configuration as close as possible. 
+
+Our [iperf3](https://iperf.fr/) based performance test in the [examples' folder](../examples/iperf3) is a good 
+starting point.
+
+Since this is still an alpha project, we have plans on investigating further performance improvements in upcoming 
+releases, both from an optimisation and observability perspective as well.
 
 ## Can I integrate Quilkin with C++ code?
 
@@ -32,8 +38,8 @@ This is an ongoing discussion, and since console development is protected by non
 comment on this directly.
 
 That being said, we are having discussions on how we can release lean versions of certain filters that would work 
-with known supported game engines and languages for circumstances where compiling Rust or a providing a separate 
-Quilkin binary as an executable is an option.
+with known supported game engines and languages for circumstances where compiling Rust or providing a separate 
+Quilkin binary as an executable is not an option.
 
 ## Any reason you didn't contribute this into/extend Envoy?
 
