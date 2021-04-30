@@ -38,6 +38,7 @@ Not to be used in production systems.
 * See how to [use Quilkin](./docs/using.md).
 * View [example integration architectures](./docs/integrations.md).
 * Quickstart: [Quilkin with netcat](docs/quickstart-netcat.md).
+* Quickstart: [Quilkin Agones and Xonotic](docs/quickstart-agones-xonotic.md).
 * See the [examples](./examples) folder for configuration and usage examples.
 * See the [proxy configuration reference](./docs/proxy-configuration.md) for all the configuration options. 
 * See the [Session documentation](./docs/session.md) for an overview of quilkin sessions and metrics.
