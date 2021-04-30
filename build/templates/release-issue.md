@@ -30,6 +30,9 @@
 - [ ] Run `git remote update && git checkout main && git reset --hard upstream/main` to ensure your code is in line
       with upstream.
 - [ ] Run `git checkout -b release-{version} && git push upstream` to create a release branch.
+- [ ] Publish to [crates.io/crates/quilkin](https://crates.io/crates/quilkin)
+    - [ ] Run `cargo publish --dry-run` to ensure there are no issues.
+    - [ ] If there are no issues, run `cargo publish` to publish to crates.io! 
 - [ ] Post an announcement to the [mailing list](https://groups.google.com/g/quilkin-discuss).
 - [ ] Post to the [Twitter account](https://twitter.com/quilkindev).
 - [ ] Edit `Cargo.toml` and increment the [minor version](https://semver.org/) and apply the `-dev` suffix to the 
