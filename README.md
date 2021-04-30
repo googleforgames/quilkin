@@ -1,5 +1,12 @@
 # Quilkin
 
+![GitHub](https://img.shields.io/github/license/googleforgames/quilkin)
+![Crates.io](https://img.shields.io/crates/v/quilkin)
+![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/googleforgames/quilkin)
+![GitHub branch checks state](https://img.shields.io/github/checks-status/googleforgames/quilkin/main)
+![Discord](https://img.shields.io/discord/773975408265134100)
+![Twitter Follow](https://img.shields.io/twitter/follow/quilkindev?style=social)
+
 Quilkin is a non-transparent UDP proxy specifically designed for use with large scale multiplayer dedicated game servers
 deployments, to ensure security, access control, telemetry data, metrics and more.
  
@@ -16,7 +23,7 @@ It is designed to be used behind game clients as well as in front of dedicated g
 - [x] gRPC configuration management control plane API
 - [x] Metrics tracking and export
 - [ ] Documentation
-- [ ] Examples (standalone, Agones)
+- [x] Examples (standalone, Agones)
 - [x] Release process with binaries and images
 
 ## Project State
@@ -31,6 +38,7 @@ Not to be used in production systems.
 * See how to [use Quilkin](./docs/using.md).
 * View [example integration architectures](./docs/integrations.md).
 * Quickstart: [Quilkin with netcat](docs/quickstart-netcat.md).
+* Quickstart: [Quilkin Agones and Xonotic](docs/quickstart-agones-xonotic.md).
 * See the [examples](./examples) folder for configuration and usage examples.
 * See the [proxy configuration reference](./docs/proxy-configuration.md) for all the configuration options. 
 * See the [Session documentation](./docs/session.md) for an overview of quilkin sessions and metrics.
