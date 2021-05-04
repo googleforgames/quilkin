@@ -19,8 +19,8 @@ use slog::Logger;
 pub(crate) use filter_chain::CreateFilterError;
 pub use filter_chain::FilterChain;
 pub use filter_registry::{
-    CreateFilterArgs, Error, Filter, FilterFactory, FilterRegistry, ReadContext, ReadResponse,
-    WriteContext, WriteResponse,
+    ConfigType, CreateFilterArgs, Error, Filter, FilterFactory, FilterRegistry, ReadContext,
+    ReadResponse, WriteContext, WriteResponse,
 };
 
 pub(crate) mod filter_manager;

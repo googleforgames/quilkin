@@ -93,7 +93,7 @@ Quilkin includes several filters out of the box.
 | [Debug](debug.md)                | Logs every packet              |
 | [LocalRateLimiter](./local_rate_limit.md) | Limit the frequency of packets. |
 | [ConcatenateBytes](./concatenate_bytes.md) | Add authentication tokens to packets. |
-| [CaptureBytes](capture_bytes.md) | Capture specific bytes from a packet and store them in filter dynamic metadata. |
+| [CaptureBytes](capture_bytes.md) | Capture specific bytes from a packet and store them in [filter dynamic metadata](#filter-dynamic-metadata). |
 | [TokenRouter](token_router.md) | Send packets to endpoints based on metadata. |
 | [Compress](./compress.md) | Compress and decompress packets data. |
 

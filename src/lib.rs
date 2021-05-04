@@ -36,6 +36,7 @@ pub mod external_doc_tests {
     // it is only available using a nightly compiler.
     // To run them locally run e.g `cargo +nightly test --doc`
     #![doc(include = "../docs/extensions/filters/filters.md")]
+    #![doc(include = "../docs/extensions/filters/writing_custom_filters.md")]
     #![doc(include = "../docs/extensions/filters/load_balancer.md")]
     #![doc(include = "../docs/extensions/filters/local_rate_limit.md")]
     #![doc(include = "../docs/extensions/filters/debug.md")]
