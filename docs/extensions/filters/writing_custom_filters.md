@@ -11,7 +11,7 @@ A [trait][Filter] representing an actual [Filter][built-in-filters] instance in 
 
 - An implementation provides a `read` and a `write` method.
 - Both methods are invoked by the proxy when it consults the [filter chain] - their arguments contain information about the packet being processed.
-- `read` is invoked when a packet is received from a client downstream and is to be sent to an upstream server while `write` is invoked in the opposite direction when a packet is received from an upstream server and is to be sent to a downstream client.
+- `read` is invoked when a packet is received on the local downstream port and is to be sent to an upstream endpoint while `write` is invoked in the opposite direction when a packet is received from an upstream endpoint and is to be sent to a downstream client.
 
 ##### FilterFactory
 
@@ -54,7 +54,7 @@ To extend Quilkin's code with our own custom filter, we need to do the following
    Add Quilkin as a dependency in `Cargo.toml`.
    ```toml
    [dependencies]
-   quilkin = "0.1.0-dev"
+   quilkin = "0.1.0"
    ```
 1. **Implement the filter traits**
 
