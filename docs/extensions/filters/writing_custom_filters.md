@@ -44,6 +44,8 @@ To extend Quilkin's code with our own custom filter, we need to do the following
 1. Implement the [Filter] trait with our custom logic, as well as a [FilterFactory] that knows how to create instances of the Filter impelmentation.
 1. Start the proxy with the custom [FilterFactory] implementation.
 
+> The full source code used in this example can be found [here][example]
+
 
 1. **Import the Quilkin crate**
 
@@ -407,3 +409,4 @@ However, it usually contains a Protobuf equivalent of the filter's static config
 [prost-any]: https://docs.rs/prost-types/0.7.0/prost_types/struct.Any.html
 [prost_build]: https://docs.rs/prost-build/0.7.0/prost_build/
 [build-script]: https://doc.rust-lang.org/cargo/reference/build-scripts.html
+[example]: https://github.com/googleforgames/quilkin/tree/main/examples/quilkin-filter-example
