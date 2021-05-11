@@ -611,14 +611,8 @@ mod tests {
         // since we don't know what the session ephemeral port is, we'll just
         // search for the filter strings.
         let result = endpoint.packet_rx.await.unwrap();
-        assert!(
-            result.contains(msg),
-            format!("'{}' not found in '{}'", msg, result)
-        );
-        assert!(
-            result.contains(":odr:"),
-            format!(":odr: not found in '{}'", result)
-        );
+        assert!(result.contains(msg), "'{}' not found in '{}'", msg, result);
+        assert!(result.contains(":odr:"), ":odr: not found in '{}'", result);
     }
 
     #[tokio::test]

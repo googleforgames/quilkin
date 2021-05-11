@@ -34,8 +34,8 @@ pub struct FilterManager {
 
 /// ListenerManagerArgs contains arguments when invoking the LDS resource manager.
 pub(crate) struct ListenerManagerArgs {
-    pub filter_registry: Arc<FilterRegistry>,
     pub filter_chain_updates_tx: mpsc::Sender<Arc<FilterChain>>,
+    pub filter_registry: Arc<FilterRegistry>,
     pub metrics_registry: Registry,
 }
 
@@ -46,9 +46,9 @@ impl ListenerManagerArgs {
         filter_chain_updates_tx: mpsc::Sender<Arc<FilterChain>>,
     ) -> ListenerManagerArgs {
         ListenerManagerArgs {
-            metrics_registry,
-            filter_registry,
             filter_chain_updates_tx,
+            filter_registry,
+            metrics_registry,
         }
     }
 }
