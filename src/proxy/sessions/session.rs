@@ -15,8 +15,7 @@
  */
 
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
-use std::result;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -51,8 +50,6 @@ pub struct Session {
     expiration: Arc<AtomicU64>,
     /// a channel to broadcast on if we are shutting down this Session
     shutdown_tx: watch::Sender<()>,
-    /// closed is if this Session has closed, and isn't receiving packets anymore
-    is_closed: Arc<AtomicBool>,
 }
 
 /// ReceivedPacketContext contains state needed to process a received packet.
@@ -115,7 +112,6 @@ impl Session {
             created_at: Instant::now(),
             expiration,
             shutdown_tx,
-            is_closed: Arc::new(AtomicBool::new(false)),
         };
         debug!(s.log, "Session created");
 
@@ -136,7 +132,6 @@ impl Session {
         let log = self.log.clone();
         let from = self.from;
         let expiration = self.expiration.clone();
-        let is_closed = self.is_closed.clone();
         let filter_manager = self.filter_manager.clone();
         let endpoint = self.dest.clone();
         let metrics = self.metrics.clone();
@@ -171,7 +166,6 @@ impl Session {
                         };
                     }
                     _ = shutdown_rx.changed() => {
-                        is_closed.store(true, Ordering::Relaxed);
                         debug!(log, "Closing Session");
                         return;
                     }
@@ -208,7 +202,7 @@ impl Session {
         } = packet_ctx;
 
         trace!(log, "Received packet"; "from" => from,
-            "endpoint_addr" => &endpoint.address, 
+            "endpoint_addr" => &endpoint.address,
             "contents" => debug::bytes_to_string(packet.to_vec()));
 
         if let Err(err) = Session::do_update_expiration(expiration, ttl) {
@@ -278,20 +272,10 @@ impl Session {
             })
     }
 
+    /// Sends `buf` to the session's destination address. On success, returns
+    /// the number of bytes written.
     pub async fn do_send(&self, buf: &[u8]) -> std::result::Result<usize, std::io::Error> {
         self.socket.send_to(buf, &self.dest.address).await
-    }
-
-    /// is_closed returns if the Session is closed or not.
-    #[allow(dead_code)]
-    pub fn is_closed(&self) -> bool {
-        self.is_closed.load(Ordering::Relaxed)
-    }
-
-    /// close closes this Session.
-    pub fn close(&self) -> result::Result<(), watch::error::SendError<()>> {
-        debug!(self.log, "Session closed"; "from" => self.from, "dest_address" => &self.dest.address);
-        self.shutdown_tx.send(())
     }
 }
 
@@ -301,6 +285,12 @@ impl Drop for Session {
         self.metrics
             .duration_secs
             .observe(self.created_at.elapsed().as_secs() as f64);
+
+        if let Err(error) = self.shutdown_tx.send(()) {
+            warn!(self.log, "Error sending session shutdown signal"; "error" => error.to_string());
+        }
+
+        debug!(self.log, "Session closed"; "from" => self.from, "dest_address" => &self.dest.address);
     }
 }
 
@@ -314,8 +304,7 @@ mod tests {
     use super::{Metrics, Packet, Session};
 
     use prometheus::Registry;
-    use slog::info;
-    use tokio::time::{sleep, timeout};
+    use tokio::time::timeout;
 
     use crate::extensions::FilterChain;
     use crate::test_utils::{TestFilter, TestHelper};
@@ -369,8 +358,6 @@ mod tests {
             .expect("Should receive a packet 'hello'");
         assert_eq!(String::from("hello").into_bytes(), packet.contents);
         assert_eq!(addr, packet.dest);
-
-        sess.close().unwrap();
     }
 
     #[tokio::test]
@@ -397,45 +384,6 @@ mod tests {
         .unwrap();
         session.send(msg.as_bytes()).await.unwrap();
         assert_eq!(msg, ep.packet_rx.await.unwrap());
-    }
-
-    #[tokio::test]
-    async fn session_close() {
-        let t = TestHelper::default();
-
-        let ep = t.open_socket_and_recv_single_packet().await;
-        let (send_packet, _) = mpsc::channel::<Packet>(5);
-        let addr = ep.socket.local_addr().unwrap();
-        let endpoint = Endpoint::from_address(addr);
-
-        info!(t.log, ">> creating sessions");
-        let sess = Session::new(
-            &t.log,
-            Metrics::new(&Registry::default(), addr.to_string(), addr.to_string()).unwrap(),
-            FilterManager::fixed(Arc::new(FilterChain::new(vec![]))),
-            addr,
-            endpoint,
-            send_packet,
-            Duration::from_millis(1000),
-        )
-        .await
-        .unwrap();
-        info!(t.log, ">> session created and running");
-
-        assert!(!sess.is_closed(), "session should not be closed");
-        sess.close().unwrap();
-
-        // Poll the state to wait for the change, because everything is async
-        for _ in 1..1000 {
-            let is_closed = sess.is_closed();
-            if is_closed {
-                break;
-            }
-
-            sleep(Duration::from_millis(10)).await;
-        }
-
-        assert!(sess.is_closed(), "session should be closed");
     }
 
     #[tokio::test]
@@ -549,7 +497,6 @@ mod tests {
 
         assert_eq!(session.metrics.sessions_total.get(), 1);
         assert_eq!(session.metrics.active_sessions.get(), 1);
-        session.close().unwrap();
     }
 
     #[tokio::test]
@@ -575,7 +522,6 @@ mod tests {
 
         assert_eq!(session.metrics.tx_bytes_total.get(), 5);
         assert_eq!(session.metrics.tx_packets_total.get(), 1);
-        session.close().unwrap();
     }
 
     #[tokio::test]
@@ -600,7 +546,6 @@ mod tests {
         assert_eq!(session.metrics.active_sessions.get(), 1);
 
         let metrics = session.metrics.clone();
-        session.close().unwrap();
         drop(session);
         assert_eq!(metrics.sessions_total.get(), 1);
         assert_eq!(metrics.active_sessions.get(), 0);
