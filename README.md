@@ -12,20 +12,6 @@ deployments, to ensure security, access control, telemetry data, metrics and mor
  
 It is designed to be used behind game clients as well as in front of dedicated game servers.
 
-## Planned Roadmap
-
-- [x] Client Proxy: Configuration with a connection token
-- [x] Server Proxy: Configuration of endpoints with multiple connection token attached, that provide routing 
-- [x] Basic non-transparent UDP forwarding from Client Proxy to Server Proxy
-- [x] Basic non-transparent UDP forwarding from Server Proxy to all Endpoints
-- [x] UDP Filtering design and implementation
-- [x] Simple UDP routing Filter (Client and Server Proxy implementation)
-- [x] gRPC configuration management control plane API
-- [x] Metrics tracking and export
-- [ ] Documentation
-- [x] Examples (standalone, Agones)
-- [x] Release process with binaries and images
-
 ## Project State
 
 Project is currently in *alpha* status, and is being actively developed. Expect things to break.
