@@ -20,7 +20,7 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use tokio::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
+use tokio::sync::{watch, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 // Tracks current sessions keyed by key (source_address,destination_address) pair.
 type SessionsMap = HashMap<(SocketAddr, SocketAddr), Session>;
@@ -36,11 +36,11 @@ const SESSION_EXPIRY_POLL_INTERVAL: u64 = 60;
 pub struct SessionManager(Sessions);
 
 impl SessionManager {
-    pub fn new(log: Logger) -> Self {
+    pub fn new(log: Logger, shutdown_rx: watch::Receiver<()>) -> Self {
         let poll_interval = Duration::from_secs(SESSION_EXPIRY_POLL_INTERVAL);
         let sessions: Sessions = Arc::new(RwLock::new(HashMap::new()));
 
-        Self::run_prune_sessions(log.clone(), sessions.clone(), poll_interval);
+        Self::run_prune_sessions(log.clone(), sessions.clone(), poll_interval, shutdown_rx);
 
         Self(sessions)
     }
@@ -57,13 +57,27 @@ impl SessionManager {
     /// SESSION_TIMEOUT_SECONDS, via a tokio::spawn, i.e. it's non-blocking.
     /// Pruning will occur ~ every interval period. So the timeout expiration may sometimes
     /// exceed the expected, but we don't have to write lock the Sessions map as often to clean up.
-    fn run_prune_sessions(log: Logger, mut sessions: Sessions, poll_interval: Duration) {
+    fn run_prune_sessions(
+        log: Logger,
+        mut sessions: Sessions,
+        poll_interval: Duration,
+        mut shutdown_rx: watch::Receiver<()>,
+    ) {
+        let mut interval = tokio::time::interval(poll_interval);
+
         tokio::spawn(async move {
-            // TODO: Add a shutdown channel to this task.
             loop {
-                tokio::time::sleep(poll_interval).await;
-                debug!(log, "Attempting to Prune Sessions");
-                Self::prune_sessions(&log, &mut sessions).await;
+                tokio::select! {
+                    _ = shutdown_rx.changed() => {
+                        debug!(log, "Exiting Prune Sessions due to shutdown signal.");
+                        break;
+                    }
+                    _ = interval.tick() => {
+                        debug!(log, "Attempting to Prune Sessions");
+                        Self::prune_sessions(&log, &mut sessions).await;
+
+                    }
+                }
             }
         });
     }
@@ -126,7 +140,7 @@ mod tests {
     use std::ops::Add;
     use std::sync::Arc;
     use std::time::Duration;
-    use tokio::sync::{mpsc, RwLock};
+    use tokio::sync::{mpsc, watch, RwLock};
 
     #[tokio::test]
     async fn run_prune_sessions() {
@@ -135,6 +149,7 @@ mod tests {
         let from: SocketAddr = "127.0.0.1:7000".parse().unwrap();
         let to: SocketAddr = "127.0.0.1:7001".parse().unwrap();
         let (send, _recv) = mpsc::channel::<Packet>(1);
+        let (_shutdown_tx, shutdown_rx) = watch::channel(());
 
         let endpoint = Endpoint::from_address(to);
 
@@ -143,7 +158,12 @@ mod tests {
 
         //let config = Arc::new(config_with_dummy_endpoint().build());
         //let server = Builder::from(config).validate().unwrap().build();
-        SessionManager::run_prune_sessions(t.log.clone(), sessions.clone(), poll_interval);
+        SessionManager::run_prune_sessions(
+            t.log.clone(),
+            sessions.clone(),
+            poll_interval,
+            shutdown_rx,
+        );
 
         let key = (from, to);
 

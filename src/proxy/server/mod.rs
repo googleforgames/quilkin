@@ -106,7 +106,7 @@ impl Server {
         }
 
         let socket = Arc::new(Server::bind(self.config.proxy.port).await?);
-        let session_manager = SessionManager::new(self.log.clone());
+        let session_manager = SessionManager::new(self.log.clone(), shutdown_rx.clone());
         let (send_packets, receive_packets) = mpsc::channel::<Packet>(1024);
 
         let session_ttl = Duration::from_secs(SESSION_TIMEOUT_SECONDS);
@@ -653,7 +653,7 @@ mod tests {
             // need to switch to 127.0.0.1, as the request comes locally
             receive_addr.set_ip("127.0.0.1".parse().unwrap());
 
-            let session_manager = SessionManager::new(t.log.clone());
+            let session_manager = SessionManager::new(t.log.clone(), shutdown_rx.clone());
             let (send_packets, mut recv_packets) = mpsc::channel::<Packet>(1);
 
             let time_increment = 10;
@@ -757,17 +757,17 @@ mod tests {
     #[tokio::test]
     async fn run_recv_from() {
         let t = TestHelper::default();
+        let (_shutdown_tx, shutdown_rx) = watch::channel(());
 
         let msg = "hello";
         let endpoint = t.open_socket_and_recv_single_packet().await;
         let socket = t.create_socket().await;
-        let session_manager = SessionManager::new(t.log.clone());
+        let session_manager = SessionManager::new(t.log.clone(), shutdown_rx.clone());
         let (send_packets, mut recv_packets) = mpsc::channel::<Packet>(1);
 
         let config = Arc::new(config_with_dummy_endpoint().build());
         let server = Builder::from(config).validate().unwrap().build();
 
-        let (_shutdown_tx, shutdown_rx) = watch::channel(());
         server.run_recv_from(RunRecvFromArgs {
             cluster_manager: ClusterManager::fixed(
                 &Registry::default(),
