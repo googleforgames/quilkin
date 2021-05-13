@@ -39,7 +39,7 @@ bytes: YWJj #abc
             .with_port(server_port)
             .with_static(
                 vec![Filter {
-                    name: ConcatBytesFactory::default().name(),
+                    name: ConcatBytesFactory::default().name().into(),
                     config: serde_yaml::from_str(yaml).unwrap(),
                 }],
                 vec![EndPoint::new(echo)],

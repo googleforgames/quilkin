@@ -129,7 +129,7 @@ mod tests {
             .with_port(server_port)
             .with_static(
                 vec![Filter {
-                    name: factory.name(),
+                    name: factory.name().into(),
                     config: Some(serde_yaml::Value::Mapping(map)),
                 }],
                 vec![EndPoint::new(echo)],
@@ -145,7 +145,7 @@ mod tests {
             .with_port(client_port)
             .with_static(
                 vec![Filter {
-                    name: factory.name(),
+                    name: factory.name().into(),
                     config: Some(serde_yaml::Value::Mapping(map)),
                 }],
                 vec![EndPoint::new(SocketAddr::new(

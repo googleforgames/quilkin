@@ -133,7 +133,7 @@ mod tests {
 
         // everything is fine
         let filter_configs = vec![config::Filter {
-            name: provider.name(),
+            name: provider.name().into(),
             config: Default::default(),
         }];
 

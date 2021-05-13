@@ -28,10 +28,11 @@ use metrics::Metrics;
 use crate::extensions::filter_registry::{CreateFilterArgs, ReadContext, ReadResponse};
 use crate::extensions::filters::ConvertProtoConfigError;
 use crate::extensions::{Error, Filter, FilterFactory};
-use proto::quilkin::extensions::filters::local_rate_limit::v1alpha1::LocalRateLimit as ProtoConfig;
 
 mod metrics;
-mod proto;
+
+crate::include_proto!("quilkin.extensions.filters.local_rate_limit.v1alpha1");
+use self::quilkin::extensions::filters::local_rate_limit::v1alpha1::LocalRateLimit as ProtoConfig;
 
 /// Config represents a RateLimitFilter's configuration.
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
@@ -80,6 +81,7 @@ pub struct RateLimitFilterFactory;
 /// Packets that violate the rate limit are dropped.
 /// It only applies rate limiting on packets that are destined for the
 /// proxy's endpoints. All other packets flow through the filter untouched.
+#[crate::filter("quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit")]
 struct RateLimitFilter {
     /// available_tokens is how many tokens are left in the bucket any
     /// any given moment.
@@ -91,14 +93,14 @@ struct RateLimitFilter {
 }
 
 impl FilterFactory for RateLimitFilterFactory {
-    fn name(&self) -> String {
-        "quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit".into()
+    fn name(&self) -> &'static str {
+        RateLimitFilter::FILTER_NAME
     }
 
     fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
         let config: Config = self
             .require_config(args.config)?
-            .deserialize::<Config, ProtoConfig>(self.name().as_str())?;
+            .deserialize::<Config, ProtoConfig>(self.name())?;
 
         if config.period.lt(&Duration::from_millis(100)) {
             Err(Error::FieldInvalid {

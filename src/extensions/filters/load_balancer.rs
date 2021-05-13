@@ -26,11 +26,12 @@ use crate::extensions::{
     CreateFilterArgs, Error, Filter, FilterFactory, ReadContext, ReadResponse,
 };
 use crate::map_proto_enum;
-use proto::quilkin::extensions::filters::load_balancer::v1alpha1::{
+
+crate::include_proto!("quilkin.extensions.filters.load_balancer.v1alpha1");
+
+use self::quilkin::extensions::filters::load_balancer::v1alpha1::{
     load_balancer::Policy as ProtoPolicy, LoadBalancer as ProtoConfig,
 };
-
-mod proto;
 
 /// Policy represents how a [`LoadBalancerFilter`] distributes
 /// packets across endpoints.
@@ -123,19 +124,20 @@ impl EndpointChooser for RandomEndpointChooser {
 pub struct LoadBalancerFilterFactory;
 
 /// LoadBalancerFilter load balances packets over the upstream endpoints.
+#[crate::filter("quilkin.extensions.filters.load_balancer.v1alpha1.LoadBalancer")]
 struct LoadBalancerFilter {
     endpoint_chooser: Box<dyn EndpointChooser>,
 }
 
 impl FilterFactory for LoadBalancerFilterFactory {
-    fn name(&self) -> String {
-        "quilkin.extensions.filters.load_balancer.v1alpha1.LoadBalancer".into()
+    fn name(&self) -> &'static str {
+        LoadBalancerFilter::FILTER_NAME
     }
 
     fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
         let config: Config = self
             .require_config(args.config)?
-            .deserialize::<Config, ProtoConfig>(self.name().as_str())?;
+            .deserialize::<Config, ProtoConfig>(self.name())?;
 
         let endpoint_chooser: Box<dyn EndpointChooser> = match config.policy {
             Policy::RoundRobin => Box::new(RoundRobinEndpointChooser::new()),
@@ -159,7 +161,7 @@ mod tests {
     use std::convert::TryFrom;
     use std::net::SocketAddr;
 
-    use super::proto::quilkin::extensions::filters::load_balancer::v1alpha1::{
+    use super::quilkin::extensions::filters::load_balancer::v1alpha1::{
         load_balancer::{Policy as ProtoPolicy, PolicyValue},
         LoadBalancer as ProtoConfig,
     };

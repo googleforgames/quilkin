@@ -42,7 +42,7 @@ on_write: COMPRESS
             .with_port(server_port)
             .with_static(
                 vec![Filter {
-                    name: CompressFactory::new(&log).name(),
+                    name: CompressFactory::new(&log).name().into(),
                     config: serde_yaml::from_str(yaml).unwrap(),
                 }],
                 vec![EndPoint::new(echo)],
@@ -61,7 +61,7 @@ on_write: DECOMPRESS
             .with_port(client_port)
             .with_static(
                 vec![Filter {
-                    name: CompressFactory::new(&log).name(),
+                    name: CompressFactory::new(&log).name().into(),
                     config: serde_yaml::from_str(yaml).unwrap(),
                 }],
                 vec![EndPoint::new(

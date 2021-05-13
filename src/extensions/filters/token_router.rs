@@ -25,12 +25,14 @@ use crate::extensions::{
     CreateFilterArgs, Error, Filter, FilterFactory, ReadContext, ReadResponse, WriteContext,
     WriteResponse,
 };
-use proto::quilkin::extensions::filters::token_router::v1alpha1::TokenRouter as ProtoConfig;
 use std::convert::TryFrom;
 use std::sync::Arc;
 
 mod metrics;
-mod proto;
+
+crate::include_proto!("quilkin.extensions.filters.token_router.v1alpha1");
+
+use self::quilkin::extensions::filters::token_router::v1alpha1::TokenRouter as ProtoConfig;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(default)]
@@ -65,6 +67,7 @@ impl TryFrom<ProtoConfig> for Config {
 
 /// Filter that only allows packets to be passed to Endpoints that have a matching
 /// connection_id to the token stored in the Filter's dynamic metadata.
+#[crate::filter("quilkin.extensions.filters.token_router.v1alpha1.TokenRouter")]
 struct TokenRouter {
     log: Logger,
     metadata_key: Arc<String>,
@@ -83,14 +86,14 @@ impl TokenRouterFactory {
 }
 
 impl FilterFactory for TokenRouterFactory {
-    fn name(&self) -> String {
-        "quilkin.extensions.filters.token_router.v1alpha1.TokenRouter".into()
+    fn name(&self) -> &'static str {
+        TokenRouter::FILTER_NAME
     }
 
     fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
         let config: Config = args
             .config
-            .map(|config| config.deserialize::<Config, ProtoConfig>(self.name().as_str()))
+            .map(|config| config.deserialize::<Config, ProtoConfig>(self.name()))
             .transpose()?
             .unwrap_or_default();
 

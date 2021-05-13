@@ -22,25 +22,15 @@ use slog::{info, o, Logger};
 use crate::extensions::filter_registry::{
     CreateFilterArgs, Error, FilterFactory, ReadContext, ReadResponse, WriteContext, WriteResponse,
 };
+use crate::extensions::filters::ConvertProtoConfigError;
 use crate::extensions::Filter;
 
-/// Protobuf config for this filter.
-mod quilkin {
-    pub(crate) mod extensions {
-        pub(crate) mod filters {
-            pub(crate) mod debug {
-                pub(crate) mod v1alpha1 {
-                    #![doc(hidden)]
-                    tonic::include_proto!("quilkin.extensions.filters.debug.v1alpha1");
-                }
-            }
-        }
-    }
-}
+crate::include_proto!("quilkin.extensions.filters.debug.v1alpha1");
 use self::quilkin::extensions::filters::debug::v1alpha1::Debug as ProtoDebug;
-use crate::extensions::filters::ConvertProtoConfigError;
 
 /// Debug logs all incoming and outgoing packets
+#[crate::filter("quilkin.extensions.filters.debug.v1alpha1.Debug")]
+#[derive(Debug)]
 pub struct Debug {
     log: Logger,
 }
@@ -84,14 +74,14 @@ impl DebugFactory {
 }
 
 impl FilterFactory for DebugFactory {
-    fn name(&self) -> String {
-        "quilkin.extensions.filters.debug.v1alpha1.Debug".into()
+    fn name(&self) -> &'static str {
+        Debug::FILTER_NAME
     }
 
     fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
         let config: Option<Config> = args
             .config
-            .map(|config| config.deserialize::<Config, ProtoDebug>(self.name().as_str()))
+            .map(|config| config.deserialize::<Config, ProtoDebug>(self.name()))
             .transpose()?;
         Ok(Box::new(Debug::new(
             &self.log,

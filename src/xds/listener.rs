@@ -251,14 +251,14 @@ mod tests {
 
     struct AppendFactory;
     impl FilterFactory for AppendFactory {
-        fn name(&self) -> String {
-            APPEND_TYPE_URL.into()
+        fn name(&self) -> &'static str {
+            APPEND_TYPE_URL
         }
 
         fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
             let filter = args
                 .config
-                .map(|config| config.deserialize::<Append, ProtoAppend>(self.name().as_str()))
+                .map(|config| config.deserialize::<Append, ProtoAppend>(self.name()))
                 .transpose()?
                 .unwrap();
             if filter.value.as_ref().unwrap() == "reject" {

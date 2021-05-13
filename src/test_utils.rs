@@ -34,8 +34,8 @@ use crate::proxy::{Builder, PendingValidation};
 
 pub struct TestFilterFactory {}
 impl FilterFactory for TestFilterFactory {
-    fn name(&self) -> String {
-        "TestFilter".to_string()
+    fn name(&self) -> &'static str {
+        "TestFilter"
     }
 
     fn create_filter(&self, _: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {

@@ -116,20 +116,21 @@ impl CaptureBytesFactory {
 }
 
 impl FilterFactory for CaptureBytesFactory {
-    fn name(&self) -> String {
-        "quilkin.extensions.filters.capture_bytes.v1alpha1.CaptureBytes".into()
+    fn name(&self) -> &'static str {
+        CaptureBytes::FILTER_NAME
     }
 
     fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
         Ok(Box::new(CaptureBytes::new(
             &self.log,
             self.require_config(args.config)?
-                .deserialize::<Config, ProtoConfig>(self.name().as_str())?,
+                .deserialize::<Config, ProtoConfig>(self.name())?,
             Metrics::new(&args.metrics_registry)?,
         )))
     }
 }
 
+#[crate::filter("quilkin.extensions.filters.capture_bytes.v1alpha1.CaptureBytes")]
 struct CaptureBytes {
     log: Logger,
     capture: Box<dyn Capture + Sync + Send>,

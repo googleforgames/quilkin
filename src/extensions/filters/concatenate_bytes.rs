@@ -26,22 +26,11 @@ use crate::extensions::{
 };
 use crate::map_proto_enum;
 
+crate::include_proto!("quilkin.extensions.filters.concatenate_bytes.v1alpha1");
 use self::quilkin::extensions::filters::concatenate_bytes::v1alpha1::{
     concatenate_bytes::Strategy as ProtoStrategy, ConcatenateBytes as ProtoConfig,
 };
 
-mod quilkin {
-    pub(crate) mod extensions {
-        pub(crate) mod filters {
-            pub(crate) mod concatenate_bytes {
-                pub(crate) mod v1alpha1 {
-                    #![doc(hidden)]
-                    tonic::include_proto!("quilkin.extensions.filters.concatenate_bytes.v1alpha1");
-                }
-            }
-        }
-    }
-}
 base64_serde_type!(Base64Standard, base64::STANDARD);
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
@@ -116,6 +105,7 @@ impl TryFrom<ProtoConfig> for Config {
 
 /// The `ConcatenateBytes` filter's job is to add a byte packet to either the beginning or end of each UDP packet that passes
 /// through. This is commonly used to provide an auth token to each packet, so they can be routed appropriately.
+#[crate::filter("quilkin.extensions.filters.concatenate_bytes.v1alpha1.ConcatenateBytes")]
 struct ConcatenateBytes {
     on_read: Strategy,
     on_write: Strategy,
@@ -131,14 +121,14 @@ impl Default for ConcatBytesFactory {
 }
 
 impl FilterFactory for ConcatBytesFactory {
-    fn name(&self) -> String {
-        "quilkin.extensions.filters.concatenate_bytes.v1alpha1.ConcatenateBytes".into()
+    fn name(&self) -> &'static str {
+        ConcatenateBytes::FILTER_NAME
     }
 
     fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
         Ok(Box::new(ConcatenateBytes::new(
             self.require_config(args.config)?
-                .deserialize::<Config, ProtoConfig>(self.name().as_str())?,
+                .deserialize::<Config, ProtoConfig>(self.name())?,
         )))
     }
 }
