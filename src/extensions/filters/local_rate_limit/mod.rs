@@ -135,10 +135,12 @@ impl RateLimitFilter {
                         while !refilled {
                             let remaining_tokens = available_tokens.load(Ordering::Relaxed);
 
-                            refilled = available_tokens.compare_and_swap(
+                            refilled = available_tokens.compare_exchange(
                                 remaining_tokens,
                                 max_tokens,
-                                Ordering::Relaxed) == remaining_tokens;
+                                Ordering::Relaxed,
+                                Ordering::Relaxed,
+                                ).unwrap_or_else(|b| b) == remaining_tokens;
                         }
                     },
                     _ = &mut shutdown_rx => {
@@ -166,11 +168,16 @@ impl RateLimitFilter {
                 return None;
             }
 
-            if self.available_tokens.compare_and_swap(
-                remaining_tokens,
-                remaining_tokens - 1,
-                Ordering::Relaxed,
-            ) == remaining_tokens
+            if self
+                .available_tokens
+                .compare_exchange(
+                    remaining_tokens,
+                    remaining_tokens - 1,
+                    Ordering::Relaxed,
+                    Ordering::Relaxed,
+                )
+                .unwrap_or_else(|b| b)
+                == remaining_tokens
             {
                 return Some(());
             }

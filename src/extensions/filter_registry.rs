@@ -237,9 +237,9 @@ impl fmt::Display for Error {
     }
 }
 
-impl Into<ValidationError> for Error {
-    fn into(self) -> ValidationError {
-        ValidationError::FilterInvalid(self)
+impl From<Error> for ValidationError {
+    fn from(error: Error) -> Self {
+        Self::FilterInvalid(error)
     }
 }
 
