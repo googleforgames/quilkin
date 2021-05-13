@@ -40,6 +40,7 @@ spec:
       ports:
         - name: default
           containerPort: 26001
+          container: quilkin
       health:
         initialDelaySeconds: 30
         periodSeconds: 60
@@ -53,6 +54,12 @@ spec:
               volumeMounts:
                 - name: config
                   mountPath: "/etc/quilkin"
+              livenessProbe:
+                httpGet:
+                  path: /live
+                  port: 9091
+                initialDelaySeconds: 3
+                periodSeconds: 2
           volumes:
             - name: config
               configMap:
