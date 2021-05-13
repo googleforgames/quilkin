@@ -49,6 +49,14 @@ git submodule update --init --recursive
 You will likely want to replace `https://github.com/googleforgames/quilkin.git` with your own fork of the repository
 for your development.
 
+### Rust version
+
+We target a specific version of Rust for each build, so we can be deliberate when changing versions to 
+track if there are any performance changes between Rust releases.
+
+Run `rustup show` in the root of the project directory to install the rust toolchain that is standard for Quilkin 
+development.
+
 ### Building
 
 Debug release:
