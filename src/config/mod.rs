@@ -28,7 +28,7 @@ mod error;
 mod metadata;
 
 pub use crate::config::endpoints::{
-    EmptyListError, Endpoints, UpstreamEndpoints, UpstreamEndpointsIter,
+    EmptyListError, Endpoints, RetainedItems, UpstreamEndpoints, UpstreamEndpointsIter,
 };
 pub(crate) use crate::config::error::ValueInvalidArgs;
 pub use builder::Builder;

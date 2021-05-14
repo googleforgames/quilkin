@@ -17,6 +17,7 @@
 use serde::{Deserialize, Serialize};
 use slog::{error, o, Logger};
 
+use crate::config::RetainedItems;
 use crate::extensions::filters::token_router::metrics::Metrics;
 use crate::extensions::filters::ConvertProtoConfigError;
 use crate::extensions::filters::CAPTURED_BYTES;
@@ -122,11 +123,11 @@ impl Filter for TokenRouter {
             }
             Some(value) => match value.downcast_ref::<Vec<u8>>() {
                 Some(token) => match ctx.endpoints.retain(|e| e.tokens.contains(token)) {
-                    Ok(_) => Some(ctx.into()),
-                    Err(_) => {
+                    RetainedItems::None => {
                         self.metrics.packets_dropped_no_endpoint_match.inc();
                         None
                     }
+                    _ => Some(ctx.into()),
                 },
                 None => {
                     error!(self.log, "Filter configuration issue: retrieved token is not the correct type (Vec<u8>)";
