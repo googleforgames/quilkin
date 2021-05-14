@@ -15,7 +15,7 @@
  */
 
 use crate::proxy::sessions::Session;
-use slog::{debug, error, warn, Logger};
+use slog::{debug, warn, Logger};
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -82,9 +82,9 @@ impl SessionManager {
         });
     }
 
-    /// prune_sessions removes expired Sessions from the Sessions map.
-    /// Should be run on a time interval.
-    /// This will lock the Sessions map if it finds expired sessions
+    /// Removes expired [`Session`]s from `sessions`. This should be run
+    /// regularly such as on a time interval. This will only write lock
+    /// `sessions` if it first finds expired sessions.
     async fn prune_sessions(log: &Logger, sessions: &mut Sessions) {
         let now = if let Ok(now) = SystemTime::now().duration_since(UNIX_EPOCH) {
             now.as_secs()
@@ -93,33 +93,18 @@ impl SessionManager {
             return;
         };
 
-        let mut expired_keys = Vec::<(SocketAddr, SocketAddr)>::new();
-        {
-            let map = sessions.read().await;
-            for (key, session) in map.iter() {
-                let expiration = session.expiration();
-                if expiration <= now {
-                    expired_keys.push(*key);
-                }
-            }
-        }
+        let expired_keys = (*sessions.read().await)
+            .iter()
+            .filter(|(_, session)| session.expiration() <= now)
+            .count();
 
-        if !expired_keys.is_empty() {
-            let mut map = sessions.write().await;
-            for key in expired_keys.iter() {
-                if let Some(session) = map.get(key) {
-                    // If the session has been updated since we marked it
-                    // for removal then its still valid so ignore it.
-                    if session.expiration() > now {
-                        continue;
-                    }
-
-                    if let Err(err) = session.close() {
-                        error!(log, "Error closing Session"; "error" => %err)
-                    }
-                }
-                map.remove(key);
-            }
+        if expired_keys != 0 {
+            // Go over the whole sessions map again in case anything expired
+            // since acquiring the write lock.
+            sessions
+                .write()
+                .await
+                .retain(|_, session| session.expiration() > now);
         }
     }
 }

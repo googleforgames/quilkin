@@ -104,43 +104,34 @@ impl UpstreamEndpoints {
     /// Updates the current subset of endpoints to contain only the endpoints
     /// which the predicate returned `true`.
     /// Returns an error if the predicate returns `false` for all endpoints.
-    pub fn retain<F>(&mut self, predicate: F) -> Result<(), AllEndpointsRemovedError>
+    pub fn retain<F>(&mut self, predicate: F) -> RetainedItems
     where
         F: Fn(&Endpoint) -> bool,
     {
-        match self.subset.as_mut() {
-            Some(subset) => {
-                let endpoints = &self.endpoints;
-                let new_subset = subset
-                    .iter()
-                    .filter(|&&index| predicate(&endpoints.0[index]))
-                    .copied()
-                    .collect::<Vec<_>>();
+        let endpoints = self
+            .subset
+            .as_ref()
+            .map(|s| either::Right(s.iter().map(|&index| (index, &self.endpoints.0[index]))))
+            .unwrap_or_else(|| either::Left(self.endpoints.0.iter().enumerate()));
 
-                if new_subset.is_empty() {
-                    return Err(AllEndpointsRemovedError);
-                }
+        let total_items = endpoints.clone().count();
+        let new_subset = endpoints
+            .filter(|(_, ep)| predicate(ep))
+            .map(|(i, _)| i)
+            .collect::<Vec<_>>();
 
-                *subset = new_subset;
-            }
-            None => {
-                let new_subset = self
-                    .endpoints
-                    .0
-                    .iter()
-                    .enumerate()
-                    .filter(|(_, ep)| predicate(ep))
-                    .map(|(i, _)| i)
-                    .collect::<Vec<_>>();
+        if new_subset.is_empty() {
+            return RetainedItems::None;
+        }
 
-                if new_subset.is_empty() {
-                    return Err(AllEndpointsRemovedError);
-                }
-                self.subset = Some(new_subset);
-            }
-        };
+        let retained_items = new_subset.len();
+        self.subset = Some(new_subset);
 
-        Ok(())
+        if retained_items == total_items {
+            RetainedItems::All
+        } else {
+            RetainedItems::Some(retained_items)
+        }
     }
 
     /// Iterate over the endpoints in the current subset.
@@ -149,6 +140,34 @@ impl UpstreamEndpoints {
             collection: self,
             index: 0,
         }
+    }
+}
+
+/// An enum representing the result of a [`UpstreamEndpoints::retain`] call,
+/// detailing how many (if any) of the endpoints were retained by the predicate.
+#[non_exhaustive]
+#[must_use]
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub enum RetainedItems {
+    None,
+    Some(usize),
+    All,
+}
+
+impl RetainedItems {
+    /// Returns whether `self` is [`RetainedItems::None`].
+    pub fn is_none(&self) -> bool {
+        matches!(self, Self::None)
+    }
+
+    /// Returns whether `self` is [`RetainedItems::All`].
+    pub fn is_all(&self) -> bool {
+        matches!(self, Self::All)
+    }
+
+    /// Returns whether `self` is [`RetainedItems::Some`].
+    pub fn is_some(&self) -> bool {
+        matches!(self, Self::Some(_))
     }
 }
 
@@ -181,7 +200,7 @@ impl<'a> Iterator for UpstreamEndpointsIter<'a> {
 mod tests {
     use super::Endpoints;
     use crate::cluster::Endpoint;
-    use crate::config::UpstreamEndpoints;
+    use crate::config::{RetainedItems, UpstreamEndpoints};
 
     fn ep(id: usize) -> Endpoint {
         Endpoint::from_address(format!("127.0.0.{}:8080", id).parse().unwrap())
@@ -220,26 +239,26 @@ mod tests {
 
         let mut up: UpstreamEndpoints = Endpoints::new(initial_endpoints.clone()).unwrap().into();
 
-        up.retain(|ep| ep.address.to_string().as_str() != "127.0.0.2:8080")
-            .unwrap();
+        let items = up.retain(|ep| ep.address.to_string().as_str() != "127.0.0.2:8080");
+        assert!(matches!(items, RetainedItems::Some(3)));
         assert_eq!(up.size(), 3);
         assert_eq!(
             vec![ep(1), ep(3), ep(4)],
             up.iter().cloned().collect::<Vec<_>>()
         );
 
-        up.retain(|ep| ep.address.to_string().as_str() != "127.0.0.3:8080")
-            .unwrap();
+        let items = up.retain(|ep| ep.address.to_string().as_str() != "127.0.0.3:8080");
+        assert!(matches!(items, RetainedItems::Some(2)));
         assert_eq!(up.size(), 2);
         assert_eq!(vec![ep(1), ep(4)], up.iter().cloned().collect::<Vec<_>>());
 
         // test an empty result on retain
         let result = up.retain(|_| false);
-        assert!(result.is_err());
+        assert!(result.is_none());
 
         let mut up: UpstreamEndpoints = Endpoints::new(initial_endpoints).unwrap().into();
         let result = up.retain(|_| false);
-        assert!(result.is_err());
+        assert!(result.is_none());
     }
 
     #[test]
