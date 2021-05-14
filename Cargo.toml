@@ -53,6 +53,7 @@ tonic = "0.4.0"
 uuid = {version = "0.8.1", default-features = false, features = ["v4"]}
 snap = "1.0.3"
 tokio-stream = "0.1.2"
+either = "1.6.1"
 
 [dev-dependencies]
 reqwest = "0.11.0"

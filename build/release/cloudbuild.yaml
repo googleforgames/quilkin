@@ -24,6 +24,12 @@ steps:
     args: [ 'build', '-f', 'Dockerfile.builder', '-t', 'builder', '.' ] # make sure we always have the latest docker with rust, cargo and cross
     dir: ./build/release
   - name: builder
+    id: copy-rust-tooling
+    entrypoint: bash
+    args:
+      - -c
+      - 'cp -r /usr/local/cargo $$CARGO_HOME'
+  - name: builder
     id: capture-version
     entrypoint: bash
     args: ['-c', "grep version -m 1 Cargo.toml | awk '{ print $3 }' | sed s/\\\"//g > version"]
