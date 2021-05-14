@@ -49,16 +49,18 @@ pub async fn run(filter_factories: Vec<Box<dyn FilterFactory>>) -> Result<(), Er
     let base_logger = logger();
     let log = base_logger.new(o!("source" => "run"));
 
-    let matches = App::new("Quilkin Proxy")
+    let matches = App::new(clap::crate_name!())
         .version(version.as_str())
-        .about("Quilkin is a non-transparent UDP proxy specifically designed for use with large scale multiplayer dedicated game servers")
-        .arg(clap::Arg::with_name("filename")
-            .short("f")
-            .long("filename")
-            .value_name("FILE")
-            .help("The yaml configuration file")
-            .required(true)
-            .takes_value(true))
+        .about(clap::crate_description!())
+        .arg(
+            clap::Arg::with_name("filename")
+                .short("f")
+                .long("filename")
+                .value_name("FILE")
+                .help("The yaml configuration file")
+                .required(true)
+                .takes_value(true),
+        )
         .get_matches();
 
     let filename = matches
