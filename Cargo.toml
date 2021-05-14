@@ -14,6 +14,9 @@
 # limitations under the License.
 #
 
+[workspace]
+members = [".", "wasm"]
+
 [package]
 name = "quilkin"
 version = "0.1.0-dev"
@@ -53,6 +56,7 @@ tonic = "0.4.0"
 uuid = {version = "0.8.1", default-features = false, features = ["v4"]}
 snap = "1.0.3"
 tokio-stream = "0.1.2"
+wasmtime = { version = "0.26.0", optional = false }
 
 [dev-dependencies]
 reqwest = "0.11.0"

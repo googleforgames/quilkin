@@ -23,6 +23,8 @@ pub use debug::DebugFactory;
 pub use load_balancer::LoadBalancerFilterFactory;
 pub use local_rate_limit::RateLimitFilterFactory;
 pub use token_router::TokenRouterFactory;
+//#[cfg(feature = "wasmtime")]
+pub use self::wasmtime::WasmtimeFactory;
 
 mod capture_bytes;
 mod compress;
@@ -31,6 +33,8 @@ mod debug;
 mod load_balancer;
 mod local_rate_limit;
 mod token_router;
+//#[cfg(feature = "wasmtime")]
+mod wasmtime;
 
 pub const CAPTURED_BYTES: &str = "quilkin.dev/captured_bytes";
 
