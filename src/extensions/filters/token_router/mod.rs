@@ -17,7 +17,7 @@
 use serde::{Deserialize, Serialize};
 use slog::{error, o, Logger};
 
-use crate::config::RetainedItems;
+use crate::config::{RetainedItems, LOG_SAMPLING_RATE};
 use crate::extensions::filters::token_router::metrics::Metrics;
 use crate::extensions::filters::ConvertProtoConfigError;
 use crate::extensions::filters::CAPTURED_BYTES;
@@ -116,8 +116,14 @@ impl Filter for TokenRouter {
     fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
         match ctx.metadata.get(self.metadata_key.as_ref()) {
             None => {
-                error!(self.log, "Filter configuration issue: token not found";
-                    "metadata_key" => self.metadata_key.clone());
+                if self.metrics.packets_dropped_no_token_found.get() % LOG_SAMPLING_RATE == 0 {
+                    error!(
+                        self.log,
+                        "Packets are being dropped as no routing token was found in filter dynamic metadata";
+                        "count" => self.metrics.packets_dropped_no_token_found.get(),
+                        "metadata_key" => self.metadata_key.clone()
+                    );
+                }
                 self.metrics.packets_dropped_no_token_found.inc();
                 None
             }
@@ -130,8 +136,14 @@ impl Filter for TokenRouter {
                     _ => Some(ctx.into()),
                 },
                 None => {
-                    error!(self.log, "Filter configuration issue: retrieved token is not the correct type (Vec<u8>)";
-                        "metadata_key" => self.metadata_key.clone());
+                    if self.metrics.packets_dropped_invalid_token.get() % LOG_SAMPLING_RATE == 0 {
+                        error!(
+                            self.log,
+                            "Packets are being dropped as routing token has invalid type: expected Vec<u8>";
+                            "count" => self.metrics.packets_dropped_invalid_token.get(),
+                            "metadata_key" => self.metadata_key.clone()
+                        );
+                    }
                     self.metrics.packets_dropped_invalid_token.inc();
                     None
                 }

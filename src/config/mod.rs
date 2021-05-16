@@ -37,6 +37,10 @@ pub(crate) use metadata::{extract_endpoint_tokens, parse_endpoint_metadata_from_
 
 base64_serde_type!(Base64Standard, base64::STANDARD);
 
+// For some log messages on the hot path (potentially per-packet), we log 1 out
+// of every `LOG_SAMPLING_RATE` occurrences to avoid spamming the logs.
+pub(crate) const LOG_SAMPLING_RATE: u64 = 1000;
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum Version {
     #[serde(rename = "v1alpha1")]
