@@ -15,17 +15,17 @@
  */
 
 use crate::metrics::{opts, CollectorExt};
-use prometheus::core::{AtomicI64, GenericCounter, GenericGauge};
+use prometheus::core::{AtomicU64, GenericCounter, GenericGauge};
 use prometheus::Result as MetricsResult;
 use prometheus::{IntCounter, Registry};
 
 #[derive(Clone)]
 pub struct Metrics {
-    pub connected_state: GenericGauge<AtomicI64>,
-    pub update_attempt_total: GenericCounter<AtomicI64>,
-    pub update_success_total: GenericCounter<AtomicI64>,
-    pub update_failure_total: GenericCounter<AtomicI64>,
-    pub requests_total: GenericCounter<AtomicI64>,
+    pub connected_state: GenericGauge<AtomicU64>,
+    pub update_attempt_total: GenericCounter<AtomicU64>,
+    pub update_success_total: GenericCounter<AtomicU64>,
+    pub update_failure_total: GenericCounter<AtomicU64>,
+    pub requests_total: GenericCounter<AtomicU64>,
 }
 
 impl Metrics {

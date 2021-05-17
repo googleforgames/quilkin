@@ -13,16 +13,16 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-use prometheus::core::{AtomicI64, GenericCounter};
+use prometheus::core::{AtomicU64, GenericCounter};
 use prometheus::{IntCounterVec, Registry, Result as MetricsResult};
 
 use crate::metrics::{filter_opts, CollectorExt};
 
 /// Register and manage metrics for this filter
 pub(super) struct Metrics {
-    pub(super) packets_dropped_no_token_found: GenericCounter<AtomicI64>,
-    pub(super) packets_dropped_invalid_token: GenericCounter<AtomicI64>,
-    pub(super) packets_dropped_no_endpoint_match: GenericCounter<AtomicI64>,
+    pub(super) packets_dropped_no_token_found: GenericCounter<AtomicU64>,
+    pub(super) packets_dropped_invalid_token: GenericCounter<AtomicU64>,
+    pub(super) packets_dropped_no_endpoint_match: GenericCounter<AtomicU64>,
 }
 
 impl Metrics {

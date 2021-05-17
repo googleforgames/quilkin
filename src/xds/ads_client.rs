@@ -41,7 +41,7 @@ use crate::xds::envoy::service::discovery::v3::{
 use crate::xds::listener::ListenerManager;
 use crate::xds::metrics::Metrics;
 use crate::xds::{CLUSTER_TYPE, ENDPOINT_TYPE, LISTENER_TYPE};
-use prometheus::core::{AtomicI64, GenericGauge};
+use prometheus::core::{AtomicU64, GenericGauge};
 use tokio::sync::mpsc::error::SendError;
 
 /// AdsClient is a client that can talk to an XDS server using the ADS protocol.
@@ -361,9 +361,9 @@ impl AdsClient {
             // This updates metrics for connection state. It updates the metric to 1 upon
             // creation and back to 0 once it goes out of scope (i.e when the function returns,
             // we are no longer connected since the client must have been dropped as well).
-            struct ConnectionState(GenericGauge<AtomicI64>);
+            struct ConnectionState(GenericGauge<AtomicU64>);
             impl ConnectionState {
-                fn connected(metric: GenericGauge<AtomicI64>) -> Self {
+                fn connected(metric: GenericGauge<AtomicU64>) -> Self {
                     metric.set(1);
                     Self(metric)
                 }

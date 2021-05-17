@@ -15,7 +15,7 @@
  */
 
 use crate::metrics::{histogram_opts, opts, CollectorExt};
-use prometheus::core::{AtomicI64, GenericCounter, GenericGauge};
+use prometheus::core::{AtomicI64, AtomicU64, GenericCounter, GenericGauge};
 use prometheus::{
     Histogram, HistogramVec, IntCounterVec, IntGaugeVec, Registry, Result as MetricsResult,
 };
@@ -23,14 +23,14 @@ use prometheus::{
 #[derive(Clone)]
 pub struct Metrics {
     pub active_sessions: GenericGauge<AtomicI64>,
-    pub sessions_total: GenericCounter<AtomicI64>,
-    pub rx_bytes_total: GenericCounter<AtomicI64>,
-    pub tx_bytes_total: GenericCounter<AtomicI64>,
-    pub rx_packets_total: GenericCounter<AtomicI64>,
-    pub tx_packets_total: GenericCounter<AtomicI64>,
-    pub rx_errors_total: GenericCounter<AtomicI64>,
-    pub tx_errors_total: GenericCounter<AtomicI64>,
-    pub packets_dropped_total: GenericCounter<AtomicI64>,
+    pub sessions_total: GenericCounter<AtomicU64>,
+    pub rx_bytes_total: GenericCounter<AtomicU64>,
+    pub tx_bytes_total: GenericCounter<AtomicU64>,
+    pub rx_packets_total: GenericCounter<AtomicU64>,
+    pub tx_packets_total: GenericCounter<AtomicU64>,
+    pub rx_errors_total: GenericCounter<AtomicU64>,
+    pub tx_errors_total: GenericCounter<AtomicU64>,
+    pub packets_dropped_total: GenericCounter<AtomicU64>,
     pub duration_secs: Histogram,
 }
 
