@@ -187,8 +187,8 @@ impl Compress {
     /// Track a failed attempt at compression
     fn failed_compression<T>(&self, err: Box<dyn std::error::Error>) -> Option<T> {
         if self.metrics.packets_dropped_compress.get() % 1000 == 0 {
-            warn!(self.log, "Packets are being dropped as they could not be compressed"; 
-                            "mode" => #?self.compression_mode, "error" => %err, 
+            warn!(self.log, "Packets are being dropped as they could not be compressed";
+                            "mode" => #?self.compression_mode, "error" => %err,
                             "count" => self.metrics.packets_dropped_compress.get());
         }
         self.metrics.packets_dropped_compress.inc();
@@ -198,8 +198,8 @@ impl Compress {
     /// Track a failed attempt at decompression
     fn failed_decompression<T>(&self, err: Box<dyn std::error::Error>) -> Option<T> {
         if self.metrics.packets_dropped_decompress.get() % 1000 == 0 {
-            warn!(self.log, "Packets are being dropped as they could not be decompressed"; 
-                            "mode" => #?self.compression_mode, "error" => %err, 
+            warn!(self.log, "Packets are being dropped as they could not be decompressed";
+                            "mode" => #?self.compression_mode, "error" => %err,
                             "count" => self.metrics.packets_dropped_decompress.get());
         }
         self.metrics.packets_dropped_decompress.inc();
@@ -216,10 +216,10 @@ impl Filter for Compress {
                 Ok(()) => {
                     self.metrics
                         .decompressed_bytes_total
-                        .inc_by(original_size as i64);
+                        .inc_by(original_size as u64);
                     self.metrics
                         .compressed_bytes_total
-                        .inc_by(ctx.contents.len() as i64);
+                        .inc_by(ctx.contents.len() as u64);
                     Some(ctx.into())
                 }
                 Err(err) => self.failed_compression(err),
@@ -228,10 +228,10 @@ impl Filter for Compress {
                 Ok(()) => {
                     self.metrics
                         .compressed_bytes_total
-                        .inc_by(original_size as i64);
+                        .inc_by(original_size as u64);
                     self.metrics
                         .decompressed_bytes_total
-                        .inc_by(ctx.contents.len() as i64);
+                        .inc_by(ctx.contents.len() as u64);
                     Some(ctx.into())
                 }
                 Err(err) => self.failed_decompression(err),
@@ -247,10 +247,10 @@ impl Filter for Compress {
                 Ok(()) => {
                     self.metrics
                         .decompressed_bytes_total
-                        .inc_by(original_size as i64);
+                        .inc_by(original_size as u64);
                     self.metrics
                         .compressed_bytes_total
-                        .inc_by(ctx.contents.len() as i64);
+                        .inc_by(ctx.contents.len() as u64);
                     Some(ctx.into())
                 }
                 Err(err) => self.failed_compression(err),
@@ -259,10 +259,10 @@ impl Filter for Compress {
                 Ok(()) => {
                     self.metrics
                         .compressed_bytes_total
-                        .inc_by(original_size as i64);
+                        .inc_by(original_size as u64);
                     self.metrics
                         .decompressed_bytes_total
-                        .inc_by(ctx.contents.len() as i64);
+                        .inc_by(ctx.contents.len() as u64);
                     Some(ctx.into())
                 }
 
@@ -490,11 +490,11 @@ mod tests {
             read_response.contents.len()
         );
         assert_eq!(
-            expected.len() as i64,
+            expected.len() as u64,
             compress.metrics.decompressed_bytes_total.get()
         );
         assert_eq!(
-            read_response.contents.len() as i64,
+            read_response.contents.len() as u64,
             compress.metrics.compressed_bytes_total.get()
         );
 
@@ -514,11 +514,11 @@ mod tests {
         assert_eq!(0, compress.metrics.packets_dropped_compress.get());
         // multiply by two, because data was sent both upstream and downstream
         assert_eq!(
-            (read_response.contents.len() * 2) as i64,
+            (read_response.contents.len() * 2) as u64,
             compress.metrics.compressed_bytes_total.get()
         );
         assert_eq!(
-            (expected.len() * 2) as i64,
+            (expected.len() * 2) as u64,
             compress.metrics.decompressed_bytes_total.get()
         );
     }
@@ -540,11 +540,11 @@ mod tests {
 
         // multiply by two, because data was sent both downstream and upstream
         assert_eq!(
-            (compressed.len() * 2) as i64,
+            (compressed.len() * 2) as u64,
             compress.metrics.compressed_bytes_total.get()
         );
         assert_eq!(
-            (expected.len() * 2) as i64,
+            (expected.len() * 2) as u64,
             compress.metrics.decompressed_bytes_total.get()
         );
 

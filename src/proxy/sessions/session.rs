@@ -147,7 +147,7 @@ impl Session {
                                 error!(log, "Error receiving packet"; "error" => %err);
                             },
                             Ok((size, recv_addr)) => {
-                                metrics.rx_bytes_total.inc_by(size as i64);
+                                metrics.rx_bytes_total.inc_by(size as u64);
                                 metrics.rx_packets_total.inc();
                                 Session::process_recv_packet(
                                     &log,
@@ -263,7 +263,7 @@ impl Session {
             .await
             .map(|size| {
                 self.metrics.tx_packets_total.inc();
-                self.metrics.tx_bytes_total.inc_by(size as i64);
+                self.metrics.tx_bytes_total.inc_by(size as u64);
                 Some(size)
             })
             .map_err(|err| {
