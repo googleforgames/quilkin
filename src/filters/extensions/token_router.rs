@@ -14,23 +14,23 @@
  *  limitations under the License.
  */
 
-use serde::{Deserialize, Serialize};
-use slog::{error, o, Logger};
-
-use crate::config::{RetainedItems, LOG_SAMPLING_RATE};
-use crate::extensions::filters::token_router::metrics::Metrics;
-use crate::extensions::filters::ConvertProtoConfigError;
-use crate::extensions::filters::CAPTURED_BYTES;
-use crate::extensions::{
-    CreateFilterArgs, Error, Filter, FilterFactory, ReadContext, ReadResponse, WriteContext,
-    WriteResponse,
-};
-use std::convert::TryFrom;
-use std::sync::Arc;
-
 mod metrics;
 
 crate::include_proto!("quilkin.extensions.filters.token_router.v1alpha1");
+
+use std::convert::TryFrom;
+use std::sync::Arc;
+
+use serde::{Deserialize, Serialize};
+use slog::{error, o, Logger};
+
+use crate::{
+    config::{RetainedItems, LOG_SAMPLING_RATE},
+    filters::{
+        extensions::{token_router::metrics::Metrics, CAPTURED_BYTES},
+        prelude::*,
+    },
+};
 
 use self::quilkin::extensions::filters::token_router::v1alpha1::TokenRouter as ProtoConfig;
 
@@ -175,8 +175,9 @@ mod tests {
         default_metadata_key, Config, Metrics, ProtoConfig, TokenRouter, TokenRouterFactory,
     };
     use crate::cluster::Endpoint;
-    use crate::extensions::filters::CAPTURED_BYTES;
-    use crate::extensions::{CreateFilterArgs, Filter, FilterFactory, ReadContext};
+    use crate::filters::{
+        extensions::CAPTURED_BYTES, CreateFilterArgs, Filter, FilterFactory, ReadContext,
+    };
 
     const TOKEN_KEY: &str = "TOKEN";
 

@@ -25,9 +25,7 @@ use tokio::time::{self, Instant};
 
 use metrics::Metrics;
 
-use crate::extensions::filter_registry::{CreateFilterArgs, ReadContext, ReadResponse};
-use crate::extensions::filters::ConvertProtoConfigError;
-use crate::extensions::{Error, Filter, FilterFactory};
+use crate::filters::prelude::*;
 
 mod metrics;
 
@@ -215,10 +213,10 @@ mod tests {
     use super::ProtoConfig;
     use crate::cluster::Endpoint;
     use crate::config::Endpoints;
-    use crate::extensions::filter_registry::ReadContext;
-    use crate::extensions::filters::local_rate_limit::metrics::Metrics;
-    use crate::extensions::filters::local_rate_limit::{Config, RateLimitFilter};
-    use crate::extensions::Filter;
+    use crate::filters::{
+        extensions::local_rate_limit::{metrics::Metrics, Config, RateLimitFilter},
+        Filter, ReadContext,
+    };
     use crate::test_utils::assert_write_no_change;
 
     fn rate_limiter(config: Config) -> RateLimitFilter {

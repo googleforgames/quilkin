@@ -14,29 +14,22 @@
  * limitations under the License.
  */
 
-#[derive(Debug)]
-pub struct Error {
-    pub message: String,
-}
+//! Useful filters for common operations.
 
-impl Error {
-    pub fn new(message: String) -> Self {
-        Error { message }
-    }
-}
+pub use capture_bytes::CaptureBytesFactory;
+pub use compress::CompressFactory;
+pub use concatenate_bytes::ConcatBytesFactory;
+pub use debug::DebugFactory;
+pub use load_balancer::LoadBalancerFilterFactory;
+pub use local_rate_limit::RateLimitFilterFactory;
+pub use token_router::TokenRouterFactory;
 
-impl From<prometheus::Error> for Error {
-    fn from(error: prometheus::Error) -> Self {
-        Self {
-            message: error.to_string(),
-        }
-    }
-}
+mod capture_bytes;
+mod compress;
+mod concatenate_bytes;
+mod debug;
+mod load_balancer;
+mod local_rate_limit;
+mod token_router;
 
-impl From<crate::filters::chain::Error> for Error {
-    fn from(error: crate::filters::chain::Error) -> Self {
-        Self {
-            message: error.to_string(),
-        }
-    }
-}
+pub const CAPTURED_BYTES: &str = "quilkin.dev/captured_bytes";

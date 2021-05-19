@@ -26,14 +26,11 @@ use self::quilkin::extensions::filters::compress::v1alpha1::{
     compress::Action as ProtoAction, compress::Mode as ProtoMode, Compress as ProtoConfig,
 };
 
-use crate::config::LOG_SAMPLING_RATE;
-use crate::extensions::filters::compress::metrics::Metrics;
-use crate::extensions::filters::ConvertProtoConfigError;
-use crate::extensions::{
-    CreateFilterArgs, Error as RegistryError, Filter, FilterFactory, ReadContext, ReadResponse,
-    WriteContext, WriteResponse,
-};
 use crate::map_proto_enum;
+use crate::{
+    config::LOG_SAMPLING_RATE,
+    filters::{extensions::compress::metrics::Metrics, prelude::*},
+};
 
 mod metrics;
 
@@ -148,10 +145,7 @@ impl FilterFactory for CompressFactory {
         Compress::FILTER_NAME
     }
 
-    fn create_filter(
-        &self,
-        args: CreateFilterArgs,
-    ) -> std::result::Result<Box<dyn Filter>, RegistryError> {
+    fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
         Ok(Box::new(Compress::new(
             &self.log,
             self.require_config(args.config)?
@@ -276,7 +270,7 @@ impl Filter for Compress {
     }
 }
 
-type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+type Result<T, E = Box<dyn std::error::Error>> = std::result::Result<T, E>;
 
 /// A trait that provides a compression and decompression strategy for this filter.
 /// Conversion takes place on a mutable Vec, to ensure the most performant compression or
@@ -315,8 +309,10 @@ mod tests {
 
     use crate::cluster::Endpoint;
     use crate::config::{Endpoints, UpstreamEndpoints};
-    use crate::extensions::filters::compress::Compressor;
-    use crate::extensions::{CreateFilterArgs, Filter, FilterFactory, ReadContext, WriteContext};
+    use crate::filters::{
+        extensions::compress::Compressor, CreateFilterArgs, Filter, FilterFactory, ReadContext,
+        WriteContext,
+    };
     use crate::test_utils::logger;
 
     use super::quilkin::extensions::filters::compress::v1alpha1::{

@@ -21,8 +21,10 @@ mod tests {
     use tokio::time::{timeout, Duration};
 
     use quilkin::config::{Builder, EndPoint, Filter};
-    use quilkin::extensions::filters::{CaptureBytesFactory, TokenRouterFactory};
-    use quilkin::extensions::FilterFactory;
+    use quilkin::filters::{
+        extensions::{CaptureBytesFactory, TokenRouterFactory},
+        FilterFactory,
+    };
     use quilkin::test_utils::{logger, TestHelper};
 
     /// This test covers both token_router and capture_bytes filters,

@@ -19,11 +19,7 @@ use std::convert::TryFrom;
 use base64_serde::base64_serde_type;
 use serde::{Deserialize, Serialize};
 
-use crate::extensions::filters::ConvertProtoConfigError;
-use crate::extensions::{
-    CreateFilterArgs, Error, Filter, FilterFactory, ReadContext, ReadResponse, WriteContext,
-    WriteResponse,
-};
+use crate::filters::prelude::*;
 use crate::map_proto_enum;
 
 crate::include_proto!("quilkin.extensions.filters.concatenate_bytes.v1alpha1");
@@ -181,7 +177,7 @@ mod tests {
 
     use crate::cluster::Endpoint;
     use crate::config::Endpoints;
-    use crate::extensions::{CreateFilterArgs, Filter, FilterFactory, ReadContext, WriteContext};
+    use crate::filters::{CreateFilterArgs, Filter, FilterFactory, ReadContext, WriteContext};
     use crate::test_utils::{assert_filter_read_no_change, assert_write_no_change};
 
     use super::quilkin::extensions::filters::concatenate_bytes::v1alpha1::{

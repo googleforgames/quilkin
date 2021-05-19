@@ -26,8 +26,7 @@ use tokio::sync::{mpsc, watch};
 use tokio::time::{Duration, Instant};
 
 use crate::cluster::Endpoint;
-use crate::extensions::filter_manager::SharedFilterManager;
-use crate::extensions::{Filter, WriteContext};
+use crate::filters::{manager::SharedFilterManager, Filter, WriteContext};
 use crate::proxy::sessions::error::Error;
 use crate::proxy::sessions::metrics::Metrics;
 use crate::utils::debug;
@@ -306,11 +305,11 @@ mod tests {
     use prometheus::Registry;
     use tokio::time::timeout;
 
-    use crate::extensions::FilterChain;
+    use crate::filters::FilterChain;
     use crate::test_utils::{new_test_chain, TestHelper};
 
     use crate::cluster::Endpoint;
-    use crate::extensions::filter_manager::FilterManager;
+    use crate::filters::manager::FilterManager;
     use crate::proxy::sessions::session::ReceivedPacketContext;
     use tokio::sync::mpsc;
 

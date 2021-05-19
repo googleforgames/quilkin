@@ -19,10 +19,7 @@ use std::fmt::{self, Formatter};
 use prometheus::{Error as PrometheusError, Histogram, HistogramOpts, Registry};
 
 use crate::config::{Filter as FilterConfig, ValidationError};
-use crate::extensions::{
-    CreateFilterArgs, Filter, FilterRegistry, ReadContext, ReadResponse, WriteContext,
-    WriteResponse,
-};
+use crate::filters::{prelude::*, FilterRegistry};
 use crate::metrics::CollectorExt;
 
 const FILTER_LABEL: &str = "filter";
@@ -167,8 +164,7 @@ mod tests {
 
     use crate::config;
     use crate::config::{Endpoints, UpstreamEndpoints};
-    use crate::extensions::filters::DebugFactory;
-    use crate::extensions::{default_registry, FilterFactory};
+    use crate::filters::{extensions::DebugFactory, FilterFactory, FilterRegistry, FilterSet};
     use crate::test_utils::{logger, new_test_chain, TestFilter};
 
     use super::*;
@@ -185,7 +181,7 @@ mod tests {
             config: Default::default(),
         }];
 
-        let registry = default_registry(&log);
+        let registry = FilterRegistry::new(FilterSet::default(&log));
         let chain =
             FilterChain::try_create(filter_configs, &registry, &Registry::default()).unwrap();
         assert_eq!(1, chain.filters.len());

@@ -123,8 +123,7 @@ mod tests {
     use tokio::sync::{mpsc, watch, RwLock};
 
     use crate::cluster::Endpoint;
-    use crate::extensions::filter_manager::FilterManager;
-    use crate::extensions::FilterChain;
+    use crate::filters::{manager::FilterManager, FilterChain};
     use crate::proxy::sessions::metrics::Metrics;
     use crate::proxy::sessions::session_manager::Sessions;
     use crate::proxy::sessions::{Packet, Session};

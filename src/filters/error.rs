@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Google LLC All Rights Reserved.
+ * Copyright 2021 Google LLC All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,23 +16,54 @@
 
 use std::fmt;
 
-pub use capture_bytes::CaptureBytesFactory;
-pub use compress::CompressFactory;
-pub use concatenate_bytes::ConcatBytesFactory;
-pub use debug::DebugFactory;
-pub use load_balancer::LoadBalancerFilterFactory;
-pub use local_rate_limit::RateLimitFilterFactory;
-pub use token_router::TokenRouterFactory;
+use crate::config::ValidationError;
+use prometheus::Error as MetricsError;
 
-mod capture_bytes;
-mod compress;
-mod concatenate_bytes;
-mod debug;
-mod load_balancer;
-mod local_rate_limit;
-mod token_router;
+#[cfg(doc)]
+use crate::filters::{Filter, FilterFactory};
 
-pub const CAPTURED_BYTES: &str = "quilkin.dev/captured_bytes";
+/// An error that occurred when attempting to create a [`Filter`] from
+/// a [`FilterFactory`].
+#[derive(Debug, PartialEq)]
+pub enum Error {
+    NotFound(String),
+    MissingConfig(&'static str),
+    FieldInvalid { field: String, reason: String },
+    DeserializeFailed(String),
+    InitializeMetricsFailed(String),
+    ConvertProtoConfig(ConvertProtoConfigError),
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Error::NotFound(key) => write!(f, "filter {} is not found", key),
+            Error::MissingConfig(filter_name) => {
+                write!(f, "filter `{}` requires a configuration", filter_name)
+            }
+            Error::FieldInvalid { field, reason } => {
+                write!(f, "field {} is invalid: {}", field, reason)
+            }
+            Error::DeserializeFailed(reason) => write!(f, "Deserialization failed: {}", reason),
+            Error::InitializeMetricsFailed(reason) => {
+                write!(f, "failed to initialize metrics: {}", reason)
+            }
+            Error::ConvertProtoConfig(inner) => write!(f, "{}", inner),
+        }
+    }
+}
+
+impl From<Error> for ValidationError {
+    fn from(error: Error) -> Self {
+        Self::FilterInvalid(error)
+    }
+}
+
+impl From<MetricsError> for Error {
+    fn from(error: MetricsError) -> Self {
+        Error::InitializeMetricsFailed(error.to_string())
+    }
+}
 
 /// An error representing failure to convert a filter's protobuf configuration
 /// to its static representation.
@@ -77,7 +108,7 @@ macro_rules! enum_no_match_error {
         enum_type = $enum_type:ty,
         allowed_values = [ $( $allowed_value:tt ),+ ]
     ) => {
-        Err(ConvertProtoConfigError::new(
+        Err($crate::filters::error::ConvertProtoConfigError::new(
             format!(
               "invalid value `{}` provided: allowed values are {}",
               $invalid_value,

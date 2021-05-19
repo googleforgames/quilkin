@@ -32,7 +32,7 @@ use tonic::{
 
 use crate::cluster::Cluster;
 use crate::config::ManagementServer;
-use crate::extensions::filter_manager::ListenerManagerArgs;
+use crate::filters::manager::ListenerManagerArgs;
 use crate::xds::cluster::ClusterManager;
 use crate::xds::envoy::config::core::v3::Node;
 use crate::xds::envoy::service::discovery::v3::{
@@ -498,14 +498,13 @@ pub(super) async fn send_discovery_req(
 mod tests {
     use super::AdsClient;
     use crate::config::ManagementServer;
-    use crate::extensions::FilterRegistry;
+    use crate::filters::FilterRegistry;
     use crate::proxy::logger;
     use crate::xds::ads_client::ListenerManagerArgs;
     use crate::xds::envoy::service::discovery::v3::DiscoveryRequest;
     use crate::xds::google::rpc::Status as GrpcStatus;
     use crate::xds::CLUSTER_TYPE;
 
-    use std::sync::Arc;
     use std::time::Duration;
 
     use prometheus::Registry;
@@ -527,7 +526,7 @@ mod tests {
             cluster_updates_tx,
             ListenerManagerArgs::new(
                 Registry::default(),
-                Arc::new(FilterRegistry::default()),
+                FilterRegistry::default(),
                 filter_chain_updates_tx,
             ),
             shutdown_rx,

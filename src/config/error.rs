@@ -14,7 +14,6 @@
  *  limitations under the License.
  */
 
-use crate::extensions::Error as FilterRegistryError;
 use std::fmt::{self, Display, Formatter};
 
 #[derive(Debug, PartialEq)]
@@ -30,7 +29,7 @@ pub enum ValidationError {
     NotUnique(String),
     EmptyList(String),
     ValueInvalid(ValueInvalidArgs),
-    FilterInvalid(FilterRegistryError),
+    FilterInvalid(crate::filters::Error),
 }
 
 impl Display for ValidationError {

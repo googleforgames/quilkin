@@ -23,8 +23,7 @@ mod tests {
     use tokio::time::{timeout, Duration};
 
     use quilkin::config::{Builder as ConfigBuilder, EndPoint, Filter};
-    use quilkin::extensions::filters::RateLimitFilterFactory;
-    use quilkin::extensions::FilterFactory;
+    use quilkin::filters::{extensions::RateLimitFilterFactory, FilterFactory};
     use quilkin::test_utils::TestHelper;
 
     #[tokio::test]

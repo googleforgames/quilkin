@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-use quilkin::extensions::{ConfigType, CreateFilterArgs, Error, FilterFactory};
-use quilkin::extensions::{Filter, ReadContext, ReadResponse, WriteContext, WriteResponse};
+use quilkin::filters::{prelude::*, DynFilterFactory};;
 use quilkin::runner::run;
 
 use bytes::Bytes;
@@ -69,5 +68,5 @@ impl FilterFactory for GreetFilterFactory {
 
 #[tokio::main]
 async fn main() {
-    run(vec![Box::new(GreetFilterFactory)]).await.unwrap();
+    run(vec![DynFilterFactory::from(GreetFilterFactory)].into_iter()).await.unwrap();
 }

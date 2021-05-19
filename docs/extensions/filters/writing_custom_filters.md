@@ -65,7 +65,7 @@ To extend Quilkin's code with our own custom filter, we need to do the following
    We start with the [Filter] implementation
    ```rust
    // src/main.rs
-   use quilkin::extensions::{Filter, ReadContext, ReadResponse, WriteContext, WriteResponse};
+   use quilkin::filters::{Filter, ReadContext, ReadResponse, WriteContext, WriteResponse};
 
    // This creates adds an associated const named `FILTER_NAME` that points
    // to `"greet.v1"`.
@@ -91,8 +91,8 @@ To extend Quilkin's code with our own custom filter, we need to do the following
    # #[quilkin::filter("greet.v1")]
    # struct Greet;
    # impl Filter for Greet {}
-   # use quilkin::extensions::Filter;
-   use quilkin::extensions::{CreateFilterArgs, Error, FilterFactory};
+   # use quilkin::filters::Filter;
+   use quilkin::filters::{CreateFilterArgs, Error, FilterFactory};
 
    struct GreetFilterFactory;
    impl FilterFactory for GreetFilterFactory {
@@ -121,8 +121,7 @@ To extend Quilkin's code with our own custom filter, we need to do the following
    Add a main function that starts the proxy.
    ```no_run
    // src/main.rs
-   # use quilkin::extensions::{CreateFilterArgs, Error, FilterFactory};
-   # use quilkin::extensions::Filter;
+   # use quilkin::filters::{CreateFilterArgs, Filter, Error, FilterFactory};
 
    # struct GreetFilterFactory;
    # impl FilterFactory for GreetFilterFactory {
@@ -133,11 +132,11 @@ To extend Quilkin's code with our own custom filter, we need to do the following
    #         unimplemented!()
    #     }
    # }
-   use quilkin::runner::run;
+   use quilkin::{filters::DynFilterFactory, runner::run};
 
    #[tokio::main]
    async fn main() {
-       run(vec![Box::new(GreetFilterFactory)]).await.unwrap();
+       run(vec![Box::new(GreetFilterFactory) as DynFilterFactory]).await.unwrap();
    }
    ```
 
@@ -206,7 +205,7 @@ The [Serde] crate is used to describe static YAML configuration in code while [P
    ```rust
    // src/main.rs
 
-   # use quilkin::extensions::{Filter, ReadContext, ReadResponse, WriteContext, WriteResponse};
+   # use quilkin::filters::{Filter, ReadContext, ReadResponse, WriteContext, WriteResponse};
 
    #[quilkin::filter("greet.v1")]
    struct Greet(String);
@@ -235,12 +234,11 @@ The [Serde] crate is used to describe static YAML configuration in code while [P
    # struct Config {
    #     greeting: String,
    # }
-   # use quilkin::extensions::{CreateFilterArgs, Error, FilterFactory};
-   # use quilkin::extensions::{Filter, ReadContext, ReadResponse, WriteContext, WriteResponse};
+   # use quilkin::filters::{CreateFilterArgs, Error, FilterFactory, Filter, ReadContext, ReadResponse, WriteContext, WriteResponse};
    # struct Greet(String);
    # impl Filter for Greet { }
 
-   use quilkin::extensions::ConfigType;
+   use quilkin::filters::ConfigType;
 
    struct GreetFilterFactory;
    impl FilterFactory for GreetFilterFactory {
@@ -347,9 +345,7 @@ However, it usually contains a Protobuf equivalent of the filter's static config
 
        ```rust
        // src/main.rs
-       # use quilkin::extensions::{CreateFilterArgs, Error, FilterFactory};
-       # use quilkin::extensions::ConfigType;
-       # use quilkin::extensions::Filter;
+       # use quilkin::filters::{ConfigType, CreateFilterArgs, Error, Filter, FilterFactory};
        # use serde::{Deserialize, Serialize};
        # #[derive(Serialize, Deserialize, Debug)]
        # struct Config {
