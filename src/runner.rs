@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-use std::fs::File;
-use std::sync::Arc;
+use std::{collections::HashSet, fs::File, sync::Arc};
 
 use clap::App;
 use slog::{info, o, Logger};
-use tokio::signal;
-use tokio::sync::watch;
+use tokio::{signal, sync::watch};
 
-use crate::config::Config;
-use crate::extensions::{default_registry, FilterFactory, FilterRegistry};
-use crate::proxy::{logger, Builder};
+use crate::{
+    config::Config,
+    extensions::{default_filters, FilterFactory, FilterRegistry},
+    proxy::{logger, Builder},
+};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const CONFIG_FILE: &str = "quilkin.yaml";
@@ -43,7 +43,7 @@ fn version() -> String {
 
 /// Start and run a proxy. Any passed in [`FilterFactory`] are included
 /// alongside the default filter factories..
-pub async fn run(filter_factories: Vec<Box<dyn FilterFactory>>) -> Result<(), Error> {
+pub async fn run(filter_factories: HashSet<Box<dyn FilterFactory>>) -> Result<(), Error> {
     let version = version();
     let base_logger = logger();
     let log = base_logger.new(o!("source" => "run"));
@@ -106,11 +106,11 @@ pub async fn run(filter_factories: Vec<Box<dyn FilterFactory>>) -> Result<(), Er
 
 fn create_filter_registry(
     log: &Logger,
-    additional_filter_factories: Vec<Box<dyn FilterFactory>>,
+    filter_factories: HashSet<Box<dyn FilterFactory>>,
 ) -> FilterRegistry {
-    let mut registry = default_registry(log);
-    registry.insert_all(additional_filter_factories);
-    registry
+    let mut filters = default_filters(log);
+    filters.append(&mut filter_factories);
+    FilterRegistry::new(filters)
 }
 
 fn get_config_file() -> Result<File, std::io::Error> {

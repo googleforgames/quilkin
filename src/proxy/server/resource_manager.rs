@@ -75,7 +75,7 @@ impl DynamicResourceManagers {
         base_logger: Logger,
         xds_node_id: String,
         metrics_registry: Registry,
-        filter_registry: Arc<FilterRegistry>,
+        filter_registry: FilterRegistry,
         management_servers: Vec<ManagementServer>,
         mut shutdown_rx: watch::Receiver<()>,
     ) -> Result<DynamicResourceManagers, InitializeError> {
@@ -238,7 +238,6 @@ mod tests {
     use crate::test_utils::logger;
     use crate::xds::ads_client::ExecutionError;
 
-    use std::sync::Arc;
     use std::time::Duration;
 
     use crate::proxy::server::resource_manager::SpawnAdsClient;
@@ -358,7 +357,7 @@ mod tests {
             cluster_updates_tx,
             listener_manager_args: ListenerManagerArgs::new(
                 Registry::default(),
-                Arc::new(FilterRegistry::default()),
+                FilterRegistry::default(),
                 filter_chain_updates_tx,
             ),
             execution_result_tx,

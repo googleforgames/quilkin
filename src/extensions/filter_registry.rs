@@ -15,10 +15,9 @@
  */
 
 use std::any::Any;
-use std::collections::HashMap;
+use std::collections::{HashMap, BTreeSet};
 use std::convert::TryFrom;
 use std::fmt;
-use std::marker::PhantomData;
 use std::net::SocketAddr;
 
 use bytes::Bytes;
@@ -29,10 +28,11 @@ use crate::config::{UpstreamEndpoints, ValidationError};
 use crate::extensions::filters::ConvertProtoConfigError;
 use std::sync::Arc;
 
-/// DynamicMetadata contains shared state between filters during processing for a single packet.
+/// Shared state between [`Filter`]s during processing for a single packet.
 type DynamicMetadata = HashMap<Arc<String>, Box<dyn Any + Send>>;
 
-/// Contains the input arguments to [`Filter::read`].
+/// The input arguments to [`Filter::read`].
+#[non_exhaustive]
 pub struct ReadContext {
     /// The upstream endpoints that the packet will be forwarded to.
     pub endpoints: UpstreamEndpoints,
@@ -40,15 +40,13 @@ pub struct ReadContext {
     pub from: SocketAddr,
     /// Contents of the received packet.
     pub contents: Vec<u8>,
-    /// Arbitrary values that can be passed from one filter to another
+    /// Arbitrary values that can be passed from one filter to another.
     pub metadata: DynamicMetadata,
-    // Enforce using constructor to create this struct.
-    phantom: PhantomData<()>,
 }
 
-/// Contains the output of [`Filter::read`].
+/// The output of [`Filter::read`].
 ///
-/// New instances are created from a [`ReadContext`]
+/// New instances are created from [`ReadContext`].
 ///
 /// ```rust
 /// # use quilkin::extensions::{ReadContext, ReadResponse};
@@ -56,6 +54,7 @@ pub struct ReadContext {
 ///       Some(ctx.into())
 ///   }
 /// ```
+#[non_exhaustive]
 pub struct ReadResponse {
     /// The upstream endpoints that the packet should be forwarded to.
     pub endpoints: UpstreamEndpoints,
@@ -63,11 +62,10 @@ pub struct ReadResponse {
     pub contents: Vec<u8>,
     /// Arbitrary values that can be passed from one filter to another
     pub metadata: DynamicMetadata,
-    // Enforce using constructor to create this struct.
-    phantom: PhantomData<()>,
 }
 
-/// Contains the input arguments to [`Filter::write`].
+/// The input arguments to [`Filter::write`].
+#[non_exhaustive]
 pub struct WriteContext<'a> {
     /// The upstream endpoint that we're expecting packets from.
     pub endpoint: &'a Endpoint,
@@ -79,13 +77,11 @@ pub struct WriteContext<'a> {
     pub contents: Vec<u8>,
     /// Arbitrary values that can be passed from one filter to another
     pub metadata: HashMap<String, Box<dyn Any + Send>>,
-    // Enforce using constructor to create this struct.
-    phantom: PhantomData<()>,
 }
 
-/// Contains the output of [`Filter::write`].
+/// The output of [`Filter::write`].
 ///
-/// New instances are created from an [`WriteContext`]
+/// New instances are created from [`WriteContext`].
 ///
 /// ```rust
 /// # use quilkin::extensions::{WriteContext, WriteResponse};
@@ -93,35 +89,32 @@ pub struct WriteContext<'a> {
 ///       Some(ctx.into())
 ///   }
 /// ```
+#[non_exhaustive]
 pub struct WriteResponse {
     /// Contents of the packet to be sent back to the original sender.
     pub contents: Vec<u8>,
-    /// Arbitrary values that can be passed from one filter to another
+    /// Arbitrary values that can be passed from one filter to another.
     pub metadata: HashMap<String, Box<dyn Any + Send>>,
-    // Enforce using constructor to create this struct.
-    phantom: PhantomData<()>,
 }
 
 impl ReadContext {
-    /// Creates a new [`ReadContext`]
+    /// Creates a new [`ReadContext`].
     pub fn new(endpoints: UpstreamEndpoints, from: SocketAddr, contents: Vec<u8>) -> Self {
         Self {
             endpoints,
             from,
             contents,
             metadata: HashMap::new(),
-            phantom: PhantomData,
         }
     }
 
-    /// Creates a new [`ReadContext`] from a [`ReadResponse`]
+    /// Creates a new [`ReadContext`] from a given [`ReadResponse`].
     pub fn with_response(from: SocketAddr, response: ReadResponse) -> Self {
         Self {
             endpoints: response.endpoints,
             from,
             contents: response.contents,
             metadata: response.metadata,
-            phantom: PhantomData,
         }
     }
 }
@@ -132,7 +125,6 @@ impl From<ReadContext> for ReadResponse {
             endpoints: ctx.endpoints,
             contents: ctx.contents,
             metadata: ctx.metadata,
-            phantom: ctx.phantom,
         }
     }
 }
@@ -151,11 +143,10 @@ impl WriteContext<'_> {
             to,
             contents,
             metadata: HashMap::new(),
-            phantom: PhantomData,
         }
     }
 
-    /// Creates a new [`WriteContext`] from a [`WriteResponse`]
+    /// Creates a new [`WriteContext`] from a given [`WriteResponse`].
     pub fn with_response(
         endpoint: &Endpoint,
         from: SocketAddr,
@@ -168,7 +159,6 @@ impl WriteContext<'_> {
             to,
             contents: response.contents,
             metadata: response.metadata,
-            phantom: PhantomData,
         }
     }
 }
@@ -177,7 +167,6 @@ impl From<WriteContext<'_>> for WriteResponse {
     fn from(ctx: WriteContext) -> Self {
         Self {
             contents: ctx.contents,
-            phantom: ctx.phantom,
             metadata: ctx.metadata,
         }
     }
@@ -208,7 +197,8 @@ pub trait Filter: Send + Sync {
 }
 
 #[derive(Debug, PartialEq)]
-/// Error is an error when attempting to create a Filter from_config() from a FilterFactory
+/// An error that occurred when attempting to create a [`Filter`] from
+/// a [`FilterFactory`].
 pub enum Error {
     NotFound(String),
     MissingConfig(String),
@@ -249,13 +239,17 @@ impl From<MetricsError> for Error {
     }
 }
 
+/// The configuration of a [`Filter`] from either a static or dynamic source.
 pub enum ConfigType<'a> {
+    /// Static configuration from YAML.
     Static(&'a serde_yaml::Value),
+    /// Dynamic configuration from Protobuf.
     Dynamic(prost_types::Any),
 }
 
 impl ConfigType<'_> {
-    /// Deserializes a config based on the input type.
+    /// Deserializes the configuration to `T` based on the input type. Errors if
+    /// the data produces an invalid config.
     pub fn deserialize<T, P>(self, filter_name: &str) -> Result<T, Error>
     where
         P: prost::Message + Default,
@@ -315,7 +309,7 @@ impl CreateFilterArgs<'_> {
     }
 }
 
-/// FilterFactory provides the name and creation function for a given Filter.
+/// Provides the name and creation function for a given [`Filter`].
 pub trait FilterFactory: Sync + Send {
     /// name returns the configuration name for the Filter
     /// The returned string identifies the filter item's path with the following format:
@@ -341,25 +335,25 @@ pub trait FilterFactory: Sync + Send {
     }
 }
 
-/// FilterRegistry is the registry of all Filters that can be applied in the system.
-#[derive(Default)]
+/// Registry of all [`Filter`]s that can be applied in the system.
+///
+/// **Note:** Cloning [`FilterRegistry`], clones a new reference to the data and
+/// does not clone the data itself. In other words the clone is "shallow" and
+/// not deep.
+#[derive(Clone, Default)]
 pub struct FilterRegistry {
-    registry: HashMap<String, Box<dyn FilterFactory>>,
+    registry: Arc<HashMap<String, Box<dyn FilterFactory>>>,
 }
 
 impl FilterRegistry {
-    /// insert adds a [`FilterFactory`] to this filter registry.
-    pub fn insert<T: 'static>(&mut self, factory: T)
-    where
-        T: FilterFactory,
-    {
-        self.registry.insert(factory.name(), Box::new(factory));
-    }
-
-    /// insert_all adds the provided [`FilterFactory`]s to this filter registry.
-    pub fn insert_all(&mut self, factories: Vec<Box<dyn FilterFactory>>) {
-        for factory in factories {
-            self.registry.insert(factory.name(), factory);
+    pub fn new(factories: BTreeSet<Box<dyn FilterFactory>>) -> Self {
+        Self {
+            registry: Arc::new(
+                factories
+                    .into_iter()
+                    .map(|factory| (factory.name(), factory))
+                    .collect(),
+            ),
         }
     }
 

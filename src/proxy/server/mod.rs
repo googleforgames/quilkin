@@ -57,7 +57,7 @@ pub struct Server {
     pub(super) metrics: Arc<Metrics>,
     pub(super) proxy_metrics: ProxyMetrics,
     pub(super) session_metrics: SessionMetrics,
-    pub(super) filter_registry: Arc<FilterRegistry>,
+    pub(super) filter_registry: FilterRegistry,
 }
 
 /// Represents arguments to the `Server::run_recv_from` method.

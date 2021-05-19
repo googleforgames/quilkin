@@ -295,7 +295,7 @@ impl Builder<Validated> {
                 .expect("session metrics should be setup properly"),
             admin: self.admin,
             metrics: self.metrics,
-            filter_registry: Arc::new(self.filter_registry),
+            filter_registry: self.filter_registry,
         }
     }
 }

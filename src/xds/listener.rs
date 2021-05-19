@@ -41,7 +41,7 @@ pub(crate) struct ListenerManager {
     metrics_registry: Registry,
 
     // Registry to lookup filter factories by name.
-    filter_registry: Arc<FilterRegistry>,
+    filter_registry: FilterRegistry,
 
     // Send discovery requests ACKs/NACKs to the server.
     discovery_req_tx: mpsc::Sender<DiscoveryRequest>,
@@ -204,7 +204,6 @@ mod tests {
     };
     use crate::xds::envoy::service::discovery::v3::{DiscoveryRequest, DiscoveryResponse};
 
-    use std::sync::Arc;
     use std::time::Duration;
 
     use crate::cluster::Endpoint;
@@ -278,12 +277,7 @@ mod tests {
         // LDS filters and it can build up a filter chain from it.
 
         // Prepare a filter registry with the filter factories we need for the test.
-        let filter_registry = {
-            let mut f = FilterRegistry::default();
-            f.insert(AppendFactory);
-            f
-        };
-        let filter_registry = Arc::new(filter_registry);
+        let filter_registry = FilterRegistry::new(vec![Box::new(AppendFactory)]);
         let (filter_chain_updates_tx, mut filter_chain_updates_rx) = mpsc::channel(10);
         let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel(10);
         let mut manager = ListenerManager::new(
@@ -396,7 +390,7 @@ mod tests {
             f.insert(AppendFactory);
             f
         };
-        let filter_registry = Arc::new(filter_registry);
+        let filter_registry = filter_registry;
         let (filter_chain_updates_tx, mut filter_chain_updates_rx) = mpsc::channel(10);
         let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel(10);
         let mut manager = ListenerManager::new(
@@ -512,7 +506,7 @@ mod tests {
             f.insert(AppendFactory);
             f
         };
-        let filter_registry = Arc::new(filter_registry);
+        let filter_registry = filter_registry;
         let (filter_chain_updates_tx, _filter_chain_updates_rx) = mpsc::channel(10);
         let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel(10);
         let mut manager = ListenerManager::new(
@@ -627,7 +621,7 @@ mod tests {
             logger(),
             ListenerManagerArgs::new(
                 Registry::default(),
-                Arc::new(FilterRegistry::default()),
+                FilterRegistry::default(),
                 filter_chain_updates_tx,
             ),
             discovery_req_tx,

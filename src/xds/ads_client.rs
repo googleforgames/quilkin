@@ -495,7 +495,6 @@ mod tests {
     use crate::xds::google::rpc::Status as GrpcStatus;
     use crate::xds::CLUSTER_TYPE;
 
-    use std::sync::Arc;
     use std::time::Duration;
 
     use prometheus::Registry;
@@ -517,7 +516,7 @@ mod tests {
             cluster_updates_tx,
             ListenerManagerArgs::new(
                 Registry::default(),
-                Arc::new(FilterRegistry::default()),
+                FilterRegistry::default(),
                 filter_chain_updates_tx,
             ),
             shutdown_rx,

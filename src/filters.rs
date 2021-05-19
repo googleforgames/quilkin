@@ -14,13 +14,10 @@
  * limitations under the License.
  */
 
-use std::collections::BTreeSet;
-
 use slog::Logger;
 
 pub(crate) use filter_chain::CreateFilterError;
 pub use filter_chain::FilterChain;
-pub use filter_set::FilterSet;
 pub use filter_registry::{
     ConfigType, CreateFilterArgs, Error, Filter, FilterFactory, FilterRegistry, ReadContext,
     ReadResponse, WriteContext, WriteResponse,
@@ -31,4 +28,17 @@ mod filter_registry;
 pub mod filters;
 
 mod filter_chain;
-mod filter_set;
+
+/// default_registry returns a FilterRegistry with the default
+/// set of filters that are user configurable registered to it
+pub fn default_registry(base: &Logger) -> FilterRegistry {
+    let mut fr = FilterRegistry::default();
+    fr.insert(filters::DebugFactory::new(base));
+    fr.insert(filters::RateLimitFilterFactory::default());
+    fr.insert(filters::ConcatBytesFactory::default());
+    fr.insert(filters::LoadBalancerFilterFactory::default());
+    fr.insert(filters::CaptureBytesFactory::new(base));
+    fr.insert(filters::TokenRouterFactory::new(base));
+    fr.insert(filters::CompressFactory::new(base));
+    fr
+}
