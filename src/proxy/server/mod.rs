@@ -33,12 +33,13 @@ use crate::extensions::filter_manager::SharedFilterManager;
 use crate::extensions::{Filter, FilterRegistry, ReadContext};
 use crate::proxy::builder::{ValidatedConfig, ValidatedSource};
 use crate::proxy::server::error::Error;
+use crate::proxy::sessions::metrics::Metrics as SessionMetrics;
+use crate::proxy::sessions::session_manager::SessionManager;
 use crate::proxy::sessions::{Packet, Session, SESSION_TIMEOUT_SECONDS};
+use crate::proxy::Admin;
 use crate::utils::debug;
 
 use super::metrics::Metrics;
-use crate::proxy::sessions::session_manager::SessionManager;
-use crate::proxy::Admin;
 
 pub mod error;
 pub(super) mod metrics;
@@ -55,6 +56,7 @@ pub struct Server {
     pub(super) admin: Option<Admin>,
     pub(super) metrics: Arc<Metrics>,
     pub(super) proxy_metrics: ProxyMetrics,
+    pub(super) session_metrics: Arc<SessionMetrics>,
     pub(super) filter_registry: Arc<FilterRegistry>,
 }
 
@@ -86,8 +88,8 @@ struct DownstreamReceiveWorkerConfig {
 /// filter chain and session pipeline.
 struct ProcessDownstreamReceiveConfig {
     log: Logger,
-    metrics: Arc<Metrics>,
     proxy_metrics: ProxyMetrics,
+    session_metrics: Arc<SessionMetrics>,
     cluster_manager: SharedClusterManager,
     filter_manager: SharedFilterManager,
     session_manager: SessionManager,
@@ -193,8 +195,8 @@ impl Server {
     fn run_recv_from(&self, args: RunRecvFromArgs) -> JoinHandle<StdResult<(), String>> {
         let session_manager = args.session_manager;
         let log = self.log.clone();
-        let metrics = self.metrics.clone();
         let proxy_metrics = self.proxy_metrics.clone();
+        let session_metrics = self.session_metrics.clone();
 
         // The number of worker tasks to spawn. Each task gets a dedicated queue to
         // consume packets off.
@@ -213,8 +215,8 @@ impl Server {
                 shutdown_rx: args.shutdown_rx.clone(),
                 receive_config: ProcessDownstreamReceiveConfig {
                     log: log.clone(),
-                    metrics: metrics.clone(),
                     proxy_metrics: proxy_metrics.clone(),
+                    session_metrics: session_metrics.clone(),
                     cluster_manager: args.cluster_manager.clone(),
                     filter_manager: args.filter_manager.clone(),
                     session_manager: session_manager.clone(),
@@ -382,53 +384,46 @@ impl Server {
                     .await;
             } else {
                 // Otherwise, create the session and insert into the map.
-                match args.metrics.new_session_metrics() {
-                    Ok(metrics) => {
-                        match Session::new(
-                            &args.log,
-                            metrics,
-                            args.filter_manager.clone(),
-                            session_key.0,
-                            endpoint.clone(),
-                            args.send_packets.clone(),
-                            args.session_ttl,
-                        )
-                        .await
-                        {
-                            Ok(session) => {
-                                // Insert the session into the map and release the write lock
-                                // immediately since we don't want to block other threads while we send
-                                // the packet. Instead, re-acquire a read lock and send the packet.
-                                guard.insert(session.key(), session);
+                match Session::new(
+                    &args.log,
+                    args.session_metrics.clone(),
+                    args.filter_manager.clone(),
+                    session_key.0,
+                    endpoint.clone(),
+                    args.send_packets.clone(),
+                    args.session_ttl,
+                )
+                .await
+                {
+                    Ok(session) => {
+                        // Insert the session into the map and release the write lock
+                        // immediately since we don't want to block other threads while we send
+                        // the packet. Instead, re-acquire a read lock and send the packet.
+                        guard.insert(session.key(), session);
 
-                                // Release the write lock.
-                                drop(guard);
+                        // Release the write lock.
+                        drop(guard);
 
-                                // Grab a read lock to send the packet.
-                                let guard = args.session_manager.get_sessions().await;
-                                if let Some(session) = guard.get(&session_key) {
-                                    Self::session_send_packet_helper(
-                                        &args.log,
-                                        &session,
-                                        packet,
-                                        args.session_ttl,
-                                    )
-                                    .await;
-                                } else {
-                                    warn!(
-                                        args.log,
-                                        "Could not find session";
-                                        "key" => format!("({}:{})", session_key.0.to_string(), session_key.1.to_string())
-                                    )
-                                }
-                            }
-                            Err(err) => {
-                                error!(args.log, "Failed to ensure session exists"; "error" => %err);
-                            }
+                        // Grab a read lock to send the packet.
+                        let guard = args.session_manager.get_sessions().await;
+                        if let Some(session) = guard.get(&session_key) {
+                            Self::session_send_packet_helper(
+                                &args.log,
+                                &session,
+                                packet,
+                                args.session_ttl,
+                            )
+                            .await;
+                        } else {
+                            warn!(
+                                args.log,
+                                "Could not find session";
+                                "key" => format!("({}:{})", session_key.0.to_string(), session_key.1.to_string())
+                            )
                         }
                     }
                     Err(err) => {
-                        error!(args.log, "Failed to create session metrics"; "error" => %err);
+                        error!(args.log, "Failed to ensure session exists"; "error" => %err);
                     }
                 }
             }
@@ -674,14 +669,15 @@ mod tests {
 
                 let metrics = Arc::new(Metrics::new(&t.log, Registry::default()));
                 let proxy_metrics = ProxyMetrics::new(&metrics.registry).unwrap();
+                let session_metrics = Arc::new(SessionMetrics::new(&metrics.registry).unwrap());
                 worker_configs.push(DownstreamReceiveWorkerConfig {
                     worker_id,
                     packet_rx,
                     shutdown_rx: shutdown_rx.clone(),
                     receive_config: ProcessDownstreamReceiveConfig {
                         log: t.log.clone(),
-                        metrics,
                         proxy_metrics,
+                        session_metrics,
                         cluster_manager: cluster_manager.clone(),
                         filter_manager: filter_manager.clone(),
                         session_manager: session_manager.clone(),

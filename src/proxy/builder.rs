@@ -33,6 +33,7 @@ use crate::config::{
 };
 use crate::extensions::{default_registry, CreateFilterError, FilterChain, FilterRegistry};
 use crate::proxy::server::metrics::Metrics as ProxyMetrics;
+use crate::proxy::sessions::metrics::Metrics as SessionMetrics;
 use crate::proxy::{Admin as ProxyAdmin, Health, Metrics, Server};
 
 pub(super) enum ValidatedSource {
@@ -286,8 +287,12 @@ impl Builder<Validated> {
         Server {
             log: self.log.new(o!("source" => "server::Server")),
             config: Arc::new(self.validation_status.0),
-            proxy_metrics: ProxyMetrics::new(&self.metrics.registry.clone())
-                .expect("metrics should be setup properly"),
+            proxy_metrics: ProxyMetrics::new(&self.metrics.registry)
+                .expect("proxy metrics should be setup properly"),
+            session_metrics: Arc::new(
+                SessionMetrics::new(&self.metrics.registry)
+                    .expect("session metrics should be setup properly"),
+            ),
             admin: self.admin,
             metrics: self.metrics,
             filter_registry: Arc::new(self.filter_registry),

@@ -14,13 +14,15 @@
  *  limitations under the License.
  */
 
-use crate::proxy::sessions::Session;
-use slog::{debug, warn, Logger};
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+use slog::{debug, warn, Logger};
 use tokio::sync::{watch, RwLock, RwLockReadGuard, RwLockWriteGuard};
+
+use crate::proxy::sessions::Session;
 
 // Tracks current sessions keyed by key (source_address,destination_address) pair.
 type SessionsMap = HashMap<(SocketAddr, SocketAddr), Session>;
@@ -111,21 +113,25 @@ impl SessionManager {
 
 #[cfg(test)]
 mod tests {
-    use super::SessionManager;
-    use crate::cluster::Endpoint;
-    use crate::extensions::filter_manager::FilterManager;
-    use crate::extensions::FilterChain;
-    use crate::proxy::sessions::session_manager::Sessions;
-    use crate::proxy::sessions::{Packet, Session};
-    use crate::proxy::Metrics;
-    use crate::test_utils::TestHelper;
-    use prometheus::Registry;
     use std::collections::HashMap;
     use std::net::SocketAddr;
     use std::ops::Add;
     use std::sync::Arc;
     use std::time::Duration;
+
+    use prometheus::Registry;
     use tokio::sync::{mpsc, watch, RwLock};
+
+    use crate::cluster::Endpoint;
+    use crate::extensions::filter_manager::FilterManager;
+    use crate::extensions::FilterChain;
+    use crate::proxy::sessions::metrics::Metrics;
+    use crate::proxy::sessions::session_manager::Sessions;
+    use crate::proxy::sessions::{Packet, Session};
+    use crate::proxy::Metrics as ProxyMetrics;
+    use crate::test_utils::TestHelper;
+
+    use super::SessionManager;
 
     #[tokio::test]
     async fn run_prune_sessions() {
@@ -159,9 +165,10 @@ mod tests {
                 key,
                 Session::new(
                     &t.log,
-                    Metrics::new(&t.log, Registry::default())
-                        .new_session_metrics()
-                        .unwrap(),
+                    Arc::new(
+                        Metrics::new(&ProxyMetrics::new(&t.log, Registry::default()).registry)
+                            .unwrap(),
+                    ),
                     FilterManager::fixed(Arc::new(FilterChain::new(vec![]))),
                     from,
                     endpoint.clone(),
@@ -221,9 +228,10 @@ mod tests {
                 key,
                 Session::new(
                     &t.log,
-                    Metrics::new(&t.log, Registry::default())
-                        .new_session_metrics()
-                        .unwrap(),
+                    Arc::new(
+                        Metrics::new(&ProxyMetrics::new(&t.log, Registry::default()).registry)
+                            .unwrap(),
+                    ),
                     FilterManager::fixed(Arc::new(FilterChain::new(vec![]))),
                     from,
                     endpoint.clone(),

@@ -37,7 +37,7 @@ type Result<T> = std::result::Result<T, Error>;
 /// Session encapsulates a UDP stream session
 pub struct Session {
     log: Logger,
-    metrics: Metrics,
+    metrics: Arc<Metrics>,
     filter_manager: SharedFilterManager,
     /// created_at is time at which the session was created
     created_at: Instant,
@@ -86,7 +86,7 @@ impl Session {
     /// from its ephemeral port from endpoint(s)
     pub async fn new(
         base: &Logger,
-        metrics: Metrics,
+        metrics: Arc<Metrics>,
         filter_manager: SharedFilterManager,
         from: SocketAddr,
         dest: Endpoint,
@@ -324,7 +324,7 @@ mod tests {
 
         let sess = Session::new(
             &t.log,
-            Metrics::new(&Registry::default()).unwrap(),
+            Arc::new(Metrics::new(&Registry::default()).unwrap()),
             FilterManager::fixed(Arc::new(FilterChain::new(vec![]))),
             addr,
             endpoint,
@@ -373,7 +373,7 @@ mod tests {
 
         let session = Session::new(
             &t.log,
-            Metrics::new(&Registry::default()).unwrap(),
+            Arc::new(Metrics::new(&Registry::default()).unwrap()),
             FilterManager::fixed(Arc::new(FilterChain::new(vec![]))),
             addr,
             endpoint.clone(),
@@ -475,7 +475,7 @@ mod tests {
 
         let session = Session::new(
             &t.log,
-            Metrics::new(&Registry::default()).unwrap(),
+            Arc::new(Metrics::new(&Registry::default()).unwrap()),
             FilterManager::fixed(Arc::new(FilterChain::new(vec![]))),
             addr,
             endpoint,
@@ -498,7 +498,7 @@ mod tests {
         let addr = endpoint.socket.local_addr().unwrap();
         let session = Session::new(
             &t.log,
-            Metrics::new(&Registry::default()).unwrap(),
+            Arc::new(Metrics::new(&Registry::default()).unwrap()),
             FilterManager::fixed(Arc::new(FilterChain::new(vec![]))),
             addr,
             Endpoint::from_address(addr),
@@ -522,7 +522,7 @@ mod tests {
         let addr = endpoint.socket.local_addr().unwrap();
         let session = Session::new(
             &t.log,
-            Metrics::new(&Registry::default()).unwrap(),
+            Arc::new(Metrics::new(&Registry::default()).unwrap()),
             FilterManager::fixed(Arc::new(FilterChain::new(vec![]))),
             addr,
             Endpoint::from_address(addr),
