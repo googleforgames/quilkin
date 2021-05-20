@@ -16,9 +16,7 @@
 
 use crate::metrics::{histogram_opts, opts, CollectorExt};
 use prometheus::core::{AtomicI64, AtomicU64, GenericCounter, GenericGauge};
-use prometheus::{
-    Histogram, HistogramVec, IntCounterVec, IntGaugeVec, Registry, Result as MetricsResult,
-};
+use prometheus::{Histogram, IntCounter, IntGauge, Registry, Result as MetricsResult};
 
 #[derive(Clone)]
 pub struct Metrics {
@@ -35,102 +33,72 @@ pub struct Metrics {
 }
 
 impl Metrics {
-    pub fn new(registry: &Registry, downstream: String, upstream: String) -> MetricsResult<Self> {
+    pub fn new(registry: &Registry) -> MetricsResult<Self> {
         let subsystem = "session";
-        let label_names = vec!["downstream", "upstream"];
-        let label_values = vec![downstream.as_str(), upstream.as_str()];
         Ok(Self {
-            active_sessions: IntGaugeVec::new(
-                opts("active", subsystem, "Number of sessions currently active"),
-                &label_names,
-            )?
-            .register_if_not_exists(registry)?
-            .get_metric_with_label_values(&label_values)?,
-            sessions_total: IntCounterVec::new(
-                opts("total", subsystem, "Total number of established sessions"),
-                &label_names,
-            )?
-            .register_if_not_exists(registry)?
-            .get_metric_with_label_values(&label_values)?,
-            rx_bytes_total: IntCounterVec::new(
-                opts(
-                    "rx_bytes_total",
-                    subsystem,
-                    "Total number of bytes received",
-                ),
-                &label_names,
-            )?
-            .register_if_not_exists(registry)?
-            .get_metric_with_label_values(&label_values)?,
-            tx_bytes_total: IntCounterVec::new(
-                opts("tx_bytes_total", subsystem, "Total number of bytes sent"),
-                &label_names,
-            )?
-            .register_if_not_exists(registry)?
-            .get_metric_with_label_values(&label_values)?,
-            rx_packets_total: IntCounterVec::new(
-                opts(
-                    "rx_packets_total",
-                    subsystem,
-                    "Total number of packets received",
-                ),
-                &label_names,
-            )?
-            .register_if_not_exists(registry)?
-            .get_metric_with_label_values(&label_values)?,
-            tx_packets_total: IntCounterVec::new(
-                opts(
-                    "tx_packets_total",
-                    subsystem,
-                    "Total number of packets sent",
-                ),
-                &label_names,
-            )?
-            .register_if_not_exists(registry)?
-            .get_metric_with_label_values(&label_values)?,
-            packets_dropped_total: IntCounterVec::new(
-                opts(
-                    "packets_dropped_total",
-                    subsystem,
-                    "Total number of dropped packets",
-                ),
-                &label_names,
-            )?
-            .register_if_not_exists(registry)?
-            .get_metric_with_label_values(&label_values)?,
-            rx_errors_total: IntCounterVec::new(
-                opts(
-                    "rx_errors_total",
-                    subsystem,
-                    "Total number of errors encountered while receiving a packet",
-                ),
-                &label_names,
-            )?
-            .register_if_not_exists(registry)?
-            .get_metric_with_label_values(&label_values)?,
-            tx_errors_total: IntCounterVec::new(
-                opts(
-                    "tx_errors_total",
-                    subsystem,
-                    "Total number of errors encountered while sending a packet",
-                ),
-                &label_names,
-            )?
-            .register_if_not_exists(registry)?
-            .get_metric_with_label_values(&label_values)?,
-            duration_secs: HistogramVec::new(
-                histogram_opts(
-                    "duration_secs",
-                    subsystem,
-                    "Duration of sessions",
-                    Some(vec![
-                        1f64, 5f64, 10f64, 25f64, 60f64, 300f64, 900f64, 1800f64, 3600f64,
-                    ]),
-                ),
-                &label_names,
-            )?
-            .register_if_not_exists(registry)?
-            .get_metric_with_label_values(&label_values)?,
+            active_sessions: IntGauge::with_opts(opts(
+                "active",
+                subsystem,
+                "Number of sessions currently active",
+            ))?
+            .register_if_not_exists(registry)?,
+            sessions_total: IntCounter::with_opts(opts(
+                "total",
+                subsystem,
+                "Total number of established sessions",
+            ))?
+            .register_if_not_exists(registry)?,
+            rx_bytes_total: IntCounter::with_opts(opts(
+                "rx_bytes_total",
+                subsystem,
+                "Total number of bytes received",
+            ))?
+            .register_if_not_exists(registry)?,
+            tx_bytes_total: IntCounter::with_opts(opts(
+                "tx_bytes_total",
+                subsystem,
+                "Total number of bytes sent",
+            ))?
+            .register_if_not_exists(registry)?,
+            rx_packets_total: IntCounter::with_opts(opts(
+                "rx_packets_total",
+                subsystem,
+                "Total number of packets received",
+            ))?
+            .register_if_not_exists(registry)?,
+            tx_packets_total: IntCounter::with_opts(opts(
+                "tx_packets_total",
+                subsystem,
+                "Total number of packets sent",
+            ))?
+            .register_if_not_exists(registry)?,
+            packets_dropped_total: IntCounter::with_opts(opts(
+                "packets_dropped_total",
+                subsystem,
+                "Total number of dropped packets",
+            ))?
+            .register_if_not_exists(registry)?,
+            rx_errors_total: IntCounter::with_opts(opts(
+                "rx_errors_total",
+                subsystem,
+                "Total number of errors encountered while receiving a packet",
+            ))?
+            .register_if_not_exists(registry)?,
+            tx_errors_total: IntCounter::with_opts(opts(
+                "tx_errors_total",
+                subsystem,
+                "Total number of errors encountered while sending a packet",
+            ))?
+            .register_if_not_exists(registry)?,
+            duration_secs: Histogram::with_opts(histogram_opts(
+                "duration_secs",
+                subsystem,
+                "Duration of sessions",
+                Some(vec![
+                    1f64, 5f64, 10f64, 25f64, 60f64, 300f64, 900f64, 1800f64, 3600f64,
+                ]),
+            ))?
+            .register_if_not_exists(registry)?,
         })
     }
 }

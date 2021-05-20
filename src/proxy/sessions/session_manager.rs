@@ -160,7 +160,7 @@ mod tests {
                 Session::new(
                     &t.log,
                     Metrics::new(&t.log, Registry::default())
-                        .new_session_metrics(&from, &endpoint.address)
+                        .new_session_metrics()
                         .unwrap(),
                     FilterManager::fixed(Arc::new(FilterChain::new(vec![]))),
                     from,
@@ -222,7 +222,7 @@ mod tests {
                 Session::new(
                     &t.log,
                     Metrics::new(&t.log, Registry::default())
-                        .new_session_metrics(&from, &endpoint.address)
+                        .new_session_metrics()
                         .unwrap(),
                     FilterManager::fixed(Arc::new(FilterChain::new(vec![]))),
                     from,

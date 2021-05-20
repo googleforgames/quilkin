@@ -382,10 +382,7 @@ impl Server {
                     .await;
             } else {
                 // Otherwise, create the session and insert into the map.
-                match args
-                    .metrics
-                    .new_session_metrics(&session_key.0, &session_key.1)
-                {
+                match args.metrics.new_session_metrics() {
                     Ok(metrics) => {
                         match Session::new(
                             &args.log,
