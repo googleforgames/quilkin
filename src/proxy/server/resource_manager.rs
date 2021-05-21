@@ -201,6 +201,9 @@ impl DynamicResourceManagers {
                         // initialize properly.
                         // Check the client's execution result if exiting was due to some root cause
                         // error and return that error if so. Otherwise return a generic error.
+                        // Wait a bit before checking the channel to give the client enough time
+                        // to put any values on the channel.
+                        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
                         if let Ok(Err(execution_error)) = execution_result_rx.try_recv() {
                             Err(InitializeError::Message(format!("failed to receive initial update: {:?}", execution_error)))
                         } else {
