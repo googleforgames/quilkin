@@ -56,7 +56,7 @@ pub struct Server {
     pub(super) admin: Option<Admin>,
     pub(super) metrics: Arc<Metrics>,
     pub(super) proxy_metrics: ProxyMetrics,
-    pub(super) session_metrics: Arc<SessionMetrics>,
+    pub(super) session_metrics: SessionMetrics,
     pub(super) filter_registry: Arc<FilterRegistry>,
 }
 
@@ -89,7 +89,7 @@ struct DownstreamReceiveWorkerConfig {
 struct ProcessDownstreamReceiveConfig {
     log: Logger,
     proxy_metrics: ProxyMetrics,
-    session_metrics: Arc<SessionMetrics>,
+    session_metrics: SessionMetrics,
     cluster_manager: SharedClusterManager,
     filter_manager: SharedFilterManager,
     session_manager: SessionManager,
@@ -669,7 +669,7 @@ mod tests {
 
                 let metrics = Arc::new(Metrics::new(&t.log, Registry::default()));
                 let proxy_metrics = ProxyMetrics::new(&metrics.registry).unwrap();
-                let session_metrics = Arc::new(SessionMetrics::new(&metrics.registry).unwrap());
+                let session_metrics = SessionMetrics::new(&metrics.registry).unwrap();
                 worker_configs.push(DownstreamReceiveWorkerConfig {
                     worker_id,
                     packet_rx,

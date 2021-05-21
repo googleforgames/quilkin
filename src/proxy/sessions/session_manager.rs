@@ -165,10 +165,7 @@ mod tests {
                 key,
                 Session::new(
                     &t.log,
-                    Arc::new(
-                        Metrics::new(&ProxyMetrics::new(&t.log, Registry::default()).registry)
-                            .unwrap(),
-                    ),
+                    Metrics::new(&ProxyMetrics::new(&t.log, Registry::default()).registry).unwrap(),
                     FilterManager::fixed(Arc::new(FilterChain::new(vec![]))),
                     from,
                     endpoint.clone(),
@@ -228,10 +225,7 @@ mod tests {
                 key,
                 Session::new(
                     &t.log,
-                    Arc::new(
-                        Metrics::new(&ProxyMetrics::new(&t.log, Registry::default()).registry)
-                            .unwrap(),
-                    ),
+                    Metrics::new(&ProxyMetrics::new(&t.log, Registry::default()).registry).unwrap(),
                     FilterManager::fixed(Arc::new(FilterChain::new(vec![]))),
                     from,
                     endpoint.clone(),

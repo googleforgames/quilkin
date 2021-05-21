@@ -289,10 +289,8 @@ impl Builder<Validated> {
             config: Arc::new(self.validation_status.0),
             proxy_metrics: ProxyMetrics::new(&self.metrics.registry)
                 .expect("proxy metrics should be setup properly"),
-            session_metrics: Arc::new(
-                SessionMetrics::new(&self.metrics.registry)
-                    .expect("session metrics should be setup properly"),
-            ),
+            session_metrics: SessionMetrics::new(&self.metrics.registry)
+                .expect("session metrics should be setup properly"),
             admin: self.admin,
             metrics: self.metrics,
             filter_registry: Arc::new(self.filter_registry),
