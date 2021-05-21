@@ -112,7 +112,7 @@ pub struct RandomEndpointChooser;
 impl EndpointChooser for RandomEndpointChooser {
     fn choose_endpoints(&self, endpoints: &mut UpstreamEndpoints) {
         // Note: Unwrap is safe here because the index is guaranteed to be in range.
-        let idx = (&mut thread_rng()).gen_range(0, endpoints.size());
+        let idx = (&mut thread_rng()).gen_range(0..endpoints.size());
         endpoints.keep(idx)
             .expect("BUG: unwrap should have been safe because index into endpoints list should be in range");
     }

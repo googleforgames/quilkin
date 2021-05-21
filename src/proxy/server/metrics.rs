@@ -15,12 +15,12 @@
  */
 
 use crate::metrics::{opts, CollectorExt};
-use prometheus::core::{AtomicI64, GenericCounter};
+use prometheus::core::{AtomicU64, GenericCounter};
 use prometheus::{IntCounterVec, Registry, Result as MetricsResult};
 
 #[derive(Clone)]
 pub struct Metrics {
-    pub packets_dropped_no_endpoints: GenericCounter<AtomicI64>,
+    pub packets_dropped_no_endpoints: GenericCounter<AtomicU64>,
 }
 
 impl Metrics {

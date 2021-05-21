@@ -13,7 +13,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-use prometheus::core::{AtomicI64, GenericCounter};
+use prometheus::core::{AtomicU64, GenericCounter};
 use prometheus::{IntCounter, Registry};
 use prometheus::{IntCounterVec, Result as MetricsResult};
 
@@ -21,10 +21,10 @@ use crate::metrics::{filter_opts, CollectorExt};
 
 /// Register and manage metrics for this filter
 pub(super) struct Metrics {
-    pub(super) packets_dropped_compress: GenericCounter<AtomicI64>,
-    pub(super) packets_dropped_decompress: GenericCounter<AtomicI64>,
-    pub(super) compressed_bytes_total: GenericCounter<AtomicI64>,
-    pub(super) decompressed_bytes_total: GenericCounter<AtomicI64>,
+    pub(super) packets_dropped_compress: GenericCounter<AtomicU64>,
+    pub(super) packets_dropped_decompress: GenericCounter<AtomicU64>,
+    pub(super) compressed_bytes_total: GenericCounter<AtomicU64>,
+    pub(super) decompressed_bytes_total: GenericCounter<AtomicU64>,
 }
 
 impl Metrics {

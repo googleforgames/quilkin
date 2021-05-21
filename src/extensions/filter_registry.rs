@@ -32,7 +32,7 @@ use std::sync::Arc;
 /// DynamicMetadata contains shared state between filters during processing for a single packet.
 type DynamicMetadata = HashMap<Arc<String>, Box<dyn Any + Send>>;
 
-/// Contains the input arguments to [read](crate::extensions::filter_registry::Filter::read)
+/// Contains the input arguments to [`Filter::read`].
 pub struct ReadContext {
     /// The upstream endpoints that the packet will be forwarded to.
     pub endpoints: UpstreamEndpoints,
@@ -46,7 +46,7 @@ pub struct ReadContext {
     phantom: PhantomData<()>,
 }
 
-/// Contains the output of [read](crate::extensions::filter_registry::Filter::read)
+/// Contains the output of [`Filter::read`].
 ///
 /// New instances are created from a [`ReadContext`]
 ///
@@ -67,7 +67,7 @@ pub struct ReadResponse {
     phantom: PhantomData<()>,
 }
 
-/// Contains the input arguments to [write](crate::extensions::filter_registry::Filter::write)
+/// Contains the input arguments to [`Filter::write`].
 pub struct WriteContext<'a> {
     /// The upstream endpoint that we're expecting packets from.
     pub endpoint: &'a Endpoint,
@@ -83,7 +83,7 @@ pub struct WriteContext<'a> {
     phantom: PhantomData<()>,
 }
 
-/// Contains the output of [write](crate::extensions::filter_registry::Filter::write)
+/// Contains the output of [`Filter::write`].
 ///
 /// New instances are created from an [`WriteContext`]
 ///
