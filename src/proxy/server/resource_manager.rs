@@ -203,10 +203,8 @@ impl DynamicResourceManagers {
                         // Check the client's execution result if exiting was due to some root cause
                         // error and return that error if so. Otherwise return a generic error.
                         if let Ok(Ok(Err(execution_error))) = tokio::time::timeout(Duration::from_millis(1000), execution_result_rx).await {
-
                             Err(InitializeError::Message(format!("failed to receive initial update: {:?}", execution_error)))
                         } else {
-
                             Err(InitializeError::Message("failed to receive initial update: sender dropped the channel".into()))
                         }
                     }
