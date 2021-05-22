@@ -22,6 +22,7 @@ use crate::xds::ads_client::{AdsClient, ClusterUpdate, ExecutionResult};
 use prometheus::Registry;
 use slog::{debug, o, warn, Logger};
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::sync::{mpsc, oneshot, watch};
 
 /// The max size of queue of the channel that provides cluster updates from the XDS layer.
@@ -187,7 +188,7 @@ impl DynamicResourceManagers {
     // an update, if the client exits prematurely, we return its execution error.
     async fn receive_update<T>(
         updates_rx: &mut mpsc::Receiver<T>,
-        mut execution_result_rx: oneshot::Receiver<ExecutionResult>,
+        execution_result_rx: oneshot::Receiver<ExecutionResult>,
         shutdown_rx: &mut watch::Receiver<()>,
     ) -> Result<(T, oneshot::Receiver<ExecutionResult>), InitializeError> {
         tokio::select! {
@@ -201,12 +202,11 @@ impl DynamicResourceManagers {
                         // initialize properly.
                         // Check the client's execution result if exiting was due to some root cause
                         // error and return that error if so. Otherwise return a generic error.
-                        // Wait a bit before checking the channel to give the client enough time
-                        // to put any values on the channel.
-                        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-                        if let Ok(Err(execution_error)) = execution_result_rx.try_recv() {
+                        if let Ok(Ok(Err(execution_error))) = tokio::time::timeout(Duration::from_millis(1000), execution_result_rx).await {
+
                             Err(InitializeError::Message(format!("failed to receive initial update: {:?}", execution_error)))
                         } else {
+
                             Err(InitializeError::Message("failed to receive initial update: sender dropped the channel".into()))
                         }
                     }
