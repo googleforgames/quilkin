@@ -22,8 +22,7 @@ static:
         max_packets: 1000
         period: 500ms
   endpoints:
-    - name: server-1
-      address: 127.0.0.1:7001
+    - address: 127.0.0.1:7001
 # ";
 #   let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 # assert_eq!(config.source.get_static_filters().unwrap().len(), 1);
