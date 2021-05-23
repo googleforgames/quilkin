@@ -324,7 +324,7 @@ mod tests {
 
         let sess = Session::new(
             &t.log,
-            Metrics::new(&Registry::default(), addr.to_string(), addr.to_string()).unwrap(),
+            Metrics::new(&Registry::default()).unwrap(),
             FilterManager::fixed(Arc::new(FilterChain::new(vec![]))),
             addr,
             endpoint,
@@ -373,7 +373,7 @@ mod tests {
 
         let session = Session::new(
             &t.log,
-            Metrics::new(&Registry::default(), addr.to_string(), addr.to_string()).unwrap(),
+            Metrics::new(&Registry::default()).unwrap(),
             FilterManager::fixed(Arc::new(FilterChain::new(vec![]))),
             addr,
             endpoint.clone(),
@@ -406,12 +406,7 @@ mod tests {
         let msg = "hello";
         Session::process_recv_packet(
             &t.log,
-            &Metrics::new(
-                &Registry::default(),
-                "127.0.1.1:80".parse().unwrap(),
-                "127.0.1.1:80".parse().unwrap(),
-            )
-            .unwrap(),
+            &Metrics::new(&Registry::default()).unwrap(),
             &mut sender,
             &expiration,
             Duration::from_secs(10),
@@ -444,12 +439,7 @@ mod tests {
         let chain = Arc::new(FilterChain::new(vec![Box::new(TestFilter {})]));
         Session::process_recv_packet(
             &t.log,
-            &Metrics::new(
-                &Registry::default(),
-                "127.0.1.1:80".parse().unwrap(),
-                "127.0.1.1:80".parse().unwrap(),
-            )
-            .unwrap(),
+            &Metrics::new(&Registry::default()).unwrap(),
             &mut sender,
             &expiration,
             Duration::from_secs(10),
@@ -485,7 +475,7 @@ mod tests {
 
         let session = Session::new(
             &t.log,
-            Metrics::new(&Registry::default(), addr.to_string(), addr.to_string()).unwrap(),
+            Metrics::new(&Registry::default()).unwrap(),
             FilterManager::fixed(Arc::new(FilterChain::new(vec![]))),
             addr,
             endpoint,
@@ -508,7 +498,7 @@ mod tests {
         let addr = endpoint.socket.local_addr().unwrap();
         let session = Session::new(
             &t.log,
-            Metrics::new(&Registry::default(), addr.to_string(), addr.to_string()).unwrap(),
+            Metrics::new(&Registry::default()).unwrap(),
             FilterManager::fixed(Arc::new(FilterChain::new(vec![]))),
             addr,
             Endpoint::from_address(addr),
@@ -532,7 +522,7 @@ mod tests {
         let addr = endpoint.socket.local_addr().unwrap();
         let session = Session::new(
             &t.log,
-            Metrics::new(&Registry::default(), addr.to_string(), addr.to_string()).unwrap(),
+            Metrics::new(&Registry::default()).unwrap(),
             FilterManager::fixed(Arc::new(FilterChain::new(vec![]))),
             addr,
             Endpoint::from_address(addr),
