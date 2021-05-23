@@ -389,10 +389,8 @@ dynamic:
 version: v1alpha1
 static:
   endpoints:
-    - name: a
-      address: 127.0.0.1:25999
-    - name: b
-      address: 127.0.0.1:25998
+    - address: 127.0.0.1:25999
+    - address: 127.0.0.1:25998
 ";
         let _ = validate_unwrap_ok(yaml);
 
@@ -401,10 +399,8 @@ static:
 version: v1alpha1
 static:
   endpoints:
-    - name: a
-      address: 127.0.0.1:25999
-    - name: b
-      address: 127.0.0.1:25999
+    - address: 127.0.0.1:25999
+    - address: 127.0.0.1:25999
 ";
         assert_eq!(
             ValidationError::NotUnique("static.endpoints.address".to_string()).to_string(),
