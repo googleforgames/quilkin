@@ -17,6 +17,6 @@
 use quilkin::runner::run;
 
 #[tokio::main]
-async fn main() {
-    run(vec![]).await.unwrap()
+async fn main() -> Result<(), quilkin::runner::Error> {
+    run(vec![]).await
 }
