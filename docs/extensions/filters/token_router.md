@@ -21,15 +21,13 @@ static:
       config:
           metadataKey: myapp.com/myownkey
   endpoints: 
-    - name: Game Server No. 1
-      address: 127.0.0.1:26000
+    - address: 127.0.0.1:26000
       metadata:
         quilkin.dev:
           tokens:
             - MXg3aWp5Ng== # Authentication is provided by these ids, and matched against 
             - OGdqM3YyaQ== # the value stored in Filter dynamic metadata
-    - name: Game Server No. 2
-      address: 127.0.0.1:26001
+    - address: 127.0.0.1:26001
       metadata:
         quilkin.dev:
           tokens:
@@ -90,15 +88,13 @@ static:
           remove: true
     - name: quilkin.extensions.filters.token_router.v1alpha1.TokenRouter
   endpoints: 
-    - name: Game Server No. 1
-      address: 127.0.0.1:26000
+    - address: 127.0.0.1:26000
       metadata:
         quilkin.dev:
           tokens:
             - MXg3aWp5Ng== # Authentication is provided by these ids, and matched against 
             - OGdqM3YyaQ== # the value stored in Filter dynamic metadata
-    - name: Game Server No. 2
-      address: 127.0.0.1:26001
+    - address: 127.0.0.1:26001
       metadata:
         quilkin.dev:
           tokens:

@@ -20,7 +20,6 @@ extern crate quilkin;
 mod tests {
     use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
-    use regex::Regex;
     use slog::info;
 
     use quilkin::config::{Admin, Builder as ConfigBuilder, EndPoint};
@@ -77,15 +76,6 @@ mod tests {
             .await
             .unwrap();
 
-        let re =
-            Regex::new(r#"quilkin_session_tx_packets_total\{downstream="(.*)",upstream="(.*)"} 1"#)
-                .unwrap();
-        assert!(re.is_match(&resp));
-
-        for c in re.captures_iter(&resp) {
-            let downstream = (&c[1]).parse::<SocketAddr>().unwrap();
-            let upstream = (&c[2]).parse::<SocketAddr>().unwrap();
-            assert_ne!(downstream, upstream);
-        }
+        assert!(resp.contains("quilkin_session_tx_packets_total 1"));
     }
 }

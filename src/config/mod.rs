@@ -48,6 +48,7 @@ pub enum Version {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct Proxy {
     #[serde(default = "default_proxy_id")]
     pub id: String,
@@ -73,6 +74,7 @@ impl Default for Proxy {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct Admin {
     pub address: SocketAddr,
 }
@@ -86,6 +88,7 @@ impl Default for Admin {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[serde(deny_unknown_fields)]
 pub struct ManagementServer {
     pub address: String,
 }
@@ -107,6 +110,7 @@ pub enum Source {
 
 /// Config is the configuration of a proxy
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct Config {
     pub version: Version,
 
@@ -143,6 +147,7 @@ impl Source {
 
 /// Filter is the configuration for a single filter
 #[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct Filter {
     pub name: String,
     pub config: Option<serde_yaml::Value>,
@@ -150,6 +155,7 @@ pub struct Filter {
 
 /// A singular endpoint, to pass on UDP packets to.
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct EndPoint {
     pub address: SocketAddr,
     pub metadata: Option<serde_yaml::Value>,
@@ -309,8 +315,7 @@ static:
 version: v1alpha1
 static:
   endpoints:
-    - name: ep-1
-      address: 127.0.0.1:25999
+    - address: 127.0.0.1:25999
   ";
         let config = parse_config(yaml);
 
@@ -409,5 +414,67 @@ dynamic:
                 },
             ],
         );
+    }
+
+    #[test]
+    fn deny_unused_fields() {
+        let configs = vec![
+            "
+version: v1alpha1
+foo: bar
+static:
+  endpoints:
+    - address: 127.0.0.1:7001
+",
+            "
+# proxy
+version: v1alpha1
+proxy:
+  foo: bar
+  id: client-proxy
+  port: 7000
+static:
+  endpoints:
+    - address: 127.0.0.1:7001
+",
+            "
+# admin
+version: v1alpha1
+admin:
+    foo: bar
+    address: 127.0.0.1:7001
+",
+            "
+# static.endpoints
+version: v1alpha1
+static:
+  endpoints:
+    - address: 127.0.0.1:7001
+      connection_ids:
+      - Mxg3aWp5Ng==
+",
+            "
+# static.filters
+version: v1alpha1
+static:
+  filters:
+    - name: quilkin.core.v1.rate-limiter
+      foo: bar
+",
+            "
+# dynamic.management_servers
+version: v1alpha1
+dynamic:
+  management_servers:
+    - address: 127.0.0.1:25999
+      foo: bar
+",
+        ];
+
+        for config in configs {
+            let result = Config::from_reader(config.as_bytes());
+            let error = result.unwrap_err();
+            assert!(format!("{:?}", error).contains("unknown field"));
+        }
     }
 }

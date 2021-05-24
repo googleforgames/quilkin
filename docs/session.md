@@ -52,17 +52,3 @@ The proxy exposes the following metrics around sessions:
 - `quilkin_session_rx_errors_total` (Counter)
 
   The total number of errors encountered while sending a packet to the upstream endpoint.
-
-#### Labels
-
-Each of the metrics listed here include the following labels to identify the associated session:
-
-- `downstream`: the session's downstream endpoint (client).
-- `upstream`: the session's upstream endpoint (server).
-
-For example, the following metric illustrates that 135 packets have been sent from a client at `127.0.0.1:7000` to an upstream server `127.0.0.1:7001`:
-
-```
-quilkin_session_tx_packets_total{downstream="127.0.0.1:7000",upstream="127.0.0.1:7001"} 135
-```
-

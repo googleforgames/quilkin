@@ -14,13 +14,9 @@
  *  limitations under the License.
  */
 
-use std::net::SocketAddr;
-
 use hyper::{Body, Response, StatusCode};
-use prometheus::{Encoder, Registry, Result as MetricsResult, TextEncoder};
+use prometheus::{Encoder, Registry, TextEncoder};
 use slog::{o, warn, Logger};
-
-use crate::proxy::sessions::metrics::Metrics as SessionMetrics;
 
 /// Metrics contains metrics configuration for the server.
 #[derive(Clone)]
@@ -35,18 +31,6 @@ impl Metrics {
             log: base.new(o!("source" => "proxy::Metrics")),
             registry,
         }
-    }
-
-    pub fn new_session_metrics(
-        &self,
-        downstream: &SocketAddr,
-        upstream: &SocketAddr,
-    ) -> MetricsResult<SessionMetrics> {
-        SessionMetrics::new(
-            &self.registry.clone(),
-            downstream.to_string(),
-            upstream.to_string(),
-        )
     }
 
     pub fn collect_metrics(&self) -> Response<Body> {
