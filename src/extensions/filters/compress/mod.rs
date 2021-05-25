@@ -26,6 +26,7 @@ use proto::quilkin::extensions::filters::compress::v1alpha1::{
     compress::Action as ProtoAction, compress::Mode as ProtoMode, Compress as ProtoConfig,
 };
 
+use crate::config::LOG_SAMPLING_RATE;
 use crate::extensions::filters::compress::metrics::Metrics;
 use crate::extensions::filters::ConvertProtoConfigError;
 use crate::extensions::{
@@ -186,7 +187,7 @@ impl Compress {
 
     /// Track a failed attempt at compression
     fn failed_compression<T>(&self, err: Box<dyn std::error::Error>) -> Option<T> {
-        if self.metrics.packets_dropped_compress.get() % 1000 == 0 {
+        if self.metrics.packets_dropped_compress.get() % LOG_SAMPLING_RATE == 0 {
             warn!(self.log, "Packets are being dropped as they could not be compressed";
                             "mode" => #?self.compression_mode, "error" => %err,
                             "count" => self.metrics.packets_dropped_compress.get());
@@ -197,7 +198,7 @@ impl Compress {
 
     /// Track a failed attempt at decompression
     fn failed_decompression<T>(&self, err: Box<dyn std::error::Error>) -> Option<T> {
-        if self.metrics.packets_dropped_decompress.get() % 1000 == 0 {
+        if self.metrics.packets_dropped_decompress.get() % LOG_SAMPLING_RATE == 0 {
             warn!(self.log, "Packets are being dropped as they could not be decompressed";
                             "mode" => #?self.compression_mode, "error" => %err,
                             "count" => self.metrics.packets_dropped_decompress.get());
