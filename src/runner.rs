@@ -27,6 +27,9 @@ use crate::extensions::{default_registry, FilterFactory, FilterRegistry};
 use crate::proxy::{logger, Builder};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
+const CONFIG_FILE: &str = "quilkin.yaml";
+
+pub type Error = Box<dyn std::error::Error>;
 
 #[cfg(debug_assertions)]
 fn version() -> String {
@@ -37,10 +40,6 @@ fn version() -> String {
 fn version() -> String {
     VERSION.into()
 }
-
-/// Wraps an error message returned by [`run`].
-#[derive(Debug)]
-pub struct Error(String);
 
 /// Start and run a proxy. Any passed in [`FilterFactory`] are included
 /// alongside the default filter factories..
@@ -58,25 +57,34 @@ pub async fn run(filter_factories: Vec<Box<dyn FilterFactory>>) -> Result<(), Er
                 .long("filename")
                 .value_name("FILE")
                 .help("The yaml configuration file")
-                .required(true)
                 .takes_value(true),
         )
         .get_matches();
 
-    let filename = matches
+    let config_env = std::env::var("QUILKIN_FILENAME").ok();
+    let config_path = matches
         .value_of("filename")
-        .ok_or_else(|| Error("missing argument `filename`".into()))?;
+        .or_else(|| config_env.as_deref())
+        .or(Some(CONFIG_FILE))
+        .map(|path| std::path::Path::new(path).canonicalize())
+        .transpose()
+        // Path wll always be `Some` here.
+        .map(Option::unwrap)?;
+
     info!(log, "Starting Quilkin"; "version" => version);
 
-    let config = Arc::new(
-        Config::from_reader(File::open(filename).map_err(|err| Error(format!("{}", err)))?)
-            .map_err(|err| Error(format!("{}", err)))?,
-    );
+    let config = File::open(&config_path)
+        .or_else(|_| get_config_file())
+        .map_err(Error::from)
+        .and_then(|file| Config::from_reader(file).map_err(Error::from))
+        .map(Arc::new)?;
+
+    info!(log, "Found configuration file"; "path" => config_path.display());
+
     let server = Builder::from(config)
         .with_log(base_logger)
         .with_filter_registry(create_filter_registry(&log, filter_factories))
-        .validate()
-        .map_err(|err| Error(format!("{:?}", err)))?
+        .validate()?
         .build();
 
     let (shutdown_tx, shutdown_rx) = watch::channel::<()>(());
@@ -87,15 +95,12 @@ pub async fn run(filter_factories: Vec<Box<dyn FilterFactory>>) -> Result<(), Er
         shutdown_tx.send(()).ok();
     });
 
-    match server.run(shutdown_rx).await {
-        Ok(()) => {
-            info!(log, "Shutting down");
-            Ok(())
-        }
-        Err(err) => {
-            info!(log, "Shutting down with error"; "error" => %err);
-            Err(Error(format!("{:?}", err)))
-        }
+    if let Err(err) = server.run(shutdown_rx).await {
+        info!(log, "Shutting down with error"; "error" => %err);
+        Err(Error::from(err))
+    } else {
+        info!(log, "Shutting down");
+        Ok(())
     }
 }
 
@@ -106,4 +111,14 @@ fn create_filter_registry(
     let mut registry = default_registry(log);
     registry.insert_all(additional_filter_factories);
     registry
+}
+
+fn get_config_file() -> Result<File, std::io::Error> {
+    std::fs::File::open("./quilkin.yaml").or_else(|error| {
+        if cfg!(unix) {
+            std::fs::File::open("/etc/quilkin/quilkin.yaml")
+        } else {
+            Err(error)
+        }
+    })
 }

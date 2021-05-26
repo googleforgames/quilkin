@@ -62,6 +62,8 @@ pub enum Error {
     CreateFilterChain(CreateFilterError),
 }
 
+impl std::error::Error for Error {}
+
 impl From<ValidationError> for Error {
     fn from(err: ValidationError) -> Self {
         Error::InvalidConfig(err)

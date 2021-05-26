@@ -2,6 +2,8 @@ Proxy Configuration
 
 The following is the schema and reference for a Quilkin proxy configuration file. See the [examples] folder for example configuration files.
 
+By default Quilkin will look for a configuration file named `quilkin.yaml` in its current running directory first, then if not present, in `/etc/quilkin/quilkin.yaml` on UNIX systems. This can be overridden with the `-f/--filename` command-line argument, or the `QUILKIN_FILENAME` environment variable.
+
 ```yaml
 type: object
 properties:
