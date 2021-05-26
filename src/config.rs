@@ -289,7 +289,7 @@ static:
         assert_eq!("also", could.get(0).unwrap().as_str().unwrap());
         assert_eq!("be", could.get(1).unwrap().as_str().unwrap());
         assert_eq!(27, could.get(2).unwrap().as_i64().unwrap());
-        assert_eq!(true, could.get(3).unwrap().as_bool().unwrap());
+        assert!(could.get(3).unwrap().as_bool().unwrap());
     }
 
     #[test]
