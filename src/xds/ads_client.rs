@@ -107,6 +107,15 @@ pub type ClusterUpdate = HashMap<String, Cluster>;
 /// Represents the result of a client execution.
 pub type ExecutionResult = Result<(), ExecutionError>;
 
+/// Use a bounded channel of size 1 on the channels between
+///   - the xds listeners and their associated resource manager.
+///   - the xds listeners and the xds server.
+/// This allows us to fetch updates from the xds server at near the same pace
+/// that the proxy is able to apply them (i.e if the channel if full then next time
+/// the listener tries to place a new update for the resource manager, we'll block
+/// so in that time we don't request more updates from the server)
+pub const UPDATES_CHANNEL_BUFFER_SIZE: usize = 1;
+
 impl AdsClient {
     pub fn new(base_logger: Logger, metrics_registry: &Registry) -> MetricsResult<Self> {
         let log = base_logger.new(o!("source" => "xds::AdsClient"));
@@ -127,7 +136,8 @@ impl AdsClient {
         let log = self.log;
         let metrics = self.metrics;
 
-        let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel::<DiscoveryRequest>(100);
+        let (discovery_req_tx, mut discovery_req_rx) =
+            mpsc::channel::<DiscoveryRequest>(UPDATES_CHANNEL_BUFFER_SIZE);
         let cluster_manager =
             ClusterManager::new(log.clone(), cluster_updates_tx, discovery_req_tx.clone());
         let listener_manager =
@@ -238,7 +248,7 @@ impl AdsClient {
             }
         };
 
-        let (mut rpc_tx, rpc_rx) = mpsc::channel::<DiscoveryRequest>(100);
+        let (mut rpc_tx, rpc_rx) = mpsc::channel::<DiscoveryRequest>(UPDATES_CHANNEL_BUFFER_SIZE);
 
         // Spawn a task that runs the receive loop.
         let mut recv_loop_join_handle = Self::run_receive_loop(

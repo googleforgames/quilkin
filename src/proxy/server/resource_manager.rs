@@ -18,18 +18,14 @@ use crate::cluster::cluster_manager::{ClusterManager, InitializeError, SharedClu
 use crate::config::{Endpoints, ManagementServer};
 use crate::extensions::filter_manager::{FilterManager, ListenerManagerArgs, SharedFilterManager};
 use crate::extensions::{FilterChain, FilterRegistry};
-use crate::xds::ads_client::{AdsClient, ClusterUpdate, ExecutionResult};
+use crate::xds::ads_client::{
+    AdsClient, ClusterUpdate, ExecutionResult, UPDATES_CHANNEL_BUFFER_SIZE,
+};
 use prometheus::Registry;
 use slog::{debug, o, warn, Logger};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::{mpsc, oneshot, watch};
-
-/// The max size of queue of the channel that provides cluster updates from the XDS layer.
-const CLUSTER_UPDATE_QUEUE_SIZE: usize = 1000;
-
-/// The max size of queue of the channel that provides filter updates from the XDS layer.
-const FILTER_CHAIN_UPDATE_QUEUE_SIZE: usize = 500;
 
 /// Contains resource managers for fixed cluster/filter etc resources.
 pub(super) struct StaticResourceManagers {
@@ -217,14 +213,14 @@ impl DynamicResourceManagers {
     }
 
     fn cluster_updates_channel() -> (mpsc::Sender<ClusterUpdate>, mpsc::Receiver<ClusterUpdate>) {
-        mpsc::channel(CLUSTER_UPDATE_QUEUE_SIZE)
+        mpsc::channel(UPDATES_CHANNEL_BUFFER_SIZE)
     }
 
     fn filter_chain_updates_channel() -> (
         mpsc::Sender<Arc<FilterChain>>,
         mpsc::Receiver<Arc<FilterChain>>,
     ) {
-        mpsc::channel(FILTER_CHAIN_UPDATE_QUEUE_SIZE)
+        mpsc::channel(UPDATES_CHANNEL_BUFFER_SIZE)
     }
 }
 #[cfg(test)]
