@@ -28,8 +28,8 @@ use tonic::transport::Endpoint as TonicEndpoint;
 
 use crate::cluster::Endpoint;
 use crate::config::{
-    parse_endpoint_metadata_from_yaml, Admin, Config, Endpoints, ManagementServer, Proxy, Source,
-    ValidationError, ValueInvalidArgs, Version,
+    parse_endpoint_metadata_from_yaml, Config, Endpoints, ManagementServer, Proxy, Source,
+    ValidationError, ValueInvalidArgs,
 };
 use crate::extensions::{default_registry, CreateFilterError, FilterChain, FilterRegistry};
 use crate::proxy::server::metrics::Metrics as ProxyMetrics;
@@ -47,9 +47,7 @@ pub(super) enum ValidatedSource {
 }
 
 pub(super) struct ValidatedConfig {
-    pub version: Version,
     pub proxy: Proxy,
-    pub admin: Admin,
     pub source: ValidatedSource,
     // Limit struct creation to the builder.
     pub phantom: PhantomData<()>,
@@ -239,9 +237,7 @@ impl ValidatedConfig {
         };
 
         Ok(ValidatedConfig {
-            version: config.version.clone(),
             proxy: config.proxy.clone(),
-            admin: config.admin.clone(),
             source: validated_source,
             phantom: Default::default(),
         })

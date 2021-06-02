@@ -290,14 +290,14 @@ struct Snappy {}
 
 impl Compressor for Snappy {
     fn encode(&self, contents: &mut Vec<u8>) -> Result<()> {
-        let input = std::mem::replace(contents, Vec::new());
+        let input = std::mem::take(contents);
         let mut wtr = FrameEncoder::new(contents);
         io::copy(&mut input.as_slice(), &mut wtr)?;
         Ok(())
     }
 
     fn decode(&self, contents: &mut Vec<u8>) -> Result<()> {
-        let input = std::mem::replace(contents, Vec::new());
+        let input = std::mem::take(contents);
         let mut rdr = FrameDecoder::new(input.as_slice());
         io::copy(&mut rdr, contents)?;
         Ok(())
