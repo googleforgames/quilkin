@@ -27,6 +27,10 @@ steps:
       git clone --depth 1000 https://github.com/googleapis/googleapis.git proto/googleapis
       git -C proto/googleapis checkout a0d282daa691e95ec51131c81c3777fc95abf7f8
     id: fetch-git-submodules
+  - name: us-docker.pkg.dev/$PROJECT_ID/ci/cargo
+    entrypoint: rustc
+    args: ["--version", "--verbose"]
+    id: version
   # clippy tends to rely on cached results from other cargo sub-commands so
   # that it skips checking some files that were built previously. As a result
   # we run it before other cargo sub-commands to ensure that it checks all files.
