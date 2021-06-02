@@ -14,11 +14,6 @@
  * limitations under the License.
  */
 
-// Running external documentation tests depends on the
-// `external_doc` unstable feature only available on a
-// nightly compiler. So we enable the feature only when needed.
-#![cfg_attr(doctest, feature(external_doc))]
-
 mod cluster;
 pub mod config;
 pub mod extensions;
@@ -29,19 +24,28 @@ pub mod test_utils;
 pub(crate) mod utils;
 pub(crate) mod xds;
 
+/// Run tests in our external documentation. This is only available in
+/// nightly at the moment, but is stable on nightly and will be available in
+/// 1.54.0. To run them locally run e.g `cargo +nightly test --doc`.
 #[cfg(doctest)]
-pub mod external_doc_tests {
-    // Run tests in our external documentation.
-    // Because this depends on the `external_doc` unstable feature,
-    // it is only available using a nightly compiler.
-    // To run them locally run e.g `cargo +nightly test --doc`
-    #![doc(include = "../docs/extensions/filters/filters.md")]
-    #![doc(include = "../docs/extensions/filters/writing_custom_filters.md")]
-    #![doc(include = "../docs/extensions/filters/load_balancer.md")]
-    #![doc(include = "../docs/extensions/filters/local_rate_limit.md")]
-    #![doc(include = "../docs/extensions/filters/debug.md")]
-    #![doc(include = "../docs/extensions/filters/concatenate_bytes.md")]
-    #![doc(include = "../docs/extensions/filters/capture_bytes.md")]
-    #![doc(include = "../docs/extensions/filters/token_router.md")]
-    #![doc(include = "../docs/extensions/filters/compress.md")]
+mod external_doc_tests {
+    // HACK(XAMPPRocky): This is hidden inside a macro, because the right hand
+    // side of `include_str!` is parsed before the `cfg` predicate currently.
+    // https://github.com/rust-lang/rust/issues/85882
+    macro_rules! hide {
+        () => {
+            #[doc = include_str!("../docs/extensions/filters/filters.md")]
+            #[doc = include_str!("../docs/extensions/filters/writing_custom_filters.md")]
+            #[doc = include_str!("../docs/extensions/filters/load_balancer.md")]
+            #[doc = include_str!("../docs/extensions/filters/local_rate_limit.md")]
+            #[doc = include_str!("../docs/extensions/filters/debug.md")]
+            #[doc = include_str!("../docs/extensions/filters/concatenate_bytes.md")]
+            #[doc = include_str!("../docs/extensions/filters/capture_bytes.md")]
+            #[doc = include_str!("../docs/extensions/filters/token_router.md")]
+            #[doc = include_str!("../docs/extensions/filters/compress.md")]
+            mod tests {}
+        };
+    }
+
+    hide!();
 }
