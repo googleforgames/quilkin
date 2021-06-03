@@ -14,6 +14,10 @@
  * limitations under the License.
  */
 
+// BUG(XAMPPRocky): Uncomment this test once
+// https://github.com/rust-lang/rust/issues/85955 is resolved.
+/*
+
 #[allow(clippy::module_inception)]
 mod xds {
     pub mod core {
@@ -545,3 +549,4 @@ dynamic:
         }
     }
 }
+*/
