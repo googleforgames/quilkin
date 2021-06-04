@@ -112,7 +112,7 @@ impl ListenerManager {
         mut resources: Vec<prost_types::Any>,
     ) -> Result<ProxyFilterChain, Error> {
         let resource = match resources.len() {
-            0 => return Ok(ProxyFilterChain::new(vec![])),
+            0 => return Ok(ProxyFilterChain::new(vec![], &self.metrics_registry)?),
             1 => resources.swap_remove(0),
             n => {
                 return Err(Error::new(format!(
@@ -126,7 +126,7 @@ impl ListenerManager {
             .map_err(|err| Error::new(format!("listener decode error: {}", err.to_string())))?;
 
         let lds_filter_chain = match listener.filter_chains.len() {
-            0 => return Ok(ProxyFilterChain::new(vec![])),
+            0 => return Ok(ProxyFilterChain::new(vec![], &self.metrics_registry)?),
             1 => listener.filter_chains.swap_remove(0),
             n => {
                 return Err(Error::new(format!(
@@ -158,15 +158,16 @@ impl ListenerManager {
             let create_filter_args =
                 CreateFilterArgs::dynamic(self.metrics_registry.clone(), config);
 
+            let name = filter.name;
             let filter = self
                 .filter_registry
-                .get(&filter.name, create_filter_args)
+                .get(&name, create_filter_args)
                 .map_err(|err| Error::new(format!("{}", err)))?;
 
-            filters.push(filter);
+            filters.push((name, filter));
         }
 
-        Ok(ProxyFilterChain::new(filters))
+        Ok(ProxyFilterChain::new(filters, &self.metrics_registry)?)
     }
 
     // Send a DiscoveryRequest ACK/NACK back to the server for the given version and nonce.
