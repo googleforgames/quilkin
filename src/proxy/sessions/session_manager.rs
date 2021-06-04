@@ -128,7 +128,6 @@ mod tests {
     use crate::proxy::sessions::metrics::Metrics;
     use crate::proxy::sessions::session_manager::Sessions;
     use crate::proxy::sessions::{Packet, Session};
-    use crate::proxy::Metrics as ProxyMetrics;
     use crate::test_utils::TestHelper;
 
     use super::SessionManager;
@@ -160,13 +159,14 @@ mod tests {
 
         // Insert key.
         {
+            let registry = Registry::default();
             let mut sessions = sessions.write().await;
             sessions.insert(
                 key,
                 Session::new(
                     &t.log,
-                    Metrics::new(&ProxyMetrics::new(&t.log, Registry::default()).registry).unwrap(),
-                    FilterManager::fixed(Arc::new(FilterChain::new(vec![]))),
+                    Metrics::new(&registry).unwrap(),
+                    FilterManager::fixed(Arc::new(FilterChain::new(vec![], &registry).unwrap())),
                     from,
                     endpoint.clone(),
                     send,
@@ -220,13 +220,14 @@ mod tests {
         let ttl = Duration::from_secs(1);
 
         {
+            let registry = Registry::default();
             let mut sessions = sessions.write().await;
             sessions.insert(
                 key,
                 Session::new(
                     &t.log,
-                    Metrics::new(&ProxyMetrics::new(&t.log, Registry::default()).registry).unwrap(),
-                    FilterManager::fixed(Arc::new(FilterChain::new(vec![]))),
+                    Metrics::new(&registry).unwrap(),
+                    FilterManager::fixed(Arc::new(FilterChain::new(vec![], &registry).unwrap())),
                     from,
                     endpoint.clone(),
                     send,

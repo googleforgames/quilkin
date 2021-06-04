@@ -508,7 +508,7 @@ mod tests {
     use crate::proxy::sessions::Packet;
     use crate::proxy::Builder;
     use crate::test_utils::{
-        config_with_dummy_endpoint, TestFilter, TestFilterFactory, TestHelper,
+        config_with_dummy_endpoint, new_test_chain, TestFilterFactory, TestHelper,
     };
 
     use super::*;
@@ -632,6 +632,7 @@ mod tests {
             name: String,
             chain: Arc<FilterChain>,
             expected: Expected,
+            registry: &prometheus::Registry,
             shutdown_rx: watch::Receiver<()>,
         ) -> Result {
             let t = TestHelper::default();
@@ -658,7 +659,7 @@ mod tests {
             let mut worker_configs = Vec::with_capacity(num_workers);
 
             let cluster_manager = ClusterManager::fixed(
-                &Registry::default(),
+                registry,
                 Endpoints::new(vec![Endpoint::from_address(endpoint_address)]).unwrap(),
             )
             .unwrap();
@@ -667,7 +668,7 @@ mod tests {
                 let (packet_tx, packet_rx) = mpsc::channel(num_workers);
                 packet_txs.push(packet_tx);
 
-                let metrics = Arc::new(Metrics::new(&t.log, Registry::default()));
+                let metrics = Arc::new(Metrics::new(&t.log, registry.clone()));
                 let proxy_metrics = ProxyMetrics::new(&metrics.registry).unwrap();
                 let session_metrics = SessionMetrics::new(&metrics.registry).unwrap();
                 worker_configs.push(DownstreamReceiveWorkerConfig {
@@ -720,21 +721,24 @@ mod tests {
         }
 
         let (_shutdown_tx, shutdown_rx) = watch::channel(());
-        let chain = Arc::new(FilterChain::new(vec![]));
+        let registry = Registry::default();
+        let chain = Arc::new(FilterChain::new(vec![], &registry).unwrap());
         let result = test(
             "no filter".to_string(),
             chain,
             Expected { session_len: 1 },
+            &registry,
             shutdown_rx.clone(),
         )
         .await;
         assert_eq!("hello", result.msg);
 
-        let chain = Arc::new(FilterChain::new(vec![Box::new(TestFilter {})]));
+        let chain = new_test_chain(&registry);
         let result = test(
             "test filter".to_string(),
             chain,
             Expected { session_len: 1 },
+            &registry,
             shutdown_rx.clone(),
         )
         .await;
@@ -760,17 +764,20 @@ mod tests {
 
         let config = Arc::new(config_with_dummy_endpoint().build());
         let server = Builder::from(config).validate().unwrap().build();
+        let registry = Registry::default();
 
         server.run_recv_from(RunRecvFromArgs {
             cluster_manager: ClusterManager::fixed(
-                &Registry::default(),
+                &registry,
                 Endpoints::new(vec![Endpoint::from_address(
                     endpoint.socket.local_addr().unwrap(),
                 )])
                 .unwrap(),
             )
             .unwrap(),
-            filter_manager: FilterManager::fixed(Arc::new(FilterChain::new(vec![]))),
+            filter_manager: FilterManager::fixed(Arc::new(
+                FilterChain::new(vec![], &registry).unwrap(),
+            )),
             socket: socket.clone(),
             session_manager: session_manager.clone(),
             session_ttl: Duration::from_secs(10),
