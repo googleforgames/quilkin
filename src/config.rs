@@ -23,17 +23,24 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 mod builder;
+mod config_type;
 mod endpoints;
 mod error;
 mod metadata;
 
-pub use crate::config::endpoints::{
-    EmptyListError, Endpoints, RetainedItems, UpstreamEndpoints, UpstreamEndpointsIter,
+pub(crate) use self::{
+    error::ValueInvalidArgs,
+    metadata::{extract_endpoint_tokens, parse_endpoint_metadata_from_yaml},
 };
-pub(crate) use crate::config::error::ValueInvalidArgs;
-pub use builder::Builder;
-pub use error::ValidationError;
-pub(crate) use metadata::{extract_endpoint_tokens, parse_endpoint_metadata_from_yaml};
+
+pub use self::{
+    builder::Builder,
+    config_type::ConfigType,
+    endpoints::{
+        EmptyListError, Endpoints, RetainedItems, UpstreamEndpoints, UpstreamEndpointsIter,
+    },
+    error::ValidationError,
+};
 
 base64_serde_type!(Base64Standard, base64::STANDARD);
 

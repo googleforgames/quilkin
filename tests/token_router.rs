@@ -21,10 +21,7 @@ mod tests {
     use tokio::time::{timeout, Duration};
 
     use quilkin::config::{Builder, EndPoint, Filter};
-    use quilkin::filters::{
-        extensions::{CaptureBytesFactory, TokenRouterFactory},
-        FilterFactory,
-    };
+    use quilkin::filters::{capture_bytes, token_router};
     use quilkin::test_utils::{logger, TestHelper};
 
     /// This test covers both token_router and capture_bytes filters,
@@ -50,11 +47,11 @@ quilkin.dev:
             .with_static(
                 vec![
                     Filter {
-                        name: CaptureBytesFactory::new(&log).name().into(),
+                        name: capture_bytes::factory(&log).name().into(),
                         config: serde_yaml::from_str(capture_yaml).unwrap(),
                     },
                     Filter {
-                        name: TokenRouterFactory::new(&log).name().into(),
+                        name: token_router::factory(&log).name().into(),
                         config: None,
                     },
                 ],

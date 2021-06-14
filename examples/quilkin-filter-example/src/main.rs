@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-use quilkin::filters::{prelude::*, DynFilterFactory};;
+use quilkin::filters::prelude::*;
 use quilkin::runner::run;
 
 use bytes::Bytes;
@@ -29,7 +29,12 @@ mod greet {
     include!(concat!(env!("OUT_DIR"), "/greet.rs"));
 }
 
-#[quilkin::filter("greet.v1")]
+pub const NAME: &str = "greet.v1";
+
+pub fn factory() -> DynFilterFactory {
+    Box::from(GreetFilterFactory)
+}
+
 struct Greet(String);
 
 impl Filter for Greet {
@@ -48,7 +53,7 @@ impl Filter for Greet {
 struct GreetFilterFactory;
 impl FilterFactory for GreetFilterFactory {
     fn name(&self) -> &'static str {
-        Greet::FILTER_NAME
+        NAME
     }
     fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
         let greeting = match args.config.unwrap() {
@@ -68,5 +73,5 @@ impl FilterFactory for GreetFilterFactory {
 
 #[tokio::main]
 async fn main() {
-    run(vec![DynFilterFactory::from(GreetFilterFactory)].into_iter()).await.unwrap();
+    run(vec![self::factory()].into_iter()).await.unwrap();
 }

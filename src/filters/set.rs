@@ -18,7 +18,7 @@ use std::iter::FromIterator;
 
 use slog::Logger;
 
-use crate::filters::{extensions, DynFilterFactory};
+use crate::filters::{self, DynFilterFactory};
 
 #[cfg(doc)]
 use crate::filters::{FilterFactory, FilterRegistry};
@@ -35,13 +35,13 @@ impl FilterSet {
     /// with each endpoint.
     ///
     /// Current default filters:
-    /// - [`Debug`][extensions::DebugFactory]
-    /// - [`LocalRateLimit`][extensions::RateLimitFilterFactory]
-    /// - [`ConcatBytes`][extensions::ConcatBytesFactory]
-    /// - [`LoadBalancer`][extensions::LoadBalancerFilterFactory]
-    /// - [`CaptureBytes`][extensions::CaptureBytesFactory]
-    /// - [`TokenRouter`][extensions::TokenRouterFactory]
-    /// - [`Compress`][extensions::CompressFactory]
+    /// - [`debug`][filters::debug]
+    /// - [`local_rate_limit`][filters::local_rate_limit]
+    /// - [`concatenate_bytes`][filters::concatenate_bytes]
+    /// - [`load_balancer`][filters::load_balancer]
+    /// - [`capture_bytes`][filters::capture_bytes]
+    /// - [`token_router`][filters::token_router]
+    /// - [`compress`][filters::compress]
     pub fn default(base: &Logger) -> Self {
         Self::default_with(base, Option::into_iter(None))
     }
@@ -57,13 +57,13 @@ impl FilterSet {
     ) -> Self {
         Self::with(
             std::array::IntoIter::new([
-                Box::from(extensions::DebugFactory::new(base)) as DynFilterFactory,
-                Box::from(extensions::RateLimitFilterFactory::default()),
-                Box::from(extensions::ConcatBytesFactory::default()),
-                Box::from(extensions::LoadBalancerFilterFactory::default()),
-                Box::from(extensions::CaptureBytesFactory::new(base)),
-                Box::from(extensions::TokenRouterFactory::new(base)),
-                Box::from(extensions::CompressFactory::new(base)),
+                filters::debug::factory(base),
+                filters::local_rate_limit::factory(),
+                filters::concatenate_bytes::factory(),
+                filters::load_balancer::factory(),
+                filters::capture_bytes::factory(base),
+                filters::token_router::factory(base),
+                filters::compress::factory(base),
             ])
             .chain(filters),
         )

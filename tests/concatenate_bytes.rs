@@ -21,7 +21,7 @@ mod tests {
     use tokio::time::{timeout, Duration};
 
     use quilkin::config::{Builder, EndPoint, Filter};
-    use quilkin::filters::{extensions::ConcatBytesFactory, FilterFactory};
+    use quilkin::filters::concatenate_bytes;
     use quilkin::test_utils::TestHelper;
 
     #[tokio::test]
@@ -38,7 +38,7 @@ bytes: YWJj #abc
             .with_port(server_port)
             .with_static(
                 vec![Filter {
-                    name: ConcatBytesFactory::default().name().into(),
+                    name: concatenate_bytes::factory().name().into(),
                     config: serde_yaml::from_str(yaml).unwrap(),
                 }],
                 vec![EndPoint::new(echo)],

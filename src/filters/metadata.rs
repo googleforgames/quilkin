@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Google LLC
+ * Copyright 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,22 +14,9 @@
  * limitations under the License.
  */
 
-//! Useful filters for common operations.
+//! Well known dynamic metadata used by Quilkin.
 
-pub use capture_bytes::CaptureBytesFactory;
-pub use compress::CompressFactory;
-pub use concatenate_bytes::ConcatBytesFactory;
-pub use debug::DebugFactory;
-pub use load_balancer::LoadBalancerFilterFactory;
-pub use local_rate_limit::RateLimitFilterFactory;
-pub use token_router::TokenRouterFactory;
-
-mod capture_bytes;
-mod compress;
-mod concatenate_bytes;
-mod debug;
-mod load_balancer;
-mod local_rate_limit;
-mod token_router;
-
+/// The default key under which the [`super::capture_bytes`] filter puts the
+/// byte slices it extracts from each packet.
+/// - **Type** `Vec<u8>`
 pub const CAPTURED_BYTES: &str = "quilkin.dev/captured_bytes";

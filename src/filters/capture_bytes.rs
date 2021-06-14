@@ -14,119 +14,30 @@
  * limitations under the License.
  */
 
-use std::convert::TryFrom;
-use std::sync::Arc;
-
-use serde::{Deserialize, Serialize};
-use slog::{o, warn, Logger};
-
-use metrics::Metrics;
-
-use crate::filters::{extensions::CAPTURED_BYTES, prelude::*};
-use crate::map_proto_enum;
-use proto::quilkin::extensions::filters::capture_bytes::v1alpha1::{
-    capture_bytes::Strategy as ProtoStrategy, CaptureBytes as ProtoConfig,
-};
-
+mod capture;
+mod config;
 mod metrics;
 mod proto;
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-/// Strategy to apply for acquiring a set of bytes in the UDP packet
-enum Strategy {
-    #[serde(rename = "PREFIX")]
-    /// Looks for the set of bytes at the beginning of the packet
-    Prefix,
-    #[serde(rename = "SUFFIX")]
-    /// Look for the set of bytes at the end of the packet
-    Suffix,
+use std::sync::Arc;
+
+use slog::{o, warn, Logger};
+
+use crate::filters::prelude::*;
+
+use capture::Capture;
+use metrics::Metrics;
+use proto::quilkin::extensions::filters::capture_bytes::v1alpha1::CaptureBytes as ProtoConfig;
+
+pub use config::{Config, Strategy};
+
+pub const NAME: &str = "quilkin.extensions.filters.capture_bytes.v1alpha1.CaptureBytes";
+
+/// Creates a new factory for generating capture filters.
+pub fn factory(base: &Logger) -> DynFilterFactory {
+    Box::from(CaptureBytesFactory::new(base))
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-struct Config {
-    #[serde(default)]
-    strategy: Strategy,
-    /// the number of bytes to capture
-    #[serde(rename = "size")]
-    size: usize,
-    /// the key to use when storing the captured bytes in the filter context
-    #[serde(rename = "metadataKey")]
-    #[serde(default = "default_metadata_key")]
-    metadata_key: String,
-    /// whether or not to remove the set of the bytes from the packet once captured
-    #[serde(default = "default_remove")]
-    remove: bool,
-}
-
-/// default value for [`Config::remove`].
-fn default_remove() -> bool {
-    false
-}
-
-/// default value for the context key in the Config
-fn default_metadata_key() -> String {
-    CAPTURED_BYTES.into()
-}
-
-impl Default for Strategy {
-    fn default() -> Self {
-        Strategy::Suffix
-    }
-}
-
-impl TryFrom<ProtoConfig> for Config {
-    type Error = ConvertProtoConfigError;
-
-    fn try_from(p: ProtoConfig) -> Result<Self, Self::Error> {
-        let strategy = p
-            .strategy
-            .map(|strategy| {
-                map_proto_enum!(
-                    value = strategy.value,
-                    field = "strategy",
-                    proto_enum_type = ProtoStrategy,
-                    target_enum_type = Strategy,
-                    variants = [Suffix, Prefix]
-                )
-            })
-            .transpose()?
-            .unwrap_or_else(Strategy::default);
-
-        Ok(Self {
-            strategy,
-            size: p.size as usize,
-            metadata_key: p.metadata_key.unwrap_or_else(default_metadata_key),
-            remove: p.remove.unwrap_or_else(default_remove),
-        })
-    }
-}
-
-pub struct CaptureBytesFactory {
-    log: Logger,
-}
-
-impl CaptureBytesFactory {
-    pub fn new(base: &Logger) -> Self {
-        CaptureBytesFactory { log: base.clone() }
-    }
-}
-
-impl FilterFactory for CaptureBytesFactory {
-    fn name(&self) -> &'static str {
-        CaptureBytes::FILTER_NAME
-    }
-
-    fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
-        Ok(Box::new(CaptureBytes::new(
-            &self.log,
-            self.require_config(args.config)?
-                .deserialize::<Config, ProtoConfig>(self.name())?,
-            Metrics::new(&args.metrics_registry)?,
-        )))
-    }
-}
-
-#[crate::filter("quilkin.extensions.filters.capture_bytes.v1alpha1.CaptureBytes")]
 struct CaptureBytes {
     log: Logger,
     capture: Box<dyn Capture + Sync + Send>,
@@ -139,14 +50,9 @@ struct CaptureBytes {
 
 impl CaptureBytes {
     fn new(base: &Logger, config: Config, metrics: Metrics) -> Self {
-        let capture: Box<dyn Capture + Sync + Send> = match config.strategy {
-            Strategy::Prefix => Box::new(Prefix {}),
-            Strategy::Suffix => Box::new(Suffix {}),
-        };
-
         CaptureBytes {
             log: base.new(o!("source" => "extensions::CaptureBytes")),
-            capture,
+            capture: config.strategy.as_capture(),
             metrics,
             metadata_key: Arc::new(config.metadata_key),
             size: config.size,
@@ -181,43 +87,33 @@ impl Filter for CaptureBytes {
     }
 }
 
-/// Trait to implement different strategies for capturing packet data
-trait Capture {
-    /// Capture the packet data from the contents. If remove is true, contents will be altered to
-    /// not have the retrieved set of bytes.
-    /// Returns the captured bytes.
-    fn capture(&self, contents: &mut Vec<u8>, size: usize, remove: bool) -> Vec<u8>;
+struct CaptureBytesFactory {
+    log: Logger,
 }
 
-struct Suffix;
-impl Capture for Suffix {
-    fn capture(&self, contents: &mut Vec<u8>, size: usize, remove: bool) -> Vec<u8> {
-        if remove {
-            return contents.split_off(contents.len() - size);
-        }
-
-        contents
-            .iter()
-            .skip(contents.len() - size)
-            .cloned()
-            .collect::<Vec<u8>>()
+impl CaptureBytesFactory {
+    pub fn new(base: &Logger) -> Self {
+        CaptureBytesFactory { log: base.clone() }
     }
 }
 
-struct Prefix;
-impl Capture for Prefix {
-    fn capture(&self, contents: &mut Vec<u8>, size: usize, remove: bool) -> Vec<u8> {
-        if remove {
-            return contents.drain(..size).collect();
-        }
+impl FilterFactory for CaptureBytesFactory {
+    fn name(&self) -> &'static str {
+        NAME
+    }
 
-        contents.iter().cloned().take(size).collect()
+    fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
+        Ok(Box::new(CaptureBytes::new(
+            &self.log,
+            self.require_config(args.config)?
+                .deserialize::<Config, ProtoConfig>(self.name())?,
+            Metrics::new(&args.metrics_registry)?,
+        )))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::convert::TryFrom;
     use std::sync::Arc;
 
     use prometheus::Registry;
@@ -226,18 +122,13 @@ mod tests {
     use crate::config::Endpoints;
     use crate::test_utils::{assert_write_no_change, logger};
 
-    use super::{
-        default_metadata_key, default_remove, Capture, CaptureBytes, CaptureBytesFactory, Config,
-        Metrics, Prefix, Strategy, Suffix,
-    };
+    use super::{CaptureBytes, CaptureBytesFactory, Config, Metrics, Strategy};
 
-    use super::proto::quilkin::extensions::filters::capture_bytes::v1alpha1::{
-        capture_bytes::{Strategy as ProtoStrategy, StrategyValue},
-        CaptureBytes as ProtoConfig,
-    };
+    use super::capture::{Capture, Prefix, Suffix};
+
     use crate::cluster::Endpoint;
     use crate::filters::{
-        extensions::CAPTURED_BYTES, CreateFilterArgs, Filter, FilterFactory, ReadContext,
+        metadata::CAPTURED_BYTES, CreateFilterArgs, Filter, FilterFactory, ReadContext,
     };
 
     const TOKEN_KEY: &str = "TOKEN";
@@ -248,66 +139,6 @@ mod tests {
             config,
             Metrics::new(&Registry::default()).unwrap(),
         )
-    }
-
-    #[test]
-    fn convert_proto_config() {
-        let test_cases = vec![
-            (
-                "should succeed when all valid values are provided",
-                ProtoConfig {
-                    strategy: Some(StrategyValue {
-                        value: ProtoStrategy::Suffix as i32,
-                    }),
-                    size: 42,
-                    metadata_key: Some("foobar".into()),
-                    remove: Some(true),
-                },
-                Some(Config {
-                    strategy: Strategy::Suffix,
-                    size: 42,
-                    metadata_key: "foobar".into(),
-                    remove: true,
-                }),
-            ),
-            (
-                "should fail when invalid strategy is provided",
-                ProtoConfig {
-                    strategy: Some(StrategyValue { value: 42 }),
-                    size: 42,
-                    metadata_key: Some("foobar".into()),
-                    remove: Some(true),
-                },
-                None,
-            ),
-            (
-                "should use correct default values",
-                ProtoConfig {
-                    strategy: None,
-                    size: 42,
-                    metadata_key: None,
-                    remove: None,
-                },
-                Some(Config {
-                    strategy: Strategy::default(),
-                    size: 42,
-                    metadata_key: default_metadata_key(),
-                    remove: default_remove(),
-                }),
-            ),
-        ];
-        for (name, proto_config, expected) in test_cases {
-            let result = Config::try_from(proto_config);
-            assert_eq!(
-                result.is_err(),
-                expected.is_none(),
-                "{}: error expectation does not match",
-                name
-            );
-            if let Some(expected) = expected {
-                assert_eq!(expected, result.unwrap(), "{}", name);
-            }
-        }
     }
 
     #[test]

@@ -20,7 +20,7 @@ mod tests {
     use std::sync::{Arc, Mutex};
 
     use quilkin::config::{Builder as ConfigBuilder, EndPoint, Filter};
-    use quilkin::filters::{extensions::LoadBalancerFilterFactory, FilterFactory};
+    use quilkin::filters::load_balancer;
     use quilkin::test_utils::TestHelper;
 
     #[tokio::test]
@@ -48,7 +48,7 @@ policy: ROUND_ROBIN
             .with_port(server_port)
             .with_static(
                 vec![Filter {
-                    name: LoadBalancerFilterFactory::default().name().into(),
+                    name: load_balancer::factory().name().into(),
                     config: serde_yaml::from_str(yaml).unwrap(),
                 }],
                 echo_addresses

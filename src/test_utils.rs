@@ -26,7 +26,7 @@ use tokio::sync::{mpsc, oneshot, watch};
 
 use crate::cluster::Endpoint;
 use crate::config::{Builder as ConfigBuilder, Config, EndPoint, Endpoints};
-use crate::filters::{prelude::*, DynFilterFactory, FilterChain, FilterRegistry, FilterSet};
+use crate::filters::{prelude::*, FilterChain, FilterRegistry, FilterSet};
 use crate::proxy::{Builder, PendingValidation};
 
 pub struct TestFilterFactory {}

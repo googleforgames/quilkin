@@ -23,7 +23,7 @@ mod tests {
     use tokio::time::{timeout, Duration};
 
     use quilkin::config::{Builder as ConfigBuilder, EndPoint, Filter};
-    use quilkin::filters::{extensions::RateLimitFilterFactory, FilterFactory};
+    use quilkin::filters::local_rate_limit;
     use quilkin::test_utils::TestHelper;
 
     #[tokio::test]
@@ -41,7 +41,7 @@ period: 1s
             .with_port(server_port)
             .with_static(
                 vec![Filter {
-                    name: RateLimitFilterFactory::default().name().into(),
+                    name: local_rate_limit::factory().name().into(),
                     config: serde_yaml::from_str(yaml).unwrap(),
                 }],
                 vec![EndPoint::new(echo)],

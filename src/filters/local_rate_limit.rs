@@ -32,55 +32,18 @@ mod metrics;
 crate::include_proto!("quilkin.extensions.filters.local_rate_limit.v1alpha1");
 use self::quilkin::extensions::filters::local_rate_limit::v1alpha1::LocalRateLimit as ProtoConfig;
 
-/// Config represents a RateLimitFilter's configuration.
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-struct Config {
-    /// max_packets is the maximum number of packets allowed
-    /// to be forwarded by the rate limiter in a given duration.
-    max_packets: usize,
-    /// period is the duration during which max_packets applies.
-    /// If none is provided, it defaults to 1 second.
-    #[serde(with = "humantime_serde", default = "default_period")]
-    period: Duration,
+pub const NAME: &str = "quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit";
+
+/// Creates a new factory for generating rate limiting filters.
+pub fn factory() -> DynFilterFactory {
+    Box::from(LocalRateLimitFactory)
 }
 
-/// default value for [`Config::period`]
-fn default_period() -> Duration {
-    Duration::from_secs(1)
-}
-impl TryFrom<ProtoConfig> for Config {
-    type Error = ConvertProtoConfigError;
-
-    fn try_from(p: ProtoConfig) -> Result<Self, Self::Error> {
-        Ok(Self {
-            max_packets: p.max_packets as usize,
-            period: p
-                .period
-                .map(|period| {
-                    period.try_into().map_err(|err| {
-                        ConvertProtoConfigError::new(
-                            format!("invalid duration: {:?}", err),
-                            Some("period".into()),
-                        )
-                    })
-                })
-                .transpose()?
-                .unwrap_or_else(default_period),
-        })
-    }
-}
-
-/// Creates instances of RateLimitFilter.
-#[derive(Default)]
-pub struct RateLimitFilterFactory;
-
-/// A filter that implements rate limiting on packets based on
-/// the token-bucket algorithm.
-/// Packets that violate the rate limit are dropped.
-/// It only applies rate limiting on packets that are destined for the
-/// proxy's endpoints. All other packets flow through the filter untouched.
-#[crate::filter("quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit")]
-struct RateLimitFilter {
+/// A filter that implements rate limiting on packets based on the token-bucket
+/// algorithm.  Packets that violate the rate limit are dropped.  It only
+/// applies rate limiting on packets that are destined for the proxy's
+/// endpoints. All other packets flow through the filter untouched.
+struct LocalRateLimit {
     /// available_tokens is how many tokens are left in the bucket any
     /// any given moment.
     available_tokens: Arc<AtomicUsize>,
@@ -90,32 +53,8 @@ struct RateLimitFilter {
     shutdown_tx: Option<Sender<()>>,
 }
 
-impl FilterFactory for RateLimitFilterFactory {
-    fn name(&self) -> &'static str {
-        RateLimitFilter::FILTER_NAME
-    }
-
-    fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
-        let config: Config = self
-            .require_config(args.config)?
-            .deserialize::<Config, ProtoConfig>(self.name())?;
-
-        if config.period.lt(&Duration::from_millis(100)) {
-            Err(Error::FieldInvalid {
-                field: "period".into(),
-                reason: "value must be at least 100ms".into(),
-            })
-        } else {
-            Ok(Box::new(RateLimitFilter::new(
-                config,
-                Metrics::new(&args.metrics_registry)?,
-            )))
-        }
-    }
-}
-
-impl RateLimitFilter {
-    /// new returns a new RateLimitFilter. It spawns a future in the background
+impl LocalRateLimit {
+    /// new returns a new LocalRateLimit. It spawns a future in the background
     /// that periodically refills the rate limiter's tokens.
     fn new(config: Config, metrics: Metrics) -> Self {
         let (shutdown_tx, mut shutdown_rx) = channel();
@@ -150,7 +89,7 @@ impl RateLimitFilter {
             }
         });
 
-        RateLimitFilter {
+        LocalRateLimit {
             available_tokens: tokens,
             metrics,
             shutdown_tx: Some(shutdown_tx),
@@ -185,7 +124,7 @@ impl RateLimitFilter {
     }
 }
 
-impl Drop for RateLimitFilter {
+impl Drop for LocalRateLimit {
     fn drop(&mut self) {
         if let Some(shutdown_tx) = self.shutdown_tx.take() {
             shutdown_tx.send(()).ok();
@@ -193,11 +132,78 @@ impl Drop for RateLimitFilter {
     }
 }
 
-impl Filter for RateLimitFilter {
+impl Filter for LocalRateLimit {
     fn read(&self, ctx: ReadContext) -> Option<ReadResponse> {
         self.acquire_token().map(|()| ctx.into()).or_else(|| {
             self.metrics.packets_dropped_total.inc();
             None
+        })
+    }
+}
+
+/// Creates instances of [`LocalRateLimit`].
+#[derive(Default)]
+struct LocalRateLimitFactory;
+
+impl FilterFactory for LocalRateLimitFactory {
+    fn name(&self) -> &'static str {
+        NAME
+    }
+
+    fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
+        let config: Config = self
+            .require_config(args.config)?
+            .deserialize::<Config, ProtoConfig>(self.name())?;
+
+        if config.period.lt(&Duration::from_millis(100)) {
+            Err(Error::FieldInvalid {
+                field: "period".into(),
+                reason: "value must be at least 100ms".into(),
+            })
+        } else {
+            Ok(Box::new(LocalRateLimit::new(
+                config,
+                Metrics::new(&args.metrics_registry)?,
+            )))
+        }
+    }
+}
+
+/// Config represents a [self]'s configuration.
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+pub struct Config {
+    /// The maximum number of packets allowed to be forwarded by the rate
+    /// limiter in a given duration.
+    pub max_packets: usize,
+    /// The duration during which max_packets applies. If none is provided, it
+    /// defaults to one second.
+    #[serde(with = "humantime_serde", default = "default_period")]
+    pub period: Duration,
+}
+
+/// default value for [`Config::period`]
+fn default_period() -> Duration {
+    Duration::from_secs(1)
+}
+
+impl TryFrom<ProtoConfig> for Config {
+    type Error = ConvertProtoConfigError;
+
+    fn try_from(p: ProtoConfig) -> Result<Self, Self::Error> {
+        Ok(Self {
+            max_packets: p.max_packets as usize,
+            period: p
+                .period
+                .map(|period| {
+                    period.try_into().map_err(|err| {
+                        ConvertProtoConfigError::new(
+                            format!("invalid duration: {:?}", err),
+                            Some("period".into()),
+                        )
+                    })
+                })
+                .transpose()?
+                .unwrap_or_else(default_period),
         })
     }
 }
@@ -214,13 +220,13 @@ mod tests {
     use crate::cluster::Endpoint;
     use crate::config::Endpoints;
     use crate::filters::{
-        extensions::local_rate_limit::{metrics::Metrics, Config, RateLimitFilter},
+        local_rate_limit::{metrics::Metrics, Config, LocalRateLimit},
         Filter, ReadContext,
     };
     use crate::test_utils::assert_write_no_change;
 
-    fn rate_limiter(config: Config) -> RateLimitFilter {
-        RateLimitFilter::new(config, Metrics::new(&Registry::default()).unwrap())
+    fn rate_limiter(config: Config) -> LocalRateLimit {
+        LocalRateLimit::new(config, Metrics::new(&Registry::default()).unwrap())
     }
 
     #[test]
