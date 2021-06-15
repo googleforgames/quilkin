@@ -16,46 +16,89 @@
 
 use std::fmt::{self, Formatter};
 
-use prometheus::Registry;
+use prometheus::{Error as PrometheusError, Histogram, HistogramOpts, Registry};
 
 use crate::config::{Filter as FilterConfig, ValidationError};
 use crate::extensions::{
     CreateFilterArgs, Filter, FilterRegistry, ReadContext, ReadResponse, WriteContext,
     WriteResponse,
 };
+use crate::metrics::CollectorExt;
 
-/// FilterChain implements a chain of Filters amd the implementation
-/// of passing the information between Filters for each filter function
+const FILTER_LABEL: &str = "filter";
+
+/// A chain of [`Filter`]s to be executed in order.
 ///
-/// Each filter implementation loops around all the filters stored in the FilterChain, passing the results of each filter to the next in the chain.
-/// The filter implementation returns the results of data that has gone through each of the filters in the chain.
-/// If any of the Filters in the chain return a None, then the chain is broken, and nothing is returned.
-#[derive(Default)]
+/// Executes each filter, passing the [`ReadContext`] and [`WriteContext`]
+/// between each filter's execution, returning the result of data that has gone
+/// through all of the filters in the chain. If any of the filters in the chain
+/// return `None`, then the chain is broken, and `None` is returned.
 pub struct FilterChain {
-    filters: Vec<Box<dyn Filter>>,
+    filters: Vec<(String, Box<dyn Filter>)>,
+    filter_read_duration_seconds: Vec<Histogram>,
+    filter_write_duration_seconds: Vec<Histogram>,
 }
 
-/// Represents an error while creating a `FilterChain`
 #[derive(Debug)]
-pub struct CreateFilterError {
-    filter_name: String,
-    error: ValidationError,
+pub enum Error {
+    Prometheus(PrometheusError),
+    Filter {
+        filter_name: String,
+        error: ValidationError,
+    },
 }
 
-impl fmt::Display for CreateFilterError {
+impl fmt::Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "failed to create filter {}: {}",
-            self.filter_name,
-            format!("{}", self.error)
-        )
+        match self {
+            Self::Prometheus(error) => f.write_str(&error.to_string()),
+            Self::Filter { filter_name, error } => {
+                write!(f, "failed to create filter {}: {}", filter_name, error,)
+            }
+        }
+    }
+}
+
+impl From<PrometheusError> for Error {
+    fn from(error: PrometheusError) -> Self {
+        Self::Prometheus(error)
     }
 }
 
 impl FilterChain {
-    pub fn new(filters: Vec<Box<dyn Filter>>) -> Self {
-        FilterChain { filters }
+    pub fn new(
+        filters: Vec<(String, Box<dyn Filter>)>,
+        registry: &Registry,
+    ) -> Result<Self, Error> {
+        Ok(Self {
+            filter_read_duration_seconds: filters
+                .iter()
+                .map(|(name, _)| {
+                    Histogram::with_opts(
+                        HistogramOpts::new(
+                            "filter_read_duration_seconds",
+                            "Seconds taken to execute a given filter's `read`.",
+                        )
+                        .const_label(FILTER_LABEL, name),
+                    )
+                    .and_then(|histogram| histogram.register_if_not_exists(&registry))
+                })
+                .collect::<Result<_, prometheus::Error>>()?,
+            filter_write_duration_seconds: filters
+                .iter()
+                .map(|(name, _)| {
+                    Histogram::with_opts(
+                        HistogramOpts::new(
+                            "filter_write_duration_seconds",
+                            "Seconds taken to execute a given filter's `write`.",
+                        )
+                        .const_label(FILTER_LABEL, name),
+                    )
+                    .and_then(|histogram| histogram.register_if_not_exists(&registry))
+                })
+                .collect::<Result<_, prometheus::Error>>()?,
+            filters,
+        })
     }
 
     /// Validates the filter configurations in the provided config and constructs
@@ -64,52 +107,57 @@ impl FilterChain {
         filter_configs: Vec<FilterConfig>,
         filter_registry: &FilterRegistry,
         metrics_registry: &Registry,
-    ) -> std::result::Result<FilterChain, CreateFilterError> {
-        let mut filters = Vec::<Box<dyn Filter>>::new();
+    ) -> Result<Self, Error> {
+        let mut filters = Vec::new();
+
         for filter_config in filter_configs {
             match filter_registry.get(
                 &filter_config.name,
                 CreateFilterArgs::fixed(metrics_registry.clone(), filter_config.config.as_ref())
                     .with_metrics_registry(metrics_registry.clone()),
             ) {
-                Ok(filter) => filters.push(filter),
+                Ok(filter) => filters.push((filter_config.name, filter)),
                 Err(err) => {
-                    return Err(CreateFilterError {
+                    return Err(Error::Filter {
                         filter_name: filter_config.name.clone(),
                         error: err.into(),
                     });
                 }
             }
         }
-        Ok(FilterChain::new(filters))
+
+        FilterChain::new(filters, &metrics_registry)
     }
 }
 
 impl Filter for FilterChain {
-    fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
-        let from = ctx.from;
-        for f in &self.filters {
-            match f.read(ctx) {
-                None => return None,
-                Some(response) => ctx = ReadContext::with_response(from, response),
-            }
-        }
-        Some(ctx.into())
+    fn read(&self, ctx: ReadContext) -> Option<ReadResponse> {
+        self.filters
+            .iter()
+            .zip(self.filter_read_duration_seconds.iter())
+            .try_fold(ctx, |ctx, ((_, filter), histogram)| {
+                Some(ReadContext::with_response(
+                    ctx.from,
+                    histogram.observe_closure_duration(|| filter.read(ctx))?,
+                ))
+            })
+            .map(ReadResponse::from)
     }
 
-    fn write(&self, mut ctx: WriteContext) -> Option<WriteResponse> {
-        let endpoint = ctx.endpoint;
-        let from = ctx.from;
-        let to = ctx.to;
-        for f in self.filters.iter().rev() {
-            match f.write(ctx) {
-                None => return None,
-                Some(response) => {
-                    ctx = WriteContext::with_response(endpoint, from, to, response);
-                }
-            }
-        }
-        Some(ctx.into())
+    fn write(&self, ctx: WriteContext) -> Option<WriteResponse> {
+        self.filters
+            .iter()
+            .rev()
+            .zip(self.filter_write_duration_seconds.iter().rev())
+            .try_fold(ctx, |ctx, ((_, filter), histogram)| {
+                Some(WriteContext::with_response(
+                    ctx.endpoint,
+                    ctx.from,
+                    ctx.to,
+                    histogram.observe_closure_duration(|| filter.write(ctx))?,
+                ))
+            })
+            .map(WriteResponse::from)
     }
 }
 
@@ -121,7 +169,7 @@ mod tests {
     use crate::config::{Endpoints, UpstreamEndpoints};
     use crate::extensions::filters::DebugFactory;
     use crate::extensions::{default_registry, FilterFactory};
-    use crate::test_utils::{logger, TestFilter};
+    use crate::test_utils::{logger, new_test_chain, TestFilter};
 
     use super::*;
     use crate::cluster::Endpoint;
@@ -164,8 +212,8 @@ mod tests {
 
     #[test]
     fn chain_single_test_filter() {
-        let chain = FilterChain::new(vec![Box::new(TestFilter {})]);
-
+        let registry = prometheus::Registry::default();
+        let chain = new_test_chain(&registry);
         let endpoints_fixture = endpoints();
 
         let response = chain
@@ -215,7 +263,15 @@ mod tests {
 
     #[test]
     fn chain_double_test_filter() {
-        let chain = FilterChain::new(vec![Box::new(TestFilter {}), Box::new(TestFilter {})]);
+        let registry = prometheus::Registry::default();
+        let chain = FilterChain::new(
+            vec![
+                ("TestFilter".into(), Box::new(TestFilter {})),
+                ("TestFilter".into(), Box::new(TestFilter {})),
+            ],
+            &registry,
+        )
+        .unwrap();
 
         let endpoints_fixture = endpoints();
 

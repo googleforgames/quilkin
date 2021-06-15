@@ -31,7 +31,7 @@ use crate::config::{
     parse_endpoint_metadata_from_yaml, Config, Endpoints, ManagementServer, Proxy, Source,
     ValidationError, ValueInvalidArgs,
 };
-use crate::extensions::{default_registry, CreateFilterError, FilterChain, FilterRegistry};
+use crate::extensions::{default_registry, FilterChain, FilterChainError, FilterRegistry};
 use crate::proxy::server::metrics::Metrics as ProxyMetrics;
 use crate::proxy::sessions::metrics::Metrics as SessionMetrics;
 use crate::proxy::{Admin as ProxyAdmin, Health, Metrics, Server};
@@ -57,7 +57,7 @@ pub(super) struct ValidatedConfig {
 #[derive(Debug)]
 pub enum Error {
     InvalidConfig(ValidationError),
-    CreateFilterChain(CreateFilterError),
+    CreateFilterChain(FilterChainError),
 }
 
 impl std::error::Error for Error {}
@@ -68,8 +68,8 @@ impl From<ValidationError> for Error {
     }
 }
 
-impl From<CreateFilterError> for Error {
-    fn from(err: CreateFilterError) -> Self {
+impl From<FilterChainError> for Error {
+    fn from(err: FilterChainError) -> Self {
         Error::CreateFilterChain(err)
     }
 }

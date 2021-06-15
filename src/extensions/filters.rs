@@ -59,8 +59,11 @@ impl fmt::Display for ConvertProtoConfigError {
 }
 
 impl ConvertProtoConfigError {
-    pub fn new(reason: String, field: Option<String>) -> Self {
-        Self { reason, field }
+    pub fn new(reason: impl Into<String>, field: Option<String>) -> Self {
+        Self {
+            reason: reason.into(),
+            field,
+        }
     }
 }
 

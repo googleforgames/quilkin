@@ -27,8 +27,8 @@ use tokio::sync::{mpsc, oneshot, watch};
 use crate::cluster::Endpoint;
 use crate::config::{Builder as ConfigBuilder, Config, EndPoint, Endpoints};
 use crate::extensions::{
-    CreateFilterArgs, Error, Filter, FilterFactory, ReadContext, ReadResponse, WriteContext,
-    WriteResponse,
+    CreateFilterArgs, Error, Filter, FilterChain, FilterFactory, ReadContext, ReadResponse,
+    WriteContext, WriteResponse,
 };
 use crate::proxy::{Builder, PendingValidation};
 
@@ -313,6 +313,16 @@ pub fn config_with_dummy_endpoint() -> ConfigBuilder {
 /// Creates a dummy endpoint with `id` as a suffix.
 pub fn ep(id: u8) -> EndPoint {
     EndPoint::new(format!("127.0.0.{:?}:8080", id).parse().unwrap())
+}
+
+pub fn new_test_chain(registry: &prometheus::Registry) -> Arc<FilterChain> {
+    Arc::new(
+        FilterChain::new(
+            vec![("TestFilter".into(), Box::new(TestFilter {}))],
+            registry,
+        )
+        .unwrap(),
+    )
 }
 
 #[cfg(test)]
