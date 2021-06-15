@@ -326,7 +326,7 @@ pub trait FilterFactory: Sync + Send {
     ///     <item-name>: The name of the rust item (e.g enum, struct) implementing the filter.
     /// For example the `v1alpha1` version of the debug filter has the name:
     ///     `quilkin.extensions.filters.debug_filter.v1alpha1.Debug`
-    fn name(&self) -> String;
+    fn name(&self) -> &'static str;
 
     /// Returns a filter based on the provided arguments.
     fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error>;
@@ -337,14 +337,14 @@ pub trait FilterFactory: Sync + Send {
         &'a self,
         config: Option<ConfigType<'b>>,
     ) -> Result<ConfigType<'b>, Error> {
-        config.ok_or_else(|| Error::MissingConfig(self.name()))
+        config.ok_or_else(|| Error::MissingConfig(self.name().into()))
     }
 }
 
 /// FilterRegistry is the registry of all Filters that can be applied in the system.
 #[derive(Default)]
 pub struct FilterRegistry {
-    registry: HashMap<String, Box<dyn FilterFactory>>,
+    registry: HashMap<&'static str, Box<dyn FilterFactory>>,
 }
 
 impl FilterRegistry {

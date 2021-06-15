@@ -62,15 +62,15 @@ on_write: DECOMPRESS
             .with_static(
                 vec![
                     Filter {
-                        name: ConcatBytesFactory::default().name(),
+                        name: ConcatBytesFactory::default().name().into(),
                         config: serde_yaml::from_str(yaml_concat_read).unwrap(),
                     },
                     Filter {
-                        name: ConcatBytesFactory::default().name(),
+                        name: ConcatBytesFactory::default().name().into(),
                         config: serde_yaml::from_str(yaml_concat_write).unwrap(),
                     },
                     Filter {
-                        name: CompressFactory::new(&t.log).name(),
+                        name: CompressFactory::new(&t.log).name().into(),
                         config: serde_yaml::from_str(yaml_compress).unwrap(),
                     },
                 ],

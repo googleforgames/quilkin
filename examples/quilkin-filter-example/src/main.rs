@@ -30,7 +30,9 @@ mod greet {
     include!(concat!(env!("OUT_DIR"), "/greet.rs"));
 }
 
+#[quilkin::filter("greet.v1")]
 struct Greet(String);
+
 impl Filter for Greet {
     fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
         ctx.contents
@@ -46,8 +48,8 @@ impl Filter for Greet {
 
 struct GreetFilterFactory;
 impl FilterFactory for GreetFilterFactory {
-    fn name(&self) -> String {
-        "greet.v1".into()
+    fn name(&self) -> &'static str {
+        Greet::FILTER_NAME
     }
     fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
         let greeting = match args.config.unwrap() {

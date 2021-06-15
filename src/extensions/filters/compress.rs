@@ -22,7 +22,7 @@ use slog::{o, warn, Logger};
 use snap::read::FrameDecoder;
 use snap::write::FrameEncoder;
 
-use proto::quilkin::extensions::filters::compress::v1alpha1::{
+use self::quilkin::extensions::filters::compress::v1alpha1::{
     compress::Action as ProtoAction, compress::Mode as ProtoMode, Compress as ProtoConfig,
 };
 
@@ -36,7 +36,8 @@ use crate::extensions::{
 use crate::map_proto_enum;
 
 mod metrics;
-mod proto;
+
+crate::include_proto!("quilkin.extensions.filters.compress.v1alpha1");
 
 /// The library to use when compressing
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
@@ -143,8 +144,8 @@ impl CompressFactory {
 }
 
 impl FilterFactory for CompressFactory {
-    fn name(&self) -> String {
-        "quilkin.extensions.filters.compress.v1alpha1.Compress".into()
+    fn name(&self) -> &'static str {
+        Compress::FILTER_NAME
     }
 
     fn create_filter(
@@ -154,13 +155,14 @@ impl FilterFactory for CompressFactory {
         Ok(Box::new(Compress::new(
             &self.log,
             self.require_config(args.config)?
-                .deserialize::<Config, ProtoConfig>(self.name().as_str())?,
+                .deserialize::<Config, ProtoConfig>(self.name())?,
             Metrics::new(&args.metrics_registry)?,
         )))
     }
 }
 
 /// Filter for compressing and decompressing packet data
+#[crate::filter("quilkin.extensions.filters.compress.v1alpha1.Compress")]
 struct Compress {
     log: Logger,
     metrics: Metrics,
@@ -317,7 +319,7 @@ mod tests {
     use crate::extensions::{CreateFilterArgs, Filter, FilterFactory, ReadContext, WriteContext};
     use crate::test_utils::logger;
 
-    use super::proto::quilkin::extensions::filters::compress::v1alpha1::{
+    use super::quilkin::extensions::filters::compress::v1alpha1::{
         compress::{Action as ProtoAction, ActionValue, Mode as ProtoMode, ModeValue},
         Compress as ProtoConfig,
     };

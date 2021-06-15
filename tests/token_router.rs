@@ -48,11 +48,11 @@ quilkin.dev:
             .with_static(
                 vec![
                     Filter {
-                        name: CaptureBytesFactory::new(&log).name(),
+                        name: CaptureBytesFactory::new(&log).name().into(),
                         config: serde_yaml::from_str(capture_yaml).unwrap(),
                     },
                     Filter {
-                        name: TokenRouterFactory::new(&log).name(),
+                        name: TokenRouterFactory::new(&log).name().into(),
                         config: None,
                     },
                 ],

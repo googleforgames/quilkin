@@ -24,6 +24,8 @@ pub mod test_utils;
 pub(crate) mod utils;
 pub(crate) mod xds;
 
+pub use quilkin_macros::{filter, include_proto};
+
 /// Run tests in our external documentation. This is only available in
 /// nightly at the moment, but is stable on nightly and will be available in
 /// 1.54.0. To run them locally run e.g `cargo +nightly test --doc`.

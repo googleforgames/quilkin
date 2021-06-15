@@ -51,7 +51,7 @@ policy: ROUND_ROBIN
             .with_port(server_port)
             .with_static(
                 vec![Filter {
-                    name: LoadBalancerFilterFactory::default().name(),
+                    name: LoadBalancerFilterFactory::default().name().into(),
                     config: serde_yaml::from_str(yaml).unwrap(),
                 }],
                 echo_addresses

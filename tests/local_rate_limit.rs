@@ -42,7 +42,7 @@ period: 1s
             .with_port(server_port)
             .with_static(
                 vec![Filter {
-                    name: RateLimitFilterFactory::default().name(),
+                    name: RateLimitFilterFactory::default().name().into(),
                     config: serde_yaml::from_str(yaml).unwrap(),
                 }],
                 vec![EndPoint::new(echo)],

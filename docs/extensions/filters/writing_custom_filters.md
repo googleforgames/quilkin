@@ -67,7 +67,11 @@ To extend Quilkin's code with our own custom filter, we need to do the following
    // src/main.rs
    use quilkin::extensions::{Filter, ReadContext, ReadResponse, WriteContext, WriteResponse};
 
+   // This creates adds an associated const named `FILTER_NAME` that points
+   // to `"greet.v1"`.
+   #[quilkin::filter("greet.v1")]
    struct Greet;
+
    impl Filter for Greet {
        fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
            ctx.contents.splice(0..0, String::from("Hello ").into_bytes());
@@ -84,6 +88,7 @@ To extend Quilkin's code with our own custom filter, we need to do the following
 
    ```rust
    // src/main.rs
+   # #[quilkin::filter("greet.v1")]
    # struct Greet;
    # impl Filter for Greet {}
    # use quilkin::extensions::Filter;
@@ -91,8 +96,9 @@ To extend Quilkin's code with our own custom filter, we need to do the following
 
    struct GreetFilterFactory;
    impl FilterFactory for GreetFilterFactory {
-       fn name(&self) -> String {
-           "greet.v1".into()
+       fn name(&self) -> &'static str {
+           // We provide the name of filter that we defined with `#[quilkin::filter]`
+           Greet::FILTER_NAME
        }
        fn create_filter(&self, _: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
            Ok(Box::new(Greet))
@@ -120,8 +126,8 @@ To extend Quilkin's code with our own custom filter, we need to do the following
 
    # struct GreetFilterFactory;
    # impl FilterFactory for GreetFilterFactory {
-   #     fn name(&self) -> String {
-   #         "greet.v1".into()
+   #     fn name(&self) -> &'static str {
+   #         "greet.v1"
    #     }
    #     fn create_filter(&self, _: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
    #         unimplemented!()
@@ -202,7 +208,9 @@ The [Serde] crate is used to describe static YAML configuration in code while [P
 
    # use quilkin::extensions::{Filter, ReadContext, ReadResponse, WriteContext, WriteResponse};
 
+   #[quilkin::filter("greet.v1")]
    struct Greet(String);
+
    impl Filter for Greet {
        fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
            ctx.contents
@@ -236,8 +244,8 @@ The [Serde] crate is used to describe static YAML configuration in code while [P
 
    struct GreetFilterFactory;
    impl FilterFactory for GreetFilterFactory {
-       fn name(&self) -> String {
-           "greet.v1".into()
+       fn name(&self) -> &'static str {
+           "greet.v1"
        }
        fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
            let greeting = match args.config.unwrap() {
@@ -366,8 +374,8 @@ However, it usually contains a Protobuf equivalent of the filter's static config
 
        struct GreetFilterFactory;
        impl FilterFactory for GreetFilterFactory {
-           fn name(&self) -> String {
-               "greet.v1".into()
+           fn name(&self) -> &'static str {
+               "greet.v1"
            }
            fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
                let greeting = match args.config.unwrap() {
