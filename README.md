@@ -1,4 +1,4 @@
-# Quilkin
+<img src="./docs/logos/logo-white.png" alt="Quilkin logo" height="220">
 
 ![GitHub](https://img.shields.io/github/license/googleforgames/quilkin)
 ![Crates.io](https://img.shields.io/crates/v/quilkin)
@@ -61,3 +61,5 @@ Huge thanks to that team for the inspiration they provided with all their hard w
 ## Licence
 
 Apache 2.0
+
+<img src="./docs/logos/mascot.png" alt="Quilly, the Quilkin mascot" height="200" align="right">
