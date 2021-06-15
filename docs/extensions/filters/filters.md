@@ -30,6 +30,18 @@ There are a few things we note here:
 
 * Exactly one filter chain is specified and used to process all packets that flow through Quilkin.
 
+**Metrics**
+
+* `filter_read_duration_seconds` The duration it took for a `filter`'s
+  `read` implementation to execute.
+  * Labels
+    * `filter` The name of the filter being executed.
+
+* `filter_write_duration_seconds` The duration it took for a `filter`'s
+  `write` implementation to execute.
+  * Labels
+    * `filter` The name of the filter being executed.
+
 ### Configuration Examples ###
 
 ```rust

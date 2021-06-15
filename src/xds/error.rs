@@ -24,3 +24,19 @@ impl Error {
         Error { message }
     }
 }
+
+impl From<prometheus::Error> for Error {
+    fn from(error: prometheus::Error) -> Self {
+        Self {
+            message: error.to_string(),
+        }
+    }
+}
+
+impl From<crate::extensions::FilterChainError> for Error {
+    fn from(error: crate::extensions::FilterChainError) -> Self {
+        Self {
+            message: error.to_string(),
+        }
+    }
+}

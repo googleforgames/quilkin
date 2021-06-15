@@ -307,7 +307,7 @@ mod tests {
     use tokio::time::timeout;
 
     use crate::extensions::FilterChain;
-    use crate::test_utils::{TestFilter, TestHelper};
+    use crate::test_utils::{new_test_chain, TestHelper};
 
     use crate::cluster::Endpoint;
     use crate::extensions::filter_manager::FilterManager;
@@ -321,11 +321,12 @@ mod tests {
         let addr = socket.local_addr().unwrap();
         let endpoint = Endpoint::from_address(addr);
         let (send_packet, mut recv_packet) = mpsc::channel::<Packet>(5);
+        let registry = Registry::default();
 
         let sess = Session::new(
             &t.log,
-            Metrics::new(&Registry::default()).unwrap(),
-            FilterManager::fixed(Arc::new(FilterChain::new(vec![]))),
+            Metrics::new(&registry).unwrap(),
+            FilterManager::fixed(Arc::new(FilterChain::new(vec![], &registry).unwrap())),
             addr,
             endpoint,
             send_packet,
@@ -370,11 +371,12 @@ mod tests {
         let ep = t.open_socket_and_recv_single_packet().await;
         let addr = ep.socket.local_addr().unwrap();
         let endpoint = Endpoint::from_address(addr);
+        let registry = Registry::default();
 
         let session = Session::new(
             &t.log,
             Metrics::new(&Registry::default()).unwrap(),
-            FilterManager::fixed(Arc::new(FilterChain::new(vec![]))),
+            FilterManager::fixed(Arc::new(FilterChain::new(vec![], &registry).unwrap())),
             addr,
             endpoint.clone(),
             sender,
@@ -389,8 +391,9 @@ mod tests {
     #[tokio::test]
     async fn process_recv_packet() {
         let t = TestHelper::default();
+        let registry = Registry::default();
 
-        let chain = Arc::new(FilterChain::new(vec![]));
+        let chain = Arc::new(FilterChain::new(vec![], &registry).unwrap());
         let endpoint = Endpoint::from_address("127.0.1.1:80".parse().unwrap());
         let dest = "127.0.0.1:88".parse().unwrap();
         let (mut sender, mut receiver) = mpsc::channel::<Packet>(10);
@@ -436,10 +439,11 @@ mod tests {
         ));
         let initial_expiration = expiration.load(Ordering::Relaxed);
         // add filter
-        let chain = Arc::new(FilterChain::new(vec![Box::new(TestFilter {})]));
+        let registry = Registry::default();
+        let chain = new_test_chain(&registry);
         Session::process_recv_packet(
             &t.log,
-            &Metrics::new(&Registry::default()).unwrap(),
+            &Metrics::new(&registry).unwrap(),
             &mut sender,
             &expiration,
             Duration::from_secs(10),
@@ -472,11 +476,12 @@ mod tests {
         let addr = ep.socket.local_addr().unwrap();
         let endpoint = Endpoint::from_address(addr);
         let (send_packet, _) = mpsc::channel::<Packet>(5);
+        let registry = Registry::default();
 
         let session = Session::new(
             &t.log,
             Metrics::new(&Registry::default()).unwrap(),
-            FilterManager::fixed(Arc::new(FilterChain::new(vec![]))),
+            FilterManager::fixed(Arc::new(FilterChain::new(vec![], &registry).unwrap())),
             addr,
             endpoint,
             send_packet,
@@ -496,10 +501,11 @@ mod tests {
         let (sender, _) = mpsc::channel::<Packet>(1);
         let endpoint = t.open_socket_and_recv_single_packet().await;
         let addr = endpoint.socket.local_addr().unwrap();
+        let registry = Registry::default();
         let session = Session::new(
             &t.log,
-            Metrics::new(&Registry::default()).unwrap(),
-            FilterManager::fixed(Arc::new(FilterChain::new(vec![]))),
+            Metrics::new(&registry).unwrap(),
+            FilterManager::fixed(Arc::new(FilterChain::new(vec![], &registry).unwrap())),
             addr,
             Endpoint::from_address(addr),
             sender,
@@ -520,10 +526,11 @@ mod tests {
         let (send_packet, _) = mpsc::channel::<Packet>(5);
         let endpoint = t.open_socket_and_recv_single_packet().await;
         let addr = endpoint.socket.local_addr().unwrap();
+        let registry = Registry::default();
         let session = Session::new(
             &t.log,
-            Metrics::new(&Registry::default()).unwrap(),
-            FilterManager::fixed(Arc::new(FilterChain::new(vec![]))),
+            Metrics::new(&registry).unwrap(),
+            FilterManager::fixed(Arc::new(FilterChain::new(vec![], &registry).unwrap())),
             addr,
             Endpoint::from_address(addr),
             send_packet,

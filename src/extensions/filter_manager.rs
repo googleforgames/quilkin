@@ -149,7 +149,9 @@ mod tests {
 
     #[tokio::test]
     async fn dynamic_filter_manager_update_filter_chain() {
-        let filter_manager = FilterManager::fixed(Arc::new(FilterChain::new(vec![])));
+        let registry = prometheus::Registry::default();
+        let filter_manager =
+            FilterManager::fixed(Arc::new(FilterChain::new(vec![], &registry).unwrap()));
         let (filter_chain_updates_tx, filter_chain_updates_rx) = mpsc::channel(10);
         let (_shutdown_tx, shutdown_rx) = watch::channel(());
 
@@ -183,7 +185,8 @@ mod tests {
                 None
             }
         }
-        let filter_chain = Arc::new(FilterChain::new(vec![Box::new(Drop)]));
+        let filter_chain =
+            Arc::new(FilterChain::new(vec![("Drop".into(), Box::new(Drop))], &registry).unwrap());
         assert!(filter_chain_updates_tx.send(filter_chain).await.is_ok());
 
         let mut num_iterations = 0;
@@ -218,7 +221,9 @@ mod tests {
     async fn dynamic_filter_manager_shutdown_task_on_shutdown_signal() {
         // Test that we shut down the background task if we receive a shutdown signal.
 
-        let filter_manager = FilterManager::fixed(Arc::new(FilterChain::new(vec![])));
+        let registry = prometheus::Registry::default();
+        let filter_manager =
+            FilterManager::fixed(Arc::new(FilterChain::new(vec![], &registry).unwrap()));
         let (filter_chain_updates_tx, filter_chain_updates_rx) = mpsc::channel(10);
         let (shutdown_tx, shutdown_rx) = watch::channel(());
 
@@ -237,7 +242,7 @@ mod tests {
 
         // Send a filter chain update on the channel. This should fail
         // since the listening task should have shut down.
-        let filter_chain = Arc::new(FilterChain::new(vec![]));
+        let filter_chain = Arc::new(FilterChain::new(vec![], &registry).unwrap());
         assert!(filter_chain_updates_tx.send(filter_chain).await.is_err());
     }
 }
