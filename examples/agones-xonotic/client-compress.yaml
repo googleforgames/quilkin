@@ -23,5 +23,4 @@ static:
         on_write: DECOMPRESS
         mode: SNAPPY
   endpoints:
-    - name: xonotic
-      address: ${GAMESERVER_IP}:${GAMESERVER_PORT}
+    - address: ${GAMESERVER_IP}:${GAMESERVER_PORT}
