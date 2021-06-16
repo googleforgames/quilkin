@@ -24,5 +24,4 @@ proxy:
   port: 8000
 static:
   endpoints:
-    - name: iperf3 client
-      address: 127.0.0.1:8001
+    - address: 127.0.0.1:8001

@@ -31,8 +31,7 @@ data:
               on_write: COMPRESS
               mode: SNAPPY
       endpoints:
-        - name: xonotic
-          address: 127.0.0.1:26000
+        - address: 127.0.0.1:26000
 ---
 apiVersion: "agones.dev/v1"
 kind: Fleet
