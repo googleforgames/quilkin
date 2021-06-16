@@ -11,7 +11,10 @@
 - [ ] Review that merged PRs have appropriate tags for the changelog.
 - [ ] Run `git remote update && git checkout main && git reset --hard upstream/main` to ensure your code is in line
   with upstream.
-- [ ] Edit the `version` field in `Cargo.toml` and remove the `-dev` suffix.
+- [ ] Update Cargo version for release
+    - [ ] Edit the `version` field in `./Cargo.toml` and remove the `-dev` suffix.
+    - [ ] Edit the `quilkin-macros` dependency in `./Cargo.toml` and remove the `-dev` suffix.
+    - [ ] Edit the `version` field in `./macros/Cargo.toml` and remove the `-dev` suffix.
 - [ ] cd to `./build/release` and run `make` to submit the cloud build
 - [ ] Download all the artifacts from the cloud build.
 - [ ] Move the CHANGELOG.md to the root of this repository, replacing any previous versions.
@@ -30,13 +33,21 @@
 - [ ] Run `git remote update && git checkout main && git reset --hard upstream/main` to ensure your code is in line
       with upstream.
 - [ ] Run `git checkout -b release-{version} && git push upstream` to create a release branch.
+- [ ] Publish to [crates.io/crates/quilkin-macros](https://crates.io/crates/quilkin-macros)
+  - [ ] Run `cd macros && cargo publish --dry-run` to ensure there are no issues.
+  - [ ] If there are no issues, run `cd macros && cargo publish` to publish to crates.io!
 - [ ] Publish to [crates.io/crates/quilkin](https://crates.io/crates/quilkin)
     - [ ] Run `cargo publish --dry-run` to ensure there are no issues.
-    - [ ] If there are no issues, run `cargo publish` to publish to crates.io! 
+    - [ ] If there are no issues, run `cargo publish` to publish to crates.io!
 - [ ] Post an announcement to the [mailing list](https://groups.google.com/g/quilkin-discuss).
 - [ ] Post to the [Twitter account](https://twitter.com/quilkindev).
-- [ ] Edit `Cargo.toml` and increment the [minor version](https://semver.org/) and apply the `-dev` suffix to the 
-  `version`.
+- [ ] Update Cargo version for development
+    - [ ] Edit `Cargo.toml` and increment the [minor version](https://semver.org/) and apply the `-dev` suffix to the
+       `version`.
+    - [ ] Edit the `quilkin-macros` dependency in `./Cargo.toml` and increment the [minor version](https://semver.org/) 
+       and apply the `-dev` suffix to the `version`.
+    - [ ] Edit the `version` field in `./macros/Cargo.toml`and increment the [minor version](https://semver.org/)
+       and apply the `-dev` suffix to the `version`.
 - [ ] Submit this change as a PR, and merge with approval.
 
 Congratulation! 🎉 You have successfully released Quilkin!
