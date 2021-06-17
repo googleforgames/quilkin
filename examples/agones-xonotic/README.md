@@ -30,3 +30,9 @@ locally as:
 From there connect to the local client proxy on "127.0.0.1:7000" via the "Multiplayer > Address" field in the 
 Xonotic client, and Quilkin will take care of compressing the data for you without having to change either the 
 client or the dedicated game server.
+
+## Metrics
+
+The Quilkin sidecars are also annotated with the 
+[appropriate Prometheus annotations](https://github.com/prometheus-community/helm-charts/tree/main/charts/prometheus#scraping-pod-metrics-via-annotations)
+to inform Prometheus on how to scrape the Quilkin proxies for metrics.
