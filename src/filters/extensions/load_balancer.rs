@@ -20,12 +20,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 
-use crate::config::UpstreamEndpoints;
-use crate::extensions::filters::ConvertProtoConfigError;
-use crate::extensions::{
-    CreateFilterArgs, Error, Filter, FilterFactory, ReadContext, ReadResponse,
-};
-use crate::map_proto_enum;
+use crate::{config::UpstreamEndpoints, filters::prelude::*, map_proto_enum};
 
 crate::include_proto!("quilkin.extensions.filters.load_balancer.v1alpha1");
 
@@ -168,9 +163,10 @@ mod tests {
     use super::{Config, Policy};
     use crate::cluster::Endpoint;
     use crate::config::Endpoints;
-    use crate::extensions::filter_registry::ReadContext;
-    use crate::extensions::filters::load_balancer::LoadBalancerFilterFactory;
-    use crate::extensions::{CreateFilterArgs, Filter, FilterFactory};
+    use crate::filters::{
+        extensions::load_balancer::LoadBalancerFilterFactory, CreateFilterArgs, Filter,
+        FilterFactory, ReadContext,
+    };
     use prometheus::Registry;
 
     fn create_filter(config: &str) -> Box<dyn Filter> {

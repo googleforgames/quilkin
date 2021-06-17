@@ -24,10 +24,9 @@ mod tests {
     use slog::info;
 
     use quilkin::config::{Builder as ConfigBuilder, EndPoint, Filter};
-    use quilkin::extensions::filters::DebugFactory;
-    use quilkin::extensions::{default_registry, FilterFactory};
+    use quilkin::filters::{extensions::DebugFactory, FilterFactory};
     use quilkin::proxy::Builder as ProxyBuilder;
-    use quilkin::test_utils::{TestFilterFactory, TestHelper};
+    use quilkin::test_utils::{new_registry, TestHelper};
     use std::sync::Arc;
 
     #[tokio::test]
@@ -51,8 +50,7 @@ mod tests {
             .build();
 
         // Run server proxy.
-        let mut registry = default_registry(&t.log);
-        registry.insert(TestFilterFactory {});
+        let registry = new_registry(&t.log);
         t.run_server_with_builder(
             ProxyBuilder::from(Arc::new(server_config))
                 .with_filter_registry(registry)
@@ -76,8 +74,7 @@ mod tests {
             .build();
 
         // Run client proxy.
-        let mut registry = default_registry(&t.log);
-        registry.insert(TestFilterFactory {});
+        let registry = new_registry(&t.log);
         t.run_server_with_builder(
             ProxyBuilder::from(Arc::new(client_config))
                 .with_filter_registry(registry)

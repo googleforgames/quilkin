@@ -14,17 +14,20 @@
  * limitations under the License.
  */
 
-use std::fs::File;
-use std::sync::Arc;
+use std::{fs::File, sync::Arc};
 
 use clap::App;
-use slog::{info, o, Logger};
-use tokio::signal;
-use tokio::sync::watch;
+use slog::{info, o};
+use tokio::{signal, sync::watch};
 
-use crate::config::Config;
-use crate::extensions::{default_registry, FilterFactory, FilterRegistry};
-use crate::proxy::{logger, Builder};
+use crate::{
+    config::Config,
+    filters::{DynFilterFactory, FilterRegistry, FilterSet},
+    proxy::{logger, Builder},
+};
+
+#[cfg(doc)]
+use crate::filters::FilterFactory;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const CONFIG_FILE: &str = "quilkin.yaml";
@@ -41,9 +44,11 @@ fn version() -> String {
     VERSION.into()
 }
 
-/// Start and run a proxy. Any passed in [`FilterFactory`] are included
-/// alongside the default filter factories..
-pub async fn run(filter_factories: Vec<Box<dyn FilterFactory>>) -> Result<(), Error> {
+/// Start and run a proxy. Any passed in [`FilterFactory`]s are included
+/// alongside the default filter factories.
+pub async fn run(
+    filter_factories: impl IntoIterator<Item = DynFilterFactory>,
+) -> Result<(), Error> {
     let version = version();
     let base_logger = logger();
     let log = base_logger.new(o!("source" => "run"));
@@ -83,7 +88,10 @@ pub async fn run(filter_factories: Vec<Box<dyn FilterFactory>>) -> Result<(), Er
 
     let server = Builder::from(config)
         .with_log(base_logger)
-        .with_filter_registry(create_filter_registry(&log, filter_factories))
+        .with_filter_registry(FilterRegistry::new(FilterSet::default_with(
+            &log,
+            filter_factories.into_iter(),
+        )))
         .validate()?
         .build();
 
@@ -102,15 +110,6 @@ pub async fn run(filter_factories: Vec<Box<dyn FilterFactory>>) -> Result<(), Er
         info!(log, "Shutting down");
         Ok(())
     }
-}
-
-fn create_filter_registry(
-    log: &Logger,
-    additional_filter_factories: Vec<Box<dyn FilterFactory>>,
-) -> FilterRegistry {
-    let mut registry = default_registry(log);
-    registry.insert_all(additional_filter_factories);
-    registry
 }
 
 fn get_config_file() -> Result<File, std::io::Error> {

@@ -31,7 +31,7 @@ use crate::config::{
     parse_endpoint_metadata_from_yaml, Config, Endpoints, ManagementServer, Proxy, Source,
     ValidationError, ValueInvalidArgs,
 };
-use crate::extensions::{default_registry, FilterChain, FilterChainError, FilterRegistry};
+use crate::filters::{chain::Error as FilterChainError, FilterChain, FilterRegistry, FilterSet};
 use crate::proxy::server::metrics::Metrics as ProxyMetrics;
 use crate::proxy::sessions::metrics::Metrics as SessionMetrics;
 use crate::proxy::{Admin as ProxyAdmin, Health, Metrics, Server};
@@ -125,7 +125,7 @@ impl From<Arc<Config>> for Builder<PendingValidation> {
         let admin = ProxyAdmin::new(&log, config.admin.address, metrics.clone(), health);
         Builder {
             config,
-            filter_registry: default_registry(&log),
+            filter_registry: FilterRegistry::new(FilterSet::default(&log)),
             admin: Some(admin),
             metrics,
             log,
@@ -291,7 +291,7 @@ impl Builder<Validated> {
                 .expect("session metrics should be setup properly"),
             admin: self.admin,
             metrics: self.metrics,
-            filter_registry: Arc::new(self.filter_registry),
+            filter_registry: self.filter_registry,
         }
     }
 }

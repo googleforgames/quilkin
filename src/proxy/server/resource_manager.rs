@@ -16,8 +16,10 @@
 
 use crate::cluster::cluster_manager::{ClusterManager, InitializeError, SharedClusterManager};
 use crate::config::{Endpoints, ManagementServer};
-use crate::extensions::filter_manager::{FilterManager, ListenerManagerArgs, SharedFilterManager};
-use crate::extensions::{FilterChain, FilterRegistry};
+use crate::filters::{
+    manager::{FilterManager, ListenerManagerArgs, SharedFilterManager},
+    FilterChain, FilterRegistry,
+};
 use crate::xds::ads_client::{
     AdsClient, ClusterUpdate, ExecutionResult, UPDATES_CHANNEL_BUFFER_SIZE,
 };
@@ -71,7 +73,7 @@ impl DynamicResourceManagers {
         base_logger: Logger,
         xds_node_id: String,
         metrics_registry: Registry,
-        filter_registry: Arc<FilterRegistry>,
+        filter_registry: FilterRegistry,
         management_servers: Vec<ManagementServer>,
         mut shutdown_rx: watch::Receiver<()>,
     ) -> Result<DynamicResourceManagers, InitializeError> {
@@ -229,12 +231,10 @@ mod tests {
     use super::DynamicResourceManagers;
     use crate::cluster::cluster_manager::InitializeError;
     use crate::config::ManagementServer;
-    use crate::extensions::filter_manager::ListenerManagerArgs;
-    use crate::extensions::FilterRegistry;
+    use crate::filters::{manager::ListenerManagerArgs, FilterRegistry};
     use crate::test_utils::logger;
     use crate::xds::ads_client::ExecutionError;
 
-    use std::sync::Arc;
     use std::time::Duration;
 
     use crate::proxy::server::resource_manager::SpawnAdsClient;
@@ -354,7 +354,7 @@ mod tests {
             cluster_updates_tx,
             listener_manager_args: ListenerManagerArgs::new(
                 Registry::default(),
-                Arc::new(FilterRegistry::default()),
+                FilterRegistry::default(),
                 filter_chain_updates_tx,
             ),
             execution_result_tx,

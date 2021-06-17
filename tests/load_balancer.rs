@@ -14,16 +14,13 @@
  * limitations under the License.
  */
 
-extern crate quilkin;
-
 #[cfg(test)]
 mod tests {
     use std::net::{IpAddr, Ipv4Addr, SocketAddr};
     use std::sync::{Arc, Mutex};
 
     use quilkin::config::{Builder as ConfigBuilder, EndPoint, Filter};
-    use quilkin::extensions::filters::LoadBalancerFilterFactory;
-    use quilkin::extensions::FilterFactory;
+    use quilkin::filters::{extensions::LoadBalancerFilterFactory, FilterFactory};
     use quilkin::test_utils::TestHelper;
 
     #[tokio::test]

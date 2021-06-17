@@ -26,10 +26,7 @@ use tokio::sync::{mpsc, oneshot, watch};
 
 use crate::cluster::Endpoint;
 use crate::config::{Builder as ConfigBuilder, Config, EndPoint, Endpoints};
-use crate::extensions::{
-    CreateFilterArgs, Error, Filter, FilterChain, FilterFactory, ReadContext, ReadResponse,
-    WriteContext, WriteResponse,
-};
+use crate::filters::{prelude::*, DynFilterFactory, FilterChain, FilterRegistry, FilterSet};
 use crate::proxy::{Builder, PendingValidation};
 
 pub struct TestFilterFactory {}
@@ -323,6 +320,13 @@ pub fn new_test_chain(registry: &prometheus::Registry) -> Arc<FilterChain> {
         )
         .unwrap(),
     )
+}
+
+pub fn new_registry(log: &slog::Logger) -> FilterRegistry {
+    FilterRegistry::new(FilterSet::default_with(
+        log,
+        std::array::IntoIter::new([DynFilterFactory::from(Box::from(TestFilterFactory {}))]),
+    ))
 }
 
 #[cfg(test)]

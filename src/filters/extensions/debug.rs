@@ -19,11 +19,7 @@ use std::convert::TryFrom;
 use serde::{Deserialize, Serialize};
 use slog::{info, o, Logger};
 
-use crate::extensions::filter_registry::{
-    CreateFilterArgs, Error, FilterFactory, ReadContext, ReadResponse, WriteContext, WriteResponse,
-};
-use crate::extensions::filters::ConvertProtoConfigError;
-use crate::extensions::Filter;
+use crate::filters::prelude::*;
 
 crate::include_proto!("quilkin.extensions.filters.debug.v1alpha1");
 use self::quilkin::extensions::filters::debug::v1alpha1::Debug as ProtoDebug;

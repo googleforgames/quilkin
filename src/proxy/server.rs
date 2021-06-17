@@ -29,8 +29,7 @@ use resource_manager::{DynamicResourceManagers, StaticResourceManagers};
 
 use crate::cluster::cluster_manager::SharedClusterManager;
 use crate::cluster::Endpoint;
-use crate::extensions::filter_manager::SharedFilterManager;
-use crate::extensions::{Filter, FilterRegistry, ReadContext};
+use crate::filters::{manager::SharedFilterManager, Filter, FilterRegistry, ReadContext};
 use crate::proxy::builder::{ValidatedConfig, ValidatedSource};
 use crate::proxy::server::error::Error;
 use crate::proxy::sessions::metrics::Metrics as SessionMetrics;
@@ -57,7 +56,7 @@ pub struct Server {
     pub(super) metrics: Arc<Metrics>,
     pub(super) proxy_metrics: ProxyMetrics,
     pub(super) session_metrics: SessionMetrics,
-    pub(super) filter_registry: Arc<FilterRegistry>,
+    pub(super) filter_registry: FilterRegistry,
 }
 
 /// Represents arguments to the `Server::run_recv_from` method.
@@ -503,12 +502,11 @@ mod tests {
     use crate::cluster::cluster_manager::ClusterManager;
     use crate::config;
     use crate::config::{Builder as ConfigBuilder, EndPoint, Endpoints};
-    use crate::extensions::filter_manager::FilterManager;
-    use crate::extensions::{FilterChain, FilterRegistry};
+    use crate::filters::{manager::FilterManager, FilterChain};
     use crate::proxy::sessions::Packet;
     use crate::proxy::Builder;
     use crate::test_utils::{
-        config_with_dummy_endpoint, new_test_chain, TestFilterFactory, TestHelper,
+        config_with_dummy_endpoint, logger, new_registry, new_test_chain, TestHelper,
     };
 
     use super::*;
@@ -572,9 +570,7 @@ mod tests {
     async fn run_with_filter() {
         let mut t = TestHelper::default();
 
-        let mut registry = FilterRegistry::default();
-        registry.insert(TestFilterFactory {});
-
+        let registry = new_registry(&logger());
         let endpoint = t.open_socket_and_recv_single_packet().await;
         let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12367);
         let config = ConfigBuilder::empty()

@@ -21,8 +21,7 @@ mod tests {
     use tokio::time::{timeout, Duration};
 
     use quilkin::config::{Builder, EndPoint, Filter};
-    use quilkin::extensions::filters::ConcatBytesFactory;
-    use quilkin::extensions::FilterFactory;
+    use quilkin::filters::{extensions::ConcatBytesFactory, FilterFactory};
     use quilkin::test_utils::TestHelper;
 
     #[tokio::test]

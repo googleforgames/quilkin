@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-use crate::extensions::{FilterChain, FilterRegistry};
+use crate::filters::{FilterChain, FilterRegistry};
 
 use std::sync::Arc;
 
@@ -35,14 +35,14 @@ pub struct FilterManager {
 /// ListenerManagerArgs contains arguments when invoking the LDS resource manager.
 pub(crate) struct ListenerManagerArgs {
     pub filter_chain_updates_tx: mpsc::Sender<Arc<FilterChain>>,
-    pub filter_registry: Arc<FilterRegistry>,
+    pub filter_registry: FilterRegistry,
     pub metrics_registry: Registry,
 }
 
 impl ListenerManagerArgs {
     pub fn new(
         metrics_registry: Registry,
-        filter_registry: Arc<FilterRegistry>,
+        filter_registry: FilterRegistry,
         filter_chain_updates_tx: mpsc::Sender<Arc<FilterChain>>,
     ) -> ListenerManagerArgs {
         ListenerManagerArgs {
@@ -135,7 +135,7 @@ impl FilterManager {
 #[cfg(test)]
 mod tests {
     use super::FilterManager;
-    use crate::extensions::{Filter, FilterChain, ReadContext, ReadResponse};
+    use crate::filters::{Filter, FilterChain, ReadContext, ReadResponse};
     use crate::test_utils::logger;
 
     use std::sync::Arc;

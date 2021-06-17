@@ -16,7 +16,7 @@
 
 mod cluster;
 pub mod config;
-pub mod extensions;
+pub mod filters;
 pub(crate) mod metrics;
 pub mod proxy;
 pub mod runner;
