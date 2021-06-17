@@ -1,4 +1,6 @@
-<img src="./docs/logos/logo-white.png" alt="Quilkin logo" height="220">
+<p  align="center">
+    <img src="./docs/logos/logo-white.png" alt="Quilkin logo" height="220">
+</p>
 
 ![GitHub](https://img.shields.io/github/license/googleforgames/quilkin)
 ![Crates.io](https://img.shields.io/crates/v/quilkin)
