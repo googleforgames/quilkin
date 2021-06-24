@@ -22,6 +22,7 @@ mod factory;
 mod read;
 mod registry;
 mod set;
+mod wrap;
 mod write;
 
 pub(crate) mod chain;
@@ -45,6 +46,7 @@ pub use self::{
     read::{ReadContext, ReadResponse},
     registry::FilterRegistry,
     set::{FilterMap, FilterSet},
+    wrap::{read, read_write, write},
     write::{WriteContext, WriteResponse},
 };
 
