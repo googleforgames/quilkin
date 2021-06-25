@@ -54,7 +54,7 @@ test: ensure-build-image
      		--entrypoint=cargo $(build_image_tag) +nightly test --doc
 
 # Build all binaries and images
-build: ensure-build-image build-linux-binary build-windows-binary build-image
+build: ensure-build-image build-linux-binary build-windows-binary build-macos-binary build-image
 
 # Build release and debug binaries for x86_64-unknown-linux-gnu
 build-linux-binary: ensure-build-image
@@ -69,6 +69,13 @@ build-windows-binary: ensure-build-image
  		--entrypoint=cross $(build_image_tag) build --target x86_64-pc-windows-gnu
 	docker run --rm $(common_rust_args) $(docker_in_docker) \
  		--entrypoint=cross $(build_image_tag) build --target x86_64-pc-windows-gnu --release
+
+# Build release and debug binaries for x86_64-apple-darwin
+build-macos-binary:
+	docker run --rm -v $(project_path):/workspace -w /workspace \
+		-v $(CARGO_HOME)/registry:/root/.cargo/registry \
+        joseluisq/rust-linux-darwin-builder:$(rust_toolchain) \
+        	sh -c "cargo build --target x86_64-apple-darwin && cargo build --release --target x86_64-apple-darwin"
 
 # Build release and debug container images.
 # Use IMAGE_NAME argument to specify the container registry and image name. Defaults to 'quilkin'.
