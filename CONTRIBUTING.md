@@ -34,51 +34,7 @@ Participation in this project comes under the [Contributor Covenant Code of Cond
 
 ## Development
 
-We welcome development from the community on Quilkin!
-
-### Cloning the repository
-
-We use several submodules, so make sure you have them downloaded and updated.
-
-```shell script
-git clone https://github.com/googleforgames/quilkin.git
-cd quilkin
-git submodule update --init --recursive
-```
-
-You will likely want to replace `https://github.com/googleforgames/quilkin.git` with your own fork of the repository
-for your development.
-
-### Rust version
-
-We target a specific version of Rust for each build, so we can be deliberate when changing versions to 
-track if there are any performance changes between Rust releases.
-
-Run `rustup show` in the root of the project directory to install the rust toolchain that is standard for Quilkin 
-development.
-
-### Building
-
-Debug release:
-
-`cargo build`
-
-Production Release:
-
-`cargo build --release`
-
-### Testing
-
-We use some nightly features to automatically test our external documentation, so you will need to be explicit about
-which tests you wish to run.
-
-To run the unit and integration tests:
-
-`cargo test --tests`
-
-To run our external documentation tests:
-
-`cargo +nightly test --doc`
+See our [Quilkin Development and Building Guide](./build/README.md) for developing, testing and building Quilkin.
 
 ## Coding standards
 

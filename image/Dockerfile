@@ -1,4 +1,3 @@
-#
 # Copyright 2021 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,16 +11,21 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
 
-.*
-target/*/deps
-target/*/incremental
-target/*/build
-target/*/*/deps
-target/*/*/incremental
-target/*/*/build
+ARG PROFILE
 
-# windows files
-*.exe
-*.rlib
+FROM gcr.io/distroless/cc:nonroot as base
+WORKDIR /
+COPY ./license.html .
+COPY ./dependencies-src.zip .
+COPY --chown=nonroot:nonroot ./image/quilkin.yaml /etc/quilkin/quilkin.yaml
+
+FROM base as release
+COPY ./target/x86_64-unknown-linux-gnu/release/quilkin .
+
+FROM base as debug
+COPY ./target/x86_64-unknown-linux-gnu/debug/quilkin .
+
+FROM $PROFILE
+USER nonroot:nonroot
+ENTRYPOINT ["/quilkin", "--filename", "/etc/quilkin/quilkin.yaml"]

@@ -14,14 +14,7 @@
 # limitations under the License.
 #
 
-.*
-target/*/deps
-target/*/incremental
-target/*/build
-target/*/*/deps
-target/*/*/incremental
-target/*/*/build
-
-# windows files
-*.exe
-*.rlib
+version: v1alpha1
+static:
+  endpoints:
+    - address: 127.0.0.1:0
