@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-use std::fmt;
-
 use crate::config::ValidationError;
 use prometheus::Error as MetricsError;
 
@@ -24,33 +22,20 @@ use crate::filters::{Filter, FilterFactory};
 
 /// An error that occurred when attempting to create a [`Filter`] from
 /// a [`FilterFactory`].
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, thiserror::Error)]
 pub enum Error {
+    #[error("filter `{}` not found", .0)]
     NotFound(String),
+    #[error("filter `{}` requires configuration, but none provided", .0)]
     MissingConfig(&'static str),
+    #[error("field `{}` is invalid, reason: {}", field, reason)]
     FieldInvalid { field: String, reason: String },
+    #[error("Deserialization failed: {}", .0)]
     DeserializeFailed(String),
+    #[error("Failed to initialize metrics: {}", .0)]
     InitializeMetricsFailed(String),
+    #[error("Protobuf error: {}", .0)]
     ConvertProtoConfig(ConvertProtoConfigError),
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Error::NotFound(key) => write!(f, "filter {} is not found", key),
-            Error::MissingConfig(filter_name) => {
-                write!(f, "filter `{}` requires a configuration", filter_name)
-            }
-            Error::FieldInvalid { field, reason } => {
-                write!(f, "field {} is invalid: {}", field, reason)
-            }
-            Error::DeserializeFailed(reason) => write!(f, "Deserialization failed: {}", reason),
-            Error::InitializeMetricsFailed(reason) => {
-                write!(f, "failed to initialize metrics: {}", reason)
-            }
-            Error::ConvertProtoConfig(inner) => write!(f, "{}", inner),
-        }
-    }
 }
 
 impl From<Error> for ValidationError {
@@ -67,26 +52,17 @@ impl From<MetricsError> for Error {
 
 /// An error representing failure to convert a filter's protobuf configuration
 /// to its static representation.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, thiserror::Error)]
+#[error(
+    "{}failed to convert protobuf config: {}",
+    self.field.as_ref().map(|f| format!("Field `{}` ", f)).unwrap_or_default(),
+    reason
+)]
 pub struct ConvertProtoConfigError {
     /// Reason for the failure.
     reason: String,
     /// Set if the failure is specific to a single field in the config.
     field: Option<String>,
-}
-
-impl fmt::Display for ConvertProtoConfigError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}failed to convert protobuf config: {}",
-            self.field
-                .as_ref()
-                .map(|f| format!("field `{}`: ", f))
-                .unwrap_or_default(),
-            self.reason
-        )
-    }
 }
 
 impl ConvertProtoConfigError {

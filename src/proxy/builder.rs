@@ -14,13 +14,7 @@
  *  limitations under the License.
  */
 
-use std::collections::HashSet;
-use std::convert::TryInto;
-use std::marker::PhantomData;
-use std::{
-    fmt::{self, Formatter},
-    sync::Arc,
-};
+use std::{collections::HashSet, convert::TryInto, marker::PhantomData, sync::Arc};
 
 use prometheus::Registry;
 use slog::{o, Drain, Logger};
@@ -54,13 +48,13 @@ pub(super) struct ValidatedConfig {
 }
 
 /// Represents an error that occurred while validating and building a server.
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum Error {
+    #[error("invalid config: {}", .0)]
     InvalidConfig(ValidationError),
+    #[error("failed to create filter chain: {}", .0)]
     CreateFilterChain(FilterChainError),
 }
-
-impl std::error::Error for Error {}
 
 impl From<ValidationError> for Error {
     fn from(err: ValidationError) -> Self {
@@ -71,19 +65,6 @@ impl From<ValidationError> for Error {
 impl From<FilterChainError> for Error {
     fn from(err: FilterChainError) -> Self {
         Error::CreateFilterChain(err)
-    }
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            Error::InvalidConfig(source) => write!(f, "invalid config: {}", format!("{}", source)),
-            Error::CreateFilterChain(source) => write!(
-                f,
-                "failed to create filter chain: {}",
-                format!("{}", source)
-            ),
-        }
     }
 }
 
