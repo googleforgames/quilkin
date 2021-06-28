@@ -13,79 +13,26 @@
 # limitations under the License.
 
 steps:
+  - name: gcr.io/cloud-builders/git
+    args: [ submodule, update, --init, --recursive ]
+    id: fetch-git-submodules
   - name: gcr.io/cloud-builders/gsutil
-    id: create-bucket
     entrypoint: bash
     args:
       - '-c'
       - 'gsutil mb $_STORAGE || true'
+    id: create-bucket
   - name: gcr.io/cloud-builders/docker
-    id: build-builder
-    args: [ 'build', '-f', 'Dockerfile.builder', '-t', 'builder', '.' ] # make sure we always have the latest docker with rust, cargo and cross
-    dir: ./build/release
-  - name: builder
-    id: copy-rust-tooling
-    entrypoint: bash
+    args: [ pull, "${_BUILD_IMAGE_TAG}" ]
+    id: pull-build-image
+  - name: us-docker.pkg.dev/$PROJECT_ID/ci/make-docker
+    dir: ./build
     args:
-      - -c
-      - 'cp -r /usr/local/cargo $$CARGO_HOME'
-  - name: builder
-    id: capture-version
-    entrypoint: bash
-    args: ['-c', "grep version -m 1 Cargo.toml | awk '{ print $3 }' | sed s/\\\"//g > version"]
-  - name: builder
-    id: echo-version
-    entrypoint: cat
-    args: ['./version']
-  - name: builder
-    id: cross-version
-    entrypoint: cross
-    args: ['--version']
-  - name: builder
-    id: cargo-about
-    entrypoint: bash
-    args:
-      - '-c'
-      - 'cargo about generate license.html.hbs > license.html'
-  - name: builder
-    id: dependencies-src.zip
-    entrypoint: bash
-    args:
-      - '-c'
-      - './build/release/archive_dependencies.sh'
-  - name: builder
-    id: x86_64-unknown-linux-gnu-debug
-    entrypoint: cross
-    args: ['build', '--target', 'x86_64-unknown-linux-gnu']
-  - name: builder
-    id: x86_64-unknown-linux-gnu-release
-    entrypoint: cross
-    args: ['build', '--target', 'x86_64-unknown-linux-gnu', '--release']
-  - name: builder
-    id: docker-linux-debug
-    entrypoint: bash
-    args:
-      - '-c'
-      - 'docker build -t $_LOCATION-docker.pkg.dev/$PROJECT_ID/$_REPOSITORY/quilkin:$(cat ./version)-debug --build-arg PROFILE=debug -f ./build/release/Dockerfile.release .'
-  - name: builder
-    id: docker-linux-release
-    entrypoint: bash
-    args:
-      - '-c'
-      - 'docker build -t $_LOCATION-docker.pkg.dev/$PROJECT_ID/$_REPOSITORY/quilkin:$(cat ./version) --build-arg PROFILE=release -f ./build/release/Dockerfile.release .'
-  - name: builder
-    id: x86_64-pc-windows-gnu-debug
-    entrypoint: cross
-    args: ['build', '--target', 'x86_64-pc-windows-gnu']
-  - name: builder
-    id: x86_64-pc-windows-gnu-release
-    entrypoint: cross
-    args: ['build', '--target', 'x86_64-pc-windows-gnu', '--release']
-  - name: builder
-    entrypoint: bash
-    args:
-      - '-c'
-      - 'zip quilkin-$(cat ./version).zip target/x86_64-unknown-linux-gnu/debug/quilkin ./target/x86_64-unknown-linux-gnu/release/quilkin ./target/x86_64-pc-windows-gnu/debug/quilkin.exe ./target/x86_64-pc-windows-gnu/release/quilkin.exe'
+      - BUILD_IMAGE_TAG=${_BUILD_IMAGE_TAG}
+      - BUILD_IMAGE_ARG=--cache-from ${_BUILD_IMAGE_TAG}
+      - IMAGE_NAME=${_IMAGE_TAG}
+      - build
+    id: build
   - name: ferrarimarco/github-changelog-generator:1.15.2
     id: changelog
     entrypoint: sh
@@ -102,17 +49,17 @@ artifacts:
       - 'license.html'
       - 'CHANGELOG.md'
   images:
-    - $_LOCATION-docker.pkg.dev/$PROJECT_ID/$_REPOSITORY/quilkin
+    - $_IMAGE_TAG
 options:
   env:
     - "CARGO_HOME=/workspace/.cargo"
     - "RUST_BACKTRACE=1"
-  machineType: N1_HIGHCPU_8
+  machineType: E2_HIGHCPU_32
   dynamic_substitutions: true
 substitutions:
+  _BUILD_IMAGE_TAG: us-docker.pkg.dev/${PROJECT_ID}/ci/build-image
+  _IMAGE_TAG: us-docker.pkg.dev/${PROJECT_ID}/release/quilkin
   _STORAGE: gs://${PROJECT_ID}-quilkin-releases
-  _LOCATION: us
-  _REPOSITORY: release
 availableSecrets:
   secretManager:
     - versionName: projects/${PROJECT_ID}/secrets/release-github-token/versions/latest

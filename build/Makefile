@@ -29,7 +29,7 @@ rust_toolchain := $(shell grep channel $(project_path)/rust-toolchain.toml | awk
 package_version := $(shell grep version -m 1 $(project_path)/Cargo.toml | awk '{print $$3}')
 
 common_rust_args := -v $(project_path):/workspace -w /workspace \
-					-v $(CARGO_HOME):/cargo --env CARGO_HOME=/cargo
+					-v $(CARGO_HOME)/registry:/usr/local/cargo/registry
 docker_in_docker := -v /var/run/docker.sock:/var/run/docker.sock
 
 #   _____                    _
@@ -56,8 +56,13 @@ test: ensure-build-image
 # Build all binaries, images and related artifacts
 build: binary-archive build-image
 
-# Build all binaries and images
-build: ensure-build-image build-linux-binary build-windows-binary build-macos-binary build-image
+# Build all debug and release binaries
+build-all-binaries: ensure-build-image build-linux-binary build-windows-binary build-macos-binary
+
+# Build an archive all debug and release binaries
+binary-archive: ensure-build-image build-all-binaries
+	docker run --rm $(common_rust_args) \
+    		--entrypoint=bash $(BUILD_IMAGE_TAG) -c 'zip quilkin-$(package_version).zip ./target/*/*/quilkin ./target/*/*/quilkin.exe'
 
 # Build release and debug binaries for x86_64-unknown-linux-gnu
 build-linux-binary: ensure-build-image
@@ -83,7 +88,7 @@ build-macos-binary:
 # Build release and debug container images.
 # Use IMAGE_NAME argument to specify the container registry and image name. Defaults to 'quilkin'.
 build-image: ensure-build-image build-linux-binary
-build-image: IMAGE_NAME ?= quilkin
+build-image: IMAGE_NAME := quilkin
 build-image:
 	docker run --rm $(common_rust_args) \
 		--entrypoint=bash $(BUILD_IMAGE_TAG) -c 'cargo about generate license.html.hbs > license.html'
@@ -92,5 +97,14 @@ build-image:
 	docker build -t $(IMAGE_NAME):$(package_version)-debug --build-arg PROFILE=debug -f $(project_path)/image/Dockerfile $(project_path)
 	docker build -t $(IMAGE_NAME):$(package_version) --build-arg PROFILE=release -f $(project_path)/image/Dockerfile $(project_path)
 
-ensure-build-image:
-	docker build --build-arg RUST_TOOLCHAIN=$(rust_toolchain) --tag=$(BUILD_IMAGE_TAG) $(build_path)/build-image/
+# Start an interactive shell inside the build image
+# Useful for testing, or adhoc cargo commands
+shell: ensure-build-image
+	docker run --rm -it $(common_rust_args) \
+		--entrypoint=bash $(BUILD_IMAGE_TAG)
+
+ensure-build-image: ensure-cargo-registry
+	docker build $(BUILD_IMAGE_ARG) --build-arg RUST_TOOLCHAIN=$(rust_toolchain) --tag=$(BUILD_IMAGE_TAG) $(build_path)/build-image/
+
+ensure-cargo-registry:
+	-mkdir -p $(CARGO_HOME)/registry
