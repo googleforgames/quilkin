@@ -545,7 +545,7 @@ mod tests {
                         value: vec![],
                     })),
                 }])],
-                "filter MissingFilter is not found",
+                "filter `MissingFilter` not found",
             ),
             (
                 // Multiple filter chains.
