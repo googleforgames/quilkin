@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Google LLC All Rights Reserved.
+ * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,8 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-use std::fmt::{self, Formatter};
 
 use prometheus::{Error as PrometheusError, Histogram, HistogramOpts, Registry};
 
@@ -36,24 +34,15 @@ pub struct FilterChain {
     filter_write_duration_seconds: Vec<Histogram>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum Error {
+    #[error("{}", .0)]
     Prometheus(PrometheusError),
+    #[error("failed to create filter {}: {}", filter_name, error)]
     Filter {
         filter_name: String,
         error: ValidationError,
     },
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Prometheus(error) => f.write_str(&error.to_string()),
-            Self::Filter { filter_name, error } => {
-                write!(f, "failed to create filter {}: {}", filter_name, error,)
-            }
-        }
-    }
 }
 
 impl From<PrometheusError> for Error {

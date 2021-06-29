@@ -52,7 +52,7 @@ The proxy exposes the following general metrics (See the metrics sub-sections fo
 
   The number of currently active clusters.
 
-- `quilkin_endpoints_active` (Gauge)
+- `quilkin_cluster_active_endpoints` (Gauge)
 
   The number of currently active upstream endpoints. Note that this tracks the number of endpoints that the proxy knows of rather than those that it is connected to (see [Session Metrics][session-metrics] instead for those)
 

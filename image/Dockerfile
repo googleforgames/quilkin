@@ -1,4 +1,4 @@
-# Copyright 2020 Google LLC
+# Copyright 2021 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,8 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-steps:
-  - name: gcr.io/cloud-builders/docker
-    args: ['build', '-t', 'us-docker.pkg.dev/$PROJECT_ID/ci/cargo', '.']
-images: ['us-docker.pkg.dev/$PROJECT_ID/ci/cargo']
-tags: ['ci']
+ARG PROFILE
+
+FROM gcr.io/distroless/cc:nonroot as base
+WORKDIR /
+COPY ./license.html .
+COPY ./dependencies-src.zip .
+COPY --chown=nonroot:nonroot ./image/quilkin.yaml /etc/quilkin/quilkin.yaml
+
+FROM base as release
+COPY ./target/x86_64-unknown-linux-gnu/release/quilkin .
+
+FROM base as debug
+COPY ./target/x86_64-unknown-linux-gnu/debug/quilkin .
+
+FROM $PROFILE
+USER nonroot:nonroot
+ENTRYPOINT ["/quilkin", "--filename", "/etc/quilkin/quilkin.yaml"]

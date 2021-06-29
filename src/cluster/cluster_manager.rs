@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Google LLC All Rights Reserved.
+ * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
+use std::sync::Arc;
+
 // We use a parking_lot since it's significantly faster under low contention
 // and we will need to acquire a read lock with every packet that is processed
 // to be able to capture the current endpoint state and pass it to Filters.
 use parking_lot::RwLock;
 use slog::{debug, o, warn, Logger};
-use std::{fmt, sync::Arc};
 
 use prometheus::{Registry, Result as MetricsResult};
 use tokio::sync::{mpsc, watch};
@@ -40,18 +41,11 @@ pub(crate) struct ClusterManager {
 
 /// InitializeError is returned with an error message if the
 /// [`ClusterManager`] fails to initialize properly.
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum InitializeError {
+    #[error("{:?}", .0)]
     Message(String),
 }
-
-impl fmt::Display for InitializeError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", format!("{:?}", self))
-    }
-}
-
-impl std::error::Error for InitializeError {}
 
 impl ClusterManager {
     fn new(metrics_registry: &Registry, endpoints: Option<Endpoints>) -> MetricsResult<Self> {
