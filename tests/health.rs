@@ -17,8 +17,8 @@
 #[cfg(test)]
 mod tests {
     use quilkin::config::{Admin, Builder, EndPoint};
-    use quilkin::proxy::Builder as ProxyBuilder;
     use quilkin::test_utils::TestHelper;
+    use quilkin::Builder as ProxyBuilder;
     use std::panic;
     use std::sync::Arc;
 

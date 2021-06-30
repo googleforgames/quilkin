@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+//! Quilkin configuration.
+
 use std::net::SocketAddr;
 
 use base64_serde::base64_serde_type;

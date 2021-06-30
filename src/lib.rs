@@ -18,11 +18,22 @@ mod cluster;
 pub mod config;
 pub mod filters;
 pub(crate) mod metrics;
-pub mod proxy;
-pub mod runner;
-pub mod test_utils;
+mod proxy;
+mod runner;
 pub(crate) mod utils;
 pub(crate) mod xds;
+
+#[doc(hidden)]
+pub mod test_utils;
+
+pub type Result<T, E = runner::Error> = std::result::Result<T, E>;
+
+#[doc(inline)]
+pub use self::{
+    config::Config,
+    proxy::{logger, Builder, PendingValidation, Server, Validated},
+    runner::{run, run_with_config},
+};
 
 pub use quilkin_macros::include_proto;
 
