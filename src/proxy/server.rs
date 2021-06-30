@@ -318,7 +318,7 @@ impl Server {
             args.log,
             "Packet Received";
             "from" => recv_addr,
-            "contents" => debug::bytes_to_string(packet.to_vec()),
+            "contents" => debug::bytes_to_string(&packet),
         );
 
         let endpoints = match args.cluster_manager.read().get_all_endpoints() {
@@ -333,7 +333,7 @@ impl Server {
             let filter_manager_guard = args.filter_manager.read();
             filter_manager_guard.get_filter_chain()
         };
-        let result = filter_chain.read(ReadContext::new(endpoints, recv_addr, packet.to_vec()));
+        let result = filter_chain.read(ReadContext::new(endpoints, recv_addr, packet));
 
         if let Some(response) = result {
             for endpoint in response.endpoints.iter() {
@@ -460,13 +460,10 @@ impl Server {
                     log,
                     "Sending packet back to origin";
                     "origin" => packet.dest(),
-                    "contents" => debug::bytes_to_string(packet.contents().clone()),
+                    "contents" => debug::bytes_to_string(packet.contents()),
                 );
 
-                if let Err(err) = socket
-                    .send_to(packet.contents().as_slice(), &packet.dest())
-                    .await
-                {
+                if let Err(err) = socket.send_to(packet.contents(), &packet.dest()).await {
                     error!(log, "Error sending packet"; "dest" => %packet.dest(), "error" => %err);
                 }
             }

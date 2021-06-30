@@ -202,7 +202,7 @@ impl Session {
 
         trace!(log, "Received packet"; "from" => from,
             "endpoint_addr" => &endpoint.address,
-            "contents" => debug::bytes_to_string(packet.to_vec()));
+            "contents" => debug::bytes_to_string(&packet));
 
         if let Err(err) = Session::do_update_expiration(expiration, ttl) {
             warn!(log, "Error updating session expiration"; "error" => %err)
@@ -256,7 +256,7 @@ impl Session {
     pub async fn send(&self, buf: &[u8]) -> Result<Option<usize>> {
         trace!(self.log, "Sending packet";
         "dest_address" => &self.dest.address,
-        "contents" => debug::bytes_to_string(buf.to_vec()));
+        "contents" => debug::bytes_to_string(buf));
 
         self.do_send(buf)
             .await
