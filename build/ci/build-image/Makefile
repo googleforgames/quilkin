@@ -1,4 +1,4 @@
-# Copyright 2020 Google LLC
+# Copyright 2021 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# build: creates the project Cloud Build custom build step and hosts it on gcr.io
+current_dir := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+project_path := $(realpath $(current_dir)/../../..)
+
+# build: submits the cloud build
 build:
-	gcloud builds submit . --config=cloudbuild.yaml $(ARGS)
+	cd $(project_path) && gcloud builds submit . --config=./build/ci/build-image/cloudbuild.yaml

@@ -12,8 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM rust:1.51.0
-
-RUN rustup component add rustfmt clippy && rustup toolchain install nightly
-
-ENTRYPOINT ["cargo"]
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args: ['build', '-t', 'us-docker.pkg.dev/$PROJECT_ID/ci/make-docker', '/workspace/build/ci/build-image']
+    id: build-make-docker
+  - name: us-docker.pkg.dev/$PROJECT_ID/ci/make-docker
+    dir: /workspace/build
+    args:
+      - BUILD_IMAGE_TAG=us-docker.pkg.dev/$PROJECT_ID/ci/build-image
+      - ensure-build-image
+    id: build-build-image
+images:
+  - us-docker.pkg.dev/$PROJECT_ID/ci/make-docker
+  - us-docker.pkg.dev/$PROJECT_ID/ci/build-image
+tags: ['ci']
+options:
+  machineType: E2_HIGHCPU_8
+timeout: 1800s
