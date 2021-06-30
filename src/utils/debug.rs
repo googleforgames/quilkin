@@ -19,7 +19,8 @@
 
 /// Attempt to convert a packet into a string, if it is one, otherwise return some human
 /// readable details about the packet.
-pub(crate) fn bytes_to_string(bytes: Vec<u8>) -> String {
-    String::from_utf8(bytes.to_vec())
+pub(crate) fn bytes_to_string(bytes: &[u8]) -> String {
+    std::str::from_utf8(bytes)
+        .map(str::to_string)
         .unwrap_or_else(|_| format!("<raw bytes :: len: {}>", bytes.len()))
 }
