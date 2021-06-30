@@ -24,7 +24,7 @@ build_path := $(dir $(mkfile_path))
 project_path := $(realpath $(build_path)/..)
 
 CARGO_HOME ?= ~/.cargo
-build_image_tag := quilkin-build
+BUILD_IMAGE_TAG := quilkin-build
 rust_toolchain := $(shell grep channel $(project_path)/rust-toolchain.toml | awk '{ print $$3 }')
 package_version := $(shell grep version -m 1 $(project_path)/Cargo.toml | awk '{print $$3}')
 
@@ -45,13 +45,16 @@ help:
 # Run all tests
 test: ensure-build-image
 	docker run --rm $(common_rust_args) \
- 		--entrypoint=cargo $(build_image_tag) clippy --tests -- -D warnings
+ 		--entrypoint=cargo $(BUILD_IMAGE_TAG) clippy --tests -- -D warnings
 	docker run --rm $(common_rust_args) \
- 		--entrypoint=cargo $(build_image_tag) fmt -- --check
+ 		--entrypoint=cargo $(BUILD_IMAGE_TAG) fmt -- --check
 	docker run --rm $(common_rust_args) \
-     		--entrypoint=cargo $(build_image_tag) test --tests
+     		--entrypoint=cargo $(BUILD_IMAGE_TAG) test --tests
 	docker run --rm $(common_rust_args) \
-     		--entrypoint=cargo $(build_image_tag) +nightly test --doc
+     		--entrypoint=cargo $(BUILD_IMAGE_TAG) +nightly test --doc
+
+# Build all binaries, images and related artifacts
+build: binary-archive build-image
 
 # Build all binaries and images
 build: ensure-build-image build-linux-binary build-windows-binary build-macos-binary build-image
@@ -59,16 +62,16 @@ build: ensure-build-image build-linux-binary build-windows-binary build-macos-bi
 # Build release and debug binaries for x86_64-unknown-linux-gnu
 build-linux-binary: ensure-build-image
 	docker run --rm $(common_rust_args) $(docker_in_docker) \
- 		--entrypoint=cross $(build_image_tag) build --target x86_64-unknown-linux-gnu
+ 		--entrypoint=cross $(BUILD_IMAGE_TAG) build --target x86_64-unknown-linux-gnu
 	docker run --rm $(common_rust_args) $(docker_in_docker) \
- 		--entrypoint=cross $(build_image_tag) build --target x86_64-unknown-linux-gnu --release
+ 		--entrypoint=cross $(BUILD_IMAGE_TAG) build --target x86_64-unknown-linux-gnu --release
 
 # Build release and debug binaries for x86_64-pc-windows-gnu
 build-windows-binary: ensure-build-image
 	docker run --rm $(common_rust_args) $(docker_in_docker) \
- 		--entrypoint=cross $(build_image_tag) build --target x86_64-pc-windows-gnu
+ 		--entrypoint=cross $(BUILD_IMAGE_TAG) build --target x86_64-pc-windows-gnu
 	docker run --rm $(common_rust_args) $(docker_in_docker) \
- 		--entrypoint=cross $(build_image_tag) build --target x86_64-pc-windows-gnu --release
+ 		--entrypoint=cross $(BUILD_IMAGE_TAG) build --target x86_64-pc-windows-gnu --release
 
 # Build release and debug binaries for x86_64-apple-darwin
 build-macos-binary:
@@ -83,11 +86,11 @@ build-image: ensure-build-image build-linux-binary
 build-image: IMAGE_NAME ?= quilkin
 build-image:
 	docker run --rm $(common_rust_args) \
-		--entrypoint=bash $(build_image_tag) -c 'cargo about generate license.html.hbs > license.html'
+		--entrypoint=bash $(BUILD_IMAGE_TAG) -c 'cargo about generate license.html.hbs > license.html'
 	docker run --rm $(common_rust_args) \
-		--entrypoint=bash $(build_image_tag) -c './image/archive_dependencies.sh'
+		--entrypoint=bash $(BUILD_IMAGE_TAG) -c './image/archive_dependencies.sh'
 	docker build -t $(IMAGE_NAME):$(package_version)-debug --build-arg PROFILE=debug -f $(project_path)/image/Dockerfile $(project_path)
 	docker build -t $(IMAGE_NAME):$(package_version) --build-arg PROFILE=release -f $(project_path)/image/Dockerfile $(project_path)
 
 ensure-build-image:
-	docker build --build-arg RUST_TOOLCHAIN=$(rust_toolchain) --tag=$(build_image_tag) $(build_path)/build-image/
+	docker build --build-arg RUST_TOOLCHAIN=$(rust_toolchain) --tag=$(BUILD_IMAGE_TAG) $(build_path)/build-image/
