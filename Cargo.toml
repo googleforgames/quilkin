@@ -29,6 +29,7 @@ readme = "README.md"
 keywords = ["proxy", "game-server", "game-development", "networking", "multiplayer"]
 categories = ["game-development", "network-programming"]
 edition = "2018"
+exclude = ["docs", "build", "examples", "image"]
 
 [dependencies]
 # Local
