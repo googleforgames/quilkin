@@ -14,41 +14,24 @@
 
 steps:
   - name: gcr.io/cloud-builders/git
-    entrypoint: '/bin/sh'
-    args:
-    - '-c'
-    - |
-      git clone --depth 1000 https://github.com/envoyproxy/data-plane-api.git proto/data-plane-api
-      git -C proto/data-plane-api checkout c5f1620aa47b4dfdefebb5271c3135ef33029a0e
-      git clone --depth 1000 https://github.com/cncf/udpa.git proto/udpa
-      git -C proto/udpa checkout bff43e8824d093cb64afdc901266cfab5a9777f0
-      git clone --depth 1000 https://github.com/envoyproxy/protoc-gen-validate.git proto/protoc-gen-validate
-      git -C proto/protoc-gen-validate checkout 12afc6dcd71f00ea08deee4df84173aed4cc7f97
-      git clone --depth 1000 https://github.com/googleapis/googleapis.git proto/googleapis
-      git -C proto/googleapis checkout a0d282daa691e95ec51131c81c3777fc95abf7f8
+    args: [ submodule, update, --init, --recursive ]
     id: fetch-git-submodules
-  - name: us-docker.pkg.dev/$PROJECT_ID/ci/cargo
-    entrypoint: rustc
-    args: ["--version", "--verbose"]
-    id: version
-  # clippy tends to rely on cached results from other cargo sub-commands so
-  # that it skips checking some files that were built previously. As a result
-  # we run it before other cargo sub-commands to ensure that it checks all files.
-  - name: us-docker.pkg.dev/$PROJECT_ID/ci/cargo
-    args: ["clippy", "--tests", "--", "-D", "warnings"]
-    id: clippy
-  - name: us-docker.pkg.dev/$PROJECT_ID/ci/cargo
-    args: ["fmt", "--", "--check"]
-    id: fmt-check
-  - name: us-docker.pkg.dev/$PROJECT_ID/ci/cargo
-    args: ["test", "--tests"]
+  - name: gcr.io/cloud-builders/docker
+    args: [ pull, "${_BUILD_IMAGE_TAG}" ]
+    id: pull-build-image
+  - name: us-docker.pkg.dev/$PROJECT_ID/ci/make-docker
+    dir: ./build
+    args:
+      - BUILD_IMAGE_TAG=${_BUILD_IMAGE_TAG}
+      - BUILD_IMAGE_ARG=--cache-from ${_BUILD_IMAGE_TAG}
+      - test
     id: test
-  - name: us-docker.pkg.dev/$PROJECT_ID/ci/cargo
-    args: ["+nightly", "test", "--doc"]
-    id: external-doc-test
 options:
   env:
     - "CARGO_HOME=/workspace/.cargo"
-  machineType: N1_HIGHCPU_8
-timeout: 30m
+  machineType: E2_HIGHCPU_8
+  dynamic_substitutions: true
+timeout: 1800s
+substitutions:
+  _BUILD_IMAGE_TAG: us-docker.pkg.dev/${PROJECT_ID}/ci/build-image
 logsBucket: "gs://quilkin-build-logs"

@@ -3,8 +3,7 @@
 Run `make` to submit the `cloudbuild.yaml` to [Google Cloud Build](https://cloud.google.com/build) and build the 
 release:
 
-* Linux executable for both release and debug.
-* Windows executable for both release and debug.
+* Linux, Windows and macOS executable for both release and debug.
 * Docker images for both release and debug.
 
 If you need to pass extra arguments to the `make` target, the target comes with an `$(ARGS)` parameter than can be

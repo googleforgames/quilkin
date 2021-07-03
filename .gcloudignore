@@ -15,5 +15,7 @@
 #
 
 .*
+!.git
 !.dockerignore
 target
+quilkin-*.zip
