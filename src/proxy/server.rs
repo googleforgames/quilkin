@@ -335,7 +335,7 @@ impl Server {
         };
         let result = filter_chain.read(ReadContext::new(endpoints, recv_addr, packet));
 
-        if let Some(response) = result {
+        if let Some(response) = result.await {
             for endpoint in response.endpoints.iter() {
                 Self::session_send_packet(
                     &response.contents.as_slice(),

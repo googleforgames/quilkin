@@ -132,8 +132,9 @@ impl Drop for LocalRateLimit {
     }
 }
 
+#[async_trait::async_trait]
 impl Filter for LocalRateLimit {
-    fn read(&self, ctx: ReadContext) -> Option<ReadResponse> {
+    async fn read(&self, ctx: ReadContext) -> Option<ReadResponse> {
         self.acquire_token().map(|()| ctx.into()).or_else(|| {
             self.metrics.packets_dropped_total.inc();
             None
@@ -345,7 +346,7 @@ mod tests {
         });
 
         // Check that other routes are not affected.
-        assert_write_no_change(&r);
+        assert_write_no_change(&r).await;
 
         // Check that we're rate limited.
         assert!(r
@@ -358,6 +359,7 @@ mod tests {
                 "127.0.0.1:8080".parse().unwrap(),
                 vec![9],
             ))
+            .await
             .is_none(),);
     }
 
@@ -378,12 +380,13 @@ mod tests {
                 "127.0.0.1:8080".parse().unwrap(),
                 vec![9],
             ))
+            .await
             .unwrap();
         assert_eq!(result.contents, vec![9]);
         // We should be out of tokens now.
         assert_eq!(None, r.acquire_token());
 
         // Check that other routes are not affected.
-        assert_write_no_change(&r);
+        assert_write_no_change(&r).await;
     }
 }

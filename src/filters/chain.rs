@@ -116,34 +116,41 @@ impl FilterChain {
     }
 }
 
+#[async_trait::async_trait]
 impl Filter for FilterChain {
-    fn read(&self, ctx: ReadContext) -> Option<ReadResponse> {
-        self.filters
+    async fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
+        for ((_, filter), histogram) in self
+            .filters
             .iter()
             .zip(self.filter_read_duration_seconds.iter())
-            .try_fold(ctx, |ctx, ((_, filter), histogram)| {
-                Some(ReadContext::with_response(
-                    ctx.from,
-                    histogram.observe_closure_duration(|| filter.read(ctx))?,
-                ))
-            })
-            .map(ReadResponse::from)
+        {
+            let from = ctx.from;
+            let timer = histogram.start_timer();
+            let result = filter.read(ctx).await;
+            timer.observe_duration();
+            ctx = ReadContext::with_response(from, result?)
+        }
+
+        Some(ctx.into())
     }
 
-    fn write(&self, ctx: WriteContext) -> Option<WriteResponse> {
-        self.filters
+    async fn write(&self, mut ctx: WriteContext<'async_trait>) -> Option<WriteResponse> {
+        for ((_, filter), histogram) in self
+            .filters
             .iter()
             .rev()
             .zip(self.filter_write_duration_seconds.iter().rev())
-            .try_fold(ctx, |ctx, ((_, filter), histogram)| {
-                Some(WriteContext::with_response(
-                    ctx.endpoint,
-                    ctx.from,
-                    ctx.to,
-                    histogram.observe_closure_duration(|| filter.write(ctx))?,
-                ))
-            })
-            .map(WriteResponse::from)
+        {
+            let endpoint = ctx.endpoint;
+            let from = ctx.from;
+            let to = ctx.to;
+            let timer = histogram.start_timer();
+            let result = filter.write(ctx).await;
+            timer.observe_duration();
+            ctx = WriteContext::with_response(endpoint, from, to, result?);
+        }
+
+        Some(ctx.into())
     }
 }
 
@@ -195,8 +202,8 @@ mod tests {
         Endpoints::new(endpoints).unwrap().into()
     }
 
-    #[test]
-    fn chain_single_test_filter() {
+    #[tokio::test]
+    async fn chain_single_test_filter() {
         let registry = prometheus::Registry::default();
         let chain = new_test_chain(&registry);
         let endpoints_fixture = endpoints();
@@ -207,6 +214,7 @@ mod tests {
                 "127.0.0.1:70".parse().unwrap(),
                 b"hello".to_vec(),
             ))
+            .await
             .unwrap();
 
         let expected = endpoints_fixture.clone();
@@ -232,6 +240,7 @@ mod tests {
                 "127.0.0.1:70".parse().unwrap(),
                 b"hello".to_vec(),
             ))
+            .await
             .unwrap();
 
         assert_eq!(
@@ -246,8 +255,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn chain_double_test_filter() {
+    #[tokio::test]
+    async fn chain_double_test_filter() {
         let registry = prometheus::Registry::default();
         let chain = FilterChain::new(
             vec![
@@ -266,6 +275,7 @@ mod tests {
                 "127.0.0.1:70".parse().unwrap(),
                 b"hello".to_vec(),
             ))
+            .await
             .unwrap();
 
         let expected = endpoints_fixture.clone();
@@ -291,6 +301,7 @@ mod tests {
                 "127.0.0.1:70".parse().unwrap(),
                 b"hello".to_vec(),
             ))
+            .await
             .unwrap();
         assert_eq!(
             "hello:our:127.0.0.1:80:127.0.0.1:70:our:127.0.0.1:80:127.0.0.1:70",

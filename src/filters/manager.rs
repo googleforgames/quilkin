@@ -171,17 +171,20 @@ mod tests {
             "127.0.0.1:8080".parse().unwrap(),
         )])
         .unwrap();
-        let response = filter_chain.read(ReadContext::new(
-            UpstreamEndpoints::from(test_endpoints.clone()),
-            "127.0.0.1:8081".parse().unwrap(),
-            vec![],
-        ));
+        let response = filter_chain
+            .read(ReadContext::new(
+                UpstreamEndpoints::from(test_endpoints.clone()),
+                "127.0.0.1:8081".parse().unwrap(),
+                vec![],
+            ))
+            .await;
         assert!(response.is_some());
 
         // A simple test filter that drops all packets flowing upstream.
         struct Drop;
+        #[async_trait::async_trait]
         impl Filter for Drop {
-            fn read(&self, _: ReadContext) -> Option<ReadResponse> {
+            async fn read(&self, _: ReadContext) -> Option<ReadResponse> {
                 None
             }
         }
@@ -203,6 +206,7 @@ mod tests {
                     "127.0.0.1:8081".parse().unwrap(),
                     vec![],
                 ))
+                .await
                 .is_none()
             {
                 break;

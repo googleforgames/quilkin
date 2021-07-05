@@ -77,6 +77,7 @@ pub(crate) use self::chain::FilterChain;
 ///   `write` implementation to execute.
 ///   * Labels
 ///     * `filter` The name of the filter being executed.
+#[async_trait::async_trait]
 pub trait Filter: Send + Sync {
     /// [`Filter::read`] is invoked when the proxy receives data from a
     /// downstream connection on the listening port.
@@ -86,7 +87,7 @@ pub trait Filter: Send + Sync {
     /// be sent (which may be manipulated) as well. If the packet should be
     /// rejected, return [`None`].  By default, the context passes
     /// through unchanged.
-    fn read(&self, ctx: ReadContext) -> Option<ReadResponse> {
+    async fn read(&self, ctx: ReadContext) -> Option<ReadResponse> {
         Some(ctx.into())
     }
 
@@ -97,7 +98,7 @@ pub trait Filter: Send + Sync {
     /// This function should return an [`WriteResponse`] containing the packet to
     /// be sent (which may be manipulated). If the packet should be rejected,
     /// return [`None`]. By default, the context passes through unchanged.
-    fn write(&self, ctx: WriteContext) -> Option<WriteResponse> {
+    async fn write(&self, ctx: WriteContext<'async_trait>) -> Option<WriteResponse> {
         Some(ctx.into())
     }
 }

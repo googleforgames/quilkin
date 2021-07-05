@@ -143,8 +143,9 @@ impl FilterFactory for LoadBalancerFilterFactory {
     }
 }
 
+#[async_trait::async_trait]
 impl Filter for LoadBalancerFilter {
-    fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
+    async fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
         self.endpoint_chooser.choose_endpoints(&mut ctx.endpoints);
         Some(ctx.into())
     }

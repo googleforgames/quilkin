@@ -235,8 +235,9 @@ mod tests {
         }
     }
 
+    #[async_trait::async_trait]
     impl Filter for Append {
-        fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
+        async fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
             ctx.contents = format!(
                 "{}{}",
                 String::from_utf8(ctx.contents).unwrap(),
@@ -377,6 +378,7 @@ mod tests {
                 "127.0.0.1:8081".parse().unwrap(),
                 "hello-".into(),
             ))
+            .await
             .unwrap();
 
         assert_eq!(
@@ -489,6 +491,7 @@ mod tests {
                     "127.0.0.1:8081".parse().unwrap(),
                     "hello-".into(),
                 ))
+                .await
                 .unwrap();
 
             assert_eq!(

@@ -192,7 +192,7 @@ pub trait Filter: Send + Sync {
     /// sent (which may be manipulated) as well.
     /// If the packet should be rejected, return None.
     /// By default, passes the context through unchanged
-    fn read(&self, ctx: ReadContext) -> Option<ReadResponse> {
+    async fn read(&self, ctx: ReadContext) -> Option<ReadResponse> {
         Some(ctx.into())
     }
 
@@ -202,7 +202,7 @@ pub trait Filter: Send + Sync {
     /// be sent (which may be manipulated).
     /// If the packet should be rejected, return None.
     /// By default, passes the context through unchanged
-    fn write(&self, ctx: WriteContext) -> Option<WriteResponse> {
+    async fn write(&self, ctx: WriteContext<'async_trait>) -> Option<WriteResponse> {
         Some(ctx.into())
     }
 }
@@ -385,12 +385,12 @@ mod tests {
 
     struct TestFilter {}
 
-    impl Filter for TestFilter {
-        fn read(&self, _: ReadContext) -> Option<ReadResponse> {
+    #[async_trait::async_trait] impl Filter for TestFilter {
+        async fn read(&self, _: ReadContext) -> Option<ReadResponse> {
             None
         }
 
-        fn write(&self, _: WriteContext) -> Option<WriteResponse> {
+        async fn write(&self, _: WriteContext) -> Option<WriteResponse> {
             None
         }
     }

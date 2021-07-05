@@ -37,13 +37,14 @@ pub fn factory() -> DynFilterFactory {
 
 struct Greet(String);
 
+#[async_trait::async_trait]
 impl Filter for Greet {
-    fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
+    async fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
         ctx.contents
             .splice(0..0, format!("{} ", self.0).into_bytes());
         Some(ctx.into())
     }
-    fn write(&self, mut ctx: WriteContext) -> Option<WriteResponse> {
+    async fn write(&self, mut ctx: WriteContext) -> Option<WriteResponse> {
         ctx.contents
             .splice(0..0, format!("{} ", self.0).into_bytes());
         Some(ctx.into())

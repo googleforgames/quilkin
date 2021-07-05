@@ -43,8 +43,9 @@ impl FilterFactory for TestFilterFactory {
 // TestFilter is useful for testing that commands are executing filters appropriately.
 pub struct TestFilter {}
 
+#[async_trait::async_trait]
 impl Filter for TestFilter {
-    fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
+    async fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
         // append values on each run
         ctx.metadata
             .entry(Arc::new("downstream".into()))
@@ -56,7 +57,7 @@ impl Filter for TestFilter {
         Some(ctx.into())
     }
 
-    fn write(&self, mut ctx: WriteContext) -> Option<WriteResponse> {
+    async fn write(&self, mut ctx: WriteContext<'async_trait>) -> Option<WriteResponse> {
         // append values on each run
         ctx.metadata
             .entry("upstream".into())
@@ -258,7 +259,7 @@ impl TestHelper {
 }
 
 /// assert that read makes no changes
-pub fn assert_filter_read_no_change<F>(filter: &F)
+pub async fn assert_filter_read_no_change<F>(filter: &F)
 where
     F: Filter,
 {
@@ -266,11 +267,14 @@ where
     let from = "127.0.0.1:90".parse().unwrap();
     let contents = "hello".to_string().into_bytes();
 
-    match filter.read(ReadContext::new(
-        Endpoints::new(endpoints.clone()).unwrap().into(),
-        from,
-        contents.clone(),
-    )) {
+    match filter
+        .read(ReadContext::new(
+            Endpoints::new(endpoints.clone()).unwrap().into(),
+            from,
+            contents.clone(),
+        ))
+        .await
+    {
         None => unreachable!("should return a result"),
         Some(response) => {
             assert_eq!(
@@ -283,19 +287,22 @@ where
 }
 
 /// assert that write makes no changes
-pub fn assert_write_no_change<F>(filter: &F)
+pub async fn assert_write_no_change<F>(filter: &F)
 where
     F: Filter,
 {
     let endpoint = Endpoint::from_address("127.0.0.1:90".parse().unwrap());
     let contents = "hello".to_string().into_bytes();
 
-    match filter.write(WriteContext::new(
-        &endpoint,
-        endpoint.address,
-        "127.0.0.1:70".parse().unwrap(),
-        contents.clone(),
-    )) {
+    match filter
+        .write(WriteContext::new(
+            &endpoint,
+            endpoint.address,
+            "127.0.0.1:70".parse().unwrap(),
+            contents.clone(),
+        ))
+        .await
+    {
         None => unreachable!("should return a result"),
         Some(response) => assert_eq!(contents, response.contents),
     }

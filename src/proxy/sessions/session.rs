@@ -212,8 +212,9 @@ impl Session {
             let filter_manager_guard = filter_manager.read();
             filter_manager_guard.get_filter_chain()
         };
-        if let Some(response) =
-            filter_chain.write(WriteContext::new(endpoint, from, to, packet.to_vec()))
+        if let Some(response) = filter_chain
+            .write(WriteContext::new(endpoint, from, to, packet.to_vec()))
+            .await
         {
             if let Err(err) = sender.send(Packet::new(to, response.contents)).await {
                 metrics.rx_errors_total.inc();

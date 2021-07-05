@@ -58,39 +58,9 @@ impl TokenRouter {
     }
 }
 
-/// Factory for the TokenRouter filter
-struct TokenRouterFactory {
-    log: Logger,
-}
-
-impl TokenRouterFactory {
-    pub fn new(base: &Logger) -> Self {
-        TokenRouterFactory { log: base.clone() }
-    }
-}
-
-impl FilterFactory for TokenRouterFactory {
-    fn name(&self) -> &'static str {
-        NAME
-    }
-
-    fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
-        let config: Config = args
-            .config
-            .map(|config| config.deserialize::<Config, ProtoConfig>(self.name()))
-            .transpose()?
-            .unwrap_or_default();
-
-        Ok(Box::new(TokenRouter::new(
-            &self.log,
-            config,
-            Metrics::new(&args.metrics_registry)?,
-        )))
-    }
-}
-
+#[async_trait::async_trait]
 impl Filter for TokenRouter {
-    fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
+    async fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
         match ctx.metadata.get(self.metadata_key.as_ref()) {
             None => {
                 if self.metrics.packets_dropped_no_token_found.get() % LOG_SAMPLING_RATE == 0 {
@@ -128,8 +98,39 @@ impl Filter for TokenRouter {
         }
     }
 
-    fn write(&self, ctx: WriteContext) -> Option<WriteResponse> {
+    async fn write(&self, ctx: WriteContext<'async_trait>) -> Option<WriteResponse> {
         Some(ctx.into())
+    }
+}
+
+/// Factory for the TokenRouter filter
+struct TokenRouterFactory {
+    log: Logger,
+}
+
+impl TokenRouterFactory {
+    pub fn new(base: &Logger) -> Self {
+        TokenRouterFactory { log: base.clone() }
+    }
+}
+
+impl FilterFactory for TokenRouterFactory {
+    fn name(&self) -> &'static str {
+        NAME
+    }
+
+    fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
+        let config: Config = args
+            .config
+            .map(|config| config.deserialize::<Config, ProtoConfig>(self.name()))
+            .transpose()?
+            .unwrap_or_default();
+
+        Ok(Box::new(TokenRouter::new(
+            &self.log,
+            config,
+            Metrics::new(&args.metrics_registry)?,
+        )))
     }
 }
 
@@ -228,8 +229,8 @@ mod tests {
         }
     }
 
-    #[test]
-    fn factory_custom_tokens() {
+    #[tokio::test]
+    async fn factory_custom_tokens() {
         let factory = TokenRouterFactory::new(&logger());
         let mut map = Mapping::new();
         map.insert(
@@ -246,11 +247,11 @@ mod tests {
         let mut ctx = new_ctx();
         ctx.metadata
             .insert(Arc::new(TOKEN_KEY.into()), Box::new(b"123".to_vec()));
-        assert_read(filter.deref(), ctx);
+        assert_read(filter.deref(), ctx).await;
     }
 
-    #[test]
-    fn factory_empty_config() {
+    #[tokio::test]
+    async fn factory_empty_config() {
         let factory = TokenRouterFactory::new(&logger());
         let map = Mapping::new();
 
@@ -263,11 +264,11 @@ mod tests {
         let mut ctx = new_ctx();
         ctx.metadata
             .insert(Arc::new(CAPTURED_BYTES.into()), Box::new(b"123".to_vec()));
-        assert_read(filter.deref(), ctx);
+        assert_read(filter.deref(), ctx).await;
     }
 
-    #[test]
-    fn factory_no_config() {
+    #[tokio::test]
+    async fn factory_no_config() {
         let factory = TokenRouterFactory::new(&logger());
 
         let filter = factory
@@ -276,11 +277,11 @@ mod tests {
         let mut ctx = new_ctx();
         ctx.metadata
             .insert(Arc::new(CAPTURED_BYTES.into()), Box::new(b"123".to_vec()));
-        assert_read(filter.deref(), ctx);
+        assert_read(filter.deref(), ctx).await;
     }
 
-    #[test]
-    fn downstream_receive() {
+    #[tokio::test]
+    async fn downstream_receive() {
         // valid key
         let config = Config {
             metadata_key: CAPTURED_BYTES.into(),
@@ -290,20 +291,20 @@ mod tests {
         let mut ctx = new_ctx();
         ctx.metadata
             .insert(Arc::new(CAPTURED_BYTES.into()), Box::new(b"123".to_vec()));
-        assert_read(&filter, ctx);
+        assert_read(&filter, ctx).await;
 
         // invalid key
         let mut ctx = new_ctx();
         ctx.metadata
             .insert(Arc::new(CAPTURED_BYTES.into()), Box::new(b"567".to_vec()));
 
-        let option = filter.read(ctx);
+        let option = filter.read(ctx).await;
         assert!(option.is_none());
         assert_eq!(1, filter.metrics.packets_dropped_no_endpoint_match.get());
 
         // no key
         let ctx = new_ctx();
-        assert!(filter.read(ctx).is_none());
+        assert!(filter.read(ctx).await.is_none());
         assert_eq!(1, filter.metrics.packets_dropped_no_token_found.get());
 
         // wrong type key
@@ -312,17 +313,17 @@ mod tests {
             Arc::new(CAPTURED_BYTES.into()),
             Box::new(String::from("wrong")),
         );
-        assert!(filter.read(ctx).is_none());
+        assert!(filter.read(ctx).await.is_none());
         assert_eq!(1, filter.metrics.packets_dropped_invalid_token.get());
     }
 
-    #[test]
-    fn write() {
+    #[tokio::test]
+    async fn write() {
         let config = Config {
             metadata_key: CAPTURED_BYTES.into(),
         };
         let filter = router(config);
-        assert_write_no_change(&filter);
+        assert_write_no_change(&filter).await;
     }
 
     fn new_ctx() -> ReadContext {
@@ -344,11 +345,11 @@ mod tests {
         )
     }
 
-    fn assert_read<F>(filter: &F, ctx: ReadContext)
+    async fn assert_read<F>(filter: &F, ctx: ReadContext)
     where
         F: Filter + ?Sized,
     {
-        let result = filter.read(ctx).unwrap();
+        let result = filter.read(ctx).await.unwrap();
 
         assert_eq!(b"hello".to_vec(), result.contents);
         assert_eq!(1, result.endpoints.size());

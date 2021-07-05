@@ -50,21 +50,6 @@ impl Debug {
     }
 }
 
-impl Filter for Debug {
-    fn read(&self, ctx: ReadContext) -> Option<ReadResponse> {
-        info!(self.log, "Read filter event"; "from" => ctx.from, "contents" => packet_to_string(ctx.contents.clone()));
-        Some(ctx.into())
-    }
-
-    fn write(&self, ctx: WriteContext) -> Option<WriteResponse> {
-        info!(self.log, "Write filter event"; "endpoint" => ctx.endpoint.address,
-        "from" => ctx.from,
-        "to" => ctx.to,
-        "contents" => packet_to_string(ctx.contents.clone()));
-        Some(ctx.into())
-    }
-}
-
 /// packet_to_string takes the content, and attempts to convert it to a string.
 /// Returns a string of "error decoding packet" on failure.
 fn packet_to_string(contents: Vec<u8>) -> String {
@@ -109,6 +94,22 @@ pub struct Config {
     pub id: Option<String>,
 }
 
+#[async_trait::async_trait]
+impl Filter for Debug {
+    async fn read(&self, ctx: ReadContext) -> Option<ReadResponse> {
+        info!(self.log, "Read filter event"; "from" => ctx.from, "contents" => packet_to_string(ctx.contents.clone()));
+        Some(ctx.into())
+    }
+
+    async fn write(&self, ctx: WriteContext<'async_trait>) -> Option<WriteResponse> {
+        info!(self.log, "Write filter event"; "endpoint" => ctx.endpoint.address,
+        "from" => ctx.from,
+        "to" => ctx.to,
+        "contents" => packet_to_string(ctx.contents.clone()));
+        Some(ctx.into())
+    }
+}
+
 impl TryFrom<ProtoDebug> for Config {
     type Error = ConvertProtoConfigError;
 
@@ -127,16 +128,16 @@ mod tests {
     use super::*;
     use prometheus::Registry;
 
-    #[test]
-    fn read() {
+    #[tokio::test]
+    async fn read() {
         let df = Debug::new(&logger(), None);
-        assert_filter_read_no_change(&df);
+        assert_filter_read_no_change(&df).await;
     }
 
-    #[test]
-    fn write() {
+    #[tokio::test]
+    async fn write() {
         let df = Debug::new(&logger(), None);
-        assert_write_no_change(&df);
+        assert_write_no_change(&df).await;
     }
 
     #[test]

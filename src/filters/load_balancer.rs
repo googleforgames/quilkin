@@ -36,8 +36,9 @@ struct LoadBalancer {
     endpoint_chooser: Box<dyn EndpointChooser>,
 }
 
+#[async_trait::async_trait]
 impl Filter for LoadBalancer {
-    fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
+    async fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
         self.endpoint_chooser.choose_endpoints(&mut ctx.endpoints);
         Some(ctx.into())
     }
@@ -84,7 +85,7 @@ mod tests {
             .unwrap()
     }
 
-    fn get_response_addresses(
+    async fn get_response_addresses(
         filter: &dyn Filter,
         input_addresses: &[SocketAddr],
     ) -> Vec<SocketAddr> {
@@ -101,6 +102,7 @@ mod tests {
                 "127.0.0.1:8080".parse().unwrap(),
                 vec![],
             ))
+            .await
             .unwrap()
             .endpoints
             .iter()
@@ -108,8 +110,8 @@ mod tests {
             .collect::<Vec<_>>()
     }
 
-    #[test]
-    fn round_robin_load_balancer_policy() {
+    #[tokio::test]
+    async fn round_robin_load_balancer_policy() {
         let addresses = vec![
             "127.0.0.1:8080".parse().unwrap(),
             "127.0.0.2:8080".parse().unwrap(),
@@ -125,17 +127,17 @@ policy: ROUND_ROBIN
         let expected_sequence = addresses.iter().map(|addr| vec![*addr]).collect::<Vec<_>>();
 
         for _ in 0..10 {
-            assert_eq!(
-                expected_sequence,
-                (0..addresses.len())
-                    .map(|_| get_response_addresses(filter.as_ref(), &addresses))
-                    .collect::<Vec<_>>()
-            );
+            let mut sequence = vec![];
+            for _ in 0..addresses.len() {
+                sequence.push(get_response_addresses(filter.as_ref(), &addresses).await);
+            }
+
+            assert_eq!(expected_sequence, sequence);
         }
     }
 
-    #[test]
-    fn random_load_balancer_policy() {
+    #[tokio::test]
+    async fn random_load_balancer_policy() {
         let addresses = vec![
             "127.0.0.1:8080".parse().unwrap(),
             "127.0.0.2:8080".parse().unwrap(),
@@ -150,10 +152,13 @@ policy: RANDOM
         // Run a few selection rounds through the addresses.
         let mut result_sequences = vec![];
         for _ in 0..10 {
-            let sequence = (0..addresses.len())
-                .map(|_| get_response_addresses(filter.as_ref(), &addresses))
-                .collect::<Vec<_>>();
-            result_sequences.push(sequence);
+            let mut results = vec![];
+
+            for _ in 0..addresses.len() {
+                results.push(get_response_addresses(filter.as_ref(), &addresses).await);
+            }
+
+            result_sequences.push(results);
         }
 
         // Check that every address was chosen at least once.

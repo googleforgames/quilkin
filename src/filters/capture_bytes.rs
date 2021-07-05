@@ -61,8 +61,9 @@ impl CaptureBytes {
     }
 }
 
+#[async_trait::async_trait]
 impl Filter for CaptureBytes {
-    fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
+    async fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
         // if the capture size is bigger than the packet size, then we drop the packet,
         // and occasionally warn
         if ctx.contents.len() < self.size {
@@ -141,8 +142,8 @@ mod tests {
         )
     }
 
-    #[test]
-    fn factory_valid_config_all() {
+    #[tokio::test]
+    async fn factory_valid_config_all() {
         let factory = CaptureBytesFactory::new(&logger());
         let mut map = Mapping::new();
         map.insert(
@@ -162,11 +163,11 @@ mod tests {
                 Some(&Value::Mapping(map)),
             ))
             .unwrap();
-        assert_end_strategy(filter.as_ref(), TOKEN_KEY, true);
+        assert_end_strategy(filter.as_ref(), TOKEN_KEY, true).await;
     }
 
-    #[test]
-    fn factory_valid_config_defaults() {
+    #[tokio::test]
+    async fn factory_valid_config_defaults() {
         let factory = CaptureBytesFactory::new(&logger());
         let mut map = Mapping::new();
         map.insert(Value::String("size".into()), Value::Number(3.into()));
@@ -176,7 +177,7 @@ mod tests {
                 Some(&Value::Mapping(map)),
             ))
             .unwrap();
-        assert_end_strategy(filter.as_ref(), CAPTURED_BYTES, false);
+        assert_end_strategy(filter.as_ref(), CAPTURED_BYTES, false).await;
     }
 
     #[test]
@@ -192,8 +193,8 @@ mod tests {
         assert!(result.is_err(), "Should be an error");
     }
 
-    #[test]
-    fn read() {
+    #[tokio::test]
+    async fn read() {
         let config = Config {
             strategy: Strategy::Suffix,
             metadata_key: TOKEN_KEY.into(),
@@ -201,11 +202,11 @@ mod tests {
             remove: true,
         };
         let filter = capture_bytes(config);
-        assert_end_strategy(&filter, TOKEN_KEY, true);
+        assert_end_strategy(&filter, TOKEN_KEY, true).await;
     }
 
-    #[test]
-    fn read_overflow_capture_size() {
+    #[tokio::test]
+    async fn read_overflow_capture_size() {
         let config = Config {
             strategy: Strategy::Suffix,
             metadata_key: TOKEN_KEY.into(),
@@ -214,19 +215,21 @@ mod tests {
         };
         let filter = capture_bytes(config);
         let endpoints = vec![Endpoint::from_address("127.0.0.1:81".parse().unwrap())];
-        let response = filter.read(ReadContext::new(
-            Endpoints::new(endpoints).unwrap().into(),
-            "127.0.0.1:80".parse().unwrap(),
-            "abc".to_string().into_bytes(),
-        ));
+        let response = filter
+            .read(ReadContext::new(
+                Endpoints::new(endpoints).unwrap().into(),
+                "127.0.0.1:80".parse().unwrap(),
+                "abc".to_string().into_bytes(),
+            ))
+            .await;
 
         assert!(response.is_none());
         let count = filter.metrics.packets_dropped_total.get();
         assert_eq!(1, count);
     }
 
-    #[test]
-    fn write() {
+    #[tokio::test]
+    async fn write() {
         let config = Config {
             strategy: Strategy::Suffix,
             metadata_key: TOKEN_KEY.into(),
@@ -234,7 +237,7 @@ mod tests {
             remove: false,
         };
         let filter = capture_bytes(config);
-        assert_write_no_change(&filter);
+        assert_write_no_change(&filter).await;
     }
 
     #[test]
@@ -264,7 +267,7 @@ mod tests {
         assert_eq!(b"hello".to_vec(), contents);
     }
 
-    fn assert_end_strategy<F>(filter: &F, key: &str, remove: bool)
+    async fn assert_end_strategy<F>(filter: &F, key: &str, remove: bool)
     where
         F: Filter + ?Sized,
     {
@@ -275,6 +278,7 @@ mod tests {
                 "127.0.0.1:80".parse().unwrap(),
                 "helloabc".to_string().into_bytes(),
             ))
+            .await
             .unwrap();
 
         if remove {

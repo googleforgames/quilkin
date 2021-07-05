@@ -82,8 +82,9 @@ impl Compress {
     }
 }
 
+#[async_trait::async_trait]
 impl Filter for Compress {
-    fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
+    async fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
         let original_size = ctx.contents.len();
 
         match self.on_read {
@@ -115,7 +116,7 @@ impl Filter for Compress {
         }
     }
 
-    fn write(&self, mut ctx: WriteContext) -> Option<WriteResponse> {
+    async fn write(&self, mut ctx: WriteContext<'async_trait>) -> Option<WriteResponse> {
         let original_size = ctx.contents.len();
         match self.on_write {
             Action::Compress => match self.compressor.encode(&mut ctx.contents) {
@@ -194,8 +195,8 @@ mod tests {
     };
     use super::{Action, Compress, CompressFactory, Config, Metrics, Mode};
 
-    #[test]
-    fn convert_proto_config() {
+    #[tokio::test]
+    async fn convert_proto_config() {
         let test_cases = vec![
             (
                 "should succeed when all valid values are provided",
@@ -283,8 +284,8 @@ mod tests {
         }
     }
 
-    #[test]
-    fn default_mode_factory() {
+    #[tokio::test]
+    async fn default_mode_factory() {
         let log = logger();
         let factory = CompressFactory::new(&log);
         let mut map = Mapping::new();
@@ -302,11 +303,11 @@ mod tests {
                 Some(&Value::Mapping(map)),
             ))
             .expect("should create a filter");
-        assert_downstream(filter.as_ref());
+        assert_downstream(filter.as_ref()).await;
     }
 
-    #[test]
-    fn config_factory() {
+    #[tokio::test]
+    async fn config_factory() {
         let log = logger();
         let factory = CompressFactory::new(&log);
         let mut map = Mapping::new();
@@ -323,11 +324,11 @@ mod tests {
         let args = CreateFilterArgs::fixed(Registry::default(), Some(&config));
 
         let filter = factory.create_filter(args).expect("should create a filter");
-        assert_downstream(filter.as_ref());
+        assert_downstream(filter.as_ref()).await;
     }
 
-    #[test]
-    fn upstream() {
+    #[tokio::test]
+    async fn upstream() {
         let log = logger();
         let compress = Compress::new(
             &log,
@@ -352,6 +353,7 @@ mod tests {
                 "127.0.0.1:8080".parse().unwrap(),
                 expected.clone(),
             ))
+            .await
             .expect("should compress");
 
         assert_ne!(expected, read_response.contents);
@@ -378,6 +380,7 @@ mod tests {
                 "127.0.0.1:8081".parse().unwrap(),
                 read_response.contents.clone(),
             ))
+            .await
             .expect("should decompress");
 
         assert_eq!(expected, write_response.contents);
@@ -395,8 +398,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn downstream() {
+    #[tokio::test]
+    async fn downstream() {
         let log = logger();
         let compress = Compress::new(
             &log,
@@ -408,7 +411,7 @@ mod tests {
             Metrics::new(&Registry::default()).unwrap(),
         );
 
-        let (expected, compressed) = assert_downstream(&compress);
+        let (expected, compressed) = assert_downstream(&compress).await;
 
         // multiply by two, because data was sent both downstream and upstream
         assert_eq!(
@@ -424,8 +427,8 @@ mod tests {
         assert_eq!(0, compress.metrics.packets_dropped_compress.get());
     }
 
-    #[test]
-    fn failed_decompress() {
+    #[tokio::test]
+    async fn failed_decompress() {
         let log = logger();
         let compression = Compress::new(
             &log,
@@ -437,12 +440,14 @@ mod tests {
             Metrics::new(&Registry::default()).unwrap(),
         );
 
-        let write_response = compression.write(WriteContext::new(
-            &Endpoint::from_address("127.0.0.1:80".parse().unwrap()),
-            "127.0.0.1:8080".parse().unwrap(),
-            "127.0.0.1:8081".parse().unwrap(),
-            b"hello".to_vec(),
-        ));
+        let write_response = compression
+            .write(WriteContext::new(
+                &Endpoint::from_address("127.0.0.1:80".parse().unwrap()),
+                "127.0.0.1:8080".parse().unwrap(),
+                "127.0.0.1:8081".parse().unwrap(),
+                b"hello".to_vec(),
+            ))
+            .await;
 
         assert!(write_response.is_none());
         assert_eq!(1, compression.metrics.packets_dropped_decompress.get());
@@ -458,16 +463,18 @@ mod tests {
             Metrics::new(&Registry::default()).unwrap(),
         );
 
-        let read_response = compression.read(ReadContext::new(
-            UpstreamEndpoints::from(
-                Endpoints::new(vec![Endpoint::from_address(
-                    "127.0.0.1:80".parse().unwrap(),
-                )])
-                .unwrap(),
-            ),
-            "127.0.0.1:8080".parse().unwrap(),
-            b"hello".to_vec(),
-        ));
+        let read_response = compression
+            .read(ReadContext::new(
+                UpstreamEndpoints::from(
+                    Endpoints::new(vec![Endpoint::from_address(
+                        "127.0.0.1:80".parse().unwrap(),
+                    )])
+                    .unwrap(),
+                ),
+                "127.0.0.1:8080".parse().unwrap(),
+                b"hello".to_vec(),
+            ))
+            .await;
 
         assert!(read_response.is_none());
         assert_eq!(1, compression.metrics.packets_dropped_decompress.get());
@@ -476,8 +483,8 @@ mod tests {
         assert_eq!(0, compression.metrics.decompressed_bytes_total.get());
     }
 
-    #[test]
-    fn do_nothing() {
+    #[tokio::test]
+    async fn do_nothing() {
         let log = logger();
         let compression = Compress::new(
             &log,
@@ -489,24 +496,28 @@ mod tests {
             Metrics::new(&Registry::default()).unwrap(),
         );
 
-        let read_response = compression.read(ReadContext::new(
-            UpstreamEndpoints::from(
-                Endpoints::new(vec![Endpoint::from_address(
-                    "127.0.0.1:80".parse().unwrap(),
-                )])
-                .unwrap(),
-            ),
-            "127.0.0.1:8080".parse().unwrap(),
-            b"hello".to_vec(),
-        ));
+        let read_response = compression
+            .read(ReadContext::new(
+                UpstreamEndpoints::from(
+                    Endpoints::new(vec![Endpoint::from_address(
+                        "127.0.0.1:80".parse().unwrap(),
+                    )])
+                    .unwrap(),
+                ),
+                "127.0.0.1:8080".parse().unwrap(),
+                b"hello".to_vec(),
+            ))
+            .await;
         assert_eq!(b"hello".to_vec(), read_response.unwrap().contents);
 
-        let write_response = compression.write(WriteContext::new(
-            &Endpoint::from_address("127.0.0.1:80".parse().unwrap()),
-            "127.0.0.1:8080".parse().unwrap(),
-            "127.0.0.1:8081".parse().unwrap(),
-            b"hello".to_vec(),
-        ));
+        let write_response = compression
+            .write(WriteContext::new(
+                &Endpoint::from_address("127.0.0.1:80".parse().unwrap()),
+                "127.0.0.1:8080".parse().unwrap(),
+                "127.0.0.1:8081".parse().unwrap(),
+                b"hello".to_vec(),
+            ))
+            .await;
 
         assert_eq!(b"hello".to_vec(), write_response.unwrap().contents)
     }
@@ -552,7 +563,7 @@ mod tests {
 
     /// assert compression work with decompress on read and compress on write
     /// Returns the original data packet, and the compressed version
-    fn assert_downstream<F>(filter: &F) -> (Vec<u8>, Vec<u8>)
+    async fn assert_downstream<F>(filter: &F) -> (Vec<u8>, Vec<u8>)
     where
         F: Filter + ?Sized,
     {
@@ -565,6 +576,7 @@ mod tests {
                 "127.0.0.1:8081".parse().unwrap(),
                 expected.clone(),
             ))
+            .await
             .expect("should compress");
 
         assert_ne!(expected, write_response.contents);
@@ -587,6 +599,7 @@ mod tests {
                 "127.0.0.1:8080".parse().unwrap(),
                 write_response.contents.clone(),
             ))
+            .await
             .expect("should decompress");
 
         assert_eq!(expected, read_response.contents);

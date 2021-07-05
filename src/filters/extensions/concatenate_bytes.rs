@@ -139,8 +139,9 @@ impl ConcatenateBytes {
     }
 }
 
+#[async_trait::async_trait]
 impl Filter for ConcatenateBytes {
-    fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
+    async fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
         match self.on_read {
             Strategy::Append => {
                 ctx.contents.extend(self.bytes.iter());
@@ -154,7 +155,7 @@ impl Filter for ConcatenateBytes {
         Some(ctx.into())
     }
 
-    fn write(&self, mut ctx: WriteContext) -> Option<WriteResponse> {
+    async fn write(&self, mut ctx: WriteContext<'async_trait>) -> Option<WriteResponse> {
         match self.on_write {
             Strategy::Append => {
                 ctx.contents.extend(self.bytes.iter());

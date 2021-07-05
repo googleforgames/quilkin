@@ -73,12 +73,13 @@ To extend Quilkin's code with our own custom filter, we need to do the following
    // to `"greet.v1"`.
    struct Greet;
 
+   #[async_trait::async_trait]
    impl Filter for Greet {
-       fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
+       async fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
            ctx.contents.splice(0..0, String::from("Hello ").into_bytes());
            Some(ctx.into())
        }
-       fn write(&self, mut ctx: WriteContext) -> Option<WriteResponse> {
+       async fn write(&self, mut ctx: WriteContext<'async_trait>) -> Option<WriteResponse> {
            ctx.contents.splice(0..0, String::from("Goodbye ").into_bytes());
            Some(ctx.into())
        }
@@ -210,13 +211,14 @@ The [Serde] crate is used to describe static YAML configuration in code while [P
 
    struct Greet(String);
 
+   #[async_trait::async_trait]
    impl Filter for Greet {
-       fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
+       async fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
            ctx.contents
                .splice(0..0, format!("{} ",self.0).into_bytes());
            Some(ctx.into())
        }
-       fn write(&self, mut ctx: WriteContext) -> Option<WriteResponse> {
+       async fn write(&self, mut ctx: WriteContext<'async_trait>) -> Option<WriteResponse> {
            ctx.contents
                .splice(0..0, format!("{} ",self.0).into_bytes());
            Some(ctx.into())

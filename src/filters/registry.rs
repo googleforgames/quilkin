@@ -67,18 +67,19 @@ mod tests {
 
     struct TestFilter {}
 
+    #[async_trait::async_trait]
     impl Filter for TestFilter {
-        fn read(&self, _: ReadContext) -> Option<ReadResponse> {
+        async fn read(&self, _: ReadContext) -> Option<ReadResponse> {
             None
         }
 
-        fn write(&self, _: WriteContext) -> Option<WriteResponse> {
+        async fn write(&self, _: WriteContext<'async_trait>) -> Option<WriteResponse> {
             None
         }
     }
 
-    #[test]
-    fn insert_and_get() {
+    #[tokio::test]
+    async fn insert_and_get() {
         let reg = new_registry(&logger());
 
         match reg.get(
@@ -116,9 +117,11 @@ mod tests {
                 addr,
                 vec![]
             ))
+            .await
             .is_some());
         assert!(filter
             .write(WriteContext::new(&endpoint, addr, addr, vec![],))
+            .await
             .is_some());
     }
 }
