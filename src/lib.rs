@@ -39,13 +39,13 @@ pub use quilkin_macros::include_proto;
 
 #[cfg(doctest)]
 mod external_doc_tests {
-    #![doc = include_str!("../docs/extensions/filters/filters.md")]
-    #![doc = include_str!("../docs/extensions/filters/writing_custom_filters.md")]
-    #![doc = include_str!("../docs/extensions/filters/load_balancer.md")]
-    #![doc = include_str!("../docs/extensions/filters/local_rate_limit.md")]
-    #![doc = include_str!("../docs/extensions/filters/debug.md")]
-    #![doc = include_str!("../docs/extensions/filters/concatenate_bytes.md")]
-    #![doc = include_str!("../docs/extensions/filters/capture_bytes.md")]
-    #![doc = include_str!("../docs/extensions/filters/token_router.md")]
-    #![doc = include_str!("../docs/extensions/filters/compress.md")]
+    #![doc = include_str!("../docs/src/filters.md")]
+    #![doc = include_str!("../docs/src/filters/writing_custom_filters.md")]
+    #![doc = include_str!("../docs/src/filters/load_balancer.md")]
+    #![doc = include_str!("../docs/src/filters/local_rate_limit.md")]
+    #![doc = include_str!("../docs/src/filters/debug.md")]
+    #![doc = include_str!("../docs/src/filters/concatenate_bytes.md")]
+    #![doc = include_str!("../docs/src/filters/capture_bytes.md")]
+    #![doc = include_str!("../docs/src/filters/token_router.md")]
+    #![doc = include_str!("../docs/src/filters/compress.md")]
 }

@@ -11,7 +11,7 @@ It is designed to be used behind game clients as well as in front of dedicated g
 
 Quilkin's aim is to pull the above functionality out of bespoke, monolithic dedicated game servers and clients, and
 provide standard, composable modules that can be reused across a wide set of multiplayer games, so that game
-developers can instead focus on their game specific aspects of building a multiplayer game.  
+developers can instead focus on their game specific aspects of building a multiplayer game.
 
 ## Why use Quilkin?
 
@@ -33,12 +33,12 @@ Quilkin incorporates these abilities:
 * Non-transparent proxying of UDP data, the internal state of your game architecture is not visible to bad actors.
 * Out of the box metrics for UDP packet information.
 * Composable tools for access control and security.
-* Able to be utilised as a standalone binary, with no client/server changes required or as a Rust library 
+* Able to be utilised as a standalone binary, with no client/server changes required or as a Rust library
   depending on how deep an integration you wish for your system.
 * Can be integrated with C/C++ code bases via FFI.
 
 ## What Next?
 
 * Read the [usage guide](./using.md)
-* Have a look at the [example configurations](../examples) for basic configuration examples.
+* Have a look at the [example configurations](https://github.com/googleforgames/quilkin/blob/main/examples) for basic configuration examples.
 * Check out the [example integration patterns](./integrations.md).

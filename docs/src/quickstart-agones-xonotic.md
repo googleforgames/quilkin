@@ -53,7 +53,7 @@ Let's take a look at some metrics that Quilkin outputs.
 Grab the name of the GameServer you connected to before, and replace the `${gameserver}` value below, and run the 
 command. This will forward the [admin](./admin.md) interface to localhost.
 
-```
+```shell
 kubectl port-forward ${gameserver} 9091
 ```
 
@@ -132,5 +132,5 @@ kubectl delete -f https://raw.githubusercontent.com/googleforgames/quilkin/main/
 
 ## What's Next?
 
-* Have a look at the [examples](./examples) folder for configuration and usage examples.
+* Have a look at the [examples](https://github.com/googleforgames/quilkin/blob/main/examples) folder for configuration and usage examples.
 * Explore the [proxy configuration reference](./docs/proxy-configuration.md) for other configuration options. 

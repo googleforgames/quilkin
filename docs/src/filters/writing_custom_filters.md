@@ -1,3 +1,5 @@
+# Writing Custom Filters
+
 Quilkin provides an extensible implementation of [Filters] that allows us to plug in custom implementations to fit our needs.
 This document provides an overview of the API and how we can go about writing our own [Filters].
 
