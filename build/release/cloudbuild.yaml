@@ -38,7 +38,7 @@ steps:
     entrypoint: sh
     args:
       - '-c'
-      - 'github_changelog_generator --user=googleforgames --project=quilkin --bug-labels=kind/bug --enhancement-labels=kind/feature --breaking-labels=kind/breaking --security-labels=area/security --future-release "v$(cat ./version)" --release-branch=main --token $$GH_TOKEN'
+      - 'github_changelog_generator --user=googleforgames --project=quilkin --bug-labels=kind/bug --enhancement-labels=kind/feature --breaking-labels=kind/breaking --security-labels=area/security --exclude-labels=duplicate,question,invalid,wontfix,priority/wontfix --future-release "v$(cat ./version)" --release-branch=main --token $$GH_TOKEN'
     secretEnv:
       - GH_TOKEN
 artifacts:
