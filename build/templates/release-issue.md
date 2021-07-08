@@ -3,6 +3,7 @@
 ## Prerequisites
 
 - [ ] Have at least `Editor` level access to `quilkin` Google Cloud project.
+- [ ] Local gcloud configuration is pointing at the `quilkin` Google Cloud project. 
 - [ ] Local git remote `upstream` points at `git@github.com:googleforgames/quilkin.git`.
 
 ## Steps
@@ -18,14 +19,13 @@
 - [ ] cd to `./build/release` and run `make` to submit the cloud build
 - [ ] Download all the artifacts from the cloud build.
 - [ ] Move the CHANGELOG.md to the root of this repository, replacing any previous versions.
-- [ ] Review `license.html` to ensure that there aren't any new MPL, GPL, LGPL, or CDDL dependencies from the last 
+- [ ] Review `license.html` to ensure that there aren't any new MPL, or CDDL dependencies from the last 
   release. If there are:
-    - [ ] Add the dependencies to
-    [archive_dependencies.sh](https://github.com/googleforgames/quilkin/blob/main/build/release/archive_dependencies.sh) 
-    so that the source is archived in the container image.
+    - [ ] Add the dependencies to [archive_dependencies.sh](https://github.com/googleforgames/quilkin/blob/main/build/release/archive_dependencies.sh)
+          so that the source is archived in the container image.
     - [ ] Reset checklist back to "run `make` to submit the cloud build", and start from there again.
-- [ ] Run `cd macros && cargo publish --dry-run` and ensure there are no issues.
-- [ ] Run `cargo publish --dry-run` and ensure there are no issues.  
+- [ ] Run `cd macros && cargo publish --dry-run --allow-dirty` and ensure there are no issues.
+- [ ] Run `cargo publish --dry-run --allow-dirty` and ensure there are no issues.  
 - [ ] Submit these changes as a PR, and merge with approval.
 - [ ] Create a [Github release](https://github.com/googleforgames/quilkin/releases/new) using the 
   [Github release template](./github-release.md).
