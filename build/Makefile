@@ -42,6 +42,10 @@ docker_in_docker := -v /var/run/docker.sock:/var/run/docker.sock
 help:
 	@cat $(MAKEFILE_LIST) | docker run --rm -i xanders/make-help
 
+# output the current build version
+version:
+	@echo $(package_version)
+
 # Run all tests
 test: ensure-build-image
 	docker run --rm $(common_rust_args) \
