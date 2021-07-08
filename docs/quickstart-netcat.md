@@ -7,10 +7,6 @@
 * [ncat](https://nmap.org/ncat/guide/)
 * [netcat](http://netcat.sourceforge.net/)
 
-> There are some issues cross compiling Rust to macOS from Linux, so we don't have a macOS release at this time, but 
-> we [are working on it!](https://github.com/googleforgames/quilkin/issues/19).
-> If you are on macOS, you may want to [compile from source](../CONTRIBUTING.md#cloning-the-repository) for the time being.
-
 ## 1. Start an udp echo service
 
 So that we have a target for sending UDP packets to, let's use `ncat` to create a simple UDP echo process.
@@ -33,8 +29,7 @@ Open a new terminal and copy the following to a file named `proxy.yaml`:
 version: v1alpha1
 static:
   endpoints:
-    - name: iperf3 client
-      address: 127.0.0.1:8000
+    - address: 127.0.0.1:8000
 ```
 
 This configuration will start Quilkin on the default port of 7000, and it will redirect all incoming UDP traffic to 

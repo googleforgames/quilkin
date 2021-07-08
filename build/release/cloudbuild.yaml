@@ -33,6 +33,13 @@ steps:
       - IMAGE_NAME=${_IMAGE_TAG}
       - build
     id: build
+  - name: us-docker.pkg.dev/$PROJECT_ID/ci/make-docker
+    dir: ./build
+    entrypoint: bash
+    args:
+      - '-c'
+      - 'make version > ../version'
+    id: output-version
   - name: ferrarimarco/github-changelog-generator:1.15.2
     id: changelog
     entrypoint: sh
