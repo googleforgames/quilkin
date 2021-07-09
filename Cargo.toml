@@ -19,7 +19,7 @@ members = [".", "./macros"]
 
 [package]
 name = "quilkin"
-version = "0.1.0-dev"
+version = "0.1.0"
 authors = ["Mark Mandel <markmandel@google.com>", "Ifeanyi Ubah <ifeanyi.ubah@embark-studios.com>"]
 license-file = "LICENSE"
 description = "Quilkin is a non-transparent UDP proxy specifically designed for use with large scale multiplayer dedicated game server deployments, to ensure security, access control, telemetry data, metrics and more."
@@ -33,7 +33,7 @@ exclude = ["docs", "build", "examples", "image"]
 
 [dependencies]
 # Local
-quilkin-macros = { version = "0.1.0-dev", path = "./macros" }
+quilkin-macros = { version = "0.1.0", path = "./macros" }
 
 # Crates.io
 backoff = "0.3"
