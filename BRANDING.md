@@ -23,6 +23,6 @@ not sure; please file an issue for the project maintainers to review.
 
 ## Quilly, the project mascot
 
-Quilly is the official mascot of the Quilkin project. They are an adorable hedgehog welcoming all to the project. Quilly is not the project logo; rather they are a fun way to represent the project. You may modify the Quilly image and adapt if for your own use, but do credit back to the Quilkin project. 
+Quilly is the official mascot of the Quilkin project. They are an adorable hedgehog welcoming all to the project. Quilly is not the project logo; rather they are a fun way to represent the project. You may modify the Quilly image and adapt it for your own use, but do credit back to the Quilkin project. 
 
 Quilly's pronouns are they/them. 
