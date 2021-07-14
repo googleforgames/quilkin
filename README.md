@@ -7,7 +7,7 @@
 ![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/googleforgames/quilkin)
 ![GitHub branch checks state](https://img.shields.io/github/checks-status/googleforgames/quilkin/main)
 ![Discord](https://img.shields.io/discord/773975408265134100)
-![Twitter Follow](https://img.shields.io/twitter/follow/quilkindev?style=social)
+[![Twitter Follow](https://img.shields.io/twitter/follow/quilkindev?style=social)](https://twitter.com/quilkindev)
 
 Quilkin is a non-transparent UDP proxy specifically designed for use with large scale multiplayer dedicated game servers
 deployments, to ensure security, access control, telemetry data, metrics and more.
