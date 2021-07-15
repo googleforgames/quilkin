@@ -239,7 +239,7 @@ impl Server {
 
             // Initialize a buffer for the UDP packet. We use the maximum size of a UDP
             // packet, which is the maximum value of 16 a bit integer.
-            let mut buf = Vec::with_capacity(1 << 16);
+            let mut buf = vec![0; 1 << 16];
             loop {
                 match socket.recv_from(&mut buf).await {
                     Ok((size, recv_addr)) => {
