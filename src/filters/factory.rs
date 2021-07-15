@@ -26,12 +26,6 @@ pub type DynFilterFactory = Box<dyn FilterFactory>;
 
 /// Provides the name and creation function for a given [`Filter`].
 ///
-/// An implementation of [`FilterFactory`] provides a `name` and
-/// `create_filter` method.
-///
-/// - The `create_filter` method takes in [configuration][filter configuration]
-///   for the filter to create and returns a new instance of its filter type.
-/// - The `name` method returns the unique identifier of the filter.
 pub trait FilterFactory: Sync + Send {
     /// name returns the configuration name for the Filter
     /// The returned string identifies the filter item's path with the following format:
