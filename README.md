@@ -59,7 +59,11 @@ There are lots of ways to engage with the Quilkin community:
 
 Many concepts and architectural decisions where inspired by [Envoy Proxy](https://www.envoyproxy.io/). 
 Huge thanks to that team for the inspiration they provided with all their hard work. 
- 
+
+## Companies using Quilkin
+
+[<img src="./image/embark.png" alt="Embark Studios" height="100">](https://www.embark-studios.com/)
+
 ## Licence
 
 Apache 2.0
