@@ -63,7 +63,7 @@ There are lots of ways to engage with the Quilkin community:
 
 ## Credits
 
-Many concepts and architectural decisions where inspired by [Envoy Proxy](https://www.envoyproxy.io/). 
+Many concepts and architectural decisions were inspired by [Envoy Proxy](https://www.envoyproxy.io/). 
 Huge thanks to that team for the inspiration they provided with all their hard work. 
 
 ## Companies using Quilkin
