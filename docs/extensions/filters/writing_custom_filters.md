@@ -208,8 +208,6 @@ The [Serde] crate is used to describe static YAML configuration in code while [P
 
    # use quilkin::filters::{Filter, ReadContext, ReadResponse, WriteContext, WriteResponse};
 
-   const NAME: &str = "greet.v1";
-
    struct Greet(String);
 
    impl Filter for Greet {
