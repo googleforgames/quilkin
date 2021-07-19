@@ -33,6 +33,7 @@ RUN set -eux && \
     rustup toolchain install nightly && \
     cargo install cross && \
     cargo install cargo-about && \
+    cargo install --locked cargo-deny && \
     rustup --version && \
     cargo --version && \
     rustc --version && \

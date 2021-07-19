@@ -50,6 +50,10 @@ To run our external documentation tests:
 
 `cargo +nightly test --doc`
 
+To test dependency licences and security advisories:
+
+`cargo deny check`
+
 ### Developing with Make + Docker 
 
 There are a few reasons you may want to use the [Make](https://www.gnu.org/software/make/)
