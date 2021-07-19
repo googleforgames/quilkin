@@ -15,14 +15,17 @@
  */
 
 mod cluster;
-pub mod config;
-pub mod filters;
+
 pub(crate) mod metrics;
-pub mod proxy;
-pub mod runner;
-pub mod test_utils;
 pub(crate) mod utils;
 pub(crate) mod xds;
+
+pub mod config;
+pub mod filters;
+pub mod proxy;
+pub mod runner;
+#[cfg(test)]
+pub mod test_utils;
 
 pub use quilkin_macros::{filter, include_proto};
 

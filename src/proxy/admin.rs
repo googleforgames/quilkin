@@ -29,25 +29,22 @@ pub struct Admin {
     log: Logger,
     /// The address that the Admin server starts on
     addr: SocketAddr,
-    metrics: Arc<Metrics>,
     health: Arc<Health>,
 }
 
 impl Admin {
-    pub fn new(base: &Logger, addr: SocketAddr, metrics: Arc<Metrics>, heath: Health) -> Self {
-        Admin {
+    pub fn new(base: &Logger, addr: SocketAddr, heath: Health) -> Self {
+        Self {
             log: base.new(o!("source" => "proxy::Admin")),
             addr,
-            metrics,
             health: Arc::new(heath),
         }
     }
 
-    pub fn run(&self, mut shutdown_rx: watch::Receiver<()>) {
+    pub fn spawn(self, metrics: Arc<Metrics>, mut shutdown_rx: watch::Receiver<()>) {
         info!(self.log, "Starting admin endpoint"; "address" => self.addr.to_string());
 
-        let metrics = self.metrics.clone();
-        let health = self.health.clone();
+        let health = self.health;
         let make_svc = make_service_fn(move |_conn| {
             let metrics = metrics.clone();
             let health = health.clone();

@@ -20,15 +20,18 @@ use prometheus::Registry;
 use slog::{o, Drain, Logger};
 use tonic::transport::Endpoint as TonicEndpoint;
 
-use crate::cluster::Endpoint;
-use crate::config::{
-    parse_endpoint_metadata_from_yaml, Config, Endpoints, ManagementServer, Proxy, Source,
-    ValidationError, ValueInvalidArgs,
+use crate::{
+    cluster::Endpoint,
+    config::{
+        parse_endpoint_metadata_from_yaml, Config, Endpoints, ManagementServer,
+        Proxy as ProxyConfig, Source, ValidationError, ValueInvalidArgs,
+    },
+    filters::{chain::Error as FilterChainError, FilterChain, FilterRegistry, FilterSet},
+    proxy::{
+        metrics::ProxyMetrics, pipeline::UpstreamMetrics, Admin as ProxyAdmin, Health, Metrics,
+        Proxy,
+    },
 };
-use crate::filters::{chain::Error as FilterChainError, FilterChain, FilterRegistry, FilterSet};
-use crate::proxy::server::metrics::Metrics as ProxyMetrics;
-use crate::proxy::sessions::metrics::Metrics as SessionMetrics;
-use crate::proxy::{Admin as ProxyAdmin, Health, Metrics, Server};
 
 pub(super) enum ValidatedSource {
     Static {
@@ -41,7 +44,7 @@ pub(super) enum ValidatedSource {
 }
 
 pub(super) struct ValidatedConfig {
-    pub proxy: Proxy,
+    pub proxy: ProxyConfig,
     pub source: ValidatedSource,
     // Limit struct creation to the builder.
     pub phantom: PhantomData<()>,
@@ -88,7 +91,7 @@ impl ValidationStatus for PendingValidation {
     type Output = ();
 }
 
-/// Represents the components needed to create a Server.
+/// Represents the components needed to create a Proxy.
 pub struct Builder<V> {
     log: Logger,
     config: Arc<Config>,
@@ -103,7 +106,7 @@ impl From<Arc<Config>> for Builder<PendingValidation> {
         let log = logger();
         let metrics = Arc::new(Metrics::new(&log, Registry::default()));
         let health = Health::new(&log);
-        let admin = ProxyAdmin::new(&log, config.admin.address, metrics.clone(), health);
+        let admin = ProxyAdmin::new(&log, config.admin.address, health);
         Builder {
             config,
             filter_registry: FilterRegistry::new(FilterSet::default(&log)),
@@ -262,13 +265,13 @@ impl Builder<PendingValidation> {
 }
 
 impl Builder<Validated> {
-    pub fn build(self) -> Server {
-        Server {
-            log: self.log.new(o!("source" => "server::Server")),
+    pub fn build(self) -> Proxy {
+        Proxy {
+            log: self.log.new(o!("source" => "server::Proxy")),
             config: Arc::new(self.validation_status.0),
             proxy_metrics: ProxyMetrics::new(&self.metrics.registry)
                 .expect("proxy metrics should be setup properly"),
-            session_metrics: SessionMetrics::new(&self.metrics.registry)
+            upstream_metrics: UpstreamMetrics::new(&self.metrics.registry)
                 .expect("session metrics should be setup properly"),
             admin: self.admin,
             metrics: self.metrics,

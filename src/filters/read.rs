@@ -17,6 +17,7 @@
 use std::{any::Any, collections::HashMap, net::SocketAddr, sync::Arc};
 
 use crate::config::UpstreamEndpoints;
+
 #[cfg(doc)]
 use crate::filters::Filter;
 

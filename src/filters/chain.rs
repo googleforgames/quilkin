@@ -137,7 +137,7 @@ impl Filter for FilterChain {
             .zip(self.filter_write_duration_seconds.iter().rev())
             .try_fold(ctx, |ctx, ((_, filter), histogram)| {
                 Some(WriteContext::with_response(
-                    ctx.endpoint,
+                    ctx.endpoint.clone(),
                     ctx.from,
                     ctx.to,
                     histogram.observe_closure_duration(|| filter.write(ctx))?,

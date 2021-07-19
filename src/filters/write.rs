@@ -23,9 +23,9 @@ use crate::filters::Filter;
 
 /// The input arguments to [`Filter::write`].
 #[non_exhaustive]
-pub struct WriteContext<'a> {
+pub struct WriteContext {
     /// The upstream endpoint that we're expecting packets from.
-    pub endpoint: &'a Endpoint,
+    pub endpoint: Endpoint,
     /// The source of the received packet.
     pub from: SocketAddr,
     /// The destination of the received packet.
@@ -54,10 +54,10 @@ pub struct WriteResponse {
     pub metadata: HashMap<String, Box<dyn Any + Send>>,
 }
 
-impl WriteContext<'_> {
+impl WriteContext {
     /// Creates a new [`WriteContext`]
     pub fn new(
-        endpoint: &Endpoint,
+        endpoint: Endpoint,
         from: SocketAddr,
         to: SocketAddr,
         contents: Vec<u8>,
@@ -73,7 +73,7 @@ impl WriteContext<'_> {
 
     /// Creates a new [`WriteContext`] from a given [`WriteResponse`].
     pub fn with_response(
-        endpoint: &Endpoint,
+        endpoint: Endpoint,
         from: SocketAddr,
         to: SocketAddr,
         response: WriteResponse,
@@ -88,7 +88,7 @@ impl WriteContext<'_> {
     }
 }
 
-impl From<WriteContext<'_>> for WriteResponse {
+impl From<WriteContext> for WriteResponse {
     fn from(ctx: WriteContext) -> Self {
         Self {
             contents: ctx.contents,

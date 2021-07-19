@@ -15,8 +15,36 @@
  */
 
 use hyper::{Body, Response, StatusCode};
-use prometheus::{Encoder, Registry, TextEncoder};
+use prometheus::{
+    core::{AtomicU64, GenericCounter},
+    Encoder, IntCounterVec, Registry, Result as MetricsResult, TextEncoder,
+};
 use slog::{o, warn, Logger};
+
+use crate::metrics::{opts, CollectorExt};
+
+#[derive(Clone)]
+pub struct ProxyMetrics {
+    pub packets_dropped_no_endpoints: GenericCounter<AtomicU64>,
+}
+
+impl ProxyMetrics {
+    pub fn new(registry: &Registry) -> MetricsResult<Self> {
+        let subsystem = "proxy";
+        Ok(Self {
+            packets_dropped_no_endpoints: IntCounterVec::new(
+                opts(
+                    "packets_dropped_total",
+                    subsystem,
+                    "Total number of packets dropped by the proxy",
+                ),
+                &["reason"],
+            )?
+            .register_if_not_exists(registry)?
+            .get_metric_with_label_values(&["NoConfiguredEndpoints"])?,
+        })
+    }
+}
 
 /// Metrics contains metrics configuration for the server.
 #[derive(Clone)]

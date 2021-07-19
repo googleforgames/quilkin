@@ -14,26 +14,16 @@
  *  limitations under the License.
  */
 
-use crate::proxy::sessions::error::Error as SessionError;
-use std::fmt::{self, Display, Formatter};
+use crate::proxy::pipeline::UpstreamError;
 
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum Error {
+    #[error("failed to startup properly: {}", .0)]
     Initialize(String),
-    Session(SessionError),
+    #[error("session error: {}", .0)]
+    Upstream(UpstreamError),
+    #[error("failed to bind to port: {}", .0)]
     Bind(tokio::io::Error),
+    #[error("receive loop exited with an error: {}", .0)]
     RecvLoop(String),
-}
-
-impl std::error::Error for Error {}
-
-impl Display for Error {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            Error::Initialize(reason) => write!(f, "failed to startup properly: {}", reason),
-            Error::Session(inner) => write!(f, "session error: {}", inner),
-            Error::Bind(inner) => write!(f, "failed to bind to port: {}", inner),
-            Error::RecvLoop(reason) => write!(f, "receive loop exited with an error: {}", reason),
-        }
-    }
 }
