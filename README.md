@@ -14,6 +14,11 @@ deployments, to ensure security, access control, telemetry data, metrics and mor
  
 It is designed to be used behind game clients as well as in front of dedicated game servers.
 
+## Announcements
+
+* [Embark Studios: Say hi to Quilkin, an open-source UDP proxy](https://medium.com/embarkstudios/say-hi-to-quilkin-an-open-source-udp-proxy-88577c795204)
+* [Google Cloud: Introducing Quilkin: open-source UDP proxies built for game server communication](https://cloud.google.com/blog/products/gaming/introducing-quilkin)
+
 ## Project State
 
 Project is currently in *alpha* status, and is being actively developed. Expect things to break.
@@ -33,6 +38,7 @@ Not to be used in production systems.
 * See [Filter documentation](./docs/extensions/filters/filters.md) for a list of filters, and their configuration options.
 * The [Administration interface](./docs/admin.md) provides access to health and metrics endpoints.
 * Finally, we also have a [FAQ](./docs/faq.md)
+
 ## Code of Conduct
 
 Participation in this project comes under the [Contributor Covenant Code of Conduct](code-of-conduct.md)
@@ -57,9 +63,13 @@ There are lots of ways to engage with the Quilkin community:
 
 ## Credits
 
-Many concepts and architectural decisions where inspired by [Envoy Proxy](https://www.envoyproxy.io/). 
+Many concepts and architectural decisions were inspired by [Envoy Proxy](https://www.envoyproxy.io/). 
 Huge thanks to that team for the inspiration they provided with all their hard work. 
- 
+
+## Companies using Quilkin
+
+[<img src="./image/embark.png" alt="Embark Studios" height="100">](https://www.embark-studios.com/)
+
 ## Licence
 
 Apache 2.0
