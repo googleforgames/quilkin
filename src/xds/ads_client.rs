@@ -191,8 +191,10 @@ impl AdsClient {
                             backoff = bk_off;
 
                             // Do not retry if this is an invalid URL error that we cannot recover from.
-                            if err.to_string().to_lowercase().contains("invalid url") {
-                                return Err(ExecutionError::Message(format!("{:?}", err)));
+                            // Need to use {:?} as the Display output only returns 'transport error'
+                            let err_description = format!("{:?}", err);
+                            if err_description.to_lowercase().contains("invalid url") {
+                                return Err(ExecutionError::Message(err_description));
                             }
                             error!(log, "Unable to connect to the XDS server"; "address" => server_addr, "error" => %err);
                             Self::backoff(
