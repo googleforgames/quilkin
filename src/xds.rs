@@ -92,12 +92,14 @@ mod envoy {
     pub mod service {
         pub mod discovery {
             pub mod v3 {
+                #![allow(clippy::unit_arg)]
                 #![doc(hidden)]
                 tonic::include_proto!("envoy.service.discovery.v3");
             }
         }
         pub mod cluster {
             pub mod v3 {
+                #![allow(clippy::unit_arg)]
                 #![doc(hidden)]
                 tonic::include_proto!("envoy.service.cluster.v3");
             }
