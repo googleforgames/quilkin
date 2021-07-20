@@ -2,11 +2,11 @@
     <img src="./docs/logos/logo-white.png" alt="Quilkin logo" height="220">
 </p>
 
-![GitHub](https://img.shields.io/github/license/googleforgames/quilkin)
-![Crates.io](https://img.shields.io/crates/v/quilkin)
-![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/googleforgames/quilkin)
-![GitHub branch checks state](https://img.shields.io/github/checks-status/googleforgames/quilkin/main)
-![Discord](https://img.shields.io/discord/773975408265134100)
+[![GitHub](https://img.shields.io/github/license/googleforgames/quilkin)](./LICENSE)
+[![Crates.io](https://img.shields.io/crates/v/quilkin)](https://crates.io/crates/quilkin)
+[![Docs.rs](https://docs.rs/quilkin/badge.svg)](https://docs.rs/quilkin)
+[![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/googleforgames/quilkin)](https://github.com/googleforgames/quilkin/releases)
+[![Discord](https://img.shields.io/discord/773975408265134100)](https://discord.gg/mfBNZjBDnc)
 [![Twitter Follow](https://img.shields.io/twitter/follow/quilkindev?style=social)](https://twitter.com/quilkindev)
 
 Quilkin is a non-transparent UDP proxy specifically designed for use with large scale multiplayer dedicated game servers
