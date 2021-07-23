@@ -54,6 +54,8 @@ To run our benchmarks:
 
 `cargo bench`
 
+We use [criterion](https://github.com/bheisler/criterion.rs) for benchmarking. You can find visual reports under `./target/criterion`.
+
 ### Developing with Make + Docker 
 
 There are a few reasons you may want to use the [Make](https://www.gnu.org/software/make/)
