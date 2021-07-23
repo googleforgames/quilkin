@@ -50,6 +50,12 @@ To run our external documentation tests:
 
 `cargo +nightly test --doc`
 
+To run our benchmarks:
+
+`cargo bench`
+
+We use [criterion](https://github.com/bheisler/criterion.rs) for benchmarking. You can find visual reports under `./target/criterion`.
+
 To test dependency licences and security advisories:
 
 `cargo deny check`
