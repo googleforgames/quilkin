@@ -56,6 +56,10 @@ To run our benchmarks:
 
 We use [criterion](https://github.com/bheisler/criterion.rs) for benchmarking. You can find visual reports under `./target/criterion`.
 
+To test dependency licences and security advisories:
+
+`cargo deny check`
+
 ### Developing with Make + Docker 
 
 There are a few reasons you may want to use the [Make](https://www.gnu.org/software/make/)

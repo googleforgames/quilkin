@@ -2,17 +2,22 @@
     <img src="./docs/logos/logo-white.png" alt="Quilkin logo" height="220">
 </p>
 
-![GitHub](https://img.shields.io/github/license/googleforgames/quilkin)
-![Crates.io](https://img.shields.io/crates/v/quilkin)
-![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/googleforgames/quilkin)
-![GitHub branch checks state](https://img.shields.io/github/checks-status/googleforgames/quilkin/main)
-![Discord](https://img.shields.io/discord/773975408265134100)
-![Twitter Follow](https://img.shields.io/twitter/follow/quilkindev?style=social)
+[![GitHub](https://img.shields.io/github/license/googleforgames/quilkin)](./LICENSE)
+[![Crates.io](https://img.shields.io/crates/v/quilkin)](https://crates.io/crates/quilkin)
+[![Docs.rs](https://docs.rs/quilkin/badge.svg)](https://docs.rs/quilkin)
+[![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/googleforgames/quilkin)](https://github.com/googleforgames/quilkin/releases)
+[![Discord](https://img.shields.io/discord/773975408265134100)](https://discord.gg/mfBNZjBDnc)
+[![Twitter Follow](https://img.shields.io/twitter/follow/quilkindev?style=social)](https://twitter.com/quilkindev)
 
 Quilkin is a non-transparent UDP proxy specifically designed for use with large scale multiplayer dedicated game servers
 deployments, to ensure security, access control, telemetry data, metrics and more.
  
 It is designed to be used behind game clients as well as in front of dedicated game servers.
+
+## Announcements
+
+* [Embark Studios: Say hi to Quilkin, an open-source UDP proxy](https://medium.com/embarkstudios/say-hi-to-quilkin-an-open-source-udp-proxy-88577c795204)
+* [Google Cloud: Introducing Quilkin: open-source UDP proxies built for game server communication](https://cloud.google.com/blog/products/gaming/introducing-quilkin)
 
 ## Project State
 
@@ -33,6 +38,7 @@ Not to be used in production systems.
 * See [Filter documentation](./docs/extensions/filters/filters.md) for a list of filters, and their configuration options.
 * The [Administration interface](./docs/admin.md) provides access to health and metrics endpoints.
 * Finally, we also have a [FAQ](./docs/faq.md)
+
 ## Code of Conduct
 
 Participation in this project comes under the [Contributor Covenant Code of Conduct](code-of-conduct.md)
@@ -57,9 +63,13 @@ There are lots of ways to engage with the Quilkin community:
 
 ## Credits
 
-Many concepts and architectural decisions where inspired by [Envoy Proxy](https://www.envoyproxy.io/). 
+Many concepts and architectural decisions were inspired by [Envoy Proxy](https://www.envoyproxy.io/). 
 Huge thanks to that team for the inspiration they provided with all their hard work. 
- 
+
+## Companies using Quilkin
+
+[<img src="./image/embark.png" alt="Embark Studios" height="100">](https://www.embark-studios.com/)
+
 ## Licence
 
 Apache 2.0
