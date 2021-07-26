@@ -26,6 +26,8 @@
     - [ ] Reset checklist back to "run `make` to submit the cloud build", and start from there again.
 - [ ] Run `cd macros && cargo publish --dry-run --allow-dirty` and ensure there are no issues.
 - [ ] Run `cargo publish --dry-run --allow-dirty` and ensure there are no issues.  
+- [ ] Add a release item to README.md "Documentation" > "Releases" list with related links in reverse chronological 
+  order.
 - [ ] Submit these changes as a PR, and merge with approval.
 - [ ] Create a [Github release](https://github.com/googleforgames/quilkin/releases/new) using the 
   [Github release template](./github-release.md).

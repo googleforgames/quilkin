@@ -25,7 +25,18 @@ Project is currently in *alpha* status, and is being actively developed. Expect 
 
 Not to be used in production systems.
 
-## Usage
+## Documentation
+
+### Releases
+
+* v0.1.0 ([guides](https://github.com/googleforgames/quilkin/blob/v0.1.0/README.md#usage), 
+  [api](https://docs.rs/quilkin/0.1.0/quilkin/), [macros](https://docs.rs/quilkin-macros/0.1.0/quilkin_macros/)).
+
+### Usage
+
+> Below is documentation for the development version of Quilkin. To view the documentation for a specific release, 
+> switch to the release tag in the dropdown at the top of the page, or click on the appropriate release documentation 
+> link above.
 
 * Start with our [Project Overview](./docs/README.md).
 * See how to [use Quilkin](./docs/using.md).
