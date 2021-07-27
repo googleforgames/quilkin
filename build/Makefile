@@ -49,6 +49,8 @@ version:
 # Run all tests
 test: ensure-build-image
 	docker run --rm $(common_rust_args) \
+     		--entrypoint=cargo $(BUILD_IMAGE_TAG) deny check
+	docker run --rm $(common_rust_args) \
  		--entrypoint=cargo $(BUILD_IMAGE_TAG) clippy --tests -- -D warnings
 	docker run --rm $(common_rust_args) \
  		--entrypoint=cargo $(BUILD_IMAGE_TAG) fmt -- --check
