@@ -24,7 +24,7 @@ mod tests {
     use slog::info;
 
     use quilkin::config::{Builder as ConfigBuilder, EndPoint, Filter};
-    use quilkin::filters::{extensions::DebugFactory, FilterFactory};
+    use quilkin::filters::debug;
     use quilkin::proxy::Builder as ProxyBuilder;
     use quilkin::test_utils::{new_registry, TestHelper};
     use std::sync::Arc;
@@ -112,7 +112,7 @@ mod tests {
         let mut t = TestHelper::default();
 
         // handy for grabbing the configuration name
-        let factory = DebugFactory::new(&t.log);
+        let factory = debug::factory(&t.log);
 
         // create an echo server as an endpoint.
         let echo = t.run_echo_server().await;

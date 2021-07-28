@@ -24,10 +24,7 @@ mod tests {
     use tokio::time::{timeout, Duration};
 
     use quilkin::config::{Builder, EndPoint, Filter};
-    use quilkin::filters::{
-        extensions::{CompressFactory, ConcatBytesFactory},
-        FilterFactory,
-    };
+    use quilkin::filters::{compress, concatenate_bytes};
     use quilkin::test_utils::TestHelper;
 
     #[tokio::test]
@@ -64,15 +61,15 @@ on_write: DECOMPRESS
             .with_static(
                 vec![
                     Filter {
-                        name: ConcatBytesFactory::default().name().into(),
+                        name: concatenate_bytes::factory().name().into(),
                         config: serde_yaml::from_str(yaml_concat_read).unwrap(),
                     },
                     Filter {
-                        name: ConcatBytesFactory::default().name().into(),
+                        name: concatenate_bytes::factory().name().into(),
                         config: serde_yaml::from_str(yaml_concat_write).unwrap(),
                     },
                     Filter {
-                        name: CompressFactory::new(&t.log).name().into(),
+                        name: compress::factory(&t.log).name().into(),
                         config: serde_yaml::from_str(yaml_compress).unwrap(),
                     },
                 ],

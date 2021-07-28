@@ -14,149 +14,30 @@
  *  limitations under the License.
  */
 
-use std::convert::TryFrom;
-use std::io;
-
-use serde::{Deserialize, Serialize};
-use slog::{o, warn, Logger};
-use snap::read::FrameDecoder;
-use snap::write::FrameEncoder;
-
-use self::quilkin::extensions::filters::compress::v1alpha1::{
-    compress::Action as ProtoAction, compress::Mode as ProtoMode, Compress as ProtoConfig,
-};
-
-use crate::map_proto_enum;
-use crate::{
-    config::LOG_SAMPLING_RATE,
-    filters::{extensions::compress::metrics::Metrics, prelude::*},
-};
-
+mod compressor;
+mod config;
 mod metrics;
 
 crate::include_proto!("quilkin.extensions.filters.compress.v1alpha1");
 
-/// The library to use when compressing
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-pub enum Mode {
-    // we only support one mode for now, but adding in the config option to provide the
-    // option to expand for later.
-    #[serde(rename = "SNAPPY")]
-    Snappy,
-}
+use slog::{o, warn, Logger};
 
-impl Default for Mode {
-    fn default() -> Self {
-        Mode::Snappy
-    }
-}
+use crate::{config::LOG_SAMPLING_RATE, filters::prelude::*};
 
-/// Whether to do nothing, compress or decompress the packet.
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-enum Action {
-    #[serde(rename = "DO_NOTHING")]
-    DoNothing,
-    #[serde(rename = "COMPRESS")]
-    Compress,
-    #[serde(rename = "DECOMPRESS")]
-    Decompress,
-}
+use self::quilkin::extensions::filters::compress::v1alpha1::Compress as ProtoConfig;
+use compressor::Compressor;
+use metrics::Metrics;
 
-impl Default for Action {
-    fn default() -> Self {
-        Action::DoNothing
-    }
-}
+pub use config::{Action, Config, Mode};
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-struct Config {
-    #[serde(default)]
-    mode: Mode,
-    on_read: Action,
-    on_write: Action,
-}
+pub const NAME: &str = "quilkin.extensions.filters.compress.v1alpha1.Compress";
 
-impl TryFrom<ProtoConfig> for Config {
-    type Error = ConvertProtoConfigError;
-
-    fn try_from(p: ProtoConfig) -> std::result::Result<Self, Self::Error> {
-        let mode = p
-            .mode
-            .map(|mode| {
-                map_proto_enum!(
-                    value = mode.value,
-                    field = "mode",
-                    proto_enum_type = ProtoMode,
-                    target_enum_type = Mode,
-                    variants = [Snappy]
-                )
-            })
-            .transpose()?
-            .unwrap_or_else(Mode::default);
-
-        let on_read = p
-            .on_read
-            .map(|on_read| {
-                map_proto_enum!(
-                    value = on_read.value,
-                    field = "on_read",
-                    proto_enum_type = ProtoAction,
-                    target_enum_type = Action,
-                    variants = [DoNothing, Compress, Decompress]
-                )
-            })
-            .transpose()?
-            .unwrap_or_else(Action::default);
-
-        let on_write = p
-            .on_write
-            .map(|on_write| {
-                map_proto_enum!(
-                    value = on_write.value,
-                    field = "on_write",
-                    proto_enum_type = ProtoAction,
-                    target_enum_type = Action,
-                    variants = [DoNothing, Compress, Decompress]
-                )
-            })
-            .transpose()?
-            .unwrap_or_else(Action::default);
-
-        Ok(Self {
-            mode,
-            on_read,
-            on_write,
-        })
-    }
-}
-
-pub struct CompressFactory {
-    log: Logger,
-}
-
-impl CompressFactory {
-    pub fn new(base: &Logger) -> Self {
-        CompressFactory { log: base.clone() }
-    }
-}
-
-impl FilterFactory for CompressFactory {
-    fn name(&self) -> &'static str {
-        Compress::FILTER_NAME
-    }
-
-    fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
-        Ok(Box::new(Compress::new(
-            &self.log,
-            self.require_config(args.config)?
-                .deserialize::<Config, ProtoConfig>(self.name())?,
-            Metrics::new(&args.metrics_registry)?,
-        )))
-    }
+/// Returns a factory for creating compression filters.
+pub fn factory(base: &Logger) -> DynFilterFactory {
+    Box::from(CompressFactory::new(base))
 }
 
 /// Filter for compressing and decompressing packet data
-#[crate::filter("quilkin.extensions.filters.compress.v1alpha1.Compress")]
 struct Compress {
     log: Logger,
     metrics: Metrics,
@@ -167,22 +48,19 @@ struct Compress {
 }
 
 impl Compress {
-    pub fn new(base: &Logger, config: Config, metrics: Metrics) -> Self {
-        let compressor = match config.mode {
-            Mode::Snappy => Box::new(Snappy {}),
-        };
-        Compress {
+    fn new(base: &Logger, config: Config, metrics: Metrics) -> Self {
+        Self {
             log: base.new(o!("source" => "extensions::Compress")),
             metrics,
+            compressor: config.mode.as_compressor(),
             compression_mode: config.mode,
             on_read: config.on_read,
             on_write: config.on_write,
-            compressor,
         }
     }
 
     /// Track a failed attempt at compression
-    fn failed_compression<T>(&self, err: Box<dyn std::error::Error>) -> Option<T> {
+    fn failed_compression<T>(&self, err: &dyn std::error::Error) -> Option<T> {
         if self.metrics.packets_dropped_compress.get() % LOG_SAMPLING_RATE == 0 {
             warn!(self.log, "Packets are being dropped as they could not be compressed";
                             "mode" => #?self.compression_mode, "error" => %err,
@@ -193,7 +71,7 @@ impl Compress {
     }
 
     /// Track a failed attempt at decompression
-    fn failed_decompression<T>(&self, err: Box<dyn std::error::Error>) -> Option<T> {
+    fn failed_decompression<T>(&self, err: &dyn std::error::Error) -> Option<T> {
         if self.metrics.packets_dropped_decompress.get() % LOG_SAMPLING_RATE == 0 {
             warn!(self.log, "Packets are being dropped as they could not be decompressed";
                             "mode" => #?self.compression_mode, "error" => %err,
@@ -219,7 +97,7 @@ impl Filter for Compress {
                         .inc_by(ctx.contents.len() as u64);
                     Some(ctx.into())
                 }
-                Err(err) => self.failed_compression(err),
+                Err(err) => self.failed_compression(&err),
             },
             Action::Decompress => match self.compressor.decode(&mut ctx.contents) {
                 Ok(()) => {
@@ -231,7 +109,7 @@ impl Filter for Compress {
                         .inc_by(ctx.contents.len() as u64);
                     Some(ctx.into())
                 }
-                Err(err) => self.failed_decompression(err),
+                Err(err) => self.failed_decompression(&err),
             },
             Action::DoNothing => Some(ctx.into()),
         }
@@ -250,7 +128,7 @@ impl Filter for Compress {
                         .inc_by(ctx.contents.len() as u64);
                     Some(ctx.into())
                 }
-                Err(err) => self.failed_compression(err),
+                Err(err) => self.failed_compression(&err),
             },
             Action::Decompress => match self.compressor.decode(&mut ctx.contents) {
                 Ok(()) => {
@@ -263,40 +141,35 @@ impl Filter for Compress {
                     Some(ctx.into())
                 }
 
-                Err(err) => self.failed_decompression(err),
+                Err(err) => self.failed_decompression(&err),
             },
             Action::DoNothing => Some(ctx.into()),
         }
     }
 }
 
-type Result<T, E = Box<dyn std::error::Error>> = std::result::Result<T, E>;
-
-/// A trait that provides a compression and decompression strategy for this filter.
-/// Conversion takes place on a mutable Vec, to ensure the most performant compression or
-/// decompression operation can occur.
-trait Compressor {
-    /// Compress the contents of the Vec - overwriting the original content.
-    fn encode(&self, contents: &mut Vec<u8>) -> Result<()>;
-    /// Decompress the contents of the Vec - overwriting the original content.
-    fn decode(&self, contents: &mut Vec<u8>) -> Result<()>;
+struct CompressFactory {
+    log: Logger,
 }
 
-struct Snappy {}
+impl CompressFactory {
+    pub fn new(base: &Logger) -> Self {
+        CompressFactory { log: base.clone() }
+    }
+}
 
-impl Compressor for Snappy {
-    fn encode(&self, contents: &mut Vec<u8>) -> Result<()> {
-        let input = std::mem::take(contents);
-        let mut wtr = FrameEncoder::new(contents);
-        io::copy(&mut input.as_slice(), &mut wtr)?;
-        Ok(())
+impl FilterFactory for CompressFactory {
+    fn name(&self) -> &'static str {
+        NAME
     }
 
-    fn decode(&self, contents: &mut Vec<u8>) -> Result<()> {
-        let input = std::mem::take(contents);
-        let mut rdr = FrameDecoder::new(input.as_slice());
-        io::copy(&mut rdr, contents)?;
-        Ok(())
+    fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
+        Ok(Box::new(Compress::new(
+            &self.log,
+            self.require_config(args.config)?
+                .deserialize::<Config, ProtoConfig>(self.name())?,
+            Metrics::new(&args.metrics_registry)?,
+        )))
     }
 }
 
@@ -310,8 +183,8 @@ mod tests {
     use crate::cluster::Endpoint;
     use crate::config::{Endpoints, UpstreamEndpoints};
     use crate::filters::{
-        extensions::compress::Compressor, CreateFilterArgs, Filter, FilterFactory, ReadContext,
-        WriteContext,
+        compress::{compressor::Snappy, Compressor},
+        CreateFilterArgs, Filter, FilterFactory, ReadContext, WriteContext,
     };
     use crate::test_utils::logger;
 
@@ -319,7 +192,7 @@ mod tests {
         compress::{Action as ProtoAction, ActionValue, Mode as ProtoMode, ModeValue},
         Compress as ProtoConfig,
     };
-    use super::{Action, Compress, CompressFactory, Config, Metrics, Mode, Snappy};
+    use super::{Action, Compress, CompressFactory, Config, Metrics, Mode};
 
     #[test]
     fn convert_proto_config() {

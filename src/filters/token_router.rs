@@ -26,56 +26,40 @@ use slog::{error, o, Logger};
 
 use crate::{
     config::{RetainedItems, LOG_SAMPLING_RATE},
-    filters::{
-        extensions::{token_router::metrics::Metrics, CAPTURED_BYTES},
-        prelude::*,
-    },
+    filters::{metadata::CAPTURED_BYTES, prelude::*},
 };
+
+use metrics::Metrics;
 
 use self::quilkin::extensions::filters::token_router::v1alpha1::TokenRouter as ProtoConfig;
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-#[serde(default)]
-struct Config {
-    /// the key to use when retrieving the token from the Filter's dynamic metadata
-    #[serde(rename = "metadataKey", default = "default_metadata_key")]
-    metadata_key: String,
-}
+pub const NAME: &str = "quilkin.extensions.filters.token_router.v1alpha1.TokenRouter";
 
-/// Default value for [`Config::metadata_key`]
-fn default_metadata_key() -> String {
-    CAPTURED_BYTES.into()
-}
-
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            metadata_key: default_metadata_key(),
-        }
-    }
-}
-
-impl TryFrom<ProtoConfig> for Config {
-    type Error = ConvertProtoConfigError;
-
-    fn try_from(p: ProtoConfig) -> Result<Self, Self::Error> {
-        Ok(Self {
-            metadata_key: p.metadata_key.unwrap_or_else(default_metadata_key),
-        })
-    }
+/// Returns a factory for creating token routing filters.
+pub fn factory(base: &Logger) -> DynFilterFactory {
+    Box::from(TokenRouterFactory::new(base))
 }
 
 /// Filter that only allows packets to be passed to Endpoints that have a matching
 /// connection_id to the token stored in the Filter's dynamic metadata.
-#[crate::filter("quilkin.extensions.filters.token_router.v1alpha1.TokenRouter")]
 struct TokenRouter {
     log: Logger,
     metadata_key: Arc<String>,
     metrics: Metrics,
 }
 
+impl TokenRouter {
+    fn new(base: &Logger, config: Config, metrics: Metrics) -> Self {
+        Self {
+            log: base.new(o!("source" => "extensions::TokenRouter")),
+            metadata_key: Arc::new(config.metadata_key),
+            metrics,
+        }
+    }
+}
+
 /// Factory for the TokenRouter filter
-pub struct TokenRouterFactory {
+struct TokenRouterFactory {
     log: Logger,
 }
 
@@ -87,7 +71,7 @@ impl TokenRouterFactory {
 
 impl FilterFactory for TokenRouterFactory {
     fn name(&self) -> &'static str {
-        TokenRouter::FILTER_NAME
+        NAME
     }
 
     fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
@@ -102,16 +86,6 @@ impl FilterFactory for TokenRouterFactory {
             config,
             Metrics::new(&args.metrics_registry)?,
         )))
-    }
-}
-
-impl TokenRouter {
-    fn new(base: &Logger, config: Config, metrics: Metrics) -> Self {
-        Self {
-            log: base.new(o!("source" => "extensions::TokenRouter")),
-            metadata_key: Arc::new(config.metadata_key),
-            metrics,
-        }
     }
 }
 
@@ -159,6 +133,37 @@ impl Filter for TokenRouter {
     }
 }
 
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[serde(default)]
+pub struct Config {
+    /// the key to use when retrieving the token from the Filter's dynamic metadata
+    #[serde(rename = "metadataKey", default = "default_metadata_key")]
+    pub metadata_key: String,
+}
+
+/// Default value for [`Config::metadata_key`]
+fn default_metadata_key() -> String {
+    CAPTURED_BYTES.into()
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            metadata_key: default_metadata_key(),
+        }
+    }
+}
+
+impl TryFrom<ProtoConfig> for Config {
+    type Error = ConvertProtoConfigError;
+
+    fn try_from(p: ProtoConfig) -> Result<Self, Self::Error> {
+        Ok(Self {
+            metadata_key: p.metadata_key.unwrap_or_else(default_metadata_key),
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::convert::TryFrom;
@@ -176,7 +181,7 @@ mod tests {
     };
     use crate::cluster::Endpoint;
     use crate::filters::{
-        extensions::CAPTURED_BYTES, CreateFilterArgs, Filter, FilterFactory, ReadContext,
+        metadata::CAPTURED_BYTES, CreateFilterArgs, Filter, FilterFactory, ReadContext,
     };
 
     const TOKEN_KEY: &str = "TOKEN";

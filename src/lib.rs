@@ -24,7 +24,7 @@ pub mod test_utils;
 pub(crate) mod utils;
 pub(crate) mod xds;
 
-pub use quilkin_macros::{filter, include_proto};
+pub use quilkin_macros::include_proto;
 
 /// Run tests in our external documentation. This is only available in
 /// nightly at the moment, but is stable on nightly and will be available in

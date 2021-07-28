@@ -153,7 +153,7 @@ mod tests {
 
     use crate::config;
     use crate::config::{Endpoints, UpstreamEndpoints};
-    use crate::filters::{extensions::DebugFactory, FilterFactory, FilterRegistry, FilterSet};
+    use crate::filters::{debug, FilterRegistry, FilterSet};
     use crate::test_utils::{logger, new_test_chain, TestFilter};
 
     use super::*;
@@ -162,7 +162,7 @@ mod tests {
     #[test]
     fn from_config() {
         let log = logger();
-        let provider = DebugFactory::new(&log);
+        let provider = debug::factory(&log);
 
         // everything is fine
         let filter_configs = vec![config::Filter {

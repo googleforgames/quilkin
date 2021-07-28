@@ -67,9 +67,10 @@ To extend Quilkin's code with our own custom filter, we need to do the following
    // src/main.rs
    use quilkin::filters::{Filter, ReadContext, ReadResponse, WriteContext, WriteResponse};
 
+   const NAME: &str = "greet.v1";
+
    // This creates adds an associated const named `FILTER_NAME` that points
    // to `"greet.v1"`.
-   #[quilkin::filter("greet.v1")]
    struct Greet;
 
    impl Filter for Greet {
@@ -88,7 +89,7 @@ To extend Quilkin's code with our own custom filter, we need to do the following
 
    ```rust
    // src/main.rs
-   # #[quilkin::filter("greet.v1")]
+   # const NAME: &str = "greet.v1";
    # struct Greet;
    # impl Filter for Greet {}
    # use quilkin::filters::Filter;
@@ -97,8 +98,8 @@ To extend Quilkin's code with our own custom filter, we need to do the following
    struct GreetFilterFactory;
    impl FilterFactory for GreetFilterFactory {
        fn name(&self) -> &'static str {
-           // We provide the name of filter that we defined with `#[quilkin::filter]`
-           Greet::FILTER_NAME
+           // We provide the name of filter that we defined earlier.
+           NAME
        }
        fn create_filter(&self, _: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
            Ok(Box::new(Greet))
@@ -207,7 +208,6 @@ The [Serde] crate is used to describe static YAML configuration in code while [P
 
    # use quilkin::filters::{Filter, ReadContext, ReadResponse, WriteContext, WriteResponse};
 
-   #[quilkin::filter("greet.v1")]
    struct Greet(String);
 
    impl Filter for Greet {
@@ -238,7 +238,7 @@ The [Serde] crate is used to describe static YAML configuration in code while [P
    # struct Greet(String);
    # impl Filter for Greet { }
 
-   use quilkin::filters::ConfigType;
+   use quilkin::config::ConfigType;
 
    struct GreetFilterFactory;
    impl FilterFactory for GreetFilterFactory {
@@ -345,7 +345,7 @@ However, it usually contains a Protobuf equivalent of the filter's static config
 
        ```rust
        // src/main.rs
-       # use quilkin::filters::{ConfigType, CreateFilterArgs, Error, Filter, FilterFactory};
+       # use quilkin::{config::ConfigType, filters::{CreateFilterArgs, Error, Filter, FilterFactory}};
        # use serde::{Deserialize, Serialize};
        # #[derive(Serialize, Deserialize, Debug)]
        # struct Config {

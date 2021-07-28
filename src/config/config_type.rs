@@ -18,7 +18,7 @@ use std::convert::TryFrom;
 
 use bytes::Bytes;
 
-use crate::filters::error::{ConvertProtoConfigError, Error};
+use crate::filters::{ConvertProtoConfigError, Error};
 
 /// The configuration of a [`Filter`][crate::filters::Filter] from either a
 /// static or dynamic source.

@@ -22,7 +22,7 @@ mod tests {
     use tokio::time::{timeout, Duration};
 
     use quilkin::config::{Builder, EndPoint, Filter};
-    use quilkin::filters::{extensions::CompressFactory, FilterFactory};
+    use quilkin::filters::compress;
     use quilkin::test_utils::{logger, TestHelper};
 
     #[tokio::test]
@@ -41,7 +41,7 @@ on_write: COMPRESS
             .with_port(server_port)
             .with_static(
                 vec![Filter {
-                    name: CompressFactory::new(&log).name().into(),
+                    name: compress::factory(&log).name().into(),
                     config: serde_yaml::from_str(yaml).unwrap(),
                 }],
                 vec![EndPoint::new(echo)],
@@ -60,7 +60,7 @@ on_write: DECOMPRESS
             .with_port(client_port)
             .with_static(
                 vec![Filter {
-                    name: CompressFactory::new(&log).name().into(),
+                    name: compress::factory(&log).name().into(),
                     config: serde_yaml::from_str(yaml).unwrap(),
                 }],
                 vec![EndPoint::new(
