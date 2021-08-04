@@ -442,7 +442,7 @@ mod tests {
     {
         let response = filter
             .write(WriteContext::new(
-                &Endpoint::from_address("127.0.0.1:81".parse().unwrap()),
+                Endpoint::from_address("127.0.0.1:81".parse().unwrap()),
                 "127.0.0.1:80".parse().unwrap(),
                 "127.0.0.1:82".parse().unwrap(),
                 b"abc".to_vec(),

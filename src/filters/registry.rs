@@ -118,7 +118,7 @@ mod tests {
             ))
             .is_some());
         assert!(filter
-            .write(WriteContext::new(&endpoint, addr, addr, vec![],))
+            .write(WriteContext::new(endpoint, addr, addr, vec![],))
             .is_some());
     }
 }

@@ -291,7 +291,7 @@ where
     let contents = "hello".to_string().into_bytes();
 
     match filter.write(WriteContext::new(
-        &endpoint,
+        endpoint.clone(),
         endpoint.address,
         "127.0.0.1:70".parse().unwrap(),
         contents.clone(),

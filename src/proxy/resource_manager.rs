@@ -237,7 +237,7 @@ mod tests {
 
     use std::time::Duration;
 
-    use crate::proxy::server::resource_manager::SpawnAdsClient;
+    use crate::proxy::resource_manager::SpawnAdsClient;
     use prometheus::Registry;
     use tokio::sync::mpsc;
     use tokio::sync::oneshot;

@@ -7,14 +7,12 @@ use slog::Logger;
 use tokio::{net::UdpSocket, task::JoinHandle};
 
 use crate::{
-    cluster::cluster_manager::SharedClusterManager, filters::manager::SharedFilterManager,
-    proxy::{ShutdownRx, metrics::ProxyMetrics},
+    cluster::cluster_manager::SharedClusterManager,
+    filters::manager::SharedFilterManager,
+    proxy::{metrics::ProxyMetrics, ShutdownRx},
 };
 
-use self::{
-    downstream::DownstreamDistributor,
-    upstream::UpstreamDistributor,
-};
+use self::{downstream::DownstreamDistributor, upstream::UpstreamDistributor};
 
 pub use self::upstream::{
     DistributorRx, DistributorTx, Error as UpstreamError, Metrics as UpstreamMetrics,

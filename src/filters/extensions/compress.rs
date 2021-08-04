@@ -500,7 +500,7 @@ mod tests {
         // write decompress
         let write_response = compress
             .write(WriteContext::new(
-                &Endpoint::from_address("127.0.0.1:80".parse().unwrap()),
+                Endpoint::from_address("127.0.0.1:80".parse().unwrap()),
                 "127.0.0.1:8080".parse().unwrap(),
                 "127.0.0.1:8081".parse().unwrap(),
                 read_response.contents.clone(),
@@ -565,7 +565,7 @@ mod tests {
         );
 
         let write_response = compression.write(WriteContext::new(
-            &Endpoint::from_address("127.0.0.1:80".parse().unwrap()),
+            Endpoint::from_address("127.0.0.1:80".parse().unwrap()),
             "127.0.0.1:8080".parse().unwrap(),
             "127.0.0.1:8081".parse().unwrap(),
             b"hello".to_vec(),
@@ -629,7 +629,7 @@ mod tests {
         assert_eq!(b"hello".to_vec(), read_response.unwrap().contents);
 
         let write_response = compression.write(WriteContext::new(
-            &Endpoint::from_address("127.0.0.1:80".parse().unwrap()),
+            Endpoint::from_address("127.0.0.1:80".parse().unwrap()),
             "127.0.0.1:8080".parse().unwrap(),
             "127.0.0.1:8081".parse().unwrap(),
             b"hello".to_vec(),
@@ -687,7 +687,7 @@ mod tests {
         // write compress
         let write_response = filter
             .write(WriteContext::new(
-                &Endpoint::from_address("127.0.0.1:80".parse().unwrap()),
+                Endpoint::from_address("127.0.0.1:80".parse().unwrap()),
                 "127.0.0.1:8080".parse().unwrap(),
                 "127.0.0.1:8081".parse().unwrap(),
                 expected.clone(),
