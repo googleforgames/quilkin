@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-#[allow(clippy::module_inception)]
+// We don't control the codegen, so disable any code warnings in the
+// proto modules.
+#[allow(warnings)]
 mod xds {
     pub mod core {
         pub mod v3 {
@@ -24,6 +26,7 @@ mod xds {
     }
 }
 
+#[allow(warnings)]
 mod envoy {
     pub mod r#type {
         pub mod matcher {
@@ -64,7 +67,6 @@ mod envoy {
         }
         pub mod core {
             pub mod v3 {
-                #![allow(clippy::large_enum_variant)]
                 #![doc(hidden)]
                 tonic::include_proto!("envoy.config.core.v3");
             }
@@ -77,7 +79,6 @@ mod envoy {
         }
         pub mod listener {
             pub mod v3 {
-                #![allow(clippy::large_enum_variant)]
                 #![doc(hidden)]
                 tonic::include_proto!("envoy.config.listener.v3");
             }
@@ -92,14 +93,12 @@ mod envoy {
     pub mod service {
         pub mod discovery {
             pub mod v3 {
-                #![allow(clippy::unit_arg)]
                 #![doc(hidden)]
                 tonic::include_proto!("envoy.service.discovery.v3");
             }
         }
         pub mod cluster {
             pub mod v3 {
-                #![allow(clippy::unit_arg)]
                 #![doc(hidden)]
                 tonic::include_proto!("envoy.service.cluster.v3");
             }
@@ -107,6 +106,7 @@ mod envoy {
     }
 }
 
+#[allow(warnings)]
 mod google {
     pub mod rpc {
         #![doc(hidden)]
