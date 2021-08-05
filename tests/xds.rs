@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#[allow(clippy::module_inception)]
+#[allow(warnings)]
 mod xds {
     pub mod core {
         pub mod v3 {
@@ -24,6 +24,7 @@ mod xds {
     }
 }
 
+#[allow(warnings)]
 mod envoy {
     pub mod r#type {
         pub mod matcher {
@@ -107,6 +108,7 @@ mod envoy {
     }
 }
 
+#[allow(warnings)]
 mod google {
     pub mod rpc {
         #![doc(hidden)]
@@ -114,6 +116,7 @@ mod google {
     }
 }
 
+#[allow(warnings)]
 mod quilkin_proto {
     pub mod extensions {
         pub mod filters {

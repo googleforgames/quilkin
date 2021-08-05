@@ -692,8 +692,8 @@ mod tests {
         let cluster_a = cluster_state.get("a").unwrap();
         let cluster_b = cluster_state.get("b").unwrap();
 
-        assert_cluster_has_lone_static_address(&cluster_a, "127.0.0.1:2020");
-        assert_cluster_has_lone_static_address(&cluster_b, "127.0.0.1:2020");
+        assert_cluster_has_lone_static_address(cluster_a, "127.0.0.1:2020");
+        assert_cluster_has_lone_static_address(cluster_b, "127.0.0.1:2020");
 
         // Update one of the clusters and check that the new cluster set is sent downstream.
         cm.on_cluster_response(cluster_discovery_response_with_update(
@@ -730,8 +730,8 @@ mod tests {
         let cluster_a = cluster_state.get("a").unwrap();
         let cluster_b = cluster_state.get("b").unwrap();
 
-        assert_cluster_has_lone_static_address(&cluster_a, "127.0.0.10:3030");
-        assert_cluster_has_lone_static_address(&cluster_b, "127.0.0.1:2020");
+        assert_cluster_has_lone_static_address(cluster_a, "127.0.0.10:3030");
+        assert_cluster_has_lone_static_address(cluster_b, "127.0.0.1:2020");
     }
 
     #[tokio::test]
@@ -786,8 +786,8 @@ mod tests {
         let cluster_a = cluster_state.get("a").unwrap();
         let cluster_b = cluster_state.get("b").unwrap();
 
-        assert_cluster_has_lone_static_address(&cluster_a, "127.0.0.1:2020");
-        assert_cluster_has_lone_static_address(&cluster_b, "127.0.0.9:4040");
+        assert_cluster_has_lone_static_address(cluster_a, "127.0.0.1:2020");
+        assert_cluster_has_lone_static_address(cluster_b, "127.0.0.9:4040");
     }
 
     #[tokio::test]
