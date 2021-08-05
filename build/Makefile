@@ -55,9 +55,7 @@ test: ensure-build-image
 	docker run --rm $(common_rust_args) \
  		--entrypoint=cargo $(BUILD_IMAGE_TAG) fmt -- --check
 	docker run --rm $(common_rust_args) \
-     		--entrypoint=cargo $(BUILD_IMAGE_TAG) test --tests
-	docker run --rm $(common_rust_args) \
-     		--entrypoint=cargo $(BUILD_IMAGE_TAG) +nightly test --doc
+     		--entrypoint=cargo $(BUILD_IMAGE_TAG) test
 
 # Build all binaries, images and related artifacts
 build: binary-archive build-image
