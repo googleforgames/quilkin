@@ -18,6 +18,7 @@
 !.gitignore
 !.gcloudignore
 !.dockerignore
+!.github
 
 *.iml
 
