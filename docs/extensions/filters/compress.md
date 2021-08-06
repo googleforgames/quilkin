@@ -24,7 +24,7 @@ static:
 # ";
 # let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 # assert_eq!(config.source.get_static_filters().unwrap().len(), 1);
-# quilkin::proxy::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
+# quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
 ```
 
 The above example shows a proxy that could be used with a typical game client, where the original client data is 

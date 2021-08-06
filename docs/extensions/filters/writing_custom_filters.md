@@ -109,7 +109,7 @@ To extend Quilkin's code with our own custom filter, we need to do the following
 
 1. **Start the proxy**
 
-   We can run the proxy in the exact manner as the default Quilkin binary using the [runner] module, passing in our custom [FilterFactory].
+   We can run the proxy in the exact manner as the default Quilkin binary using the [run] function, passing in our custom [FilterFactory].
    Lets add a main function that does that. Quilkin relies on the [Tokio] async runtime so we need to import that crate and wrap our main function with it.
 
    Add Tokio as a dependency in `Cargo.toml`.
@@ -133,7 +133,7 @@ To extend Quilkin's code with our own custom filter, we need to do the following
    #         unimplemented!()
    #     }
    # }
-   use quilkin::{filters::DynFilterFactory, runner::run};
+   use quilkin::{filters::DynFilterFactory, run};
 
    #[tokio::main]
    async fn main() {

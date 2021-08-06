@@ -18,16 +18,20 @@ extern crate quilkin;
 
 #[cfg(test)]
 mod tests {
-    use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+    use std::{
+        net::{IpAddr, Ipv4Addr, SocketAddr},
+        sync::Arc,
+    };
 
     use serde_yaml::{Mapping, Value};
     use slog::info;
 
-    use quilkin::config::{Builder as ConfigBuilder, EndPoint, Filter};
-    use quilkin::filters::debug;
-    use quilkin::proxy::Builder as ProxyBuilder;
-    use quilkin::test_utils::{new_registry, TestHelper};
-    use std::sync::Arc;
+    use quilkin::{
+        config::{Builder as ConfigBuilder, EndPoint, Filter},
+        filters::debug,
+        test_utils::{new_registry, TestHelper},
+        Builder as ProxyBuilder,
+    };
 
     #[tokio::test]
     async fn test_filter() {
