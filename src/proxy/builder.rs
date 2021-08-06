@@ -277,6 +277,8 @@ impl Builder<Validated> {
     }
 }
 
+/// Create a new `slog::Logger` instance using the default
+/// quilkin configuration.
 pub fn logger() -> Logger {
     let drain = slog_json::Json::new(std::io::stdout())
         .set_pretty(false)

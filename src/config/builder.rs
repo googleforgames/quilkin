@@ -60,7 +60,6 @@ impl Builder {
             },
             admin: self.admin,
             source: self.source,
-            phantom: None,
         }
     }
 }

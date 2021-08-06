@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-use std::io;
-use std::marker::PhantomData;
+//! Quilkin configuration.
+
 use std::net::SocketAddr;
 
 use base64_serde::base64_serde_type;
@@ -47,6 +47,64 @@ base64_serde_type!(Base64Standard, base64::STANDARD);
 // For some log messages on the hot path (potentially per-packet), we log 1 out
 // of every `LOG_SAMPLING_RATE` occurrences to avoid spamming the logs.
 pub(crate) const LOG_SAMPLING_RATE: u64 = 1000;
+
+/// Config is the configuration of a proxy
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+#[non_exhaustive]
+pub struct Config {
+    pub version: Version,
+
+    #[serde(default)]
+    pub proxy: Proxy,
+
+    #[serde(default)]
+    pub admin: Admin,
+
+    #[serde(flatten)]
+    pub source: Source,
+}
+
+impl Config {
+    /// Attempts to locate and parse a `Config` located at either `path`, the
+    /// `$QUILKIN_CONFIG` environment variable if set, the current directory,
+    /// or the `/etc/quilkin` directory (on unix platforms only). Returns an
+    /// error if the found configuration is invalid, or if no configuration
+    /// could be found at any location.
+    pub fn find(
+        log: &slog::Logger,
+        path: Option<&str>,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
+        const ENV_CONFIG_PATH: &str = "QUILKIN_CONFIG";
+        const CONFIG_FILE: &str = "quilkin.yaml";
+
+        let config_env = std::env::var(ENV_CONFIG_PATH).ok();
+
+        let config_path = std::path::Path::new(
+            path.or_else(|| config_env.as_deref())
+                .unwrap_or(CONFIG_FILE),
+        )
+        .canonicalize()?;
+
+        slog::info!(log, "Found configuration file"; "path" => config_path.display());
+
+        std::fs::File::open(&config_path)
+            .or_else(|error| {
+                if cfg!(unix) {
+                    std::fs::File::open("/etc/quilkin/quilkin.yaml")
+                } else {
+                    Err(error)
+                }
+            })
+            .map_err(From::from)
+            .and_then(|file| Self::from_reader(file).map_err(From::from))
+    }
+
+    /// Attempts to deserialize `input` as a YAML object representing `Self`.
+    pub fn from_reader<R: std::io::Read>(input: R) -> Result<Self, serde_yaml::Error> {
+        serde_yaml::from_reader(input)
+    }
+}
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum Version {
@@ -115,27 +173,6 @@ pub enum Source {
     },
 }
 
-/// Config is the configuration of a proxy
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(deny_unknown_fields)]
-pub struct Config {
-    pub version: Version,
-
-    #[serde(default)]
-    pub proxy: Proxy,
-
-    #[serde(default)]
-    pub admin: Admin,
-
-    #[serde(flatten)]
-    pub source: Source,
-
-    // Limit struct creation to the builder. We use an Optional<Phantom>
-    // so that we can create instances though deserialization.
-    #[serde(skip_serializing)]
-    pub(super) phantom: Option<PhantomData<()>>,
-}
-
 impl Source {
     /// Returns the list of filters if the config is a static config and None otherwise.
     /// This is a convenience function and should only be used for doc tests and tests.
@@ -175,13 +212,6 @@ impl EndPoint {
 
     pub fn with_metadata(address: SocketAddr, metadata: Option<serde_yaml::Value>) -> Self {
         EndPoint { address, metadata }
-    }
-}
-
-impl Config {
-    /// from_reader returns a config from a given Reader
-    pub fn from_reader<R: io::Read>(input: R) -> Result<Config, serde_yaml::Error> {
-        serde_yaml::from_reader(input)
     }
 }
 

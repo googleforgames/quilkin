@@ -14,9 +14,35 @@
  * limitations under the License.
  */
 
-use quilkin::runner::run;
+use std::sync::Arc;
+
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[tokio::main]
-async fn main() -> Result<(), quilkin::runner::Error> {
-    run(vec![]).await
+async fn main() -> quilkin::Result<()> {
+    let log = quilkin::logger();
+    let version: std::borrow::Cow<'static, str> = if cfg!(debug_assertions) {
+        format!("{}+debug", VERSION).into()
+    } else {
+        VERSION.into()
+    };
+
+    slog::info!(log, "Starting Quilkin"; "version" => &*version);
+
+    let matches = clap::App::new(clap::crate_name!())
+        .version(&*version)
+        .about(clap::crate_description!())
+        .arg(
+            clap::Arg::with_name("config")
+                .short("c")
+                .long("config")
+                .value_name("CONFIG")
+                .help("The YAML configuration file")
+                .takes_value(true),
+        )
+        .get_matches();
+
+    let config = quilkin::config::Config::find(&log, matches.value_of("config")).map(Arc::new)?;
+
+    quilkin::run_with_config(log, config, vec![]).await
 }

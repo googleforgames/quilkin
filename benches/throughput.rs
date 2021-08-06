@@ -31,7 +31,7 @@ static SERVER_INIT: Lazy<()> = Lazy::new(|| {
                 )],
             )
             .build();
-        let server = quilkin::proxy::Builder::from(std::sync::Arc::new(config))
+        let server = quilkin::Builder::from(std::sync::Arc::new(config))
             .validate()
             .unwrap()
             .build();

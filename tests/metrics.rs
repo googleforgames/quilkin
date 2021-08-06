@@ -23,8 +23,8 @@ mod tests {
     use slog::info;
 
     use quilkin::config::{Admin, Builder as ConfigBuilder, EndPoint};
-    use quilkin::proxy::Builder;
     use quilkin::test_utils::TestHelper;
+    use quilkin::Builder;
     use std::sync::Arc;
 
     #[tokio::test]
