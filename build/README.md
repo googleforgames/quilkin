@@ -39,16 +39,9 @@ To build a production release, run:
 
 #### Testing
 
-We use some nightly features to automatically test our external documentation, so you will need to be explicit about
-which tests you wish to run.
+To run the unit, integration and docs tests:
 
-To run the unit and integration tests:
-
-`cargo test --tests`
-
-To run our external documentation tests:
-
-`cargo +nightly test --doc`
+`cargo test`
 
 To run our benchmarks:
 
