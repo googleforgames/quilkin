@@ -15,7 +15,6 @@
  */
 
 use quilkin::filters::prelude::*;
-use quilkin::runner::run;
 
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
@@ -73,5 +72,5 @@ impl FilterFactory for GreetFilterFactory {
 
 #[tokio::main]
 async fn main() {
-    run(vec![self::factory()].into_iter()).await.unwrap();
+    quilkin::runner::run(vec![self::factory()].into_iter()).await.unwrap();
 }
