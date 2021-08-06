@@ -337,13 +337,7 @@ impl Server {
 
         if let Some(response) = result.await {
             for endpoint in response.endpoints.iter() {
-                Self::session_send_packet(
-                    &response.contents.as_slice(),
-                    recv_addr,
-                    endpoint,
-                    &args,
-                )
-                .await;
+                Self::session_send_packet(&response.contents, recv_addr, endpoint, args).await;
             }
         }
     }
@@ -408,7 +402,7 @@ impl Server {
                         if let Some(session) = guard.get(&session_key) {
                             Self::session_send_packet_helper(
                                 &args.log,
-                                &session,
+                                session,
                                 packet,
                                 args.session_ttl,
                             )

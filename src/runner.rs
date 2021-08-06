@@ -14,80 +14,46 @@
  * limitations under the License.
  */
 
-use std::{fs::File, sync::Arc};
+use std::sync::Arc;
 
-use clap::App;
 use slog::{info, o};
 use tokio::{signal, sync::watch};
 
 use crate::{
     config::Config,
     filters::{DynFilterFactory, FilterRegistry, FilterSet},
-    proxy::{logger, Builder},
+    proxy::Builder,
 };
 
 #[cfg(doc)]
 use crate::filters::FilterFactory;
 
-const VERSION: &str = env!("CARGO_PKG_VERSION");
-const CONFIG_FILE: &str = "quilkin.yaml";
-
 pub type Error = Box<dyn std::error::Error>;
 
-#[cfg(debug_assertions)]
-fn version() -> String {
-    format!("{}+debug", VERSION)
-}
-
-#[cfg(not(debug_assertions))]
-fn version() -> String {
-    VERSION.into()
+/// Calls [`run`] with the [`Config`] found by [`Config::find`] and the
+/// default [`FilterSet`].
+pub async fn run(
+    filter_factories: impl IntoIterator<Item = DynFilterFactory>,
+) -> Result<(), Error> {
+    let log = crate::proxy::logger();
+    run_with_config(
+        log.clone(),
+        Config::find(&log, None).map(Arc::new)?,
+        filter_factories,
+    )
+    .await
 }
 
 /// Start and run a proxy. Any passed in [`FilterFactory`]s are included
 /// alongside the default filter factories.
-pub async fn run(
+pub async fn run_with_config(
+    base_log: slog::Logger,
+    config: Arc<Config>,
     filter_factories: impl IntoIterator<Item = DynFilterFactory>,
 ) -> Result<(), Error> {
-    let version = version();
-    let base_logger = logger();
-    let log = base_logger.new(o!("source" => "run"));
-
-    let matches = App::new(clap::crate_name!())
-        .version(version.as_str())
-        .about(clap::crate_description!())
-        .arg(
-            clap::Arg::with_name("filename")
-                .short("f")
-                .long("filename")
-                .value_name("FILE")
-                .help("The yaml configuration file")
-                .takes_value(true),
-        )
-        .get_matches();
-
-    let config_env = std::env::var("QUILKIN_FILENAME").ok();
-    let config_path = matches
-        .value_of("filename")
-        .or_else(|| config_env.as_deref())
-        .or(Some(CONFIG_FILE))
-        .map(|path| std::path::Path::new(path).canonicalize())
-        .transpose()
-        // Path wll always be `Some` here.
-        .map(Option::unwrap)?;
-
-    info!(log, "Starting Quilkin"; "version" => version);
-
-    let config = File::open(&config_path)
-        .or_else(|_| get_config_file())
-        .map_err(Error::from)
-        .and_then(|file| Config::from_reader(file).map_err(Error::from))
-        .map(Arc::new)?;
-
-    info!(log, "Found configuration file"; "path" => config_path.display());
-
+    let log = base_log.new(o!("source" => "run"));
     let server = Builder::from(config)
-        .with_log(base_logger)
+        .with_log(base_log)
         .with_filter_registry(FilterRegistry::new(FilterSet::default_with(
             &log,
             filter_factories.into_iter(),
@@ -110,14 +76,4 @@ pub async fn run(
         info!(log, "Shutting down");
         Ok(())
     }
-}
-
-fn get_config_file() -> Result<File, std::io::Error> {
-    std::fs::File::open("./quilkin.yaml").or_else(|error| {
-        if cfg!(unix) {
-            std::fs::File::open("/etc/quilkin/quilkin.yaml")
-        } else {
-            Err(error)
-        }
-    })
 }

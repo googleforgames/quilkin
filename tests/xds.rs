@@ -14,16 +14,12 @@
  * limitations under the License.
  */
 
-#[allow(clippy::module_inception)]
-mod xds {
-    pub mod core {
-        pub mod v3 {
-            #![doc(hidden)]
-            tonic::include_proto!("xds.core.v3");
-        }
-    }
-}
+#[allow(warnings)]
+quilkin::include_proto!("xds.core.v3");
+#[allow(warnings)]
+quilkin::include_proto!("google.rpc");
 
+#[allow(warnings)]
 mod envoy {
     pub mod r#type {
         pub mod matcher {
@@ -107,13 +103,7 @@ mod envoy {
     }
 }
 
-mod google {
-    pub mod rpc {
-        #![doc(hidden)]
-        tonic::include_proto!("google.rpc");
-    }
-}
-
+#[allow(warnings)]
 mod quilkin_proto {
     pub mod extensions {
         pub mod filters {
@@ -126,8 +116,6 @@ mod quilkin_proto {
         }
     }
 }
-
-extern crate quilkin;
 
 #[cfg(test)]
 mod tests {
@@ -155,8 +143,8 @@ mod tests {
     };
 
     use quilkin::config::Config;
-    use quilkin::proxy::Builder;
     use quilkin::test_utils::{logger, TestHelper};
+    use quilkin::Builder;
 
     use prost::Message;
     use slog::{info, o, Logger};

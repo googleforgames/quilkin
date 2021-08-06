@@ -202,7 +202,7 @@ impl Session {
 
         trace!(log, "Received packet"; "from" => from,
             "endpoint_addr" => &endpoint.address,
-            "contents" => debug::bytes_to_string(&packet));
+            "contents" => debug::bytes_to_string(packet));
 
         if let Err(err) = Session::do_update_expiration(expiration, ttl) {
             warn!(log, "Error updating session expiration"; "error" => %err)

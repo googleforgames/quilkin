@@ -30,7 +30,6 @@ RUN set -eux && \
     rm rustup-init && \
     chmod -R a+w $RUSTUP_HOME $CARGO_HOME && \
     rustup component add rustfmt clippy && \
-    rustup toolchain install nightly && \
     cargo install cross && \
     cargo install cargo-about && \
     cargo install --locked cargo-deny && \

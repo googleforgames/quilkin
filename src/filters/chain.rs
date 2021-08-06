@@ -67,7 +67,7 @@ impl FilterChain {
                         )
                         .const_label(FILTER_LABEL, name),
                     )
-                    .and_then(|histogram| histogram.register_if_not_exists(&registry))
+                    .and_then(|histogram| histogram.register_if_not_exists(registry))
                 })
                 .collect::<Result<_, prometheus::Error>>()?,
             filter_write_duration_seconds: filters
@@ -80,7 +80,7 @@ impl FilterChain {
                         )
                         .const_label(FILTER_LABEL, name),
                     )
-                    .and_then(|histogram| histogram.register_if_not_exists(&registry))
+                    .and_then(|histogram| histogram.register_if_not_exists(registry))
                 })
                 .collect::<Result<_, prometheus::Error>>()?,
             filters,
@@ -112,7 +112,7 @@ impl FilterChain {
             }
         }
 
-        FilterChain::new(filters, &metrics_registry)
+        FilterChain::new(filters, metrics_registry)
     }
 }
 
