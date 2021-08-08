@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-use crate::filters::{FilterChain, FilterRegistry};
+use crate::filters::{chain::Error as FilterChainError, FilterChain, FilterRegistry};
 
 use std::sync::Arc;
 
@@ -72,15 +72,15 @@ impl FilterManager {
     /// Updates from the provided stream will be reflected in the current filter chain.
     pub fn dynamic(
         base_logger: Logger,
-        filter_chain_update: Arc<FilterChain>,
+        metrics_registry: &Registry,
         filter_chain_updates_rx: mpsc::Receiver<Arc<FilterChain>>,
         shutdown_rx: watch::Receiver<()>,
-    ) -> SharedFilterManager {
+    ) -> Result<SharedFilterManager, FilterChainError> {
         let log = Self::create_logger(base_logger);
 
         let filter_manager = Arc::new(RwLock::new(FilterManager {
             // Start out with an empty filter chain.
-            filter_chain: filter_chain_update,
+            filter_chain: Arc::new(FilterChain::new(vec![], metrics_registry)?),
         }));
 
         // Start a task in the background to receive LDS updates
@@ -92,7 +92,7 @@ impl FilterManager {
             shutdown_rx,
         );
 
-        filter_manager
+        Ok(filter_manager)
     }
 
     /// Spawns a task in the background that listens for filter chain updates and
