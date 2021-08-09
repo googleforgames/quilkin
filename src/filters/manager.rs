@@ -141,8 +141,7 @@ mod tests {
     use std::sync::Arc;
     use std::time::Duration;
 
-    use crate::cluster::Endpoint;
-    use crate::config::{Endpoints, UpstreamEndpoints};
+    use crate::endpoint::{Endpoint, Endpoints, UpstreamEndpoints};
     use tokio::sync::mpsc;
     use tokio::sync::watch;
     use tokio::time::sleep;
@@ -167,10 +166,8 @@ mod tests {
             manager_guard.get_filter_chain().clone()
         };
 
-        let test_endpoints = Endpoints::new(vec![Endpoint::from_address(
-            "127.0.0.1:8080".parse().unwrap(),
-        )])
-        .unwrap();
+        let test_endpoints =
+            Endpoints::new(vec![Endpoint::new("127.0.0.1:8080".parse().unwrap())]).unwrap();
         let response = filter_chain.read(ReadContext::new(
             UpstreamEndpoints::from(test_endpoints.clone()),
             "127.0.0.1:8081".parse().unwrap(),

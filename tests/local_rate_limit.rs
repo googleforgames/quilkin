@@ -18,9 +18,12 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use tokio::time::{timeout, Duration};
 
-use quilkin::config::{Builder as ConfigBuilder, EndPoint, Filter};
-use quilkin::filters::local_rate_limit;
-use quilkin::test_utils::TestHelper;
+use quilkin::{
+    config::{Builder as ConfigBuilder, Filter},
+    endpoint::Endpoint,
+    filters::local_rate_limit,
+    test_utils::TestHelper,
+};
 
 #[tokio::test]
 async fn local_rate_limit_filter() {
@@ -40,7 +43,7 @@ period: 1s
                 name: local_rate_limit::factory().name().into(),
                 config: serde_yaml::from_str(yaml).unwrap(),
             }],
-            vec![EndPoint::new(echo)],
+            vec![Endpoint::new(echo)],
         )
         .build();
     t.run_server_with_config(server_config);

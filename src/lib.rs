@@ -15,13 +15,17 @@
  */
 
 mod cluster;
-pub mod config;
-pub mod filters;
+pub mod metadata;
 pub(crate) mod metrics;
+pub(crate) mod prost;
 mod proxy;
 mod runner;
 pub(crate) mod utils;
 pub(crate) mod xds;
+
+pub mod config;
+pub mod endpoint;
+pub mod filters;
 
 #[doc(hidden)]
 pub mod test_utils;

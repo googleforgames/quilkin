@@ -14,14 +14,19 @@
  * limitations under the License.
  */
 
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::{
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+    sync::Arc,
+};
 
 use slog::info;
 
-use quilkin::config::{Admin, Builder as ConfigBuilder, EndPoint};
-use quilkin::test_utils::TestHelper;
-use quilkin::Builder;
-use std::sync::Arc;
+use quilkin::{
+    config::{Admin, Builder as ConfigBuilder},
+    endpoint::Endpoint,
+    test_utils::TestHelper,
+    Builder,
+};
 
 #[tokio::test]
 async fn metrics_server() {
@@ -34,7 +39,7 @@ async fn metrics_server() {
     let server_port = 12346;
     let server_config = ConfigBuilder::empty()
         .with_port(server_port)
-        .with_static(vec![], vec![EndPoint::new(echo)])
+        .with_static(vec![], vec![Endpoint::new(echo)])
         .with_admin(Admin {
             address: "[::]:9092".parse().unwrap(),
         })
@@ -47,7 +52,7 @@ async fn metrics_server() {
         .with_port(client_port)
         .with_static(
             vec![],
-            vec![EndPoint::new(SocketAddr::new(
+            vec![Endpoint::new(SocketAddr::new(
                 IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
                 server_port,
             ))],

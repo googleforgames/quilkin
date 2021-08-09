@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Google LLC
+ * Copyright 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,22 +14,140 @@
  *  limitations under the License.
  */
 
-// TODO Move endpoint.rs out of config/ into cluster/
-use crate::cluster::Endpoint;
-use std::sync::Arc;
+//! Types representing where the data is the sent.
 
-#[derive(Debug)]
-pub struct EmptyListError;
+use std::{net::SocketAddr, sync::Arc};
 
-#[derive(Debug)]
-pub struct AllEndpointsRemovedError;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug)]
-pub struct IndexOutOfRangeError;
+use crate::metadata::Metadata;
 
-/// Endpoints represents the set of all known upstream endpoints.
+/// Represents the set of all known upstream endpoints.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Endpoints(Arc<Vec<Endpoint>>);
+
+/// A destination endpoint with any associated metadata.
+#[derive(Debug, Deserialize, Serialize, PartialEq, Clone, PartialOrd, Eq)]
+#[non_exhaustive]
+#[serde(deny_unknown_fields)]
+pub struct Endpoint {
+    pub address: SocketAddr,
+    #[serde(default)]
+    pub metadata: Metadata<EndpointMetadata>,
+}
+
+impl Endpoint {
+    /// Creates a new [`Endpoint`] with no metadata.
+    pub fn new(address: SocketAddr) -> Self {
+        Self::with_metadata(address, Metadata::default())
+    }
+
+    /// Creates a new [`Endpoint`] with the specified `metadata`.
+    pub fn with_metadata(
+        address: SocketAddr,
+        metadata: impl Into<Metadata<EndpointMetadata>>,
+    ) -> Self {
+        Self {
+            address,
+            metadata: metadata.into(),
+        }
+    }
+}
+
+impl Default for Endpoint {
+    fn default() -> Self {
+        Self {
+            address: std::net::SocketAddrV6::new(std::net::Ipv6Addr::UNSPECIFIED, 0, 0, 0).into(),
+            metadata: <_>::default(),
+        }
+    }
+}
+
+/// Metadata specific to endpoints.
+#[derive(Default, Debug, Deserialize, Serialize, PartialEq, Clone, PartialOrd, Eq)]
+#[non_exhaustive]
+pub struct EndpointMetadata {
+    #[serde(with = "base64_set")]
+    pub tokens: base64_set::Set,
+}
+
+mod base64_set {
+    use serde::de::Error;
+
+    pub type Set<T = Vec<u8>> = std::collections::BTreeSet<T>;
+
+    pub fn serialize<S>(set: &Set, ser: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serde::Serialize::serialize(&set.iter().map(base64::encode).collect::<Vec<_>>(), ser)
+    }
+
+    pub fn deserialize<'de, D>(de: D) -> Result<Set, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let items = <Vec<String> as serde::Deserialize>::deserialize(de)?;
+        let set = items.iter().cloned().collect::<Set<String>>();
+
+        if set.len() != items.len() {
+            Err(D::Error::custom(
+                "Found duplicate tokens in endpoint metadata.",
+            ))
+        } else {
+            set.into_iter()
+                .map(|string| base64::decode(string).map_err(D::Error::custom))
+                .collect()
+        }
+    }
+}
+
+#[derive(Debug, Clone, thiserror::Error)]
+pub enum MetadataError {
+    #[error("Invalid bas64 encoded token: `{0}`.")]
+    InvalidBase64(base64::DecodeError),
+    #[error("Missing required key `{0}`.")]
+    MissingKey(&'static str),
+    #[error("Invalid type ({expected}) given for `{key}`.")]
+    InvalidType {
+        key: &'static str,
+        expected: &'static str,
+    },
+}
+
+impl std::convert::TryFrom<prost_types::Struct> for EndpointMetadata {
+    type Error = MetadataError;
+
+    fn try_from(mut value: prost_types::Struct) -> Result<Self, Self::Error> {
+        use prost_types::value::Kind;
+        const TOKENS: &str = "tokens";
+
+        let tokens = if let Some(kind) = value.fields.remove(TOKENS).and_then(|v| v.kind) {
+            if let Kind::ListValue(list) = kind {
+                list.values
+                    .into_iter()
+                    .filter_map(|v| v.kind)
+                    .map(|kind| {
+                        if let Kind::StringValue(string) = kind {
+                            base64::decode(string).map_err(MetadataError::InvalidBase64)
+                        } else {
+                            Err(MetadataError::InvalidType {
+                                key: TOKENS,
+                                expected: "base64 string",
+                            })
+                        }
+                    })
+                    .collect::<Result<_, _>>()?
+            } else {
+                return Err(MetadataError::MissingKey(TOKENS));
+            }
+        } else {
+            <_>::default()
+        };
+
+        Ok(Self { tokens })
+    }
+}
 
 /// UpstreamEndpoints represents a set of endpoints.
 /// This set is guaranteed to be non-empty - any operation that would
@@ -46,12 +164,8 @@ pub struct UpstreamEndpoints {
 
 impl Endpoints {
     /// Returns an [`Endpoints`] backed by the provided list of endpoints.
-    pub fn new(endpoints: Vec<Endpoint>) -> Result<Self, EmptyListError> {
-        if endpoints.is_empty() {
-            Err(EmptyListError)
-        } else {
-            Ok(Self(Arc::new(endpoints)))
-        }
+    pub fn new(endpoints: Vec<Endpoint>) -> Option<Self> {
+        (!endpoints.is_empty()).then(|| Self(Arc::new(endpoints)))
     }
 }
 
@@ -81,10 +195,11 @@ impl UpstreamEndpoints {
     }
 
     /// Updates the current subset of endpoints to contain only the endpoint
-    /// at the specified zero-indexed position.
-    pub fn keep(&mut self, index: usize) -> Result<(), IndexOutOfRangeError> {
+    /// at the specified zero-indexed position, returns `None` if `index`
+    /// is greater than the number of endpoints.
+    pub fn keep(&mut self, index: usize) -> Option<()> {
         if index >= self.size() {
-            return Err(IndexOutOfRangeError);
+            return None;
         }
 
         match self.subset.as_mut() {
@@ -98,7 +213,7 @@ impl UpstreamEndpoints {
             }
         }
 
-        Ok(())
+        Some(())
     }
 
     /// Updates the current subset of endpoints to contain only the endpoints
@@ -198,18 +313,16 @@ impl<'a> Iterator for UpstreamEndpointsIter<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::Endpoints;
-    use crate::cluster::Endpoint;
-    use crate::config::{RetainedItems, UpstreamEndpoints};
+    use super::*;
 
     fn ep(id: usize) -> Endpoint {
-        Endpoint::from_address(format!("127.0.0.{}:8080", id).parse().unwrap())
+        Endpoint::new(format!("127.0.0.{}:8080", id).parse().unwrap())
     }
 
     #[test]
     fn new_endpoints() {
-        assert!(Endpoints::new(vec![]).is_err());
-        assert!(Endpoints::new(vec![ep(1)]).is_ok());
+        assert!(Endpoints::new(vec![]).is_none());
+        assert!(Endpoints::new(vec![ep(1)]).is_some());
     }
 
     #[test]
@@ -217,10 +330,10 @@ mod tests {
         let initial_endpoints = vec![ep(1), ep(2), ep(3)];
 
         let mut up: UpstreamEndpoints = Endpoints::new(initial_endpoints.clone()).unwrap().into();
-        assert!(up.keep(initial_endpoints.len() - 1).is_ok());
+        assert!(up.keep(initial_endpoints.len() - 1).is_some());
 
         let mut up: UpstreamEndpoints = Endpoints::new(initial_endpoints.clone()).unwrap().into();
-        assert!(up.keep(initial_endpoints.len()).is_err());
+        assert!(up.keep(initial_endpoints.len()).is_none());
 
         // Limit the set to only one element.
         let mut up = UpstreamEndpoints::from(Endpoints::new(initial_endpoints.clone()).unwrap());
@@ -230,7 +343,7 @@ mod tests {
 
         let mut up = UpstreamEndpoints::from(Endpoints::new(initial_endpoints).unwrap());
         up.keep(1).unwrap();
-        assert!(up.keep(1).is_err());
+        assert!(up.keep(1).is_none());
     }
 
     #[test]
@@ -285,5 +398,51 @@ mod tests {
         let mut up = UpstreamEndpoints::from(Endpoints::new(vec![ep(1), ep(2), ep(3)]).unwrap());
         up.keep(1).unwrap();
         assert_eq!(vec![ep(2)], up.iter().cloned().collect::<Vec<_>>());
+    }
+    #[test]
+    fn yaml_parse_endpoint_metadata() {
+        let yaml = "
+ user:
+     key1: value1
+ quilkin.dev:
+     tokens:
+         - MXg3aWp5Ng== #1x7ijy6
+         - OGdqM3YyaQ== #8gj3v2i
+ ";
+        assert_eq!(
+            serde_json::to_value(serde_yaml::from_str::<Metadata<EndpointMetadata>>(yaml).unwrap())
+                .unwrap(),
+            serde_json::json!({
+                "user": {
+                    "key1": "value1"
+                },
+                "quilkin.dev": {
+                    "tokens": ["MXg3aWp5Ng==", "OGdqM3YyaQ=="],
+                }
+            })
+        );
+    }
+
+    #[test]
+    fn yaml_parse_invalid_endpoint_metadata() {
+        let not_a_list = "
+ quilkin.dev:
+     tokens: OGdqM3YyaQ==
+ ";
+        let not_a_string_value = "
+ quilkin.dev:
+     tokens:
+         - map:
+           a: b
+ ";
+        let not_a_base64_string = "
+ quilkin.dev:
+     tokens:
+         - OGdqM3YyaQ== #8gj3v2i
+         - iix
+ ";
+        for yaml in &[not_a_list, not_a_string_value, not_a_base64_string] {
+            serde_yaml::from_str::<Metadata<EndpointMetadata>>(yaml).unwrap_err();
+        }
     }
 }

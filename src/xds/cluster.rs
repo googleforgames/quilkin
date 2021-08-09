@@ -14,24 +14,35 @@
  * limitations under the License.
  */
 
-use crate::cluster::{
-    Cluster as ProxyCluster, ClusterLocalities, Endpoint, Locality, LocalityEndpoints,
+use std::{
+    collections::{HashMap, HashSet},
+    convert::TryFrom,
+    net::SocketAddr,
 };
-use crate::xds::envoy::config::cluster::v3::{cluster, Cluster};
-use crate::xds::envoy::config::core::v3::{address, socket_address};
-use crate::xds::envoy::config::endpoint::v3::{lb_endpoint, ClusterLoadAssignment};
-use crate::xds::envoy::service::discovery::v3::{DiscoveryRequest, DiscoveryResponse};
-use crate::xds::metadata;
-use crate::xds::{CLUSTER_TYPE, ENDPOINT_TYPE};
 
-use crate::xds::ads_client::send_discovery_req;
-use crate::xds::error::Error;
 use bytes::Bytes;
 use prost::Message;
 use slog::{debug, o, warn, Logger};
-use std::collections::{HashMap, HashSet};
-use std::net::SocketAddr;
 use tokio::sync::mpsc;
+
+use crate::{
+    cluster::{Cluster as ProxyCluster, ClusterLocalities, Locality, LocalityEndpoints},
+    endpoint::Endpoint,
+    metadata::Metadata,
+    xds::{
+        ads_client::send_discovery_req,
+        envoy::{
+            config::{
+                cluster::v3::{cluster, Cluster},
+                core::v3::{address, socket_address},
+                endpoint::v3::{lb_endpoint, ClusterLoadAssignment},
+            },
+            service::discovery::v3::{DiscoveryRequest, DiscoveryResponse},
+        },
+        error::Error,
+        CLUSTER_TYPE, ENDPOINT_TYPE,
+    },
+};
 
 /// Tracks clusters and endpoints reported by an XDS server.
 /// This struct handles, parsing and aggregating XDS DiscoveryResponse
@@ -252,7 +263,7 @@ impl ClusterManager {
             });
 
             // Extract components of the endpoint that we care about.
-            let mut processed_endpoints = vec![];
+            let mut endpoints = vec![];
             for (host_identifier, metadata) in
                 lb_locality
                     .lb_endpoints
@@ -283,7 +294,14 @@ impl ClusterManager {
                     .and_then(|address| address.address)
                     .map(|address| match address {
                         address::Address::SocketAddress(sock_addr) => {
-                            let address = sock_addr.address;
+                            // We only support IP addresses so anything else is an error.
+                            let address =
+                                sock_addr
+                                    .address
+                                    .parse::<std::net::IpAddr>()
+                                    .map_err(|err| {
+                                        Error::new(format!("invalid ip address: {}", err))
+                                    })?;
                             sock_addr
                                 .port_specifier
                                 .map(|port_specifier| match port_specifier {
@@ -291,11 +309,11 @@ impl ClusterManager {
                                         Ok((address, port as u16))
                                     }
                                     socket_address::PortSpecifier::NamedPort(_) => Err(Error::new(
-                                        "named_port on socket addresses is not supported".into(),
+                                        "named_port on socket addresses is not supported",
                                     )),
                                 })
                                 .unwrap_or_else(|| {
-                                    Err(Error::new("no port specifier was provided".into()))
+                                    Err(Error::new("no port specifier was provided"))
                                 })
                         }
                         invalid => Err(Error::new(format!(
@@ -303,31 +321,15 @@ impl ClusterManager {
                             invalid
                         ))),
                     })
-                    .unwrap_or_else(|| {
-                        Err(Error::new("received `Endpoint` with no `address`".into()))
-                    })?;
+                    .unwrap_or_else(|| Err(Error::new("received `Endpoint` with no `address`")))?;
 
-                // Extract any metadata associated with the endpoint.
-                let (metadata, tokens) = if let Some(metadata) = metadata {
-                    let (metadata, tokens) =
-                        metadata::parse_endpoint_metadata(metadata).map_err(Error::new)?;
-                    (Some(metadata), tokens)
-                } else {
-                    (None, Default::default())
-                };
-
-                processed_endpoints.push((address, tokens, metadata));
-            }
-
-            let mut endpoints = vec![];
-            for ((addr, port), tokens, metadata) in processed_endpoints.into_iter() {
-                endpoints.push(Endpoint::new(
-                    // We only support IP addresses so anything else is an error.
-                    addr.parse::<std::net::IpAddr>()
-                        .map_err(|err| Error::new(format!("invalid ip address: {}", err)))
-                        .map(|ip_addr| SocketAddr::new(ip_addr, port))?,
-                    tokens,
-                    metadata,
+                endpoints.push(Endpoint::with_metadata(
+                    SocketAddr::from(address),
+                    metadata
+                        .map(Metadata::try_from)
+                        .transpose()
+                        .map_err(Error::new)?
+                        .unwrap_or_default(),
                 ));
             }
 
@@ -403,7 +405,7 @@ impl ClusterManager {
 #[cfg(test)]
 mod tests {
     use super::{ClusterManager, ProxyCluster};
-    use crate::cluster::Endpoint as ProxyEndpoint;
+    use crate::endpoint::Endpoint as ProxyEndpoint;
     use crate::test_utils::logger;
     use crate::xds::envoy::config::cluster::v3::{cluster::ClusterDiscoveryType, Cluster};
     use crate::xds::envoy::config::core::v3::{
@@ -537,7 +539,7 @@ mod tests {
                     .get(&None)
                     .unwrap()
                     .endpoints,
-                vec![ProxyEndpoint::from_address(expected_socket_addr)]
+                vec![ProxyEndpoint::new(expected_socket_addr)]
             );
             assert_eq!(
                 cm.clusters
@@ -547,9 +549,7 @@ mod tests {
                     .get(&None)
                     .unwrap()
                     .endpoints,
-                vec![ProxyEndpoint::from_address(
-                    "127.0.0.1:2020".parse().unwrap(),
-                )]
+                vec![ProxyEndpoint::new("127.0.0.1:2020".parse().unwrap(),)]
             );
         }
     }
@@ -840,17 +840,19 @@ mod tests {
         // Validate the metadata we set for the endpoint.
         assert_eq!(locality.endpoints.len(), 1);
         let endpoint = locality.endpoints.get(0).unwrap();
-        let metadata = endpoint.metadata.as_ref().unwrap();
+        let dyn_metadata = &endpoint.metadata.dynamic;
 
-        let object = metadata.as_object().unwrap();
-        assert_eq!(object.len(), 1);
+        assert_eq!(dyn_metadata.len(), 1);
 
-        let value = object.get(&format!("key-{}", cluster_name)).unwrap();
+        let value = dyn_metadata
+            .get(&format!("key-{}", cluster_name).into())
+            .unwrap();
         assert_eq!(
             value,
-            &serde_json::json!({
-                "one": "two"
-            })
+            &serde_yaml::Value::from(
+                std::array::IntoIter::new([("one".into(), "two".into())])
+                    .collect::<serde_yaml::Mapping>()
+            )
         );
     }
 

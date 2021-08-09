@@ -25,7 +25,8 @@ use serde::{Deserialize, Serialize};
 use slog::{error, o, Logger};
 
 use crate::{
-    config::{RetainedItems, LOG_SAMPLING_RATE},
+    config::LOG_SAMPLING_RATE,
+    endpoint::RetainedItems,
     filters::{metadata::CAPTURED_BYTES, prelude::*},
 };
 
@@ -105,7 +106,10 @@ impl Filter for TokenRouter {
                 None
             }
             Some(value) => match value.downcast_ref::<Vec<u8>>() {
-                Some(token) => match ctx.endpoints.retain(|e| e.tokens.contains(token)) {
+                Some(token) => match ctx
+                    .endpoints
+                    .retain(|e| e.metadata.known.tokens.contains(token))
+                {
                     RetainedItems::None => {
                         self.metrics.packets_dropped_no_endpoint_match.inc();
                         None
@@ -173,13 +177,12 @@ mod tests {
     use prometheus::Registry;
     use serde_yaml::{Mapping, Value};
 
-    use crate::config::Endpoints;
+    use crate::endpoint::{Endpoint, EndpointMetadata, Endpoints};
     use crate::test_utils::{assert_write_no_change, logger};
 
     use super::{
         default_metadata_key, Config, Metrics, ProtoConfig, TokenRouter, TokenRouterFactory,
     };
-    use crate::cluster::Endpoint;
     use crate::filters::{
         metadata::CAPTURED_BYTES, CreateFilterArgs, Filter, FilterFactory, ReadContext,
     };
@@ -326,15 +329,17 @@ mod tests {
     }
 
     fn new_ctx() -> ReadContext {
-        let endpoint1 = Endpoint::new(
+        let endpoint1 = Endpoint::with_metadata(
             "127.0.0.1:80".parse().unwrap(),
-            vec!["123".into()].into_iter().collect(),
-            None,
+            EndpointMetadata {
+                tokens: vec!["123".into()].into_iter().collect(),
+            },
         );
-        let endpoint2 = Endpoint::new(
+        let endpoint2 = Endpoint::with_metadata(
             "127.0.0.1:90".parse().unwrap(),
-            vec!["456".into()].into_iter().collect(),
-            None,
+            EndpointMetadata {
+                tokens: vec!["456".into()].into_iter().collect(),
+            },
         );
 
         ReadContext::new(

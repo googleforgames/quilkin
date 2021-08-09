@@ -18,7 +18,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use rand::{thread_rng, Rng};
 
-use crate::config::UpstreamEndpoints;
+use crate::endpoint::UpstreamEndpoints;
 
 /// EndpointChooser chooses from a set of endpoints that a proxy is connected to.
 pub trait EndpointChooser: Send + Sync {

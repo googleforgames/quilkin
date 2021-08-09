@@ -14,20 +14,12 @@
  * limitations under the License.
  */
 
-use crate::config::{parse_endpoint_metadata_from_yaml, EndPoint};
-use serde_json::value::Value;
-use std::collections::{HashMap, HashSet};
-use std::net::SocketAddr;
-
 pub(crate) mod cluster_manager;
 mod metrics;
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Endpoint {
-    pub address: SocketAddr,
-    pub tokens: HashSet<Vec<u8>>,
-    pub metadata: Option<Value>,
-}
+use std::collections::HashMap;
+
+use crate::endpoint::Endpoint;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct Locality {
@@ -47,29 +39,3 @@ pub struct Cluster {
 }
 
 pub type ClusterLocalities = HashMap<Option<Locality>, LocalityEndpoints>;
-
-impl Endpoint {
-    pub fn new(address: SocketAddr, tokens: HashSet<Vec<u8>>, metadata: Option<Value>) -> Endpoint {
-        Endpoint {
-            address,
-            tokens,
-            metadata,
-        }
-    }
-
-    pub fn from_address(address: SocketAddr) -> Endpoint {
-        Endpoint::new(address, Default::default(), None)
-    }
-
-    /// Converts an endpoint config into an internal endpoint representation.
-    pub fn from_config(config: &EndPoint) -> Result<Endpoint, String> {
-        let (metadata, tokens) = if let Some(metadata) = config.metadata.clone() {
-            let (metadata, tokens) = parse_endpoint_metadata_from_yaml(metadata)?;
-            (Some(metadata), tokens)
-        } else {
-            (None, Default::default())
-        };
-
-        Ok(Endpoint::new(config.address, tokens, metadata))
-    }
-}

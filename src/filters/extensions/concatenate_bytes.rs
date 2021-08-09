@@ -420,7 +420,7 @@ mod tests {
     where
         F: Filter + ?Sized,
     {
-        let endpoints = vec![Endpoint::from_address("127.0.0.1:81".parse().unwrap())];
+        let endpoints = vec![Endpoint::new("127.0.0.1:81".parse().unwrap())];
         let response = filter
             .read(ReadContext::new(
                 Endpoints::new(endpoints.clone()).unwrap().into(),
@@ -442,7 +442,7 @@ mod tests {
     {
         let response = filter
             .write(WriteContext::new(
-                &Endpoint::from_address("127.0.0.1:81".parse().unwrap()),
+                &Endpoint::new("127.0.0.1:81".parse().unwrap()),
                 "127.0.0.1:80".parse().unwrap(),
                 "127.0.0.1:82".parse().unwrap(),
                 b"abc".to_vec(),

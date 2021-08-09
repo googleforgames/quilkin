@@ -119,14 +119,13 @@ mod tests {
     use prometheus::Registry;
     use serde_yaml::{Mapping, Value};
 
-    use crate::config::Endpoints;
+    use crate::endpoint::{Endpoint, Endpoints};
     use crate::test_utils::{assert_write_no_change, logger};
 
     use super::{CaptureBytes, CaptureBytesFactory, Config, Metrics, Strategy};
 
     use super::capture::{Capture, Prefix, Suffix};
 
-    use crate::cluster::Endpoint;
     use crate::filters::{
         metadata::CAPTURED_BYTES, CreateFilterArgs, Filter, FilterFactory, ReadContext,
     };
@@ -213,7 +212,7 @@ mod tests {
             remove: true,
         };
         let filter = capture_bytes(config);
-        let endpoints = vec![Endpoint::from_address("127.0.0.1:81".parse().unwrap())];
+        let endpoints = vec![Endpoint::new("127.0.0.1:81".parse().unwrap())];
         let response = filter.read(ReadContext::new(
             Endpoints::new(endpoints).unwrap().into(),
             "127.0.0.1:80".parse().unwrap(),
@@ -268,7 +267,7 @@ mod tests {
     where
         F: Filter + ?Sized,
     {
-        let endpoints = vec![Endpoint::from_address("127.0.0.1:81".parse().unwrap())];
+        let endpoints = vec![Endpoint::new("127.0.0.1:81".parse().unwrap())];
         let response = filter
             .read(ReadContext::new(
                 Endpoints::new(endpoints).unwrap().into(),

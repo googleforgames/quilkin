@@ -13,12 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+use std::{panic, sync::Arc};
 
-use quilkin::config::{Admin, Builder, EndPoint};
-use quilkin::test_utils::TestHelper;
-use quilkin::Builder as ProxyBuilder;
-use std::panic;
-use std::sync::Arc;
+use quilkin::{
+    config::{Admin, Builder},
+    endpoint::Endpoint,
+    test_utils::TestHelper,
+    Builder as ProxyBuilder,
+};
 
 #[tokio::test]
 async fn health_server() {
@@ -28,7 +30,7 @@ async fn health_server() {
     let server_port = 12349;
     let server_config = Builder::empty()
         .with_port(server_port)
-        .with_static(vec![], vec![EndPoint::new("127.0.0.1:0".parse().unwrap())])
+        .with_static(vec![], vec![Endpoint::new("127.0.0.1:0".parse().unwrap())])
         .with_admin(Admin {
             address: "[::]:9093".parse().unwrap(),
         })

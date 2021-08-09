@@ -18,9 +18,13 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use tokio::time::{timeout, Duration};
 
-use quilkin::config::{Builder, EndPoint, Filter};
-use quilkin::filters::{capture_bytes, token_router};
-use quilkin::test_utils::{logger, TestHelper};
+use quilkin::{
+    config::{Builder, Filter},
+    endpoint::Endpoint,
+    filters::{capture_bytes, token_router},
+    metadata::Metadata,
+    test_utils::{logger, TestHelper},
+};
 
 /// This test covers both token_router and capture_bytes filters,
 /// since they work in concert together.
@@ -53,9 +57,9 @@ quilkin.dev:
                     config: None,
                 },
             ],
-            vec![EndPoint::with_metadata(
+            vec![Endpoint::with_metadata(
                 echo,
-                Some(serde_yaml::from_str(endpoint_metadata).unwrap()),
+                serde_yaml::from_str::<Metadata<_>>(endpoint_metadata).unwrap(),
             )],
         )
         .build();

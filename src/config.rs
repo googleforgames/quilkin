@@ -24,23 +24,13 @@ use uuid::Uuid;
 
 mod builder;
 mod config_type;
-mod endpoints;
 mod error;
-mod metadata;
 
-pub(crate) use self::{
-    error::ValueInvalidArgs,
-    metadata::{extract_endpoint_tokens, parse_endpoint_metadata_from_yaml},
-};
+use crate::endpoint::Endpoint;
 
-pub use self::{
-    builder::Builder,
-    config_type::ConfigType,
-    endpoints::{
-        EmptyListError, Endpoints, RetainedItems, UpstreamEndpoints, UpstreamEndpointsIter,
-    },
-    error::ValidationError,
-};
+pub(crate) use self::error::ValueInvalidArgs;
+
+pub use self::{builder::Builder, config_type::ConfigType, error::ValidationError};
 
 base64_serde_type!(Base64Standard, base64::STANDARD);
 
@@ -165,7 +155,7 @@ pub enum Source {
         #[serde(default)]
         filters: Vec<Filter>,
 
-        endpoints: Vec<EndPoint>,
+        endpoints: Vec<Endpoint>,
     },
     #[serde(rename = "dynamic")]
     Dynamic {
@@ -197,36 +187,19 @@ pub struct Filter {
     pub config: Option<serde_yaml::Value>,
 }
 
-/// A singular endpoint, to pass on UDP packets to.
-#[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
-#[serde(deny_unknown_fields)]
-pub struct EndPoint {
-    pub address: SocketAddr,
-    pub metadata: Option<serde_yaml::Value>,
-}
-
-impl EndPoint {
-    pub fn new(address: SocketAddr) -> Self {
-        EndPoint::with_metadata(address, None)
-    }
-
-    pub fn with_metadata(address: SocketAddr, metadata: Option<serde_yaml::Value>) -> Self {
-        EndPoint { address, metadata }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use serde_yaml::Value;
 
-    use crate::config::{Builder, Config, EndPoint, ManagementServer, Source};
-    use std::collections::HashMap;
+    use super::*;
+
+    use crate::endpoint::EndpointMetadata;
 
     fn parse_config(yaml: &str) -> Config {
         Config::from_reader(yaml.as_bytes()).unwrap()
     }
 
-    fn assert_static_endpoints(source: &Source, expected_endpoints: Vec<EndPoint>) {
+    fn assert_static_endpoints(source: &Source, expected_endpoints: Vec<Endpoint>) {
         match source {
             Source::Static {
                 filters: _,
@@ -253,7 +226,7 @@ mod tests {
             .with_port(7000)
             .with_static(
                 vec![],
-                vec![EndPoint::new("127.0.0.1:25999".parse().unwrap())],
+                vec![Endpoint::new("127.0.0.1:25999".parse().unwrap())],
             )
             .build();
         let _ = serde_yaml::to_string(&config).unwrap();
@@ -266,8 +239,8 @@ mod tests {
             .with_static(
                 vec![],
                 vec![
-                    EndPoint::new("127.0.0.1:26000".parse().unwrap()),
-                    EndPoint::new("127.0.0.1:26001".parse().unwrap()),
+                    Endpoint::new("127.0.0.1:26000".parse().unwrap()),
+                    Endpoint::new("127.0.0.1:26001".parse().unwrap()),
                 ],
             )
             .build();
@@ -358,7 +331,7 @@ static:
 
         assert_static_endpoints(
             &config.source,
-            vec![EndPoint::new("127.0.0.1:25999".parse().unwrap())],
+            vec![Endpoint::new("127.0.0.1:25999".parse().unwrap())],
         );
     }
 
@@ -384,37 +357,20 @@ static:
         assert_static_endpoints(
             &config.source,
             vec![
-                EndPoint::with_metadata(
+                Endpoint::with_metadata(
                     "127.0.0.1:26000".parse().unwrap(),
-                    Some(
-                        serde_yaml::to_value(
-                            vec![(
-                                "quilkin.dev",
-                                vec![("tokens", vec!["MXg3aWp5Ng==", "OGdqM3YyaQ=="])]
-                                    .into_iter()
-                                    .collect::<HashMap<_, _>>(),
-                            )]
+                    EndpointMetadata {
+                        tokens: vec!["1x7ijy6", "8gj3v2i"]
                             .into_iter()
-                            .collect::<HashMap<_, _>>(),
-                        )
-                        .unwrap(),
-                    ),
+                            .map(From::from)
+                            .collect(),
+                    },
                 ),
-                EndPoint::with_metadata(
+                Endpoint::with_metadata(
                     "127.0.0.1:26001".parse().unwrap(),
-                    Some(
-                        serde_yaml::to_value(
-                            vec![(
-                                "quilkin.dev",
-                                vec![("tokens", vec!["bmt1eTcweA=="])]
-                                    .into_iter()
-                                    .collect::<HashMap<_, _>>(),
-                            )]
-                            .into_iter()
-                            .collect::<HashMap<_, _>>(),
-                        )
-                        .unwrap(),
-                    ),
+                    EndpointMetadata {
+                        tokens: vec!["nkuy70x"].into_iter().map(From::from).collect(),
+                    },
                 ),
             ],
         );

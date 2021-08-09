@@ -66,11 +66,12 @@ mod tests {
     use std::collections::HashSet;
     use std::net::SocketAddr;
 
-    use crate::cluster::Endpoint;
-    use crate::config::Endpoints;
-    use crate::filters::{
-        load_balancer::LoadBalancerFilterFactory, CreateFilterArgs, Filter, FilterFactory,
-        ReadContext,
+    use crate::{
+        endpoint::{Endpoint, Endpoints},
+        filters::{
+            load_balancer::LoadBalancerFilterFactory, CreateFilterArgs, Filter, FilterFactory,
+            ReadContext,
+        },
     };
     use prometheus::Registry;
 
@@ -93,7 +94,7 @@ mod tests {
                 Endpoints::new(
                     input_addresses
                         .iter()
-                        .map(|addr| Endpoint::from_address(*addr))
+                        .map(|addr| Endpoint::new(*addr))
                         .collect(),
                 )
                 .unwrap()
