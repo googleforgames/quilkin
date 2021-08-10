@@ -1,0 +1,1 @@
+initSidebarItems({"constant":[["NAME",""]],"enum":[["Action","Whether to do nothing, compress or decompress the packet."],["Mode","The library to use when compressing."]],"fn":[["factory","Returns a factory for creating compression filters."]],"struct":[["Config",""]]});

@@ -1,0 +1,1 @@
+initSidebarItems({"constant":[["NAME",""]],"fn":[["factory","Creates a new factory for generating rate limiting filters."]],"struct":[["Config","Config represents a [self]’s configuration."]]});
