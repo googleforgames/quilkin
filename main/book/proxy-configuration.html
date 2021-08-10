@@ -144,8 +144,11 @@
                 <div id="content" class="content">
                     <main>
                         <p>Proxy Configuration</p>
-<p>The following is the schema and reference for a Quilkin proxy configuration file. See the <a href="https://github.com/googleforgames/quilkin/blob/main/examples">examples</a> folder for example configuration files.</p>
-<p>By default Quilkin will look for a configuration file named <code>quilkin.yaml</code> in its current running directory first, then if not present, in <code>/etc/quilkin/quilkin.yaml</code> on UNIX systems. This can be overridden with the <code>-f/--filename</code> command-line argument, or the <code>QUILKIN_FILENAME</code> environment variable.</p>
+<p>The following is the schema and reference for a Quilkin proxy configuration file. See the <a href="https://github.com/googleforgames/quilkin/blob/main/examples">examples</a> folder for 
+example configuration files.</p>
+<p>By default Quilkin will look for a configuration file named <code>quilkin.yaml</code> in its current running directory first, 
+then if not present, in <code>/etc/quilkin/quilkin.yaml</code> on UNIX systems. This can be overridden with the 
+<code>-c/--config</code> command-line argument, or the <code>QUILKIN_FILENAME</code> environment variable.</p>
 <pre><code class="language-yaml">type: object
 properties:
   version:

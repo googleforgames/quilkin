@@ -206,10 +206,10 @@ static:
 <p>This configuration will start Quilkin on the default port of 7000, and it will redirect all incoming UDP traffic to
 a single endpoint of 127.0.0.1, port 8000.</p>
 <p>Let's start Quilkin with the above configuration:</p>
-<pre><code class="language-shell">./quilkin --filename proxy.yaml
+<pre><code class="language-shell">./quilkin --config proxy.yaml
 </code></pre>
 <p>You should see an output like the following:</p>
-<pre><code class="language-shell">$ ./quilkin --filename proxy.yaml
+<pre><code class="language-shell">$ ./quilkin --config proxy.yaml
 {&quot;msg&quot;:&quot;Starting Quilkin&quot;,&quot;level&quot;:&quot;INFO&quot;,&quot;ts&quot;:&quot;2021-04-25T19:27:22.535174615-07:00&quot;,&quot;source&quot;:&quot;run&quot;,&quot;version&quot;:&quot;0.1.0-dev&quot;}
 {&quot;msg&quot;:&quot;Starting&quot;,&quot;level&quot;:&quot;INFO&quot;,&quot;ts&quot;:&quot;2021-04-25T19:27:22.535315827-07:00&quot;,&quot;source&quot;:&quot;server::Server&quot;,&quot;port&quot;:7000}
 {&quot;msg&quot;:&quot;Starting admin endpoint&quot;,&quot;level&quot;:&quot;INFO&quot;,&quot;ts&quot;:&quot;2021-04-25T19:27:22.535550572-07:00&quot;,&quot;source&quot;:&quot;proxy::Admin&quot;,&quot;address&quot;:&quot;[::]:9091&quot;}
@@ -313,7 +313,7 @@ demonstrate this functionality through a static configuration.</p>
 <p>Instead of connecting Xonotic directly, take the IP and port from one of the Agones hosted <code>GameServer</code> records, and 
 replace the <code>${GAMESERVER_IP}</code> and <code>${GAMESERVER_PORT}</code> values in your copy of <code>client-compress.yaml</code>. </p>
 <p>Run this configuration locally as:</p>
-<pre><code class="language-shell">quilkin -f ./client-compress.yaml`
+<pre><code class="language-shell">quilkin -c ./client-compress.yaml`
 </code></pre>
 <p>Now we can connect to the local client proxy on &quot;127.0.0.1:7000&quot; via the &quot;Multiplayer &gt; Address&quot; field in the
 Xonotic client, and Quilkin will take care of compressing the data for you without having to change the game
@@ -465,8 +465,11 @@ Not that packets reflected by this metric were dropped at an earlier stage befor
 </li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><p>Proxy Configuration</p>
-<p>The following is the schema and reference for a Quilkin proxy configuration file. See the <a href="https://github.com/googleforgames/quilkin/blob/main/examples">examples</a> folder for example configuration files.</p>
-<p>By default Quilkin will look for a configuration file named <code>quilkin.yaml</code> in its current running directory first, then if not present, in <code>/etc/quilkin/quilkin.yaml</code> on UNIX systems. This can be overridden with the <code>-f/--filename</code> command-line argument, or the <code>QUILKIN_FILENAME</code> environment variable.</p>
+<p>The following is the schema and reference for a Quilkin proxy configuration file. See the <a href="https://github.com/googleforgames/quilkin/blob/main/examples">examples</a> folder for 
+example configuration files.</p>
+<p>By default Quilkin will look for a configuration file named <code>quilkin.yaml</code> in its current running directory first, 
+then if not present, in <code>/etc/quilkin/quilkin.yaml</code> on UNIX systems. This can be overridden with the 
+<code>-c/--config</code> command-line argument, or the <code>QUILKIN_FILENAME</code> environment variable.</p>
 <pre><code class="language-yaml">type: object
 properties:
   version:
@@ -1227,7 +1230,7 @@ static:
 <ul>
 <li>
 <p>Start the proxy</p>
-<pre><code class="language-bash">cargo run -- -f config.yaml
+<pre><code class="language-bash">cargo run -- -c config.yaml
 </code></pre>
 </li>
 <li>
