@@ -32,23 +32,14 @@ Not to be used in production systems.
 * v0.1.0 ([guides](https://github.com/googleforgames/quilkin/blob/v0.1.0/README.md#usage), 
   [api](https://docs.rs/quilkin/0.1.0/quilkin/), [macros](https://docs.rs/quilkin-macros/0.1.0/quilkin_macros/)).
 
-### Usage
+### Development
 
-> Below is documentation for the development version of Quilkin. To view the documentation for a specific release, 
-> switch to the release tag in the dropdown at the top of the page, or click on the appropriate release documentation 
-> link above.
+> This documentation is for the development version of Quilkin, currently active on the `main` branch. To view the 
+> documentation for a specific release, click on the appropriate release documentation link above.
 
-* Start with our [Project Overview](./docs/README.md).
-* See how to [use Quilkin](./docs/using.md).
-* View [example integration architectures](./docs/integrations.md).
-* Quickstart: [Quilkin with netcat](docs/quickstart-netcat.md).
-* Quickstart: [Quilkin Agones and Xonotic](docs/quickstart-agones-xonotic.md).
-* See the [examples](./examples) folder for configuration and usage examples.
-* See the [proxy configuration reference](./docs/proxy-configuration.md) for all the configuration options. 
-* See the [Session documentation](./docs/session.md) for an overview of quilkin sessions and metrics.
-* See [Filter documentation](./docs/extensions/filters/filters.md) for a list of filters, and their configuration options.
-* The [Administration interface](./docs/admin.md) provides access to health and metrics endpoints.
-* Finally, we also have a [FAQ](./docs/faq.md)
+* [Guide](https://googleforgames.github.io/quilkin/main/book/)
+* [Api](https://googleforgames.github.io/quilkin/main/api/quilkin/)
+* [Macros](https://googleforgames.github.io/quilkin/main/api/quilkin_macros/)
 
 ## Code of Conduct
 
