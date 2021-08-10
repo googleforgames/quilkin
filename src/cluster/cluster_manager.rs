@@ -79,31 +79,19 @@ impl ClusterManager {
         Ok(Arc::new(RwLock::new(cm)))
     }
 
-    /// Returns a ClusterManager backed by a set of XDS servers.
-    /// This function starts an XDS client in the background that talks to
-    /// one of the provided servers.
-    /// Multiple management servers can be provided for redundancy - the servers will be
-    /// connected to in turn only in the case of failure.
-    /// The set of clusters is continuously updated based on responses
-    /// from the XDS server.
-    /// The returned contains the XDS client's execution result after termination.
+    /// Returns a ClusterManager where the set of clusters is continuously
+    /// updated based on responses from the provided updates channel.
     pub fn dynamic(
         base_logger: Logger,
         metrics_registry: &Registry,
-        cluster_update: ClusterUpdate,
         cluster_updates_rx: mpsc::Receiver<ClusterUpdate>,
         shutdown_rx: watch::Receiver<()>,
     ) -> MetricsResult<SharedClusterManager> {
         let log = base_logger.new(o!("source" => "cluster::ClusterManager"));
 
-        let cluster_manager = Self::new(
-            metrics_registry,
-            Self::create_endpoints_from_update(&cluster_update),
-        )?;
+        let cluster_manager = Self::new(metrics_registry, None)?;
         let metrics = cluster_manager.metrics.clone();
         let cluster_manager = Arc::new(RwLock::new(cluster_manager));
-
-        Self::update_cluster_update_metrics(&metrics, &cluster_update);
 
         // Start a task in the background to receive cluster updates
         // and update the cluster manager's cluster set in turn.
@@ -220,37 +208,14 @@ mod tests {
     async fn dynamic_cluster_manager_metrics() {
         let (update_tx, update_rx) = mpsc::channel(3);
         let (_shutdown_tx, shutdown_rx) = watch::channel(());
-        let cm = ClusterManager::dynamic(
-            logger(),
-            &Registry::default(),
-            vec![(
-                "cluster-1".into(),
-                Cluster {
-                    localities: vec![(
-                        None,
-                        LocalityEndpoints {
-                            endpoints: vec![
-                                Endpoint::from_address("127.0.0.1:80".parse().unwrap()),
-                                Endpoint::from_address("127.0.0.1:81".parse().unwrap()),
-                            ],
-                        },
-                    )]
-                    .into_iter()
-                    .collect(),
-                },
-            )]
-            .into_iter()
-            .collect(),
-            update_rx,
-            shutdown_rx,
-        )
-        .unwrap();
+        let cm = ClusterManager::dynamic(logger(), &Registry::default(), update_rx, shutdown_rx)
+            .unwrap();
 
         // Initialization metrics
         {
             let metrics = &cm.read().metrics;
-            assert_eq!(2, metrics.active_endpoints.get());
-            assert_eq!(1, metrics.active_clusters.get());
+            assert_eq!(0, metrics.active_endpoints.get());
+            assert_eq!(0, metrics.active_clusters.get());
         }
 
         let update = vec![
