@@ -14,60 +14,57 @@
  * limitations under the License.
  */
 
-#[cfg(test)]
-mod tests {
-    use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-    use std::sync::{Arc, Mutex};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::sync::{Arc, Mutex};
 
-    use quilkin::config::{Builder as ConfigBuilder, EndPoint, Filter};
-    use quilkin::filters::load_balancer;
-    use quilkin::test_utils::TestHelper;
+use quilkin::config::{Builder as ConfigBuilder, EndPoint, Filter};
+use quilkin::filters::load_balancer;
+use quilkin::test_utils::TestHelper;
 
-    #[tokio::test]
-    async fn load_balancer_filter() {
-        let mut t = TestHelper::default();
+#[tokio::test]
+async fn load_balancer_filter() {
+    let mut t = TestHelper::default();
 
-        let yaml = "
+    let yaml = "
 policy: ROUND_ROBIN
 ";
-        let selected_endpoint = Arc::new(Mutex::new(None::<SocketAddr>));
+    let selected_endpoint = Arc::new(Mutex::new(None::<SocketAddr>));
 
-        let mut echo_addresses = vec![];
-        for _ in 0..2 {
-            let selected_endpoint = selected_endpoint.clone();
-            echo_addresses.push(
-                t.run_echo_server_with_tap(move |_, _, echo_addr| {
-                    let _ = selected_endpoint.lock().unwrap().replace(echo_addr);
-                })
-                .await,
-            )
-        }
+    let mut echo_addresses = vec![];
+    for _ in 0..2 {
+        let selected_endpoint = selected_endpoint.clone();
+        echo_addresses.push(
+            t.run_echo_server_with_tap(move |_, _, echo_addr| {
+                let _ = selected_endpoint.lock().unwrap().replace(echo_addr);
+            })
+            .await,
+        )
+    }
 
-        let server_port = 12346;
-        let server_config = ConfigBuilder::empty()
-            .with_port(server_port)
-            .with_static(
-                vec![Filter {
-                    name: load_balancer::factory().name().into(),
-                    config: serde_yaml::from_str(yaml).unwrap(),
-                }],
-                echo_addresses
-                    .iter()
-                    .enumerate()
-                    .map(|(_, addr)| EndPoint::new(*addr))
-                    .collect(),
-            )
-            .build();
-        t.run_server_with_config(server_config);
-        let server_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port);
+    let server_port = 12346;
+    let server_config = ConfigBuilder::empty()
+        .with_port(server_port)
+        .with_static(
+            vec![Filter {
+                name: load_balancer::factory().name().into(),
+                config: serde_yaml::from_str(yaml).unwrap(),
+            }],
+            echo_addresses
+                .iter()
+                .enumerate()
+                .map(|(_, addr)| EndPoint::new(*addr))
+                .collect(),
+        )
+        .build();
+    t.run_server_with_config(server_config);
+    let server_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port);
 
-        let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
+    let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
 
-        for addr in echo_addresses {
-            socket.send_to(b"hello", &server_addr).await.unwrap();
-            assert_eq!(recv_chan.recv().await.unwrap(), "hello");
+    for addr in echo_addresses {
+        socket.send_to(b"hello", &server_addr).await.unwrap();
+        assert_eq!(recv_chan.recv().await.unwrap(), "hello");
 
-            assert_eq!(addr, selected_endpoint.lock().unwrap().take().unwrap());
-        }
+        assert_eq!(addr, selected_endpoint.lock().unwrap().take().unwrap());
     }
 }
