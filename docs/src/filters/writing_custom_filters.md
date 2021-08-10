@@ -159,7 +159,7 @@ static:
 ```
 - Start the proxy
   ```bash
-  cargo run -- -f config.yaml
+  cargo run -- -c config.yaml
   ```
 
 - Start a UDP listening server on the configured port
