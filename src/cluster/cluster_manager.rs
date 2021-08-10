@@ -106,30 +106,26 @@ impl ClusterManager {
         Ok(cluster_manager)
     }
 
-    fn update_cluster_update_metrics(metrics: &Metrics, update: &ClusterUpdate) {
-        metrics.active_clusters.set(update.len() as i64);
-        metrics.active_endpoints.set(
-            Self::create_endpoints_from_update(update)
-                .map(|ep| ep.as_ref().len() as i64)
-                .unwrap_or_default(),
-        )
+    fn update_cluster_update_metrics(metrics: &Metrics, num_clusters: i64, num_endpoints: i64) {
+        metrics.active_clusters.set(num_clusters);
+        metrics.active_endpoints.set(num_endpoints)
     }
 
-    fn create_endpoints_from_update(update: &ClusterUpdate) -> Option<Endpoints> {
+    fn create_endpoints_from_update(update: ClusterUpdate) -> Option<Endpoints> {
         // NOTE: We don't currently have support for consuming multiple clusters
         // so here gather all endpoints into the same set, ignoring what cluster they
         // belong to.
         let endpoints = update
-            .iter()
+            .into_iter()
             .fold(vec![], |mut endpoints, (_name, cluster)| {
                 let cluster_endpoints = cluster
                     .localities
-                    .iter()
+                    .into_iter()
                     .map(|(_, endpoints)| {
                         endpoints
                             .endpoints
-                            .iter()
-                            .map(|ep| Endpoint::from_address(ep.address))
+                            .into_iter()
+                            .map(|ep| Endpoint::new(ep.address, ep.tokens, ep.metadata))
                     })
                     .flatten();
                 endpoints.extend(cluster_endpoints);
@@ -158,9 +154,11 @@ impl ClusterManager {
                     update = cluster_updates_rx.recv() => {
                         match update {
                             Some(update) => {
-                                Self::update_cluster_update_metrics(&metrics, &update);
-                                let update = Self::create_endpoints_from_update(&update);
                                 debug!(log, "Received a cluster update.");
+                                let num_clusters = update.len() as i64;
+                                let update = Self::create_endpoints_from_update(update);
+                                let num_endpoints = update.as_ref().map(|ep| ep.as_ref().len() as i64).unwrap_or_default();
+                                Self::update_cluster_update_metrics(&metrics, num_clusters, num_endpoints);
                                 cluster_manager.write().update(update);
                             }
                             None => {
