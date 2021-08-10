@@ -108,5 +108,5 @@ definitions:
         - address
 ```
 
-[examples]: ../examples
+[examples]: https://github.com/googleforgames/quilkin/blob/main/examples
 

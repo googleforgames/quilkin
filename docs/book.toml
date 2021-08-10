@@ -1,0 +1,7 @@
+[book]
+language = "en"
+multilingual = false
+src = "src"
+title = "Quilkin Book"
+
+[output.html]

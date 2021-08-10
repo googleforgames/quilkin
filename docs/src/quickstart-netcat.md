@@ -2,7 +2,7 @@
 
 ## Requirements
 
-* A *nix terminal
+* A \*nix terminal
 * A binary release of Quilkin from the [Github releases page](https://github.com/googleforgames/quilkin/releases)
 * [ncat](https://nmap.org/ncat/guide/)
 * [netcat](http://netcat.sourceforge.net/)
@@ -32,7 +32,7 @@ static:
     - address: 127.0.0.1:8000
 ```
 
-This configuration will start Quilkin on the default port of 7000, and it will redirect all incoming UDP traffic to 
+This configuration will start Quilkin on the default port of 7000, and it will redirect all incoming UDP traffic to
 a single endpoint of 127.0.0.1, port 8000.
 
 Let's start Quilkin with the above configuration:
@@ -75,6 +75,6 @@ Congratulations! You have successfully routed a UDP packet and back again with Q
 What's next?
 
 * Run through the [Quilkin with Agones quickstart](./quickstart-agones-xonotic.md).
-* Have a look at some of [the examples](../examples) we have.
-* Check out the [proxy configuration reference](./proxy-configuration.md) to what other configuration options are 
+* Have a look at some of [the examples](https://github.com/googleforgames/quilkin/blob/main/examples) we have.
+* Check out the [proxy configuration reference](./proxy-configuration.md) to what other configuration options are
   available.

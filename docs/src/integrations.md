@@ -8,7 +8,7 @@ on how you can use Quilkin in your multiplayer game networking architecture.
 
 ## Server Proxy as a Sidecar
 
-```
+```text
                   +
                   |
                Internet
@@ -49,7 +49,7 @@ and metric information that comes with Quilkin.
 
 ## Client Proxy to Sidecar Server Proxy
 
-```
+```text
                                     +
                                     |
                                  Internet
@@ -85,7 +85,7 @@ advantage of Client Proxy functionality.
 
 ## Client Proxy to Separate Server Proxies Pools
 
-```
+```text
                                        +                          +
                                        |                          |
                                     Internet                   Private
@@ -134,7 +134,7 @@ while also providing the most redundancy and security for your dedicated game se
 
 ## What Next?
 
-* Have a look at the [example configurations](../examples) for basic configuration examples.
+* Have a look at the [example configurations](https://github.com/googleforgames/quilkin/blob/main/examples) for basic configuration examples.
 * Review the [set of filters](./extensions/filters/filters.md) that are available.
 
 ---

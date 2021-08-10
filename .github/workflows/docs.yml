@@ -1,0 +1,29 @@
+name: Deploy docs
+on:
+  push:
+    branches:
+      - main
+      - pr/** # just for testing
+    tags:
+      - "v*" # Push events to matching v*, i.e. v1.0, v20.15.10
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+            submodules: true
+      - run: echo snapshot=$(echo ${{ github.ref }} | sed -E 's|refs/[^/]+/||') >> $GITHUB_ENV
+      - run: echo docs_dir=docs-build/${{ env.snapshot }} >> $GITHUB_ENV
+      - run: echo documentation directory=${{ env.docs_dir }}
+      - run: brew install mdbook
+      - run: mkdir -p ${{ env.docs_dir }}
+      - run: $(cd docs && mdbook build -d ../${{ env.docs_dir }}/book)
+      - run: cargo doc --workspace --no-deps
+      - run: mv target/doc ${{ env.docs_dir }}/api
+      - uses: JamesIves/github-pages-deploy-action@4.1.4
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: gh-pages
+          FOLDER: docs-build
+          CLEAN: false
