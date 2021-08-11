@@ -186,6 +186,89 @@ mod tests {
     use prometheus::Registry;
     use tokio::sync::{mpsc, watch};
 
+    #[tokio::test]
+    async fn dynamic_cluster_manager_process_cluster_update() {
+        let (update_tx, update_rx) = mpsc::channel(3);
+        let (_shutdown_tx, shutdown_rx) = watch::channel(());
+        let cm = ClusterManager::dynamic(logger(), &Registry::default(), update_rx, shutdown_rx)
+            .unwrap();
+
+        let test_endpoints = vec![
+            Endpoint::new(
+                "127.0.0.1:80".parse().unwrap(),
+                vec!["abc-0".into(), "xyz-0".into()].into_iter().collect(),
+                Some(serde_json::json!({
+                    "key-01": "value-01",
+                    "key-02": "value-02",
+                })),
+            ),
+            Endpoint::new(
+                "127.0.0.1:82".parse().unwrap(),
+                vec!["abc-2".into(), "xyz-2".into()].into_iter().collect(),
+                Some(serde_json::json!({
+                    "key-01": "value-01",
+                    "key-02": "value-02",
+                })),
+            ),
+            Endpoint::new(
+                "127.0.0.1:83".parse().unwrap(),
+                vec!["abc-3".into(), "xyz-3".into()].into_iter().collect(),
+                None,
+            ),
+        ];
+
+        let update = vec![
+            (
+                "cluster-1".into(),
+                Cluster {
+                    localities: vec![(
+                        None,
+                        LocalityEndpoints {
+                            endpoints: vec![test_endpoints[0].clone()],
+                        },
+                    )]
+                    .into_iter()
+                    .collect(),
+                },
+            ),
+            (
+                "cluster-2".into(),
+                Cluster {
+                    localities: vec![(
+                        None,
+                        LocalityEndpoints {
+                            endpoints: vec![test_endpoints[1].clone(), test_endpoints[2].clone()],
+                        },
+                    )]
+                    .into_iter()
+                    .collect(),
+                },
+            ),
+        ]
+        .into_iter()
+        .collect();
+        update_tx.send(update).await.unwrap();
+
+        // Check the processed update.
+        tokio::time::timeout(std::time::Duration::from_secs(3), async move {
+            // Wait for the update to be processed. Here just poll until there's
+            // a change we expect (or we will timeout from the enclosing future eventually.
+            loop {
+                let endpoints = { cm.read().endpoints.clone() };
+                if let Some(endpoints) = endpoints {
+                    let mut endpoints = endpoints.as_ref().clone();
+                    endpoints.sort_by(|a, b| a.address.cmp(&b.address));
+                    assert_eq!(endpoints, test_endpoints);
+                    break;
+                } else {
+                    tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+                };
+            }
+        })
+        .await
+        .unwrap();
+    }
+
     #[test]
     fn static_cluster_manager_metrics() {
         let cm = ClusterManager::fixed(
