@@ -193,7 +193,7 @@ mod tests {
 
     use super::*;
 
-    use crate::endpoint::EndpointMetadata;
+    use crate::endpoint::Metadata;
 
     fn parse_config(yaml: &str) -> Config {
         Config::from_reader(yaml.as_bytes()).unwrap()
@@ -359,7 +359,7 @@ static:
             vec![
                 Endpoint::with_metadata(
                     "127.0.0.1:26000".parse().unwrap(),
-                    EndpointMetadata {
+                    Metadata {
                         tokens: vec!["1x7ijy6", "8gj3v2i"]
                             .into_iter()
                             .map(From::from)
@@ -368,7 +368,7 @@ static:
                 ),
                 Endpoint::with_metadata(
                     "127.0.0.1:26001".parse().unwrap(),
-                    EndpointMetadata {
+                    Metadata {
                         tokens: vec!["nkuy70x"].into_iter().map(From::from).collect(),
                     },
                 ),

@@ -840,7 +840,7 @@ mod tests {
         // Validate the metadata we set for the endpoint.
         assert_eq!(locality.endpoints.len(), 1);
         let endpoint = locality.endpoints.get(0).unwrap();
-        let dyn_metadata = &endpoint.metadata.dynamic;
+        let dyn_metadata = &endpoint.metadata.unknown;
 
         assert_eq!(dyn_metadata.len(), 1);
 

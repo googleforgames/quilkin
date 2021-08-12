@@ -20,7 +20,7 @@ use std::{net::SocketAddr, sync::Arc};
 
 use serde::{Deserialize, Serialize};
 
-use crate::metadata::Metadata;
+type MetadataMap = crate::metadata::Metadata<Metadata>;
 
 /// Represents the set of all known upstream endpoints.
 #[derive(Clone, Debug, PartialEq)]
@@ -33,20 +33,17 @@ pub struct Endpoints(Arc<Vec<Endpoint>>);
 pub struct Endpoint {
     pub address: SocketAddr,
     #[serde(default)]
-    pub metadata: Metadata<EndpointMetadata>,
+    pub metadata: MetadataMap,
 }
 
 impl Endpoint {
     /// Creates a new [`Endpoint`] with no metadata.
     pub fn new(address: SocketAddr) -> Self {
-        Self::with_metadata(address, Metadata::default())
+        Self::with_metadata(address, MetadataMap::default())
     }
 
     /// Creates a new [`Endpoint`] with the specified `metadata`.
-    pub fn with_metadata(
-        address: SocketAddr,
-        metadata: impl Into<Metadata<EndpointMetadata>>,
-    ) -> Self {
+    pub fn with_metadata(address: SocketAddr, metadata: impl Into<MetadataMap>) -> Self {
         Self {
             address,
             metadata: metadata.into(),
@@ -66,11 +63,15 @@ impl Default for Endpoint {
 /// Metadata specific to endpoints.
 #[derive(Default, Debug, Deserialize, Serialize, PartialEq, Clone, PartialOrd, Eq)]
 #[non_exhaustive]
-pub struct EndpointMetadata {
+pub struct Metadata {
     #[serde(with = "base64_set")]
     pub tokens: base64_set::Set,
 }
 
+/// A module for providing base64 encoding for a `BTreeSet` at the `serde`
+/// boundary. Accepts a list of strings representing Base64 encoded data,
+/// this list is then converted into its binary representation while in memory,
+/// and then encoded back as a list of base64 strings.
 mod base64_set {
     use serde::de::Error;
 
@@ -115,7 +116,7 @@ pub enum MetadataError {
     },
 }
 
-impl std::convert::TryFrom<prost_types::Struct> for EndpointMetadata {
+impl std::convert::TryFrom<prost_types::Struct> for Metadata {
     type Error = MetadataError;
 
     fn try_from(mut value: prost_types::Struct) -> Result<Self, Self::Error> {
@@ -132,7 +133,7 @@ impl std::convert::TryFrom<prost_types::Struct> for EndpointMetadata {
                             base64::decode(string).map_err(MetadataError::InvalidBase64)
                         } else {
                             Err(MetadataError::InvalidType {
-                                key: TOKENS,
+                                key: "quilkin.dev.tokens",
                                 expected: "base64 string",
                             })
                         }
@@ -410,8 +411,7 @@ mod tests {
          - OGdqM3YyaQ== #8gj3v2i
  ";
         assert_eq!(
-            serde_json::to_value(serde_yaml::from_str::<Metadata<EndpointMetadata>>(yaml).unwrap())
-                .unwrap(),
+            serde_json::to_value(serde_yaml::from_str::<MetadataMap>(yaml).unwrap()).unwrap(),
             serde_json::json!({
                 "user": {
                     "key1": "value1"
@@ -442,7 +442,7 @@ mod tests {
          - iix
  ";
         for yaml in &[not_a_list, not_a_string_value, not_a_base64_string] {
-            serde_yaml::from_str::<Metadata<EndpointMetadata>>(yaml).unwrap_err();
+            serde_yaml::from_str::<MetadataMap>(yaml).unwrap_err();
         }
     }
 }

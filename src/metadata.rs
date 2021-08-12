@@ -18,16 +18,20 @@ use std::convert::TryFrom;
 
 use crate::xds::envoy::config::core::v3::Metadata as ProtoMetadata;
 
+pub const KEY: &str = "quilkin.dev";
+
 /// Represents metadata attached to specific object.
 #[derive(
     Default, Debug, serde::Deserialize, serde::Serialize, PartialEq, Clone, PartialOrd, Eq,
 )]
 #[non_exhaustive]
 pub struct Metadata<T> {
+    /// Known Quilkin metadata.
     #[serde(default, rename = "quilkin.dev")]
     pub known: T,
+    /// User created metadata.
     #[serde(flatten)]
-    pub dynamic: serde_yaml::Mapping,
+    pub unknown: serde_yaml::Mapping,
 }
 
 // This impl means that any `T` that we can try convert from a protobuf struct
@@ -40,7 +44,7 @@ where
     fn from(known: T) -> Self {
         Self {
             known,
-            dynamic: <_>::default(),
+            unknown: <_>::default(),
         }
     }
 }
@@ -52,10 +56,9 @@ where
     type Error = E;
 
     fn try_from(mut value: ProtoMetadata) -> Result<Self, Self::Error> {
-        const METADATA_KEY: &str = "quilkin.dev";
         let known = value
             .filter_metadata
-            .remove(METADATA_KEY)
+            .remove(KEY)
             .map(T::try_from)
             .transpose()?
             .unwrap_or_default();
@@ -77,7 +80,7 @@ where
 
         Ok(Self {
             known,
-            dynamic: crate::prost::mapping_from_kind(value).unwrap_or_default(),
+            unknown: crate::prost::mapping_from_kind(value).unwrap_or_default(),
         })
     }
 }
@@ -88,14 +91,14 @@ mod tests {
 
     #[test]
     fn endpoint_metadata() {
-        let metadata = crate::endpoint::EndpointMetadata {
+        let metadata = crate::endpoint::Metadata {
             tokens: vec!["Man".into()].into_iter().collect(),
         };
 
         assert_eq!(
             serde_json::to_value(Metadata::from(metadata)).unwrap(),
             serde_json::json!({
-                "quilkin.dev": {
+                KEY: {
                     "tokens": ["TWFu"],
                 }
             })

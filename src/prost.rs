@@ -42,8 +42,7 @@ pub fn value_from_kind(kind: Kind) -> Value {
         Kind::StructValue(v) => Value::Mapping(
             v.fields
                 .into_iter()
-                .filter(|(_, v)| v.kind.is_some())
-                .map(|(k, v)| (k.into(), value_from_kind(v.kind.unwrap())))
+                .filter_map(|(k, v)| v.kind.map(value_from_kind).map(|v| (k.into(), v)))
                 .collect(),
         ),
     }

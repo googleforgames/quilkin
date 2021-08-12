@@ -177,7 +177,7 @@ mod tests {
     use prometheus::Registry;
     use serde_yaml::{Mapping, Value};
 
-    use crate::endpoint::{Endpoint, EndpointMetadata, Endpoints};
+    use crate::endpoint::{Endpoint, Endpoints, Metadata};
     use crate::test_utils::{assert_write_no_change, logger};
 
     use super::{
@@ -331,13 +331,13 @@ mod tests {
     fn new_ctx() -> ReadContext {
         let endpoint1 = Endpoint::with_metadata(
             "127.0.0.1:80".parse().unwrap(),
-            EndpointMetadata {
+            Metadata {
                 tokens: vec!["123".into()].into_iter().collect(),
             },
         );
         let endpoint2 = Endpoint::with_metadata(
             "127.0.0.1:90".parse().unwrap(),
-            EndpointMetadata {
+            Metadata {
                 tokens: vec!["456".into()].into_iter().collect(),
             },
         );
