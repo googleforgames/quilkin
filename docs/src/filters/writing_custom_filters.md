@@ -387,7 +387,7 @@ However, it usually contains a Protobuf equivalent of the filter's static config
        }
        ```
 
-[Filter]: https://docs.rs/quilkin/{{version}}/quilkin/filters/trait.Filter.html
+[Filter]: https://docs.rs/quilkin/0.1.0/quilkin/filters/trait.Filter.html
 [FilterFactory]: https://docs.rs/quilkin/0.1.0/quilkin/filters/trait.FilterFactory.html
 [filter-factory-name]: https://docs.rs/quilkin/0.1.0/quilkin/filters/trait.FilterFactory.html#tymethod.name
 [FilterRegistry]: https://docs.rs/quilkin/0.1.0/quilkin/filters/struct.FilterRegistry.html
