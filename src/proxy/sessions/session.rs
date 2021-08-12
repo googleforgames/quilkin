@@ -51,6 +51,22 @@ pub struct Session {
     shutdown_tx: watch::Sender<()>,
 }
 
+// A (source, destination) address pair that uniquely identifies a session.
+#[derive(Clone, Eq, Hash, PartialEq, Debug, PartialOrd, Ord)]
+pub struct SessionKey {
+    pub source: SocketAddr,
+    pub destination: SocketAddr,
+}
+
+impl From<(SocketAddr, SocketAddr)> for SessionKey {
+    fn from(pair: (SocketAddr, SocketAddr)) -> Self {
+        SessionKey {
+            source: pair.0,
+            destination: pair.1,
+        }
+    }
+}
+
 /// ReceivedPacketContext contains state needed to process a received packet.
 struct ReceivedPacketContext<'a> {
     packet: &'a [u8],
@@ -179,8 +195,11 @@ impl Session {
     }
 
     /// key returns the key to be used for this session in a SessionMap
-    pub fn key(&self) -> (SocketAddr, SocketAddr) {
-        (self.from, self.dest.address)
+    pub fn key(&self) -> SessionKey {
+        SessionKey {
+            source: self.from,
+            destination: self.dest.address,
+        }
     }
 
     /// process_recv_packet processes a packet that is received by this session.

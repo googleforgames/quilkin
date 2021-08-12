@@ -15,17 +15,16 @@
  */
 
 use std::collections::HashMap;
-use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use slog::{debug, warn, Logger};
 use tokio::sync::{watch, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
-use crate::proxy::sessions::Session;
+use crate::proxy::sessions::{Session, SessionKey};
 
-// Tracks current sessions keyed by key (source_address,destination_address) pair.
-type SessionsMap = HashMap<(SocketAddr, SocketAddr), Session>;
+// Tracks current sessions by their [`SessionKey`]
+type SessionsMap = HashMap<SessionKey, Session>;
 type Sessions = Arc<RwLock<SessionsMap>>;
 
 /// SESSION_TIMEOUT_SECONDS is the default session timeout.
@@ -126,7 +125,7 @@ mod tests {
     use crate::filters::{manager::FilterManager, FilterChain};
     use crate::proxy::sessions::metrics::Metrics;
     use crate::proxy::sessions::session_manager::Sessions;
-    use crate::proxy::sessions::{Packet, Session};
+    use crate::proxy::sessions::{Packet, Session, SessionKey};
     use crate::test_utils::TestHelper;
 
     use super::SessionManager;
@@ -154,14 +153,14 @@ mod tests {
             shutdown_rx,
         );
 
-        let key = (from, to);
+        let key = SessionKey::from((from, to));
 
         // Insert key.
         {
             let registry = Registry::default();
             let mut sessions = sessions.write().await;
             sessions.insert(
-                key,
+                key.clone(),
                 Session::new(
                     &t.log,
                     Metrics::new(&registry).unwrap(),
@@ -215,14 +214,14 @@ mod tests {
         let (send, _recv) = mpsc::channel::<Packet>(1);
         let endpoint = Endpoint::from_address(to);
 
-        let key = (from, to);
+        let key = SessionKey::from((from, to));
         let ttl = Duration::from_secs(1);
 
         {
             let registry = Registry::default();
             let mut sessions = sessions.write().await;
             sessions.insert(
-                key,
+                key.clone(),
                 Session::new(
                     &t.log,
                     Metrics::new(&registry).unwrap(),
