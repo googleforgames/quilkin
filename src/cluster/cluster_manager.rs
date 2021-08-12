@@ -106,6 +106,17 @@ impl ClusterManager {
         Ok(cluster_manager)
     }
 
+    fn process_cluster_update(metrics: &Metrics, update: ClusterUpdate) -> Option<Endpoints> {
+        let num_clusters = update.len() as i64;
+        let update = Self::create_endpoints_from_update(update);
+        let num_endpoints = update
+            .as_ref()
+            .map(|ep| ep.as_ref().len() as i64)
+            .unwrap_or_default();
+        Self::update_cluster_update_metrics(metrics, num_clusters, num_endpoints);
+        update
+    }
+
     fn update_cluster_update_metrics(metrics: &Metrics, num_clusters: i64, num_endpoints: i64) {
         metrics.active_clusters.set(num_clusters);
         metrics.active_endpoints.set(num_endpoints)
@@ -155,11 +166,7 @@ impl ClusterManager {
                         match update {
                             Some(update) => {
                                 debug!(log, "Received a cluster update.");
-                                let num_clusters = update.len() as i64;
-                                let update = Self::create_endpoints_from_update(update);
-                                let num_endpoints = update.as_ref().map(|ep| ep.as_ref().len() as i64).unwrap_or_default();
-                                Self::update_cluster_update_metrics(&metrics, num_clusters, num_endpoints);
-                                cluster_manager.write().update(update);
+                                cluster_manager.write().update(Self::process_cluster_update(&metrics, update));
                             }
                             None => {
                                 warn!(log, "Exiting cluster update receive loop because the sender dropped the channel.");
