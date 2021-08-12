@@ -70,13 +70,13 @@ Quilkin exposes the following metrics around the management servers and its reso
 [clapolicy]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint.proto#config-endpoint-v3-clusterloadassignment-policy
 [locality]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/base.proto#config-core-v3-locality
 [socket addresses]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-address
-[filters-doc]: ./extensions/filters/filters.md
+[filters-doc]: ./filters.md
 [listener-resource]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto#config-listener-v3-listener
 [xds-filters]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener_components.proto#envoy-v3-api-msg-config-listener-v3-filter
 [xds-filter-chain]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener_components.proto#config-listener-v3-filterchain
 [DiscoveryRequest]: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/discovery.proto#envoy-api-msg-discoveryrequest
 [xds-variants]: https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol#variants-of-the-xds-transport-protocol
-[filter-protos]: ../proto/quilkin/extensions/filters
-[filters-doc]: ./extensions/filters/filters.md
+[filter-protos]: https://github.com/googleforgames/quilkin/tree/v0.1.0/proto/quilkin/extensions/filters
+[filters-doc]: ./filters.md
 [xds-endpoint-metadata]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/base.proto#envoy-v3-api-msg-config-core-v3-metadata
 [endpoint-metadata]: ./proxy.md#endpoint-metadata
