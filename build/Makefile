@@ -101,6 +101,17 @@ build-image:
 	docker build -t $(IMAGE_NAME):$(package_version)-debug --build-arg PROFILE=debug -f $(project_path)/image/Dockerfile $(project_path)
 	docker build -t $(IMAGE_NAME):$(package_version) --build-arg PROFILE=release -f $(project_path)/image/Dockerfile $(project_path)
 
+# Runs mdbook and cargo doc in the same directory structure as what is hosted on Github pages.
+# Open http://localhost:3000/book/index.html or http://localhost:3000/api/quilkin/index.html after running. Pages will live reload on change.
+# (the .html extension is required for hot reload, but pages will display without it)
+docs: ensure-build-image
+	@echo "📭 Open browser to http://localhost:3000/book/index.html or http://localhost:3000/api/quilkin/index.html (the .html extension is required for hot reload)"
+	docker run -it --rm $(common_rust_args) -p 3000:3000 \
+		--entrypoint=bash $(BUILD_IMAGE_TAG) -c \
+		 	'mkdir /tmp/docs && (live-server -p 3000 /tmp/docs &) && \
+			mkdir -p ./target/doc; ln -s $$(pwd)/target/doc /tmp/docs/api && \
+			cargo watch -s "cargo doc --workspace --no-deps && cd docs && mdbook build --dest-dir /tmp/docs/book"'
+
 # Start an interactive shell inside the build image
 # Useful for testing, or adhoc cargo commands
 shell: ensure-build-image
