@@ -19,18 +19,21 @@ ARG RUST_TOOLCHAIN
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH \
-    CROSS_DOCKER_IN_DOCKER=true
+    CROSS_DOCKER_IN_DOCKER=true \
+    LC_ALL=C.UTF-8 \
+    LANG=C.UTF-8
 
 RUN set -eux && \
     apt-get update && \
-    apt-get install -y wget zip build-essential libssl-dev pkg-config && \
+    apt-get install -y wget zip build-essential libssl-dev pkg-config python3-pip && \
+    pip3 install live-server && \
     wget https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init && \
     chmod +x rustup-init && \
     ./rustup-init -y --no-modify-path --default-toolchain $RUST_TOOLCHAIN && \
     rm rustup-init && \
     chmod -R a+w $RUSTUP_HOME $CARGO_HOME && \
     rustup component add rustfmt clippy && \
-    cargo install cross && \
+    cargo install cross cargo-watch mdbook && \
     cargo install cargo-about && \
     cargo install --locked cargo-deny && \
     rustup --version && \
