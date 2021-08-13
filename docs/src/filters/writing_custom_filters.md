@@ -387,16 +387,16 @@ However, it usually contains a Protobuf equivalent of the filter's static config
        }
        ```
 
-[Filter]: https://docs.rs/quilkin/0.1.0/quilkin/filters/trait.Filter.html
-[FilterFactory]: https://docs.rs/quilkin/0.1.0/quilkin/filters/trait.FilterFactory.html
-[filter-factory-name]: https://docs.rs/quilkin/0.1.0/quilkin/filters/trait.FilterFactory.html#tymethod.name
-[FilterRegistry]: https://docs.rs/quilkin/0.1.0/quilkin/filters/struct.FilterRegistry.html
-[runner::run]: https://docs.rs/quilkin/0.1.0/quilkin/runner/fn.run.html
-[CreateFilterArgs::config]: https://docs.rs/quilkin/0.1.0/quilkin/filters/prelude/struct.CreateFilterArgs.html#structfield.config
-[ConfigType::dynamic]: https://docs.rs/quilkin/0.1.0/quilkin/filters/enum.ConfigType.html#variant.Dynamic
+[Filter]: ../../../api/quilkin/filters/trait.Filter.html
+[FilterFactory]: ../../../api/quilkin/filters/trait.FilterFactory.html
+[filter-factory-name]: ../../../api/quilkin/0.1.0/quilkin/filters/trait.FilterFactory.html#tymethod.name
+[FilterRegistry]: ../../../api/quilkin/0.1.0/quilkin/filters/struct.FilterRegistry.html
+[runner::run]: ../../../api/quilkin/0.1.0/quilkin/runner/fn.run.html
+[CreateFilterArgs::config]: ../../../api/quilkin/0.1.0/quilkin/filters/prelude/struct.CreateFilterArgs.html#structfield.config
+[ConfigType::dynamic]: ../../../api/quilkin/0.1.0/quilkin/filters/enum.ConfigType.html#variant.Dynamic
 
 [anchor-static-config]: #static-configuration
-[Filters]: ./filters.md
+[Filters]: ../filters.md
 [filter chain]: ./filters.md#filters-and-filter-chain
 [built-in-filters]: ./filters.md#built-in-filters
 [filter configuration]: ./filters.md#filter-config
