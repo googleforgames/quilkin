@@ -34,7 +34,7 @@ use crate::proxy::builder::{ValidatedConfig, ValidatedSource};
 use crate::proxy::server::error::Error;
 use crate::proxy::sessions::metrics::Metrics as SessionMetrics;
 use crate::proxy::sessions::session_manager::SessionManager;
-use crate::proxy::sessions::{Packet, Session, SESSION_TIMEOUT_SECONDS};
+use crate::proxy::sessions::{Packet, Session, SessionKey, SESSION_TIMEOUT_SECONDS};
 use crate::proxy::Admin;
 use crate::utils::debug;
 
@@ -349,7 +349,10 @@ impl Server {
         endpoint: &Endpoint,
         args: &ProcessDownstreamReceiveConfig,
     ) {
-        let session_key = (recv_addr, endpoint.address);
+        let session_key = SessionKey {
+            source: recv_addr,
+            destination: endpoint.address,
+        };
 
         // Grab a read lock and find the session.
         let guard = args.session_manager.get_sessions().await;
@@ -381,7 +384,7 @@ impl Server {
                     &args.log,
                     args.session_metrics.clone(),
                     args.filter_manager.clone(),
-                    session_key.0,
+                    session_key.source,
                     endpoint.clone(),
                     args.send_packets.clone(),
                     args.session_ttl,
@@ -411,7 +414,7 @@ impl Server {
                             warn!(
                                 args.log,
                                 "Could not find session";
-                                "key" => format!("({}:{})", session_key.0.to_string(), session_key.1.to_string())
+                                "key" => format!("({}:{})", session_key.source.to_string(), session_key.destination.to_string())
                             )
                         }
                     }
@@ -691,7 +694,7 @@ mod tests {
 
             let map = session_manager.get_sessions().await;
             assert_eq!(expected.session_len, map.len());
-            let build_key = (receive_addr, endpoint.socket.local_addr().unwrap());
+            let build_key = (receive_addr, endpoint.socket.local_addr().unwrap()).into();
             assert!(map.contains_key(&build_key));
             let session = map.get(&build_key).unwrap();
             let now_secs = SystemTime::now()
