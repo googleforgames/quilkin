@@ -4,8 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/golang/protobuf/ptypes"
-	"google.golang.org/protobuf/types/known/wrapperspb"
+	gogojsonpb "github.com/gogo/protobuf/jsonpb"
 	"strconv"
 
 	envoycluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
@@ -14,10 +13,9 @@ import (
 	envoylistener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/v3"
+	prototypes "github.com/gogo/protobuf/types"
 	"github.com/golang/protobuf/jsonpb"
 	structpb "github.com/golang/protobuf/ptypes/struct"
-
-	quilkinfilter "quilkin.dev/xds-management-server/filters/debug/v1alpha1"
 )
 
 // Endpoint represents an xds endpoint
@@ -32,20 +30,13 @@ type Cluster struct {
 	Endpoints []Endpoint
 }
 
-// FilterConfig represents a filter's config
-type FilterConfig struct {
-	Name string
-	Config interface{}
-}
+// FilterConfig represents a filter's config.
+type FilterConfig interface {}
 
 // Resources represents an xds resource.
 type Resources struct {
 	Clusters map[string]Cluster
 	FilterChain []FilterConfig
-}
-
-type debugFilterConfig struct {
-	Id string
 }
 
 func GenerateSnapshot(version int64, resources Resources) (cache.Snapshot, error) {
@@ -164,33 +155,28 @@ func makeFilterChain(
 ) (*envoylistener.FilterChain, error) {
 	var filters []*envoylistener.Filter
 
-	for _, resource := range filterChainResource {
-		switch resource.Name {
-		case "quilkin.extensions.filters.debug.v1alpha1.Debug":
-			configBytes, err := json.Marshal(resource.Config)
-			if err != nil {
-				return nil, fmt.Errorf("failed to JSON marshal filter config: %w", err)
-			}
-			var filterConfig debugFilterConfig
-			if err := json.Unmarshal(configBytes, &filterConfig); err != nil {
-				return nil, fmt.Errorf("failed to JSON unmarshal filter config: %w", err)
-			}
-			protoConfig, err := ptypes.MarshalAny(&quilkinfilter.Debug{
-				Id: &wrapperspb.StringValue{Value: filterConfig.Id},
-			})
-			if err != nil {
-				return nil, fmt.Errorf("failed to proto marshal filter config: %w", err)
-			}
-			filter := &envoylistener.Filter{
-				Name: resource.Name,
-				ConfigType:&envoylistener.Filter_TypedConfig{
-					TypedConfig: protoConfig,
-				},
-			}
-			filters = append(filters, filter)
-		default:
-			return nil, fmt.Errorf("invalid or unsupported filter: %s", resource.Name)
+	for _, config := range filterChainResource {
+		configBytes, err := json.Marshal(config)
+		if err != nil {
+			return nil, fmt.Errorf("failed to JSON marshal filter config: %w", err)
 		}
+
+		pbs := &prototypes.Struct{}
+		if err := gogojsonpb.Unmarshal(bytes.NewReader(configBytes), pbs); err != nil {
+			return nil, fmt.Errorf("failed to Unmarshal filter config into protobuf Struct: %w", err)
+		}
+
+		buf := &bytes.Buffer{}
+		if err := (&gogojsonpb.Marshaler{OrigName: true}).Marshal(buf, pbs); err != nil {
+			return nil, fmt.Errorf("failed to marshal filter config protobuf into json: %w", err)
+		}
+
+		filter := &envoylistener.Filter{}
+		if err := (&jsonpb.Unmarshaler{AllowUnknownFields: false}).Unmarshal(buf, filter); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal filter config jsonpb into envoy filter proto: %w", err)
+		}
+
+		filters = append(filters, filter)
 	}
 
 	return &envoylistener.FilterChain{

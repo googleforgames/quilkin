@@ -16,7 +16,8 @@
     "filterchain": [
         {
             "name": "quilkin.extensions.filters.debug.v1alpha1.Debug",
-            "config": {
+            "typed_config": {
+                "@type": "quilkin.extensions.filters.debug.v1alpha1.Debug",
                 "id": "hello"
             }
         }
