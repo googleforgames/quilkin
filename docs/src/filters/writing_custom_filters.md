@@ -389,17 +389,17 @@ However, it usually contains a Protobuf equivalent of the filter's static config
 
 [Filter]: ../../../api/quilkin/filters/trait.Filter.html
 [FilterFactory]: ../../../api/quilkin/filters/trait.FilterFactory.html
-[filter-factory-name]: ../../../api/quilkin/0.1.0/quilkin/filters/trait.FilterFactory.html#tymethod.name
-[FilterRegistry]: ../../../api/quilkin/0.1.0/quilkin/filters/struct.FilterRegistry.html
-[runner::run]: ../../../api/quilkin/0.1.0/quilkin/runner/fn.run.html
-[CreateFilterArgs::config]: ../../../api/quilkin/0.1.0/quilkin/filters/prelude/struct.CreateFilterArgs.html#structfield.config
-[ConfigType::dynamic]: ../../../api/quilkin/0.1.0/quilkin/filters/enum.ConfigType.html#variant.Dynamic
+[filter-factory-name]: ../../../api/quilkin/filters/trait.FilterFactory.html#tymethod.name
+[FilterRegistry]: ../../../api/quilkin/filters/struct.FilterRegistry.html
+[runner::run]: ../../../api/quilkin/runner/fn.run.html
+[CreateFilterArgs::config]: ../../../api/quilkin/filters/prelude/struct.CreateFilterArgs.html#structfield.config
+[ConfigType::dynamic]: ../../../api/quilkin/config/enum.ConfigType.html#variant.Dynamic
 
 [anchor-static-config]: #static-configuration
 [Filters]: ../filters.md
-[filter chain]: ./filters.md#filters-and-filter-chain
-[built-in-filters]: ./filters.md#built-in-filters
-[filter configuration]: ./filters.md#filter-config
+[filter chain]: ../filters.md#filters-and-filter-chain
+[built-in-filters]: ../filters.md#built-in-filters
+[filter configuration]: ../filters.md#filter-config
 [proxy-config]: ../../proxy-configuration.md
 [management server]: ../../xds.md
 [Tokio]: https://docs.rs/tokio/1.5.0/tokio/
