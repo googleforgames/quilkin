@@ -26,10 +26,32 @@ steps:
       - BUILD_IMAGE_ARG=--cache-from ${_BUILD_IMAGE_TAG}
       - test
     id: test
+  - name: us-docker.pkg.dev/$PROJECT_ID/ci/make-docker
+    dir: ./build
+    args:
+      - BUILD_IMAGE_TAG=${_BUILD_IMAGE_TAG}
+      - BUILD_IMAGE_ARG=--cache-from ${_BUILD_IMAGE_TAG}
+      - build
+    id: build
+  # Run the built images for 5 seconds to make sure that the entrypoint and default config works out of the box
+  - name: gcr.io/cloud-builders/docker
+    dir: ./build
+    entrypoint: bash
+    args:
+      - '-c'
+      - 'timeout --signal=INT --preserve-status 5s docker run --rm quilkin:$(make version)'
+    id: test-quilkin-debug
+  - name: gcr.io/cloud-builders/docker
+    dir: ./build
+    entrypoint: bash
+    args:
+      - '-c'
+      - 'timeout --signal=INT --preserve-status 5s docker run --rm quilkin:$(make version)-debug'
+    id: test-quilkin-release
 options:
   env:
     - "CARGO_HOME=/workspace/.cargo"
-  machineType: E2_HIGHCPU_8
+  machineType: E2_HIGHCPU_32
   dynamic_substitutions: true
 timeout: 1800s
 substitutions:
