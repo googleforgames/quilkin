@@ -36,6 +36,15 @@ pub struct MetadataView<T> {
     pub unknown: serde_yaml::Mapping,
 }
 
+impl<T> MetadataView<T> {
+    pub fn with_unknown(known: impl Into<T>, unknown: serde_yaml::Mapping) -> Self {
+        Self {
+            known: known.into(),
+            unknown,
+        }
+    }
+}
+
 // This impl means that any `T` that we can try convert from a protobuf struct
 // at run-time can be constructed statically without going through
 // conversion first.

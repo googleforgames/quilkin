@@ -25,7 +25,7 @@ use slog::{debug, o, warn, Logger};
 use prometheus::{Registry, Result as MetricsResult};
 use tokio::sync::{mpsc, watch};
 
-use crate::endpoint::{Endpoint, Endpoints, UpstreamEndpoints};
+use crate::endpoint::{Endpoints, UpstreamEndpoints};
 use crate::xds::ads_client::ClusterUpdate;
 
 use super::metrics::Metrics;
@@ -183,10 +183,10 @@ mod tests {
     use super::ClusterManager;
     use crate::{
         cluster::{Cluster, LocalityEndpoints},
-        endpoint::{Endpoint, Endpoints},
+        endpoint::{Endpoint, Endpoints, Metadata},
+        metadata::MetadataView,
         test_utils::logger,
     };
-
 
     #[tokio::test]
     async fn dynamic_cluster_manager_process_cluster_update() {
@@ -195,27 +195,37 @@ mod tests {
         let cm = ClusterManager::dynamic(logger(), &Registry::default(), update_rx, shutdown_rx)
             .unwrap();
 
+        fn mapping(entries: &[(&str, &str)]) -> serde_yaml::Mapping {
+            entries
+                .iter()
+                .map(|(k, v)| ((*k).into(), (*v).into()))
+                .collect()
+        }
+
         let test_endpoints = vec![
-            Endpoint::new(
+            Endpoint::with_metadata(
                 "127.0.0.1:80".parse().unwrap(),
-                vec!["abc-0".into(), "xyz-0".into()].into_iter().collect(),
-                Some(serde_json::json!({
-                    "key-01": "value-01",
-                    "key-02": "value-02",
-                })),
+                MetadataView::with_unknown(
+                    Metadata {
+                        tokens: vec!["abc-0".into(), "xyz-0".into()].into_iter().collect(),
+                    },
+                    mapping(&[("key-01", "value-01"), ("key-02", "value-02")]),
+                ),
             ),
-            Endpoint::new(
+            Endpoint::with_metadata(
                 "127.0.0.1:82".parse().unwrap(),
-                vec!["abc-2".into(), "xyz-2".into()].into_iter().collect(),
-                Some(serde_json::json!({
-                    "key-01": "value-01",
-                    "key-02": "value-02",
-                })),
+                MetadataView::with_unknown(
+                    Metadata {
+                        tokens: vec!["abc-2".into(), "xyz-2".into()].into_iter().collect(),
+                    },
+                    mapping(&[("key-01", "value-01"), ("key-02", "value-02")]),
+                ),
             ),
-            Endpoint::new(
+            Endpoint::with_metadata(
                 "127.0.0.1:83".parse().unwrap(),
-                vec!["abc-3".into(), "xyz-3".into()].into_iter().collect(),
-                None,
+                Metadata {
+                    tokens: vec!["abc-3".into(), "xyz-3".into()].into_iter().collect(),
+                },
             ),
         ];
 
