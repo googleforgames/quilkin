@@ -661,8 +661,8 @@ static:
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 2);
 </span><span class="boring">quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
-</span>}
-</code></pre></pre>
+</span><span class="boring">}
+</span></code></pre></pre>
 <p>We specify our filter chain in the <code>.filters</code> section of the proxy's configuration which has takes a sequence of <a href="filters.html#filter-config">FilterConfig</a> objects. Each object describes all information necessary to create a single filter.</p>
 <p>The above example creates a filter chain comprising a <a href="debug.html">Debug</a> filter followed by a <a href="./local_rate_limit.html">Rate limiter</a> filter - the effect is that every packet will be logged and the proxy will not forward more than 20 packets per second.</p>
 <blockquote>
@@ -742,7 +742,6 @@ static:
 </span><span class="boring">quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>
-<p><code>[[TODO: update/link to routing examples once they are complete]]</code></p>
 <h3 id="configuration-options"><a class="header" href="#configuration-options">Configuration Options</a></h3>
 <pre><code class="language-yaml">properties:
   strategy:
@@ -1096,41 +1095,41 @@ static:
 <p>On the game client side the <a href="filters/./concatenate_bytes.html">ConcatenateBytes</a> filter could also be used to add authentication
 tokens to outgoing packets.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="writing-custom-filters"><a class="header" href="#writing-custom-filters">Writing Custom Filters</a></h1>
-<p>Quilkin provides an extensible implementation of <a href="filters/./filters.html">Filters</a> that allows us to plug in custom implementations to fit our needs.
-This document provides an overview of the API and how we can go about writing our own <a href="filters/./filters.html">Filters</a>.</p>
+<p>Quilkin provides an extensible implementation of <a href="filters/../filters.html">Filters</a> that allows us to plug in custom implementations to fit our needs.
+This document provides an overview of the API and how we can go about writing our own <a href="filters/../filters.html">Filters</a>.</p>
 <h4 id="api-components"><a class="header" href="#api-components">API Components</a></h4>
 <p>The following components make up Quilkin's implementation of filters.</p>
 <h5 id="filter"><a class="header" href="#filter">Filter</a></h5>
-<p>A <a href="filters/writing_custom_filters.html#">trait</a> representing an actual <a href="filters/./filters.html#built-in-filters">Filter</a> instance in the pipeline.</p>
+<p>A <a href="filters/../../../api/quilkin/filters/trait.Filter.html">trait</a> representing an actual <a href="filters/../filters.html#built-in-filters">Filter</a> instance in the pipeline.</p>
 <ul>
 <li>An implementation provides a <code>read</code> and a <code>write</code> method.</li>
-<li>Both methods are invoked by the proxy when it consults the <a href="filters/./filters.html#filters-and-filter-chain">filter chain</a> - their arguments contain information about the packet being processed.</li>
+<li>Both methods are invoked by the proxy when it consults the <a href="filters/../filters.html#filters-and-filter-chain">filter chain</a> - their arguments contain information about the packet being processed.</li>
 <li><code>read</code> is invoked when a packet is received on the local downstream port and is to be sent to an upstream endpoint while <code>write</code> is invoked in the opposite direction when a packet is received from an upstream endpoint and is to be sent to a downstream client.</li>
 </ul>
 <h5 id="filterfactory"><a class="header" href="#filterfactory">FilterFactory</a></h5>
-<p>A <a href="filters/writing_custom_filters.html#">trait</a> representing a type that knows how to create instances of a particular type of <a href="filters/writing_custom_filters.html#">Filter</a>.</p>
+<p>A <a href="filters/../../../api/quilkin/filters/trait.FilterFactory.html">trait</a> representing a type that knows how to create instances of a particular type of <a href="filters/../../../api/quilkin/filters/trait.Filter.html">Filter</a>.</p>
 <ul>
 <li>An implementation provides a <code>name</code> and <code>create_filter</code> method.</li>
-<li><code>create_filter</code> takes in <a href="filters/./filters.html#filter-config">configuration</a> for the filter to create and returns a new instance of its filter type.
+<li><code>create_filter</code> takes in <a href="filters/../filters.html#filter-config">configuration</a> for the filter to create and returns a new instance of its filter type.
 <code>name</code> returns the Filter name - a unique identifier of filters of the created type (e.g quilkin.extensions.filters.debug.v1alpha1.Debug).</li>
 </ul>
 <h5 id="filterregistry"><a class="header" href="#filterregistry">FilterRegistry</a></h5>
-<p>A <a href="filters/writing_custom_filters.html#">struct</a> representing the set of all filter types known to the proxy.
-It contains all known implementations of <a href="filters/writing_custom_filters.html#">FilterFactory</a>, each identified by their <a href="filters/writing_custom_filters.html#FilterFactory::name">name</a>.</p>
-<p>These components come together to form the <a href="filters/./filters.html#filters-and-filter-chain">filter chain</a>.</p>
+<p>A <a href="filters/../../../api/quilkin/filters/struct.FilterRegistry.html">struct</a> representing the set of all filter types known to the proxy.
+It contains all known implementations of <a href="filters/../../../api/quilkin/filters/trait.FilterFactory.html">FilterFactory</a>, each identified by their <a href="filters/../../../api/quilkin/filters/trait.FilterFactory.html#tymethod.name">name</a>.</p>
+<p>These components come together to form the <a href="filters/../filters.html#filters-and-filter-chain">filter chain</a>.</p>
 <ul>
-<li>A <a href="filters/writing_custom_filters.html#">FilterRegistry</a> is populated with the <a href="filters/writing_custom_filters.html#">FilterFactory</a> for <a href="filters/./filters.html#built-in-filters">built-in-filters</a> and any custom ones we provide.</li>
-<li>During startup, the initial list of <a href="filters/./filters.html#filter-config">filter configuration</a> is retrieved, either from a <a href="filters/../../proxy-configuration.html">static config file</a> or dynamically from a <a href="filters/../../xds.html">management server</a>.</li>
-<li>Each <a href="filters/./filters.html#filter-config">filter configuration</a> is used to invoke the matching (based on the Filter name) <a href="filters/writing_custom_filters.html#">FilterFactory</a> in the <a href="filters/writing_custom_filters.html#">FilterRegistry</a> - creating a <a href="filters/writing_custom_filters.html#">Filter</a> instance.</li>
-<li>Finally, the created <a href="filters/writing_custom_filters.html#">Filter</a> instances are piped together to form the <a href="filters/./filters.html#filters-and-filter-chain">filter chain</a>.</li>
+<li>A <a href="filters/../../../api/quilkin/filters/struct.FilterRegistry.html">FilterRegistry</a> is populated with the <a href="filters/../../../api/quilkin/filters/trait.FilterFactory.html">FilterFactory</a> for <a href="filters/../filters.html#built-in-filters">built-in-filters</a> and any custom ones we provide.</li>
+<li>During startup, the initial list of <a href="filters/../filters.html#filter-config">filter configuration</a> is retrieved, either from a <a href="filters/../../proxy-configuration.html">static config file</a> or dynamically from a <a href="filters/../../xds.html">management server</a>.</li>
+<li>Each <a href="filters/../filters.html#filter-config">filter configuration</a> is used to invoke the matching (based on the Filter name) <a href="filters/../../../api/quilkin/filters/trait.FilterFactory.html">FilterFactory</a> in the <a href="filters/../../../api/quilkin/filters/struct.FilterRegistry.html">FilterRegistry</a> - creating a <a href="filters/../../../api/quilkin/filters/trait.Filter.html">Filter</a> instance.</li>
+<li>Finally, the created <a href="filters/../../../api/quilkin/filters/trait.Filter.html">Filter</a> instances are piped together to form the <a href="filters/../filters.html#filters-and-filter-chain">filter chain</a>.</li>
 </ul>
-<p>Note that when using dynamic configuration, the process repeats in a similar manner - new filter instances are created according to the updated <a href="filters/./filters.html#filter-config">filter configuration</a> and a new <a href="filters/./filters.html#filters-and-filter-chain">filter chain</a> is re-created while the old one is dropped.</p>
+<p>Note that when using dynamic configuration, the process repeats in a similar manner - new filter instances are created according to the updated <a href="filters/../filters.html#filter-config">filter configuration</a> and a new <a href="filters/../filters.html#filters-and-filter-chain">filter chain</a> is re-created while the old one is dropped.</p>
 <h5 id="creating-custom-filters"><a class="header" href="#creating-custom-filters">Creating Custom Filters</a></h5>
 <p>To extend Quilkin's code with our own custom filter, we need to do the following:</p>
 <ol>
 <li>Import the Quilkin crate.</li>
-<li>Implement the <a href="filters/writing_custom_filters.html#">Filter</a> trait with our custom logic, as well as a <a href="filters/writing_custom_filters.html#">FilterFactory</a> that knows how to create instances of the Filter impelmentation.</li>
-<li>Start the proxy with the custom <a href="filters/writing_custom_filters.html#">FilterFactory</a> implementation.</li>
+<li>Implement the <a href="filters/../../../api/quilkin/filters/trait.Filter.html">Filter</a> trait with our custom logic, as well as a <a href="filters/../../../api/quilkin/filters/trait.FilterFactory.html">FilterFactory</a> that knows how to create instances of the Filter impelmentation.</li>
+<li>Start the proxy with the custom <a href="filters/../../../api/quilkin/filters/trait.FilterFactory.html">FilterFactory</a> implementation.</li>
 </ol>
 <blockquote>
 <p>The full source code used in this example can be found <a href="https://github.com/googleforgames/quilkin/tree/main/examples/quilkin-filter-example">here</a></p>
@@ -1149,7 +1148,7 @@ quilkin = &quot;0.1.0&quot;
 <li>
 <p><strong>Implement the filter traits</strong></p>
 <p>Its not terribly important what the filter in this example does so lets write a <code>Greet</code> filter that appends <code>Hello</code> to every packet in one direction and <code>Goodbye</code> to packets in the opposite direction.</p>
-<p>We start with the <a href="filters/writing_custom_filters.html#">Filter</a> implementation</p>
+<p>We start with the <a href="filters/../../../api/quilkin/filters/trait.Filter.html">Filter</a> implementation</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -1174,7 +1173,7 @@ impl Filter for Greet {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<p>Next, we implement a <a href="filters/writing_custom_filters.html#">FilterFactory</a> for it and give it a name:</p>
+<p>Next, we implement a <a href="filters/../../../api/quilkin/filters/trait.FilterFactory.html">FilterFactory</a> for it and give it a name:</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -1200,7 +1199,7 @@ impl FilterFactory for GreetFilterFactory {
 </li>
 <li>
 <p><strong>Start the proxy</strong></p>
-<p>We can run the proxy in the exact manner as the default Quilkin binary using the [run] function, passing in our custom <a href="filters/writing_custom_filters.html#">FilterFactory</a>.
+<p>We can run the proxy in the exact manner as the default Quilkin binary using the <a href="filters/../../../api/quilkin/runner/fn.run.html">run</a> function, passing in our custom <a href="filters/../../../api/quilkin/filters/trait.FilterFactory.html">FilterFactory</a>.
 Lets add a main function that does that. Quilkin relies on the <a href="https://docs.rs/tokio/1.5.0/tokio/">Tokio</a> async runtime so we need to import that crate and wrap our main function with it.</p>
 <p>Add Tokio as a dependency in <code>Cargo.toml</code>.</p>
 <pre><code class="language-toml">[dependencies]
@@ -1208,25 +1207,24 @@ quilkin = &quot;0.1.0-dev&quot;
 tokio = { version = &quot;1&quot;, features = [&quot;full&quot;]}
 </code></pre>
 <p>Add a main function that starts the proxy.</p>
-<pre><code class="language-no_run">// src/main.rs
-# use quilkin::filters::{CreateFilterArgs, Filter, Error, FilterFactory};
-
-# struct GreetFilterFactory;
-# impl FilterFactory for GreetFilterFactory {
-#     fn name(&amp;self) -&gt; &amp;'static str {
-#         &quot;greet.v1&quot;
-#     }
-#     fn create_filter(&amp;self, _: CreateFilterArgs) -&gt; Result&lt;Box&lt;dyn Filter&gt;, Error&gt; {
-#         unimplemented!()
-#     }
-# }
-use quilkin::{filters::DynFilterFactory, run};
+<pre><pre class="playground"><code class="language-rust  no_run">// src/main.rs
+<span class="boring">use quilkin::filters::{CreateFilterArgs, Filter, Error, FilterFactory};
+</span><span class="boring">struct GreetFilterFactory;
+</span><span class="boring">impl FilterFactory for GreetFilterFactory {
+</span><span class="boring">    fn name(&amp;self) -&gt; &amp;'static str {
+</span><span class="boring">        &quot;greet.v1&quot;
+</span><span class="boring">    }
+</span><span class="boring">    fn create_filter(&amp;self, _: CreateFilterArgs) -&gt; Result&lt;Box&lt;dyn Filter&gt;, Error&gt; {
+</span><span class="boring">        unimplemented!()
+</span><span class="boring">    }
+</span><span class="boring">}
+</span>use quilkin::{filters::DynFilterFactory, run};
 
 #[tokio::main]
 async fn main() {
     run(vec![Box::new(GreetFilterFactory) as DynFilterFactory]).await.unwrap();
 }
-</code></pre>
+</code></pre></pre>
 </li>
 </ol>
 <p>Now, let's try out the proxy. The following configuration starts our extended version of the proxy at port 7001
@@ -1294,10 +1292,8 @@ struct Config {
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>// src/main.rs
-
 <span class="boring">use quilkin::filters::{Filter, ReadContext, ReadResponse, WriteContext, WriteResponse};
-</span>
-struct Greet(String);
+</span>struct Greet(String);
 
 impl Filter for Greet {
     fn read(&amp;self, mut ctx: ReadContext) -&gt; Option&lt;ReadResponse&gt; {
@@ -1320,7 +1316,6 @@ impl Filter for Greet {
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>// src/main.rs
-
 <span class="boring">use serde::{Deserialize, Serialize};
 </span><span class="boring">#[derive(Serialize, Deserialize, Debug)]
 </span><span class="boring">struct Config {
@@ -1329,8 +1324,7 @@ impl Filter for Greet {
 </span><span class="boring">use quilkin::filters::{CreateFilterArgs, Error, FilterFactory, Filter, ReadContext, ReadResponse, WriteContext, WriteResponse};
 </span><span class="boring">struct Greet(String);
 </span><span class="boring">impl Filter for Greet { }
-</span>
-use quilkin::config::ConfigType;
+</span>use quilkin::config::ConfigType;
 
 struct GreetFilterFactory;
 impl FilterFactory for GreetFilterFactory {
@@ -1367,9 +1361,9 @@ static:
   - address: 127.0.0.1:4321
 </code></pre>
 <h5 id="dynamic-configuration"><a class="header" href="#dynamic-configuration">Dynamic Configuration</a></h5>
-<p>You might have noticed while adding <a href="filters/writing_custom_filters.html#static-configuration">static configuration support</a>, that the <a href="filters/writing_custom_filters.html#CreateFilter::config">config</a> argument passed into our <a href="filters/writing_custom_filters.html#">FilterFactory</a>
-has a <a href="filters/writing_custom_filters.html#ConfigType::Dynamic">Dynamic</a> variant.</p>
-<pre><code class="language-ignore">let greeting = match args.config.unwrap() {
+<p>You might have noticed while adding <a href="filters/writing_custom_filters.html#static-configuration">static configuration support</a>, that the <a href="filters/../../../api/quilkin/filters/prelude/struct.CreateFilterArgs.html#structfield.config">config</a> argument passed into our <a href="filters/../../../api/quilkin/filters/trait.FilterFactory.html">FilterFactory</a>
+has a <a href="filters/../../../api/quilkin/config/enum.ConfigType.html#variant.Dynamic">Dynamic</a> variant.</p>
+<pre><code class="language-rust  ignore">let greeting = match args.config.unwrap() {
     ConfigType::Static(config) =&gt; {
         serde_yaml::from_str::&lt;Config&gt;(serde_yaml::to_string(config).unwrap().as_str())
          .unwrap()
@@ -1378,8 +1372,8 @@ has a <a href="filters/writing_custom_filters.html#ConfigType::Dynamic">Dynamic<
     ConfigType::Dynamic(_) =&gt; unimplemented!(&quot;dynamic config is not yet supported for this filter&quot;),
 };
 </code></pre>
-<p>It contains the serialized <a href="https://developers.google.com/protocol-buffers">Protobuf</a> message received from the <a href="filters/../../xds.html">management server</a> for the <a href="filters/writing_custom_filters.html#">Filter</a> to create.
-As a result, its contents are entirely opaque to Quilkin and it is represented with the <a href="https://docs.rs/prost-types/0.7.0/prost_types/struct.Any.html">Prost Any</a> type so the <a href="filters/writing_custom_filters.html#">FilterFactory</a>
+<p>It contains the serialized <a href="https://developers.google.com/protocol-buffers">Protobuf</a> message received from the <a href="filters/../../xds.html">management server</a> for the <a href="filters/../../../api/quilkin/filters/trait.Filter.html">Filter</a> to create.
+As a result, its contents are entirely opaque to Quilkin and it is represented with the <a href="https://docs.rs/prost-types/0.7.0/prost_types/struct.Any.html">Prost Any</a> type so the <a href="filters/../../../api/quilkin/filters/trait.FilterFactory.html">FilterFactory</a>
 can interpret its contents anyway it wishes to.
 However, it usually contains a Protobuf equivalent of the filter's static configuration.</p>
 <ol>
@@ -1613,7 +1607,7 @@ balanced via the Client Proxy to multiple Server Proxies for even greater redund
 <h2 id="what-next-1"><a class="header" href="#what-next-1">What Next?</a></h2>
 <ul>
 <li>Have a look at the <a href="https://github.com/googleforgames/quilkin/blob/main/examples">example configurations</a> for basic configuration examples.</li>
-<li>Review the <a href="./extensions/filters/filters.html">set of filters</a> that are available.</li>
+<li>Review the <a href="./filters.html">set of filters</a> that are available.</li>
 </ul>
 <hr />
 <p>Diagrams powered by http://asciiflow.com/</p>
@@ -1691,7 +1685,7 @@ Quilkin implements the <strong>Aggregated Discovery Service (ADS)</strong> <em>S
 <ul>
 <li>The proxy uses these resources to discover clusters and their endpoints.</li>
 <li>While cluster topology information like <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/base.proto#config-core-v3-locality">locality</a> can be provided in the configuration, the proxy currently does not use this information (support may be included in the future however).</li>
-<li>Any <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#enum-config-cluster-v3-cluster-lbpolicy">load balancing information</a> included in this resource is ignored. For load balancing, use <a href="./extensions/filters/filters.html">Quilkin filters</a> instead.</li>
+<li>Any <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#enum-config-cluster-v3-cluster-lbpolicy">load balancing information</a> included in this resource is ignored. For load balancing, use <a href="./filters.html">Quilkin filters</a> instead.</li>
 <li>Only <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#enum-config-cluster-v3-cluster-discoverytype">cluster discovery type</a> <code>STATIC</code> and <code>EDS</code> is supported. Configuration including other discovery types e.g <code>LOGICAL_DNS</code> is rejected.</li>
 </ul>
 </li>
@@ -1701,16 +1695,16 @@ Quilkin implements the <strong>Aggregated Discovery Service (ADS)</strong> <em>S
 <li>The proxy uses these resources to discover information about endpoints like their IP addresses.</li>
 <li>Endpoints may provide <a href="./proxy.html#endpoint-metadata">Endpoint Metadata</a> via the <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/base.proto#envoy-v3-api-msg-config-core-v3-metadata">metadata</a> field. These metadata will be visible to filters as part of the corresponding endpoints information when processing packets.</li>
 <li>Only <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-address">socket addresses</a> are supported on an endpoint's address configuration - i.e an IP address and port number combination. Configuration including any other type of addressing e.g named pipes will be rejected.</li>
-<li>Any <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint.proto#config-endpoint-v3-clusterloadassignment-policy">load balancing information</a> included in this resource is ignored. For load balancing, use <a href="./extensions/filters/filters.html">Quilkin filters</a> instead.</li>
+<li>Any <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint.proto#config-endpoint-v3-clusterloadassignment-policy">load balancing information</a> included in this resource is ignored. For load balancing, use <a href="./filters.html">Quilkin filters</a> instead.</li>
 </ul>
 </li>
 <li>
-<p><strong>Listener Discovery Service <a href="https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/operations/dynamic_configuration#lds">(LDS)</a></strong>: Provides information about <a href="./extensions/filters/filters.html">Filters and Filter Chains</a>.</p>
+<p><strong>Listener Discovery Service <a href="https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/operations/dynamic_configuration#lds">(LDS)</a></strong>: Provides information about <a href="./filters.html">Filters and Filter Chains</a>.</p>
 <ul>
 <li>Only the <code>name</code> and <code>filter_chains</code> fields in the <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto#config-listener-v3-listener">Listener resource</a> are used by the proxy. The rest are ignored.</li>
 <li>Since Quilkin only uses one filter chain per proxy, at most one filter chain can be provided in the resource. Otherwise the configuration is rejected.</li>
 <li>Only the list of <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener_components.proto#envoy-v3-api-msg-config-listener-v3-filter">filters</a> specified in the <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener_components.proto#config-listener-v3-filterchain">filter chain</a> is used by the proxy - i.e other fields like <code>filter_chain_match</code> are ignored. This list also specifies the order that the corresponding filter chain will be constructed.</li>
-<li>gRPC proto configuration for Quilkin's built-in filters <a href="../proto/quilkin/extensions/filters">can be found here</a>. They are equivalent to the filter's static configuration.</li>
+<li>gRPC proto configuration for Quilkin's built-in filters <a href="https://github.com/googleforgames/quilkin/tree/main/proto/quilkin/extensions/filters">can be found here</a>. They are equivalent to the filter's static configuration.</li>
 </ul>
 </li>
 </ul>

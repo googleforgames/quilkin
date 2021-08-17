@@ -218,8 +218,8 @@ static:
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 2);
 </span><span class="boring">quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
-</span>}
-</code></pre></pre>
+</span><span class="boring">}
+</span></code></pre></pre>
 <p>We specify our filter chain in the <code>.filters</code> section of the proxy's configuration which has takes a sequence of <a href="#filter-config">FilterConfig</a> objects. Each object describes all information necessary to create a single filter.</p>
 <p>The above example creates a filter chain comprising a <a href="debug.html">Debug</a> filter followed by a <a href="./local_rate_limit.html">Rate limiter</a> filter - the effect is that every packet will be logged and the proxy will not forward more than 20 packets per second.</p>
 <blockquote>
