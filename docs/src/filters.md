@@ -66,7 +66,7 @@ static:
 # let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 # assert_eq!(config.source.get_static_filters().unwrap().len(), 2);
 # quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
-}
+# }
 ```
 
 We specify our filter chain in the `.filters` section of the proxy's configuration which has takes a sequence of [FilterConfig](#filter-config) objects. Each object describes all information necessary to create a single filter.

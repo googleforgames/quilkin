@@ -33,8 +33,6 @@ static:
 # quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
 ```
 
-`[[TODO: update/link to routing examples once they are complete]]`
-
 ### Configuration Options
 
 ```yaml
