@@ -20,11 +20,8 @@ use prometheus::Registry;
 use slog::{o, Drain, Logger};
 use tonic::transport::Endpoint as TonicEndpoint;
 
-use crate::cluster::Endpoint;
-use crate::config::{
-    parse_endpoint_metadata_from_yaml, Config, Endpoints, ManagementServer, Proxy, Source,
-    ValidationError, ValueInvalidArgs,
-};
+use crate::config::{Config, ManagementServer, Proxy, Source, ValidationError, ValueInvalidArgs};
+use crate::endpoint::Endpoints;
 use crate::filters::{chain::Error as FilterChainError, FilterChain, FilterRegistry, FilterSet};
 use crate::proxy::server::metrics::Metrics as ProxyMetrics;
 use crate::proxy::sessions::metrics::Metrics as SessionMetrics;
@@ -138,32 +135,8 @@ impl ValidatedConfig {
                     );
                 }
 
-                let mut endpoints = Vec::with_capacity(config_endpoints.len());
-                for ep in config_endpoints {
-                    endpoints.push(Endpoint::from_config(ep).map_err(|err| {
-                        ValidationError::ValueInvalid(ValueInvalidArgs {
-                            field: "static.endpoints".to_string(),
-                            clarification: Some(format!("invalid endpoint config: {}", err)),
-                            examples: None,
-                        })
-                    })?);
-                }
-                let endpoints = Endpoints::new(endpoints).map_err(|_empty_list_error| {
-                    ValidationError::EmptyList("static.endpoints".into())
-                })?;
-
-                for ep in config_endpoints {
-                    if let Some(ref metadata) = ep.metadata {
-                        if let Err(err) = parse_endpoint_metadata_from_yaml(metadata.clone()) {
-                            return Err(ValidationError::ValueInvalid(ValueInvalidArgs {
-                                field: "static.endpoints.metadata".into(),
-                                clarification: Some(err),
-                                examples: None,
-                            })
-                            .into());
-                        }
-                    }
-                }
+                let endpoints = Endpoints::new(config_endpoints.clone())
+                    .ok_or_else(|| ValidationError::EmptyList("static.endpoints".into()))?;
 
                 ValidatedSource::Static {
                     filter_chain: Arc::new(FilterChain::try_create(
@@ -299,6 +272,7 @@ mod tests {
 
     use super::{Builder, Error};
 
+    #[track_caller]
     fn parse_config(yaml: &str) -> Config {
         Config::from_reader(yaml.as_bytes()).unwrap()
     }
@@ -310,6 +284,7 @@ mod tests {
             .unwrap()
     }
 
+    #[track_caller]
     fn validate_unwrap_err(yaml: &'static str) -> ValidationError {
         match Builder::try_from(Arc::new(parse_config(yaml)))
             .unwrap()
@@ -398,17 +373,5 @@ static:
             ValidationError::EmptyList("static.endpoints".to_string()).to_string(),
             validate_unwrap_err(yaml).to_string()
         );
-
-        let yaml = "
-# Invalid metadata
-version: v1alpha1
-static:
-  endpoints:
-    - address: 127.0.0.1:25999
-      metadata:
-        quilkin.dev:
-          tokens: abc
-";
-        let _ = validate_unwrap_err(yaml);
     }
 }

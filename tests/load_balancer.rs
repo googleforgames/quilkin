@@ -17,9 +17,12 @@
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::{Arc, Mutex};
 
-use quilkin::config::{Builder as ConfigBuilder, EndPoint, Filter};
-use quilkin::filters::load_balancer;
-use quilkin::test_utils::TestHelper;
+use quilkin::{
+    config::{Builder as ConfigBuilder, Filter},
+    endpoint::Endpoint,
+    filters::load_balancer,
+    test_utils::TestHelper,
+};
 
 #[tokio::test]
 async fn load_balancer_filter() {
@@ -52,7 +55,7 @@ policy: ROUND_ROBIN
             echo_addresses
                 .iter()
                 .enumerate()
-                .map(|(_, addr)| EndPoint::new(*addr))
+                .map(|(_, addr)| Endpoint::new(*addr))
                 .collect(),
         )
         .build();

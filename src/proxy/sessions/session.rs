@@ -25,11 +25,12 @@ use tokio::select;
 use tokio::sync::{mpsc, watch};
 use tokio::time::{Duration, Instant};
 
-use crate::cluster::Endpoint;
-use crate::filters::{manager::SharedFilterManager, Filter, WriteContext};
-use crate::proxy::sessions::error::Error;
-use crate::proxy::sessions::metrics::Metrics;
-use crate::utils::debug;
+use crate::{
+    endpoint::Endpoint,
+    filters::{manager::SharedFilterManager, Filter, WriteContext},
+    proxy::sessions::{error::Error, metrics::Metrics},
+    utils::debug,
+};
 
 type Result<T> = std::result::Result<T, Error>;
 
@@ -327,7 +328,7 @@ mod tests {
     use crate::filters::FilterChain;
     use crate::test_utils::{new_test_chain, TestHelper};
 
-    use crate::cluster::Endpoint;
+    use crate::endpoint::Endpoint;
     use crate::filters::manager::FilterManager;
     use crate::proxy::sessions::session::ReceivedPacketContext;
     use tokio::sync::mpsc;
@@ -337,7 +338,7 @@ mod tests {
         let t = TestHelper::default();
         let socket = t.create_socket().await;
         let addr = socket.local_addr().unwrap();
-        let endpoint = Endpoint::from_address(addr);
+        let endpoint = Endpoint::new(addr);
         let (send_packet, mut recv_packet) = mpsc::channel::<Packet>(5);
         let registry = Registry::default();
 
@@ -388,7 +389,7 @@ mod tests {
         let (sender, _) = mpsc::channel::<Packet>(1);
         let ep = t.open_socket_and_recv_single_packet().await;
         let addr = ep.socket.local_addr().unwrap();
-        let endpoint = Endpoint::from_address(addr);
+        let endpoint = Endpoint::new(addr);
         let registry = Registry::default();
 
         let session = Session::new(
@@ -412,7 +413,7 @@ mod tests {
         let registry = Registry::default();
 
         let chain = Arc::new(FilterChain::new(vec![], &registry).unwrap());
-        let endpoint = Endpoint::from_address("127.0.1.1:80".parse().unwrap());
+        let endpoint = Endpoint::new("127.0.1.1:80".parse().unwrap());
         let dest = "127.0.0.1:88".parse().unwrap();
         let (mut sender, mut receiver) = mpsc::channel::<Packet>(10);
         let expiration = Arc::new(AtomicU64::new(
@@ -492,7 +493,7 @@ mod tests {
         let t = TestHelper::default();
         let ep = t.open_socket_and_recv_single_packet().await;
         let addr = ep.socket.local_addr().unwrap();
-        let endpoint = Endpoint::from_address(addr);
+        let endpoint = Endpoint::new(addr);
         let (send_packet, _) = mpsc::channel::<Packet>(5);
         let registry = Registry::default();
 
@@ -525,7 +526,7 @@ mod tests {
             Metrics::new(&registry).unwrap(),
             FilterManager::fixed(Arc::new(FilterChain::new(vec![], &registry).unwrap())),
             addr,
-            Endpoint::from_address(addr),
+            Endpoint::new(addr),
             sender,
             Duration::from_secs(10),
         )
@@ -550,7 +551,7 @@ mod tests {
             Metrics::new(&registry).unwrap(),
             FilterManager::fixed(Arc::new(FilterChain::new(vec![], &registry).unwrap())),
             addr,
-            Endpoint::from_address(addr),
+            Endpoint::new(addr),
             send_packet,
             Duration::from_secs(10),
         )

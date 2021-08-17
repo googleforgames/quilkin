@@ -15,14 +15,16 @@
  */
 
 ///! Complex integration tests that incorporate multiple elements
-use std::net::SocketAddr;
-use std::str::from_utf8;
+use std::{net::SocketAddr, str::from_utf8};
 
 use tokio::time::{timeout, Duration};
 
-use quilkin::config::{Builder, EndPoint, Filter};
-use quilkin::filters::{compress, concatenate_bytes};
-use quilkin::test_utils::TestHelper;
+use quilkin::{
+    config::{Builder, Filter},
+    endpoint::Endpoint,
+    filters::{compress, concatenate_bytes},
+    test_utils::TestHelper,
+};
 
 #[tokio::test]
 async fn filter_order() {
@@ -70,7 +72,7 @@ on_write: DECOMPRESS
                     config: serde_yaml::from_str(yaml_compress).unwrap(),
                 },
             ],
-            vec![EndPoint::new(echo)],
+            vec![Endpoint::new(echo)],
         )
         .build();
 

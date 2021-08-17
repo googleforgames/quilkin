@@ -27,65 +27,55 @@ mod xds {
 }
 
 #[allow(warnings)]
-mod envoy {
+pub(crate) mod envoy {
     pub mod r#type {
         pub mod matcher {
             pub mod v3 {
-                #![doc(hidden)]
                 tonic::include_proto!("envoy.r#type.matcher.v3");
             }
         }
         pub mod metadata {
             pub mod v3 {
-                #![doc(hidden)]
                 tonic::include_proto!("envoy.r#type.metadata.v3");
             }
         }
         pub mod tracing {
             pub mod v3 {
-                #![doc(hidden)]
                 tonic::include_proto!("envoy.r#type.tracing.v3");
             }
         }
         pub mod v3 {
-            #![doc(hidden)]
             tonic::include_proto!("envoy.r#type.v3");
         }
     }
     pub mod config {
         pub mod accesslog {
             pub mod v3 {
-                #![doc(hidden)]
                 tonic::include_proto!("envoy.config.accesslog.v3");
             }
         }
         pub mod cluster {
             pub mod v3 {
-                #![doc(hidden)]
                 tonic::include_proto!("envoy.config.cluster.v3");
             }
         }
         pub mod core {
             pub mod v3 {
-                #![doc(hidden)]
                 tonic::include_proto!("envoy.config.core.v3");
             }
         }
         pub mod endpoint {
             pub mod v3 {
-                #![doc(hidden)]
                 tonic::include_proto!("envoy.config.endpoint.v3");
             }
         }
         pub mod listener {
             pub mod v3 {
-                #![doc(hidden)]
                 tonic::include_proto!("envoy.config.listener.v3");
             }
         }
         pub mod route {
             pub mod v3 {
-                #![doc(hidden)]
                 tonic::include_proto!("envoy.config.route.v3");
             }
         }
@@ -93,13 +83,11 @@ mod envoy {
     pub mod service {
         pub mod discovery {
             pub mod v3 {
-                #![doc(hidden)]
                 tonic::include_proto!("envoy.service.discovery.v3");
             }
         }
         pub mod cluster {
             pub mod v3 {
-                #![doc(hidden)]
                 tonic::include_proto!("envoy.service.cluster.v3");
             }
         }
@@ -122,5 +110,4 @@ pub(crate) mod ads_client;
 pub(crate) mod cluster;
 pub(crate) mod error;
 pub(crate) mod listener;
-pub(crate) mod metadata;
 mod metrics;

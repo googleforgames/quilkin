@@ -188,7 +188,7 @@ mod tests {
                 Endpoints::new(
                     input_addresses
                         .iter()
-                        .map(|addr| Endpoint::from_address(*addr))
+                        .map(|addr| Endpoint::new(*addr))
                         .collect(),
                 )
                 .unwrap()

@@ -60,8 +60,7 @@ mod tests {
     use crate::test_utils::{logger, new_registry};
 
     use super::*;
-    use crate::cluster::Endpoint;
-    use crate::config::Endpoints;
+    use crate::endpoint::{Endpoint, Endpoints};
     use crate::filters::{ReadContext, ReadResponse, WriteContext, WriteResponse};
     use prometheus::Registry;
 
@@ -104,15 +103,13 @@ mod tests {
             .unwrap();
 
         let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080);
-        let endpoint = Endpoint::from_address(addr);
+        let endpoint = Endpoint::new(addr);
 
         assert!(filter
             .read(ReadContext::new(
-                Endpoints::new(vec![Endpoint::from_address(
-                    "127.0.0.1:8080".parse().unwrap(),
-                )])
-                .unwrap()
-                .into(),
+                Endpoints::new(vec![Endpoint::new("127.0.0.1:8080".parse().unwrap(),)])
+                    .unwrap()
+                    .into(),
                 addr,
                 vec![]
             ))

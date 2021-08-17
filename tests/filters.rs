@@ -23,7 +23,8 @@ use serde_yaml::{Mapping, Value};
 use slog::info;
 
 use quilkin::{
-    config::{Builder as ConfigBuilder, EndPoint, Filter},
+    config::{Builder as ConfigBuilder, Filter},
+    endpoint::Endpoint,
     filters::debug,
     test_utils::{new_registry, TestHelper},
     Builder as ProxyBuilder,
@@ -45,7 +46,7 @@ async fn test_filter() {
                 name: "TestFilter".to_string(),
                 config: None,
             }],
-            vec![EndPoint::new(echo)],
+            vec![Endpoint::new(echo)],
         )
         .build();
 
@@ -66,7 +67,7 @@ async fn test_filter() {
                 name: "TestFilter".to_string(),
                 config: None,
             }],
-            vec![EndPoint::new(SocketAddr::new(
+            vec![Endpoint::new(SocketAddr::new(
                 IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
                 server_port,
             ))],
@@ -129,7 +130,7 @@ async fn debug_filter() {
                 name: factory.name().into(),
                 config: Some(serde_yaml::Value::Mapping(map)),
             }],
-            vec![EndPoint::new(echo)],
+            vec![Endpoint::new(echo)],
         )
         .build();
     t.run_server_with_config(server_config);
@@ -145,7 +146,7 @@ async fn debug_filter() {
                 name: factory.name().into(),
                 config: Some(serde_yaml::Value::Mapping(map)),
             }],
-            vec![EndPoint::new(SocketAddr::new(
+            vec![Endpoint::new(SocketAddr::new(
                 IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
                 server_port,
             ))],

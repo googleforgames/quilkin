@@ -217,8 +217,7 @@ mod tests {
     use tokio::time;
 
     use super::ProtoConfig;
-    use crate::cluster::Endpoint;
-    use crate::config::Endpoints;
+    use crate::endpoint::{Endpoint, Endpoints};
     use crate::filters::{
         local_rate_limit::{metrics::Metrics, Config, LocalRateLimit},
         Filter, ReadContext,
@@ -350,11 +349,9 @@ mod tests {
         // Check that we're rate limited.
         assert!(r
             .read(ReadContext::new(
-                Endpoints::new(vec![Endpoint::from_address(
-                    "127.0.0.1:8080".parse().unwrap(),
-                )])
-                .unwrap()
-                .into(),
+                Endpoints::new(vec![Endpoint::new("127.0.0.1:8080".parse().unwrap(),)])
+                    .unwrap()
+                    .into(),
                 "127.0.0.1:8080".parse().unwrap(),
                 vec![9],
             ))
@@ -370,11 +367,9 @@ mod tests {
 
         let result = r
             .read(ReadContext::new(
-                Endpoints::new(vec![Endpoint::from_address(
-                    "127.0.0.1:8080".parse().unwrap(),
-                )])
-                .unwrap()
-                .into(),
+                Endpoints::new(vec![Endpoint::new("127.0.0.1:8080".parse().unwrap())])
+                    .unwrap()
+                    .into(),
                 "127.0.0.1:8080".parse().unwrap(),
                 vec![9],
             ))

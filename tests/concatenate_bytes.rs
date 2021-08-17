@@ -18,9 +18,12 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use tokio::time::{timeout, Duration};
 
-use quilkin::config::{Builder, EndPoint, Filter};
-use quilkin::filters::concatenate_bytes;
-use quilkin::test_utils::TestHelper;
+use quilkin::{
+    config::{Builder, Filter},
+    endpoint::Endpoint,
+    filters::concatenate_bytes,
+    test_utils::TestHelper,
+};
 
 #[tokio::test]
 async fn concatenate_bytes() {
@@ -39,7 +42,7 @@ bytes: YWJj #abc
                 name: concatenate_bytes::factory().name().into(),
                 config: serde_yaml::from_str(yaml).unwrap(),
             }],
-            vec![EndPoint::new(echo)],
+            vec![Endpoint::new(echo)],
         )
         .build();
     t.run_server_with_config(server_config);
