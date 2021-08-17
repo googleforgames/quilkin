@@ -19,9 +19,12 @@ use std::net::SocketAddr;
 use slog::info;
 use tokio::time::{timeout, Duration};
 
-use quilkin::config::{Builder, EndPoint, Filter};
-use quilkin::filters::compress;
-use quilkin::test_utils::{logger, TestHelper};
+use quilkin::{
+    config::{Builder, Filter},
+    endpoint::Endpoint,
+    filters::compress,
+    test_utils::{logger, TestHelper},
+};
 
 #[tokio::test]
 async fn client_and_server() {
@@ -42,7 +45,7 @@ on_write: COMPRESS
                 name: compress::factory(&log).name().into(),
                 config: serde_yaml::from_str(yaml).unwrap(),
             }],
-            vec![EndPoint::new(echo)],
+            vec![Endpoint::new(echo)],
         )
         .build();
     // Run server proxy.
@@ -61,7 +64,7 @@ on_write: DECOMPRESS
                 name: compress::factory(&log).name().into(),
                 config: serde_yaml::from_str(yaml).unwrap(),
             }],
-            vec![EndPoint::new(
+            vec![Endpoint::new(
                 format!("127.0.0.1:{}", server_port).parse().unwrap(),
             )],
         )

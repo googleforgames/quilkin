@@ -151,13 +151,14 @@ impl Filter for FilterChain {
 mod tests {
     use std::str::from_utf8;
 
-    use crate::config;
-    use crate::config::{Endpoints, UpstreamEndpoints};
-    use crate::filters::{debug, FilterRegistry, FilterSet};
-    use crate::test_utils::{logger, new_test_chain, TestFilter};
+    use crate::{
+        config,
+        endpoint::{Endpoint, Endpoints, UpstreamEndpoints},
+        filters::{debug, FilterRegistry, FilterSet},
+        test_utils::{logger, new_test_chain, TestFilter},
+    };
 
     use super::*;
-    use crate::cluster::Endpoint;
 
     #[test]
     fn from_config() {
@@ -186,8 +187,8 @@ mod tests {
 
     fn endpoints() -> Vec<Endpoint> {
         vec![
-            Endpoint::from_address("127.0.0.1:80".parse().unwrap()),
-            Endpoint::from_address("127.0.0.1:90".parse().unwrap()),
+            Endpoint::new("127.0.0.1:80".parse().unwrap()),
+            Endpoint::new("127.0.0.1:90".parse().unwrap()),
         ]
     }
 

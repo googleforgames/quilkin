@@ -28,7 +28,7 @@ use metrics::Metrics as ProxyMetrics;
 use resource_manager::{DynamicResourceManagers, StaticResourceManagers};
 
 use crate::cluster::cluster_manager::SharedClusterManager;
-use crate::cluster::Endpoint;
+use crate::endpoint::Endpoint;
 use crate::filters::{manager::SharedFilterManager, Filter, FilterRegistry, ReadContext};
 use crate::proxy::builder::{ValidatedConfig, ValidatedSource};
 use crate::proxy::server::error::Error;
@@ -495,7 +495,8 @@ mod tests {
 
     use crate::cluster::cluster_manager::ClusterManager;
     use crate::config;
-    use crate::config::{Builder as ConfigBuilder, EndPoint, Endpoints};
+    use crate::config::Builder as ConfigBuilder;
+    use crate::endpoint::{Endpoint, Endpoints};
     use crate::filters::{manager::FilterManager, FilterChain};
     use crate::proxy::sessions::Packet;
     use crate::proxy::Builder;
@@ -518,8 +519,8 @@ mod tests {
             .with_static(
                 vec![],
                 vec![
-                    EndPoint::new(endpoint1.socket.local_addr().unwrap()),
-                    EndPoint::new(endpoint2.socket.local_addr().unwrap()),
+                    Endpoint::new(endpoint1.socket.local_addr().unwrap()),
+                    Endpoint::new(endpoint2.socket.local_addr().unwrap()),
                 ],
             )
             .build();
@@ -546,7 +547,7 @@ mod tests {
             .with_port(local_addr.port())
             .with_static(
                 vec![],
-                vec![EndPoint::new(endpoint.socket.local_addr().unwrap())],
+                vec![Endpoint::new(endpoint.socket.local_addr().unwrap())],
             )
             .build();
         t.run_server_with_config(config);
@@ -574,7 +575,7 @@ mod tests {
                     name: "TestFilter".to_string(),
                     config: None,
                 }],
-                vec![EndPoint::new(endpoint.socket.local_addr().unwrap())],
+                vec![Endpoint::new(endpoint.socket.local_addr().unwrap())],
             )
             .build();
         t.run_server_with_builder(
@@ -650,7 +651,7 @@ mod tests {
 
             let cluster_manager = ClusterManager::fixed(
                 registry,
-                Endpoints::new(vec![Endpoint::from_address(endpoint_address)]).unwrap(),
+                Endpoints::new(vec![Endpoint::new(endpoint_address)]).unwrap(),
             )
             .unwrap();
             let filter_manager = FilterManager::fixed(chain.clone());
@@ -759,10 +760,7 @@ mod tests {
         server.run_recv_from(RunRecvFromArgs {
             cluster_manager: ClusterManager::fixed(
                 &registry,
-                Endpoints::new(vec![Endpoint::from_address(
-                    endpoint.socket.local_addr().unwrap(),
-                )])
-                .unwrap(),
+                Endpoints::new(vec![Endpoint::new(endpoint.socket.local_addr().unwrap())]).unwrap(),
             )
             .unwrap(),
             filter_manager: FilterManager::fixed(Arc::new(

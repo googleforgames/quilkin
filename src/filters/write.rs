@@ -16,7 +16,7 @@
 
 use std::{any::Any, collections::HashMap, net::SocketAddr};
 
-use crate::cluster::Endpoint;
+use crate::endpoint::Endpoint;
 
 #[cfg(doc)]
 use crate::filters::Filter;

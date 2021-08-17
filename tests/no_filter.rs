@@ -16,11 +16,12 @@
 
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
-use tokio::select;
-use tokio::time::{sleep, Duration};
+use tokio::{
+    select,
+    time::{sleep, Duration},
+};
 
-use quilkin::config::{Builder as ConfigBuilder, EndPoint};
-use quilkin::test_utils::TestHelper;
+use quilkin::{config::Builder as ConfigBuilder, endpoint::Endpoint, test_utils::TestHelper};
 
 #[tokio::test]
 async fn echo() {
@@ -34,7 +35,7 @@ async fn echo() {
     let server_port = 12345;
     let server_config = ConfigBuilder::empty()
         .with_port(server_port)
-        .with_static(vec![], vec![EndPoint::new(server1), EndPoint::new(server2)])
+        .with_static(vec![], vec![Endpoint::new(server1), Endpoint::new(server2)])
         .build();
 
     t.run_server_with_config(server_config);
@@ -45,7 +46,7 @@ async fn echo() {
         .with_port(client_port)
         .with_static(
             vec![],
-            vec![EndPoint::new(SocketAddr::new(
+            vec![Endpoint::new(SocketAddr::new(
                 IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
                 server_port,
             ))],

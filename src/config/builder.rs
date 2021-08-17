@@ -15,7 +15,10 @@
  */
 
 use super::{Config, Filter};
-use crate::config::{Admin, EndPoint, Proxy, Source, Version};
+use crate::{
+    config::{Admin, Proxy, Source, Version},
+    endpoint::Endpoint,
+};
 
 /// Builder for a [`Config`]
 #[derive(Debug)]
@@ -42,7 +45,7 @@ impl Builder {
         Builder { port, ..self }
     }
 
-    pub fn with_static(self, filters: Vec<Filter>, endpoints: Vec<EndPoint>) -> Self {
+    pub fn with_static(self, filters: Vec<Filter>, endpoints: Vec<Endpoint>) -> Self {
         let source = Source::Static { filters, endpoints };
         Builder { source, ..self }
     }

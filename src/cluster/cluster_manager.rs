@@ -25,8 +25,7 @@ use slog::{debug, o, warn, Logger};
 use prometheus::{Registry, Result as MetricsResult};
 use tokio::sync::{mpsc, watch};
 
-use crate::cluster::Endpoint;
-use crate::config::{Endpoints, UpstreamEndpoints};
+use crate::endpoint::{Endpoints, UpstreamEndpoints};
 use crate::xds::ads_client::ClusterUpdate;
 
 use super::metrics::Metrics;
@@ -132,22 +131,14 @@ impl ClusterManager {
                 let cluster_endpoints = cluster
                     .localities
                     .into_iter()
-                    .map(|(_, endpoints)| {
-                        endpoints
-                            .endpoints
-                            .into_iter()
-                            .map(|ep| Endpoint::new(ep.address, ep.tokens, ep.metadata))
-                    })
+                    .map(|(_, endpoints)| endpoints.endpoints.into_iter())
                     .flatten();
                 endpoints.extend(cluster_endpoints);
 
                 endpoints
             });
 
-        match Endpoints::new(endpoints) {
-            Ok(endpoints) => Some(endpoints),
-            Err(_empty_list_error) => None,
-        }
+        Endpoints::new(endpoints)
     }
 
     /// Spawns a task to run a loop that receives cluster updates
@@ -186,12 +177,16 @@ impl ClusterManager {
 
 #[cfg(test)]
 mod tests {
-    use super::ClusterManager;
-    use crate::cluster::{Cluster, Endpoint, LocalityEndpoints};
-    use crate::config::Endpoints;
-    use crate::test_utils::logger;
     use prometheus::Registry;
     use tokio::sync::{mpsc, watch};
+
+    use super::ClusterManager;
+    use crate::{
+        cluster::{Cluster, LocalityEndpoints},
+        endpoint::{Endpoint, Endpoints, Metadata},
+        metadata::MetadataView,
+        test_utils::logger,
+    };
 
     #[tokio::test]
     async fn dynamic_cluster_manager_process_cluster_update() {
@@ -200,27 +195,37 @@ mod tests {
         let cm = ClusterManager::dynamic(logger(), &Registry::default(), update_rx, shutdown_rx)
             .unwrap();
 
+        fn mapping(entries: &[(&str, &str)]) -> serde_yaml::Mapping {
+            entries
+                .iter()
+                .map(|(k, v)| ((*k).into(), (*v).into()))
+                .collect()
+        }
+
         let test_endpoints = vec![
-            Endpoint::new(
+            Endpoint::with_metadata(
                 "127.0.0.1:80".parse().unwrap(),
-                vec!["abc-0".into(), "xyz-0".into()].into_iter().collect(),
-                Some(serde_json::json!({
-                    "key-01": "value-01",
-                    "key-02": "value-02",
-                })),
+                MetadataView::with_unknown(
+                    Metadata {
+                        tokens: vec!["abc-0".into(), "xyz-0".into()].into_iter().collect(),
+                    },
+                    mapping(&[("key-01", "value-01"), ("key-02", "value-02")]),
+                ),
             ),
-            Endpoint::new(
+            Endpoint::with_metadata(
                 "127.0.0.1:82".parse().unwrap(),
-                vec!["abc-2".into(), "xyz-2".into()].into_iter().collect(),
-                Some(serde_json::json!({
-                    "key-01": "value-01",
-                    "key-02": "value-02",
-                })),
+                MetadataView::with_unknown(
+                    Metadata {
+                        tokens: vec!["abc-2".into(), "xyz-2".into()].into_iter().collect(),
+                    },
+                    mapping(&[("key-01", "value-01"), ("key-02", "value-02")]),
+                ),
             ),
-            Endpoint::new(
+            Endpoint::with_metadata(
                 "127.0.0.1:83".parse().unwrap(),
-                vec!["abc-3".into(), "xyz-3".into()].into_iter().collect(),
-                None,
+                Metadata {
+                    tokens: vec!["abc-3".into(), "xyz-3".into()].into_iter().collect(),
+                },
             ),
         ];
 
@@ -281,8 +286,8 @@ mod tests {
         let cm = ClusterManager::fixed(
             &Registry::default(),
             Endpoints::new(vec![
-                Endpoint::from_address("127.0.0.1:80".parse().unwrap()),
-                Endpoint::from_address("127.0.0.1:81".parse().unwrap()),
+                Endpoint::new("127.0.0.1:80".parse().unwrap()),
+                Endpoint::new("127.0.0.1:81".parse().unwrap()),
             ])
             .unwrap(),
         )
@@ -313,9 +318,7 @@ mod tests {
                     localities: vec![(
                         None,
                         LocalityEndpoints {
-                            endpoints: vec![Endpoint::from_address(
-                                "127.0.0.1:80".parse().unwrap(),
-                            )],
+                            endpoints: vec![Endpoint::new("127.0.0.1:80".parse().unwrap())],
                         },
                     )]
                     .into_iter()
@@ -329,8 +332,8 @@ mod tests {
                         None,
                         LocalityEndpoints {
                             endpoints: vec![
-                                Endpoint::from_address("127.0.0.1:82".parse().unwrap()),
-                                Endpoint::from_address("127.0.0.1:83".parse().unwrap()),
+                                Endpoint::new("127.0.0.1:82".parse().unwrap()),
+                                Endpoint::new("127.0.0.1:83".parse().unwrap()),
                             ],
                         },
                     )]
