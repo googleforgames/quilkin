@@ -111,7 +111,7 @@ To extend Quilkin's code with our own custom filter, we need to do the following
 
 1. **Start the proxy**
 
-   We can run the proxy in the exact manner as the default Quilkin binary using the [run] function, passing in our custom [FilterFactory].
+   We can run the proxy in the exact manner as the default Quilkin binary using the [run][runner::run] function, passing in our custom [FilterFactory].
    Lets add a main function that does that. Quilkin relies on the [Tokio] async runtime so we need to import that crate and wrap our main function with it.
 
    Add Tokio as a dependency in `Cargo.toml`.
@@ -122,10 +122,9 @@ To extend Quilkin's code with our own custom filter, we need to do the following
    ```
 
    Add a main function that starts the proxy.
-   ```no_run
+   ```rust, no_run
    // src/main.rs
    # use quilkin::filters::{CreateFilterArgs, Filter, Error, FilterFactory};
-
    # struct GreetFilterFactory;
    # impl FilterFactory for GreetFilterFactory {
    #     fn name(&self) -> &'static str {
@@ -207,9 +206,7 @@ The [Serde] crate is used to describe static YAML configuration in code while [P
 
    ```rust
    // src/main.rs
-
    # use quilkin::filters::{Filter, ReadContext, ReadResponse, WriteContext, WriteResponse};
-
    struct Greet(String);
 
    impl Filter for Greet {
@@ -230,7 +227,6 @@ The [Serde] crate is used to describe static YAML configuration in code while [P
 
    ```rust
    // src/main.rs
-
    # use serde::{Deserialize, Serialize};
    # #[derive(Serialize, Deserialize, Debug)]
    # struct Config {
@@ -239,7 +235,6 @@ The [Serde] crate is used to describe static YAML configuration in code while [P
    # use quilkin::filters::{CreateFilterArgs, Error, FilterFactory, Filter, ReadContext, ReadResponse, WriteContext, WriteResponse};
    # struct Greet(String);
    # impl Filter for Greet { }
-
    use quilkin::config::ConfigType;
 
    struct GreetFilterFactory;
@@ -278,9 +273,9 @@ static:
 
 ##### Dynamic Configuration
 
-You might have noticed while adding [static configuration support][anchor-static-config], that the [config][create-filter-args-config] argument passed into our [FilterFactory]
-has a [Dynamic][config-type-dynamic] variant.
-```ignore
+You might have noticed while adding [static configuration support][anchor-static-config], that the [config][CreateFilterArgs::config] argument passed into our [FilterFactory]
+has a [Dynamic][ConfigType::dynamic] variant.
+```rust, ignore
 let greeting = match args.config.unwrap() {
     ConfigType::Static(config) => {
         serde_yaml::from_str::<Config>(serde_yaml::to_string(config).unwrap().as_str())
@@ -392,20 +387,19 @@ However, it usually contains a Protobuf equivalent of the filter's static config
        }
        ```
 
-[Filter]: #
-[FilterFactory]: #
-[filter-factory-name]: #FilterFactory::name
-[FilterRegistry]: #
-[FilterChain]: #
-[runner]: #
-[create-filter-args-config]: #CreateFilter::config
-[config-type-dynamic]: #ConfigType::Dynamic
+[Filter]: ../../../api/quilkin/filters/trait.Filter.html
+[FilterFactory]: ../../../api/quilkin/filters/trait.FilterFactory.html
+[filter-factory-name]: ../../../api/quilkin/filters/trait.FilterFactory.html#tymethod.name
+[FilterRegistry]: ../../../api/quilkin/filters/struct.FilterRegistry.html
+[runner::run]: ../../../api/quilkin/runner/fn.run.html
+[CreateFilterArgs::config]: ../../../api/quilkin/filters/prelude/struct.CreateFilterArgs.html#structfield.config
+[ConfigType::dynamic]: ../../../api/quilkin/config/enum.ConfigType.html#variant.Dynamic
 
 [anchor-static-config]: #static-configuration
-[Filters]: ./filters.md
-[filter chain]: ./filters.md#filters-and-filter-chain
-[built-in-filters]: ./filters.md#built-in-filters
-[filter configuration]: ./filters.md#filter-config
+[Filters]: ../filters.md
+[filter chain]: ../filters.md#filters-and-filter-chain
+[built-in-filters]: ../filters.md#built-in-filters
+[filter configuration]: ../filters.md#filter-config
 [proxy-config]: ../../proxy-configuration.md
 [management server]: ../../xds.md
 [Tokio]: https://docs.rs/tokio/1.5.0/tokio/
