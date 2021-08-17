@@ -20,12 +20,14 @@ use crate::xds::envoy::config::core::v3::Metadata as ProtoMetadata;
 
 pub const KEY: &str = "quilkin.dev";
 
-/// Represents metadata attached to specific object.
+/// Represents a view into the metadata object attached to another object. `T`
+/// represents metadata known to Quilkin under `quilkin.dev` (available under
+/// the [`KEY`] constant.)
 #[derive(
     Default, Debug, serde::Deserialize, serde::Serialize, PartialEq, Clone, PartialOrd, Eq,
 )]
 #[non_exhaustive]
-pub struct Metadata<T> {
+pub struct MetadataView<T> {
     /// Known Quilkin metadata.
     #[serde(default, rename = "quilkin.dev")]
     pub known: T,
@@ -37,7 +39,7 @@ pub struct Metadata<T> {
 // This impl means that any `T` that we can try convert from a protobuf struct
 // at run-time can be constructed statically without going through
 // conversion first.
-impl<T, E> From<T> for Metadata<T>
+impl<T, E> From<T> for MetadataView<T>
 where
     T: TryFrom<prost_types::Struct, Error = E> + Default,
 {
@@ -49,7 +51,7 @@ where
     }
 }
 
-impl<T, E> TryFrom<ProtoMetadata> for Metadata<T>
+impl<T, E> TryFrom<ProtoMetadata> for MetadataView<T>
 where
     T: TryFrom<prost_types::Struct, Error = E> + Default,
 {
@@ -82,26 +84,5 @@ where
             known,
             unknown: crate::prost::mapping_from_kind(value).unwrap_or_default(),
         })
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn endpoint_metadata() {
-        let metadata = crate::endpoint::Metadata {
-            tokens: vec!["Man".into()].into_iter().collect(),
-        };
-
-        assert_eq!(
-            serde_json::to_value(Metadata::from(metadata)).unwrap(),
-            serde_json::json!({
-                KEY: {
-                    "tokens": ["TWFu"],
-                }
-            })
-        );
     }
 }

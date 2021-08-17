@@ -20,11 +20,7 @@ use std::{net::SocketAddr, sync::Arc};
 
 use serde::{Deserialize, Serialize};
 
-type MetadataMap = crate::metadata::Metadata<Metadata>;
-
-/// Represents the set of all known upstream endpoints.
-#[derive(Clone, Debug, PartialEq)]
-pub struct Endpoints(Arc<Vec<Endpoint>>);
+type EndpointMetadata = crate::metadata::MetadataView<Metadata>;
 
 /// A destination endpoint with any associated metadata.
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone, PartialOrd, Eq)]
@@ -33,20 +29,24 @@ pub struct Endpoints(Arc<Vec<Endpoint>>);
 pub struct Endpoint {
     pub address: SocketAddr,
     #[serde(default)]
-    pub metadata: MetadataMap,
+    pub metadata: EndpointMetadata,
 }
 
 impl Endpoint {
     /// Creates a new [`Endpoint`] with no metadata.
     pub fn new(address: SocketAddr) -> Self {
-        Self::with_metadata(address, MetadataMap::default())
+        Self {
+            address,
+            ..<_>::default()
+        }
     }
 
     /// Creates a new [`Endpoint`] with the specified `metadata`.
-    pub fn with_metadata(address: SocketAddr, metadata: impl Into<MetadataMap>) -> Self {
+    pub fn with_metadata(address: SocketAddr, metadata: impl Into<EndpointMetadata>) -> Self {
         Self {
             address,
             metadata: metadata.into(),
+            ..<_>::default()
         }
     }
 }
@@ -57,6 +57,27 @@ impl Default for Endpoint {
             address: std::net::SocketAddrV6::new(std::net::Ipv6Addr::UNSPECIFIED, 0, 0, 0).into(),
             metadata: <_>::default(),
         }
+    }
+}
+
+/// Represents the set of all known upstream endpoints.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Endpoints(Arc<Vec<Endpoint>>);
+
+impl Endpoints {
+    /// Returns an [`Endpoints`] backed by the provided list of endpoints.
+    pub fn new(endpoints: Vec<Endpoint>) -> Option<Self> {
+        match endpoints.is_empty() {
+            true => None,
+            false => Some(Self(Arc::new(endpoints))),
+        }
+    }
+}
+
+/// Provides a read-only view into the underlying endpoints.
+impl AsRef<Vec<Endpoint>> for Endpoints {
+    fn as_ref(&self) -> &Vec<Endpoint> {
+        self.0.as_ref()
     }
 }
 
@@ -161,20 +182,6 @@ pub struct UpstreamEndpoints {
     /// It contains indices into the initial set, to form the subset.
     /// If unset, the initial set is the current subset.
     subset: Option<Vec<usize>>,
-}
-
-impl Endpoints {
-    /// Returns an [`Endpoints`] backed by the provided list of endpoints.
-    pub fn new(endpoints: Vec<Endpoint>) -> Option<Self> {
-        (!endpoints.is_empty()).then(|| Self(Arc::new(endpoints)))
-    }
-}
-
-/// Provides a read-only view into the underlying endpoints.
-impl AsRef<Vec<Endpoint>> for Endpoints {
-    fn as_ref(&self) -> &Vec<Endpoint> {
-        self.0.as_ref()
-    }
 }
 
 impl From<Endpoints> for UpstreamEndpoints {
@@ -321,6 +328,22 @@ mod tests {
     }
 
     #[test]
+    fn endpoint_metadata() {
+        let metadata = Metadata {
+            tokens: vec!["Man".into()].into_iter().collect(),
+        };
+
+        assert_eq!(
+            serde_json::to_value(EndpointMetadata::from(metadata)).unwrap(),
+            serde_json::json!({
+                crate::metadata::KEY: {
+                    "tokens": ["TWFu"],
+                }
+            })
+        );
+    }
+
+    #[test]
     fn new_endpoints() {
         assert!(Endpoints::new(vec![]).is_none());
         assert!(Endpoints::new(vec![ep(1)]).is_some());
@@ -411,7 +434,7 @@ mod tests {
          - OGdqM3YyaQ== #8gj3v2i
  ";
         assert_eq!(
-            serde_json::to_value(serde_yaml::from_str::<MetadataMap>(yaml).unwrap()).unwrap(),
+            serde_json::to_value(serde_yaml::from_str::<EndpointMetadata>(yaml).unwrap()).unwrap(),
             serde_json::json!({
                 "user": {
                     "key1": "value1"
@@ -442,7 +465,7 @@ mod tests {
          - iix
  ";
         for yaml in &[not_a_list, not_a_string_value, not_a_base64_string] {
-            serde_yaml::from_str::<MetadataMap>(yaml).unwrap_err();
+            serde_yaml::from_str::<EndpointMetadata>(yaml).unwrap_err();
         }
     }
 }

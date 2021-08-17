@@ -39,7 +39,6 @@ impl Health {
         let default_hook = panic::take_hook();
         panic::set_hook(Box::new(move |panic_info| {
             error!(log, "Panic has occurred. Moving to Unhealthy");
-            error!(log, "Info: {}", panic_info);
             healthy.swap(false, Relaxed);
             default_hook(panic_info);
         }));

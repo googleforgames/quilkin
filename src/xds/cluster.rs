@@ -28,7 +28,7 @@ use tokio::sync::mpsc;
 use crate::{
     cluster::{Cluster as ProxyCluster, ClusterLocalities, Locality, LocalityEndpoints},
     endpoint::Endpoint,
-    metadata::Metadata,
+    metadata::MetadataView,
     xds::{
         ads_client::send_discovery_req,
         envoy::{
@@ -326,7 +326,7 @@ impl ClusterManager {
                 endpoints.push(Endpoint::with_metadata(
                     SocketAddr::from(address),
                     metadata
-                        .map(Metadata::try_from)
+                        .map(MetadataView::try_from)
                         .transpose()
                         .map_err(Error::new)?
                         .unwrap_or_default(),

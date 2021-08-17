@@ -22,7 +22,7 @@ use quilkin::{
     config::{Builder, Filter},
     endpoint::Endpoint,
     filters::{capture_bytes, token_router},
-    metadata::Metadata,
+    metadata::MetadataView,
     test_utils::{logger, TestHelper},
 };
 
@@ -59,7 +59,7 @@ quilkin.dev:
             ],
             vec![Endpoint::with_metadata(
                 echo,
-                serde_yaml::from_str::<Metadata<_>>(endpoint_metadata).unwrap(),
+                serde_yaml::from_str::<MetadataView<_>>(endpoint_metadata).unwrap(),
             )],
         )
         .build();
