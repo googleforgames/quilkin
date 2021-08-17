@@ -384,11 +384,6 @@
 <span id="382">382</span>
 <span id="383">383</span>
 <span id="384">384</span>
-<span id="385">385</span>
-<span id="386">386</span>
-<span id="387">387</span>
-<span id="388">388</span>
-<span id="389">389</span>
 </pre><pre class="rust">
 <span class="comment">/*
  * Copyright 2020 Google LLC
@@ -609,8 +604,7 @@
     <span class="kw">use</span> <span class="ident">tokio::time</span>;
 
     <span class="kw">use</span> <span class="kw">super</span><span class="ident">::ProtoConfig</span>;
-    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::cluster::Endpoint</span>;
-    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::config::Endpoints</span>;
+    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">Endpoints</span>};
     <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::filters</span>::{
         <span class="ident">local_rate_limit</span>::{<span class="ident">metrics::Metrics</span>, <span class="ident">Config</span>, <span class="ident">LocalRateLimit</span>},
         <span class="ident">Filter</span>, <span class="ident">ReadContext</span>,
@@ -742,11 +736,9 @@
         <span class="comment">// Check that we&#39;re rate limited.</span>
         <span class="macro">assert!</span>(<span class="ident">r</span>
             .<span class="ident">read</span>(<span class="ident">ReadContext::new</span>(
-                <span class="ident">Endpoints::new</span>(<span class="macro">vec!</span>[<span class="ident">Endpoint::from_address</span>(
-                    <span class="string">&quot;127.0.0.1:8080&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
-                )])
-                .<span class="ident">unwrap</span>()
-                .<span class="ident">into</span>(),
+                <span class="ident">Endpoints::new</span>(<span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(<span class="string">&quot;127.0.0.1:8080&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),)])
+                    .<span class="ident">unwrap</span>()
+                    .<span class="ident">into</span>(),
                 <span class="string">&quot;127.0.0.1:8080&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
                 <span class="macro">vec!</span>[<span class="number">9</span>],
             ))
@@ -762,11 +754,9 @@
 
         <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">r</span>
             .<span class="ident">read</span>(<span class="ident">ReadContext::new</span>(
-                <span class="ident">Endpoints::new</span>(<span class="macro">vec!</span>[<span class="ident">Endpoint::from_address</span>(
-                    <span class="string">&quot;127.0.0.1:8080&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
-                )])
-                .<span class="ident">unwrap</span>()
-                .<span class="ident">into</span>(),
+                <span class="ident">Endpoints::new</span>(<span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(<span class="string">&quot;127.0.0.1:8080&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>())])
+                    .<span class="ident">unwrap</span>()
+                    .<span class="ident">into</span>(),
                 <span class="string">&quot;127.0.0.1:8080&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
                 <span class="macro">vec!</span>[<span class="number">9</span>],
             ))

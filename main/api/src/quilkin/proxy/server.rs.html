@@ -813,8 +813,6 @@
 <span id="811">811</span>
 <span id="812">812</span>
 <span id="813">813</span>
-<span id="814">814</span>
-<span id="815">815</span>
 </pre><pre class="rust">
 <span class="comment">/*
  * Copyright 2020 Google LLC
@@ -846,7 +844,7 @@
 <span class="kw">use</span> <span class="ident">resource_manager</span>::{<span class="ident">DynamicResourceManagers</span>, <span class="ident">StaticResourceManagers</span>};
 
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::cluster::cluster_manager::SharedClusterManager</span>;
-<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::cluster::Endpoint</span>;
+<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::endpoint::Endpoint</span>;
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::filters</span>::{<span class="ident">manager::SharedFilterManager</span>, <span class="ident">Filter</span>, <span class="ident">FilterRegistry</span>, <span class="ident">ReadContext</span>};
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::proxy::builder</span>::{<span class="ident">ValidatedConfig</span>, <span class="ident">ValidatedSource</span>};
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::proxy::server::error::Error</span>;
@@ -1313,7 +1311,8 @@
 
     <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::cluster::cluster_manager::ClusterManager</span>;
     <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::config</span>;
-    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::config</span>::{<span class="ident">Builder</span> <span class="kw">as</span> <span class="ident">ConfigBuilder</span>, <span class="ident">EndPoint</span>, <span class="ident">Endpoints</span>};
+    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::config::Builder</span> <span class="kw">as</span> <span class="ident">ConfigBuilder</span>;
+    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">Endpoints</span>};
     <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::filters</span>::{<span class="ident">manager::FilterManager</span>, <span class="ident">FilterChain</span>};
     <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::proxy::sessions::Packet</span>;
     <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::proxy::Builder</span>;
@@ -1336,8 +1335,8 @@
             .<span class="ident">with_static</span>(
                 <span class="macro">vec!</span>[],
                 <span class="macro">vec!</span>[
-                    <span class="ident">EndPoint::new</span>(<span class="ident">endpoint1</span>.<span class="ident">socket</span>.<span class="ident">local_addr</span>().<span class="ident">unwrap</span>()),
-                    <span class="ident">EndPoint::new</span>(<span class="ident">endpoint2</span>.<span class="ident">socket</span>.<span class="ident">local_addr</span>().<span class="ident">unwrap</span>()),
+                    <span class="ident">Endpoint::new</span>(<span class="ident">endpoint1</span>.<span class="ident">socket</span>.<span class="ident">local_addr</span>().<span class="ident">unwrap</span>()),
+                    <span class="ident">Endpoint::new</span>(<span class="ident">endpoint2</span>.<span class="ident">socket</span>.<span class="ident">local_addr</span>().<span class="ident">unwrap</span>()),
                 ],
             )
             .<span class="ident">build</span>();
@@ -1364,7 +1363,7 @@
             .<span class="ident">with_port</span>(<span class="ident">local_addr</span>.<span class="ident">port</span>())
             .<span class="ident">with_static</span>(
                 <span class="macro">vec!</span>[],
-                <span class="macro">vec!</span>[<span class="ident">EndPoint::new</span>(<span class="ident">endpoint</span>.<span class="ident">socket</span>.<span class="ident">local_addr</span>().<span class="ident">unwrap</span>())],
+                <span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(<span class="ident">endpoint</span>.<span class="ident">socket</span>.<span class="ident">local_addr</span>().<span class="ident">unwrap</span>())],
             )
             .<span class="ident">build</span>();
         <span class="ident">t</span>.<span class="ident">run_server_with_config</span>(<span class="ident">config</span>);
@@ -1392,7 +1391,7 @@
                     <span class="ident">name</span>: <span class="string">&quot;TestFilter&quot;</span>.<span class="ident">to_string</span>(),
                     <span class="ident">config</span>: <span class="prelude-val">None</span>,
                 }],
-                <span class="macro">vec!</span>[<span class="ident">EndPoint::new</span>(<span class="ident">endpoint</span>.<span class="ident">socket</span>.<span class="ident">local_addr</span>().<span class="ident">unwrap</span>())],
+                <span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(<span class="ident">endpoint</span>.<span class="ident">socket</span>.<span class="ident">local_addr</span>().<span class="ident">unwrap</span>())],
             )
             .<span class="ident">build</span>();
         <span class="ident">t</span>.<span class="ident">run_server_with_builder</span>(
@@ -1468,7 +1467,7 @@
 
             <span class="kw">let</span> <span class="ident">cluster_manager</span> <span class="op">=</span> <span class="ident">ClusterManager::fixed</span>(
                 <span class="ident">registry</span>,
-                <span class="ident">Endpoints::new</span>(<span class="macro">vec!</span>[<span class="ident">Endpoint::from_address</span>(<span class="ident">endpoint_address</span>)]).<span class="ident">unwrap</span>(),
+                <span class="ident">Endpoints::new</span>(<span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(<span class="ident">endpoint_address</span>)]).<span class="ident">unwrap</span>(),
             )
             .<span class="ident">unwrap</span>();
             <span class="kw">let</span> <span class="ident">filter_manager</span> <span class="op">=</span> <span class="ident">FilterManager::fixed</span>(<span class="ident">chain</span>.<span class="ident">clone</span>());
@@ -1577,10 +1576,7 @@
         <span class="ident">server</span>.<span class="ident">run_recv_from</span>(<span class="ident">RunRecvFromArgs</span> {
             <span class="ident">cluster_manager</span>: <span class="ident">ClusterManager::fixed</span>(
                 <span class="kw-2">&amp;</span><span class="ident">registry</span>,
-                <span class="ident">Endpoints::new</span>(<span class="macro">vec!</span>[<span class="ident">Endpoint::from_address</span>(
-                    <span class="ident">endpoint</span>.<span class="ident">socket</span>.<span class="ident">local_addr</span>().<span class="ident">unwrap</span>(),
-                )])
-                .<span class="ident">unwrap</span>(),
+                <span class="ident">Endpoints::new</span>(<span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(<span class="ident">endpoint</span>.<span class="ident">socket</span>.<span class="ident">local_addr</span>().<span class="ident">unwrap</span>())]).<span class="ident">unwrap</span>(),
             )
             .<span class="ident">unwrap</span>(),
             <span class="ident">filter_manager</span>: <span class="ident">FilterManager::fixed</span>(<span class="ident">Arc::new</span>(

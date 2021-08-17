@@ -245,9 +245,6 @@
 <span id="243">243</span>
 <span id="244">244</span>
 <span id="245">245</span>
-<span id="246">246</span>
-<span id="247">247</span>
-<span id="248">248</span>
 </pre><pre class="rust">
 <span class="comment">/*
  * Copyright 2021 Google LLC
@@ -392,8 +389,7 @@
     <span class="kw">use</span> <span class="ident">std::sync::Arc</span>;
     <span class="kw">use</span> <span class="ident">std::time::Duration</span>;
 
-    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::cluster::Endpoint</span>;
-    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::config</span>::{<span class="ident">Endpoints</span>, <span class="ident">UpstreamEndpoints</span>};
+    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">Endpoints</span>, <span class="ident">UpstreamEndpoints</span>};
     <span class="kw">use</span> <span class="ident">tokio::sync::mpsc</span>;
     <span class="kw">use</span> <span class="ident">tokio::sync::watch</span>;
     <span class="kw">use</span> <span class="ident">tokio::time::sleep</span>;
@@ -418,10 +414,8 @@
             <span class="ident">manager_guard</span>.<span class="ident">get_filter_chain</span>().<span class="ident">clone</span>()
         };
 
-        <span class="kw">let</span> <span class="ident">test_endpoints</span> <span class="op">=</span> <span class="ident">Endpoints::new</span>(<span class="macro">vec!</span>[<span class="ident">Endpoint::from_address</span>(
-            <span class="string">&quot;127.0.0.1:8080&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
-        )])
-        .<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="ident">test_endpoints</span> <span class="op">=</span>
+            <span class="ident">Endpoints::new</span>(<span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(<span class="string">&quot;127.0.0.1:8080&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>())]).<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">filter_chain</span>.<span class="ident">read</span>(<span class="ident">ReadContext::new</span>(
             <span class="ident">UpstreamEndpoints::from</span>(<span class="ident">test_endpoints</span>.<span class="ident">clone</span>()),
             <span class="string">&quot;127.0.0.1:8081&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),

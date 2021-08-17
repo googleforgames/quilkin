@@ -356,6 +356,11 @@
 <span id="354">354</span>
 <span id="355">355</span>
 <span id="356">356</span>
+<span id="357">357</span>
+<span id="358">358</span>
+<span id="359">359</span>
+<span id="360">360</span>
+<span id="361">361</span>
 </pre><pre class="rust">
 <span class="comment">/*
  * Copyright 2020 Google LLC
@@ -384,7 +389,8 @@
 <span class="kw">use</span> <span class="ident">slog</span>::{<span class="ident">error</span>, <span class="ident">o</span>, <span class="ident">Logger</span>};
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">config</span>::{<span class="ident">RetainedItems</span>, <span class="ident">LOG_SAMPLING_RATE</span>},
+    <span class="ident">config::LOG_SAMPLING_RATE</span>,
+    <span class="ident">endpoint::RetainedItems</span>,
     <span class="ident">filters</span>::{<span class="ident">metadata::CAPTURED_BYTES</span>, <span class="ident">prelude</span>::<span class="kw-2">*</span>},
 };
 
@@ -464,7 +470,10 @@
                 <span class="prelude-val">None</span>
             }
             <span class="prelude-val">Some</span>(<span class="ident">value</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="ident">value</span>.<span class="ident">downcast_ref</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>() {
-                <span class="prelude-val">Some</span>(<span class="ident">token</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="ident">ctx</span>.<span class="ident">endpoints</span>.<span class="ident">retain</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">e</span>.<span class="ident">tokens</span>.<span class="ident">contains</span>(<span class="ident">token</span>)) {
+                <span class="prelude-val">Some</span>(<span class="ident">token</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="ident">ctx</span>
+                    .<span class="ident">endpoints</span>
+                    .<span class="ident">retain</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">e</span>.<span class="ident">metadata</span>.<span class="ident">known</span>.<span class="ident">tokens</span>.<span class="ident">contains</span>(<span class="ident">token</span>))
+                {
                     <span class="ident">RetainedItems::None</span> <span class="op">=</span><span class="op">&gt;</span> {
                         <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_no_endpoint_match</span>.<span class="ident">inc</span>();
                         <span class="prelude-val">None</span>
@@ -532,13 +541,12 @@
     <span class="kw">use</span> <span class="ident">prometheus::Registry</span>;
     <span class="kw">use</span> <span class="ident">serde_yaml</span>::{<span class="ident">Mapping</span>, <span class="ident">Value</span>};
 
-    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::config::Endpoints</span>;
+    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">Endpoints</span>, <span class="ident">Metadata</span>};
     <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::test_utils</span>::{<span class="ident">assert_write_no_change</span>, <span class="ident">logger</span>};
 
     <span class="kw">use</span> <span class="kw">super</span>::{
         <span class="ident">default_metadata_key</span>, <span class="ident">Config</span>, <span class="ident">Metrics</span>, <span class="ident">ProtoConfig</span>, <span class="ident">TokenRouter</span>, <span class="ident">TokenRouterFactory</span>,
     };
-    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::cluster::Endpoint</span>;
     <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::filters</span>::{
         <span class="ident">metadata::CAPTURED_BYTES</span>, <span class="ident">CreateFilterArgs</span>, <span class="ident">Filter</span>, <span class="ident">FilterFactory</span>, <span class="ident">ReadContext</span>,
     };
@@ -685,15 +693,17 @@
     }
 
     <span class="kw">fn</span> <span class="ident">new_ctx</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">ReadContext</span> {
-        <span class="kw">let</span> <span class="ident">endpoint1</span> <span class="op">=</span> <span class="ident">Endpoint::new</span>(
+        <span class="kw">let</span> <span class="ident">endpoint1</span> <span class="op">=</span> <span class="ident">Endpoint::with_metadata</span>(
             <span class="string">&quot;127.0.0.1:80&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
-            <span class="macro">vec!</span>[<span class="string">&quot;123&quot;</span>.<span class="ident">into</span>()].<span class="ident">into_iter</span>().<span class="ident">collect</span>(),
-            <span class="prelude-val">None</span>,
+            <span class="ident">Metadata</span> {
+                <span class="ident">tokens</span>: <span class="macro">vec!</span>[<span class="string">&quot;123&quot;</span>.<span class="ident">into</span>()].<span class="ident">into_iter</span>().<span class="ident">collect</span>(),
+            },
         );
-        <span class="kw">let</span> <span class="ident">endpoint2</span> <span class="op">=</span> <span class="ident">Endpoint::new</span>(
+        <span class="kw">let</span> <span class="ident">endpoint2</span> <span class="op">=</span> <span class="ident">Endpoint::with_metadata</span>(
             <span class="string">&quot;127.0.0.1:90&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
-            <span class="macro">vec!</span>[<span class="string">&quot;456&quot;</span>.<span class="ident">into</span>()].<span class="ident">into_iter</span>().<span class="ident">collect</span>(),
-            <span class="prelude-val">None</span>,
+            <span class="ident">Metadata</span> {
+                <span class="ident">tokens</span>: <span class="macro">vec!</span>[<span class="string">&quot;456&quot;</span>.<span class="ident">into</span>()].<span class="ident">into_iter</span>().<span class="ident">collect</span>(),
+            },
         );
 
         <span class="ident">ReadContext::new</span>(

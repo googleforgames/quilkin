@@ -83,7 +83,7 @@
 
 <span class="kw">use</span> <span class="ident">rand</span>::{<span class="ident">thread_rng</span>, <span class="ident">Rng</span>};
 
-<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::config::UpstreamEndpoints</span>;
+<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::endpoint::UpstreamEndpoints</span>;
 
 <span class="doccomment">/// EndpointChooser chooses from a set of endpoints that a proxy is connected to.</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">EndpointChooser</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> {

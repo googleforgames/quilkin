@@ -1061,6 +1061,8 @@
 <span id="1059">1059</span>
 <span id="1060">1060</span>
 <span id="1061">1061</span>
+<span id="1062">1062</span>
+<span id="1063">1063</span>
 </pre><pre class="rust">
 <span class="comment">/*
  * Copyright 2020 Google LLC
@@ -1078,24 +1080,35 @@
  * limitations under the License.
  */</span>
 
-<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::cluster</span>::{
-    <span class="ident">Cluster</span> <span class="kw">as</span> <span class="ident">ProxyCluster</span>, <span class="ident">ClusterLocalities</span>, <span class="ident">Endpoint</span>, <span class="ident">Locality</span>, <span class="ident">LocalityEndpoints</span>,
+<span class="kw">use</span> <span class="ident">std</span>::{
+    <span class="ident">collections</span>::{<span class="ident">HashMap</span>, <span class="ident">HashSet</span>},
+    <span class="ident">convert::TryFrom</span>,
+    <span class="ident">net::SocketAddr</span>,
 };
-<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::xds::envoy::config::cluster::v3</span>::{<span class="ident">cluster</span>, <span class="ident">Cluster</span>};
-<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::xds::envoy::config::core::v3</span>::{<span class="ident">address</span>, <span class="ident">socket_address</span>};
-<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::xds::envoy::config::endpoint::v3</span>::{<span class="ident">lb_endpoint</span>, <span class="ident">ClusterLoadAssignment</span>};
-<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::xds::envoy::service::discovery::v3</span>::{<span class="ident">DiscoveryRequest</span>, <span class="ident">DiscoveryResponse</span>};
-<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::xds::metadata</span>;
-<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::xds</span>::{<span class="ident">CLUSTER_TYPE</span>, <span class="ident">ENDPOINT_TYPE</span>};
 
-<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::xds::ads_client::send_discovery_req</span>;
-<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::xds::error::Error</span>;
 <span class="kw">use</span> <span class="ident">bytes::Bytes</span>;
 <span class="kw">use</span> <span class="ident">prost::Message</span>;
 <span class="kw">use</span> <span class="ident">slog</span>::{<span class="ident">debug</span>, <span class="ident">o</span>, <span class="ident">warn</span>, <span class="ident">Logger</span>};
-<span class="kw">use</span> <span class="ident">std::collections</span>::{<span class="ident">HashMap</span>, <span class="ident">HashSet</span>};
-<span class="kw">use</span> <span class="ident">std::net::SocketAddr</span>;
 <span class="kw">use</span> <span class="ident">tokio::sync::mpsc</span>;
+
+<span class="kw">use</span> <span class="kw">crate</span>::{
+    <span class="ident">cluster</span>::{<span class="ident">Cluster</span> <span class="kw">as</span> <span class="ident">ProxyCluster</span>, <span class="ident">ClusterLocalities</span>, <span class="ident">Locality</span>, <span class="ident">LocalityEndpoints</span>},
+    <span class="ident">endpoint::Endpoint</span>,
+    <span class="ident">metadata::MetadataView</span>,
+    <span class="ident">xds</span>::{
+        <span class="ident">ads_client::send_discovery_req</span>,
+        <span class="ident">envoy</span>::{
+            <span class="ident">config</span>::{
+                <span class="ident">cluster::v3</span>::{<span class="ident">cluster</span>, <span class="ident">Cluster</span>},
+                <span class="ident">core::v3</span>::{<span class="ident">address</span>, <span class="ident">socket_address</span>},
+                <span class="ident">endpoint::v3</span>::{<span class="ident">lb_endpoint</span>, <span class="ident">ClusterLoadAssignment</span>},
+            },
+            <span class="ident">service::discovery::v3</span>::{<span class="ident">DiscoveryRequest</span>, <span class="ident">DiscoveryResponse</span>},
+        },
+        <span class="ident">error::Error</span>,
+        <span class="ident">CLUSTER_TYPE</span>, <span class="ident">ENDPOINT_TYPE</span>,
+    },
+};
 
 <span class="doccomment">/// Tracks clusters and endpoints reported by an XDS server.</span>
 <span class="doccomment">/// This struct handles, parsing and aggregating XDS DiscoveryResponse</span>
@@ -1316,7 +1329,7 @@
             });
 
             <span class="comment">// Extract components of the endpoint that we care about.</span>
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">processed_endpoints</span> <span class="op">=</span> <span class="macro">vec!</span>[];
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">endpoints</span> <span class="op">=</span> <span class="macro">vec!</span>[];
             <span class="kw">for</span> (<span class="ident">host_identifier</span>, <span class="ident">metadata</span>) <span class="kw">in</span>
                 <span class="ident">lb_locality</span>
                     .<span class="ident">lb_endpoints</span>
@@ -1347,7 +1360,14 @@
                     .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">address</span><span class="op">|</span> <span class="ident">address</span>.<span class="ident">address</span>)
                     .<span class="ident">map</span>(<span class="op">|</span><span class="ident">address</span><span class="op">|</span> <span class="kw">match</span> <span class="ident">address</span> {
                         <span class="ident">address::Address::SocketAddress</span>(<span class="ident">sock_addr</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                            <span class="kw">let</span> <span class="ident">address</span> <span class="op">=</span> <span class="ident">sock_addr</span>.<span class="ident">address</span>;
+                            <span class="comment">// We only support IP addresses so anything else is an error.</span>
+                            <span class="kw">let</span> <span class="ident">address</span> <span class="op">=</span>
+                                <span class="ident">sock_addr</span>
+                                    .<span class="ident">address</span>
+                                    .<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">std::net::IpAddr</span><span class="op">&gt;</span>()
+                                    .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
+                                        <span class="ident">Error::new</span>(<span class="macro">format!</span>(<span class="string">&quot;invalid ip address: {}&quot;</span>, <span class="ident">err</span>))
+                                    })<span class="question-mark">?</span>;
                             <span class="ident">sock_addr</span>
                                 .<span class="ident">port_specifier</span>
                                 .<span class="ident">map</span>(<span class="op">|</span><span class="ident">port_specifier</span><span class="op">|</span> <span class="kw">match</span> <span class="ident">port_specifier</span> {
@@ -1355,11 +1375,11 @@
                                         <span class="prelude-val">Ok</span>((<span class="ident">address</span>, <span class="ident">port</span> <span class="kw">as</span> <span class="ident">u16</span>))
                                     }
                                     <span class="ident">socket_address::PortSpecifier::NamedPort</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">Error::new</span>(
-                                        <span class="string">&quot;named_port on socket addresses is not supported&quot;</span>.<span class="ident">into</span>(),
+                                        <span class="string">&quot;named_port on socket addresses is not supported&quot;</span>,
                                     )),
                                 })
                                 .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> {
-                                    <span class="prelude-val">Err</span>(<span class="ident">Error::new</span>(<span class="string">&quot;no port specifier was provided&quot;</span>.<span class="ident">into</span>()))
+                                    <span class="prelude-val">Err</span>(<span class="ident">Error::new</span>(<span class="string">&quot;no port specifier was provided&quot;</span>))
                                 })
                         }
                         <span class="ident">invalid</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">Error::new</span>(<span class="macro">format!</span>(
@@ -1367,31 +1387,15 @@
                             <span class="ident">invalid</span>
                         ))),
                     })
-                    .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> {
-                        <span class="prelude-val">Err</span>(<span class="ident">Error::new</span>(<span class="string">&quot;received `Endpoint` with no `address`&quot;</span>.<span class="ident">into</span>()))
-                    })<span class="question-mark">?</span>;
+                    .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="prelude-val">Err</span>(<span class="ident">Error::new</span>(<span class="string">&quot;received `Endpoint` with no `address`&quot;</span>)))<span class="question-mark">?</span>;
 
-                <span class="comment">// Extract any metadata associated with the endpoint.</span>
-                <span class="kw">let</span> (<span class="ident">metadata</span>, <span class="ident">tokens</span>) <span class="op">=</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">metadata</span>) <span class="op">=</span> <span class="ident">metadata</span> {
-                    <span class="kw">let</span> (<span class="ident">metadata</span>, <span class="ident">tokens</span>) <span class="op">=</span>
-                        <span class="ident">metadata::parse_endpoint_metadata</span>(<span class="ident">metadata</span>).<span class="ident">map_err</span>(<span class="ident">Error::new</span>)<span class="question-mark">?</span>;
-                    (<span class="prelude-val">Some</span>(<span class="ident">metadata</span>), <span class="ident">tokens</span>)
-                } <span class="kw">else</span> {
-                    (<span class="prelude-val">None</span>, <span class="ident">Default::default</span>())
-                };
-
-                <span class="ident">processed_endpoints</span>.<span class="ident">push</span>((<span class="ident">address</span>, <span class="ident">tokens</span>, <span class="ident">metadata</span>));
-            }
-
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">endpoints</span> <span class="op">=</span> <span class="macro">vec!</span>[];
-            <span class="kw">for</span> ((<span class="ident">addr</span>, <span class="ident">port</span>), <span class="ident">tokens</span>, <span class="ident">metadata</span>) <span class="kw">in</span> <span class="ident">processed_endpoints</span>.<span class="ident">into_iter</span>() {
-                <span class="ident">endpoints</span>.<span class="ident">push</span>(<span class="ident">Endpoint::new</span>(
-                    <span class="comment">// We only support IP addresses so anything else is an error.</span>
-                    <span class="ident">addr</span>.<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">std::net::IpAddr</span><span class="op">&gt;</span>()
-                        .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="ident">Error::new</span>(<span class="macro">format!</span>(<span class="string">&quot;invalid ip address: {}&quot;</span>, <span class="ident">err</span>)))
-                        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">ip_addr</span><span class="op">|</span> <span class="ident">SocketAddr::new</span>(<span class="ident">ip_addr</span>, <span class="ident">port</span>))<span class="question-mark">?</span>,
-                    <span class="ident">tokens</span>,
-                    <span class="ident">metadata</span>,
+                <span class="ident">endpoints</span>.<span class="ident">push</span>(<span class="ident">Endpoint::with_metadata</span>(
+                    <span class="ident">SocketAddr::from</span>(<span class="ident">address</span>),
+                    <span class="ident">metadata</span>
+                        .<span class="ident">map</span>(<span class="ident">MetadataView::try_from</span>)
+                        .<span class="ident">transpose</span>()
+                        .<span class="ident">map_err</span>(<span class="ident">Error::new</span>)<span class="question-mark">?</span>
+                        .<span class="ident">unwrap_or_default</span>(),
                 ));
             }
 
@@ -1467,7 +1471,7 @@
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span> {
     <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">ClusterManager</span>, <span class="ident">ProxyCluster</span>};
-    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::cluster::Endpoint</span> <span class="kw">as</span> <span class="ident">ProxyEndpoint</span>;
+    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::endpoint::Endpoint</span> <span class="kw">as</span> <span class="ident">ProxyEndpoint</span>;
     <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::test_utils::logger</span>;
     <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::xds::envoy::config::cluster::v3</span>::{<span class="ident">cluster::ClusterDiscoveryType</span>, <span class="ident">Cluster</span>};
     <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::xds::envoy::config::core::v3</span>::{
@@ -1601,7 +1605,7 @@
                     .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="prelude-val">None</span>)
                     .<span class="ident">unwrap</span>()
                     .<span class="ident">endpoints</span>,
-                <span class="macro">vec!</span>[<span class="ident">ProxyEndpoint::from_address</span>(<span class="ident">expected_socket_addr</span>)]
+                <span class="macro">vec!</span>[<span class="ident">ProxyEndpoint::new</span>(<span class="ident">expected_socket_addr</span>)]
             );
             <span class="macro">assert_eq!</span>(
                 <span class="ident">cm</span>.<span class="ident">clusters</span>
@@ -1611,9 +1615,7 @@
                     .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="prelude-val">None</span>)
                     .<span class="ident">unwrap</span>()
                     .<span class="ident">endpoints</span>,
-                <span class="macro">vec!</span>[<span class="ident">ProxyEndpoint::from_address</span>(
-                    <span class="string">&quot;127.0.0.1:2020&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
-                )]
+                <span class="macro">vec!</span>[<span class="ident">ProxyEndpoint::new</span>(<span class="string">&quot;127.0.0.1:2020&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),)]
             );
         }
     }
@@ -1904,17 +1906,19 @@
         <span class="comment">// Validate the metadata we set for the endpoint.</span>
         <span class="macro">assert_eq!</span>(<span class="ident">locality</span>.<span class="ident">endpoints</span>.<span class="ident">len</span>(), <span class="number">1</span>);
         <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="ident">locality</span>.<span class="ident">endpoints</span>.<span class="ident">get</span>(<span class="number">0</span>).<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="ident">metadata</span> <span class="op">=</span> <span class="ident">endpoint</span>.<span class="ident">metadata</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="ident">dyn_metadata</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">endpoint</span>.<span class="ident">metadata</span>.<span class="ident">unknown</span>;
 
-        <span class="kw">let</span> <span class="ident">object</span> <span class="op">=</span> <span class="ident">metadata</span>.<span class="ident">as_object</span>().<span class="ident">unwrap</span>();
-        <span class="macro">assert_eq!</span>(<span class="ident">object</span>.<span class="ident">len</span>(), <span class="number">1</span>);
+        <span class="macro">assert_eq!</span>(<span class="ident">dyn_metadata</span>.<span class="ident">len</span>(), <span class="number">1</span>);
 
-        <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">object</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;key-{}&quot;</span>, <span class="ident">cluster_name</span>)).<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">dyn_metadata</span>
+            .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;key-{}&quot;</span>, <span class="ident">cluster_name</span>).<span class="ident">into</span>())
+            .<span class="ident">unwrap</span>();
         <span class="macro">assert_eq!</span>(
             <span class="ident">value</span>,
-            <span class="kw-2">&amp;</span><span class="macro">serde_json::json!</span>({
-                <span class="string">&quot;one&quot;</span>: <span class="string">&quot;two&quot;</span>
-            })
+            <span class="kw-2">&amp;</span><span class="ident">serde_yaml::Value::from</span>(
+                <span class="ident">std::array::IntoIter::new</span>([(<span class="string">&quot;one&quot;</span>.<span class="ident">into</span>(), <span class="string">&quot;two&quot;</span>.<span class="ident">into</span>())])
+                    .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">serde_yaml::Mapping</span><span class="op">&gt;</span>()
+            )
         );
     }
 

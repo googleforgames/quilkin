@@ -178,6 +178,7 @@
 <span id="176">176</span>
 <span id="177">177</span>
 <span id="178">178</span>
+<span id="179">179</span>
 </pre><pre class="rust">
 <span class="comment">/*
  * Copyright 2020 Google LLC All Rights Reserved.
@@ -247,11 +248,12 @@
     <span class="kw">use</span> <span class="ident">std::collections::HashSet</span>;
     <span class="kw">use</span> <span class="ident">std::net::SocketAddr</span>;
 
-    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::cluster::Endpoint</span>;
-    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::config::Endpoints</span>;
-    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::filters</span>::{
-        <span class="ident">load_balancer::LoadBalancerFilterFactory</span>, <span class="ident">CreateFilterArgs</span>, <span class="ident">Filter</span>, <span class="ident">FilterFactory</span>,
-        <span class="ident">ReadContext</span>,
+    <span class="kw">use</span> <span class="kw">crate</span>::{
+        <span class="ident">endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">Endpoints</span>},
+        <span class="ident">filters</span>::{
+            <span class="ident">load_balancer::LoadBalancerFilterFactory</span>, <span class="ident">CreateFilterArgs</span>, <span class="ident">Filter</span>, <span class="ident">FilterFactory</span>,
+            <span class="ident">ReadContext</span>,
+        },
     };
     <span class="kw">use</span> <span class="ident">prometheus::Registry</span>;
 
@@ -274,7 +276,7 @@
                 <span class="ident">Endpoints::new</span>(
                     <span class="ident">input_addresses</span>
                         .<span class="ident">iter</span>()
-                        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">addr</span><span class="op">|</span> <span class="ident">Endpoint::from_address</span>(<span class="kw-2">*</span><span class="ident">addr</span>))
+                        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">addr</span><span class="op">|</span> <span class="ident">Endpoint::new</span>(<span class="kw-2">*</span><span class="ident">addr</span>))
                         .<span class="ident">collect</span>(),
                 )
                 .<span class="ident">unwrap</span>()

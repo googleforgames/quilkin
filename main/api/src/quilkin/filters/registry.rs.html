@@ -121,9 +121,6 @@
 <span id="119">119</span>
 <span id="120">120</span>
 <span id="121">121</span>
-<span id="122">122</span>
-<span id="123">123</span>
-<span id="124">124</span>
 </pre><pre class="rust">
 <span class="comment">/*
  * Copyright 2020 Google LLC
@@ -187,8 +184,7 @@
     <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::test_utils</span>::{<span class="ident">logger</span>, <span class="ident">new_registry</span>};
 
     <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
-    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::cluster::Endpoint</span>;
-    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::config::Endpoints</span>;
+    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">Endpoints</span>};
     <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::filters</span>::{<span class="ident">ReadContext</span>, <span class="ident">ReadResponse</span>, <span class="ident">WriteContext</span>, <span class="ident">WriteResponse</span>};
     <span class="kw">use</span> <span class="ident">prometheus::Registry</span>;
 
@@ -231,15 +227,13 @@
             .<span class="ident">unwrap</span>();
 
         <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span> <span class="ident">SocketAddr::new</span>(<span class="ident">IpAddr::V4</span>(<span class="ident">Ipv4Addr::new</span>(<span class="number">127</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">1</span>)), <span class="number">8080</span>);
-        <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="ident">Endpoint::from_address</span>(<span class="ident">addr</span>);
+        <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="ident">Endpoint::new</span>(<span class="ident">addr</span>);
 
         <span class="macro">assert!</span>(<span class="ident">filter</span>
             .<span class="ident">read</span>(<span class="ident">ReadContext::new</span>(
-                <span class="ident">Endpoints::new</span>(<span class="macro">vec!</span>[<span class="ident">Endpoint::from_address</span>(
-                    <span class="string">&quot;127.0.0.1:8080&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
-                )])
-                .<span class="ident">unwrap</span>()
-                .<span class="ident">into</span>(),
+                <span class="ident">Endpoints::new</span>(<span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(<span class="string">&quot;127.0.0.1:8080&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),)])
+                    .<span class="ident">unwrap</span>()
+                    .<span class="ident">into</span>(),
                 <span class="ident">addr</span>,
                 <span class="macro">vec!</span>[]
             ))

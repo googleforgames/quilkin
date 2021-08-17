@@ -293,7 +293,6 @@
 <span id="291">291</span>
 <span id="292">292</span>
 <span id="293">293</span>
-<span id="294">294</span>
 </pre><pre class="rust">
 <span class="comment">/*
  * Copyright 2020 Google LLC
@@ -416,14 +415,13 @@
     <span class="kw">use</span> <span class="ident">prometheus::Registry</span>;
     <span class="kw">use</span> <span class="ident">serde_yaml</span>::{<span class="ident">Mapping</span>, <span class="ident">Value</span>};
 
-    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::config::Endpoints</span>;
+    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">Endpoints</span>};
     <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::test_utils</span>::{<span class="ident">assert_write_no_change</span>, <span class="ident">logger</span>};
 
     <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">CaptureBytes</span>, <span class="ident">CaptureBytesFactory</span>, <span class="ident">Config</span>, <span class="ident">Metrics</span>, <span class="ident">Strategy</span>};
 
     <span class="kw">use</span> <span class="kw">super</span><span class="ident">::capture</span>::{<span class="ident">Capture</span>, <span class="ident">Prefix</span>, <span class="ident">Suffix</span>};
 
-    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::cluster::Endpoint</span>;
     <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::filters</span>::{
         <span class="ident">metadata::CAPTURED_BYTES</span>, <span class="ident">CreateFilterArgs</span>, <span class="ident">Filter</span>, <span class="ident">FilterFactory</span>, <span class="ident">ReadContext</span>,
     };
@@ -510,7 +508,7 @@
             <span class="ident">remove</span>: <span class="bool-val">true</span>,
         };
         <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">capture_bytes</span>(<span class="ident">config</span>);
-        <span class="kw">let</span> <span class="ident">endpoints</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">Endpoint::from_address</span>(<span class="string">&quot;127.0.0.1:81&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>())];
+        <span class="kw">let</span> <span class="ident">endpoints</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(<span class="string">&quot;127.0.0.1:81&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>())];
         <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">filter</span>.<span class="ident">read</span>(<span class="ident">ReadContext::new</span>(
             <span class="ident">Endpoints::new</span>(<span class="ident">endpoints</span>).<span class="ident">unwrap</span>().<span class="ident">into</span>(),
             <span class="string">&quot;127.0.0.1:80&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
@@ -565,7 +563,7 @@
     <span class="kw">where</span>
         <span class="ident">F</span>: <span class="ident">Filter</span> <span class="op">+</span> <span class="question-mark">?</span><span class="ident">Sized</span>,
     {
-        <span class="kw">let</span> <span class="ident">endpoints</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">Endpoint::from_address</span>(<span class="string">&quot;127.0.0.1:81&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>())];
+        <span class="kw">let</span> <span class="ident">endpoints</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(<span class="string">&quot;127.0.0.1:81&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>())];
         <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">filter</span>
             .<span class="ident">read</span>(<span class="ident">ReadContext::new</span>(
                 <span class="ident">Endpoints::new</span>(<span class="ident">endpoints</span>).<span class="ident">unwrap</span>().<span class="ident">into</span>(),

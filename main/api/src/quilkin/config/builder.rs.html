@@ -65,6 +65,9 @@
 <span id="63">63</span>
 <span id="64">64</span>
 <span id="65">65</span>
+<span id="66">66</span>
+<span id="67">67</span>
+<span id="68">68</span>
 </pre><pre class="rust">
 <span class="comment">/*
  * Copyright 2020 Google LLC
@@ -83,7 +86,10 @@
  */</span>
 
 <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">Config</span>, <span class="ident">Filter</span>};
-<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::config</span>::{<span class="ident">Admin</span>, <span class="ident">EndPoint</span>, <span class="ident">Proxy</span>, <span class="ident">Source</span>, <span class="ident">Version</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::{
+    <span class="ident">config</span>::{<span class="ident">Admin</span>, <span class="ident">Proxy</span>, <span class="ident">Source</span>, <span class="ident">Version</span>},
+    <span class="ident">endpoint::Endpoint</span>,
+};
 
 <span class="doccomment">/// Builder for a [`Config`]</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
@@ -110,7 +116,7 @@
         <span class="ident">Builder</span> { <span class="ident">port</span>, ..<span class="self">self</span> }
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_static</span>(<span class="self">self</span>, <span class="ident">filters</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Filter</span><span class="op">&gt;</span>, <span class="ident">endpoints</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">EndPoint</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_static</span>(<span class="self">self</span>, <span class="ident">filters</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Filter</span><span class="op">&gt;</span>, <span class="ident">endpoints</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Endpoint</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="kw">let</span> <span class="ident">source</span> <span class="op">=</span> <span class="ident">Source::Static</span> { <span class="ident">filters</span>, <span class="ident">endpoints</span> };
         <span class="ident">Builder</span> { <span class="ident">source</span>, ..<span class="self">self</span> }
     }

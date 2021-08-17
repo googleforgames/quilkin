@@ -306,6 +306,7 @@
 <span id="304">304</span>
 <span id="305">305</span>
 <span id="306">306</span>
+<span id="307">307</span>
 </pre><pre class="rust">
 <span class="comment">/*
  * Copyright 2020 Google LLC
@@ -460,13 +461,14 @@
 <span class="kw">mod</span> <span class="ident">tests</span> {
     <span class="kw">use</span> <span class="ident">std::str::from_utf8</span>;
 
-    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::config</span>;
-    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::config</span>::{<span class="ident">Endpoints</span>, <span class="ident">UpstreamEndpoints</span>};
-    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::filters</span>::{<span class="ident">debug</span>, <span class="ident">FilterRegistry</span>, <span class="ident">FilterSet</span>};
-    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::test_utils</span>::{<span class="ident">logger</span>, <span class="ident">new_test_chain</span>, <span class="ident">TestFilter</span>};
+    <span class="kw">use</span> <span class="kw">crate</span>::{
+        <span class="ident">config</span>,
+        <span class="ident">endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">Endpoints</span>, <span class="ident">UpstreamEndpoints</span>},
+        <span class="ident">filters</span>::{<span class="ident">debug</span>, <span class="ident">FilterRegistry</span>, <span class="ident">FilterSet</span>},
+        <span class="ident">test_utils</span>::{<span class="ident">logger</span>, <span class="ident">new_test_chain</span>, <span class="ident">TestFilter</span>},
+    };
 
     <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
-    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::cluster::Endpoint</span>;
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">from_config</span>() {
@@ -495,8 +497,8 @@
 
     <span class="kw">fn</span> <span class="ident">endpoints</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Endpoint</span><span class="op">&gt;</span> {
         <span class="macro">vec!</span>[
-            <span class="ident">Endpoint::from_address</span>(<span class="string">&quot;127.0.0.1:80&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>()),
-            <span class="ident">Endpoint::from_address</span>(<span class="string">&quot;127.0.0.1:90&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>()),
+            <span class="ident">Endpoint::new</span>(<span class="string">&quot;127.0.0.1:80&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>()),
+            <span class="ident">Endpoint::new</span>(<span class="string">&quot;127.0.0.1:90&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>()),
         ]
     }
 

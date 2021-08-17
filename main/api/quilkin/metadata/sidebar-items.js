@@ -1,0 +1,1 @@
+initSidebarItems({"constant":[["KEY",""]],"struct":[["MetadataView","Represents a view into the metadata object attached to another object. `T` represents metadata known to Quilkin under `quilkin.dev` (available under the [`KEY`] constant.)"]]});

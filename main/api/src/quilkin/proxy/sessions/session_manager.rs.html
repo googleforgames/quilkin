@@ -391,7 +391,7 @@
     <span class="kw">use</span> <span class="ident">prometheus::Registry</span>;
     <span class="kw">use</span> <span class="ident">tokio::sync</span>::{<span class="ident">mpsc</span>, <span class="ident">watch</span>, <span class="ident">RwLock</span>};
 
-    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::cluster::Endpoint</span>;
+    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::endpoint::Endpoint</span>;
     <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::filters</span>::{<span class="ident">manager::FilterManager</span>, <span class="ident">FilterChain</span>};
     <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::proxy::sessions::metrics::Metrics</span>;
     <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::proxy::sessions::session_manager::Sessions</span>;
@@ -409,7 +409,7 @@
         <span class="kw">let</span> (<span class="ident">send</span>, <span class="ident">_recv</span>) <span class="op">=</span> <span class="ident">mpsc::channel</span>::<span class="op">&lt;</span><span class="ident">Packet</span><span class="op">&gt;</span>(<span class="number">1</span>);
         <span class="kw">let</span> (<span class="ident">_shutdown_tx</span>, <span class="ident">shutdown_rx</span>) <span class="op">=</span> <span class="ident">watch::channel</span>(());
 
-        <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="ident">Endpoint::from_address</span>(<span class="ident">to</span>);
+        <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="ident">Endpoint::new</span>(<span class="ident">to</span>);
 
         <span class="kw">let</span> <span class="ident">ttl</span> <span class="op">=</span> <span class="ident">Duration::from_secs</span>(<span class="number">1</span>);
         <span class="kw">let</span> <span class="ident">poll_interval</span> <span class="op">=</span> <span class="ident">Duration::from_millis</span>(<span class="number">1</span>);
@@ -482,7 +482,7 @@
         <span class="kw">let</span> <span class="ident">from</span>: <span class="ident">SocketAddr</span> <span class="op">=</span> <span class="string">&quot;127.0.0.1:7000&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="ident">to</span>: <span class="ident">SocketAddr</span> <span class="op">=</span> <span class="string">&quot;127.0.0.1:7001&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>();
         <span class="kw">let</span> (<span class="ident">send</span>, <span class="ident">_recv</span>) <span class="op">=</span> <span class="ident">mpsc::channel</span>::<span class="op">&lt;</span><span class="ident">Packet</span><span class="op">&gt;</span>(<span class="number">1</span>);
-        <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="ident">Endpoint::from_address</span>(<span class="ident">to</span>);
+        <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="ident">Endpoint::new</span>(<span class="ident">to</span>);
 
         <span class="kw">let</span> <span class="ident">key</span> <span class="op">=</span> <span class="ident">SessionKey::from</span>((<span class="ident">from</span>, <span class="ident">to</span>));
         <span class="kw">let</span> <span class="ident">ttl</span> <span class="op">=</span> <span class="ident">Duration::from_secs</span>(<span class="number">1</span>);
