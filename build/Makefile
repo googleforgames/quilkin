@@ -87,7 +87,7 @@ build-macos-binary:
 	docker run --rm -v $(project_path):/workspace -w /workspace \
 		-v $(CARGO_HOME)/registry:/root/.cargo/registry \
         joseluisq/rust-linux-darwin-builder:$(rust_toolchain) \
-        	sh -c "cargo build --target x86_64-apple-darwin && cargo build --release --target x86_64-apple-darwin"
+        	sh -c "rustup target add x86_64-apple-darwin && cargo build --target x86_64-apple-darwin && cargo build --release --target x86_64-apple-darwin"
 
 # Build release and debug container images.
 # Use IMAGE_NAME argument to specify the container registry and image name. Defaults to 'quilkin'.
