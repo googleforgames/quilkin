@@ -238,14 +238,15 @@ impl TestHelper {
     }
 
     pub fn run_server_with_builder(&mut self, builder: Builder<PendingValidation>) {
-        let (shutdown_tx, shutdown_rx) = watch::channel::<()>(());
+        let (shutdown_tx, shutdown_rx) = watch::channel(());
+        let (ready_tx, _ready_rx) = oneshot::channel();
         self.server_shutdown_tx.push(Some(shutdown_tx));
         tokio::spawn(async move {
             builder
                 .validate()
                 .unwrap()
                 .build()
-                .run(shutdown_rx)
+                .run(ready_tx, shutdown_rx)
                 .await
                 .unwrap();
         });

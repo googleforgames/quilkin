@@ -14,7 +14,42 @@
  *  limitations under the License.
  */
 
-use std::fmt::{self, Display, Formatter};
+use std::fmt;
+
+#[derive(thiserror::Error, Debug)]
+pub enum TestSuiteDecodeError {
+    #[error(
+        "Expected Quilkin configuration. Configuration must be either \
+             included in the test suite, or set `config` in your test suite."
+    )]
+    MissingConfig,
+    #[error(
+        "Expected Quilkin a test suite after the configuration. Ensure \
+             there is a `---` separating the documents."
+    )]
+    MissingTestOptions,
+    #[error(
+        "Expected `config` key in the test suite, because no configuration \
+             was found included."
+    )]
+    MissingConfigInTestOptions,
+    #[error("Decoding error: {0}")]
+    Yaml(serde_yaml::Error),
+    #[error("i/o error: {0}")]
+    Io(std::io::Error),
+}
+
+impl From<serde_yaml::Error> for TestSuiteDecodeError {
+    fn from(value: serde_yaml::Error) -> Self {
+        Self::Yaml(value)
+    }
+}
+
+impl From<std::io::Error> for TestSuiteDecodeError {
+    fn from(value: std::io::Error) -> Self {
+        Self::Io(value)
+    }
+}
 
 #[derive(Debug, PartialEq)]
 pub struct ValueInvalidArgs {
@@ -32,8 +67,8 @@ pub enum ValidationError {
     FilterInvalid(crate::filters::Error),
 }
 
-impl Display for ValidationError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+impl fmt::Display for ValidationError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ValidationError::NotUnique(field) => write!(f, "field {} is not unique", field),
             ValidationError::EmptyList(field) => write!(f, "field {} is cannot be an empty", field),

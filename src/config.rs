@@ -16,7 +16,7 @@
 
 //! Quilkin configuration.
 
-use std::net::SocketAddr;
+use std::{net::SocketAddr, path::Path};
 
 use base64_serde::base64_serde_type;
 use serde::{Deserialize, Serialize};
@@ -25,18 +25,53 @@ use uuid::Uuid;
 mod builder;
 mod config_type;
 mod error;
+mod test;
 
-use crate::endpoint::Endpoint;
+use crate::{endpoint::Endpoint, Result};
 
 pub(crate) use self::error::ValueInvalidArgs;
 
-pub use self::{builder::Builder, config_type::ConfigType, error::ValidationError};
+pub use self::{
+    builder::Builder,
+    config_type::ConfigType,
+    error::ValidationError,
+    test::{TestCase, TestConfig, TestSuite},
+};
 
 base64_serde_type!(Base64Standard, base64::STANDARD);
 
 // For some log messages on the hot path (potentially per-packet), we log 1 out
 // of every `LOG_SAMPLING_RATE` occurrences to avoid spamming the logs.
 pub(crate) const LOG_SAMPLING_RATE: u64 = 1000;
+
+fn find_config_file<P: AsRef<Path>>(
+    log: &slog::Logger,
+    path: Option<P>,
+) -> Result<String, std::io::Error> {
+    const ENV_CONFIG_PATH: &str = "QUILKIN_CONFIG";
+    const CONFIG_FILE: &str = "quilkin.yaml";
+
+    let config_env = std::env::var(ENV_CONFIG_PATH).ok();
+
+    let config_path = path
+        .as_ref()
+        .map(AsRef::as_ref)
+        .or_else(|| config_env.as_deref().map(AsRef::as_ref))
+        .unwrap_or_else(|| CONFIG_FILE.as_ref())
+        .canonicalize()?;
+
+    slog::info!(log, "Found configuration file"; "path" => config_path.display());
+
+    std::fs::read_to_string(&config_path)
+        .or_else(|error| {
+            if cfg!(unix) {
+                std::fs::read_to_string("/etc/quilkin/quilkin.yaml")
+            } else {
+                Err(error)
+            }
+        })
+        .map_err(From::from)
+}
 
 /// Config is the configuration of a proxy
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -61,30 +96,13 @@ impl Config {
     /// or the `/etc/quilkin` directory (on unix platforms only). Returns an
     /// error if the found configuration is invalid, or if no configuration
     /// could be found at any location.
-    pub fn find(log: &slog::Logger, path: Option<&str>) -> crate::Result<Self> {
-        const ENV_CONFIG_PATH: &str = "QUILKIN_CONFIG";
-        const CONFIG_FILE: &str = "quilkin.yaml";
-
-        let config_env = std::env::var(ENV_CONFIG_PATH).ok();
-
-        let config_path = std::path::Path::new(
-            path.or_else(|| config_env.as_deref())
-                .unwrap_or(CONFIG_FILE),
-        )
-        .canonicalize()?;
-
-        slog::info!(log, "Found configuration file"; "path" => config_path.display());
-
-        std::fs::File::open(&config_path)
-            .or_else(|error| {
-                if cfg!(unix) {
-                    std::fs::File::open("/etc/quilkin/quilkin.yaml")
-                } else {
-                    Err(error)
-                }
-            })
+    pub fn find(
+        log: &slog::Logger,
+        path: Option<&str>,
+    ) -> Result<Self> {
+        find_config_file(log, path)
             .map_err(From::from)
-            .and_then(|file| Self::from_reader(file).map_err(From::from))
+            .and_then(|s| serde_yaml::from_str(&s).map_err(From::from))
     }
 
     /// Attempts to deserialize `input` as a YAML object representing `Self`.
@@ -167,17 +185,30 @@ pub enum Source {
 }
 
 impl Source {
+    /// Returns a slice list of endpoints if the configuration
+    /// is [`Self::Static`].
+    pub fn get_static_endpoints(&self) -> Option<&[Endpoint]> {
+        match self {
+            Source::Static { endpoints, .. } => Some(endpoints),
+            _ => None,
+        }
+    }
+
+    /// Returns a mutable reference to the list of endpoints if the
+    /// configuration is [`Self::Static`].
+    pub fn get_static_endpoints_mut(&mut self) -> Option<&mut Vec<Endpoint>> {
+        match self {
+            Source::Static { endpoints, .. } => Some(endpoints),
+            _ => None,
+        }
+    }
+
     /// Returns the list of filters if the config is a static config and None otherwise.
     /// This is a convenience function and should only be used for doc tests and tests.
     pub fn get_static_filters(&self) -> Option<&[Filter]> {
         match self {
-            Source::Static {
-                filters,
-                endpoints: _,
-            } => Some(filters),
-            Source::Dynamic {
-                management_servers: _,
-            } => None,
+            Source::Static { filters, .. } => Some(filters),
+            _ => None,
         }
     }
 }

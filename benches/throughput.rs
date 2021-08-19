@@ -37,8 +37,9 @@ static SERVER_INIT: Lazy<()> = Lazy::new(|| {
             .build();
 
         runtime.block_on(async move {
-            let (_shutdown_tx, shutdown_rx) = tokio::sync::watch::channel::<()>(());
-            server.run(shutdown_rx).await.unwrap();
+            let (_shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(());
+            let (ready_tx, _ready_rx) = tokio::sync::oneshot::channel();
+            server.run(ready_tx, shutdown_rx).await.unwrap();
         });
     });
 });

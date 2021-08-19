@@ -54,7 +54,7 @@ impl Endpoint {
 impl Default for Endpoint {
     fn default() -> Self {
         Self {
-            address: std::net::SocketAddrV6::new(std::net::Ipv6Addr::UNSPECIFIED, 0, 0, 0).into(),
+            address: (std::net::Ipv4Addr::UNSPECIFIED, 0).into(),
             metadata: <_>::default(),
         }
     }

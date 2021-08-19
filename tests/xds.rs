@@ -240,6 +240,7 @@ dynamic:
         .build();
 
     let (_shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(());
+    let (ready_tx, _ready_rx) = tokio::sync::oneshot::channel();
     let (discovery_response_tx, discovery_response_rx) = mpsc::channel(1);
 
     let mut control_plane_shutdown_rx = shutdown_rx.clone();
@@ -261,7 +262,7 @@ dynamic:
 
     // Run the server.
     tokio::spawn(async move {
-        server.run(shutdown_rx).await.unwrap();
+        server.run(ready_tx, shutdown_rx).await.unwrap();
     });
 
     let timeout = time::sleep(Duration::from_secs(10));
