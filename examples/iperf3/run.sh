@@ -45,7 +45,7 @@ echo "Starting iperf3 server..."
 iperf3 --server --interval 10 --port 8001 > server.log &
 pids+=($!)
 echo "Starting quilkin server..."
-"$QUILKIN_PATH" -f "$CONFIG" > quilkin.log &
+"$QUILKIN_PATH" run -c "$CONFIG" > quilkin.log &
 pids+=($!)
 
 echo "Waiting for startup..."

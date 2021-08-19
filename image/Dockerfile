@@ -28,4 +28,4 @@ COPY ./target/x86_64-unknown-linux-gnu/debug/quilkin .
 
 FROM $PROFILE
 USER nonroot:nonroot
-ENTRYPOINT ["/quilkin", "--config", "/etc/quilkin/quilkin.yaml"]
+ENTRYPOINT ["/quilkin", "run", "--config", "/etc/quilkin/quilkin.yaml"]
