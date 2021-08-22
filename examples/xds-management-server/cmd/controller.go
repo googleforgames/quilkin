@@ -15,8 +15,8 @@ import (
 )
 
 type flags struct {
-	File string `name:"file" help:"Resource config file path." type:"path" default:"config.json"`
-	Port int16  `name:"int16" help:"Server listening port." default:"18000"`
+	Config string `name:"config" help:"Resource config file path." type:"path" default:"config.yaml"`
+	Port   int16  `name:"int16" help:"Server listening port." default:"18000"`
 }
 
 func main() {
@@ -26,11 +26,11 @@ func main() {
 	logger := &log.Logger{}
 	logger.SetOutput(os.Stdout)
 	logger.SetLevel(log.DebugLevel)
-	logger.SetFormatter(&log.TextFormatter{})
+	logger.SetFormatter(&log.JSONFormatter{})
 
 	ctx, shutdown := context.WithCancel(context.Background())
 
-	provider := providers.NewFileProvider(flags.File)
+	provider := providers.NewFileProvider(flags.Config)
 	resourcesCh, providerErrorCh := provider.Run(ctx, logger)
 
 	nodeIDCh := make(chan string, 1000)

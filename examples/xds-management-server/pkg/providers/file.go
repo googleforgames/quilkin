@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"sigs.k8s.io/yaml"
+	"time"
 
 	"github.com/cenkalti/backoff"
 	"github.com/fsnotify/fsnotify"
@@ -45,7 +47,10 @@ func runConfigFileProvider(
 		"config_file": configFilePath,
 	}).Logger
 
-	defer close(errorCh)
+	defer func() {
+		close(resourcesCh)
+		close(errorCh)
+	}()
 
 	reloadFileEventCh := make(chan struct{}, 1)
 	defer close(reloadFileEventCh)
@@ -59,8 +64,14 @@ func runConfigFileProvider(
 		}
 
 		r := resources.Resources{}
-		if err := json.Unmarshal(fileBytes, &r); err != nil {
-			log.WithError(err).Warn("failed to JSON unmarshal resources config file")
+		jsonBytes, err := yaml.YAMLToJSON(fileBytes)
+		if err != nil {
+			log.WithError(err).Warn("failed to convert file from YAML to JSON")
+			return
+		}
+
+		if err := json.Unmarshal(jsonBytes, &r); err != nil {
+			log.WithError(err).Warn("failed to YAML unmarshal resources config file")
 			return
 		}
 
@@ -83,7 +94,7 @@ func runConfigFileProvider(
 			logger.Debugf("Exiting: context cancelled")
 			return
 		case err := <-fileWatcherErrorCh:
-			errorCh <- fmt.Errorf("failed to watch config file: %w", err)
+			errorCh <- fmt.Errorf("failed to watch config file %s: %w", configFilePath, err)
 			return
 		}
 	}
@@ -91,12 +102,15 @@ func runConfigFileProvider(
 
 func runConfigFileWatch(
 	ctx context.Context,
-	logger *log.Logger,
+	base *log.Logger,
 	configFilePath string,
 	reloadFileEventCh chan<- struct{},
 	errorCh chan<- error,
 ) {
-	logger = logger.WithFields(log.Fields{"component": "ConfigFileWatcher"}).Logger
+	logger := base.WithFields(log.Fields{
+		"component":   "ConfigFileWatcher",
+		"config_file": configFilePath,
+	})
 
 	defer close(errorCh)
 
@@ -110,10 +124,6 @@ func runConfigFileWatch(
 			logger.WithError(err).Warn("failed to close watcher successfully")
 		}
 	}()
-
-	logger = logger.WithFields(log.Fields{
-		"config_file": configFilePath,
-	}).Logger
 
 	backOff := backoff.NewExponentialBackOff()
 	err = backoff.Retry(func() error {
@@ -155,6 +165,11 @@ func runConfigFileWatch(
 				if !(isCreate || isWrite) {
 					continue
 				}
+
+				// Wait for a bit before reading the file because race conditions
+				//  between getting the event and the file updated actually being
+				//  reflected on disk.
+				time.Sleep(1 * time.Second)
 
 				// Write event. We can reload the config file
 				reloadFileEventCh <- struct{}{}

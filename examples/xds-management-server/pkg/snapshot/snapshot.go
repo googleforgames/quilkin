@@ -51,7 +51,6 @@ func runSnapshotUpdater(
 	currentSnapshotVersion := noSnapshot
 	var currentSnapshot cache.Snapshot
 
-	var latestResources resources.Resources
 	// Map each node to the most recent snapshot version they've seen.
 	//  we use this to figure out whether or not to update the ndoe
 	nodeStatus := make(map[string]int64)
@@ -68,9 +67,9 @@ func runSnapshotUpdater(
 				// New node. The node has seen no update so assign 0 index.
 				nodeStatus[nodeID] = noSnapshot
 			}
-		case latestResources = <-resourcesCh:
+		case rsc := <-resourcesCh:
 			version := currentSnapshotVersion + 1
-			snapshot, err := resources.GenerateSnapshot(version, latestResources)
+			snapshot, err := resources.GenerateSnapshot(version, rsc)
 			if err != nil {
 				logger.WithError(err).Warn("failed to generate snapshot")
 				continue

@@ -16,6 +16,9 @@ import (
 	prototypes "github.com/gogo/protobuf/types"
 	"github.com/golang/protobuf/jsonpb"
 	structpb "github.com/golang/protobuf/ptypes/struct"
+
+	// Import proto packages for proto registration side effects
+	_ "quilkin.dev/xds-management-server/pkg/filters"
 )
 
 // Endpoint represents an xds endpoint
@@ -27,52 +30,59 @@ type Endpoint struct {
 
 // Cluster represents an xds cluster
 type Cluster struct {
+	Name      string
 	Endpoints []Endpoint
 }
 
 // FilterConfig represents a filter's config.
-type FilterConfig interface {}
+type FilterConfig interface{}
 
 // Resources represents an xds resource.
 type Resources struct {
-	Clusters map[string]Cluster
+	Clusters    []Cluster
 	FilterChain []FilterConfig
 }
 
 func GenerateSnapshot(version int64, resources Resources) (cache.Snapshot, error) {
 	var clusterResources []types.Resource
-	for clusterName, cluster := range resources.Clusters {
-		clusterResource, err := makeCluster(clusterName, cluster)
+	for _, cluster := range resources.Clusters {
+		clusterResource, err := makeCluster(cluster)
 		if err != nil {
 			return cache.Snapshot{}, fmt.Errorf("failed to generate cluster resources: %w", err)
 		}
 		clusterResources = append(clusterResources, clusterResource)
 	}
 
-	listener, err  := makeListener(resources.FilterChain)
+	listener, err := makeListener(resources.FilterChain)
 	if err != nil {
 		return cache.Snapshot{}, fmt.Errorf("failed to generate filterchain resource: %w", err)
 	}
 
-	return cache.NewSnapshot(
+	snapshot := cache.NewSnapshot(
 		strconv.FormatInt(version, 10),
 		[]types.Resource{}, // endpoints
 		clusterResources,
-		[]types.Resource{}, // routes
+		[]types.Resource{},         // routes
 		[]types.Resource{listener}, // listeners
-		[]types.Resource{}, // runtimes
-		[]types.Resource{}, // secrets
-	), nil
+		[]types.Resource{},         // runtimes
+		[]types.Resource{},         // secrets
+	)
+
+	if err := snapshot.Consistent(); err != nil {
+		return cache.Snapshot{}, err
+	}
+
+	return snapshot, nil
 }
 
-func makeCluster(clusterName string, cluster Cluster) (*envoycluster.Cluster, error) {
-	loadAssignment, err := makeEndpoint(clusterName, cluster.Endpoints)
+func makeCluster(cluster Cluster) (*envoycluster.Cluster, error) {
+	loadAssignment, err := makeEndpoint(cluster.Name, cluster.Endpoints)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create cluster resource: %w", err)
 	}
 
 	return &envoycluster.Cluster{
-		Name: clusterName,
+		Name: cluster.Name,
 		ClusterDiscoveryType: &envoycluster.Cluster_Type{
 			Type: envoycluster.Cluster_STATIC,
 		},
@@ -146,7 +156,7 @@ func makeListener(
 	}
 
 	return &envoylistener.Listener{
-		FilterChains: []*envoylistener.FilterChain{ filterChain },
+		FilterChains: []*envoylistener.FilterChain{filterChain},
 	}, nil
 }
 

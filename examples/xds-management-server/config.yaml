@@ -1,0 +1,15 @@
+clusters:
+- 'c-a':
+  name: cluster-a
+  endpoints:
+  - ip: 123.0.0.1
+    port": 29
+    metadata:
+      'quilkin.dev':
+         tokens:
+         - "MXg3aWp5Ng=="
+filterchain:
+- name: quilkin.extensions.filters.debug.v1alpha1.Debug
+  typed_config:
+    '@type': quilkin.extensions.filters.debug.v1alpha1.Debug
+    id: hello
