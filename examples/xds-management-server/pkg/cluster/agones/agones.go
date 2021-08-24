@@ -50,7 +50,6 @@ func (p *Provider) Run(ctx context.Context) (<-chan []cluster.Cluster, error) {
 		p.agonesClient.AgonesV1().RESTClient(),
 		"gameservers",
 		p.config.GameServersNamespace,
-		// TODO ONly watch those that are allocated! can we do that?
 		fields.Everything())
 
 	gameServerInformer := cache.NewSharedInformer(gameServerListWatch, &agonesv1.GameServer{}, 0)
@@ -129,13 +128,6 @@ func getEndpointsFromStore(
 			continue
 		}
 
-		gsPort := gs.Status.Ports[0]
-
-		// TODO: What does this mean??
-		if numPorts > 1 {
-			gsLogger.Warnf("found %d ports: will pick the first one %v", numPorts, gsPort)
-		}
-
 		var metadata map[string]interface{}
 		tokenStr, found := gs.Annotations["quilkin.dev/tokens"]
 		if found {
@@ -148,10 +140,29 @@ func getEndpointsFromStore(
 
 		endpoints = append(endpoints, cluster.Endpoint{
 			IP:       gs.Status.Address,
-			Port:     int(gsPort.Port),
+			Port:     int(getGameServerPort(gsLogger, gs.Status.Ports)),
 			Metadata: metadata,
 		})
 	}
 
 	return endpoints
+}
+
+func getGameServerPort(logger *log.Entry, ports []agonesv1.GameServerStatusPort) int32 {
+	if len(ports) == 0 {
+		return 0
+	}
+
+	if len(ports) == 1 {
+		return ports[0].Port
+	}
+
+	for _, port := range ports {
+		if port.Name == "default" {
+			return port.Port
+		}
+	}
+
+	logger.Warnf("found %d ports: will pick the first one %v", len(ports), ports[0])
+	return ports[0].Port
 }
