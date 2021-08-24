@@ -2,6 +2,8 @@ package snapshot
 
 import (
 	"context"
+	"quilkin.dev/xds-management-server/pkg/cluster"
+	"quilkin.dev/xds-management-server/pkg/filterchain"
 	"time"
 
 	"github.com/envoyproxy/go-control-plane/pkg/cache/v3"
@@ -17,26 +19,29 @@ import (
 func RunSnapshotUpdater(
 	ctx context.Context,
 	logger *log.Logger,
-	nodeIDCh <-chan string,
-	resourcesCh <-chan resources.Resources,
+	clusterCh <-chan []cluster.Cluster,
+	filterChainCh <-chan filterchain.ProxyFilterChain,
 	updateInterval time.Duration,
 ) cache.SnapshotCache {
 	snapshotCache := cache.NewSnapshotCache(false, cache.IDHash{}, logger)
 	go runSnapshotUpdater(
 		ctx,
 		logger,
-		nodeIDCh,
-		resourcesCh,
+		clusterCh,
+		filterChainCh,
 		snapshotCache,
 		updateInterval)
 	return snapshotCache
 }
 
+// runSnapshotUpdater runs a loop that periodically checks if there are any
+// cluster/filter-chain updates and if so creates a snapshot for affected proxies
+// in the snapshot cache.
 func runSnapshotUpdater(
 	ctx context.Context,
 	logger *log.Logger,
-	nodeIDCh <-chan string,
-	resourcesCh <-chan resources.Resources,
+	clusterCh <-chan []cluster.Cluster,
+	filterChainCh <-chan filterchain.ProxyFilterChain,
 	snapshotCache cache.SnapshotCache,
 	updateInterval time.Duration,
 ) {
@@ -47,13 +52,16 @@ func runSnapshotUpdater(
 	updateTicker := time.NewTicker(updateInterval)
 	defer updateTicker.Stop()
 
-	noSnapshot := int64(0)
-	currentSnapshotVersion := noSnapshot
-	var currentSnapshot cache.Snapshot
+	currentSnapshotVersion := int64(0)
 
-	// Map each node to the most recent snapshot version they've seen.
-	//  we use this to figure out whether or not to update the ndoe
-	nodeStatus := make(map[string]int64)
+	type proxyStatus struct {
+		hasPendingFilterChainUpdate bool
+		filterChain                 filterchain.ProxyFilterChain
+	}
+	proxyStatuses := make(map[string]proxyStatus)
+
+	var pendingClusterUpdate bool
+	var clusterUpdate []cluster.Cluster
 
 	// TODO: Implement cleanup of stale nodes in the snapshot Cache
 	//   (If we have no open watchers for a node we can forget it?).
@@ -62,52 +70,48 @@ func runSnapshotUpdater(
 		case <-ctx.Done():
 			logger.Infof("Exiting snapshot updater loop: Context cancelled")
 			return
-		case nodeID := <-nodeIDCh:
-			if _, exists := nodeStatus[nodeID]; !exists {
-				// New node. The node has seen no update so assign 0 index.
-				nodeStatus[nodeID] = noSnapshot
+		case filterChain := <-filterChainCh:
+			proxyID := filterChain.ProxyID
+			proxyStatuses[proxyID] = proxyStatus{
+				hasPendingFilterChainUpdate: true,
+				filterChain:                 filterChain,
 			}
-		case rsc := <-resourcesCh:
-			version := currentSnapshotVersion + 1
-			snapshot, err := resources.GenerateSnapshot(version, rsc)
-			if err != nil {
-				logger.WithError(err).Warn("failed to generate snapshot")
-				continue
-			}
-
-			currentSnapshot = snapshot
-			currentSnapshotVersion = version
+		case clusterUpdate = <-clusterCh:
+			pendingClusterUpdate = true
 		case <-updateTicker.C:
 			logger.Tracef("Checking for update")
 
-			// If we haven't generated any snapshot at all, nothing to do.
-			if currentSnapshotVersion == noSnapshot {
-				continue
-			}
-
-			var nodeIDsToUpdate []string
-			for nodeID, lastSeenSnapshotVersion := range nodeStatus {
-				// Nothing to send if the node has already seen this update.
-				if lastSeenSnapshotVersion == currentSnapshotVersion {
+			version := currentSnapshotVersion + 1
+			numUpdates := 0
+			for proxyID, status := range proxyStatuses {
+				if !pendingClusterUpdate && !status.hasPendingFilterChainUpdate {
+					// Nothing to do for this proxy.
 					continue
 				}
 
-				// Mark the node as having seen this version since we're about to send it.
-				nodeStatus[nodeID] = currentSnapshotVersion
+				status.hasPendingFilterChainUpdate = false
+				proxyStatuses[proxyID] = status
 
-				nodeIDsToUpdate = append(nodeIDsToUpdate, nodeID)
-			}
+				numUpdates++
 
-			if len(nodeIDsToUpdate) == 0 {
-				continue
-			}
+				proxyLog := logger.WithFields(log.Fields{
+					"proxy_id": proxyID,
+				})
 
-			for _, nodeID := range nodeIDsToUpdate {
-				if err := snapshotCache.SetSnapshot(nodeID, currentSnapshot); err != nil {
-					logger.WithError(err).WithFields(log.Fields{
-						"node": nodeID,
-					}).Warnf("Failed to set snapshot")
+				snapshot, err := resources.GenerateSnapshot(version, clusterUpdate, status.filterChain)
+				if err != nil {
+					proxyLog.WithError(err).Warn("failed to generate snapshot")
+					continue
 				}
+
+				if err := snapshotCache.SetSnapshot(proxyID, snapshot); err != nil {
+					proxyLog.WithError(err).Warnf("Failed to set snapshot")
+				}
+			}
+
+			pendingClusterUpdate = false
+			if numUpdates > 0 {
+				currentSnapshotVersion = version
 			}
 		}
 	}

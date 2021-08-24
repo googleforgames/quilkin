@@ -1,21 +1,21 @@
 package resources
 
 import (
-	"encoding/json"
 	envoycore "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoyendpoint "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
+	envoylistener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	"github.com/stretchr/testify/require"
-	"sigs.k8s.io/yaml"
+	"google.golang.org/protobuf/types/known/wrapperspb"
+	"quilkin.dev/xds-management-server/pkg/cluster"
+	"quilkin.dev/xds-management-server/pkg/filterchain"
+	"quilkin.dev/xds-management-server/pkg/filters"
+	debugfilterv1alpha "quilkin.dev/xds-management-server/pkg/filters/debug/v1alpha1"
+	ratelimitv1alpha "quilkin.dev/xds-management-server/pkg/filters/local_rate_limit/v1alpha1"
 	"testing"
 )
 
-type filterConfig struct {
-	Name        string                 `json:"name"`
-	TypedConfig map[string]interface{} `json:"typed_config"`
-}
-
 func TestMakeEndpoint(t *testing.T) {
-	ep, err := makeEndpoint("cluster-a", []Endpoint{{
+	ep, err := makeEndpoint("cluster-a", []cluster.Endpoint{{
 		IP:   "127.0.0.1",
 		Port: 22,
 		Metadata: map[string]interface{}{
@@ -48,7 +48,7 @@ func TestMakeEndpoint(t *testing.T) {
 }
 
 func TestMakeEndpointWithoutMetadata(t *testing.T) {
-	ep, err := makeEndpoint("cluster-a", []Endpoint{{
+	ep, err := makeEndpoint("cluster-a", []cluster.Endpoint{{
 		IP:   "127.0.0.1",
 		Port: 22,
 	}})
@@ -67,160 +67,62 @@ func TestMakeEndpointWithoutMetadata(t *testing.T) {
 }
 
 func TestMakeCluster(t *testing.T) {
-	cluster, err := makeCluster(Cluster{
+	cs, err := makeCluster(cluster.Cluster{
 		Name: "cluster-1",
-		Endpoints: []Endpoint{{
+		Endpoints: []cluster.Endpoint{{
 			IP:   "127.0.0.1",
 			Port: 22,
 		}},
 	})
 
 	require.NoError(t, err)
-	require.Len(t, cluster.LoadAssignment.Endpoints, 1)
+	require.Len(t, cs.LoadAssignment.Endpoints, 1)
 
-	require.EqualValues(t, "cluster-1", cluster.Name)
+	require.EqualValues(t, "cluster-1", cs.Name)
 
-	lbEndpoint := cluster.LoadAssignment.Endpoints[0].LbEndpoints[0]
+	lbEndpoint := cs.LoadAssignment.Endpoints[0].LbEndpoints[0]
 	endpoint := lbEndpoint.HostIdentifier.(*envoyendpoint.LbEndpoint_Endpoint)
 	socketAddress := endpoint.Endpoint.Address.Address.(*envoycore.Address_SocketAddress).SocketAddress
 	require.EqualValues(t, "127.0.0.1", socketAddress.Address)
 	require.EqualValues(t, 22, socketAddress.PortSpecifier.(*envoycore.SocketAddress_PortValue).PortValue)
 }
 
-func TestMakeFilterChain(t *testing.T) {
-	dbgFilter := `
-name: my-filter-1
-typed_config:
-  '@type': quilkin.extensions.filters.debug.v1alpha1.Debug
-  id: hello
-`
-	rateLimitFilter := `
-name: my-filter-2
-typed_config:
-  '@type': quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit
-  max_packets: 400
-  period: 1s
-`
-	filterConfigs := makeTestFilterConfig(t, []string{dbgFilter, rateLimitFilter})
-
-	got, err := makeFilterChain(filterConfigs)
-	require.NoError(t, err)
-
-	require.EqualValues(t, "", got.Name)
-	require.Len(t, got.Filters, 2)
-
-	require.EqualValues(t, "my-filter-1", got.Filters[0].Name)
-	require.EqualValues(t, "my-filter-2", got.Filters[1].Name)
-
-	require.Contains(t, got.Filters[0].String(), "id:{value:\"hello\"}")
-	require.Contains(t, got.Filters[1].String(), "max_packets:400")
-}
-
-func TestMakeFilterChainInvalid(t *testing.T) {
-	tests := []struct {
-		name   string
-		config string
-	}{
-		{
-			name: "invalid filter config",
-			config: `
-name: my-filter-1
-typed_config:
-  '@type': quilkin.extensions.filters.debug.v1alpha1.Debug
-  notExists: hello
-`,
-		},
-		{
-			name: "missing proto",
-			config: `
-name: my-filter-1
-typed_config:
-  '@type': quilkin.extensions.filters.debug.v1alpha1.Debug2
-  id: hello
-`,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			_, err := makeFilterChain(makeTestFilterConfig(t, []string{tt.config}))
-			require.Error(t, err)
-		})
-	}
-}
-
-func makeTestFilterConfig(t *testing.T, configs []string) []FilterConfig {
-	var filterConfigs []FilterConfig
-
-	for _, config := range configs {
-		jsonBytes, err := yaml.YAMLToJSON([]byte(config))
-		require.NoError(t, err, "failed to convert filter config from yaml to json")
-
-		fc := &filterConfig{}
-		require.NoError(t, json.Unmarshal(jsonBytes, fc), "failed to unmarshal test data filter config")
-
-		filterConfigs = append(filterConfigs, fc)
-	}
-
-	return filterConfigs
-}
-
-func TestMakeListener(t *testing.T) {
-	dbgFilter := `
-name: my-filter-1
-typed_config:
-  '@type': quilkin.extensions.filters.debug.v1alpha1.Debug
-  id: hello
-`
-	listener, err := makeListener(makeTestFilterConfig(t, []string{dbgFilter}))
-	require.NoError(t, err)
-
-	require.EqualValues(t, "", listener.Name)
-	require.Len(t, listener.FilterChains, 1)
-
-	filterChain := listener.FilterChains[0]
-	require.EqualValues(t, "", filterChain.Name)
-
-	require.Len(t, filterChain.Filters, 1)
-	filter := filterChain.Filters[0]
-	require.EqualValues(t, "my-filter-1", filter.Name)
-	require.Contains(t, filter.String(), "id:{value:\"hello\"}")
-}
-
 func TestGenerateSnapshot(t *testing.T) {
-	resources := Resources{
-		Clusters: []Cluster{
-			{
-				Name: "cluster-1",
-				Endpoints: []Endpoint{{
-					IP:   "127.0.0.1",
-					Port: 22,
-				}},
-			},
-			{
-				Name: "cluster-2",
-				Endpoints: []Endpoint{{
-					IP:   "127.0.0.3",
-					Port: 23,
-				}},
+	clusters := []cluster.Cluster{
+		{
+			Name: "cluster-1",
+			Endpoints: []cluster.Endpoint{{
+				IP:   "127.0.0.1",
+				Port: 22,
+			}},
+		},
+		{
+			Name: "cluster-2",
+			Endpoints: []cluster.Endpoint{{
+				IP:   "127.0.0.3",
+				Port: 23,
+			}},
+		},
+	}
+	debugFilter, err := filterchain.CreateXdsFilter(filters.DebugFilterName,
+		&debugfilterv1alpha.Debug{
+			Id: &wrapperspb.StringValue{Value: "hello"},
+		})
+	require.NoError(t, err)
+	rateLimitFilter, err := filterchain.CreateXdsFilter(filters.RateLimitFilterName,
+		&ratelimitv1alpha.LocalRateLimit{
+			MaxPackets: 400,
+		})
+	require.NoError(t, err)
+
+	snapshot, err := GenerateSnapshot(19, clusters, filterchain.ProxyFilterChain{
+		ProxyID: "proxy-1",
+		FilterChain: &envoylistener.FilterChain{
+			Filters: []*envoylistener.Filter{
+				debugFilter, rateLimitFilter,
 			},
 		},
-		FilterChain: makeTestFilterConfig(t, []string{`
-name: my-filter-1
-typed_config:
-  '@type': quilkin.extensions.filters.debug.v1alpha1.Debug
-  id: hello
-`,
-			`
-name: my-filter-2
-typed_config:
-  '@type': quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit
-  max_packets: 400
-  period: 1s
-`,
-		}),
-	}
-
-	snapshot, err := GenerateSnapshot(19, resources)
+	})
 	require.NoError(t, err)
 
 	require.NoError(t, snapshot.Consistent())
@@ -248,6 +150,9 @@ typed_config:
 	filterChain, found := listenerResource.Items[""]
 	require.True(t, found, "missing default filter chain")
 
-	require.Contains(t, filterChain.Resource.String(), "my-filter-1")
-	require.Contains(t, filterChain.Resource.String(), "my-filter-2")
+	require.Contains(t, filterChain.Resource.String(), filters.DebugFilterName)
+	require.Contains(t, filterChain.Resource.String(), "hello")
+
+	require.Contains(t, filterChain.Resource.String(), filters.RateLimitFilterName)
+	require.Contains(t, filterChain.Resource.String(), "max_packets:400")
 }

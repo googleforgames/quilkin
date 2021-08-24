@@ -4,7 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	gogojsonpb "github.com/gogo/protobuf/jsonpb"
+	"quilkin.dev/xds-management-server/pkg/cluster"
+	"quilkin.dev/xds-management-server/pkg/filterchain"
 	"strconv"
 
 	envoycluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
@@ -13,7 +14,6 @@ import (
 	envoylistener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/v3"
-	prototypes "github.com/gogo/protobuf/types"
 	"github.com/golang/protobuf/jsonpb"
 	structpb "github.com/golang/protobuf/ptypes/struct"
 
@@ -21,41 +21,18 @@ import (
 	_ "quilkin.dev/xds-management-server/pkg/filters"
 )
 
-// Endpoint represents an xds endpoint
-type Endpoint struct {
-	IP       string
-	Port     int
-	Metadata map[string]interface{}
-}
-
-// Cluster represents an xds cluster
-type Cluster struct {
-	Name      string
-	Endpoints []Endpoint
-}
-
-// FilterConfig represents a filter's config.
-type FilterConfig interface{}
-
-// Resources represents an xds resource.
-type Resources struct {
-	Clusters    []Cluster
-	FilterChain []FilterConfig
-}
-
-func GenerateSnapshot(version int64, resources Resources) (cache.Snapshot, error) {
+func GenerateSnapshot(version int64, clusters []cluster.Cluster, filterChain filterchain.ProxyFilterChain) (cache.Snapshot, error) {
 	var clusterResources []types.Resource
-	for _, cluster := range resources.Clusters {
-		clusterResource, err := makeCluster(cluster)
+	for _, cl := range clusters {
+		clusterResource, err := makeCluster(cl)
 		if err != nil {
 			return cache.Snapshot{}, fmt.Errorf("failed to generate cluster resources: %w", err)
 		}
 		clusterResources = append(clusterResources, clusterResource)
 	}
 
-	listener, err := makeListener(resources.FilterChain)
-	if err != nil {
-		return cache.Snapshot{}, fmt.Errorf("failed to generate filterchain resource: %w", err)
+	listener := &envoylistener.Listener{
+		FilterChains: []*envoylistener.FilterChain{filterChain.FilterChain},
 	}
 
 	snapshot := cache.NewSnapshot(
@@ -75,14 +52,14 @@ func GenerateSnapshot(version int64, resources Resources) (cache.Snapshot, error
 	return snapshot, nil
 }
 
-func makeCluster(cluster Cluster) (*envoycluster.Cluster, error) {
-	loadAssignment, err := makeEndpoint(cluster.Name, cluster.Endpoints)
+func makeCluster(cl cluster.Cluster) (*envoycluster.Cluster, error) {
+	loadAssignment, err := makeEndpoint(cl.Name, cl.Endpoints)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create cluster resource: %w", err)
 	}
 
 	return &envoycluster.Cluster{
-		Name: cluster.Name,
+		Name: cl.Name,
 		ClusterDiscoveryType: &envoycluster.Cluster_Type{
 			Type: envoycluster.Cluster_STATIC,
 		},
@@ -109,7 +86,7 @@ func parseMetadata(input map[string]interface{}) (map[string]*structpb.Struct, e
 
 func makeEndpoint(
 	clusterName string,
-	endpoints []Endpoint,
+	endpoints []cluster.Endpoint,
 ) (*envoyendpoint.ClusterLoadAssignment, error) {
 	var endpointConfigs []*envoyendpoint.LocalityLbEndpoints
 	for _, ep := range endpoints {
@@ -144,52 +121,5 @@ func makeEndpoint(
 	return &envoyendpoint.ClusterLoadAssignment{
 		ClusterName: clusterName,
 		Endpoints:   endpointConfigs,
-	}, nil
-}
-
-func makeListener(
-	filterChainResource []FilterConfig,
-) (*envoylistener.Listener, error) {
-	filterChain, err := makeFilterChain(filterChainResource)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create listener resource: %w", err)
-	}
-
-	return &envoylistener.Listener{
-		FilterChains: []*envoylistener.FilterChain{filterChain},
-	}, nil
-}
-
-func makeFilterChain(
-	filterChainResource []FilterConfig,
-) (*envoylistener.FilterChain, error) {
-	var filters []*envoylistener.Filter
-
-	for _, config := range filterChainResource {
-		configBytes, err := json.Marshal(config)
-		if err != nil {
-			return nil, fmt.Errorf("failed to JSON marshal filter config: %w", err)
-		}
-
-		pbs := &prototypes.Struct{}
-		if err := gogojsonpb.Unmarshal(bytes.NewReader(configBytes), pbs); err != nil {
-			return nil, fmt.Errorf("failed to Unmarshal filter config into protobuf Struct: %w", err)
-		}
-
-		buf := &bytes.Buffer{}
-		if err := (&gogojsonpb.Marshaler{OrigName: true}).Marshal(buf, pbs); err != nil {
-			return nil, fmt.Errorf("failed to marshal filter config protobuf into json: %w", err)
-		}
-
-		filter := &envoylistener.Filter{}
-		if err := (&jsonpb.Unmarshaler{AllowUnknownFields: false}).Unmarshal(buf, filter); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal filter config jsonpb into envoy filter proto: %w", err)
-		}
-
-		filters = append(filters, filter)
-	}
-
-	return &envoylistener.FilterChain{
-		Filters: filters,
 	}, nil
 }

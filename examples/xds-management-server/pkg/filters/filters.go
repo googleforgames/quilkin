@@ -10,3 +10,10 @@ import (
 	_ "quilkin.dev/xds-management-server/pkg/filters/load_balancer/v1alpha1"
 	_ "quilkin.dev/xds-management-server/pkg/filters/local_rate_limit/v1alpha1"
 )
+
+const (
+	// DebugFilterName is the name of the Debug filter
+	DebugFilterName = "quilkin.extensions.filters.debug.v1alpha1.Debug"
+	// RateLimitFilterName is the name of the RateLimit filter
+	RateLimitFilterName = "quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit"
+)

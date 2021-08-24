@@ -1,45 +1,134 @@
 package providers
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	envoylistener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
+	gogojsonpb "github.com/gogo/protobuf/jsonpb"
+	prototypes "github.com/gogo/protobuf/types"
+	"github.com/golang/protobuf/jsonpb"
 	"io/ioutil"
+	"quilkin.dev/xds-management-server/pkg/cluster"
+	"quilkin.dev/xds-management-server/pkg/filterchain"
 	"sigs.k8s.io/yaml"
 	"time"
 
 	"github.com/cenkalti/backoff"
 	"github.com/fsnotify/fsnotify"
 	log "github.com/sirupsen/logrus"
-
-	"quilkin.dev/xds-management-server/pkg/resources"
 )
+
+// FilterConfig represents a filter's config.
+type FilterConfig interface{}
+type resources struct {
+	Clusters    []cluster.Cluster
+	FilterChain []FilterConfig
+}
 
 // FileProvider watches a file on disk for resources.
 type FileProvider struct {
 	configFilePath string
+	proxyIDCh      <-chan string
 }
 
 // NewFileProvider creates a new FileProvider.
-func NewFileProvider(configFilePath string) *FileProvider {
-	return &FileProvider{configFilePath: configFilePath}
+func NewFileProvider(configFilePath string, proxyIDCh chan string) *FileProvider {
+	return &FileProvider{
+		configFilePath: configFilePath,
+		proxyIDCh:      proxyIDCh,
+	}
 }
 
 // Run runs the FileProvider.
-func (p *FileProvider) Run(ctx context.Context, logger *log.Logger) (<-chan resources.Resources, <-chan error) {
-	resourcesCh := make(chan resources.Resources, 100)
+func (p *FileProvider) Run(ctx context.Context, logger *log.Logger) (
+	<-chan []cluster.Cluster, <-chan filterchain.ProxyFilterChain, <-chan error) {
+	clusterCh := make(chan []cluster.Cluster, 10)
+	filterChainCh := make(chan filterchain.ProxyFilterChain, 10)
+	resourcesCh := make(chan resources)
+
 	errorCh := make(chan error)
 
-	go runConfigFileProvider(ctx, logger, p.configFilePath, resourcesCh, errorCh)
+	go runUpdater(
+		ctx,
+		logger,
+		p.proxyIDCh,
+		resourcesCh,
+		clusterCh,
+		filterChainCh)
 
-	return resourcesCh, errorCh
+	go runConfigFileProvider(
+		ctx,
+		logger,
+		p.configFilePath,
+		resourcesCh,
+		errorCh)
+
+	return clusterCh, filterChainCh, errorCh
+}
+
+func runUpdater(
+	ctx context.Context,
+	logger *log.Logger,
+	proxyIDCh <-chan string,
+	resourcesCh <-chan resources,
+	clusterCh chan<- []cluster.Cluster,
+	filterChainCh chan<- filterchain.ProxyFilterChain,
+) {
+	defer func() {
+		close(clusterCh)
+		close(filterChainCh)
+	}()
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+
+	proxyIDs := make(map[string]struct{})
+	var pendingUpdate bool
+
+	var currClusters []cluster.Cluster
+	var currFilterChain *envoylistener.FilterChain
+
+	for {
+		select {
+		case proxyID := <-proxyIDCh:
+			proxyIDs[proxyID] = struct{}{}
+		case r := <-resourcesCh:
+			filterChain, err := makeFilterChain(r.FilterChain)
+			if err != nil {
+				logger.WithError(err).Warn("failed to create filter chain")
+				continue
+			}
+			pendingUpdate = true
+			currFilterChain = filterChain
+			currClusters = r.Clusters
+		case <-ticker.C:
+			if !pendingUpdate {
+				continue
+			}
+
+			clusterCh <- currClusters
+
+			for proxyID := range proxyIDs {
+				if currFilterChain != nil {
+					filterChainCh <- filterchain.ProxyFilterChain{
+						ProxyID:     proxyID,
+						FilterChain: currFilterChain,
+					}
+				}
+			}
+		case <-ctx.Done():
+			logger.Debug("Exiting update loop due to context cancelled.")
+			return
+		}
+	}
 }
 
 func runConfigFileProvider(
 	ctx context.Context,
 	logger *log.Logger,
 	configFilePath string,
-	resourcesCh chan<- resources.Resources,
+	resourcesCh chan<- resources,
 	errorCh chan<- error,
 ) {
 	logger = logger.WithFields(log.Fields{
@@ -63,7 +152,7 @@ func runConfigFileProvider(
 			return
 		}
 
-		r := resources.Resources{}
+		r := resources{}
 		jsonBytes, err := yaml.YAMLToJSON(fileBytes)
 		if err != nil {
 			log.WithError(err).Warn("failed to convert file from YAML to JSON")
@@ -100,6 +189,8 @@ func runConfigFileProvider(
 	}
 }
 
+// runConfigFileWatch runs a loop that watches the config file
+// for changes and sends an event on the provided channel on each change.
 func runConfigFileWatch(
 	ctx context.Context,
 	base *log.Logger,
@@ -166,7 +257,7 @@ func runConfigFileWatch(
 					continue
 				}
 
-				// Wait for a bit before reading the file because race conditions
+				// Wait for a bit before reading the file because potential race conditions
 				//  between getting the event and the file updated actually being
 				//  reflected on disk.
 				time.Sleep(1 * time.Second)
@@ -180,4 +271,38 @@ func runConfigFileWatch(
 	if err != nil {
 		errorCh <- err
 	}
+}
+
+func makeFilterChain(
+	filterChainResource []FilterConfig,
+) (*envoylistener.FilterChain, error) {
+	var filters []*envoylistener.Filter
+
+	for _, config := range filterChainResource {
+		configBytes, err := json.Marshal(config)
+		if err != nil {
+			return nil, fmt.Errorf("failed to JSON marshal filter config: %w", err)
+		}
+
+		pbs := &prototypes.Struct{}
+		if err := gogojsonpb.Unmarshal(bytes.NewReader(configBytes), pbs); err != nil {
+			return nil, fmt.Errorf("failed to Unmarshal filter config into protobuf Struct: %w", err)
+		}
+
+		buf := &bytes.Buffer{}
+		if err := (&gogojsonpb.Marshaler{OrigName: true}).Marshal(buf, pbs); err != nil {
+			return nil, fmt.Errorf("failed to marshal filter config protobuf into json: %w", err)
+		}
+
+		filter := &envoylistener.Filter{}
+		if err := (&jsonpb.Unmarshaler{AllowUnknownFields: false}).Unmarshal(buf, filter); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal filter config jsonpb into envoy filter proto: %w", err)
+		}
+
+		filters = append(filters, filter)
+	}
+
+	return &envoylistener.FilterChain{
+		Filters: filters,
+	}, nil
 }

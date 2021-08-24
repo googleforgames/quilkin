@@ -41,7 +41,9 @@ func (c *callbacks) OnStreamRequest(streamId int64, request *discoveryservice.Di
 		"request_nonce":        request.ResponseNonce,
 	}).Debugf("OnStreamRequest")
 
-	c.nodeIDCh <- request.Node.Id
+	if c.nodeIDCh != nil {
+		c.nodeIDCh <- request.Node.Id
+	}
 	return nil
 }
 
