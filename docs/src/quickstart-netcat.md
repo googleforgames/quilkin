@@ -3,7 +3,7 @@
 ## Requirements
 
 * A \*nix terminal
-* A binary release of Quilkin from the [Github releases page](https://github.com/googleforgames/quilkin/releases)
+* A binary release of Quilkin from the [Github releases page](https://github.com/googleforgames/quilkin/releases) or by running `cargo install quilkin`
 * [ncat](https://nmap.org/ncat/guide/)
 * [netcat](http://netcat.sourceforge.net/)
 
@@ -38,13 +38,13 @@ a single endpoint of 127.0.0.1, port 8000.
 Let's start Quilkin with the above configuration:
 
 ```shell
-./quilkin --config proxy.yaml
+quilkin run --config proxy.yaml
 ```
 
 You should see an output like the following:
 
 ```shell
-$ ./quilkin --config proxy.yaml
+$ quilkin run --config proxy.yaml
 {"msg":"Starting Quilkin","level":"INFO","ts":"2021-04-25T19:27:22.535174615-07:00","source":"run","version":"0.1.0-dev"}
 {"msg":"Starting","level":"INFO","ts":"2021-04-25T19:27:22.535315827-07:00","source":"server::Server","port":7000}
 {"msg":"Starting admin endpoint","level":"INFO","ts":"2021-04-25T19:27:22.535550572-07:00","source":"proxy::Admin","address":"[::]:9091"}

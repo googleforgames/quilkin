@@ -16,6 +16,8 @@
 
 use std::sync::Arc;
 
+use clap::{App, AppSettings, Arg, SubCommand};
+
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[tokio::main]
@@ -27,22 +29,42 @@ async fn main() -> quilkin::Result<()> {
         VERSION.into()
     };
 
-    slog::info!(log, "Starting Quilkin"; "version" => &*version);
+    let config_arg = Arg::with_name("config")
+        .short("c")
+        .long("config")
+        .value_name("CONFIG")
+        .help("The YAML configuration file")
+        .takes_value(true);
 
-    let matches = clap::App::new(clap::crate_name!())
+    let cli = App::new(clap::crate_name!())
         .version(&*version)
         .about(clap::crate_description!())
-        .arg(
-            clap::Arg::with_name("config")
-                .short("c")
-                .long("config")
-                .value_name("CONFIG")
-                .help("The YAML configuration file")
-                .takes_value(true),
+        .setting(AppSettings::VersionlessSubcommands)
+        .setting(AppSettings::SubcommandRequiredElseHelp)
+        .subcommand(
+            SubCommand::with_name("run")
+                .about("Start Quilkin process.")
+                .arg(config_arg.clone()),
+        )
+        .subcommand(
+            SubCommand::with_name("test")
+                .about("Execute one or more sets of tests.")
+                .arg(config_arg),
         )
         .get_matches();
 
-    let config = quilkin::config::Config::find(&log, matches.value_of("config")).map(Arc::new)?;
+    slog::info!(log, "Starting Quilkin"; "version" => &*version);
 
-    quilkin::run_with_config(log, config, vec![]).await
+    match cli.subcommand() {
+        ("run", Some(matches)) => {
+            let config =
+                quilkin::config::Config::find(&log, matches.value_of("config")).map(Arc::new)?;
+
+            quilkin::run_with_config(log, config, vec![]).await
+        }
+
+        ("test", Some(_matches)) => todo!(),
+
+        (_, _) => unreachable!(),
+    }
 }

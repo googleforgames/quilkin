@@ -112,7 +112,7 @@ replace the `${GAMESERVER_IP}` and `${GAMESERVER_PORT}` values in your copy of `
 Run this configuration locally as:
 
 ```shell
-quilkin -c ./client-compress.yaml`
+quilkin run -c ./client-compress.yaml`
 ```
 
 Now we can connect to the local client proxy on "127.0.0.1:7000" via the "Multiplayer > Address" field in the
