@@ -147,7 +147,7 @@
 <h2 id="requirements"><a class="header" href="#requirements">Requirements</a></h2>
 <ul>
 <li>A *nix terminal</li>
-<li>A binary release of Quilkin from the <a href="https://github.com/googleforgames/quilkin/releases">Github releases page</a></li>
+<li>A binary release of Quilkin from the <a href="https://github.com/googleforgames/quilkin/releases">Github releases page</a> or by running <code>cargo install quilkin</code></li>
 <li><a href="https://nmap.org/ncat/guide/">ncat</a></li>
 <li><a href="http://netcat.sourceforge.net/">netcat</a></li>
 </ul>
@@ -168,10 +168,10 @@ static:
 <p>This configuration will start Quilkin on the default port of 7000, and it will redirect all incoming UDP traffic to
 a single endpoint of 127.0.0.1, port 8000.</p>
 <p>Let's start Quilkin with the above configuration:</p>
-<pre><code class="language-shell">./quilkin --config proxy.yaml
+<pre><code class="language-shell">quilkin run --config proxy.yaml
 </code></pre>
 <p>You should see an output like the following:</p>
-<pre><code class="language-shell">$ ./quilkin --config proxy.yaml
+<pre><code class="language-shell">$ quilkin run --config proxy.yaml
 {&quot;msg&quot;:&quot;Starting Quilkin&quot;,&quot;level&quot;:&quot;INFO&quot;,&quot;ts&quot;:&quot;2021-04-25T19:27:22.535174615-07:00&quot;,&quot;source&quot;:&quot;run&quot;,&quot;version&quot;:&quot;0.1.0-dev&quot;}
 {&quot;msg&quot;:&quot;Starting&quot;,&quot;level&quot;:&quot;INFO&quot;,&quot;ts&quot;:&quot;2021-04-25T19:27:22.535315827-07:00&quot;,&quot;source&quot;:&quot;server::Server&quot;,&quot;port&quot;:7000}
 {&quot;msg&quot;:&quot;Starting admin endpoint&quot;,&quot;level&quot;:&quot;INFO&quot;,&quot;ts&quot;:&quot;2021-04-25T19:27:22.535550572-07:00&quot;,&quot;source&quot;:&quot;proxy::Admin&quot;,&quot;address&quot;:&quot;[::]:9091&quot;}
