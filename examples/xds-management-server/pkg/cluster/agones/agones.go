@@ -1,18 +1,19 @@
 package agones
 
 import (
-	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
-	agones "agones.dev/agones/pkg/client/clientset/versioned"
 	"context"
 	"fmt"
+	"reflect"
+	"strings"
+	"time"
+
+	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
+	agones "agones.dev/agones/pkg/client/clientset/versioned"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"quilkin.dev/xds-management-server/pkg/cluster"
-	"reflect"
-	"strings"
-	"time"
 )
 
 // Provider implements the Provider interface, exposing Agones GameServers as endpoints.

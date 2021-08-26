@@ -3,6 +3,7 @@ package filters
 // Import all filters we know of so that they're registered and
 // available at runtime during (un)marshaling
 import (
+	//nolint:revive
 	_ "quilkin.dev/xds-management-server/pkg/filters/capture_bytes/v1alpha1"
 	_ "quilkin.dev/xds-management-server/pkg/filters/compress/v1alpha1"
 	_ "quilkin.dev/xds-management-server/pkg/filters/concatenate_bytes/v1alpha1"

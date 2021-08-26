@@ -1,6 +1,8 @@
 package resources
 
 import (
+	"testing"
+
 	envoycore "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoyendpoint "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	envoylistener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
@@ -11,7 +13,6 @@ import (
 	"quilkin.dev/xds-management-server/pkg/filters"
 	debugfilterv1alpha "quilkin.dev/xds-management-server/pkg/filters/debug/v1alpha1"
 	ratelimitv1alpha "quilkin.dev/xds-management-server/pkg/filters/local_rate_limit/v1alpha1"
-	"testing"
 )
 
 func TestMakeEndpoint(t *testing.T) {

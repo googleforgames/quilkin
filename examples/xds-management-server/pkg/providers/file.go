@@ -5,15 +5,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"time"
+
 	envoylistener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	gogojsonpb "github.com/gogo/protobuf/jsonpb"
 	prototypes "github.com/gogo/protobuf/types"
 	"google.golang.org/protobuf/encoding/protojson"
-	"io/ioutil"
 	"quilkin.dev/xds-management-server/pkg/cluster"
 	"quilkin.dev/xds-management-server/pkg/filterchain"
 	"sigs.k8s.io/yaml"
-	"time"
 
 	"github.com/cenkalti/backoff"
 	"github.com/fsnotify/fsnotify"

@@ -4,17 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	log "github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"os"
+	"sync"
+	"testing"
+	"time"
+
+	log "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/require"
 	"quilkin.dev/xds-management-server/pkg/cluster"
 	"quilkin.dev/xds-management-server/pkg/filterchain"
 	"quilkin.dev/xds-management-server/pkg/filters"
 	"sigs.k8s.io/yaml"
-	"sync"
-	"testing"
-	"time"
 )
 
 func testFileProvider(configFilePath string) (*FileProvider, chan<- string) {

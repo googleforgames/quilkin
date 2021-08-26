@@ -1,13 +1,14 @@
 package agones
 
 import (
+	"os"
+	"sync"
+	"testing"
+
 	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"os"
-	"sync"
-	"testing"
 )
 
 type testStore struct {

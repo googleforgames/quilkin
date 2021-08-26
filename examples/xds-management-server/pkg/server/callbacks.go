@@ -17,26 +17,26 @@ type callbacks struct {
 func (c *callbacks) OnStreamOpen(
 	_ context.Context,
 	streamID int64,
-	typeUrl string,
+	typeURL string,
 ) error {
 	c.log.WithFields(log.Fields{
 		"streamId": streamID,
-		"type_url": typeUrl,
+		"type_url": typeURL,
 	}).Debugf("OnStreamOpen")
 	return nil
 }
 
 func (c *callbacks) OnStreamClosed(streamID int64) {
 	c.log.WithFields(log.Fields{
-		"streamId": streamID,
+		"stream_id": streamID,
 	}).Debugf("OnStreamClosed")
 }
 
 // OnStreamRequest is called whenever a new DiscoveryRequest is received from a proxy.
 //  we use this event to track proxies that are connected to the server.
-func (c *callbacks) OnStreamRequest(streamId int64, request *discoveryservice.DiscoveryRequest) error {
+func (c *callbacks) OnStreamRequest(streamID int64, request *discoveryservice.DiscoveryRequest) error {
 	c.log.WithFields(log.Fields{
-		"streamId":             streamId,
+		"stream_id":            streamID,
 		"request_version_info": request.VersionInfo,
 		"request_nonce":        request.ResponseNonce,
 	}).Debugf("OnStreamRequest")
@@ -48,12 +48,12 @@ func (c *callbacks) OnStreamRequest(streamId int64, request *discoveryservice.Di
 }
 
 func (c *callbacks) OnStreamResponse(
-	streamId int64,
+	streamID int64,
 	request *discoveryservice.DiscoveryRequest,
 	response *discoveryservice.DiscoveryResponse,
 ) {
 	c.log.WithFields(log.Fields{
-		"streamId":              streamId,
+		"stream_id":             streamID,
 		"request_version_info":  request.VersionInfo,
 		"request_nonce":         request.ResponseNonce,
 		"response_version_info": response.VersionInfo,

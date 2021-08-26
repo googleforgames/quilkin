@@ -2,11 +2,12 @@ package k8s
 
 import (
 	"fmt"
+	"os"
+
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	"os"
 
 	//  load the gcp plugin (required to authenticate against GKE clusters from outside the cluster)
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -29,12 +30,11 @@ func GetK8sConfig(logger *log.Logger, kubeHost string) (*rest.Config, error) {
 		if kubeConfig := os.Getenv("KUBE_CONFIG"); kubeConfig != "" {
 			if restConfig, err := clientcmd.BuildConfigFromFlags("", kubeConfig); err == nil {
 				return restConfig, nil
-			} else {
-				logger.WithError(err).Warn("failed to load kube config, will use empty configuration")
-				return &rest.Config{
-					Host: kubeHost,
-				}, nil
 			}
+			logger.WithError(err).Warn("failed to load kube config, will use empty configuration")
+			return &rest.Config{
+				Host: kubeHost,
+			}, nil
 		}
 	}
 

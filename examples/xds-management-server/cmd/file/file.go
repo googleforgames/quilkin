@@ -4,8 +4,9 @@ import (
 	"context"
 	"os"
 	"os/signal"
-	"quilkin.dev/xds-management-server/pkg/providers"
 	"time"
+
+	"quilkin.dev/xds-management-server/pkg/providers"
 
 	"github.com/alecthomas/kong"
 	log "github.com/sirupsen/logrus"

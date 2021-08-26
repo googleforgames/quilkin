@@ -2,6 +2,9 @@ package k8s
 
 import (
 	"context"
+	"reflect"
+	"time"
+
 	envoylistener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -13,8 +16,6 @@ import (
 	"quilkin.dev/xds-management-server/pkg/filterchain"
 	filters2 "quilkin.dev/xds-management-server/pkg/filters"
 	debugfilterv1alpha "quilkin.dev/xds-management-server/pkg/filters/debug/v1alpha1"
-	"reflect"
-	"time"
 )
 
 const (
@@ -40,11 +41,15 @@ type proxyPod struct {
 	latestPodAnnotations map[string]string
 }
 
+// Provider is a kubernetes implementation of how to configure filter chains.
+// It checks pods labels/annotations to figure out what the filter chain for
+// each proxy should be.
 type Provider struct {
 	logger   *log.Logger
 	podStore cache.Store
 }
 
+// NewProvider returns a new Provider.
 func NewProvider(
 	ctx context.Context,
 	logger *log.Logger,
@@ -61,6 +66,8 @@ func NewProvider(
 	}, nil
 }
 
+// Run starts a goroutine that watches proxy pods and sends filter chain
+// updates whenever any related pod configuration changes.
 func (p *Provider) Run(
 	ctx context.Context,
 	proxyRefreshInterval time.Duration,

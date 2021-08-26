@@ -2,9 +2,10 @@ package snapshot
 
 import (
 	"context"
+	"time"
+
 	"quilkin.dev/xds-management-server/pkg/cluster"
 	"quilkin.dev/xds-management-server/pkg/filterchain"
-	"time"
 
 	"github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	log "github.com/sirupsen/logrus"

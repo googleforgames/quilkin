@@ -2,6 +2,12 @@ package k8s
 
 import (
 	"context"
+	"os"
+	"sort"
+	"strings"
+	"testing"
+	"time"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	kubernetesv1 "k8s.io/api/core/v1"
@@ -10,13 +16,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 	testing2 "k8s.io/client-go/testing"
-	"os"
 	"quilkin.dev/xds-management-server/pkg/filterchain"
 	"quilkin.dev/xds-management-server/pkg/filters"
-	"sort"
-	"strings"
-	"testing"
-	"time"
 )
 
 func testLogger() *log.Logger {
@@ -50,7 +51,7 @@ func testClient() (kubernetes.Interface, <-chan struct{}) {
 	return client, watcherStarted
 }
 
-func createPod(t *testing.T, ctx context.Context, client kubernetes.Interface, pod *kubernetesv1.Pod) {
+func createPod(ctx context.Context, t *testing.T, client kubernetes.Interface, pod *kubernetesv1.Pod) {
 	_, err := client.
 		CoreV1().
 		Pods(pod.Namespace).
@@ -64,12 +65,12 @@ func TestProviderCreateFilterChainForWatchedPods(t *testing.T) {
 
 	client, watcherStarted := testClient()
 
-	p := testProvider(t, ctx, client)
+	p := testProvider(ctx, t, client)
 	filterChainCh := p.Run(ctx, 1*time.Millisecond)
 	<-watcherStarted
 
 	// A new pod is created.
-	createPod(t, ctx, client, &kubernetesv1.Pod{
+	createPod(ctx, t, client, &kubernetesv1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "pod-1",
 			Namespace: "quilkin",
@@ -83,7 +84,7 @@ func TestProviderCreateFilterChainForWatchedPods(t *testing.T) {
 	require.Empty(t, proxyFilterChain.FilterChain.Filters)
 }
 
-func testProvider(t *testing.T, ctx context.Context, client kubernetes.Interface) *Provider {
+func testProvider(ctx context.Context, t *testing.T, client kubernetes.Interface) *Provider {
 	p, err := NewProvider(ctx, testLogger(), client, defaultProxyNamespace)
 	require.NoError(t, err, "failed to create provider")
 	return p
@@ -105,21 +106,21 @@ func TestProviderCreateProxySpecificFilterChain(t *testing.T) {
 
 	client, watcherStarted := testClient()
 
-	p := testProvider(t, ctx, client)
+	p := testProvider(ctx, t, client)
 	filterChainCh := p.Run(ctx, 1*time.Millisecond)
 	<-watcherStarted
 
 	pod1 := testPod("pod-1")
 	pod1.Annotations[annotationKeyDebug] = "true"
-	createPod(t, ctx, client, pod1)
+	createPod(ctx, t, client, pod1)
 
 	pod2 := testPod("pod-2")
 	pod2.Annotations[annotationKeyDebug] = "false"
-	createPod(t, ctx, client, pod2)
+	createPod(ctx, t, client, pod2)
 
 	pod3 := testPod("pod-3")
 	pod3.Annotations[annotationKeyDebug] = "true"
-	createPod(t, ctx, client, pod3)
+	createPod(ctx, t, client, pod3)
 
 	// Wait for a filterchain to be delivered for each pod
 	pfcs := []filterchain.ProxyFilterChain{
@@ -160,14 +161,14 @@ func TestProviderPushNewFilterChainWhenPodIsUpdated(t *testing.T) {
 
 	client, watcherStarted := testClient()
 
-	p := testProvider(t, ctx, client)
+	p := testProvider(ctx, t, client)
 	filterChainCh := p.Run(ctx, 1*time.Millisecond)
 	<-watcherStarted
 
 	// Create the pod with debug enabled.
 	pod := testPod("pod-1")
 	pod.Annotations[annotationKeyDebug] = "true"
-	createPod(t, ctx, client, pod)
+	createPod(ctx, t, client, pod)
 
 	// Check that the generated filter chain has the debug filter.
 	pfc := <-filterChainCh
@@ -200,12 +201,12 @@ func TestProviderIgnoreNonProxyPods(t *testing.T) {
 
 	client, watcherStarted := testClient()
 
-	p := testProvider(t, ctx, client)
+	p := testProvider(ctx, t, client)
 	filterChainCh := p.Run(ctx, 1*time.Millisecond)
 	<-watcherStarted
 
 	// A new pod is created but in a different namespace.
-	createPod(t, ctx, client, &kubernetesv1.Pod{
+	createPod(ctx, t, client, &kubernetesv1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "pod-1",
 			Namespace: "quilkin-2",

@@ -3,9 +3,10 @@ package resources
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
+
 	"quilkin.dev/xds-management-server/pkg/cluster"
 	"quilkin.dev/xds-management-server/pkg/filterchain"
-	"strconv"
 
 	envoycluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	envoycore "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -20,7 +21,13 @@ import (
 	_ "quilkin.dev/xds-management-server/pkg/filters"
 )
 
-func GenerateSnapshot(version int64, clusters []cluster.Cluster, filterChain filterchain.ProxyFilterChain) (cache.Snapshot, error) {
+// GenerateSnapshot generates a new snapshot for the gocontrol-plane snapshot cache
+// with the provide version and resources.
+func GenerateSnapshot(
+	version int64,
+	clusters []cluster.Cluster,
+	filterChain filterchain.ProxyFilterChain,
+) (cache.Snapshot, error) {
 	var clusterResources []types.Resource
 	for _, cl := range clusters {
 		clusterResource, err := makeCluster(cl)

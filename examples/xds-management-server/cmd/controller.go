@@ -4,10 +4,11 @@ import (
 	"context"
 	"os"
 	"os/signal"
+	"time"
+
 	agonescluster "quilkin.dev/xds-management-server/pkg/cluster/agones"
 	k8sfilterchain "quilkin.dev/xds-management-server/pkg/filterchain/k8s"
 	"quilkin.dev/xds-management-server/pkg/k8s"
-	"time"
 
 	"github.com/alecthomas/kong"
 	log "github.com/sirupsen/logrus"
