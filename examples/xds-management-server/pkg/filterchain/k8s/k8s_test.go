@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 	"sort"
-	"strings"
 	"testing"
 	"time"
 
@@ -122,12 +121,32 @@ func TestProviderCreateProxySpecificFilterChain(t *testing.T) {
 	pod3.Annotations[annotationKeyDebug] = "true"
 	createPod(ctx, t, client, pod3)
 
-	// Wait for a filterchain to be delivered for each pod
-	pfcs := []filterchain.ProxyFilterChain{
-		<-filterChainCh,
-		<-filterChainCh,
-		<-filterChainCh,
+	// Wait for a filter chain to be delivered for each pod
+	var pfcs []string
+	pfcMap := make(map[string]struct{})
+	for {
+		fc := <-filterChainCh
+
+		if fc.ProxyID == "pod-2" {
+			// Pod 2 has debug disabled.
+			require.Empty(t, fc.FilterChain.Filters)
+		} else {
+			// Other pods have debug enabled.
+			require.Len(t, fc.FilterChain.Filters, 1)
+			require.Contains(t, fc.FilterChain.Filters[0].String(), filters.DebugFilterName)
+		}
+
+		pfcMap[fc.ProxyID] = struct{}{}
+		if len(pfcMap) == 3 {
+			break
+		}
 	}
+
+	for proxyID := range pfcMap {
+		pfcs = append(pfcs, proxyID)
+	}
+	sort.Strings(pfcs)
+	require.EqualValues(t, []string{"pod-1", "pod-2", "pod-3"}, pfcs)
 
 	// Shutdown
 	cancel()
@@ -136,23 +155,6 @@ func TestProviderCreateProxySpecificFilterChain(t *testing.T) {
 	empty, more := <-filterChainCh
 	require.False(t, more, "received unexpected filter chain update")
 	require.EqualValues(t, filterchain.ProxyFilterChain{}, empty)
-
-	sort.Slice(pfcs, func(i, j int) bool {
-		return strings.Compare(pfcs[i].ProxyID, pfcs[j].ProxyID) < 0
-	})
-
-	pfc1, pfc2, pfc3 := pfcs[0], pfcs[1], pfcs[2]
-
-	require.EqualValues(t, "pod-1", pfc1.ProxyID)
-	require.EqualValues(t, "pod-2", pfc2.ProxyID)
-	require.EqualValues(t, "pod-3", pfc3.ProxyID)
-
-	for _, pfc := range []filterchain.ProxyFilterChain{pfc1, pfc3} {
-		require.Len(t, pfc.FilterChain.Filters, 1)
-		require.Contains(t, pfc.FilterChain.Filters[0].String(), filters.DebugFilterName)
-	}
-
-	require.Empty(t, pfc2.FilterChain.Filters)
 }
 
 func TestProviderPushNewFilterChainWhenPodIsUpdated(t *testing.T) {
