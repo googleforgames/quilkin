@@ -21,7 +21,10 @@ steps:
     id: pull-build-image
   - name: golangci/golangci-lint
     dir: examples/xds-management-server
-    args: [ "golangci-lint", "run" , "./..."]
+    args: [ "golangci-lint", "run", "-c", "ci/.golangci.yaml", "./..." ]
+  - name: golang
+    dir: examples/xds-management-server
+    args: [ "go", "test", "./..." ]
     id: golangci-lint
   - name: us-docker.pkg.dev/$PROJECT_ID/ci/make-docker
     dir: ./build
