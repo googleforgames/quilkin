@@ -62,6 +62,9 @@ There are lots of ways to engage with the Quilkin community:
   our continuous integration builds.
 * Join our [Discord chat server](https://discord.gg/mfBNZjBDnc).
 * Follow up on [Twitter](https://twitter.com/quilkindev).
+* Join our monthly community meetings ([webcal](https://calendar.google.com/calendar/embed?src=c_9mgnkieltlphoijg5uio0g6a14%40group.calendar.google.com&ctz=America%2FLos_Angeles),
+  [ical](https://calendar.google.com/calendar/ical/c_9mgnkieltlphoijg5uio0g6a14%40group.calendar.google.com/public/basic.ics),
+  [recordings](https://www.youtube.com/playlist?list=PLhkWKwFGACw1oG-qbKQZBlAKAfuG_XpTd)).
 
 ## Credits
 
