@@ -25,7 +25,7 @@ steps:
   - name: golang
     dir: examples/xds-management-server
     args: [ "go", "test", "./..." ]
-    id: golangci-lint
+    id: go-test
   - name: us-docker.pkg.dev/$PROJECT_ID/ci/make-docker
     dir: ./build
     args:

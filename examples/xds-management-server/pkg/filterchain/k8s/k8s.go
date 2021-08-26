@@ -111,7 +111,7 @@ func (p *Provider) run(
 					}
 				}
 
-				if !existingProxy && reflect.DeepEqual(proxy.latestPodAnnotations, currAnnotations) {
+				if existingProxy && reflect.DeepEqual(proxy.latestPodAnnotations, currAnnotations) {
 					// Nothing has changed so no update
 					continue
 				}
