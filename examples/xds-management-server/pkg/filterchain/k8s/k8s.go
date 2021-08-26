@@ -88,8 +88,8 @@ func (p *Provider) run(
 			for i := range pods {
 				pod := pods[i].(*k8scorev1.Pod)
 
-				proxy, found := proxies[pod.Name]
-				if !found {
+				proxy, existingProxy := proxies[pod.Name]
+				if !existingProxy {
 					proxy = &proxyPod{
 						podID:                pod.Name,
 						latestPodAnnotations: map[string]string{},
@@ -104,7 +104,7 @@ func (p *Provider) run(
 					}
 				}
 
-				if reflect.DeepEqual(proxy.latestPodAnnotations, currAnnotations) {
+				if !existingProxy && reflect.DeepEqual(proxy.latestPodAnnotations, currAnnotations) {
 					// Nothing has changed so no update
 					continue
 				}

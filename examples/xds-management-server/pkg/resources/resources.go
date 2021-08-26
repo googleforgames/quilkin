@@ -1,7 +1,6 @@
 package resources
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"quilkin.dev/xds-management-server/pkg/cluster"
@@ -14,8 +13,8 @@ import (
 	envoylistener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/v3"
-	"github.com/golang/protobuf/jsonpb"
 	structpb "github.com/golang/protobuf/ptypes/struct"
+	"google.golang.org/protobuf/encoding/protojson"
 
 	// Import proto packages for proto registration side effects
 	_ "quilkin.dev/xds-management-server/pkg/filters"
@@ -76,7 +75,7 @@ func parseMetadata(input map[string]interface{}) (map[string]*structpb.Struct, e
 		}
 
 		protoValue := structpb.Struct{}
-		if err := jsonpb.Unmarshal(bytes.NewReader(metadataBytes), &protoValue); err != nil {
+		if err := protojson.Unmarshal(metadataBytes, &protoValue); err != nil {
 			return nil, err
 		}
 		output[key] = &protoValue

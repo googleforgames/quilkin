@@ -12,6 +12,7 @@ import (
 	testing2 "k8s.io/client-go/testing"
 	"os"
 	"quilkin.dev/xds-management-server/pkg/filterchain"
+	"quilkin.dev/xds-management-server/pkg/filters"
 	"sort"
 	"strings"
 	"testing"
@@ -75,7 +76,7 @@ func TestProviderCreateFilterChainForWatchedPods(t *testing.T) {
 		},
 	})
 
-	// Wait for a filterchain to be delivered for this pod
+	// Wait for a filter chain to be delivered for this pod
 	proxyFilterChain := <-filterChainCh
 
 	require.EqualValues(t, "pod-1", proxyFilterChain.ProxyID)
@@ -147,7 +148,7 @@ func TestProviderCreateProxySpecificFilterChain(t *testing.T) {
 
 	for _, pfc := range []filterchain.ProxyFilterChain{pfc1, pfc3} {
 		require.Len(t, pfc.FilterChain.Filters, 1)
-		require.Contains(t, pfc.FilterChain.Filters[0].String(), debugFilterName)
+		require.Contains(t, pfc.FilterChain.Filters[0].String(), filters.DebugFilterName)
 	}
 
 	require.Empty(t, pfc2.FilterChain.Filters)
@@ -170,7 +171,7 @@ func TestProviderPushNewFilterChainWhenPodIsUpdated(t *testing.T) {
 
 	// Check that the generated filter chain has the debug filter.
 	pfc := <-filterChainCh
-	require.Contains(t, pfc.FilterChain.Filters[0].String(), debugFilterName)
+	require.Contains(t, pfc.FilterChain.Filters[0].String(), filters.DebugFilterName)
 
 	// Update the pod to turn off debug.
 	pod.Annotations[annotationKeyDebug] = "false"

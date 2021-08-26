@@ -8,7 +8,7 @@ import (
 	envoylistener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	gogojsonpb "github.com/gogo/protobuf/jsonpb"
 	prototypes "github.com/gogo/protobuf/types"
-	"github.com/golang/protobuf/jsonpb"
+	"google.golang.org/protobuf/encoding/protojson"
 	"io/ioutil"
 	"quilkin.dev/xds-management-server/pkg/cluster"
 	"quilkin.dev/xds-management-server/pkg/filterchain"
@@ -295,7 +295,7 @@ func makeFilterChain(
 		}
 
 		filter := &envoylistener.Filter{}
-		if err := (&jsonpb.Unmarshaler{AllowUnknownFields: false}).Unmarshal(buf, filter); err != nil {
+		if err := protojson.Unmarshal(buf.Bytes(), filter); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal filter config jsonpb into envoy filter proto: %w", err)
 		}
 
