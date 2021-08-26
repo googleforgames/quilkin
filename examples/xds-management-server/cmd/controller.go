@@ -18,7 +18,8 @@ import (
 )
 
 type flags struct {
-	KubeHost                string        `name:"kube-host" env:"KUBE_HOST" help:"The host the kubernetes API server runs on or 'cluster' if running in cluster or 'local' to use local kube config" default:"cluster"`
+	KubeHost                string        `name:"kube-host" env:"KUBE_HOST" help:"The host the kubernetes API server runs on or 'cluster' if running in cluster" default:"cluster"`
+	KubeConfigPath          string        `name:"kube-config-path" env:"KUBE_CONFIG_PATH" help:"Path to local kube config"`
 	Port                    int16         `name:"int16" help:"Server listening port." default:"18000"`
 	ProxyNamespace          string        `name:"proxy-namespace" help:"Namespace under which the proxies run." default:"quilkin"`
 	GameServersNamespace    string        `name:"game-server-namespace" help:"Namespace under which the game-servers run." default:"gameservers"`
@@ -38,7 +39,7 @@ func main() {
 	ctx, shutdown := context.WithCancel(context.Background())
 	defer shutdown()
 
-	k8sConfig, err := k8s.GetK8sConfig(logger, flags.KubeHost)
+	k8sConfig, err := k8s.GetK8sConfig(logger, flags.KubeHost, flags.KubeConfigPath)
 	if err != nil {
 		log.WithError(err).Fatal("failed to get kube config")
 	}

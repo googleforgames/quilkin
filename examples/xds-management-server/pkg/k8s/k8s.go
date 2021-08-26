@@ -14,12 +14,12 @@ import (
 )
 
 // GetK8sConfig finds and returns a kubernetes config
-func GetK8sConfig(logger *log.Logger, kubeHost string) (*rest.Config, error) {
+func GetK8sConfig(logger *log.Logger, kubeHost, kubeConfigPath string) (*rest.Config, error) {
 	var restConfig *rest.Config
 	var err error
 
-	if kubeHost == "local" {
-		return clientcmd.BuildConfigFromFlags("", "/home/iffy/.kube/config")
+	if kubeConfigPath != "" {
+		return clientcmd.BuildConfigFromFlags("", kubeConfigPath)
 	} else if kubeHost == "cluster" {
 		restConfig, err = rest.InClusterConfig()
 		if err != nil {

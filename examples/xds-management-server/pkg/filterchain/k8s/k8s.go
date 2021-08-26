@@ -146,8 +146,7 @@ func createFilterChainForProxy(podAnnotations map[string]string) (*envoylistener
 		filter, err := filterchain.CreateXdsFilter(
 			filters2.DebugFilterName,
 			&debugfilterv1alpha.Debug{
-				// TODO: use uuid
-				Id: &wrapperspb.StringValue{Value: "quilkin-filter-debug"},
+				Id: &wrapperspb.StringValue{Value: "debug-filter"},
 			},
 		)
 		if err != nil {
