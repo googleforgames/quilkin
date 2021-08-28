@@ -18,8 +18,8 @@ mod cluster;
 pub mod metadata;
 pub(crate) mod metrics;
 pub(crate) mod prost;
-mod proxy;
-mod runner;
+pub mod proxy;
+pub mod runner;
 pub(crate) mod utils;
 pub(crate) mod xds;
 
