@@ -29,6 +29,7 @@ pub(crate) trait Compressor {
     fn decode(&self, contents: &mut Vec<u8>) -> io::Result<()>;
 }
 
+#[derive(Debug)]
 pub(crate) struct Snappy {}
 
 impl Compressor for Snappy {

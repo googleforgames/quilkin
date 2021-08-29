@@ -22,6 +22,7 @@ use crate::filters::{ConvertProtoConfigError, Error};
 
 /// The configuration of a [`Filter`][crate::filters::Filter] from either a
 /// static or dynamic source.
+#[derive(Debug)]
 pub enum ConfigType<'a> {
     /// Static configuration from YAML.
     Static(&'a serde_yaml::Value),

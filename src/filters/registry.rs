@@ -57,7 +57,7 @@ impl FilterRegistry {
 mod tests {
     use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
-    use crate::test_utils::{logger, new_registry};
+    use crate::test_utils::new_registry;
 
     use super::*;
     use crate::endpoint::{Endpoint, Endpoints};
@@ -78,7 +78,7 @@ mod tests {
 
     #[test]
     fn insert_and_get() {
-        let reg = new_registry(&logger());
+        let reg = new_registry();
 
         match reg.get(
             &String::from("not.found"),

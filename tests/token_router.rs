@@ -23,14 +23,13 @@ use quilkin::{
     endpoint::Endpoint,
     filters::{capture_bytes, token_router},
     metadata::MetadataView,
-    test_utils::{logger, TestHelper},
+    test_utils::TestHelper,
 };
 
 /// This test covers both token_router and capture_bytes filters,
 /// since they work in concert together.
 #[tokio::test]
 async fn token_router() {
-    let log = logger();
     let mut t = TestHelper::default();
     let echo = t.run_echo_server().await;
 
@@ -49,11 +48,11 @@ quilkin.dev:
         .with_static(
             vec![
                 Filter {
-                    name: capture_bytes::factory(&log).name().into(),
+                    name: capture_bytes::factory().name().into(),
                     config: serde_yaml::from_str(capture_yaml).unwrap(),
                 },
                 Filter {
-                    name: token_router::factory(&log).name().into(),
+                    name: token_router::factory().name().into(),
                     config: None,
                 },
             ],

@@ -25,6 +25,7 @@ type DynamicMetadata = HashMap<Arc<String>, Box<dyn Any + Send>>;
 
 /// The input arguments to [`Filter::read`].
 #[non_exhaustive]
+#[derive(Debug)]
 pub struct ReadContext {
     /// The upstream endpoints that the packet will be forwarded to.
     pub endpoints: UpstreamEndpoints,

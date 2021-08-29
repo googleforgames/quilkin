@@ -611,7 +611,7 @@ mod tests {
             logger(),
             ListenerManagerArgs::new(
                 Registry::default(),
-                FilterRegistry::new(FilterSet::default(&logger())),
+                FilterRegistry::new(FilterSet::default()),
                 filter_chain_updates_tx,
             ),
             discovery_req_tx,

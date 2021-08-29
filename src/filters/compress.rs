@@ -20,9 +20,8 @@ mod metrics;
 
 crate::include_proto!("quilkin.extensions.filters.compress.v1alpha1");
 
-use slog::{o, warn, Logger};
-
 use crate::{config::LOG_SAMPLING_RATE, filters::prelude::*};
+use tracing::{span, warn, Level};
 
 use self::quilkin::extensions::filters::compress::v1alpha1::Compress as ProtoConfig;
 use compressor::Compressor;
@@ -33,13 +32,12 @@ pub use config::{Action, Config, Mode};
 pub const NAME: &str = "quilkin.extensions.filters.compress.v1alpha1.Compress";
 
 /// Returns a factory for creating compression filters.
-pub fn factory(base: &Logger) -> DynFilterFactory {
-    Box::from(CompressFactory::new(base))
+pub fn factory() -> DynFilterFactory {
+    Box::from(CompressFactory::new())
 }
 
 /// Filter for compressing and decompressing packet data
 struct Compress {
-    log: Logger,
     metrics: Metrics,
     compression_mode: Mode,
     on_read: Action,
@@ -48,9 +46,8 @@ struct Compress {
 }
 
 impl Compress {
-    fn new(base: &Logger, config: Config, metrics: Metrics) -> Self {
+    fn new(config: Config, metrics: Metrics) -> Self {
         Self {
-            log: base.new(o!("source" => "extensions::Compress")),
             metrics,
             compressor: config.mode.as_compressor(),
             compression_mode: config.mode,
@@ -62,9 +59,8 @@ impl Compress {
     /// Track a failed attempt at compression
     fn failed_compression<T>(&self, err: &dyn std::error::Error) -> Option<T> {
         if self.metrics.packets_dropped_compress.get() % LOG_SAMPLING_RATE == 0 {
-            warn!(self.log, "Packets are being dropped as they could not be compressed";
-                            "mode" => #?self.compression_mode, "error" => %err,
-                            "count" => self.metrics.packets_dropped_compress.get());
+            warn!(mode = ?self.compression_mode, error = %err, count = self.metrics.packets_dropped_compress.get(),
+            "Packets are being dropped as they could not be compressed");
         }
         self.metrics.packets_dropped_compress.inc();
         None
@@ -73,9 +69,8 @@ impl Compress {
     /// Track a failed attempt at decompression
     fn failed_decompression<T>(&self, err: &dyn std::error::Error) -> Option<T> {
         if self.metrics.packets_dropped_decompress.get() % LOG_SAMPLING_RATE == 0 {
-            warn!(self.log, "Packets are being dropped as they could not be decompressed";
-                            "mode" => #?self.compression_mode, "error" => %err,
-                            "count" => self.metrics.packets_dropped_decompress.get());
+            warn!(mode = ?self.compression_mode, error = %err, count = ?self.metrics.packets_dropped_decompress.get(),
+            "Packets are being dropped as they could not be decompressed");
         }
         self.metrics.packets_dropped_decompress.inc();
         None
@@ -84,6 +79,9 @@ impl Compress {
 
 impl Filter for Compress {
     fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
+        let span = span!(Level::INFO, "extensions::Compress::read");
+        let _enter = span.enter();
+
         let original_size = ctx.contents.len();
 
         match self.on_read {
@@ -116,6 +114,9 @@ impl Filter for Compress {
     }
 
     fn write(&self, mut ctx: WriteContext) -> Option<WriteResponse> {
+        let span = span!(Level::INFO, "extensions::Compress::write");
+        let _enter = span.enter();
+
         let original_size = ctx.contents.len();
         match self.on_write {
             Action::Compress => match self.compressor.encode(&mut ctx.contents) {
@@ -148,13 +149,11 @@ impl Filter for Compress {
     }
 }
 
-struct CompressFactory {
-    log: Logger,
-}
+struct CompressFactory {}
 
 impl CompressFactory {
-    pub fn new(base: &Logger) -> Self {
-        CompressFactory { log: base.clone() }
+    pub fn new() -> Self {
+        CompressFactory {}
     }
 }
 
@@ -165,7 +164,6 @@ impl FilterFactory for CompressFactory {
 
     fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
         Ok(Box::new(Compress::new(
-            &self.log,
             self.require_config(args.config)?
                 .deserialize::<Config, ProtoConfig>(self.name())?,
             Metrics::new(&args.metrics_registry)?,
@@ -179,13 +177,13 @@ mod tests {
 
     use prometheus::Registry;
     use serde_yaml::{Mapping, Value};
+    use tracing_test::traced_test;
 
     use crate::endpoint::{Endpoint, Endpoints, UpstreamEndpoints};
     use crate::filters::{
         compress::{compressor::Snappy, Compressor},
         CreateFilterArgs, Filter, FilterFactory, ReadContext, WriteContext,
     };
-    use crate::test_utils::logger;
 
     use super::quilkin::extensions::filters::compress::v1alpha1::{
         compress::{Action as ProtoAction, ActionValue, Mode as ProtoMode, ModeValue},
@@ -284,8 +282,7 @@ mod tests {
 
     #[test]
     fn default_mode_factory() {
-        let log = logger();
-        let factory = CompressFactory::new(&log);
+        let factory = CompressFactory::new();
         let mut map = Mapping::new();
         map.insert(
             Value::String("on_read".into()),
@@ -306,8 +303,7 @@ mod tests {
 
     #[test]
     fn config_factory() {
-        let log = logger();
-        let factory = CompressFactory::new(&log);
+        let factory = CompressFactory::new();
         let mut map = Mapping::new();
         map.insert(Value::String("mode".into()), Value::String("SNAPPY".into()));
         map.insert(
@@ -327,9 +323,7 @@ mod tests {
 
     #[test]
     fn upstream() {
-        let log = logger();
         let compress = Compress::new(
-            &log,
             Config {
                 mode: Default::default(),
                 on_read: Action::Compress,
@@ -393,9 +387,7 @@ mod tests {
 
     #[test]
     fn downstream() {
-        let log = logger();
         let compress = Compress::new(
-            &log,
             Config {
                 mode: Default::default(),
                 on_read: Action::Decompress,
@@ -420,11 +412,10 @@ mod tests {
         assert_eq!(0, compress.metrics.packets_dropped_compress.get());
     }
 
+    #[traced_test]
     #[test]
     fn failed_decompress() {
-        let log = logger();
         let compression = Compress::new(
-            &log,
             Config {
                 mode: Default::default(),
                 on_read: Action::Compress,
@@ -445,7 +436,6 @@ mod tests {
         assert_eq!(0, compression.metrics.packets_dropped_compress.get());
 
         let compression = Compress::new(
-            &log,
             Config {
                 mode: Default::default(),
                 on_read: Action::Decompress,
@@ -462,6 +452,9 @@ mod tests {
             b"hello".to_vec(),
         ));
 
+        assert!(logs_contain("Packets are being dropped as they could not be decompressed"));
+        assert!(logs_contain("extensions::Compress::read"));
+
         assert!(read_response.is_none());
         assert_eq!(1, compression.metrics.packets_dropped_decompress.get());
         assert_eq!(0, compression.metrics.packets_dropped_compress.get());
@@ -471,9 +464,7 @@ mod tests {
 
     #[test]
     fn do_nothing() {
-        let log = logger();
         let compression = Compress::new(
-            &log,
             Config {
                 mode: Default::default(),
                 on_read: Action::default(),

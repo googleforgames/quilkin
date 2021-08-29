@@ -500,9 +500,7 @@ mod tests {
     use crate::filters::{manager::FilterManager, FilterChain};
     use crate::proxy::sessions::Packet;
     use crate::proxy::Builder;
-    use crate::test_utils::{
-        config_with_dummy_endpoint, logger, new_registry, new_test_chain, TestHelper,
-    };
+    use crate::test_utils::{config_with_dummy_endpoint, new_registry, new_test_chain, TestHelper};
 
     use super::*;
 
@@ -565,7 +563,7 @@ mod tests {
     async fn run_with_filter() {
         let mut t = TestHelper::default();
 
-        let registry = new_registry(&logger());
+        let registry = new_registry();
         let endpoint = t.open_socket_and_recv_single_packet().await;
         let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12367);
         let config = ConfigBuilder::empty()

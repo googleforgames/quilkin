@@ -16,12 +16,13 @@
 
 use std::sync::Arc;
 
-use slog::{info, o};
 use tokio::{signal, sync::watch};
+use tracing::{info, span, Level};
 
 use crate::{
     config::Config,
     filters::{DynFilterFactory, FilterRegistry, FilterSet},
+    proxy::logger,
     proxy::Builder,
 };
 
@@ -35,27 +36,22 @@ pub type Error = Box<dyn std::error::Error>;
 pub async fn run(
     filter_factories: impl IntoIterator<Item = DynFilterFactory>,
 ) -> Result<(), Error> {
-    let log = crate::proxy::logger();
-    run_with_config(
-        log.clone(),
-        Config::find(&log, None).map(Arc::new)?,
-        filter_factories,
-    )
-    .await
+    run_with_config(Config::find(None).map(Arc::new)?, filter_factories).await
 }
 
 /// Start and run a proxy. Any passed in [`FilterFactory`]s are included
 /// alongside the default filter factories.
 pub async fn run_with_config(
-    base_log: slog::Logger,
     config: Arc<Config>,
     filter_factories: impl IntoIterator<Item = DynFilterFactory>,
 ) -> Result<(), Error> {
-    let log = base_log.new(o!("source" => "run"));
+    let base_log = logger(); // TODO: we will remove this, when replace tracing in server later
+    let span = span!(Level::INFO, "source::run");
+    let _enter = span.enter();
+
     let server = Builder::from(config)
         .with_log(base_log)
         .with_filter_registry(FilterRegistry::new(FilterSet::default_with(
-            &log,
             filter_factories.into_iter(),
         )))
         .validate()?
@@ -70,10 +66,10 @@ pub async fn run_with_config(
     });
 
     if let Err(err) = server.run(shutdown_rx).await {
-        info!(log, "Shutting down with error"; "error" => %err);
+        info! (error = %err, "Shutting down with error");
         Err(Error::from(err))
     } else {
-        info!(log, "Shutting down");
+        info!("Shutting down");
         Ok(())
     }
 }

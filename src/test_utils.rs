@@ -328,11 +328,10 @@ pub fn new_test_chain(registry: &prometheus::Registry) -> Arc<FilterChain> {
     )
 }
 
-pub fn new_registry(log: &slog::Logger) -> FilterRegistry {
-    FilterRegistry::new(FilterSet::default_with(
-        log,
-        std::array::IntoIter::new([DynFilterFactory::from(Box::from(TestFilterFactory {}))]),
-    ))
+pub fn new_registry() -> FilterRegistry {
+    FilterRegistry::new(FilterSet::default_with(std::array::IntoIter::new([
+        DynFilterFactory::from(Box::from(TestFilterFactory {})),
+    ])))
 }
 
 #[cfg(test)]

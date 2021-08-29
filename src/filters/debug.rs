@@ -16,51 +16,43 @@
 
 use std::convert::TryFrom;
 
-use serde::{Deserialize, Serialize};
-use slog::{info, o, Logger};
-
 use crate::filters::prelude::*;
+use serde::{Deserialize, Serialize};
+use tracing::{info, instrument};
 
 crate::include_proto!("quilkin.extensions.filters.debug.v1alpha1");
 use self::quilkin::extensions::filters::debug::v1alpha1::Debug as ProtoDebug;
 
 /// Debug logs all incoming and outgoing packets
 #[derive(Debug)]
-struct Debug {
-    log: Logger,
-}
+struct Debug {}
 
 pub const NAME: &str = "quilkin.extensions.filters.debug.v1alpha1.Debug";
 
 /// Creates a new factory for generating debug filters.
-pub fn factory(base: &Logger) -> DynFilterFactory {
-    Box::from(DebugFactory::new(base))
+pub fn factory() -> DynFilterFactory {
+    Box::from(DebugFactory::new())
 }
 
 impl Debug {
     /// Constructor for the Debug. Pass in a "id" to append a string to your log messages from this
     /// Filter.
-    fn new(base: &Logger, id: Option<String>) -> Self {
-        let log = match id {
-            None => base.new(o!("source" => "extensions::Debug")),
-            Some(id) => base.new(o!("source" => "extensions::Debug", "id" => id)),
-        };
 
-        Debug { log }
+    fn new(_: Option<String>) -> Self {
+        Debug {}
     }
 }
 
 impl Filter for Debug {
+    #[instrument]
     fn read(&self, ctx: ReadContext) -> Option<ReadResponse> {
-        info!(self.log, "Read filter event"; "from" => ctx.from, "contents" => packet_to_string(ctx.contents.clone()));
+        info!(contents = ?packet_to_string(ctx.contents.clone()), "Read filter event");
         Some(ctx.into())
     }
 
+    #[instrument]
     fn write(&self, ctx: WriteContext) -> Option<WriteResponse> {
-        info!(self.log, "Write filter event"; "endpoint" => ctx.endpoint.address,
-        "from" => ctx.from,
-        "to" => ctx.to,
-        "contents" => packet_to_string(ctx.contents.clone()));
+        info!(contents = ?packet_to_string(ctx.contents.clone()), "Write filter event");
         Some(ctx.into())
     }
 }
@@ -75,13 +67,11 @@ fn packet_to_string(contents: Vec<u8>) -> String {
 }
 
 /// Factory for the Debug
-struct DebugFactory {
-    log: Logger,
-}
+struct DebugFactory {}
 
 impl DebugFactory {
-    pub fn new(base: &Logger) -> Self {
-        DebugFactory { log: base.clone() }
+    pub fn new() -> Self {
+        DebugFactory {}
     }
 }
 
@@ -95,10 +85,7 @@ impl FilterFactory for DebugFactory {
             .config
             .map(|config| config.deserialize::<Config, ProtoDebug>(self.name()))
             .transpose()?;
-        Ok(Box::new(Debug::new(
-            &self.log,
-            config.and_then(|cfg| cfg.id),
-        )))
+        Ok(Box::new(Debug::new(config.and_then(|cfg| cfg.id))))
     }
 }
 
@@ -119,31 +106,34 @@ impl TryFrom<ProtoDebug> for Config {
 
 #[cfg(test)]
 mod tests {
+    use crate::test_utils::{assert_filter_read_no_change, assert_write_no_change};
     use serde_yaml::Mapping;
     use serde_yaml::Value;
-
-    use crate::test_utils::{assert_filter_read_no_change, assert_write_no_change, logger};
+    use tracing_test::traced_test;
 
     use super::*;
     use prometheus::Registry;
 
+    #[traced_test]
     #[test]
     fn read() {
-        let df = Debug::new(&logger(), None);
+        let df = Debug::new(None);
         assert_filter_read_no_change(&df);
+        assert!(logs_contain("Read filter event"));
     }
 
+    #[traced_test]
     #[test]
     fn write() {
-        let df = Debug::new(&logger(), None);
+        let df = Debug::new(None);
         assert_write_no_change(&df);
+        assert!(logs_contain("Write filter event"));
     }
 
     #[test]
     fn from_config_with_id() {
-        let log = logger();
         let mut map = Mapping::new();
-        let factory = DebugFactory::new(&log);
+        let factory = DebugFactory::new();
 
         map.insert(Value::from("id"), Value::from("name"));
         assert!(factory
@@ -156,9 +146,8 @@ mod tests {
 
     #[test]
     fn from_config_without_id() {
-        let log = logger();
         let mut map = Mapping::new();
-        let factory = DebugFactory::new(&log);
+        let factory = DebugFactory::new();
 
         map.insert(Value::from("id"), Value::from("name"));
         assert!(factory
@@ -171,9 +160,8 @@ mod tests {
 
     #[test]
     fn from_config_should_error() {
-        let log = logger();
         let mut map = Mapping::new();
-        let factory = DebugFactory::new(&log);
+        let factory = DebugFactory::new();
 
         map.insert(Value::from("id"), Value::Sequence(vec![]));
         assert!(factory

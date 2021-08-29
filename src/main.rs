@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-use std::sync::Arc;
-
 use clap::{App, AppSettings, Arg, SubCommand};
+use std::sync::Arc;
+use tracing::info;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[tokio::main]
 async fn main() -> quilkin::Result<()> {
-    let log = quilkin::logger();
+    tracing_subscriber::fmt().json().with_target(false).init();
     let version: std::borrow::Cow<'static, str> = if cfg!(debug_assertions) {
         format!("{}+debug", VERSION).into()
     } else {
@@ -53,14 +53,12 @@ async fn main() -> quilkin::Result<()> {
         )
         .get_matches();
 
-    slog::info!(log, "Starting Quilkin"; "version" => &*version);
-
+    info!(version = &*version, "Starting Quilkin");
     match cli.subcommand() {
         ("run", Some(matches)) => {
-            let config =
-                quilkin::config::Config::find(&log, matches.value_of("config")).map(Arc::new)?;
+            let config = quilkin::config::Config::find(matches.value_of("config")).map(Arc::new)?;
 
-            quilkin::run_with_config(log, config, vec![]).await
+            quilkin::run_with_config(config, vec![]).await
         }
 
         ("test", Some(_matches)) => todo!(),

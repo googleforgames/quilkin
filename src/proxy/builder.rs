@@ -103,7 +103,7 @@ impl From<Arc<Config>> for Builder<PendingValidation> {
         let admin = ProxyAdmin::new(&log, config.admin.address, metrics.clone(), health);
         Builder {
             config,
-            filter_registry: FilterRegistry::new(FilterSet::default(&log)),
+            filter_registry: FilterRegistry::new(FilterSet::default()),
             admin: Some(admin),
             metrics,
             log,

@@ -23,12 +23,11 @@ use quilkin::{
     config::{Builder, Filter},
     endpoint::Endpoint,
     filters::compress,
-    test_utils::{logger, TestHelper},
+    test_utils::TestHelper,
 };
 
 #[tokio::test]
 async fn client_and_server() {
-    let log = logger();
     let mut t = TestHelper::default();
     let echo = t.run_echo_server().await;
 
@@ -42,7 +41,7 @@ on_write: COMPRESS
         .with_port(server_port)
         .with_static(
             vec![Filter {
-                name: compress::factory(&log).name().into(),
+                name: compress::factory().name().into(),
                 config: serde_yaml::from_str(yaml).unwrap(),
             }],
             vec![Endpoint::new(echo)],
@@ -61,7 +60,7 @@ on_write: DECOMPRESS
         .with_port(client_port)
         .with_static(
             vec![Filter {
-                name: compress::factory(&log).name().into(),
+                name: compress::factory().name().into(),
                 config: serde_yaml::from_str(yaml).unwrap(),
             }],
             vec![Endpoint::new(
