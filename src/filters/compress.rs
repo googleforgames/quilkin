@@ -452,7 +452,9 @@ mod tests {
             b"hello".to_vec(),
         ));
 
-        assert!(logs_contain("Packets are being dropped as they could not be decompressed"));
+        assert!(logs_contain(
+            "Packets are being dropped as they could not be decompressed"
+        ));
         assert!(logs_contain("extensions::Compress::read"));
 
         assert!(read_response.is_none());

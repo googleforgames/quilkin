@@ -67,8 +67,7 @@ impl Filter for CaptureBytes {
         // and occasionally warn
         if ctx.contents.len() < self.size {
             if self.metrics.packets_dropped_total.get() % 1000 == 0 {
-                warn!(count = ?self.metrics.packets_dropped_total.get(), 
-                "Packets are being dropped due to their length being less than {} bytes", self.size);
+                warn!(count = ?self.metrics.packets_dropped_total.get(), "Packets are being dropped due to their length being less than {} bytes", self.size);
             }
             self.metrics.packets_dropped_total.inc();
             return None;
