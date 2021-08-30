@@ -20,3 +20,8 @@
 /// byte slices it extracts from each packet.
 /// - **Type** `Vec<u8>`
 pub const CAPTURED_BYTES: &str = "quilkin.dev/captured_bytes";
+
+/// The default key under which the [`super::regex`] filter puts the
+/// byte slices it extracts from each packet.
+/// - **Type** `Vec<u8>`
+pub const REGEX: &str = "quilkin.dev/regex";
