@@ -43,7 +43,7 @@ struct RegexBytes {
     /// metrics reporter for this filter.
     metrics: Metrics,
     regex_expression: Arc<String>,
-    metadata_key: Arc<String>,
+    //metadata_key: Arc<String>,
 }
 
 impl RegexBytes {
@@ -53,17 +53,23 @@ impl RegexBytes {
             //capture: config.strategy.as_capture(),
             metrics,
             regex_expression: Arc::new(config.regex_expression),
-            metadata_key: Arc::new(config.metadata_key),
+            //metadata_key: Arc::new(config.metadata_key),
         }
     }
 }
 
 impl Filter for RegexBytes {
-    fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
-        let re = Regex::new(r"^\d{4}-\d{2}-\d{2}$").unwrap();
+    fn read(&self, ctx: ReadContext) -> Option<ReadResponse> {
+        let re = Regex::new(self.regex_expression.as_str()).unwrap();
 
         if !re.is_match(&ctx.contents) {
             // on error -> drop
+
+            warn!(
+                self.log,
+                "Packets are being dropped due not matching regex expression"; "count" => self.metrics.packets_matched_total.get()
+            );
+
             self.metrics.packets_matched_total.inc();
 
             return None;
