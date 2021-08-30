@@ -88,12 +88,16 @@ impl FilterFactory for TokenRouterFactory {
 }
 
 impl Filter for TokenRouter {
-    #[instrument]
+    #[instrument(skip(self, ctx))]
     fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
         match ctx.metadata.get(self.metadata_key.as_ref()) {
             None => {
                 if self.metrics.packets_dropped_no_token_found.get() % LOG_SAMPLING_RATE == 0 {
-                    error!("Packets are being dropped as no routing token was found in filter dynamic metadata");
+                    error!(
+                        count = ?self.metrics.packets_dropped_no_token_found.get(),
+                        metadata_key = ?self.metadata_key.clone(),
+                        "Packets are being dropped as no routing token was found in filter dynamic metadata"
+                    );
                 }
                 self.metrics.packets_dropped_no_token_found.inc();
                 None
@@ -111,7 +115,11 @@ impl Filter for TokenRouter {
                 },
                 None => {
                     if self.metrics.packets_dropped_invalid_token.get() % LOG_SAMPLING_RATE == 0 {
-                        error!("Packets are being dropped as routing token has invalid type: expected Vec<u8>");
+                        error!(
+                            count = ?self.metrics.packets_dropped_invalid_token.get(),
+                            metadata_key = ?self.metadata_key.clone(),
+                            "Packets are being dropped as routing token has invalid type: expected Vec<u8>"
+                        );
                     }
                     self.metrics.packets_dropped_invalid_token.inc();
                     None

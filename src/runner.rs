@@ -45,7 +45,7 @@ pub async fn run_with_config(
     config: Arc<Config>,
     filter_factories: impl IntoIterator<Item = DynFilterFactory>,
 ) -> Result<(), Error> {
-    let base_log = logger(); // TODO: we will remove this, when replace tracing in server later
+    let base_log = logger(); // TODO: remove this, when tracing is replaceed in Server
     let span = span!(Level::INFO, "source::run");
     let _enter = span.enter();
 

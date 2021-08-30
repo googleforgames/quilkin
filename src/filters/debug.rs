@@ -44,15 +44,16 @@ impl Debug {
 }
 
 impl Filter for Debug {
-    #[instrument]
+    #[instrument(skip(self, ctx))]
     fn read(&self, ctx: ReadContext) -> Option<ReadResponse> {
-        info!(contents = ?packet_to_string(ctx.contents.clone()), "Read filter event");
+        info!(from = ?ctx.from, contents = ?packet_to_string(ctx.contents.clone()), "Read filter event");
         Some(ctx.into())
     }
 
-    #[instrument]
+    #[instrument(skip(self, ctx))]
     fn write(&self, ctx: WriteContext) -> Option<WriteResponse> {
-        info!(contents = ?packet_to_string(ctx.contents.clone()), "Write filter event");
+        info!(endpoint = ?ctx.endpoint.address, from = ?ctx.from,
+             to = ?ctx.to, contents = ?packet_to_string(ctx.contents.clone()), "Write filter event");
         Some(ctx.into())
     }
 }
@@ -128,6 +129,7 @@ mod tests {
         let df = Debug::new(None);
         assert_write_no_change(&df);
         assert!(logs_contain("Write filter event"));
+        assert!(logs_contain("quilkin::filters::debug")); // the given name to the the logger by tracing
     }
 
     #[test]

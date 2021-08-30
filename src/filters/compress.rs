@@ -21,7 +21,7 @@ mod metrics;
 crate::include_proto!("quilkin.extensions.filters.compress.v1alpha1");
 
 use crate::{config::LOG_SAMPLING_RATE, filters::prelude::*};
-use tracing::{span, warn, Level};
+use tracing::{instrument, warn};
 
 use self::quilkin::extensions::filters::compress::v1alpha1::Compress as ProtoConfig;
 use compressor::Compressor;
@@ -78,10 +78,8 @@ impl Compress {
 }
 
 impl Filter for Compress {
+    #[instrument(skip(self, ctx))]
     fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
-        let span = span!(Level::INFO, "extensions::Compress::read");
-        let _enter = span.enter();
-
         let original_size = ctx.contents.len();
 
         match self.on_read {
@@ -113,10 +111,8 @@ impl Filter for Compress {
         }
     }
 
+    #[instrument(skip(self, ctx))]
     fn write(&self, mut ctx: WriteContext) -> Option<WriteResponse> {
-        let span = span!(Level::INFO, "extensions::Compress::write");
-        let _enter = span.enter();
-
         let original_size = ctx.contents.len();
         match self.on_write {
             Action::Compress => match self.compressor.encode(&mut ctx.contents) {
@@ -455,7 +451,7 @@ mod tests {
         assert!(logs_contain(
             "Packets are being dropped as they could not be decompressed"
         ));
-        assert!(logs_contain("extensions::Compress::read"));
+        assert!(logs_contain("quilkin::filters::compress")); // the given name to the the logger by tracing
 
         assert!(read_response.is_none());
         assert_eq!(1, compression.metrics.packets_dropped_decompress.get());
