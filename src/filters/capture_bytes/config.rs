@@ -24,47 +24,17 @@ use super::proto::quilkin::extensions::filters::capture_bytes::v1alpha1::{
 use crate::filters::{metadata::CAPTURED_BYTES, ConvertProtoConfigError};
 use crate::map_proto_enum;
 
-use super::capture::{Capture, Prefix, Suffix};
+use super::capture::{Capture, Prefix, Regex, Suffix};
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-/// Strategy to apply for acquiring a set of bytes in the UDP packet
-pub enum Strategy {
-    #[serde(rename = "PREFIX")]
-    /// Looks for the set of bytes at the beginning of the packet
-    Prefix,
-    #[serde(rename = "SUFFIX")]
-    /// Look for the set of bytes at the end of the packet
-    Suffix,
-}
-
-impl Strategy {
-    pub(crate) fn as_capture(&self) -> Box<dyn Capture + Send + Sync> {
-        match self {
-            Self::Prefix => Box::new(Prefix {}),
-            Self::Suffix => Box::new(Suffix {}),
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
-    #[serde(default)]
-    pub strategy: Strategy,
-    /// the number of bytes to capture
-    #[serde(rename = "size")]
-    pub size: usize,
     /// the key to use when storing the captured bytes in the filter context
     #[serde(rename = "metadataKey")]
     #[serde(default = "default_metadata_key")]
     pub metadata_key: String,
-    /// whether or not to remove the set of the bytes from the packet once captured
-    #[serde(default = "default_remove")]
-    pub remove: bool,
-}
 
-/// default value for [`Config::remove`].
-fn default_remove() -> bool {
-    false
+    #[serde(flatten)]
+    pub strategy: Strategy,
 }
 
 /// default value for the context key in the Config
@@ -72,9 +42,73 @@ fn default_metadata_key() -> String {
     CAPTURED_BYTES.into()
 }
 
+/// default value for [`Config::strategy::remove`].
+fn default_remove() -> bool {
+    false
+}
+
+/// default value for [`Config::strategy::expression`].
+fn default_expression() -> String {
+    ".*".to_string()
+}
+
+/// default value for [`Config::strategy::passthrough`].
+fn default_passthrough() -> bool {
+    true
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub enum Strategy {
+    #[serde(rename = "prefix")]
+    Prefix {
+        /// the number of bytes to capture
+        #[serde(rename = "size")]
+        size: usize,
+        /// whether or not to remove the set of the bytes from the packet once captured
+        #[serde(default = "default_remove")]
+        remove: bool,
+    },
+    #[serde(rename = "suffix")]
+    Suffix {
+        // /// the number of bytes to capture
+        #[serde(rename = "size")]
+        size: usize,
+        /// whether or not to remove the set of the bytes from the packet once captured
+        #[serde(default = "default_remove")]
+        remove: bool,
+    },
+    #[serde(rename = "regex")]
+    Regex {
+        #[serde(default = "default_expression")]
+        expression: String,
+        /// whether or not to remove the set of the bytes from the packet once captured
+        #[serde(default = "default_remove")]
+        remove: bool,
+        #[serde(default = "default_passthrough")]
+        passthrough: bool,
+    },
+}
+
+impl Strategy {
+    pub(crate) fn as_capture(&self) -> Box<dyn Capture + Send + Sync> {
+        match self {
+            Self::Prefix { size, remove } => Box::new(Prefix {}),
+            Self::Suffix { size, remove } => Box::new(Suffix {}),
+            Self::Regex {
+                expression,
+                remove,
+                passthrough,
+            } => Box::new(Regex {}),
+        }
+    }
+}
+
 impl Default for Strategy {
     fn default() -> Self {
-        Strategy::Suffix
+        Strategy::Suffix {
+            size: 0,
+            remove: false,
+        }
     }
 }
 
@@ -90,7 +124,7 @@ impl TryFrom<ProtoConfig> for Config {
                     field = "strategy",
                     proto_enum_type = ProtoStrategy,
                     target_enum_type = Strategy,
-                    variants = [Suffix, Prefix]
+                    variants = [Suffix, Prefix, Regex]
                 )
             })
             .transpose()?
@@ -98,9 +132,9 @@ impl TryFrom<ProtoConfig> for Config {
 
         Ok(Self {
             strategy,
-            size: p.size as usize,
             metadata_key: p.metadata_key.unwrap_or_else(default_metadata_key),
-            remove: p.remove.unwrap_or_else(default_remove),
+            //size: p.size as usize,
+            //remove: p.remove.unwrap_or_else(default_remove),
         })
     }
 }
