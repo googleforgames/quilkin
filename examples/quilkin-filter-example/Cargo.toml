@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+[workspace]
+
 [package]
 name = "quilkin-filter-example"
 version = "0.1.0"
@@ -22,13 +24,15 @@ repository = "https://github.com/googleforgames/quilkin"
 edition = "2018"
 
 [dependencies]
-quilkin = "0.1.0"
-tokio = { version = "1", features = ["full"]}
-prost = "0.7"
-prost-types = "0.7"
+# If lifting this example, you will want to be explicit about the Quilkin version, e.g.
+# quilkin = "0.2.0"
+quilkin = { path = "../../" }
+tokio = { version = "1", features = ["full"] }
+prost = "0.8"
+prost-types = "0.8"
 serde = "1.0"
 serde_yaml = "0.8"
 bytes = "1.0"
 
 [build-dependencies]
-prost-build = "0.7"
+prost-build = "0.8"

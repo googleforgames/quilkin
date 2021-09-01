@@ -14,14 +14,25 @@
  * limitations under the License.
  */
 
+use greet::Greet as ProtoGreet;
 use quilkin::filters::prelude::*;
 
-use bytes::Bytes;
 use serde::{Deserialize, Serialize};
+use std::convert::TryFrom;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Config {
     greeting: String,
+}
+
+impl TryFrom<ProtoGreet> for Config {
+    type Error = ConvertProtoConfigError;
+
+    fn try_from(p: ProtoGreet) -> Result<Self, Self::Error> {
+        Ok(Config {
+            greeting: p.greeting,
+        })
+    }
 }
 
 mod greet {
@@ -55,22 +66,16 @@ impl FilterFactory for GreetFilterFactory {
         NAME
     }
     fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
-        let greeting = match args.config.unwrap() {
-            ConfigType::Static(config) => {
-                serde_yaml::from_str::<Config>(serde_yaml::to_string(config).unwrap().as_str())
-                    .unwrap()
-                    .greeting
-            }
-            ConfigType::Dynamic(config) => {
-                let config: greet::Greet = prost::Message::decode(Bytes::from(config.value)).unwrap();
-                config.greeting
-            }
-        };
-        Ok(Box::new(Greet(greeting)))
+        let greeting = self
+            .require_config(args.config)?
+            .deserialize::<Config, ProtoGreet>(self.name())?;
+        Ok(Box::new(Greet(greeting.greeting)))
     }
 }
 
 #[tokio::main]
 async fn main() {
-    quilkin::runner::run(vec![self::factory()].into_iter()).await.unwrap();
+    quilkin::run(vec![self::factory()].into_iter())
+        .await
+        .unwrap();
 }
