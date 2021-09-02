@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+quilkin::include_proto!("greet");
 use greet::Greet as ProtoGreet;
 use quilkin::filters::prelude::*;
 
@@ -33,10 +34,6 @@ impl TryFrom<ProtoGreet> for Config {
             greeting: p.greeting,
         })
     }
-}
-
-mod greet {
-    include!(concat!(env!("OUT_DIR"), "/greet.rs"));
 }
 
 pub const NAME: &str = "greet.v1";

@@ -28,6 +28,7 @@ edition = "2018"
 # quilkin = "0.2.0"
 quilkin = { path = "../../" }
 tokio = { version = "1", features = ["full"] }
+tonic = "0.5.0"
 prost = "0.8"
 prost-types = "0.8"
 serde = "1.0"
