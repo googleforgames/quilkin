@@ -46,11 +46,6 @@ async fn main() -> quilkin::Result<()> {
                 .about("Start Quilkin process.")
                 .arg(config_arg.clone()),
         )
-        .subcommand(
-            SubCommand::with_name("test")
-                .about("Execute one or more sets of tests.")
-                .arg(config_arg),
-        )
         .get_matches();
 
     slog::info!(log, "Starting Quilkin"; "version" => &*version);
@@ -62,8 +57,6 @@ async fn main() -> quilkin::Result<()> {
 
             quilkin::run_with_config(log, config, vec![]).await
         }
-
-        ("test", Some(_matches)) => todo!(),
 
         (_, _) => unreachable!(),
     }
