@@ -34,6 +34,7 @@ const (
 	tokenSecretName = "gh-token"
 	owner           = "googleforgames"
 	repo            = "quilkin"
+	quilkinBotId    = 84364394
 )
 
 func main() {
@@ -118,12 +119,30 @@ func (g *githubNotifier) SendNotification(ctx context.Context, build *cloudbuild
 		}
 	}
 
+	g.clearBotComments(ctx, pr)
+
 	commentBody := body.String()
 	comment := &github.IssueComment{
 		Body: &commentBody,
 	}
 	if _, _, err := g.client.Issues.CreateComment(ctx, owner, repo, pr, comment); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (g *githubNotifier) clearBotComments(ctx context.Context, pr int) error {
+	comments, _, err := g.client.Issues.ListComments(ctx, owner, repo, pr, &github.IssueListCommentsOptions{})
+	if err != nil {
+		log.Errorf("Error retriving comment history: %v on PR with id: %s", err, pr)
+		return nil
+	}
+
+	for _, comment := range comments {
+		if *comment.User.ID == quilkinBotId {
+			g.client.Issues.DeleteComment(ctx, owner, repo, *comment.ID)
+		}
 	}
 
 	return nil
