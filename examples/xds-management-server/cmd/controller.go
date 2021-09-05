@@ -6,6 +6,8 @@ import (
 	"os/signal"
 	"time"
 
+	"k8s.io/apimachinery/pkg/util/clock"
+
 	agonescluster "quilkin.dev/xds-management-server/pkg/cluster/agones"
 	k8sfilterchain "quilkin.dev/xds-management-server/pkg/filterchain/k8s"
 	"quilkin.dev/xds-management-server/pkg/k8s"
@@ -18,8 +20,6 @@ import (
 )
 
 type flags struct {
-	KubeHost                string        `name:"kube-host" env:"KUBE_HOST" help:"The host the kubernetes API server runs on or 'cluster' if running in cluster" default:"cluster"`
-	KubeConfigPath          string        `name:"kube-config-path" env:"KUBE_CONFIG_PATH" help:"Path to local kube config"`
 	Port                    int16         `name:"int16" help:"Server listening port." default:"18000"`
 	ProxyNamespace          string        `name:"proxy-namespace" help:"Namespace under which the proxies run." default:"quilkin"`
 	GameServersNamespace    string        `name:"game-server-namespace" help:"Namespace under which the game-servers run." default:"gameservers"`
@@ -39,7 +39,7 @@ func main() {
 	ctx, shutdown := context.WithCancel(context.Background())
 	defer shutdown()
 
-	k8sConfig, err := k8s.GetK8sConfig(logger, flags.KubeHost, flags.KubeConfigPath)
+	k8sConfig, err := k8s.GetK8sConfig()
 	if err != nil {
 		log.WithError(err).Fatal("failed to get kube config")
 	}
@@ -58,7 +58,13 @@ func main() {
 		log.WithError(err).Fatal("failed to create Agones cluster provider")
 	}
 
-	filterChainProvider, err := k8sfilterchain.NewProvider(ctx, logger, k8sClient, flags.ProxyNamespace)
+	filterChainProvider, err := k8sfilterchain.NewProvider(
+		ctx,
+		logger,
+		clock.RealClock{},
+		k8sClient,
+		flags.ProxyNamespace,
+		flags.ProxyPollInterval)
 	if err != nil {
 		log.WithError(err).Fatal("failed to create k8s filter-chain provider")
 	}
@@ -68,16 +74,19 @@ func main() {
 		log.WithError(err).Fatal("failed to create start cluster provider")
 	}
 
-	filterChainCh := filterChainProvider.Run(ctx, flags.ProxyPollInterval)
+	filterChainCh := filterChainProvider.Run(ctx)
 
-	snapshotCache := snapshot.RunSnapshotUpdater(
-		ctx,
+	snapshotUpdater := snapshot.NewUpdater(
 		logger,
 		clusterCh,
 		filterChainCh,
-		100*time.Millisecond)
+		100*time.Millisecond,
+		clock.RealClock{})
+	snapshotCache := snapshotUpdater.GetSnapshotCache()
+	go snapshotUpdater.Run(ctx)
 
-	if err := server.Run(ctx, logger, flags.Port, snapshotCache, nil); err != nil {
+	srv := server.New(logger, flags.Port, snapshotCache, nil)
+	if err := srv.Run(ctx); err != nil {
 		logger.WithError(err).Fatal("failed to start server")
 	}
 

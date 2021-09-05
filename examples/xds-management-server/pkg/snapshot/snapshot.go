@@ -9,48 +9,58 @@ import (
 
 	"github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	log "github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/util/clock"
 
 	"quilkin.dev/xds-management-server/pkg/resources"
 )
 
-// RunSnapshotUpdater starts a goroutine that listens for resource updates,
-// uses the updates to generate an xds config snapshot and updates the snapshot from the provided channel and generates xds config snapshots.
-// cache with the latest snapshot for each connected node.
-// It returns the snapshot cache which can be passed on to the xds server impl.
-func RunSnapshotUpdater(
-	ctx context.Context,
-	logger *log.Logger,
-	clusterCh <-chan []cluster.Cluster,
-	filterChainCh <-chan filterchain.ProxyFilterChain,
-	updateInterval time.Duration,
-) cache.SnapshotCache {
-	snapshotCache := cache.NewSnapshotCache(false, cache.IDHash{}, logger)
-	go runSnapshotUpdater(
-		ctx,
-		logger,
-		clusterCh,
-		filterChainCh,
-		snapshotCache,
-		updateInterval)
-	return snapshotCache
+// Updater periodically generates xds config snapshots from resources
+// and updates a snapshot cache with the latest snapshot for each connected
+// node.
+type Updater struct {
+	logger         *log.Logger
+	clusterCh      <-chan []cluster.Cluster
+	filterChainCh  <-chan filterchain.ProxyFilterChain
+	updateInterval time.Duration
+	clock          clock.Clock
+	snapshotCache  cache.SnapshotCache
 }
 
-// runSnapshotUpdater runs a loop that periodically checks if there are any
-// cluster/filter-chain updates and if so creates a snapshot for affected proxies
-// in the snapshot cache.
-func runSnapshotUpdater(
-	ctx context.Context,
+// NewUpdater returns a new Updater.
+func NewUpdater(
 	logger *log.Logger,
 	clusterCh <-chan []cluster.Cluster,
 	filterChainCh <-chan filterchain.ProxyFilterChain,
-	snapshotCache cache.SnapshotCache,
 	updateInterval time.Duration,
-) {
+	clock clock.Clock,
+) *Updater {
 	logger = logger.WithFields(log.Fields{
 		"component": "SnapshotUpdater",
 	}).Logger
+	return &Updater{
+		logger:         logger,
+		clusterCh:      clusterCh,
+		filterChainCh:  filterChainCh,
+		snapshotCache:  cache.NewSnapshotCache(false, cache.IDHash{}, logger),
+		updateInterval: updateInterval,
+		clock:          clock,
+	}
+}
 
-	updateTicker := time.NewTicker(updateInterval)
+// GetSnapshotCache returns the backing snapshot cache.
+func (u *Updater) GetSnapshotCache() cache.SnapshotCache {
+	return u.snapshotCache
+}
+
+// Run starts a goroutine that listens for resource updates,
+// uses the updates to generate an xds config snapshot and updates the snapshot from the provided channel and generates xds config snapshots.
+// cache with the latest snapshot for each connected node.
+
+// Run runs a loop that periodically checks if there are any
+// cluster/filter-chain updates and if so creates a snapshot for
+// affected proxies in the snapshot cache.
+func (u *Updater) Run(ctx context.Context) {
+	updateTicker := u.clock.NewTicker(u.updateInterval)
 	defer updateTicker.Stop()
 
 	currentSnapshotVersion := int64(0)
@@ -69,18 +79,18 @@ func runSnapshotUpdater(
 	for {
 		select {
 		case <-ctx.Done():
-			logger.Infof("Exiting snapshot updater loop: Context cancelled")
+			u.logger.Infof("Exiting snapshot updater loop: Context cancelled")
 			return
-		case filterChain := <-filterChainCh:
+		case filterChain := <-u.filterChainCh:
 			proxyID := filterChain.ProxyID
 			proxyStatuses[proxyID] = proxyStatus{
 				hasPendingFilterChainUpdate: true,
 				filterChain:                 filterChain,
 			}
-		case clusterUpdate = <-clusterCh:
+		case clusterUpdate = <-u.clusterCh:
 			pendingClusterUpdate = true
-		case <-updateTicker.C:
-			logger.Tracef("Checking for update")
+		case <-updateTicker.C():
+			u.logger.Tracef("Checking for update")
 
 			version := currentSnapshotVersion + 1
 			numUpdates := 0
@@ -95,7 +105,7 @@ func runSnapshotUpdater(
 
 				numUpdates++
 
-				proxyLog := logger.WithFields(log.Fields{
+				proxyLog := u.logger.WithFields(log.Fields{
 					"proxy_id": proxyID,
 				})
 
@@ -105,7 +115,7 @@ func runSnapshotUpdater(
 					continue
 				}
 
-				if err := snapshotCache.SetSnapshot(proxyID, snapshot); err != nil {
+				if err := u.snapshotCache.SetSnapshot(proxyID, snapshot); err != nil {
 					proxyLog.WithError(err).Warnf("Failed to set snapshot")
 				}
 			}

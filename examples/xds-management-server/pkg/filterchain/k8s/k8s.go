@@ -10,6 +10,7 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	k8scorev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/clock"
 	informersv1 "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
@@ -26,6 +27,8 @@ const (
 	defaultProxyNamespace  = "quilkin"
 )
 
+var _ filterchain.Provider = &Provider{}
+
 // relevantAnnotations lists the pod annotations that we care about.
 var relevantAnnotations = []string{
 	annotationKeyDebug,
@@ -41,56 +44,59 @@ type proxyPod struct {
 	latestPodAnnotations map[string]string
 }
 
-// Provider is a kubernetes implementation of how to configure filter chains.
-// It checks pods labels/annotations to figure out what the filter chain for
-// each proxy should be.
+// Provider is a filter chain provider implementation for kubernetes that
+// generates filter chain per proxy based on each proxy's pod annotations.
 type Provider struct {
-	logger   *log.Logger
+	logger *log.Logger
+	// podStore contains the current list of all pods.
 	podStore cache.Store
+	// proxyRefreshInterval is how often to check pods for updates.
+	proxyRefreshInterval time.Duration
+	// proxyFilterChainCh is the channel on which proxies filter chains are made available.
+	proxyFilterChainCh chan filterchain.ProxyFilterChain
+	// clock is used for time and timers.
+	clock clock.Clock
 }
 
-// NewProvider returns a new Provider.
+// NewProvider returns a new provider.
 func NewProvider(
 	ctx context.Context,
 	logger *log.Logger,
+	clock clock.Clock,
 	k8sClient kubernetes.Interface,
-	podNamespace string) (*Provider, error) {
+	podNamespace string,
+	proxyRefreshInterval time.Duration) (*Provider, error) {
 	podInformer := informersv1.NewFilteredPodInformer(k8sClient, podNamespace, 0, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, func(options *metav1.ListOptions) {
 		options.LabelSelector = labelSelectorProxyRole
 	})
 	go podInformer.Run(ctx.Done())
 
 	return &Provider{
-		logger:   logger,
-		podStore: podInformer.GetStore(),
+		logger:               logger,
+		clock:                clock,
+		podStore:             podInformer.GetStore(),
+		proxyRefreshInterval: proxyRefreshInterval,
+		proxyFilterChainCh:   make(chan filterchain.ProxyFilterChain, 1000),
 	}, nil
 }
 
-// Run starts a goroutine that watches proxy pods and sends filter chain
-// updates whenever any related pod configuration changes.
-func (p *Provider) Run(
-	ctx context.Context,
-	proxyRefreshInterval time.Duration,
-) <-chan filterchain.ProxyFilterChain {
-	proxyFilterChainCh := make(chan filterchain.ProxyFilterChain, 1000)
-	go p.run(ctx, p.logger, proxyRefreshInterval, proxyFilterChainCh)
-	return proxyFilterChainCh
+// Run is a blocking function that periodically checks proxy pod annotations on
+// and generates new filter chain for them as needed.
+func (p *Provider) Run(ctx context.Context) <-chan filterchain.ProxyFilterChain {
+	go p.run(ctx)
+	return p.proxyFilterChainCh
 }
-func (p *Provider) run(
-	ctx context.Context,
-	logger *log.Logger,
-	proxyRefreshInterval time.Duration,
-	proxyFilterChainCh chan<- filterchain.ProxyFilterChain,
-) {
-	defer close(proxyFilterChainCh)
 
-	ticker := time.NewTicker(proxyRefreshInterval)
+func (p *Provider) run(ctx context.Context) {
+	defer close(p.proxyFilterChainCh)
+
+	ticker := p.clock.NewTicker(p.proxyRefreshInterval)
 	defer ticker.Stop()
 
 	proxies := make(map[string]*proxyPod)
 	for {
 		select {
-		case <-ticker.C:
+		case <-ticker.C():
 			pods := p.podStore.List()
 			for i := range pods {
 				pod := pods[i].(*k8scorev1.Pod)
@@ -120,19 +126,19 @@ func (p *Provider) run(
 
 				proxyFilterChain, err := createFilterChainForProxy(currAnnotations)
 				if err != nil {
-					logger.WithError(err).WithFields(log.Fields{
+					p.logger.WithError(err).WithFields(log.Fields{
 						"proxy_id": proxy.podID,
 					}).Warn("Failed to create filter chain. Skipping update.")
 					continue
 				}
 
-				proxyFilterChainCh <- filterchain.ProxyFilterChain{
+				p.proxyFilterChainCh <- filterchain.ProxyFilterChain{
 					ProxyID:     proxy.podID,
 					FilterChain: proxyFilterChain,
 				}
 			}
 		case <-ctx.Done():
-			logger.Debug("Exiting run loop due to context cancelled")
+			p.logger.Debug("Exiting run loop due to context cancelled")
 			return
 		}
 	}

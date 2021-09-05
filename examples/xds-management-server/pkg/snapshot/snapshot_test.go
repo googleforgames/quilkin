@@ -13,11 +13,15 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/wrapperspb"
+	"k8s.io/apimachinery/pkg/util/clock"
 	"quilkin.dev/xds-management-server/pkg/cluster"
 	"quilkin.dev/xds-management-server/pkg/filterchain"
 	"quilkin.dev/xds-management-server/pkg/filters"
 	debugfilterv1alpha "quilkin.dev/xds-management-server/pkg/filters/debug/v1alpha1"
 )
+
+// defaultUpdateInterval is how often to check for updates in tests.
+const defaultUpdateInterval = 1 * time.Millisecond
 
 func getDefaultFilterChain(t *testing.T, snapshot cache.Snapshot) types.Resource {
 	listeners := snapshot.GetResources(resource.ListenerType)
@@ -50,12 +54,13 @@ func waitForSnapshotUpdate(t *testing.T, snapshotCache cache.SnapshotCache, prox
 	}, 1*time.Second, 1*time.Millisecond)
 }
 
-func runTestSnapshotUpdater(
+func makeTestUpdater(
 	ctx context.Context,
 ) (
-	cache.SnapshotCache,
+	*Updater,
 	chan<- []cluster.Cluster,
 	chan<- filterchain.ProxyFilterChain,
+	*clock.FakeClock,
 ) {
 	logger := &log.Logger{}
 	logger.SetOutput(os.Stdout)
@@ -64,12 +69,17 @@ func runTestSnapshotUpdater(
 	clusterCh := make(chan []cluster.Cluster)
 	filterChainCh := make(chan filterchain.ProxyFilterChain)
 
-	return RunSnapshotUpdater(
-		ctx,
+	fakeClock := clock.NewFakeClock(time.Now())
+	u := NewUpdater(
 		logger,
 		clusterCh,
 		filterChainCh,
-		1*time.Millisecond), clusterCh, filterChainCh
+		defaultUpdateInterval,
+		fakeClock)
+
+	go u.Run(ctx)
+
+	return u, clusterCh, filterChainCh, fakeClock
 }
 
 func TestSnapshotUpdaterClusterUpdate(t *testing.T) {
@@ -77,7 +87,7 @@ func TestSnapshotUpdaterClusterUpdate(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	snapshotCache, clusterCh, filterChainCh := runTestSnapshotUpdater(ctx)
+	u, clusterCh, filterChainCh, fakeClock := makeTestUpdater(ctx)
 
 	proxyIDs := []string{"proxy-1", "proxy-2", "proxy-3"}
 	for _, proxyID := range proxyIDs {
@@ -88,7 +98,8 @@ func TestSnapshotUpdaterClusterUpdate(t *testing.T) {
 	}
 
 	// Wait for the first round of updates.
-	waitForSnapshotUpdate(t, snapshotCache, proxyIDs, "1")
+	fakeClock.Step(defaultUpdateInterval)
+	waitForSnapshotUpdate(t, u.snapshotCache, proxyIDs, "1")
 
 	// Send cluster update.
 	clusterCh <- []cluster.Cluster{{
@@ -98,10 +109,11 @@ func TestSnapshotUpdaterClusterUpdate(t *testing.T) {
 		}}}}
 
 	// Wait for a v2 snapshot.
-	waitForSnapshotUpdate(t, snapshotCache, proxyIDs, "2")
+	fakeClock.Step(defaultUpdateInterval)
+	waitForSnapshotUpdate(t, u.snapshotCache, proxyIDs, "2")
 
 	for _, proxyID := range proxyIDs {
-		proxySnapshot, err := snapshotCache.GetSnapshot(proxyID)
+		proxySnapshot, err := u.snapshotCache.GetSnapshot(proxyID)
 		require.NoError(t, err)
 		require.NoError(t, proxySnapshot.Consistent())
 
@@ -117,11 +129,11 @@ func TestSnapshotUpdaterProxyFilterChainUpdates(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	snapshotCache, _, filterChainCh := runTestSnapshotUpdater(ctx)
+	u, _, filterChainCh, fakeClock := makeTestUpdater(ctx)
 
 	proxyIDs := []string{"proxy-1", "proxy-2", "proxy-3"}
 	for _, proxyID := range proxyIDs {
-		_, err := snapshotCache.GetSnapshot(proxyID)
+		_, err := u.snapshotCache.GetSnapshot(proxyID)
 		require.Error(t, err, "found unexpected snapshot for proxy")
 	}
 
@@ -132,10 +144,11 @@ func TestSnapshotUpdaterProxyFilterChainUpdates(t *testing.T) {
 		}
 	}
 
-	waitForSnapshotUpdate(t, snapshotCache, proxyIDs, "1")
+	fakeClock.Step(defaultUpdateInterval)
+	waitForSnapshotUpdate(t, u.snapshotCache, proxyIDs, "1")
 
 	for _, proxyID := range proxyIDs {
-		proxySnapshot, err := snapshotCache.GetSnapshot(proxyID)
+		proxySnapshot, err := u.snapshotCache.GetSnapshot(proxyID)
 		require.NoError(t, err)
 		require.NoError(t, proxySnapshot.Consistent())
 
@@ -155,7 +168,7 @@ func TestSnapshotUpdaterContinuousProxyFilterChainUpdates(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	snapshotCache, _, filterChainCh := runTestSnapshotUpdater(ctx)
+	u, _, filterChainCh, fakeClock := makeTestUpdater(ctx)
 
 	proxyIDs := []string{"proxy-1", "proxy-2"}
 
@@ -167,7 +180,8 @@ func TestSnapshotUpdaterContinuousProxyFilterChainUpdates(t *testing.T) {
 		}
 	}
 
-	waitForSnapshotUpdate(t, snapshotCache, proxyIDs, "1")
+	fakeClock.Step(defaultUpdateInterval)
+	waitForSnapshotUpdate(t, u.snapshotCache, proxyIDs, "1")
 
 	// Send an updated filter chain to proxy-2
 	debugFilter, err := filterchain.CreateXdsFilter(filters.DebugFilterName,
@@ -182,12 +196,13 @@ func TestSnapshotUpdaterContinuousProxyFilterChainUpdates(t *testing.T) {
 			Filters: []*envoylistener.Filter{debugFilter},
 		},
 	}
-	waitForSnapshotUpdate(t, snapshotCache, []string{"proxy-2"}, "2")
+	fakeClock.Step(defaultUpdateInterval)
+	waitForSnapshotUpdate(t, u.snapshotCache, []string{"proxy-2"}, "2")
 
 	// Check that proxy-1 is on v1 while proxy-2 is on v2
-	proxy1Snapshot := getProxySnapshot(t, snapshotCache, "proxy-1", "1")
+	proxy1Snapshot := getProxySnapshot(t, u.snapshotCache, "proxy-1", "1")
 	require.EqualValues(t, "filter_chains:{}", getDefaultFilterChain(t, proxy1Snapshot).String())
 
-	proxy2Snapshot := getProxySnapshot(t, snapshotCache, "proxy-2", "2")
+	proxy2Snapshot := getProxySnapshot(t, u.snapshotCache, "proxy-2", "2")
 	require.Contains(t, getDefaultFilterChain(t, proxy2Snapshot).String(), "hello")
 }

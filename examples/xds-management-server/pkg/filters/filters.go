@@ -13,6 +13,8 @@ import (
 )
 
 const (
+	// These following filters are referenced directly throughout the repository.
+	//
 	// DebugFilterName is the name of the Debug filter
 	DebugFilterName = "quilkin.extensions.filters.debug.v1alpha1.Debug"
 	// RateLimitFilterName is the name of the RateLimit filter

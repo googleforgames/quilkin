@@ -17,22 +17,43 @@ const (
 	grpcMaxConcurrentStreams = 1000000
 )
 
-// Run starts a go-control-plane, xds grpc server in a background goroutine.
-// The server is bounded by the provided context.
-func Run(
-	ctx context.Context,
+// Server is a wrapper around go-control-plane's xds server.
+type Server struct {
+	logger *log.Logger
+	// port is the port the server runs on.
+	port int16
+	// snapshotCache is passed updated by us and read by go-control-plane
+	// to provided proxies with config from.
+	snapshotCache cache.SnapshotCache
+	// nodeIDCh is nilable. It is used as a callback mechanism from go-control-plane's server to
+	// let us know when a new proxy has connected. The proxy's ID is passed on the channel.
+	nodeIDCh chan<- string
+}
+
+// NewServer returns a new Server
+func New(
 	logger *log.Logger,
 	port int16,
 	snapshotCache cache.SnapshotCache,
 	nodeIDCh chan<- string,
-) error {
-	logger = logger.WithFields(log.Fields{
-		"component": "server",
-	}).Logger
+) *Server {
+	return &Server{
+		logger: logger.WithFields(log.Fields{
+			"component": "server",
+		}).Logger,
+		port:          port,
+		snapshotCache: snapshotCache,
+		nodeIDCh:      nodeIDCh,
+	}
+}
 
-	cbs := &callbacks{log: logger, nodeIDCh: nodeIDCh}
+// Run starts a go-control-plane, xds server in a background goroutine.
+// The server is bounded by the provided context.
+func (s *Server) Run(ctx context.Context) error {
 
-	srv := server.NewServer(ctx, snapshotCache, cbs)
+	cbs := &callbacks{log: s.logger, nodeIDCh: s.nodeIDCh}
+
+	srv := server.NewServer(ctx, s.snapshotCache, cbs)
 
 	var grpcOptions []grpc.ServerOption
 	grpcOptions = append(grpcOptions, grpc.MaxConcurrentStreams(grpcMaxConcurrentStreams))
@@ -44,14 +65,14 @@ func Run(
 	go func() {
 		<-ctx.Done()
 		grpcServer.Stop()
-		close(nodeIDCh)
+		close(s.nodeIDCh)
 	}()
 
-	listen, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	listen, err := net.Listen("tcp", fmt.Sprintf(":%d", s.port))
 	if err != nil {
 		return fmt.Errorf("failed to start server: %w", err)
 	}
-	log.Infof("management server listening on %d\n", port)
+	log.Infof("management server listening on %d\n", s.port)
 
 	go func() {
 		if err = grpcServer.Serve(listen); err != nil {

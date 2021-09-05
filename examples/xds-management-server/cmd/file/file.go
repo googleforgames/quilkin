@@ -6,6 +6,8 @@ import (
 	"os/signal"
 	"time"
 
+	"k8s.io/apimachinery/pkg/util/clock"
+
 	"quilkin.dev/xds-management-server/pkg/providers"
 
 	"github.com/alecthomas/kong"
@@ -37,14 +39,17 @@ func main() {
 	provider := providers.NewFileProvider(flags.Config, proxyIDCh)
 	clusterCh, filterChainCh, providerErrorCh := provider.Run(ctx, logger)
 
-	snapshotCache := snapshot.RunSnapshotUpdater(
-		ctx,
+	snapshotUpdater := snapshot.NewUpdater(
 		logger,
 		clusterCh,
 		filterChainCh,
-		100*time.Millisecond)
+		100*time.Millisecond,
+		clock.RealClock{})
+	snapshotCache := snapshotUpdater.GetSnapshotCache()
+	go snapshotUpdater.Run(ctx)
 
-	if err := server.Run(ctx, logger, flags.Port, snapshotCache, proxyIDCh); err != nil {
+	srv := server.New(logger, flags.Port, snapshotCache, proxyIDCh)
+	if err := srv.Run(ctx); err != nil {
 		logger.WithError(err).Fatal("failed to start server")
 	}
 
