@@ -470,7 +470,7 @@ impl Server {
 
     /// log_config outputs a log of what is configured
     fn log_config(&self) {
-        info!(self.log, "Starting"; "port" => self.config.proxy.port);
+        info!(self.log, "Starting"; "port" => self.config.proxy.port, "proxy_id" => &self.config.proxy.id);
     }
 
     /// bind binds the local configured port
