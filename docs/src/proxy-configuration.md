@@ -25,7 +25,7 @@ properties:
         type: string
         description: |
           An identifier for the proxy instance.
-        default: the machine hostname is used a default. Otherwise it falls back to generating a UUID for the proxy.
+        default: On linux, the machine hostname is used as default. On all other platforms a UUID is generated for the proxy.
       port:
         type: integer
         description: |

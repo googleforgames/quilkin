@@ -111,6 +111,12 @@ pub struct Proxy {
     pub port: u16,
 }
 
+#[cfg(not(target_os = "linux"))]
+fn default_proxy_id() -> String {
+    Uuid::new_v4().to_hyphenated().to_string()
+}
+
+#[cfg(target_os = "linux")]
 fn default_proxy_id() -> String {
     sys_info::hostname().unwrap_or_else(|_| Uuid::new_v4().to_hyphenated().to_string())
 }
