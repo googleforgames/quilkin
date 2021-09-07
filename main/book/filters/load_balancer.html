@@ -167,7 +167,7 @@ static:
 </span><span class="boring">}
 </span></code></pre></pre>
 <p>The load balancing policy (the strategy to use to select what endpoint to send traffic to) is configurable.
-In the example above, packets will be distributed by selecting endpoints in turn, in round robin fashion</p>
+In the example above, packets will be distributed by selecting endpoints in turn, in round robin fashion.</p>
 <h3 id="configuration-options"><a class="header" href="#configuration-options">Configuration Options</a></h3>
 <pre><code class="language-yaml">properties:
   policy:
@@ -177,6 +177,7 @@ In the example above, packets will be distributed by selecting endpoints in turn
     enum:
       - ROUND_ROBIN # Send packets by selecting endpoints in turn.
       - RANDOM      # Send packets by randomly selecting endpoints.
+      - HASH        # Send packets by hashing the source IP and port.
     default: ROUND_ROBIN
 </code></pre>
 <h3 id="metrics"><a class="header" href="#metrics">Metrics</a></h3>
