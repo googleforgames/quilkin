@@ -1286,7 +1286,7 @@
 
     <span class="doccomment">/// log_config outputs a log of what is configured</span>
     <span class="kw">fn</span> <span class="ident">log_config</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) {
-        <span class="macro">info!</span>(<span class="self">self</span>.<span class="ident">log</span>, <span class="string">&quot;Starting&quot;</span>; <span class="string">&quot;port&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">proxy</span>.<span class="ident">port</span>);
+        <span class="macro">info!</span>(<span class="self">self</span>.<span class="ident">log</span>, <span class="string">&quot;Starting&quot;</span>; <span class="string">&quot;port&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">proxy</span>.<span class="ident">port</span>, <span class="string">&quot;proxy_id&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">config</span>.<span class="ident">proxy</span>.<span class="ident">id</span>);
     }
 
     <span class="doccomment">/// bind binds the local configured port</span>
