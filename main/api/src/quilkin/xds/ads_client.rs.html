@@ -581,6 +581,12 @@
 <span id="579">579</span>
 <span id="580">580</span>
 <span id="581">581</span>
+<span id="582">582</span>
+<span id="583">583</span>
+<span id="584">584</span>
+<span id="585">585</span>
+<span id="586">586</span>
+<span id="587">587</span>
 </pre><pre class="rust">
 <span class="comment">/*
  * Copyright 2020 Google LLC
@@ -716,7 +722,12 @@
         <span class="ident">listener_manager_args</span>: <span class="ident">ListenerManagerArgs</span>,
         <span class="kw-2">mut</span> <span class="ident">shutdown_rx</span>: <span class="ident">watch::Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">ExecutionResult</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">backoff</span> <span class="op">=</span> <span class="ident">ExponentialBackoff</span>::<span class="op">&lt;</span><span class="ident">SystemClock</span><span class="op">&gt;</span><span class="ident">::default</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">backoff</span> <span class="op">=</span> <span class="ident">ExponentialBackoff</span>::<span class="op">&lt;</span><span class="ident">SystemClock</span><span class="op">&gt;</span> {
+            <span class="comment">// If we hit connectivity issues, always backoff and retry.</span>
+            <span class="ident">max_elapsed_time</span>: <span class="prelude-val">None</span>,
+            ..<span class="ident">Default::default</span>()
+        };
+
         <span class="kw">let</span> <span class="ident">log</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">log</span>;
         <span class="kw">let</span> <span class="ident">metrics</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">metrics</span>;
 
@@ -789,7 +800,7 @@
                         <span class="prelude-val">Err</span>(<span class="ident">RpcSessionError::Receive</span>(<span class="ident">handlers</span>, <span class="ident">bk_off</span>, <span class="ident">status</span>)) <span class="op">=</span><span class="op">&gt;</span> {
                             <span class="ident">resource_handlers</span> <span class="op">=</span> <span class="ident">handlers</span>;
                             <span class="ident">backoff</span> <span class="op">=</span> <span class="ident">bk_off</span>;
-                            <span class="macro">error!</span>(<span class="ident">log</span>, <span class="string">&quot;Failed to receive from XDS server&quot;</span>; <span class="string">&quot;address&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">server_addr</span>, <span class="string">&quot;status&quot;</span> <span class="op">=</span><span class="op">&gt;</span> #<span class="question-mark">?</span><span class="ident">status</span>);
+                            <span class="macro">error!</span>(<span class="ident">log</span>, <span class="string">&quot;Failed to receive response from XDS server&quot;</span>; <span class="string">&quot;address&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">server_addr</span>, <span class="string">&quot;status&quot;</span> <span class="op">=</span><span class="op">&gt;</span> #<span class="question-mark">?</span><span class="ident">status</span>);
                             <span class="self">Self</span><span class="ident">::backoff</span>(
                                 <span class="kw-2">&amp;</span><span class="ident">log</span>,
                                 <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">backoff</span>
@@ -1034,9 +1045,10 @@
         <span class="ident">log</span>: <span class="kw-2">&amp;</span><span class="ident">Logger</span>,
         <span class="ident">backoff</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">ExponentialBackoff</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">ExecutionError</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">delay</span> <span class="op">=</span> <span class="ident">backoff</span>
-            .<span class="ident">next_backoff</span>()
-            .<span class="ident">ok_or</span>(<span class="ident">ExecutionError::BackoffLimitExceeded</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">delay</span> <span class="op">=</span> <span class="ident">backoff</span>.<span class="ident">next_backoff</span>().<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
+            <span class="macro">warn!</span>(<span class="ident">log</span>, <span class="string">&quot;Backoff limit exceeded&quot;</span>);
+            <span class="ident">ExecutionError::BackoffLimitExceeded</span>
+        })<span class="question-mark">?</span>;
         <span class="macro">info!</span>(<span class="ident">log</span>, <span class="string">&quot;Retrying&quot;</span>; <span class="string">&quot;delay&quot;</span> <span class="op">=</span><span class="op">&gt;</span> #<span class="question-mark">?</span><span class="ident">delay</span>);
         <span class="ident">tokio::time::sleep</span>(<span class="ident">delay</span>).<span class="kw">await</span>;
         <span class="prelude-val">Ok</span>(())
