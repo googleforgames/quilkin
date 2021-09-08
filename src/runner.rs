@@ -16,7 +16,7 @@
 
 use std::sync::Arc;
 
-use slog::{info, o};
+use slog::{debug, info, o};
 use tokio::{signal, sync::watch};
 
 use crate::{
@@ -63,22 +63,25 @@ pub async fn run_with_config(
 
     #[cfg(target_os = "linux")]
     let mut sig_term_fut = signal::unix::signal(signal::unix::SignalKind::terminate())?;
-    #[cfg(not(target_os = "linux"))]
-    let sig_term = std::future::pending();
 
     let (shutdown_tx, shutdown_rx) = watch::channel::<()>(());
     let signal_log = log.clone();
     tokio::spawn(async move {
         #[cfg(target_os = "linux")]
         let sig_term = sig_term_fut.recv();
+        #[cfg(not(target_os = "linux"))]
+        let sig_term = std::future::pending();
+
         tokio::select! {
             _ = signal::ctrl_c() => {
-                info!(signal_log, "Received SIGINT")
+                debug!(signal_log, "Received SIGINT")
             }
             _ = sig_term => {
-                info!(signal_log, "Received SIGTERM")
+                debug!(signal_log, "Received SIGTERM")
             }
         }
+
+        info!(signal_log, "Shutting down");
         // Don't unwrap in order to ensure that we execute
         // any subsequent shutdown tasks.
         shutdown_tx.send(()).ok();
@@ -88,7 +91,6 @@ pub async fn run_with_config(
         info!(log, "Shutting down with error"; "error" => %err);
         Err(Error::from(err))
     } else {
-        info!(log, "Shutting down");
         Ok(())
     }
 }
