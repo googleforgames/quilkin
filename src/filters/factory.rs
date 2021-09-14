@@ -24,6 +24,23 @@ use crate::{
 /// An owned pointer to a dynamic [`FilterFactory`] instance.
 pub type DynFilterFactory = Box<dyn FilterFactory>;
 
+/// The value returned by [`FilterFactory::create_filter`].
+pub struct CreatedFilter {
+    /// The configuration used to create the filter.
+    pub config: serde_json::Value,
+    /// The created filter.
+    pub filter: Box<dyn Filter>,
+}
+
+impl From<(serde_json::Value, Box<dyn Filter>)> for CreatedFilter {
+    fn from(value: (serde_json::Value, Box<dyn Filter>)) -> Self {
+        Self {
+            config: value.0,
+            filter: value.1,
+        }
+    }
+}
+
 /// Provides the name and creation function for a given [`Filter`].
 ///
 pub trait FilterFactory: Sync + Send {
@@ -39,7 +56,7 @@ pub trait FilterFactory: Sync + Send {
     fn name(&self) -> &'static str;
 
     /// Returns a filter based on the provided arguments.
-    fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error>;
+    fn create_filter(&self, args: CreateFilterArgs) -> Result<CreatedFilter, Error>;
 
     /// Returns the [`ConfigType`] from the provided Option, otherwise it returns
     /// Error::MissingConfig if the Option is None.

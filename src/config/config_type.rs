@@ -30,17 +30,42 @@ pub enum ConfigType<'a> {
 }
 
 impl ConfigType<'_> {
-    /// Deserializes the configuration to `T` based on the input type. Errors if
-    /// the data produces an invalid config.
-    pub fn deserialize<T, P>(self, filter_name: &str) -> Result<T, Error>
+    /// Deserializes takes two type arguments `Static` and `Dynamic` representing
+    /// the types of a static and dynamic configuration respectively.
+    ///
+    /// If the configuration input is a [ConfigType::Static], then it is directly
+    /// marshalled into the returned `Static` instance.
+    ///
+    /// Otherwise if the input is a [ConfigType::Dynamic] then the contained Protobuf
+    /// data is decoded into a type `Dynamic` instance, after which the decoded
+    /// value is converted into the returned `Static` instance.
+    /// As a result [TryFrom] must be implemented from the `Dynamic` to the `Static`
+    /// type.
+    ///
+    /// It returns both the marshalled, as well as, a JSON representation
+    /// of the provided config.
+    /// It returns an error if any of the serialization or deserialization steps fail.
+    pub fn deserialize<Static, Dynamic>(
+        self,
+        filter_name: &str,
+    ) -> Result<(serde_json::Value, Static), Error>
     where
-        P: prost::Message + Default,
-        T: for<'de> serde::Deserialize<'de> + TryFrom<P, Error = ConvertProtoConfigError>,
+        Dynamic: prost::Message + Default,
+        Static: serde::Serialize
+            + for<'de> serde::Deserialize<'de>
+            + TryFrom<Dynamic, Error = ConvertProtoConfigError>,
     {
         match self {
             ConfigType::Static(config) => serde_yaml::to_string(config)
                 .and_then(|raw_config| serde_yaml::from_str(raw_config.as_str()))
-                .map_err(|err| Error::DeserializeFailed(err.to_string())),
+                .map_err(|err| {
+                    Error::DeserializeFailed(format!(
+                        "filter `{}`: failed to YAML deserialize config: {}",
+                        filter_name,
+                        err.to_string()
+                    ))
+                })
+                .and_then(|config| Self::get_json_config(filter_name, config)),
             ConfigType::Dynamic(config) => prost::Message::decode(Bytes::from(config.value))
                 .map_err(|err| {
                     Error::DeserializeFailed(format!(
@@ -49,7 +74,63 @@ impl ConfigType<'_> {
                         err.to_string()
                     ))
                 })
-                .and_then(|config| T::try_from(config).map_err(Error::ConvertProtoConfig)),
+                .and_then(|config| Static::try_from(config).map_err(Error::ConvertProtoConfig))
+                .and_then(|config| Self::get_json_config(filter_name, config)),
         }
+    }
+
+    // Returns an equivalent json value for the passed in config.
+    fn get_json_config<T>(filter_name: &str, config: T) -> Result<(serde_json::Value, T), Error>
+    where
+        T: serde::Serialize + for<'de> serde::Deserialize<'de>,
+    {
+        serde_json::to_string(&config)
+            .map_err(|err| {
+                Error::DeserializeFailed(format!(
+                    "filter `{}`: failed to serialize config to json: {}",
+                    filter_name,
+                    err.to_string()
+                ))
+            })
+            .and_then(|config_json| {
+                serde_json::from_str::<serde_json::Value>(config_json.as_str()).map_err(|err| {
+                    Error::DeserializeFailed(format!(
+                        "filter `{}`: failed to deserialize into json: {}",
+                        filter_name,
+                        err.to_string()
+                    ))
+                })
+            })
+            .map(|config_json| (config_json, config))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ConfigType;
+    use serde::{Deserialize, Serialize};
+
+    #[test]
+    fn get_json_config() {
+        #[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize)]
+        struct TestConfig {
+            name: String,
+            value: usize,
+        }
+        let expected_config = TestConfig {
+            name: "bebop".into(),
+            value: 98,
+        };
+        let (config_json, config) =
+            ConfigType::get_json_config("my-filter", expected_config.clone()).unwrap();
+
+        assert_eq!(expected_config, config);
+        assert_eq!(
+            serde_json::json!({
+                "name": "bebop",
+                "value": 98,
+            }),
+            config_json
+        )
     }
 }

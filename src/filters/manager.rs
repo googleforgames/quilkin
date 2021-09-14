@@ -182,8 +182,16 @@ mod tests {
                 None
             }
         }
-        let filter_chain =
-            Arc::new(FilterChain::new(vec![("Drop".into(), Box::new(Drop))], &registry).unwrap());
+        let filter_chain = Arc::new(
+            FilterChain::new(
+                vec![(
+                    "Drop".into(),
+                    (serde_json::Value::Null, Box::new(Drop) as Box<dyn Filter>).into(),
+                )],
+                &registry,
+            )
+            .unwrap(),
+        );
         assert!(filter_chain_updates_tx.send(filter_chain).await.is_ok());
 
         let mut num_iterations = 0;

@@ -90,15 +90,17 @@ impl FilterFactory for DebugFactory {
         NAME
     }
 
-    fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
-        let config: Option<Config> = args
+    fn create_filter(&self, args: CreateFilterArgs) -> Result<CreatedFilter, Error> {
+        let config: Option<(_, Config)> = args
             .config
             .map(|config| config.deserialize::<Config, ProtoDebug>(self.name()))
             .transpose()?;
-        Ok(Box::new(Debug::new(
-            &self.log,
-            config.and_then(|cfg| cfg.id),
-        )))
+        let (config_json, config) = config
+            .map(|(config_json, config)| (config_json, Some(config)))
+            .unwrap_or_else(|| (serde_json::Value::Null, None));
+        let filter = Debug::new(&self.log, config.and_then(|cfg| cfg.id));
+
+        Ok((config_json, Box::new(filter) as Box<dyn Filter>).into())
     }
 }
 

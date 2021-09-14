@@ -62,11 +62,12 @@ impl FilterFactory for GreetFilterFactory {
     fn name(&self) -> &'static str {
         NAME
     }
-    fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
-        let greeting = self
+    fn create_filter(&self, args: CreateFilterArgs) -> Result<CreatedFilter, Error> {
+        let (config_json, config) = self
             .require_config(args.config)?
             .deserialize::<Config, ProtoGreet>(self.name())?;
-        Ok(Box::new(Greet(greeting.greeting)))
+        let filter: Box<dyn Filter> = Box::new(Greet(config.greeting));
+        Ok((config_json, filter).into())
     }
 }
 

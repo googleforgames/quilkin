@@ -23,7 +23,9 @@ use hyper::{Body, Method, Request, Response, Server as HyperServer, StatusCode};
 use slog::{error, info, o, Logger};
 use tokio::sync::watch;
 
-use crate::proxy::{Health, Metrics};
+use crate::cluster::cluster_manager::SharedClusterManager;
+use crate::filters::manager::SharedFilterManager;
+use crate::proxy::{config_dump, Health, Metrics};
 
 pub struct Admin {
     log: Logger,
@@ -31,6 +33,14 @@ pub struct Admin {
     addr: SocketAddr,
     metrics: Arc<Metrics>,
     health: Arc<Health>,
+}
+
+#[derive(Clone)]
+struct HandleRequestArgs {
+    metrics: Arc<Metrics>,
+    health: Arc<Health>,
+    cluster_manager: SharedClusterManager,
+    filter_manager: SharedFilterManager,
 }
 
 impl Admin {
@@ -43,21 +53,27 @@ impl Admin {
         }
     }
 
-    pub fn run(&self, mut shutdown_rx: watch::Receiver<()>) {
+    pub(crate) fn run(
+        &self,
+        cluster_manager: SharedClusterManager,
+        filter_manager: SharedFilterManager,
+        mut shutdown_rx: watch::Receiver<()>,
+    ) {
         info!(self.log, "Starting admin endpoint"; "address" => self.addr.to_string());
 
-        let metrics = self.metrics.clone();
-        let health = self.health.clone();
+        let args = HandleRequestArgs {
+            metrics: self.metrics.clone(),
+            health: self.health.clone(),
+            cluster_manager,
+            filter_manager,
+        };
         let make_svc = make_service_fn(move |_conn| {
-            let metrics = metrics.clone();
-            let health = health.clone();
+            let args = args.clone();
             async move {
-                let metrics = metrics.clone();
-                let health = health.clone();
+                let args = args.clone();
                 Ok::<_, Infallible>(service_fn(move |req| {
-                    let metrics = metrics.clone();
-                    let health = health.clone();
-                    async move { Ok::<_, Infallible>(handle_request(req, metrics, health)) }
+                    let args = args.clone();
+                    async move { Ok::<_, Infallible>(handle_request(req, args)) }
                 }))
             }
         });
@@ -77,14 +93,13 @@ impl Admin {
     }
 }
 
-fn handle_request(
-    request: Request<Body>,
-    metrics: Arc<Metrics>,
-    health: Arc<Health>,
-) -> Response<Body> {
+fn handle_request(request: Request<Body>, args: HandleRequestArgs) -> Response<Body> {
     match (request.method(), request.uri().path()) {
-        (&Method::GET, "/metrics") => metrics.collect_metrics(),
-        (&Method::GET, "/live") => health.check_healthy(),
+        (&Method::GET, "/metrics") => args.metrics.collect_metrics(),
+        (&Method::GET, "/live") => args.health.check_healthy(),
+        (&Method::GET, "/config_dump") => {
+            config_dump::handle_request(args.cluster_manager, args.filter_manager)
+        }
         (_, _) => {
             let mut response = Response::new(Body::empty());
             *response.status_mut() = StatusCode::NOT_FOUND;

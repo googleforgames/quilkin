@@ -150,8 +150,8 @@ impl FilterFactory for LocalRateLimitFactory {
         NAME
     }
 
-    fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
-        let config: Config = self
+    fn create_filter(&self, args: CreateFilterArgs) -> Result<CreatedFilter, Error> {
+        let (config_json, config) = self
             .require_config(args.config)?
             .deserialize::<Config, ProtoConfig>(self.name())?;
 
@@ -161,10 +161,8 @@ impl FilterFactory for LocalRateLimitFactory {
                 reason: "value must be at least 100ms".into(),
             })
         } else {
-            Ok(Box::new(LocalRateLimit::new(
-                config,
-                Metrics::new(&args.metrics_registry)?,
-            )))
+            let filter = LocalRateLimit::new(config, Metrics::new(&args.metrics_registry)?);
+            Ok((config_json, Box::new(filter) as Box<dyn Filter>).into())
         }
     }
 }

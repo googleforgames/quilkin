@@ -86,10 +86,11 @@ impl FilterFactory for ConcatBytesFactory {
         NAME
     }
 
-    fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
-        Ok(Box::new(ConcatenateBytes::new(
-            self.require_config(args.config)?
-                .deserialize::<Config, ProtoConfig>(self.name())?,
-        )))
+    fn create_filter(&self, args: CreateFilterArgs) -> Result<CreatedFilter, Error> {
+        let (config_json, config) = self
+            .require_config(args.config)?
+            .deserialize::<Config, ProtoConfig>(self.name())?;
+        let filter = ConcatenateBytes::new(config);
+        Ok((config_json, Box::new(filter) as Box<dyn Filter>).into())
     }
 }

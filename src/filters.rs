@@ -39,15 +39,15 @@ pub mod token_router;
 /// [`FilterFactory`].
 pub mod prelude {
     pub use super::{
-        ConvertProtoConfigError, CreateFilterArgs, DynFilterFactory, Error, Filter, FilterFactory,
-        ReadContext, ReadResponse, WriteContext, WriteResponse,
+        ConvertProtoConfigError, CreateFilterArgs, CreatedFilter, DynFilterFactory, Error, Filter,
+        FilterFactory, ReadContext, ReadResponse, WriteContext, WriteResponse,
     };
 }
 
 // Core Filter types
 pub use self::{
     error::{ConvertProtoConfigError, Error},
-    factory::{CreateFilterArgs, DynFilterFactory, FilterFactory},
+    factory::{CreateFilterArgs, CreatedFilter, DynFilterFactory, FilterFactory},
     read::{ReadContext, ReadResponse},
     registry::FilterRegistry,
     set::{FilterMap, FilterSet},

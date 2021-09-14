@@ -29,7 +29,7 @@ const FILTER_LABEL: &str = "filter";
 /// through all of the filters in the chain. If any of the filters in the chain
 /// return `None`, then the chain is broken, and `None` is returned.
 pub struct FilterChain {
-    filters: Vec<(String, Box<dyn Filter>)>,
+    filters: Vec<(String, CreatedFilter)>,
     filter_read_duration_seconds: Vec<Histogram>,
     filter_write_duration_seconds: Vec<Histogram>,
 }
@@ -52,10 +52,7 @@ impl From<PrometheusError> for Error {
 }
 
 impl FilterChain {
-    pub fn new(
-        filters: Vec<(String, Box<dyn Filter>)>,
-        registry: &Registry,
-    ) -> Result<Self, Error> {
+    pub fn new(filters: Vec<(String, CreatedFilter)>, registry: &Registry) -> Result<Self, Error> {
         Ok(Self {
             filter_read_duration_seconds: filters
                 .iter()
@@ -114,6 +111,13 @@ impl FilterChain {
 
         FilterChain::new(filters, metrics_registry)
     }
+
+    /// Returns an iterator over the current filters' configs.
+    pub(crate) fn get_configs(&self) -> impl Iterator<Item = (&str, &serde_json::Value)> {
+        self.filters
+            .iter()
+            .map(|(config_json, config)| (config_json.as_str(), &config.config))
+    }
 }
 
 impl Filter for FilterChain {
@@ -124,7 +128,7 @@ impl Filter for FilterChain {
             .try_fold(ctx, |ctx, ((_, filter), histogram)| {
                 Some(ReadContext::with_response(
                     ctx.from,
-                    histogram.observe_closure_duration(|| filter.read(ctx))?,
+                    histogram.observe_closure_duration(|| filter.filter.read(ctx))?,
                 ))
             })
             .map(ReadResponse::from)
@@ -140,7 +144,7 @@ impl Filter for FilterChain {
                     ctx.endpoint,
                     ctx.from,
                     ctx.to,
-                    histogram.observe_closure_duration(|| filter.write(ctx))?,
+                    histogram.observe_closure_duration(|| filter.filter.write(ctx))?,
                 ))
             })
             .map(WriteResponse::from)
@@ -155,7 +159,7 @@ mod tests {
         config,
         endpoint::{Endpoint, Endpoints, UpstreamEndpoints},
         filters::{debug, FilterRegistry, FilterSet},
-        test_utils::{logger, new_test_chain, TestFilter},
+        test_utils::{logger, new_test_chain, TestFilterFactory},
     };
 
     use super::*;
@@ -252,8 +256,14 @@ mod tests {
         let registry = prometheus::Registry::default();
         let chain = FilterChain::new(
             vec![
-                ("TestFilter".into(), Box::new(TestFilter {})),
-                ("TestFilter".into(), Box::new(TestFilter {})),
+                (
+                    "TestFilter".into(),
+                    TestFilterFactory::create_empty_filter(),
+                ),
+                (
+                    "TestFilter".into(),
+                    TestFilterFactory::create_empty_filter(),
+                ),
             ],
             &registry,
         )
@@ -303,5 +313,48 @@ mod tests {
                 .downcast_ref::<String>()
                 .unwrap()
         );
+    }
+
+    #[test]
+    fn get_configs() {
+        struct TestFilter2 {}
+        impl Filter for TestFilter2 {}
+
+        let registry = prometheus::Registry::default();
+        let filter_chain = FilterChain::new(
+            vec![
+                (
+                    "TestFilter".into(),
+                    TestFilterFactory::create_empty_filter(),
+                ),
+                (
+                    "TestFilter2".into(),
+                    CreatedFilter {
+                        config: serde_json::json!({
+                            "k1": "v1",
+                            "k2": 2
+                        }),
+                        filter: Box::new(TestFilter2 {}),
+                    },
+                ),
+            ],
+            &registry,
+        )
+        .unwrap();
+
+        let configs = filter_chain.get_configs().collect::<Vec<_>>();
+        assert_eq!(
+            vec![
+                ("TestFilter", &serde_json::Value::Null),
+                (
+                    "TestFilter2",
+                    &serde_json::json!({
+                        "k1": "v1",
+                        "k2": 2
+                    })
+                )
+            ],
+            configs
+        )
     }
 }
