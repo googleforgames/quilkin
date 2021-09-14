@@ -48,7 +48,6 @@ To extend Quilkin's code with our own custom filter, we need to do the following
 
 > The full source code used in this example can be found [here][example]
 
-
 #### 1. Import the Quilkin crate
 
 ```bash
@@ -68,6 +67,12 @@ It's not terribly important what the filter in this example does so let's write 
 We start with the [Filter] implementation
 
 ```rust,no_run,noplayground
+# #![allow(unused)]
+# fn main() {
+#
+// src/main.rs
+use quilkin::filters::prelude::*;
+ 
 struct Greet;
 
 impl Filter for Greet {
@@ -80,11 +85,21 @@ impl Filter for Greet {
         Some(ctx.into())
     }
 }
+# }
 ```
 
 Next, we implement a [FilterFactory] for it and give it a name:
 
 ```rust,no_run,noplayground
+# #![allow(unused)]
+# fn main() {
+#
+# struct Greet;
+# impl Filter for Greet {}
+# use quilkin::filters::Filter;
+// src/main.rs
+use quilkin::filters::prelude::*;
+
 pub const NAME: &str = "greet.v1";
 
 pub fn factory() -> DynFilterFactory {
@@ -100,10 +115,8 @@ impl FilterFactory for GreetFilterFactory {
         Ok(Box::new(Greet))
     }
 }
+# }
 ```
-
-> As a convention we implement a `pub factory() -> DynFilterFactory` function, to 
-> make the next integration step easier.
 
 #### 3. Start the proxy
 
@@ -112,6 +125,7 @@ Let's add a main function that does that. Quilkin relies on the [Tokio] async ru
 crate and wrap our main function with it.
 
 Add Tokio as a dependency in `Cargo.toml`.
+
 ```toml
 [dependencies]
 quilkin = "0.2.0"
@@ -120,12 +134,13 @@ tokio = { version = "1", features = ["full"]}
 
 Add a main function that starts the proxy.
 
-```rust,no_run,noplayground
+```rust,no_run,noplayground,ignore
+// src/main.rs
 {{#include ../../../examples/quilkin-filter-example/src/main.rs:run}}
 ```
 
-Now, let's try out the proxy. The following configuration starts our extended version of the proxy at port 7001
-and forwards all packets to an upstream server at port 4321.
+Now, let's try out the proxy. The following configuration starts our extended version of the proxy at port 7001 and
+forwards all packets to an upstream server at port 4321.
 
 ```yaml
 # config.yaml
@@ -138,6 +153,7 @@ static:
   endpoints:
   - address: 127.0.0.1:4321
 ```
+
 - Start the proxy
 
   ```bash
@@ -167,7 +183,7 @@ The [Serde] crate is used to describe static YAML configuration in code while [P
 
 First let's create the config for our static configuration:
 
-###### 1. Add the yaml parsing crates to Cargo.toml:
+###### 1. Add the yaml parsing crates to `Cargo.toml`:
 
 ```toml
   [dependencies]
@@ -177,13 +193,16 @@ First let's create the config for our static configuration:
 ```
 
 ###### 2. Define a struct representing the config:
-```rust,no_run,noplayground
+
+```rust,no_run,noplayground,ignore
+// src/main.rs
 {{#include ../../../examples/quilkin-filter-example/src/main.rs:serde_config}}
 ```
 
 ###### 3. Update the `Greet` Filter to take in `greeting` as a parameter:
 
-```rust,no_run,noplayground
+```rust,no_run,noplayground,ignore
+// src/main.rs
 {{#include ../../../examples/quilkin-filter-example/src/main.rs:filter}}
 ```
 
@@ -196,7 +215,7 @@ Our dynamic config model contains the serialized [Protobuf] message received fro
 [ProstAny][prost-any] type so the [FilterFactory] can interpret its contents anyway it wishes to. However, it usually 
 contains a Protobuf equivalent of the filter's static configuration.
 
-###### 1. Add the proto parsing crates to Cargo.toml:
+###### 1. Add the proto parsing crates to `Cargo.toml`:
 
 ```toml
 [dependencies]
@@ -206,9 +225,10 @@ prost = "0.7"
 prost-types = "0.7"
 ```
 
-###### 2. Create `greet.proto`, a [Protobuf] equivalent of the [static configuration][anchor-static-config]:
+###### 2. Create a [Protobuf] equivalent of the [static configuration][anchor-static-config]:
 
-```plaintext,no_run,noplayground
+```plaintext,no_run,noplayground,ignore
+// src/greet.proto
 {{#include ../../../examples/quilkin-filter-example/src/greet.proto:proto}}
 ```
 
@@ -216,7 +236,7 @@ prost-types = "0.7"
 
 There are a few ways to generate [Prost] code from proto, we will use the [prost_build] crate in this example.
 
-Add the required crates to Cargo.toml:
+Add the required crates to `Cargo.toml`:
 
 ```toml
 [dependencies]
@@ -229,14 +249,16 @@ prost-build = "0.7"
 
 Add a [build script][build-script] to generate the Rust code during compilation:
 
-```rust,no_run,noplayground
+```rust,no_run,noplayground,ignore
+// src/build.rs
 {{#include ../../../examples/quilkin-filter-example/build.rs:build}}
 ```
 
-To include the generated code, we'll use a convenience macro [include_proto], which imports the 
-generated code, while recreating the grpc package name as Rust modules:
+To include the generated code, we'll use a convenience macro [include_proto], which imports the generated code, while
+recreating the grpc package name as Rust modules:
 
-```rust,no_run,noplayground
+```rust,no_run,noplayground,ignore
+// src/main.rs
 {{#include ../../../examples/quilkin-filter-example/src/main.rs:include_proto}}
 ```
 
@@ -246,13 +268,15 @@ Since configuration can be provided either statically or dynamically at runtime,
 between one configuration model and the other. To do this, we'll implement the [std::convert::TryFrom] trait to 
 convert from the [Protobuf] model to the [Serde] model.
 
-```rust,no_run,noplayground
+```rust,no_run,noplayground,ignore
+// src/main.rs
 {{#include ../../../examples/quilkin-filter-example/src/main.rs:TryFrom}}
 ```
 
 ##### Finally, update `GreetFilterFactory` to extract the greeting from the passed in configuration and forward it onto the `Greet` Filter.
 
-```rust,no_run,noplayground
+```rust,no_run,noplayground,ignore
+// src/main.rs
 {{#include ../../../examples/quilkin-filter-example/src/main.rs:factory}}
 ```
 
@@ -260,7 +284,9 @@ convert from the [Protobuf] model to the [Serde] model.
 of configuration is utilised. 
 
 And with these changes we have wired up configuration for our filter. Try it out with the following `config.yaml`:
+
 ```yaml
+# config.yaml
 {{#include ../../../examples/quilkin-filter-example/config.yaml:yaml}}
 ```
 
