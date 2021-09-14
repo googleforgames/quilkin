@@ -3,11 +3,11 @@
 Quilkin provides an extensible implementation of [Filters] that allows us to plug in custom implementations to fit our needs.
 This document provides an overview of the API and how we can go about writing our own [Filters].
 
-#### API Components
+## API Components
 
 The following components make up Quilkin's implementation of filters.
 
-##### Filter
+### Filter
 
 A [trait][Filter] representing an actual [Filter][built-in-filters] instance in the pipeline.
 
@@ -15,15 +15,15 @@ A [trait][Filter] representing an actual [Filter][built-in-filters] instance in 
 - Both methods are invoked by the proxy when it consults the [filter chain] - their arguments contain information about the packet being processed.
 - `read` is invoked when a packet is received on the local downstream port and is to be sent to an upstream endpoint while `write` is invoked in the opposite direction when a packet is received from an upstream endpoint and is to be sent to a downstream client.
 
-##### FilterFactory
+### FilterFactory
 
 A [trait][FilterFactory] representing a type that knows how to create instances of a particular type of [Filter].
 
 - An implementation provides a `name` and `create_filter` method.
 - `create_filter` takes in [configuration][filter configuration] for the filter to create and returns a new instance of its filter type.
-`name` returns the Filter name - a unique identifier of filters of the created type (e.g quilkin.extensions.filters.debug.v1alpha1.Debug).
+`name` returns the Filter name - a unique identifier of filters of the created type (e.g. quilkin.extensions.filters.debug.v1alpha1.Debug).
 
-##### FilterRegistry
+### FilterRegistry
 
 A [struct][FilterRegistry] representing the set of all filter types known to the proxy.
 It contains all known implementations of [FilterFactory], each identified by their [name][filter-factory-name].
@@ -38,109 +38,91 @@ These components come together to form the [filter chain].
 Note that when using dynamic configuration, the process repeats in a similar manner - new filter instances are created according to the updated [filter configuration] and a new [filter chain] is re-created while the old one is dropped.
 
 
-##### Creating Custom Filters
+### Creating Custom Filters
 
 To extend Quilkin's code with our own custom filter, we need to do the following:
 
 1. Import the Quilkin crate.
-1. Implement the [Filter] trait with our custom logic, as well as a [FilterFactory] that knows how to create instances of the Filter impelmentation.
+1. Implement the [Filter] trait with our custom logic, as well as a [FilterFactory] that knows how to create instances of the Filter implementation.
 1. Start the proxy with the custom [FilterFactory] implementation.
 
 > The full source code used in this example can be found [here][example]
 
 
-1. **Import the Quilkin crate**
+#### 1. Import the Quilkin crate
 
-   ```bash
-   # Start with a new crate
-   cargo new --bin quilkin-filter-example
-   ```
-   Add Quilkin as a dependency in `Cargo.toml`.
-   ```toml
-   [dependencies]
-   quilkin = "0.1.0"
-   ```
-1. **Implement the filter traits**
+```bash
+# Start with a new crate
+cargo new --bin quilkin-filter-example
+```
+Add Quilkin as a dependency in `Cargo.toml`.
+```toml
+[dependencies]
+quilkin = "0.2.0"
+```
 
-   Its not terribly important what the filter in this example does so lets write a `Greet` filter that appends `Hello` to every packet in one direction and `Goodbye` to packets in the opposite direction.
+#### 2. Implement the filter traits
 
-   We start with the [Filter] implementation
-   ```rust
-   // src/main.rs
-   use quilkin::filters::{Filter, ReadContext, ReadResponse, WriteContext, WriteResponse};
+It's not terribly important what the filter in this example does so let's write a `Greet` filter that appends `Hello` to every packet in one direction and `Goodbye` to packets in the opposite direction.
 
-   const NAME: &str = "greet.v1";
+We start with the [Filter] implementation
 
-   // This creates adds an associated const named `FILTER_NAME` that points
-   // to `"greet.v1"`.
-   struct Greet;
+```rust,no_run,noplayground
+struct Greet;
 
-   impl Filter for Greet {
-       fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
-           ctx.contents.splice(0..0, String::from("Hello ").into_bytes());
-           Some(ctx.into())
-       }
-       fn write(&self, mut ctx: WriteContext) -> Option<WriteResponse> {
-           ctx.contents.splice(0..0, String::from("Goodbye ").into_bytes());
-           Some(ctx.into())
-       }
-   }
-   ```
+impl Filter for Greet {
+    fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
+        ctx.contents.splice(0..0, String::from("Hello ").into_bytes());
+        Some(ctx.into())
+    }
+    fn write(&self, mut ctx: WriteContext) -> Option<WriteResponse> {
+        ctx.contents.splice(0..0, String::from("Goodbye ").into_bytes());
+        Some(ctx.into())
+    }
+}
+```
 
-   Next, we implement a [FilterFactory] for it and give it a name:
+Next, we implement a [FilterFactory] for it and give it a name:
 
-   ```rust
-   // src/main.rs
-   # const NAME: &str = "greet.v1";
-   # struct Greet;
-   # impl Filter for Greet {}
-   # use quilkin::filters::Filter;
-   use quilkin::filters::{CreateFilterArgs, Error, FilterFactory};
+```rust,no_run,noplayground
+pub const NAME: &str = "greet.v1";
 
-   struct GreetFilterFactory;
-   impl FilterFactory for GreetFilterFactory {
-       fn name(&self) -> &'static str {
-           // We provide the name of filter that we defined earlier.
-           NAME
-       }
-       fn create_filter(&self, _: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
-           Ok(Box::new(Greet))
-       }
-   }
-   ```
+pub fn factory() -> DynFilterFactory {
+    Box::from(GreetFilterFactory)
+}
 
-1. **Start the proxy**
+struct GreetFilterFactory;
+impl FilterFactory for GreetFilterFactory {
+    fn name(&self) -> &'static str {
+        NAME
+    }
+    fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
+        Ok(Box::new(Greet))
+    }
+}
+```
 
-   We can run the proxy in the exact manner as the default Quilkin binary using the [run][runner::run] function, passing in our custom [FilterFactory].
-   Lets add a main function that does that. Quilkin relies on the [Tokio] async runtime so we need to import that crate and wrap our main function with it.
+> As a convention we implement a `pub factory() -> DynFilterFactory` function, to 
+> make the next integration step easier.
 
-   Add Tokio as a dependency in `Cargo.toml`.
-   ```toml
-   [dependencies]
-   quilkin = "0.1.0-dev"
-   tokio = { version = "1", features = ["full"]}
-   ```
+#### 3. Start the proxy
 
-   Add a main function that starts the proxy.
-   ```rust, no_run
-   // src/main.rs
-   # use quilkin::filters::{CreateFilterArgs, Filter, Error, FilterFactory};
-   # struct GreetFilterFactory;
-   # impl FilterFactory for GreetFilterFactory {
-   #     fn name(&self) -> &'static str {
-   #         "greet.v1"
-   #     }
-   #     fn create_filter(&self, _: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
-   #         unimplemented!()
-   #     }
-   # }
-   use quilkin::{filters::DynFilterFactory, run};
+We can run the proxy in the exact manner as the default Quilkin binary using the [run][runner::run] function, passing in our custom [FilterFactory].
+Let's add a main function that does that. Quilkin relies on the [Tokio] async runtime, so we need to import that 
+crate and wrap our main function with it.
 
-   #[tokio::main]
-   async fn main() {
-       run(vec![Box::new(GreetFilterFactory) as DynFilterFactory]).await.unwrap();
-   }
-   ```
+Add Tokio as a dependency in `Cargo.toml`.
+```toml
+[dependencies]
+quilkin = "0.2.0"
+tokio = { version = "1", features = ["full"]}
+```
+
+Add a main function that starts the proxy.
+
+```rust,no_run,noplayground
+{{#include ../../../examples/quilkin-filter-example/src/main.rs:run}}
+```
 
 Now, let's try out the proxy. The following configuration starts our extended version of the proxy at port 7001
 and forwards all packets to an upstream server at port 4321.
@@ -157,6 +139,7 @@ static:
   - address: 127.0.0.1:4321
 ```
 - Start the proxy
+
   ```bash
   cargo run -- -c config.yaml
   ```
@@ -174,218 +157,112 @@ static:
 Whatever we pass to the client should now show up with our modification on the listening server's standard output.
 For example typing `Quilkin` in the client prints `Hello Quilkin` on the server.
 
-#### Working with Filter Configuration
+#### 4. Working with Filter Configuration
 
 Let's extend the `Greet` filter to require a configuration that contains what greeting to use.
 
 The [Serde] crate is used to describe static YAML configuration in code while [Prost] to describe dynamic configuration as [Protobuf] messages when talking to the [management server].
 
 ##### Static Configuration
-1. Add the yaml parsing crates to Cargo.toml:
 
-   ```toml
-      [dependencies]
-      # ...
-      serde = "1.0"
-      serde_yaml = "0.8"
-   ```
+First let's create the config for our static configuration:
 
-1.  Define a struct representing the config:
+###### 1. Add the yaml parsing crates to Cargo.toml:
 
-    ```rust
-    // src/main.rs
-    use serde::{Deserialize, Serialize};
+```toml
+  [dependencies]
+  # ...
+  serde = "1.0"
+  serde_yaml = "0.8"
+```
 
-    #[derive(Serialize, Deserialize, Debug)]
-    struct Config {
-        greeting: String,
-    }
-    ```
+###### 2. Define a struct representing the config:
+```rust,no_run,noplayground
+{{#include ../../../examples/quilkin-filter-example/src/main.rs:serde_config}}
+```
 
-1. Update the `Greet` Filter to take in `greeting` as a parameter:
+###### 3. Update the `Greet` Filter to take in `greeting` as a parameter:
 
-   ```rust
-   // src/main.rs
-   # use quilkin::filters::{Filter, ReadContext, ReadResponse, WriteContext, WriteResponse};
-   struct Greet(String);
-
-   impl Filter for Greet {
-       fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
-           ctx.contents
-               .splice(0..0, format!("{} ",self.0).into_bytes());
-           Some(ctx.into())
-       }
-       fn write(&self, mut ctx: WriteContext) -> Option<WriteResponse> {
-           ctx.contents
-               .splice(0..0, format!("{} ",self.0).into_bytes());
-           Some(ctx.into())
-       }
-   }
-   ```
-
-1. Finally, update `GreetFilterFactory` to extract the greeting from the passed in configuration and forward it onto the `Greet` Filter.
-
-   ```rust
-   // src/main.rs
-   # use serde::{Deserialize, Serialize};
-   # #[derive(Serialize, Deserialize, Debug)]
-   # struct Config {
-   #     greeting: String,
-   # }
-   # use quilkin::filters::{CreateFilterArgs, Error, FilterFactory, Filter, ReadContext, ReadResponse, WriteContext, WriteResponse};
-   # struct Greet(String);
-   # impl Filter for Greet { }
-   use quilkin::config::ConfigType;
-
-   struct GreetFilterFactory;
-   impl FilterFactory for GreetFilterFactory {
-       fn name(&self) -> &'static str {
-           "greet.v1"
-       }
-       fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
-           let greeting = match args.config.unwrap() {
-               ConfigType::Static(config) => {
-                   serde_yaml::from_str::<Config>(serde_yaml::to_string(config).unwrap().as_str())
-                    .unwrap()
-                    .greeting
-               }
-               ConfigType::Dynamic(_) => unimplemented!("dynamic config is not yet supported for this filter"),
-           };
-           Ok(Box::new(Greet(greeting)))
-       }
-   }
-   ```
-
-And with these changes we have wired up static configuration for our filter. Try it out with the following config.yaml:
-```yaml
-# config.yaml
-version: v1alpha1
-proxy:
-  port: 7001
-static:
-  filters:
-  - name: greet.v1
-    config:
-      greeting: Hey
-  endpoints:
-  - address: 127.0.0.1:4321
+```rust,no_run,noplayground
+{{#include ../../../examples/quilkin-filter-example/src/main.rs:filter}}
 ```
 
 ##### Dynamic Configuration
 
-You might have noticed while adding [static configuration support][anchor-static-config], that the [config][CreateFilterArgs::config] argument passed into our [FilterFactory]
-has a [Dynamic][ConfigType::dynamic] variant.
-```rust, ignore
-let greeting = match args.config.unwrap() {
-    ConfigType::Static(config) => {
-        serde_yaml::from_str::<Config>(serde_yaml::to_string(config).unwrap().as_str())
-         .unwrap()
-         .greeting
-    }
-    ConfigType::Dynamic(_) => unimplemented!("dynamic config is not yet supported for this filter"),
-};
+Next, we'll create the [Protobuf] definition of the same configuration for the dynamic configuration of our Filter. 
+
+Our dynamic config model contains the serialized [Protobuf] message received from the [management server] for the 
+[Filter] to create. As a result, its contents are entirely opaque to Quilkin, and it is represented with the 
+[ProstAny][prost-any] type so the [FilterFactory] can interpret its contents anyway it wishes to. However, it usually 
+contains a Protobuf equivalent of the filter's static configuration.
+
+###### 1. Add the proto parsing crates to Cargo.toml:
+
+```toml
+[dependencies]
+# ...
+tonic = "0.5.0"
+prost = "0.7"
+prost-types = "0.7"
 ```
 
-It contains the serialized [Protobuf] message received from the [management server] for the [Filter] to create.
-As a result, its contents are entirely opaque to Quilkin and it is represented with the [Prost Any][prost-any] type so the [FilterFactory]
-can interpret its contents anyway it wishes to.
-However, it usually contains a Protobuf equivalent of the filter's static configuration.
+###### 2. Create `greet.proto`, a [Protobuf] equivalent of the [static configuration][anchor-static-config]:
 
-1. Add the proto parsing crates to Cargo.toml:
+```plaintext,no_run,noplayground
+{{#include ../../../examples/quilkin-filter-example/src/greet.proto:proto}}
+```
 
-   ```toml
-   [dependencies]
-   # ...
-   prost = "0.7"
-   prost-types = "0.7"
-   ```
-1. Create a [Protobuf] equivalent of the [static configuration][anchor-static-config]:
+###### 3. Generate Rust code from the proto file:
 
-   ```proto
-   # src/greet.proto
-   syntax = "proto3";
-   package greet;
-   message Greet {
-     string greeting = 1;
-   }
-   ```
-1. Generate Rust code from the proto file:
+There are a few ways to generate [Prost] code from proto, we will use the [prost_build] crate in this example.
 
-   There are a few ways to generate [Prost] code from proto, we will use the [prost_build] crate in this example.
+Add the required crates to Cargo.toml:
 
-   1. Add the required crates to Cargo.toml
-      ```toml
-      [dependencies]
-      # ...
-      bytes = "1.0"
+```toml
+[dependencies]
+# ...
+bytes = "1.0"
 
-      [build-dependencies]
-      prost-build = "0.7"
-      ```
+[build-dependencies]
+prost-build = "0.7"
+```
 
-   1. Add a [build script][build-script] to generate the Rust code during compilation:
+Add a [build script][build-script] to generate the Rust code during compilation:
 
-      ```ignore
-      // build.rs
-      fn main() {
-        prost_build::compile_protos(&["src/greet.proto"], &["src/"]).unwrap();
-      }
-      ```
-   1. Include the generated code:
+```rust,no_run,noplayground
+{{#include ../../../examples/quilkin-filter-example/build.rs:build}}
+```
 
-      ```ignore
-      mod greet {
-        include!(concat!(env!("OUT_DIR"), "/greet.rs"));
-      }
-      ```
-    1. Decode the serialized proto message into the generated config:
+To include the generated code, we'll use a convenience macro [include_proto], which imports the 
+generated code, while recreating the grpc package name as Rust modules:
 
-       ```rust
-       // src/main.rs
-       # use quilkin::{config::ConfigType, filters::{CreateFilterArgs, Error, Filter, FilterFactory}};
-       # use serde::{Deserialize, Serialize};
-       # #[derive(Serialize, Deserialize, Debug)]
-       # struct Config {
-       #     greeting: String,
-       # }
-       # pub mod greet {
-       #    #[derive(Debug,Default)]
-       #    pub struct Greet{ pub greeting: String }
-       #    use prost::encoding::{WireType, DecodeContext};
-       #    use prost::DecodeError;
-       #    use bytes::{BufMut, Buf};
-       #    impl prost::Message for Greet {
-       #      fn encoded_len(&self) -> usize { todo!() }
-       #      fn encode_raw<B>(&self, _: &mut B) where B: BufMut { todo!() }
-       #      fn merge_field<B>(&mut self, _: u32, _: WireType, _: &mut B, _: DecodeContext) -> std::result::Result<(), DecodeError> where B: Buf { todo!() }
-       #      fn clear(&mut self) { todo!() }
-       #    }
-       # }
-       # struct Greet(String);
-       # impl Filter for Greet { }
-       use bytes::Bytes;
+```rust,no_run,noplayground
+{{#include ../../../examples/quilkin-filter-example/src/main.rs:include_proto}}
+```
 
-       struct GreetFilterFactory;
-       impl FilterFactory for GreetFilterFactory {
-           fn name(&self) -> &'static str {
-               "greet.v1"
-           }
-           fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
-               let greeting = match args.config.unwrap() {
-                   ConfigType::Static(config) => {
-                       serde_yaml::from_str::<Config>(serde_yaml::to_string(config).unwrap().as_str())
-                           .unwrap()
-                           .greeting
-                   }
-                   ConfigType::Dynamic(config) => {
-                       let config: greet::Greet = prost::Message::decode(Bytes::from(config.value)).unwrap();
-                       config.greeting
-                   }
-               };
-               Ok(Box::new(Greet(greeting)))
-           }
-       }
-       ```
+##### Convert between static and dynamic configuration models
+
+Since configuration can be provided either statically or dynamically at runtime, we need to provide a way to convert 
+between one configuration model and the other. To do this, we'll implement the [std::convert::TryFrom] trait to 
+convert from the [Protobuf] model to the [Serde] model.
+
+```rust,no_run,noplayground
+{{#include ../../../examples/quilkin-filter-example/src/main.rs:TryFrom}}
+```
+
+##### Finally, update `GreetFilterFactory` to extract the greeting from the passed in configuration and forward it onto the `Greet` Filter.
+
+```rust,no_run,noplayground
+{{#include ../../../examples/quilkin-filter-example/src/main.rs:factory}}
+```
+
+> We use the convenience function of [ConfigType::deserialize] to return the [Serde] config regardless of which type 
+of configuration is utilised. 
+
+And with these changes we have wired up configuration for our filter. Try it out with the following `config.yaml`:
+```yaml
+{{#include ../../../examples/quilkin-filter-example/config.yaml:yaml}}
+```
 
 [Filter]: ../../api/quilkin/filters/trait.Filter.html
 [FilterFactory]: ../../api/quilkin/filters/trait.FilterFactory.html
@@ -393,7 +270,9 @@ However, it usually contains a Protobuf equivalent of the filter's static config
 [FilterRegistry]: ../../api/quilkin/filters/struct.FilterRegistry.html
 [runner::run]: ../../api/quilkin/runner/fn.run.html
 [CreateFilterArgs::config]: ../../api/quilkin/filters/prelude/struct.CreateFilterArgs.html#structfield.config
-[ConfigType::dynamic]: ../../api/quilkin/config/enum.ConfigType.html#variant.Dynamic
+[include_proto]: ../../api/quilkin/macro.include_proto.html
+[std::convert::TryFrom]: https://doc.rust-lang.org/std/convert/trait.TryFrom.html
+[ConfigType::deserialize]: ../../api/quilkin/config/enum.ConfigType.html#method.deserialize
 
 [anchor-static-config]: #static-configuration
 [Filters]: ../filters.md
