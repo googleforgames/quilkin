@@ -259,7 +259,7 @@ mod tests {
             APPEND_TYPE_URL
         }
 
-        fn create_filter(&self, args: CreateFilterArgs) -> Result<CreatedFilter, Error> {
+        fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
             let (config_json, filter) = args
                 .config
                 .map(|config| config.deserialize::<Append, ProtoAppend>(self.name()))
@@ -271,7 +271,10 @@ mod tests {
                     reason: "reject requested".into(),
                 })
             } else {
-                Ok((config_json, Box::new(filter) as Box<dyn Filter>).into())
+                Ok(FilterInstance::new(
+                    config_json,
+                    Box::new(filter) as Box<dyn Filter>,
+                ))
             }
         }
     }

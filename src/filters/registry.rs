@@ -16,7 +16,7 @@
 
 use std::sync::Arc;
 
-use crate::filters::{CreateFilterArgs, CreatedFilter, Error, FilterMap, FilterSet};
+use crate::filters::{CreateFilterArgs, Error, FilterInstance, FilterMap, FilterSet};
 
 /// Registry of all [`Filter`][crate::filters::Filter]s that can be applied in the system.
 ///
@@ -45,7 +45,7 @@ impl FilterRegistry {
     /// Creates and returns a new dynamic instance of [`Filter`][crate::filters::Filter] for a given
     /// `key`. Errors if the filter cannot be found, or if there is a
     /// configuration issue.
-    pub fn get(&self, key: &str, args: CreateFilterArgs) -> Result<CreatedFilter, Error> {
+    pub fn get(&self, key: &str, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
         match self.registry.get(key).map(|p| p.create_filter(args)) {
             None => Err(Error::NotFound(key.to_owned())),
             Some(filter) => filter,

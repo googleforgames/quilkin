@@ -15,6 +15,7 @@
  */
 
 use prometheus::Registry;
+use std::sync::Arc;
 
 use crate::{
     config::ConfigType,
@@ -25,18 +26,20 @@ use crate::{
 pub type DynFilterFactory = Box<dyn FilterFactory>;
 
 /// The value returned by [`FilterFactory::create_filter`].
-pub struct CreatedFilter {
+#[non_exhaustive]
+pub struct FilterInstance {
     /// The configuration used to create the filter.
-    pub config: serde_json::Value,
+    pub config: Arc<serde_json::Value>,
     /// The created filter.
     pub filter: Box<dyn Filter>,
 }
 
-impl From<(serde_json::Value, Box<dyn Filter>)> for CreatedFilter {
-    fn from(value: (serde_json::Value, Box<dyn Filter>)) -> Self {
-        Self {
-            config: value.0,
-            filter: value.1,
+impl FilterInstance {
+    /// Constructs a [`FilterInstance`].
+    pub fn new(config: serde_json::Value, filter: Box<dyn Filter>) -> FilterInstance {
+        FilterInstance {
+            config: Arc::new(config),
+            filter,
         }
     }
 }
@@ -56,7 +59,7 @@ pub trait FilterFactory: Sync + Send {
     fn name(&self) -> &'static str;
 
     /// Returns a filter based on the provided arguments.
-    fn create_filter(&self, args: CreateFilterArgs) -> Result<CreatedFilter, Error>;
+    fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error>;
 
     /// Returns the [`ConfigType`] from the provided Option, otherwise it returns
     /// Error::MissingConfig if the Option is None.

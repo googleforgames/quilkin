@@ -90,7 +90,7 @@ impl FilterFactory for DebugFactory {
         NAME
     }
 
-    fn create_filter(&self, args: CreateFilterArgs) -> Result<CreatedFilter, Error> {
+    fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
         let config: Option<(_, Config)> = args
             .config
             .map(|config| config.deserialize::<Config, ProtoDebug>(self.name()))
@@ -100,7 +100,10 @@ impl FilterFactory for DebugFactory {
             .unwrap_or_else(|| (serde_json::Value::Null, None));
         let filter = Debug::new(&self.log, config.and_then(|cfg| cfg.id));
 
-        Ok((config_json, Box::new(filter) as Box<dyn Filter>).into())
+        Ok(FilterInstance::new(
+            config_json,
+            Box::new(filter) as Box<dyn Filter>,
+        ))
     }
 }
 

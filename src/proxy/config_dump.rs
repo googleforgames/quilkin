@@ -21,6 +21,7 @@ use crate::endpoint::Endpoint;
 use hyper::http::HeaderValue;
 use hyper::{Body, Response, StatusCode};
 use serde::Serialize;
+use std::sync::Arc;
 
 #[derive(Debug, Serialize)]
 struct ClusterDump {
@@ -37,7 +38,7 @@ struct ConfigDump {
 #[derive(Debug, Serialize)]
 struct FilterConfigDump {
     name: String,
-    config: serde_json::Value,
+    config: Arc<serde_json::Value>,
 }
 
 #[derive(Debug, Serialize)]
@@ -89,7 +90,7 @@ fn create_config_dump_json(
             .get_configs()
             .map(|(name, config)| FilterConfigDump {
                 name: name.into(),
-                config: config.clone(),
+                config,
             })
             .collect::<Vec<_>>()
     };

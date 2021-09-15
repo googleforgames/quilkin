@@ -20,7 +20,7 @@ A [trait][Filter] representing an actual [Filter][built-in-filters] instance in 
 A [trait][FilterFactory] representing a type that knows how to create instances of a particular type of [Filter].
 
 - An implementation provides a `name` and `create_filter` method.
-- `create_filter` takes in [configuration][filter configuration] for the filter to create and returns a [CreatedFilter] type containing a new instance of its filter type.
+- `create_filter` takes in [configuration][filter configuration] for the filter to create and returns a [FilterInstance] type containing a new instance of its filter type.
 `name` returns the Filter name - a unique identifier of filters of the created type (e.g quilkin.extensions.filters.debug.v1alpha1.Debug).
 
 ##### FilterRegistry
@@ -95,7 +95,7 @@ To extend Quilkin's code with our own custom filter, we need to do the following
    # struct Greet;
    # impl Filter for Greet {}
    # use quilkin::filters::Filter;
-   use quilkin::filters::{CreatedFilter, CreateFilterArgs, Error, FilterFactory};
+   use quilkin::filters::{FilterInstance, CreateFilterArgs, Error, FilterFactory};
 
    struct GreetFilterFactory;
    impl FilterFactory for GreetFilterFactory {
@@ -103,9 +103,9 @@ To extend Quilkin's code with our own custom filter, we need to do the following
            // We provide the name of filter that we defined earlier.
            NAME
        }
-       fn create_filter(&self, _: CreateFilterArgs) -> Result<CreatedFilter, Error> {
+       fn create_filter(&self, _: CreateFilterArgs) -> Result<FilterInstance, Error> {
            let filter: Box<dyn Filter> = Box::new(Greet);
-           Ok((serde_json::Value::Null, filter).into())
+           Ok(FilterInstance::new(serde_json::Value::Null, filter))
        }
    }
    ```
@@ -125,13 +125,13 @@ To extend Quilkin's code with our own custom filter, we need to do the following
    Add a main function that starts the proxy.
    ```rust, no_run
    // src/main.rs
-   # use quilkin::filters::{CreatedFilter, CreateFilterArgs, Filter, Error, FilterFactory};
+   # use quilkin::filters::{FilterInstance, CreateFilterArgs, Filter, Error, FilterFactory};
    # struct GreetFilterFactory;
    # impl FilterFactory for GreetFilterFactory {
    #     fn name(&self) -> &'static str {
    #         "greet.v1"
    #     }
-   #     fn create_filter(&self, _: CreateFilterArgs) -> Result<CreatedFilter, Error> {
+   #     fn create_filter(&self, _: CreateFilterArgs) -> Result<FilterInstance, Error> {
    #         unimplemented!()
    #     }
    # }
@@ -233,7 +233,7 @@ The [Serde] crate is used to describe static YAML configuration in code while [P
    # struct Config {
    #     greeting: String,
    # }
-   # use quilkin::filters::{CreatedFilter, CreateFilterArgs, Error, FilterFactory, Filter, ReadContext, ReadResponse, WriteContext, WriteResponse};
+   # use quilkin::filters::{FilterInstance, CreateFilterArgs, Error, FilterFactory, Filter, ReadContext, ReadResponse, WriteContext, WriteResponse};
    # struct Greet(String);
    # impl Filter for Greet { }
    use quilkin::config::ConfigType;
@@ -243,7 +243,7 @@ The [Serde] crate is used to describe static YAML configuration in code while [P
        fn name(&self) -> &'static str {
            "greet.v1"
        }
-       fn create_filter(&self, args: CreateFilterArgs) -> Result<CreatedFilter, Error> {
+       fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
            let config = match args.config.unwrap() {
              ConfigType::Static(config) => {
                  serde_yaml::from_str::<Config>(serde_yaml::to_string(config).unwrap().as_str())
@@ -252,7 +252,7 @@ The [Serde] crate is used to describe static YAML configuration in code while [P
              ConfigType::Dynamic(_) => unimplemented!("dynamic config is not yet supported for this filter"),
            };
            let filter: Box<dyn Filter> = Box::new(Greet(config.greeting));
-           Ok((serde_json::Value::Null, filter).into())
+           Ok(FilterInstance::new(serde_json::Value::Null, filter))
        }
    }
    ```
@@ -348,7 +348,7 @@ However, it usually contains a Protobuf equivalent of the filter's static config
 
        ```rust
        // src/main.rs
-       # use quilkin::{config::ConfigType, filters::{CreatedFilter, CreateFilterArgs, Error, Filter, FilterFactory}};
+       # use quilkin::{config::ConfigType, filters::{FilterInstance, CreateFilterArgs, Error, Filter, FilterFactory}};
        # use serde::{Deserialize, Serialize};
        # #[derive(Serialize, Deserialize, Debug)]
        # struct Config {
@@ -389,17 +389,17 @@ However, it usually contains a Protobuf equivalent of the filter's static config
            fn name(&self) -> &'static str {
                "greet.v1"
            }
-           fn create_filter(&self, args: CreateFilterArgs) -> Result<CreatedFilter, Error> {
+           fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
                let (config_json, config) = self
                    .require_config(args.config)?
                    .deserialize::<Config, greet::Greet>(self.name())?;
                let filter: Box<dyn Filter> = Box::new(Greet(config.greeting));
-               Ok((config_json, filter).into())
+               Ok(FilterInstance::new(config_json, filter))
            }
        }
        ```
 
-[CreatedFilter]: ../../api/quilkin/filters/prelude/struct.CreatedFilter.html
+[FilterInstance]: ../../api/quilkin/filters/prelude/struct.FilterInstance.html
 [Filter]: ../../api/quilkin/filters/trait.Filter.html
 [FilterFactory]: ../../api/quilkin/filters/trait.FilterFactory.html
 [filter-factory-name]: ../../api/quilkin/filters/trait.FilterFactory.html#tymethod.name

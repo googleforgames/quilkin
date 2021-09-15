@@ -35,18 +35,17 @@ impl FilterFactory for TestFilterFactory {
         "TestFilter"
     }
 
-    fn create_filter(&self, _: CreateFilterArgs) -> Result<CreatedFilter, Error> {
+    fn create_filter(&self, _: CreateFilterArgs) -> Result<FilterInstance, Error> {
         Ok(Self::create_empty_filter())
     }
 }
 
 impl TestFilterFactory {
-    pub(crate) fn create_empty_filter() -> CreatedFilter {
-        (
+    pub(crate) fn create_empty_filter() -> FilterInstance {
+        FilterInstance::new(
             serde_json::Value::Null,
             Box::new(TestFilter {}) as Box<dyn Filter>,
         )
-            .into()
     }
 }
 

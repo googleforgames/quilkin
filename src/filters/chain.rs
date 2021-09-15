@@ -19,6 +19,7 @@ use prometheus::{Error as PrometheusError, Histogram, HistogramOpts, Registry};
 use crate::config::{Filter as FilterConfig, ValidationError};
 use crate::filters::{prelude::*, FilterRegistry};
 use crate::metrics::CollectorExt;
+use std::sync::Arc;
 
 const FILTER_LABEL: &str = "filter";
 
@@ -29,7 +30,7 @@ const FILTER_LABEL: &str = "filter";
 /// through all of the filters in the chain. If any of the filters in the chain
 /// return `None`, then the chain is broken, and `None` is returned.
 pub struct FilterChain {
-    filters: Vec<(String, CreatedFilter)>,
+    filters: Vec<(String, FilterInstance)>,
     filter_read_duration_seconds: Vec<Histogram>,
     filter_write_duration_seconds: Vec<Histogram>,
 }
@@ -52,7 +53,7 @@ impl From<PrometheusError> for Error {
 }
 
 impl FilterChain {
-    pub fn new(filters: Vec<(String, CreatedFilter)>, registry: &Registry) -> Result<Self, Error> {
+    pub fn new(filters: Vec<(String, FilterInstance)>, registry: &Registry) -> Result<Self, Error> {
         Ok(Self {
             filter_read_duration_seconds: filters
                 .iter()
@@ -113,10 +114,10 @@ impl FilterChain {
     }
 
     /// Returns an iterator over the current filters' configs.
-    pub(crate) fn get_configs(&self) -> impl Iterator<Item = (&str, &serde_json::Value)> {
+    pub(crate) fn get_configs(&self) -> impl Iterator<Item = (&str, Arc<serde_json::Value>)> {
         self.filters
             .iter()
-            .map(|(config_json, config)| (config_json.as_str(), &config.config))
+            .map(|(config_json, config)| (config_json.as_str(), config.config.clone()))
     }
 }
 
@@ -125,10 +126,10 @@ impl Filter for FilterChain {
         self.filters
             .iter()
             .zip(self.filter_read_duration_seconds.iter())
-            .try_fold(ctx, |ctx, ((_, filter), histogram)| {
+            .try_fold(ctx, |ctx, ((_, instance), histogram)| {
                 Some(ReadContext::with_response(
                     ctx.from,
-                    histogram.observe_closure_duration(|| filter.filter.read(ctx))?,
+                    histogram.observe_closure_duration(|| instance.filter.read(ctx))?,
                 ))
             })
             .map(ReadResponse::from)
@@ -139,12 +140,12 @@ impl Filter for FilterChain {
             .iter()
             .rev()
             .zip(self.filter_write_duration_seconds.iter().rev())
-            .try_fold(ctx, |ctx, ((_, filter), histogram)| {
+            .try_fold(ctx, |ctx, ((_, instance), histogram)| {
                 Some(WriteContext::with_response(
                     ctx.endpoint,
                     ctx.from,
                     ctx.to,
-                    histogram.observe_closure_duration(|| filter.filter.write(ctx))?,
+                    histogram.observe_closure_duration(|| instance.filter.write(ctx))?,
                 ))
             })
             .map(WriteResponse::from)
@@ -329,11 +330,11 @@ mod tests {
                 ),
                 (
                     "TestFilter2".into(),
-                    CreatedFilter {
-                        config: serde_json::json!({
+                    FilterInstance {
+                        config: Arc::new(serde_json::json!({
                             "k1": "v1",
                             "k2": 2
-                        }),
+                        })),
                         filter: Box::new(TestFilter2 {}),
                     },
                 ),
@@ -345,13 +346,13 @@ mod tests {
         let configs = filter_chain.get_configs().collect::<Vec<_>>();
         assert_eq!(
             vec![
-                ("TestFilter", &serde_json::Value::Null),
+                ("TestFilter", Arc::new(serde_json::Value::Null)),
                 (
                     "TestFilter2",
-                    &serde_json::json!({
+                    Arc::new(serde_json::json!({
                         "k1": "v1",
                         "k2": 2
-                    })
+                    }))
                 )
             ],
             configs

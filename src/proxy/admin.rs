@@ -97,7 +97,7 @@ fn handle_request(request: Request<Body>, args: HandleRequestArgs) -> Response<B
     match (request.method(), request.uri().path()) {
         (&Method::GET, "/metrics") => args.metrics.collect_metrics(),
         (&Method::GET, "/live") => args.health.check_healthy(),
-        (&Method::GET, "/config_dump") => {
+        (&Method::GET, "/config") => {
             config_dump::handle_request(args.cluster_manager, args.filter_manager)
         }
         (_, _) => {

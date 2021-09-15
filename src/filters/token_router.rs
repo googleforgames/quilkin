@@ -75,7 +75,7 @@ impl FilterFactory for TokenRouterFactory {
         NAME
     }
 
-    fn create_filter(&self, args: CreateFilterArgs) -> Result<CreatedFilter, Error> {
+    fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
         let (config_json, config) = args
             .config
             .map(|config| config.deserialize::<Config, ProtoConfig>(self.name()))
@@ -93,7 +93,10 @@ impl FilterFactory for TokenRouterFactory {
 
         let filter = TokenRouter::new(&self.log, config, Metrics::new(&args.metrics_registry)?);
 
-        Ok((config_json, Box::new(filter) as Box<dyn Filter>).into())
+        Ok(FilterInstance::new(
+            config_json,
+            Box::new(filter) as Box<dyn Filter>,
+        ))
     }
 }
 

@@ -102,12 +102,15 @@ impl FilterFactory for CaptureBytesFactory {
         NAME
     }
 
-    fn create_filter(&self, args: CreateFilterArgs) -> Result<CreatedFilter, Error> {
+    fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
         let (config_json, config) = self
             .require_config(args.config)?
             .deserialize::<Config, ProtoConfig>(self.name())?;
         let filter = CaptureBytes::new(&self.log, config, Metrics::new(&args.metrics_registry)?);
-        Ok((config_json, Box::new(filter) as Box<dyn Filter>).into())
+        Ok(FilterInstance::new(
+            config_json,
+            Box::new(filter) as Box<dyn Filter>,
+        ))
     }
 }
 

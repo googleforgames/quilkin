@@ -51,14 +51,17 @@ impl FilterFactory for LoadBalancerFilterFactory {
         NAME
     }
 
-    fn create_filter(&self, args: CreateFilterArgs) -> Result<CreatedFilter, Error> {
+    fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
         let (config_json, config) = self
             .require_config(args.config)?
             .deserialize::<Config, ProtoConfig>(self.name())?;
         let filter = LoadBalancer {
             endpoint_chooser: config.policy.as_endpoint_chooser(),
         };
-        Ok((config_json, Box::new(filter) as Box<dyn Filter>).into())
+        Ok(FilterInstance::new(
+            config_json,
+            Box::new(filter) as Box<dyn Filter>,
+        ))
     }
 }
 

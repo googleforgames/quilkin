@@ -135,7 +135,7 @@ impl FilterManager {
 #[cfg(test)]
 mod tests {
     use super::FilterManager;
-    use crate::filters::{Filter, FilterChain, ReadContext, ReadResponse};
+    use crate::filters::{Filter, FilterChain, FilterInstance, ReadContext, ReadResponse};
     use crate::test_utils::logger;
 
     use std::sync::Arc;
@@ -186,7 +186,7 @@ mod tests {
             FilterChain::new(
                 vec![(
                     "Drop".into(),
-                    (serde_json::Value::Null, Box::new(Drop) as Box<dyn Filter>).into(),
+                    FilterInstance::new(serde_json::Value::Null, Box::new(Drop) as Box<dyn Filter>),
                 )],
                 &registry,
             )
