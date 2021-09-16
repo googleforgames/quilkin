@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+
+// ANCHOR: proto
 syntax = "proto3";
 
 package greet;
@@ -21,4 +23,4 @@ package greet;
 message Greet {
   string greeting = 1;
 }
-
+// ANCHOR_END: proto

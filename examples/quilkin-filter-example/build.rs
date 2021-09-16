@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+// ANCHOR: build
 fn main() {
     prost_build::compile_protos(&["src/greet.proto"], &["src/"]).unwrap();
 }
+// ANCHOR_END: build

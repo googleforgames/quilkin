@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+# ANCHOR: yaml
 version: v1alpha1
 proxy:
   port: 7001
@@ -24,3 +25,4 @@ static:
       greeting: Hey
   endpoints:
   - address: 127.0.0.1:4321
+# ANCHOR_END: yaml

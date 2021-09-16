@@ -14,18 +14,23 @@
  * limitations under the License.
  */
 
+// ANCHOR: include_proto
 quilkin::include_proto!("greet");
 use greet::Greet as ProtoGreet;
+// ANCHOR_END: include_proto
 use quilkin::filters::prelude::*;
 
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 
+// ANCHOR: serde_config
 #[derive(Serialize, Deserialize, Debug)]
 struct Config {
     greeting: String,
 }
+// ANCHOR_END: serde_config
 
+// ANCHOR: TryFrom
 impl TryFrom<ProtoGreet> for Config {
     type Error = ConvertProtoConfigError;
 
@@ -35,13 +40,9 @@ impl TryFrom<ProtoGreet> for Config {
         })
     }
 }
+// ANCHOR_END: TryFrom
 
-pub const NAME: &str = "greet.v1";
-
-pub fn factory() -> DynFilterFactory {
-    Box::from(GreetFilterFactory)
-}
-
+// ANCHOR: filter
 struct Greet(String);
 
 impl Filter for Greet {
@@ -56,6 +57,14 @@ impl Filter for Greet {
         Some(ctx.into())
     }
 }
+// ANCHOR_END: filter
+
+// ANCHOR: factory
+pub const NAME: &str = "greet.v1";
+
+pub fn factory() -> DynFilterFactory {
+    Box::from(GreetFilterFactory)
+}
 
 struct GreetFilterFactory;
 impl FilterFactory for GreetFilterFactory {
@@ -69,10 +78,13 @@ impl FilterFactory for GreetFilterFactory {
         Ok(Box::new(Greet(greeting.greeting)))
     }
 }
+// ANCHOR_END: factory
 
+// ANCHOR: run
 #[tokio::main]
 async fn main() {
     quilkin::run(vec![self::factory()].into_iter())
         .await
         .unwrap();
 }
+// ANCHOR_END: run
