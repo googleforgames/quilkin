@@ -146,23 +146,23 @@
                         <h1 id="writing-custom-filters"><a class="header" href="#writing-custom-filters">Writing Custom Filters</a></h1>
 <p>Quilkin provides an extensible implementation of <a href="../filters.html">Filters</a> that allows us to plug in custom implementations to fit our needs.
 This document provides an overview of the API and how we can go about writing our own <a href="../filters.html">Filters</a>.</p>
-<h4 id="api-components"><a class="header" href="#api-components">API Components</a></h4>
+<h2 id="api-components"><a class="header" href="#api-components">API Components</a></h2>
 <p>The following components make up Quilkin's implementation of filters.</p>
-<h5 id="filter"><a class="header" href="#filter">Filter</a></h5>
+<h3 id="filter"><a class="header" href="#filter">Filter</a></h3>
 <p>A <a href="../../api/quilkin/filters/trait.Filter.html">trait</a> representing an actual <a href="../filters.html#built-in-filters">Filter</a> instance in the pipeline.</p>
 <ul>
 <li>An implementation provides a <code>read</code> and a <code>write</code> method.</li>
 <li>Both methods are invoked by the proxy when it consults the <a href="../filters.html#filters-and-filter-chain">filter chain</a> - their arguments contain information about the packet being processed.</li>
 <li><code>read</code> is invoked when a packet is received on the local downstream port and is to be sent to an upstream endpoint while <code>write</code> is invoked in the opposite direction when a packet is received from an upstream endpoint and is to be sent to a downstream client.</li>
 </ul>
-<h5 id="filterfactory"><a class="header" href="#filterfactory">FilterFactory</a></h5>
+<h3 id="filterfactory"><a class="header" href="#filterfactory">FilterFactory</a></h3>
 <p>A <a href="../../api/quilkin/filters/trait.FilterFactory.html">trait</a> representing a type that knows how to create instances of a particular type of <a href="../../api/quilkin/filters/trait.Filter.html">Filter</a>.</p>
 <ul>
 <li>An implementation provides a <code>name</code> and <code>create_filter</code> method.</li>
 <li><code>create_filter</code> takes in <a href="../filters.html#filter-config">configuration</a> for the filter to create and returns a new instance of its filter type.
-<code>name</code> returns the Filter name - a unique identifier of filters of the created type (e.g quilkin.extensions.filters.debug.v1alpha1.Debug).</li>
+<code>name</code> returns the Filter name - a unique identifier of filters of the created type (e.g. quilkin.extensions.filters.debug.v1alpha1.Debug).</li>
 </ul>
-<h5 id="filterregistry"><a class="header" href="#filterregistry">FilterRegistry</a></h5>
+<h3 id="filterregistry"><a class="header" href="#filterregistry">FilterRegistry</a></h3>
 <p>A <a href="../../api/quilkin/filters/struct.FilterRegistry.html">struct</a> representing the set of all filter types known to the proxy.
 It contains all known implementations of <a href="../../api/quilkin/filters/trait.FilterFactory.html">FilterFactory</a>, each identified by their <a href="../../api/quilkin/filters/trait.FilterFactory.html#tymethod.name">name</a>.</p>
 <p>These components come together to form the <a href="../filters.html#filters-and-filter-chain">filter chain</a>.</p>
@@ -173,41 +173,33 @@ It contains all known implementations of <a href="../../api/quilkin/filters/trai
 <li>Finally, the created <a href="../../api/quilkin/filters/trait.Filter.html">Filter</a> instances are piped together to form the <a href="../filters.html#filters-and-filter-chain">filter chain</a>.</li>
 </ul>
 <p>Note that when using dynamic configuration, the process repeats in a similar manner - new filter instances are created according to the updated <a href="../filters.html#filter-config">filter configuration</a> and a new <a href="../filters.html#filters-and-filter-chain">filter chain</a> is re-created while the old one is dropped.</p>
-<h5 id="creating-custom-filters"><a class="header" href="#creating-custom-filters">Creating Custom Filters</a></h5>
+<h3 id="creating-custom-filters"><a class="header" href="#creating-custom-filters">Creating Custom Filters</a></h3>
 <p>To extend Quilkin's code with our own custom filter, we need to do the following:</p>
 <ol>
 <li>Import the Quilkin crate.</li>
-<li>Implement the <a href="../../api/quilkin/filters/trait.Filter.html">Filter</a> trait with our custom logic, as well as a <a href="../../api/quilkin/filters/trait.FilterFactory.html">FilterFactory</a> that knows how to create instances of the Filter impelmentation.</li>
+<li>Implement the <a href="../../api/quilkin/filters/trait.Filter.html">Filter</a> trait with our custom logic, as well as a <a href="../../api/quilkin/filters/trait.FilterFactory.html">FilterFactory</a> that knows how to create instances of the Filter implementation.</li>
 <li>Start the proxy with the custom <a href="../../api/quilkin/filters/trait.FilterFactory.html">FilterFactory</a> implementation.</li>
 </ol>
 <blockquote>
 <p>The full source code used in this example can be found <a href="https://github.com/googleforgames/quilkin/tree/main/examples/quilkin-filter-example">here</a></p>
 </blockquote>
-<ol>
-<li>
-<p><strong>Import the Quilkin crate</strong></p>
+<h4 id="1-import-the-quilkin-crate"><a class="header" href="#1-import-the-quilkin-crate">1. Import the Quilkin crate</a></h4>
 <pre><code class="language-bash"># Start with a new crate
 cargo new --bin quilkin-filter-example
 </code></pre>
 <p>Add Quilkin as a dependency in <code>Cargo.toml</code>.</p>
 <pre><code class="language-toml">[dependencies]
-quilkin = &quot;0.1.0&quot;
+quilkin = &quot;0.2.0&quot;
 </code></pre>
-</li>
-<li>
-<p><strong>Implement the filter traits</strong></p>
-<p>Its not terribly important what the filter in this example does so lets write a <code>Greet</code> filter that appends <code>Hello</code> to every packet in one direction and <code>Goodbye</code> to packets in the opposite direction.</p>
+<h4 id="2-implement-the-filter-traits"><a class="header" href="#2-implement-the-filter-traits">2. Implement the filter traits</a></h4>
+<p>It's not terribly important what the filter in this example does so let's write a <code>Greet</code> filter that appends <code>Hello</code> to every packet in one direction and <code>Goodbye</code> to packets in the opposite direction.</p>
 <p>We start with the <a href="../../api/quilkin/filters/trait.Filter.html">Filter</a> implementation</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><code class="language-rust no_run noplayground"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
+</span><span class="boring">
 </span>// src/main.rs
-use quilkin::filters::{Filter, ReadContext, ReadResponse, WriteContext, WriteResponse};
-
-const NAME: &amp;str = &quot;greet.v1&quot;;
-
-// This creates adds an associated const named `FILTER_NAME` that points
-// to `&quot;greet.v1&quot;`.
+use quilkin::filters::prelude::*;
+ 
 struct Greet;
 
 impl Filter for Greet {
@@ -221,63 +213,54 @@ impl Filter for Greet {
     }
 }
 <span class="boring">}
-</span></code></pre></pre>
+</span></code></pre>
 <p>Next, we implement a <a href="../../api/quilkin/filters/trait.FilterFactory.html">FilterFactory</a> for it and give it a name:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><code class="language-rust no_run noplayground"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>// src/main.rs
-<span class="boring">const NAME: &amp;str = &quot;greet.v1&quot;;
+</span><span class="boring">
 </span><span class="boring">struct Greet;
 </span><span class="boring">impl Filter for Greet {}
 </span><span class="boring">use quilkin::filters::Filter;
-</span>use quilkin::filters::{CreateFilterArgs, Error, FilterFactory};
+</span>// src/main.rs
+use quilkin::filters::prelude::*;
+
+pub const NAME: &amp;str = &quot;greet.v1&quot;;
+
+pub fn factory() -&gt; DynFilterFactory {
+    Box::from(GreetFilterFactory)
+}
 
 struct GreetFilterFactory;
 impl FilterFactory for GreetFilterFactory {
     fn name(&amp;self) -&gt; &amp;'static str {
-        // We provide the name of filter that we defined earlier.
         NAME
     }
-    fn create_filter(&amp;self, _: CreateFilterArgs) -&gt; Result&lt;Box&lt;dyn Filter&gt;, Error&gt; {
+    fn create_filter(&amp;self, args: CreateFilterArgs) -&gt; Result&lt;Box&lt;dyn Filter&gt;, Error&gt; {
         Ok(Box::new(Greet))
     }
 }
 <span class="boring">}
-</span></code></pre></pre>
-</li>
-<li>
-<p><strong>Start the proxy</strong></p>
+</span></code></pre>
+<h4 id="3-start-the-proxy"><a class="header" href="#3-start-the-proxy">3. Start the proxy</a></h4>
 <p>We can run the proxy in the exact manner as the default Quilkin binary using the <a href="../../api/quilkin/runner/fn.run.html">run</a> function, passing in our custom <a href="../../api/quilkin/filters/trait.FilterFactory.html">FilterFactory</a>.
-Lets add a main function that does that. Quilkin relies on the <a href="https://docs.rs/tokio/1.5.0/tokio/">Tokio</a> async runtime so we need to import that crate and wrap our main function with it.</p>
+Let's add a main function that does that. Quilkin relies on the <a href="https://docs.rs/tokio/1.5.0/tokio/">Tokio</a> async runtime, so we need to import that 
+crate and wrap our main function with it.</p>
 <p>Add Tokio as a dependency in <code>Cargo.toml</code>.</p>
 <pre><code class="language-toml">[dependencies]
-quilkin = &quot;0.1.0-dev&quot;
+quilkin = &quot;0.2.0&quot;
 tokio = { version = &quot;1&quot;, features = [&quot;full&quot;]}
 </code></pre>
 <p>Add a main function that starts the proxy.</p>
-<pre><pre class="playground"><code class="language-rust  no_run">// src/main.rs
-<span class="boring">use quilkin::filters::{CreateFilterArgs, Filter, Error, FilterFactory};
-</span><span class="boring">struct GreetFilterFactory;
-</span><span class="boring">impl FilterFactory for GreetFilterFactory {
-</span><span class="boring">    fn name(&amp;self) -&gt; &amp;'static str {
-</span><span class="boring">        &quot;greet.v1&quot;
-</span><span class="boring">    }
-</span><span class="boring">    fn create_filter(&amp;self, _: CreateFilterArgs) -&gt; Result&lt;Box&lt;dyn Filter&gt;, Error&gt; {
-</span><span class="boring">        unimplemented!()
-</span><span class="boring">    }
-</span><span class="boring">}
-</span>use quilkin::{filters::DynFilterFactory, run};
-
+<pre><code class="language-rust no_run noplayground ignore">// src/main.rs
 #[tokio::main]
 async fn main() {
-    run(vec![Box::new(GreetFilterFactory) as DynFilterFactory]).await.unwrap();
+    quilkin::run(vec![self::factory()].into_iter())
+        .await
+        .unwrap();
 }
-</code></pre></pre>
-</li>
-</ol>
-<p>Now, let's try out the proxy. The following configuration starts our extended version of the proxy at port 7001
-and forwards all packets to an upstream server at port 4321.</p>
+</code></pre>
+<p>Now, let's try out the proxy. The following configuration starts our extended version of the proxy at port 7001 and
+forwards all packets to an upstream server at port 4321.</p>
 <pre><code class="language-yaml"># config.yaml
 version: v1alpha1
 proxy:
@@ -307,96 +290,127 @@ static:
 </ul>
 <p>Whatever we pass to the client should now show up with our modification on the listening server's standard output.
 For example typing <code>Quilkin</code> in the client prints <code>Hello Quilkin</code> on the server.</p>
-<h4 id="working-with-filter-configuration"><a class="header" href="#working-with-filter-configuration">Working with Filter Configuration</a></h4>
+<h4 id="4-working-with-filter-configuration"><a class="header" href="#4-working-with-filter-configuration">4. Working with Filter Configuration</a></h4>
 <p>Let's extend the <code>Greet</code> filter to require a configuration that contains what greeting to use.</p>
 <p>The <a href="https://docs.serde.rs/serde_yaml/index.html">Serde</a> crate is used to describe static YAML configuration in code while <a href="https://docs.rs/prost/0.7.0/prost/">Prost</a> to describe dynamic configuration as <a href="https://developers.google.com/protocol-buffers">Protobuf</a> messages when talking to the <a href="../xds.html">management server</a>.</p>
 <h5 id="static-configuration"><a class="header" href="#static-configuration">Static Configuration</a></h5>
-<ol>
-<li>
-<p>Add the yaml parsing crates to Cargo.toml:</p>
-<pre><code class="language-toml">   [dependencies]
-   # ...
-   serde = &quot;1.0&quot;
-   serde_yaml = &quot;0.8&quot;
+<p>First let's create the config for our static configuration:</p>
+<h6 id="1-add-the-yaml-parsing-crates-to-cargotoml"><a class="header" href="#1-add-the-yaml-parsing-crates-to-cargotoml">1. Add the yaml parsing crates to <code>Cargo.toml</code>:</a></h6>
+<pre><code class="language-toml">  [dependencies]
+  # ...
+  serde = &quot;1.0&quot;
+  serde_yaml = &quot;0.8&quot;
 </code></pre>
-</li>
-<li>
-<p>Define a struct representing the config:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>// src/main.rs
-use serde::{Deserialize, Serialize};
-
+<h6 id="2-define-a-struct-representing-the-config"><a class="header" href="#2-define-a-struct-representing-the-config">2. Define a struct representing the config:</a></h6>
+<pre><code class="language-rust no_run noplayground ignore">// src/main.rs
 #[derive(Serialize, Deserialize, Debug)]
 struct Config {
     greeting: String,
 }
-<span class="boring">}
-</span></code></pre></pre>
-</li>
-<li>
-<p>Update the <code>Greet</code> Filter to take in <code>greeting</code> as a parameter:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>// src/main.rs
-<span class="boring">use quilkin::filters::{Filter, ReadContext, ReadResponse, WriteContext, WriteResponse};
-</span>struct Greet(String);
+</code></pre>
+<h6 id="3-update-the-greet-filter-to-take-in-greeting-as-a-parameter"><a class="header" href="#3-update-the-greet-filter-to-take-in-greeting-as-a-parameter">3. Update the <code>Greet</code> Filter to take in <code>greeting</code> as a parameter:</a></h6>
+<pre><code class="language-rust no_run noplayground ignore">// src/main.rs
+struct Greet(String);
 
 impl Filter for Greet {
     fn read(&amp;self, mut ctx: ReadContext) -&gt; Option&lt;ReadResponse&gt; {
         ctx.contents
-            .splice(0..0, format!(&quot;{} &quot;,self.0).into_bytes());
+            .splice(0..0, format!(&quot;{} &quot;, self.0).into_bytes());
         Some(ctx.into())
     }
     fn write(&amp;self, mut ctx: WriteContext) -&gt; Option&lt;WriteResponse&gt; {
         ctx.contents
-            .splice(0..0, format!(&quot;{} &quot;,self.0).into_bytes());
+            .splice(0..0, format!(&quot;{} &quot;, self.0).into_bytes());
         Some(ctx.into())
     }
 }
-<span class="boring">}
-</span></code></pre></pre>
-</li>
-<li>
-<p>Finally, update <code>GreetFilterFactory</code> to extract the greeting from the passed in configuration and forward it onto the <code>Greet</code> Filter.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>// src/main.rs
-<span class="boring">use serde::{Deserialize, Serialize};
-</span><span class="boring">#[derive(Serialize, Deserialize, Debug)]
-</span><span class="boring">struct Config {
-</span><span class="boring">    greeting: String,
-</span><span class="boring">}
-</span><span class="boring">use quilkin::filters::{CreateFilterArgs, Error, FilterFactory, Filter, ReadContext, ReadResponse, WriteContext, WriteResponse};
-</span><span class="boring">struct Greet(String);
-</span><span class="boring">impl Filter for Greet { }
-</span>use quilkin::config::ConfigType;
+</code></pre>
+<h5 id="dynamic-configuration"><a class="header" href="#dynamic-configuration">Dynamic Configuration</a></h5>
+<p>Next, we'll create the <a href="https://developers.google.com/protocol-buffers">Protobuf</a> definition of the same configuration for the dynamic configuration of our Filter. </p>
+<p>Our dynamic config model contains the serialized <a href="https://developers.google.com/protocol-buffers">Protobuf</a> message received from the <a href="../xds.html">management server</a> for the 
+<a href="../../api/quilkin/filters/trait.Filter.html">Filter</a> to create. As a result, its contents are entirely opaque to Quilkin, and it is represented with the 
+<a href="https://docs.rs/prost-types/0.7.0/prost_types/struct.Any.html">ProstAny</a> type so the <a href="../../api/quilkin/filters/trait.FilterFactory.html">FilterFactory</a> can interpret its contents anyway it wishes to. However, it usually 
+contains a Protobuf equivalent of the filter's static configuration.</p>
+<h6 id="1-add-the-proto-parsing-crates-to-cargotoml"><a class="header" href="#1-add-the-proto-parsing-crates-to-cargotoml">1. Add the proto parsing crates to <code>Cargo.toml</code>:</a></h6>
+<pre><code class="language-toml">[dependencies]
+# ...
+tonic = &quot;0.5.0&quot;
+prost = &quot;0.7&quot;
+prost-types = &quot;0.7&quot;
+</code></pre>
+<h6 id="2-create-a-a-hrefhttpsdevelopersgooglecomprotocol-buffersprotobufa-equivalent-of-the-a-hrefstatic-configurationstatic-configurationa"><a class="header" href="#2-create-a-a-hrefhttpsdevelopersgooglecomprotocol-buffersprotobufa-equivalent-of-the-a-hrefstatic-configurationstatic-configurationa">2. Create a <a href="https://developers.google.com/protocol-buffers">Protobuf</a> equivalent of the <a href="#static-configuration">static configuration</a>:</a></h6>
+<pre><code class="language-plaintext no_run noplayground ignore">// src/greet.proto
+syntax = &quot;proto3&quot;;
+
+package greet;
+
+message Greet {
+  string greeting = 1;
+}
+</code></pre>
+<h6 id="3-generate-rust-code-from-the-proto-file"><a class="header" href="#3-generate-rust-code-from-the-proto-file">3. Generate Rust code from the proto file:</a></h6>
+<p>There are a few ways to generate <a href="https://docs.rs/prost/0.7.0/prost/">Prost</a> code from proto, we will use the <a href="https://docs.rs/prost-build/0.7.0/prost_build/">prost_build</a> crate in this example.</p>
+<p>Add the required crates to <code>Cargo.toml</code>:</p>
+<pre><code class="language-toml">[dependencies]
+# ...
+bytes = &quot;1.0&quot;
+
+[build-dependencies]
+prost-build = &quot;0.7&quot;
+</code></pre>
+<p>Add a <a href="https://doc.rust-lang.org/cargo/reference/build-scripts.html">build script</a> to generate the Rust code during compilation:</p>
+<pre><code class="language-rust no_run noplayground ignore">// src/build.rs
+fn main() {
+    prost_build::compile_protos(&amp;[&quot;src/greet.proto&quot;], &amp;[&quot;src/&quot;]).unwrap();
+}
+</code></pre>
+<p>To include the generated code, we'll use a convenience macro <a href="../../api/quilkin/macro.include_proto.html">include_proto</a>, which imports the generated code, while
+recreating the grpc package name as Rust modules:</p>
+<pre><code class="language-rust no_run noplayground ignore">// src/main.rs
+quilkin::include_proto!(&quot;greet&quot;);
+use greet::Greet as ProtoGreet;
+</code></pre>
+<h5 id="convert-between-static-and-dynamic-configuration-models"><a class="header" href="#convert-between-static-and-dynamic-configuration-models">Convert between static and dynamic configuration models</a></h5>
+<p>Since configuration can be provided either statically or dynamically at runtime, we need to provide a way to convert 
+between one configuration model and the other. To do this, we'll implement the <a href="https://doc.rust-lang.org/std/convert/trait.TryFrom.html">std::convert::TryFrom</a> trait to 
+convert from the <a href="https://developers.google.com/protocol-buffers">Protobuf</a> model to the <a href="https://docs.serde.rs/serde_yaml/index.html">Serde</a> model.</p>
+<pre><code class="language-rust no_run noplayground ignore">// src/main.rs
+impl TryFrom&lt;ProtoGreet&gt; for Config {
+    type Error = ConvertProtoConfigError;
+
+    fn try_from(p: ProtoGreet) -&gt; Result&lt;Self, Self::Error&gt; {
+        Ok(Config {
+            greeting: p.greeting,
+        })
+    }
+}
+</code></pre>
+<h5 id="finally-update-greetfilterfactory-to-extract-the-greeting-from-the-passed-in-configuration-and-forward-it-onto-the-greet-filter"><a class="header" href="#finally-update-greetfilterfactory-to-extract-the-greeting-from-the-passed-in-configuration-and-forward-it-onto-the-greet-filter">Finally, update <code>GreetFilterFactory</code> to extract the greeting from the passed in configuration and forward it onto the <code>Greet</code> Filter.</a></h5>
+<pre><code class="language-rust no_run noplayground ignore">// src/main.rs
+pub const NAME: &amp;str = &quot;greet.v1&quot;;
+
+pub fn factory() -&gt; DynFilterFactory {
+    Box::from(GreetFilterFactory)
+}
 
 struct GreetFilterFactory;
 impl FilterFactory for GreetFilterFactory {
     fn name(&amp;self) -&gt; &amp;'static str {
-        &quot;greet.v1&quot;
+        NAME
     }
     fn create_filter(&amp;self, args: CreateFilterArgs) -&gt; Result&lt;Box&lt;dyn Filter&gt;, Error&gt; {
-        let greeting = match args.config.unwrap() {
-            ConfigType::Static(config) =&gt; {
-                serde_yaml::from_str::&lt;Config&gt;(serde_yaml::to_string(config).unwrap().as_str())
-                 .unwrap()
-                 .greeting
-            }
-            ConfigType::Dynamic(_) =&gt; unimplemented!(&quot;dynamic config is not yet supported for this filter&quot;),
-        };
-        Ok(Box::new(Greet(greeting)))
+        let greeting = self
+            .require_config(args.config)?
+            .deserialize::&lt;Config, ProtoGreet&gt;(self.name())?;
+        Ok(Box::new(Greet(greeting.greeting)))
     }
 }
-<span class="boring">}
-</span></code></pre></pre>
-</li>
-</ol>
-<p>And with these changes we have wired up static configuration for our filter. Try it out with the following config.yaml:</p>
+</code></pre>
+<blockquote>
+<p>We use the convenience function of <a href="../../api/quilkin/config/enum.ConfigType.html#method.deserialize">ConfigType::deserialize</a> to return the <a href="https://docs.serde.rs/serde_yaml/index.html">Serde</a> config regardless of which type 
+of configuration is utilised. </p>
+</blockquote>
+<p>And with these changes we have wired up configuration for our filter. Try it out with the following <code>config.yaml</code>:</p>
 <pre><code class="language-yaml"># config.yaml
 version: v1alpha1
 proxy:
@@ -409,125 +423,6 @@ static:
   endpoints:
   - address: 127.0.0.1:4321
 </code></pre>
-<h5 id="dynamic-configuration"><a class="header" href="#dynamic-configuration">Dynamic Configuration</a></h5>
-<p>You might have noticed while adding <a href="#static-configuration">static configuration support</a>, that the <a href="../../api/quilkin/filters/prelude/struct.CreateFilterArgs.html#structfield.config">config</a> argument passed into our <a href="../../api/quilkin/filters/trait.FilterFactory.html">FilterFactory</a>
-has a <a href="../../api/quilkin/config/enum.ConfigType.html#variant.Dynamic">Dynamic</a> variant.</p>
-<pre><code class="language-rust  ignore">let greeting = match args.config.unwrap() {
-    ConfigType::Static(config) =&gt; {
-        serde_yaml::from_str::&lt;Config&gt;(serde_yaml::to_string(config).unwrap().as_str())
-         .unwrap()
-         .greeting
-    }
-    ConfigType::Dynamic(_) =&gt; unimplemented!(&quot;dynamic config is not yet supported for this filter&quot;),
-};
-</code></pre>
-<p>It contains the serialized <a href="https://developers.google.com/protocol-buffers">Protobuf</a> message received from the <a href="../xds.html">management server</a> for the <a href="../../api/quilkin/filters/trait.Filter.html">Filter</a> to create.
-As a result, its contents are entirely opaque to Quilkin and it is represented with the <a href="https://docs.rs/prost-types/0.7.0/prost_types/struct.Any.html">Prost Any</a> type so the <a href="../../api/quilkin/filters/trait.FilterFactory.html">FilterFactory</a>
-can interpret its contents anyway it wishes to.
-However, it usually contains a Protobuf equivalent of the filter's static configuration.</p>
-<ol>
-<li>
-<p>Add the proto parsing crates to Cargo.toml:</p>
-<pre><code class="language-toml">[dependencies]
-# ...
-prost = &quot;0.7&quot;
-prost-types = &quot;0.7&quot;
-</code></pre>
-</li>
-<li>
-<p>Create a <a href="https://developers.google.com/protocol-buffers">Protobuf</a> equivalent of the <a href="#static-configuration">static configuration</a>:</p>
-<pre><code class="language-proto"># src/greet.proto
-syntax = &quot;proto3&quot;;
-package greet;
-message Greet {
-  string greeting = 1;
-}
-</code></pre>
-</li>
-<li>
-<p>Generate Rust code from the proto file:</p>
-<p>There are a few ways to generate <a href="https://docs.rs/prost/0.7.0/prost/">Prost</a> code from proto, we will use the <a href="https://docs.rs/prost-build/0.7.0/prost_build/">prost_build</a> crate in this example.</p>
-<ol>
-<li>
-<p>Add the required crates to Cargo.toml</p>
-<pre><code class="language-toml">[dependencies]
-# ...
-bytes = &quot;1.0&quot;
-
-[build-dependencies]
-prost-build = &quot;0.7&quot;
-</code></pre>
-</li>
-<li>
-<p>Add a <a href="https://doc.rust-lang.org/cargo/reference/build-scripts.html">build script</a> to generate the Rust code during compilation:</p>
-<pre><code class="language-ignore">// build.rs
-fn main() {
-  prost_build::compile_protos(&amp;[&quot;src/greet.proto&quot;], &amp;[&quot;src/&quot;]).unwrap();
-}
-</code></pre>
-</li>
-<li>
-<p>Include the generated code:</p>
-<pre><code class="language-ignore">mod greet {
-  include!(concat!(env!(&quot;OUT_DIR&quot;), &quot;/greet.rs&quot;));
-}
-</code></pre>
-</li>
-<li>
-<p>Decode the serialized proto message into the generated config:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>// src/main.rs
-<span class="boring">use quilkin::{config::ConfigType, filters::{CreateFilterArgs, Error, Filter, FilterFactory}};
-</span><span class="boring">use serde::{Deserialize, Serialize};
-</span><span class="boring">#[derive(Serialize, Deserialize, Debug)]
-</span><span class="boring">struct Config {
-</span><span class="boring">    greeting: String,
-</span><span class="boring">}
-</span><span class="boring">pub mod greet {
-</span><span class="boring">   #[derive(Debug,Default)]
-</span><span class="boring">   pub struct Greet{ pub greeting: String }
-</span><span class="boring">   use prost::encoding::{WireType, DecodeContext};
-</span><span class="boring">   use prost::DecodeError;
-</span><span class="boring">   use bytes::{BufMut, Buf};
-</span><span class="boring">   impl prost::Message for Greet {
-</span><span class="boring">     fn encoded_len(&amp;self) -&gt; usize { todo!() }
-</span><span class="boring">     fn encode_raw&lt;B&gt;(&amp;self, _: &amp;mut B) where B: BufMut { todo!() }
-</span><span class="boring">     fn merge_field&lt;B&gt;(&amp;mut self, _: u32, _: WireType, _: &amp;mut B, _: DecodeContext) -&gt; std::result::Result&lt;(), DecodeError&gt; where B: Buf { todo!() }
-</span><span class="boring">     fn clear(&amp;mut self) { todo!() }
-</span><span class="boring">   }
-</span><span class="boring">}
-</span><span class="boring">struct Greet(String);
-</span><span class="boring">impl Filter for Greet { }
-</span>use bytes::Bytes;
-
-struct GreetFilterFactory;
-impl FilterFactory for GreetFilterFactory {
-    fn name(&amp;self) -&gt; &amp;'static str {
-        &quot;greet.v1&quot;
-    }
-    fn create_filter(&amp;self, args: CreateFilterArgs) -&gt; Result&lt;Box&lt;dyn Filter&gt;, Error&gt; {
-        let greeting = match args.config.unwrap() {
-            ConfigType::Static(config) =&gt; {
-                serde_yaml::from_str::&lt;Config&gt;(serde_yaml::to_string(config).unwrap().as_str())
-                    .unwrap()
-                    .greeting
-            }
-            ConfigType::Dynamic(config) =&gt; {
-                let config: greet::Greet = prost::Message::decode(Bytes::from(config.value)).unwrap();
-                config.greeting
-            }
-        };
-        Ok(Box::new(Greet(greeting)))
-    }
-}
-<span class="boring">}
-</span></code></pre></pre>
-</li>
-</ol>
-</li>
-</ol>
 
                     </main>
 
