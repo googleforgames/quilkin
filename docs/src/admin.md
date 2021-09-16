@@ -27,7 +27,7 @@ Outputs [Prometheus](https://prometheus.io/) formatted metrics for this proxy.
 
 See the [Proxy Metrics](./proxy.md#metrics) documentation for what metrics are available.
 
-## /config_
+## /config
 
 Returns a JSON representation of the cluster and filterchain configuration that the proxy is running
 with at the time of invocation.
