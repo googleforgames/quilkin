@@ -47,10 +47,7 @@ version:
 	@echo $(package_version)
 
 # Run all tests
-test: ensure-build-image test-quilkin test-examples
-
-# test only the quilkin crate
-test-quilkin: ensure-build-image
+test: ensure-build-image
 	docker run --rm $(common_rust_args) \
      		--entrypoint=cargo $(BUILD_IMAGE_TAG) deny check
 	docker run --rm $(common_rust_args) \
@@ -59,13 +56,6 @@ test-quilkin: ensure-build-image
  		--entrypoint=cargo $(BUILD_IMAGE_TAG) fmt -- --check
 	docker run --rm $(common_rust_args) \
      		--entrypoint=cargo $(BUILD_IMAGE_TAG) test
-
-# Run tests against the examples
-test-examples: ensure-build-image
-	docker run --rm $(common_rust_args) -w /workspace/examples/quilkin-filter-example \
-		--entrypoint=cargo $(BUILD_IMAGE_TAG) clippy --tests -- -D warnings
-	docker run --rm $(common_rust_args) -w /workspace/examples/quilkin-filter-example \
-		--entrypoint=cargo $(BUILD_IMAGE_TAG) fmt -- --check
 
 # Build all binaries, images and related artifacts
 build: binary-archive build-image

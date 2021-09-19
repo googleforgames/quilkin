@@ -22,7 +22,6 @@ message LoadBalancer {
   enum Policy {
     RoundRobin = 0;
     Random = 1;
-    Hash = 2;
   }
 
   message PolicyValue {
