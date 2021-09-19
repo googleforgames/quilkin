@@ -32,7 +32,7 @@ impl Metrics {
                 "CaptureBytes",
                 "Total number of packets dropped due capture size being larger than the received packet",
             ))?
-            .register(registry)?,
+            .register_if_not_exists(registry)?,
         })
     }
 }

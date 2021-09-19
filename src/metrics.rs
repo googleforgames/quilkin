@@ -43,25 +43,22 @@ pub fn filter_opts(name: &str, filter_name: &str, description: &str) -> Opts {
     opts(name, &format!("filter_{}", filter_name), description)
 }
 
-pub trait CollectorExt: Collector + Clone + Sized + 'static {
-    /// Registers the current metric collector with the provided registry.
-    /// Returns an error if a collector with the same name has already
-    /// been registered.
-    fn register(self, registry: &Registry) -> Result<Self> {
-        registry.register(Box::new(self.clone()))?;
-        Ok(self)
-    }
+/// Registers the current metric collector with the provided registry.
+/// Returns an error if a collector with the same name has already
+/// been registered.
+fn register_metric<T: Collector + Sized + 'static>(
+    registry: &Registry,
+    collector: T,
+) -> Result<()> {
+    registry.register(Box::new(collector))
+}
 
+pub trait CollectorExt: Collector + Clone + Sized + 'static {
     /// Registers the current metric collector with the provided registry
     /// if not already registered.
     fn register_if_not_exists(self, registry: &Registry) -> Result<Self> {
-        match self.clone().register(registry) {
+        match register_metric(registry, self.clone()) {
             Ok(_) | Err(prometheus::Error::AlreadyReg) => Ok(self),
-            Err(prometheus::Error::Msg(msg)) if msg.contains("already exists") => {
-                // FIXME: We should be able to remove this branch entirely if `AlreadyReg` gets fixed.
-                //  https://github.com/tikv/rust-prometheus/issues/247
-                Ok(self)
-            }
             Err(err) => Err(err),
         }
     }
