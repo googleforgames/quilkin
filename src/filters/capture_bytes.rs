@@ -102,13 +102,15 @@ impl FilterFactory for CaptureBytesFactory {
         NAME
     }
 
-    fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
-        Ok(Box::new(CaptureBytes::new(
-            &self.log,
-            self.require_config(args.config)?
-                .deserialize::<Config, ProtoConfig>(self.name())?,
-            Metrics::new(&args.metrics_registry)?,
-        )))
+    fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
+        let (config_json, config) = self
+            .require_config(args.config)?
+            .deserialize::<Config, ProtoConfig>(self.name())?;
+        let filter = CaptureBytes::new(&self.log, config, Metrics::new(&args.metrics_registry)?);
+        Ok(FilterInstance::new(
+            config_json,
+            Box::new(filter) as Box<dyn Filter>,
+        ))
     }
 }
 
@@ -160,7 +162,8 @@ mod tests {
                 Registry::default(),
                 Some(&Value::Mapping(map)),
             ))
-            .unwrap();
+            .unwrap()
+            .filter;
         assert_end_strategy(filter.as_ref(), TOKEN_KEY, true);
     }
 
@@ -174,7 +177,8 @@ mod tests {
                 Registry::default(),
                 Some(&Value::Mapping(map)),
             ))
-            .unwrap();
+            .unwrap()
+            .filter;
         assert_end_strategy(filter.as_ref(), CAPTURED_BYTES, false);
     }
 

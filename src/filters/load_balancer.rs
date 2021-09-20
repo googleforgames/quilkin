@@ -51,14 +51,17 @@ impl FilterFactory for LoadBalancerFilterFactory {
         NAME
     }
 
-    fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
-        let config: Config = self
+    fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
+        let (config_json, config) = self
             .require_config(args.config)?
             .deserialize::<Config, ProtoConfig>(self.name())?;
-
-        Ok(Box::new(LoadBalancer {
+        let filter = LoadBalancer {
             endpoint_chooser: config.policy.as_endpoint_chooser(),
-        }))
+        };
+        Ok(FilterInstance::new(
+            config_json,
+            Box::new(filter) as Box<dyn Filter>,
+        ))
     }
 }
 
@@ -84,6 +87,7 @@ mod tests {
                 Some(&serde_yaml::from_str(config).unwrap()),
             ))
             .unwrap()
+            .filter
     }
 
     fn get_response_addresses(

@@ -135,7 +135,7 @@ impl FilterManager {
 #[cfg(test)]
 mod tests {
     use super::FilterManager;
-    use crate::filters::{Filter, FilterChain, ReadContext, ReadResponse};
+    use crate::filters::{Filter, FilterChain, FilterInstance, ReadContext, ReadResponse};
     use crate::test_utils::logger;
 
     use std::sync::Arc;
@@ -182,8 +182,16 @@ mod tests {
                 None
             }
         }
-        let filter_chain =
-            Arc::new(FilterChain::new(vec![("Drop".into(), Box::new(Drop))], &registry).unwrap());
+        let filter_chain = Arc::new(
+            FilterChain::new(
+                vec![(
+                    "Drop".into(),
+                    FilterInstance::new(serde_json::Value::Null, Box::new(Drop) as Box<dyn Filter>),
+                )],
+                &registry,
+            )
+            .unwrap(),
+        );
         assert!(filter_chain_updates_tx.send(filter_chain).await.is_ok());
 
         let mut num_iterations = 0;

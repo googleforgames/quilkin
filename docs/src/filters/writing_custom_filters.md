@@ -20,8 +20,8 @@ A [trait][Filter] representing an actual [Filter][built-in-filters] instance in 
 A [trait][FilterFactory] representing a type that knows how to create instances of a particular type of [Filter].
 
 - An implementation provides a `name` and `create_filter` method.
-- `create_filter` takes in [configuration][filter configuration] for the filter to create and returns a new instance of its filter type.
-`name` returns the Filter name - a unique identifier of filters of the created type (e.g. quilkin.extensions.filters.debug.v1alpha1.Debug).
+- `create_filter` takes in [configuration][filter configuration] for the filter to create and returns a [FilterInstance] type containing a new instance of its filter type.  
+  `name` returns the Filter name - a unique identifier of filters of the created type (e.g quilkin.extensions.filters.debug.v1alpha1.Debug).
 
 ### FilterRegistry
 
@@ -111,8 +111,9 @@ impl FilterFactory for GreetFilterFactory {
     fn name(&self) -> &'static str {
         NAME
     }
-    fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
-        Ok(Box::new(Greet))
+    fn create_filter(&self, _: CreateFilterArgs) -> Result<FilterInstance, Error> {
+        let filter: Box<dyn Filter> = Box::new(Greet);
+        Ok(FilterInstance::new(serde_json::Value::Null, filter))
     }
 }
 # }
@@ -177,7 +178,7 @@ For example typing `Quilkin` in the client prints `Hello Quilkin` on the server.
 
 Let's extend the `Greet` filter to require a configuration that contains what greeting to use.
 
-The [Serde] crate is used to describe static YAML configuration in code while [Prost] to describe dynamic configuration as [Protobuf] messages when talking to the [management server].
+The [Serde] crate is used to describe static YAML configuration in code while [Prost] is used to describe dynamic configuration as [Protobuf] messages when talking to the [management server].
 
 ##### Static Configuration
 
@@ -206,14 +207,70 @@ First let's create the config for our static configuration:
 {{#include ../../../examples/quilkin-filter-example/src/main.rs:filter}}
 ```
 
+###### 4. Finally, update `GreetFilterFactory` to extract the greeting from the passed in configuration and forward it onto the `Greet` Filter.
+
+```rust,no_run,noplayground
+// src/main.rs
+# use serde::{Deserialize, Serialize};
+# #[derive(Serialize, Deserialize, Debug)]
+# struct Config {
+#     greeting: String,
+# }
+# use quilkin::filters::prelude::*;
+# struct Greet(String);
+# impl Filter for Greet { }
+use quilkin::config::ConfigType;
+
+pub const NAME: &str = "greet.v1";
+
+pub fn factory() -> DynFilterFactory {
+    Box::from(GreetFilterFactory)
+}
+
+struct GreetFilterFactory;
+impl FilterFactory for GreetFilterFactory {
+    fn name(&self) -> &'static str {
+        NAME
+    }
+    fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
+        let config = match args.config.unwrap() {
+          ConfigType::Static(config) => {
+              serde_yaml::from_str::<Config>(serde_yaml::to_string(config).unwrap().as_str())
+                .unwrap()
+          }
+          ConfigType::Dynamic(_) => unimplemented!("dynamic config is not yet supported for this filter"),
+        };
+        let filter: Box<dyn Filter> = Box::new(Greet(config.greeting));
+        Ok(FilterInstance::new(serde_json::Value::Null, filter))
+    }
+}
+```
+
+And with these changes we have wired up static configuration for our filter. Try it out with the following config.yaml:
+```yaml
+# config.yaml
+{{#include ../../../examples/quilkin-filter-example/config.yaml:yaml}}
+```
+
 ##### Dynamic Configuration
 
-Next, we'll create the [Protobuf] definition of the same configuration for the dynamic configuration of our Filter. 
+You might have noticed while adding [static configuration support][anchor-static-config], that the [config][CreateFilterArgs::config] argument passed into our [FilterFactory]
+has a [Dynamic][ConfigType::dynamic] variant.
 
-Our dynamic config model contains the serialized [Protobuf] message received from the [management server] for the 
-[Filter] to create. As a result, its contents are entirely opaque to Quilkin, and it is represented with the 
-[ProstAny][prost-any] type so the [FilterFactory] can interpret its contents anyway it wishes to. However, it usually 
-contains a Protobuf equivalent of the filter's static configuration.
+```rust,ignore
+let config = match args.config.unwrap() {
+    ConfigType::Static(config) => {
+        serde_yaml::from_str::<Config>(serde_yaml::to_string(config).unwrap().as_str())
+         .unwrap()
+    }
+    ConfigType::Dynamic(_) => unimplemented!("dynamic config is not yet supported for this filter"),
+};
+```
+
+The [Dynamic][ConfigType::dynamic] contains the serialized [Protobuf] message received from the [management server] for the [Filter] to create.
+As a result, its contents are entirely opaque to Quilkin and it is represented with the [Prost Any][prost-any] type so the [FilterFactory]
+can interpret its contents however it wishes.  
+However, it usually contains a Protobuf equivalent of the filter's static configuration.
 
 ###### 1. Add the proto parsing crates to `Cargo.toml`:
 
@@ -261,45 +318,42 @@ recreating the grpc package name as Rust modules:
 // src/main.rs
 {{#include ../../../examples/quilkin-filter-example/src/main.rs:include_proto}}
 ```
+###### 4. Decode the serialized proto message into a config:
 
-##### Convert between static and dynamic configuration models
-
-Since configuration can be provided either statically or dynamically at runtime, we need to provide a way to convert 
-between one configuration model and the other. To do this, we'll implement the [std::convert::TryFrom] trait to 
-convert from the [Protobuf] model to the [Serde] model.
+If the message contains a Protobuf equivalent of the filter's static configuration, we can
+leverage the [deserialize][ConfigType::deserialize] method to deserialize either a static or dynamic config. 
+The function automatically deserializes and converts from the Protobuf type if the input contains a dynamic
+configuration.  
+As a result, the function requires that the [std::convert::TryFrom] is implemented from our dynamic
+config type to a static equivalent.
 
 ```rust,no_run,noplayground,ignore
 // src/main.rs
 {{#include ../../../examples/quilkin-filter-example/src/main.rs:TryFrom}}
 ```
 
-##### Finally, update `GreetFilterFactory` to extract the greeting from the passed in configuration and forward it onto the `Greet` Filter.
+With our conversion implementation, we can to extract a greeting from any configuration type and
+forward it onto the `Greet` Filter.
 
 ```rust,no_run,noplayground,ignore
 // src/main.rs
 {{#include ../../../examples/quilkin-filter-example/src/main.rs:factory}}
 ```
 
-> We use the convenience function of [ConfigType::deserialize] to return the [Serde] config regardless of which type 
-of configuration is utilised. 
-
-And with these changes we have wired up configuration for our filter. Try it out with the following `config.yaml`:
-
-```yaml
-# config.yaml
-{{#include ../../../examples/quilkin-filter-example/config.yaml:yaml}}
-```
-
+[FilterInstance]: ../../api/quilkin/filters/prelude/struct.FilterInstance.html
 [Filter]: ../../api/quilkin/filters/trait.Filter.html
 [FilterFactory]: ../../api/quilkin/filters/trait.FilterFactory.html
 [filter-factory-name]: ../../api/quilkin/filters/trait.FilterFactory.html#tymethod.name
 [FilterRegistry]: ../../api/quilkin/filters/struct.FilterRegistry.html
 [runner::run]: ../../api/quilkin/runner/fn.run.html
 [CreateFilterArgs::config]: ../../api/quilkin/filters/prelude/struct.CreateFilterArgs.html#structfield.config
+[ConfigType::dynamic]: ../../api/quilkin/config/enum.ConfigType.html#variant.Dynamic
+[ConfigType::static]: ../../api/quilkin/config/enum.ConfigType.html#variant.Static
+[ConfigType::deserialize]: ../../api/quilkin/config/enum.ConfigType.html#method.deserialize
 [include_proto]: ../../api/quilkin/macro.include_proto.html
 [std::convert::TryFrom]: https://doc.rust-lang.org/std/convert/trait.TryFrom.html
-[ConfigType::deserialize]: ../../api/quilkin/config/enum.ConfigType.html#method.deserialize
 
+[anchor-dynamic-config]: #dynamic-configuration
 [anchor-static-config]: #static-configuration
 [Filters]: ../filters.md
 [filter chain]: ../filters.md#filters-and-filter-chain
