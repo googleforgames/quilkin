@@ -146,14 +146,14 @@
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">prelude</span> {
     <span class="kw">pub</span> <span class="kw">use</span> <span class="kw">super</span>::{
         <span class="ident">ConvertProtoConfigError</span>, <span class="ident">CreateFilterArgs</span>, <span class="ident">DynFilterFactory</span>, <span class="ident">Error</span>, <span class="ident">Filter</span>, <span class="ident">FilterFactory</span>,
-        <span class="ident">ReadContext</span>, <span class="ident">ReadResponse</span>, <span class="ident">WriteContext</span>, <span class="ident">WriteResponse</span>,
+        <span class="ident">FilterInstance</span>, <span class="ident">ReadContext</span>, <span class="ident">ReadResponse</span>, <span class="ident">WriteContext</span>, <span class="ident">WriteResponse</span>,
     };
 }
 
 <span class="comment">// Core Filter types</span>
 <span class="kw">pub</span> <span class="kw">use</span> <span class="self">self</span>::{
     <span class="ident">error</span>::{<span class="ident">ConvertProtoConfigError</span>, <span class="ident">Error</span>},
-    <span class="ident">factory</span>::{<span class="ident">CreateFilterArgs</span>, <span class="ident">DynFilterFactory</span>, <span class="ident">FilterFactory</span>},
+    <span class="ident">factory</span>::{<span class="ident">CreateFilterArgs</span>, <span class="ident">DynFilterFactory</span>, <span class="ident">FilterFactory</span>, <span class="ident">FilterInstance</span>},
     <span class="ident">read</span>::{<span class="ident">ReadContext</span>, <span class="ident">ReadResponse</span>},
     <span class="ident">registry::FilterRegistry</span>,
     <span class="ident">set</span>::{<span class="ident">FilterMap</span>, <span class="ident">FilterSet</span>},
