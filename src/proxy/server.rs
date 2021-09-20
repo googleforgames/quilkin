@@ -102,10 +102,6 @@ impl Server {
     pub async fn run(self, mut shutdown_rx: watch::Receiver<()>) -> Result<()> {
         self.log_config();
 
-        if let Some(admin) = &self.admin {
-            admin.run(shutdown_rx.clone());
-        }
-
         let socket = Arc::new(Server::bind(self.config.proxy.port).await?);
         let session_manager = SessionManager::new(self.log.clone(), shutdown_rx.clone());
         let (send_packets, receive_packets) = mpsc::channel::<Packet>(1024);
@@ -114,6 +110,15 @@ impl Server {
 
         let (cluster_manager, filter_manager) =
             self.create_resource_managers(shutdown_rx.clone()).await?;
+
+        if let Some(admin) = &self.admin {
+            admin.run(
+                cluster_manager.clone(),
+                filter_manager.clone(),
+                shutdown_rx.clone(),
+            );
+        }
+
         self.run_receive_packet(socket.clone(), receive_packets);
         let recv_loop = self.run_recv_from(RunRecvFromArgs {
             cluster_manager,

@@ -35,8 +35,17 @@ impl FilterFactory for TestFilterFactory {
         "TestFilter"
     }
 
-    fn create_filter(&self, _: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
-        Ok(Box::new(TestFilter {}))
+    fn create_filter(&self, _: CreateFilterArgs) -> Result<FilterInstance, Error> {
+        Ok(Self::create_empty_filter())
+    }
+}
+
+impl TestFilterFactory {
+    pub(crate) fn create_empty_filter() -> FilterInstance {
+        FilterInstance::new(
+            serde_json::Value::Null,
+            Box::new(TestFilter {}) as Box<dyn Filter>,
+        )
     }
 }
 
@@ -321,7 +330,10 @@ pub fn ep(id: u8) -> Endpoint {
 pub fn new_test_chain(registry: &prometheus::Registry) -> Arc<FilterChain> {
     Arc::new(
         FilterChain::new(
-            vec![("TestFilter".into(), Box::new(TestFilter {}))],
+            vec![(
+                "TestFilter".into(),
+                TestFilterFactory::create_empty_filter(),
+            )],
             registry,
         )
         .unwrap(),
