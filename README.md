@@ -29,6 +29,9 @@ Not to be used in production systems.
 
 ### Releases
 
+* v0.2.0 ([guides](https://googleforgames.github.io/quilkin/v0.2.0/book/), 
+  [api](https://googleforgames.github.io/quilkin/v0.2.0/api/quilkin/), 
+  [macros](https://googleforgames.github.io/quilkin/v0.2.0/api/quilkin_macros/))
 * v0.1.0 ([guides](https://github.com/googleforgames/quilkin/blob/v0.1.0/README.md#usage), 
   [api](https://docs.rs/quilkin/0.1.0/quilkin/), [macros](https://docs.rs/quilkin-macros/0.1.0/quilkin_macros/)).
 
