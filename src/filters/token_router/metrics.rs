@@ -36,7 +36,7 @@ impl Metrics {
             ),
             &label_names,
         )?
-        .register(registry)?;
+        .register_if_not_exists(registry)?;
 
         Ok(Metrics {
             packets_dropped_no_token_found: metric

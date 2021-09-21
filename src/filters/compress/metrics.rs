@@ -38,21 +38,21 @@ impl Metrics {
             ),
             &operation_labels,
         )?
-        .register(registry)?;
+        .register_if_not_exists(registry)?;
 
         let decompressed_bytes_total = IntCounter::with_opts(filter_opts(
             "decompressed_bytes_total",
             "Compress",
             "Total number of decompressed bytes either received or sent.",
         ))?
-        .register(registry)?;
+        .register_if_not_exists(registry)?;
 
         let compressed_bytes_total = IntCounter::with_opts(filter_opts(
             "compressed_bytes_total",
             "Compress",
             "Total number of compressed bytes either received or sent.",
         ))?
-        .register(registry)?;
+        .register_if_not_exists(registry)?;
 
         Ok(Metrics {
             packets_dropped_compress: dropped_metric
