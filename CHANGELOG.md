@@ -1,22 +1,25 @@
 # Changelog
 
-## [v0.2.0](https://github.com/googleforgames/quilkin/tree/v0.2.0) (2021-09-21)
+## [v0.2.0-dev](https://github.com/googleforgames/quilkin/tree/v0.2.0-dev) (2021-09-22)
 
-[Full Changelog](https://github.com/googleforgames/quilkin/compare/v0.1.0...v0.2.0)
+[Full Changelog](https://github.com/googleforgames/quilkin/compare/v0.1.0...v0.2.0-dev)
 
 **Breaking changes:**
 
+- Add a /config endpoint [\#396](https://github.com/googleforgames/quilkin/pull/396) ([iffyio](https://github.com/iffyio))
+- Use hostname as default proxy id [\#391](https://github.com/googleforgames/quilkin/pull/391) ([iffyio](https://github.com/iffyio))
+- Move to run and test subcommand setup [\#369](https://github.com/googleforgames/quilkin/pull/369) ([XAMPPRocky](https://github.com/XAMPPRocky))
+- Add a type for session keys [\#364](https://github.com/googleforgames/quilkin/pull/364) ([iffyio](https://github.com/iffyio))
+- Refactor Endpoint and Metadata from cluster and config into one type. [\#358](https://github.com/googleforgames/quilkin/pull/358) ([XAMPPRocky](https://github.com/XAMPPRocky))
 - Move I/O and configuration out of runner::run [\#350](https://github.com/googleforgames/quilkin/pull/350) ([XAMPPRocky](https://github.com/XAMPPRocky))
+- Filter Extension Re-organisation [\#293](https://github.com/googleforgames/quilkin/pull/293) ([XAMPPRocky](https://github.com/XAMPPRocky))
 
 **Implemented enhancements:**
 
 - Make a quilkin crate [\#232](https://github.com/googleforgames/quilkin/issues/232)
-- Add a /config endpoint [\#396](https://github.com/googleforgames/quilkin/pull/396) ([iffyio](https://github.com/iffyio))
 - Always backoff and retry management server [\#392](https://github.com/googleforgames/quilkin/pull/392) ([iffyio](https://github.com/iffyio))
-- Use hostname as default proxy id [\#391](https://github.com/googleforgames/quilkin/pull/391) ([iffyio](https://github.com/iffyio))
 - Hash load balancer [\#381](https://github.com/googleforgames/quilkin/pull/381) ([gilesheron](https://github.com/gilesheron))
 - CI: Add cross compile and basic image test [\#370](https://github.com/googleforgames/quilkin/pull/370) ([markmandel](https://github.com/markmandel))
-- Move to run and test subcommand setup [\#369](https://github.com/googleforgames/quilkin/pull/369) ([XAMPPRocky](https://github.com/XAMPPRocky))
 - `make docs` to preview documentation locally [\#366](https://github.com/googleforgames/quilkin/pull/366) ([markmandel](https://github.com/markmandel))
 - Add "examples" page to the documentation. [\#362](https://github.com/googleforgames/quilkin/pull/362) ([markmandel](https://github.com/markmandel))
 - GH Action: Sizing labels on PRs [\#353](https://github.com/googleforgames/quilkin/pull/353) ([markmandel](https://github.com/markmandel))
@@ -56,10 +59,8 @@
 - README: Add community meetings [\#377](https://github.com/googleforgames/quilkin/pull/377) ([markmandel](https://github.com/markmandel))
 - Fix 404: Writing Custom Filters [\#376](https://github.com/googleforgames/quilkin/pull/376) ([markmandel](https://github.com/markmandel))
 - Delete filter\_registry.rs [\#368](https://github.com/googleforgames/quilkin/pull/368) ([XAMPPRocky](https://github.com/XAMPPRocky))
-- Add a type for session keys [\#364](https://github.com/googleforgames/quilkin/pull/364) ([iffyio](https://github.com/iffyio))
 - Update doc links [\#363](https://github.com/googleforgames/quilkin/pull/363) ([iffyio](https://github.com/iffyio))
 - Better language on using.md [\#361](https://github.com/googleforgames/quilkin/pull/361) ([markmandel](https://github.com/markmandel))
-- Refactor Endpoint and Metadata from cluster and config into one type. [\#358](https://github.com/googleforgames/quilkin/pull/358) ([XAMPPRocky](https://github.com/XAMPPRocky))
 - Remove redundant cfg\(test\) [\#357](https://github.com/googleforgames/quilkin/pull/357) ([XAMPPRocky](https://github.com/XAMPPRocky))
 - Fix README.md development documentation links [\#356](https://github.com/googleforgames/quilkin/pull/356) ([markmandel](https://github.com/markmandel))
 - Remove initial xds update delay [\#354](https://github.com/googleforgames/quilkin/pull/354) ([iffyio](https://github.com/iffyio))
@@ -81,10 +82,6 @@
 ## [v0.1.0](https://github.com/googleforgames/quilkin/tree/v0.1.0) (2021-07-09)
 
 [Full Changelog](https://github.com/googleforgames/quilkin/compare/d60c41ce257c77a4daafb5ab645536f8e1f2aa14...v0.1.0)
-
-**Breaking changes:**
-
-- Filter Extension Re-organisation [\#293](https://github.com/googleforgames/quilkin/pull/293) ([XAMPPRocky](https://github.com/XAMPPRocky))
 
 **Implemented enhancements:**
 
