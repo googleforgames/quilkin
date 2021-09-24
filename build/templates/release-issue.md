@@ -35,7 +35,7 @@
     - [ ] Attach all the remaining cloud build artifacts to the release.
 - [ ] Run `git remote update && git checkout main && git reset --hard upstream/main` to ensure your code is in line
       with upstream.
-- [ ] Run `git checkout -b release-{version} && git push upstream` to create a release branch.
+- [ ] Run `git checkout -b release-{version} && git push upstream release-{version}` to create a release branch.
 - [ ] Publish to [crates.io/crates/quilkin-macros](https://crates.io/crates/quilkin-macros): run `cd macros && cargo publish`
 - [ ] Publish to [crates.io/crates/quilkin](https://crates.io/crates/quilkin): run `cargo publish`
 - [ ] Submit the release.
