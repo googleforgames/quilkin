@@ -1,3 +1,5 @@
+use regex::bytes::Regex as RegexBytes;
+
 /// Trait to implement different strategies for capturing packet data
 pub trait Capture {
     /// Capture the packet data from the contents. If remove is true, contents will be altered to
@@ -44,7 +46,5 @@ impl Capture for Regex {
         if remove {
             return contents.drain(..size).collect();
         }
-
-        contents.iter().cloned().take(size).collect()
     }
 }
