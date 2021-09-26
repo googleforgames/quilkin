@@ -20,6 +20,7 @@ pub(crate) mod metrics;
 pub(crate) mod prost;
 mod proxy;
 mod runner;
+pub(crate) mod ttl_map;
 pub(crate) mod utils;
 pub(crate) mod xds;
 
