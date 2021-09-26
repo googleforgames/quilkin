@@ -1,6 +1,7 @@
 # LocalRateLimit
 
-The LocalRateLimit filter controls the frequency at which packets received downstream are forwarded upstream by the proxy.
+The LocalRateLimit filter controls the frequency at which packets received downstream are forwarded upstream by the proxy.  
+Rate limiting is done independently per source (IP, Port) combination.
 
 #### Filter name
 ```text
@@ -20,7 +21,7 @@ static:
     - name: quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit
       config:
         max_packets: 1000
-        period: 500ms
+        period: 1s
   endpoints:
     - address: 127.0.0.1:7001
 # ";
@@ -29,7 +30,7 @@ static:
 #   quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
 # }
 ```
-To configure a rate limiter, we specify the maximum rate at which the proxy is allowed to forward packets. In the example above, we configured the proxy to forward a maximum of 1000 packets per 500ms (2000 packets/second).
+To configure a rate limiter, we specify the maximum rate at which the proxy is allowed to forward packets. In the example above, we configured the proxy to forward a maximum of 1000 packets per second).
 
 > Packets that that exceeds the maximum configured rate are dropped.
 
@@ -47,8 +48,8 @@ properties:
     type: string
     description: |
       A human readable duration overwhich `max_packets` applies.
-      Examples: `1s` 1 second, `500ms` 500 milliseconds.
-      The minimum allowed value is 100ms.
+      Examples: `1s` 1 second.
+      The minimum allowed value is 1s.
     default: '1s' # 1 second
 
 required: [ 'max_packets' ]

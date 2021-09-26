@@ -59,7 +59,7 @@ static:
     - name: quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit
       config:
         max_packets: 10
-        period: 500ms
+        period: 1s
   endpoints:
     - address: 127.0.0.1:7001
 # ";
