@@ -135,7 +135,7 @@ func (g *githubNotifier) SendNotification(ctx context.Context, build *cloudbuild
 func (g *githubNotifier) clearBotComments(ctx context.Context, pr int) error {
 	comments, _, err := g.client.Issues.ListComments(ctx, owner, repo, pr, &github.IssueListCommentsOptions{})
 	if err != nil {
-		log.Errorf("Error retriving comment history: %v on PR with id: %s", err, pr)
+		log.Errorf("Error retrieving comment history: %v on PR with id: %s", err, pr)
 		return nil
 	}
 
