@@ -274,7 +274,7 @@ mod tests {
         let endpoints =
             Endpoints::new(vec![Endpoint::new("127.0.0.1:8089".parse().unwrap())]).unwrap();
 
-        let result = r.read(ReadContext::new(endpoints.clone().into(), address, vec![9]));
+        let result = r.read(ReadContext::new(endpoints.into(), address, vec![9]));
 
         if should_succeed {
             assert_eq!(result.unwrap().contents, vec![9]);
