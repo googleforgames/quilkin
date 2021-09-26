@@ -24,6 +24,7 @@ message CaptureBytes {
   enum Strategy {
     Prefix = 0;
     Suffix = 1;
+    Regex = 2;
   }
 
   message StrategyValue {
@@ -34,5 +35,8 @@ message CaptureBytes {
   uint32 size = 2;
   google.protobuf.StringValue metadata_key = 3;
   google.protobuf.BoolValue remove = 4;
+
+  google.protobuf.StringValue expression = 5;
+  google.protobuf.BoolValue passthrough = 6;
 }
 

@@ -26,7 +26,7 @@ use crate::map_proto_enum;
 
 use super::capture::{Capture, Prefix, Regex, Suffix};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct Config {
     /// the key to use when storing the captured bytes in the filter context
     #[serde(rename = "metadataKey")]
@@ -57,7 +57,7 @@ fn default_passthrough() -> bool {
     true
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub enum Strategy {
     #[serde(rename = "prefix")]
     Prefix {
@@ -161,12 +161,15 @@ mod tests {
                     size: 42,
                     metadata_key: Some("foobar".into()),
                     remove: Some(true),
+                    expression: None,
+                    passthrough: None,
                 },
                 Some(Config {
-                    strategy: Strategy::Suffix,
-                    size: 42,
+                    strategy: Strategy::Suffix {
+                        size: 43,
+                        remove: true,
+                    },
                     metadata_key: "foobar".into(),
-                    remove: true,
                 }),
             ),
             (
@@ -176,6 +179,8 @@ mod tests {
                     size: 42,
                     metadata_key: Some("foobar".into()),
                     remove: Some(true),
+                    expression: None,
+                    passthrough: None,
                 },
                 None,
             ),
@@ -186,12 +191,12 @@ mod tests {
                     size: 42,
                     metadata_key: None,
                     remove: None,
+                    expression: None,
+                    passthrough: None,
                 },
                 Some(Config {
                     strategy: Strategy::default(),
-                    size: 42,
                     metadata_key: default_metadata_key(),
-                    remove: default_remove(),
                 }),
             ),
         ];

@@ -35,3 +35,16 @@ impl Capture for Prefix {
         contents.iter().cloned().take(size).collect()
     }
 }
+
+/// Capture from the start of the packet.
+pub struct Regex;
+
+impl Capture for Regex {
+    fn capture(&self, contents: &mut Vec<u8>, size: usize, remove: bool) -> Vec<u8> {
+        if remove {
+            return contents.drain(..size).collect();
+        }
+
+        contents.iter().cloned().take(size).collect()
+    }
+}

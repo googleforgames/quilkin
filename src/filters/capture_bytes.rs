@@ -44,19 +44,49 @@ struct CaptureBytes {
     /// metrics reporter for this filter.
     metrics: Metrics,
     metadata_key: Arc<String>,
-    size: usize,
     remove: bool,
+    size: Option<usize>,
+    expression: Option<String>,
+    passthrough: Option<bool>,
 }
 
 impl CaptureBytes {
     fn new(base: &Logger, config: Config, metrics: Metrics) -> Self {
-        CaptureBytes {
-            log: base.new(o!("source" => "extensions::CaptureBytes")),
-            capture: config.strategy.as_capture(),
-            metrics,
-            metadata_key: Arc::new(config.metadata_key),
-            size: config.size,
-            remove: config.remove,
+        match config.strategy {
+            Strategy::Prefix { size, remove } => CaptureBytes {
+                log: base.new(o!("source" => "extensions::CaptureBytes")),
+                capture: config.strategy.as_capture(),
+                metrics,
+                metadata_key: Arc::new(config.metadata_key),
+                remove,
+                size: Some(size),
+                expression: None,
+                passthrough: None,
+            },
+            Strategy::Suffix { size, remove } => CaptureBytes {
+                log: base.new(o!("source" => "extensions::CaptureBytes")),
+                capture: config.strategy.as_capture(),
+                metrics,
+                metadata_key: Arc::new(config.metadata_key),
+                remove,
+                size: Some(size),
+                expression: None,
+                passthrough: None,
+            },
+            Strategy::Regex {
+                expression,
+                remove,
+                passthrough,
+            } => CaptureBytes {
+                log: base.new(o!("source" => "extensions::CaptureBytes")),
+                capture: config.strategy.as_capture(),
+                metrics,
+                metadata_key: Arc::new(config.metadata_key),
+                remove,
+                size: None,
+                expression: Some(expression),
+                passthrough: Some(passthrough),
+            },
         }
     }
 }
@@ -65,12 +95,12 @@ impl Filter for CaptureBytes {
     fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
         // if the capture size is bigger than the packet size, then we drop the packet,
         // and occasionally warn
-        if ctx.contents.len() < self.size {
+        if ctx.contents.len() < self.size.unwrap() {
             if self.metrics.packets_dropped_total.get() % 1000 == 0 {
                 warn!(
                     self.log,
                     "Packets are being dropped due to their length being less than {} bytes",
-                    self.size; "count" => self.metrics.packets_dropped_total.get()
+                    self.size.unwrap(); "count" => self.metrics.packets_dropped_total.get()
                 );
             }
             self.metrics.packets_dropped_total.inc();
@@ -78,7 +108,7 @@ impl Filter for CaptureBytes {
         }
         let token = self
             .capture
-            .capture(&mut ctx.contents, self.size, self.remove);
+            .capture(&mut ctx.contents, self.size.unwrap(), self.remove);
 
         ctx.metadata
             .insert(self.metadata_key.clone(), Box::new(token));
@@ -194,10 +224,11 @@ mod tests {
     #[test]
     fn read() {
         let config = Config {
-            strategy: Strategy::Suffix,
+            strategy: Strategy::Suffix {
+                size: 3,
+                remove: true,
+            },
             metadata_key: TOKEN_KEY.into(),
-            size: 3,
-            remove: true,
         };
         let filter = capture_bytes(config);
         assert_end_strategy(&filter, TOKEN_KEY, true);
@@ -206,10 +237,11 @@ mod tests {
     #[test]
     fn read_overflow_capture_size() {
         let config = Config {
-            strategy: Strategy::Suffix,
+            strategy: Strategy::Suffix {
+                size: 99,
+                remove: true,
+            },
             metadata_key: TOKEN_KEY.into(),
-            size: 99,
-            remove: true,
         };
         let filter = capture_bytes(config);
         let endpoints = vec![Endpoint::new("127.0.0.1:81".parse().unwrap())];
@@ -227,10 +259,11 @@ mod tests {
     #[test]
     fn write() {
         let config = Config {
-            strategy: Strategy::Suffix,
+            strategy: Strategy::Suffix {
+                size: 0,
+                remove: false,
+            },
             metadata_key: TOKEN_KEY.into(),
-            size: 0,
-            remove: false,
         };
         let filter = capture_bytes(config);
         assert_write_no_change(&filter);
