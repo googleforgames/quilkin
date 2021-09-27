@@ -512,7 +512,7 @@ mod tests {
             TtlMap::<usize>::new(logger(), Duration::from_secs(10), Duration::from_millis(10));
         map.insert(one, 1);
 
-        match map.entry(one.into()) {
+        match map.entry(one) {
             Entry::Occupied(mut entry) => {
                 entry.get_mut().value = 5;
             }
