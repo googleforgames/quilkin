@@ -94,7 +94,7 @@ impl LocalRateLimit {
     /// for rate limiting. It returns whether there exists a token for the corresponding
     /// address in the current period - determining whether or not the packet
     /// should be forwarded or dropped.
-    fn acquire_token_for_source(&self, address: SocketAddr) -> Option<()> {
+    fn acquire_token(&self, address: SocketAddr) -> Option<()> {
         if self.config.max_packets == 0 {
             return None;
         }
@@ -102,7 +102,7 @@ impl LocalRateLimit {
         if let Some(bucket) = self.state.get(&address) {
             let prev_count = bucket.value.counter.fetch_add(1, Ordering::Relaxed);
 
-            let now_secs = self.state.now_secs();
+            let now_secs = self.state.now_relative_secs();
             let window_start_secs = bucket.value.window_start_time_secs.load(Ordering::Acquire);
 
             let elapsed = Duration::from_secs(now_secs - window_start_secs);
@@ -140,7 +140,7 @@ impl LocalRateLimit {
             }
             Entry::Vacant(entry) => {
                 // New entry, set both the time stamp and
-                let now_secs = self.state.now_secs();
+                let now_secs = self.state.now_relative_secs();
                 entry.insert(Bucket {
                     counter: Arc::new(AtomicUsize::new(1)),
                     window_start_time_secs: Arc::new(AtomicU64::new(now_secs)),
@@ -154,7 +154,7 @@ impl LocalRateLimit {
 
 impl Filter for LocalRateLimit {
     fn read(&self, ctx: ReadContext) -> Option<ReadResponse> {
-        self.acquire_token_for_source(ctx.from)
+        self.acquire_token(ctx.from)
             .map(|()| ctx.into())
             .or_else(|| {
                 self.metrics.packets_dropped_total.inc();

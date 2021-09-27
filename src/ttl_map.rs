@@ -22,8 +22,13 @@ use std::borrow::Borrow;
 use std::hash::Hash;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::Duration;
 use tokio::sync::oneshot::{channel, Receiver, Sender};
+
+// Clippy isn't recognizing that these imports are used conditionally.
+#[allow(unused_imports)]
+use std::time::{SystemTime, UNIX_EPOCH};
+#[allow(unused_imports)]
 use tokio::time::Instant;
 
 /// A wrapper around the value of an entry in the map.
@@ -31,20 +36,11 @@ use tokio::time::Instant;
 pub(crate) struct Value<V> {
     pub value: V,
     expires_at: Arc<AtomicU64>,
-    #[cfg(test)]
-    clock: TestClock,
-    #[cfg(not(test))]
-    clock: RealClock,
+    clock: Clock,
 }
 
 impl<V> Value<V> {
-    fn new(
-        value: V,
-        log: &Logger,
-        ttl: Duration,
-        #[cfg(test)] clock: TestClock,
-        #[cfg(not(test))] clock: RealClock,
-    ) -> Value<V> {
+    fn new(value: V, log: &Logger, ttl: Duration, clock: Clock) -> Value<V> {
         let value = Value {
             value,
             expires_at: Arc::new(AtomicU64::new(0)),
@@ -57,13 +53,13 @@ impl<V> Value<V> {
     /// Get the expiration time for this value. The returned value is the
     /// number of seconds relative to some reference point (e.g UNIX_EPOCH), based
     /// on the clock being used.
-    fn expiration(&self) -> u64 {
+    fn expiration_secs(&self) -> u64 {
         self.expires_at.load(Ordering::Relaxed)
     }
 
     /// Update the value's expiration time to (now + TTL).
     fn update_expiration(&self, log: &Logger, ttl: Duration) {
-        match self.clock.compute_expiration(ttl) {
+        match self.clock.compute_expiration_secs(ttl) {
             Ok(new_expiration_time) => {
                 self.expires_at
                     .store(new_expiration_time, Ordering::Relaxed);
@@ -80,12 +76,8 @@ struct Map<K, V> {
     inner: DashMap<K, Value<V>>,
     log: Logger,
     ttl: Duration,
+    clock: Clock,
     shutdown_tx: Option<Sender<()>>,
-
-    #[cfg(test)]
-    clock: TestClock,
-    #[cfg(not(test))]
-    clock: RealClock,
 }
 
 impl<K, V> Drop for Map<K, V> {
@@ -136,11 +128,7 @@ where
             shutdown_tx: Some(shutdown_tx),
             log: log.clone(),
             ttl,
-
-            #[cfg(test)]
-            clock: TestClock(Instant::now()),
-            #[cfg(not(test))]
-            clock: RealClock,
+            clock: Clock::new(),
         }));
         spawn_cleanup_task(
             log,
@@ -155,8 +143,8 @@ where
     /// Returns the current time as the number of seconds relative to some initial
     /// reference point (e.g UNIX_EPOCH), based on the clock implementation being used.
     /// In tests, this will be driven by [`tokio::time`]
-    pub(crate) fn now_secs(&self) -> u64 {
-        self.0.clock.now().unwrap_or_default()
+    pub(crate) fn now_relative_secs(&self) -> u64 {
+        self.0.clock.now_relative_secs().unwrap_or_default()
     }
 }
 
@@ -255,10 +243,7 @@ pub(crate) struct OccupiedEntry<'a, K, V> {
     inner: DashMapEntry<'a, K, V>,
     log: &'a Logger,
     ttl: Duration,
-    #[cfg(test)]
-    clock: TestClock,
-    #[cfg(not(test))]
-    clock: RealClock,
+    clock: Clock,
 }
 
 /// A view into a vacant entry in the map.
@@ -266,10 +251,7 @@ pub(crate) struct VacantEntry<'a, K, V> {
     inner: DashMapEntry<'a, K, V>,
     log: &'a Logger,
     ttl: Duration,
-    #[cfg(test)]
-    clock: TestClock,
-    #[cfg(not(test))]
-    clock: RealClock,
+    clock: Clock,
 }
 
 /// A view into an entry in the map.
@@ -343,8 +325,7 @@ fn spawn_cleanup_task<K, V>(
     log: Logger,
     map: Arc<Map<K, V>>,
     poll_interval: Duration,
-    #[cfg(test)] clock: TestClock,
-    #[cfg(not(test))] clock: RealClock,
+    clock: Clock,
     mut shutdown_rx: Receiver<()>,
 ) where
     K: Eq + Hash + Send + Sync + 'static,
@@ -366,17 +347,13 @@ fn spawn_cleanup_task<K, V>(
     });
 }
 
-async fn prune_sessions<K, V>(
-    log: &Logger,
-    map: &Arc<Map<K, V>>,
-    #[cfg(test)] clock: &TestClock,
-    #[cfg(not(test))] clock: &RealClock,
-) where
+async fn prune_sessions<K, V>(log: &Logger, map: &Arc<Map<K, V>>, clock: &Clock)
+where
     K: Eq + Hash + Send + Sync + 'static,
     V: Send + Sync + 'static,
 {
-    let now = if let Ok(now) = clock.now() {
-        now
+    let now_secs = if let Ok(now_secs) = clock.now_relative_secs() {
+        now_secs
     } else {
         warn!(log, "Failed to get current time when pruning sessions");
         return;
@@ -386,7 +363,7 @@ async fn prune_sessions<K, V>(
     let has_expired_keys = map
         .inner
         .iter()
-        .filter(|entry| entry.value().expiration() <= now)
+        .filter(|entry| entry.value().expiration_secs() <= now_secs)
         .take(1)
         .next()
         .is_some();
@@ -395,51 +372,58 @@ async fn prune_sessions<K, V>(
     if has_expired_keys {
         // Go over the whole map in case anything expired
         // since acquiring the write lock.
-        map.inner.retain(|_, value| value.expiration() > now);
+        map.inner
+            .retain(|_, value| value.expiration_secs() > now_secs);
     }
 }
 
-// The cfg attribute isn't working nicely with clippy so silence the unused warning.
-#[allow(dead_code)]
-/// A wrapper over functions to generate relative timestamps via tokio::time.
+/// A wrapper over functions to generate relative timestamps and ttl.
+/// During test it is driven via [`tokio::time`], otherwise it uses system time.
 #[derive(Clone)]
-struct TestClock(Instant);
-impl TestClock {
-    #[allow(dead_code)]
-    fn compute_expiration(&self, ttl: Duration) -> Result<u64, String> {
-        Ok((Instant::now() + ttl).duration_since(self.0).as_secs())
-    }
-
-    #[allow(dead_code)]
-    fn now(&self) -> Result<u64, String> {
-        Ok((Instant::now()).duration_since(self.0).as_secs())
-    }
+struct Clock {
+    #[cfg(test)]
+    base: Instant,
 }
 
-// The cfg attribute isn't working nicely with clippy so silence the unused warning.
-#[allow(dead_code)]
-/// A wrapper to generate relative timestamps using system time.
-#[derive(Clone)]
-struct RealClock;
-impl RealClock {
-    #[allow(dead_code)]
-    fn compute_expiration(&self, ttl: Duration) -> Result<u64, String> {
-        (SystemTime::now() + ttl)
+impl Clock {
+    fn new() -> Clock {
+        #[cfg(not(test))]
+        return Clock {};
+
+        #[cfg(test)]
+        return Clock {
+            base: Instant::now(),
+        };
+    }
+
+    /// Returns the current time in seconds, relative to some base time instant.
+    /// For non test cases, relative to UNIX_EPOCH, while during test, a random
+    /// point in the past is used.
+    fn now_relative_secs(&self) -> Result<u64, String> {
+        #[cfg(not(test))]
+        return SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_err(|_| {
                 String::from("duration_since was called with time later than the current time")
             })
-            .map(|t| t.as_secs())
+            .map(|t| t.as_secs());
+
+        #[cfg(test)]
+        return Ok((Instant::now()).duration_since(self.base).as_secs());
     }
 
-    #[allow(dead_code)]
-    fn now(&self) -> Result<u64, String> {
-        SystemTime::now()
+    /// Returns the expiration time from now in seconds for the given ttl.
+    fn compute_expiration_secs(&self, ttl: Duration) -> Result<u64, String> {
+        #[cfg(not(test))]
+        return (SystemTime::now() + ttl)
             .duration_since(UNIX_EPOCH)
             .map_err(|_| {
                 String::from("duration_since was called with time later than the current time")
             })
-            .map(|t| t.as_secs())
+            .map(|t| t.as_secs());
+
+        #[cfg(test)]
+        return Ok((Instant::now() + ttl).duration_since(self.base).as_secs());
     }
 }
 
@@ -487,13 +471,13 @@ mod tests {
         );
         map.insert("one".into(), 1);
 
-        let exp1 = map.get("one").unwrap().expiration();
+        let exp1 = map.get("one").unwrap().expiration_secs();
 
         time::advance(Duration::from_secs(2)).await;
-        let exp2 = map.get("one").unwrap().expiration();
+        let exp2 = map.get("one").unwrap().expiration_secs();
 
         time::advance(Duration::from_secs(3)).await;
-        let exp3 = map.get("one").unwrap().expiration();
+        let exp3 = map.get("one").unwrap().expiration_secs();
 
         assert!(exp1 < exp2);
         assert_eq!(2, exp2 - exp1);
@@ -587,12 +571,12 @@ mod tests {
         );
         map.insert("one".into(), 1);
 
-        let exp1 = map.get("one").unwrap().expiration();
+        let exp1 = map.get("one").unwrap().expiration_secs();
 
         time::advance(Duration::from_secs(2)).await;
 
         let exp2 = match map.entry("one".into()) {
-            Entry::Occupied(entry) => entry.get().expiration(),
+            Entry::Occupied(entry) => entry.get().expiration_secs(),
             _ => unreachable!("expected occupied entry"),
         };
 
@@ -612,12 +596,12 @@ mod tests {
         );
         map.insert("one".into(), 1);
 
-        let exp1 = map.get("one").unwrap().expiration();
+        let exp1 = map.get("one").unwrap().expiration_secs();
 
         time::advance(Duration::from_secs(2)).await;
 
         let exp2 = match map.entry("one".into()) {
-            Entry::Occupied(mut entry) => entry.get_mut().expiration(),
+            Entry::Occupied(mut entry) => entry.get_mut().expiration_secs(),
             _ => unreachable!("expected occupied entry"),
         };
 
@@ -637,16 +621,16 @@ mod tests {
         );
         map.insert("one".into(), 1);
 
-        let exp1 = map.get("one").unwrap().expiration();
+        let exp1 = map.get("one").unwrap().expiration_secs();
 
         time::advance(Duration::from_secs(2)).await;
 
         let old_exp1 = match map.entry("one".into()) {
-            Entry::Occupied(mut entry) => entry.insert(9).expiration(),
+            Entry::Occupied(mut entry) => entry.insert(9).expiration_secs(),
             _ => unreachable!("expected occupied entry"),
         };
 
-        let exp2 = map.get("one").unwrap().expiration();
+        let exp2 = map.get("one").unwrap().expiration_secs();
 
         assert_eq!(exp1, old_exp1);
         assert!(exp1 < exp2);
@@ -665,13 +649,13 @@ mod tests {
         );
 
         let exp1 = match map.entry("one".into()) {
-            Entry::Vacant(entry) => entry.insert(9).expiration(),
+            Entry::Vacant(entry) => entry.insert(9).expiration_secs(),
             _ => unreachable!("expected vacant entry"),
         };
 
         time::advance(Duration::from_secs(2)).await;
 
-        let exp2 = map.get("one").unwrap().expiration();
+        let exp2 = map.get("one").unwrap().expiration_secs();
 
         // Initial expiration should be set at our configured ttl.
         assert_eq!(10, exp1);
@@ -689,7 +673,7 @@ mod tests {
         let map = TTLMap::<String, usize>::new(logger(), ttl, Duration::from_millis(10));
 
         let exp = match map.entry("one".into()) {
-            Entry::Vacant(entry) => entry.insert(9).expiration(),
+            Entry::Vacant(entry) => entry.insert(9).expiration_secs(),
             _ => unreachable!("expected vacant entry"),
         };
 
