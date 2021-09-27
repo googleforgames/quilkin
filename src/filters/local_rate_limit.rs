@@ -103,7 +103,7 @@ impl LocalRateLimit {
             let prev_count = bucket.value.counter.fetch_add(1, Ordering::Relaxed);
 
             let now_secs = self.state.now_relative_secs();
-            let window_start_secs = bucket.value.window_start_time_secs.load(Ordering::Acquire);
+            let window_start_secs = bucket.value.window_start_time_secs.load(Ordering::Relaxed);
 
             let elapsed = Duration::from_secs(now_secs - window_start_secs);
             let start_new_window = elapsed > self.config.period;
@@ -124,7 +124,7 @@ impl LocalRateLimit {
                 bucket
                     .value
                     .window_start_time_secs
-                    .store(now_secs, Ordering::Release);
+                    .store(now_secs, Ordering::Relaxed);
             }
 
             return Some(());
