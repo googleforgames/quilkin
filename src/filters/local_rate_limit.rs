@@ -26,7 +26,7 @@ use slog::Logger;
 use metrics::Metrics;
 
 use crate::filters::prelude::*;
-use crate::ttl_map::{Entry, TTLMap};
+use crate::ttl_map::{Entry, TtlMap};
 
 mod metrics;
 
@@ -72,7 +72,7 @@ struct Bucket {
 /// flow through the filter untouched.
 struct LocalRateLimit {
     /// Tracks rate limiting state per source address.
-    state: TTLMap<SocketAddr, Bucket>,
+    state: TtlMap<Bucket>,
     /// Filter configuration.
     config: Config,
     /// metrics reporter for this filter.
@@ -84,7 +84,7 @@ impl LocalRateLimit {
     /// that periodically refills the rate limiter's tokens.
     fn new(log: Logger, config: Config, metrics: Metrics) -> Self {
         LocalRateLimit {
-            state: TTLMap::new(log, SESSION_TIMEOUT_SECONDS, SESSION_EXPIRY_POLL_INTERVAL),
+            state: TtlMap::new(log, SESSION_TIMEOUT_SECONDS, SESSION_EXPIRY_POLL_INTERVAL),
             config,
             metrics,
         }
@@ -99,7 +99,7 @@ impl LocalRateLimit {
             return None;
         }
 
-        if let Some(bucket) = self.state.get(&address) {
+        if let Some(bucket) = self.state.get(address) {
             let prev_count = bucket.value.counter.fetch_add(1, Ordering::Relaxed);
 
             let now_secs = self.state.now_relative_secs();
