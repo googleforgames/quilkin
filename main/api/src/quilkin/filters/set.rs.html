@@ -180,7 +180,7 @@
         <span class="self">Self</span><span class="ident">::with</span>(
             <span class="ident">std::array::IntoIter::new</span>([
                 <span class="ident">filters::debug::factory</span>(<span class="ident">base</span>),
-                <span class="ident">filters::local_rate_limit::factory</span>(),
+                <span class="ident">filters::local_rate_limit::factory</span>(<span class="ident">base</span>),
                 <span class="ident">filters::concatenate_bytes::factory</span>(),
                 <span class="ident">filters::load_balancer::factory</span>(),
                 <span class="ident">filters::capture_bytes::factory</span>(<span class="ident">base</span>),

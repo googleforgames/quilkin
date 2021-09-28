@@ -211,7 +211,7 @@ static:
     - name: quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit
       config:
         max_packets: 10
-        period: 500ms
+        period: 1
   endpoints:
     - address: 127.0.0.1:7001
 <span class="boring">&quot;;
@@ -221,7 +221,7 @@ static:
 </span><span class="boring">}
 </span></code></pre></pre>
 <p>We specify our filter chain in the <code>.filters</code> section of the proxy's configuration which has takes a sequence of <a href="#filter-config">FilterConfig</a> objects. Each object describes all information necessary to create a single filter.</p>
-<p>The above example creates a filter chain comprising a <a href="debug.html">Debug</a> filter followed by a <a href="./local_rate_limit.html">Rate limiter</a> filter - the effect is that every packet will be logged and the proxy will not forward more than 20 packets per second.</p>
+<p>The above example creates a filter chain comprising a <a href="debug.html">Debug</a> filter followed by a <a href="./local_rate_limit.html">Rate limiter</a> filter - the effect is that every packet will be logged and the proxy will not forward more than 10 packets per second.</p>
 <blockquote>
 <p>The sequence determines the filter chain order so its ordering matters - the chain starts with the filter corresponding the first filter config and ends with the filter corresponding the last filter config in the sequence.</p>
 </blockquote>
