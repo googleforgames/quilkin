@@ -18,6 +18,7 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use tokio::time::{timeout, Duration};
 
+use quilkin::test_utils::logger;
 use quilkin::{
     config::{Builder as ConfigBuilder, Filter},
     endpoint::Endpoint,
@@ -31,7 +32,7 @@ async fn local_rate_limit_filter() {
 
     let yaml = "
 max_packets: 2
-period: 1s
+period: 1
 ";
     let echo = t.run_echo_server().await;
 
@@ -40,7 +41,7 @@ period: 1s
         .with_port(server_port)
         .with_static(
             vec![Filter {
-                name: local_rate_limit::factory().name().into(),
+                name: local_rate_limit::factory(&logger()).name().into(),
                 config: serde_yaml::from_str(yaml).unwrap(),
             }],
             vec![Endpoint::new(echo)],

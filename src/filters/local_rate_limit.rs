@@ -14,18 +14,19 @@
  * limitations under the License.
  */
 
-use std::convert::{TryFrom, TryInto};
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::convert::TryFrom;
+use std::net::SocketAddr;
+use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
-use tokio::sync::oneshot::{channel, Sender};
-use tokio::time::{self, Instant};
+use slog::Logger;
 
 use metrics::Metrics;
 
 use crate::filters::prelude::*;
+use crate::ttl_map::{Entry, TtlMap};
 
 mod metrics;
 
@@ -35,115 +36,143 @@ use self::quilkin::extensions::filters::local_rate_limit::v1alpha1::LocalRateLim
 pub const NAME: &str = "quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit";
 
 /// Creates a new factory for generating rate limiting filters.
-pub fn factory() -> DynFilterFactory {
-    Box::from(LocalRateLimitFactory)
+pub fn factory(base: &Logger) -> DynFilterFactory {
+    Box::from(LocalRateLimitFactory::new(base))
+}
+
+// TODO: we should make these values configurable and transparent to the filter.
+/// SESSION_TIMEOUT_SECONDS is the default session timeout.
+pub const SESSION_TIMEOUT_SECONDS: Duration = Duration::from_secs(60);
+
+/// SESSION_EXPIRY_POLL_INTERVAL is the default interval to check for expired sessions.
+const SESSION_EXPIRY_POLL_INTERVAL: Duration = Duration::from_secs(60);
+
+/// Bucket stores two atomics.
+/// - A counter that tracks how many packets we've processed within a time window.
+/// - A timestamp that stores the time we last reset the counter. It tracks
+///   the start of the time window.
+/// This allows us to have a simpler implementation for calculating token
+/// exhaustion without needing a write lock in the common case. The downside
+/// however is that since we're relying on two independent atomics, there is
+/// in theory, a chance that we could allow a few packets through (i.e in-between
+/// checking the counter and the timestamp). However, in practice this would be
+/// quite rare and the number of such packets that do get through will likely be
+/// insignificant (worse case scenario is ~N-1 stray packets where N is the
+/// number of packet handling workers).
+#[derive(Debug)]
+struct Bucket {
+    counter: Arc<AtomicUsize>,
+    window_start_time_secs: Arc<AtomicU64>,
 }
 
 /// A filter that implements rate limiting on packets based on the token-bucket
 /// algorithm.  Packets that violate the rate limit are dropped.  It only
-/// applies rate limiting on packets that are destined for the proxy's
-/// endpoints. All other packets flow through the filter untouched.
+/// applies rate limiting on packets received from a downstream connection (processed
+/// through [`LocalRateLimit::read`]). Packets coming from upstream endpoints
+/// flow through the filter untouched.
 struct LocalRateLimit {
-    /// available_tokens is how many tokens are left in the bucket any
-    /// any given moment.
-    available_tokens: Arc<AtomicUsize>,
+    /// Tracks rate limiting state per source address.
+    state: TtlMap<Bucket>,
+    /// Filter configuration.
+    config: Config,
     /// metrics reporter for this filter.
     metrics: Metrics,
-    /// shutdown_tx signals the spawned token refill future to exit.
-    shutdown_tx: Option<Sender<()>>,
 }
 
 impl LocalRateLimit {
     /// new returns a new LocalRateLimit. It spawns a future in the background
     /// that periodically refills the rate limiter's tokens.
-    fn new(config: Config, metrics: Metrics) -> Self {
-        let (shutdown_tx, mut shutdown_rx) = channel();
-
-        let tokens = Arc::new(AtomicUsize::new(config.max_packets));
-
-        let max_tokens = config.max_packets;
-        let period = config.period;
-        let available_tokens = tokens.clone();
-        let _ = tokio::spawn(async move {
-            let mut interval = time::interval_at(Instant::now() + period, period);
-            loop {
-                tokio::select! {
-                    _ = interval.tick() => {
-                        // Refill tokens.
-                        let mut refilled = false;
-                        while !refilled {
-                            let remaining_tokens = available_tokens.load(Ordering::Relaxed);
-
-                            refilled = available_tokens.compare_exchange(
-                                remaining_tokens,
-                                max_tokens,
-                                Ordering::Relaxed,
-                                Ordering::Relaxed,
-                                ).unwrap_or_else(|b| b) == remaining_tokens;
-                        }
-                    },
-                    _ = &mut shutdown_rx => {
-                        return;
-                    }
-                }
-            }
-        });
-
+    fn new(log: Logger, config: Config, metrics: Metrics) -> Self {
         LocalRateLimit {
-            available_tokens: tokens,
+            state: TtlMap::new(log, SESSION_TIMEOUT_SECONDS, SESSION_EXPIRY_POLL_INTERVAL),
+            config,
             metrics,
-            shutdown_tx: Some(shutdown_tx),
         }
     }
 
     /// acquire_token is called on behalf of every packet that is eligible
-    /// for rate limiting. It returns whether there exists a token in the current
-    /// period - determining whether or not the packet should be forwarded or dropped.
-    fn acquire_token(&self) -> Option<()> {
-        loop {
-            let remaining_tokens = self.available_tokens.load(Ordering::Relaxed);
+    /// for rate limiting. It returns whether there exists a token for the corresponding
+    /// address in the current period - determining whether or not the packet
+    /// should be forwarded or dropped.
+    fn acquire_token(&self, address: SocketAddr) -> Option<()> {
+        if self.config.max_packets == 0 {
+            return None;
+        }
 
-            if remaining_tokens == 0 {
-                return None;
+        if let Some(bucket) = self.state.get(address) {
+            let prev_count = bucket.value.counter.fetch_add(1, Ordering::Relaxed);
+
+            let now_secs = self.state.now_relative_secs();
+            let window_start_secs = bucket.value.window_start_time_secs.load(Ordering::Relaxed);
+
+            let elapsed_secs = now_secs - window_start_secs;
+            let start_new_window = elapsed_secs > self.config.period as u64;
+
+            // Check if allowing this packet will put us over the maximum.
+            if prev_count >= self.config.max_packets {
+                // If so, then we can only allow the packet if the current time
+                // window has ended.
+                if !start_new_window {
+                    return None;
+                }
             }
 
-            if self
-                .available_tokens
-                .compare_exchange(
-                    remaining_tokens,
-                    remaining_tokens - 1,
-                    Ordering::Relaxed,
-                    Ordering::Relaxed,
-                )
-                .unwrap_or_else(|b| b)
-                == remaining_tokens
-            {
-                return Some(());
+            if start_new_window {
+                // Current time window has ended, so we can reset the counter and
+                // start a new time window instead.
+                bucket.value.counter.store(1, Ordering::Relaxed);
+                bucket
+                    .value
+                    .window_start_time_secs
+                    .store(now_secs, Ordering::Relaxed);
             }
-        }
-    }
-}
 
-impl Drop for LocalRateLimit {
-    fn drop(&mut self) {
-        if let Some(shutdown_tx) = self.shutdown_tx.take() {
-            shutdown_tx.send(()).ok();
+            return Some(());
         }
+
+        match self.state.entry(address) {
+            Entry::Occupied(entry) => {
+                // It is possible that some other task has added the item since we
+                // checked for it. If so, only increment the counter - no need to
+                // update the window start time since the window has just started.
+                let bucket = entry.get();
+                bucket.value.counter.fetch_add(1, Ordering::Relaxed);
+            }
+            Entry::Vacant(entry) => {
+                // New entry, set both the time stamp and
+                let now_secs = self.state.now_relative_secs();
+                entry.insert(Bucket {
+                    counter: Arc::new(AtomicUsize::new(1)),
+                    window_start_time_secs: Arc::new(AtomicU64::new(now_secs)),
+                });
+            }
+        };
+
+        Some(())
     }
 }
 
 impl Filter for LocalRateLimit {
     fn read(&self, ctx: ReadContext) -> Option<ReadResponse> {
-        self.acquire_token().map(|()| ctx.into()).or_else(|| {
-            self.metrics.packets_dropped_total.inc();
-            None
-        })
+        self.acquire_token(ctx.from)
+            .map(|()| ctx.into())
+            .or_else(|| {
+                self.metrics.packets_dropped_total.inc();
+                None
+            })
     }
 }
 
 /// Creates instances of [`LocalRateLimit`].
-#[derive(Default)]
-struct LocalRateLimitFactory;
+struct LocalRateLimitFactory {
+    log: Logger,
+}
+
+impl LocalRateLimitFactory {
+    pub fn new(base: &Logger) -> Self {
+        LocalRateLimitFactory { log: base.clone() }
+    }
+}
 
 impl FilterFactory for LocalRateLimitFactory {
     fn name(&self) -> &'static str {
@@ -155,13 +184,17 @@ impl FilterFactory for LocalRateLimitFactory {
             .require_config(args.config)?
             .deserialize::<Config, ProtoConfig>(self.name())?;
 
-        if config.period.lt(&Duration::from_millis(100)) {
+        if config.period < 1 {
             Err(Error::FieldInvalid {
                 field: "period".into(),
-                reason: "value must be at least 100ms".into(),
+                reason: "value must be at least 1 second".into(),
             })
         } else {
-            let filter = LocalRateLimit::new(config, Metrics::new(&args.metrics_registry)?);
+            let filter = LocalRateLimit::new(
+                self.log.clone(),
+                config,
+                Metrics::new(&args.metrics_registry)?,
+            );
             Ok(FilterInstance::new(
                 config_json,
                 Box::new(filter) as Box<dyn Filter>,
@@ -176,15 +209,14 @@ pub struct Config {
     /// The maximum number of packets allowed to be forwarded by the rate
     /// limiter in a given duration.
     pub max_packets: usize,
-    /// The duration during which max_packets applies. If none is provided, it
+    /// The duration in seconds during which max_packets applies. If none is provided, it
     /// defaults to one second.
-    #[serde(with = "humantime_serde", default = "default_period")]
-    pub period: Duration,
+    pub period: u32,
 }
 
 /// default value for [`Config::period`]
-fn default_period() -> Duration {
-    Duration::from_secs(1)
+fn default_period() -> u32 {
+    1
 }
 
 impl TryFrom<ProtoConfig> for Config {
@@ -193,18 +225,7 @@ impl TryFrom<ProtoConfig> for Config {
     fn try_from(p: ProtoConfig) -> Result<Self, Self::Error> {
         Ok(Self {
             max_packets: p.max_packets as usize,
-            period: p
-                .period
-                .map(|period| {
-                    period.try_into().map_err(|err| {
-                        ConvertProtoConfigError::new(
-                            format!("invalid duration: {:?}", err),
-                            Some("period".into()),
-                        )
-                    })
-                })
-                .transpose()?
-                .unwrap_or_else(default_period),
+            period: p.period.unwrap_or_else(default_period),
         })
     }
 }
@@ -218,15 +239,53 @@ mod tests {
     use tokio::time;
 
     use super::ProtoConfig;
+    use crate::config::ConfigType;
     use crate::endpoint::{Endpoint, Endpoints};
+    use crate::filters::local_rate_limit::LocalRateLimitFactory;
     use crate::filters::{
         local_rate_limit::{metrics::Metrics, Config, LocalRateLimit},
-        Filter, ReadContext,
+        CreateFilterArgs, Filter, FilterFactory, ReadContext,
     };
-    use crate::test_utils::assert_write_no_change;
+    use crate::test_utils::{assert_write_no_change, logger};
+    use std::net::SocketAddr;
 
     fn rate_limiter(config: Config) -> LocalRateLimit {
-        LocalRateLimit::new(config, Metrics::new(&Registry::default()).unwrap())
+        LocalRateLimit::new(
+            logger(),
+            config,
+            Metrics::new(&Registry::default()).unwrap(),
+        )
+    }
+
+    /// Send a packet to the filter and assert whether or not it was processed.
+    fn read(r: &LocalRateLimit, address: SocketAddr, should_succeed: bool) {
+        let endpoints =
+            Endpoints::new(vec![Endpoint::new("127.0.0.1:8089".parse().unwrap())]).unwrap();
+
+        let result = r.read(ReadContext::new(endpoints.into(), address, vec![9]));
+
+        if should_succeed {
+            assert_eq!(result.unwrap().contents, vec![9]);
+        } else {
+            assert!(result.is_none());
+        }
+    }
+
+    #[tokio::test]
+    async fn config_minimum_period() {
+        let factory = LocalRateLimitFactory::new(&logger());
+        let config = "
+max_packets: 10
+period: 0
+";
+        let err = factory
+            .create_filter(CreateFilterArgs {
+                config: Some(ConfigType::Static(&serde_yaml::from_str(config).unwrap())),
+                metrics_registry: Default::default(),
+            })
+            .err()
+            .unwrap();
+        assert!(format!("{:?}", err).contains("value must be at least 1 second"));
     }
 
     #[test]
@@ -236,11 +295,11 @@ mod tests {
                 "should succeed when all valid values are provided",
                 ProtoConfig {
                     max_packets: 10,
-                    period: Some(Duration::from_secs(2).into()),
+                    period: Some(2),
                 },
                 Some(Config {
                     max_packets: 10,
-                    period: Duration::from_secs(2),
+                    period: 2,
                 }),
             ),
             (
@@ -251,7 +310,7 @@ mod tests {
                 },
                 Some(Config {
                     max_packets: 10,
-                    period: Duration::from_secs(1),
+                    period: 1,
                 }),
             ),
         ];
@@ -274,110 +333,99 @@ mod tests {
         // Test that we always start with the max number of tokens available.
         let r = rate_limiter(Config {
             max_packets: 3,
-            period: Duration::from_millis(100),
+            period: 1,
         });
 
-        assert_eq!(r.acquire_token(), Some(()));
-        assert_eq!(r.acquire_token(), Some(()));
-        assert_eq!(r.acquire_token(), Some(()));
-        assert_eq!(r.acquire_token(), None);
-    }
+        let address = "127.0.0.1:8080".parse().unwrap();
 
-    #[tokio::test]
-    async fn token_exhaustion_and_refill() {
-        let r = rate_limiter(Config {
-            max_packets: 2,
-            period: Duration::from_millis(100),
-        });
-
-        // Exhaust tokens
-        assert_eq!(r.acquire_token(), Some(()));
-        assert_eq!(r.acquire_token(), Some(()));
-        assert_eq!(r.acquire_token(), None);
-
-        // Wait for refill
-        let mut num_iterations = 0;
-        let first_token = loop {
-            let token = r.acquire_token();
-            if token.is_some() {
-                break token;
-            }
-            num_iterations += 1;
-            if num_iterations >= 1000 {
-                unreachable!("timed-out waiting for token refill");
-            }
-            time::sleep(Duration::from_millis(10)).await;
-        };
-
-        // Exhaust tokens again.
-        assert_eq!(first_token, Some(()));
-        assert_eq!(r.acquire_token(), Some(()));
-        assert_eq!(r.acquire_token(), None);
-    }
-
-    #[tokio::test]
-    async fn token_refill_maximum() {
-        // Test that we never refill more than the max_tokens specified.
-
-        let r = rate_limiter(Config {
-            max_packets: 3,
-            period: Duration::from_millis(30),
-        });
-
-        // Use up some of the tokens.
-        assert_eq!(r.acquire_token(), Some(()));
-
-        // Wait for refill
-        time::sleep(Duration::from_millis(110)).await;
-
-        // Refill should not go over max token limit.
-        assert_eq!(r.acquire_token(), Some(()));
-        assert_eq!(r.acquire_token(), Some(()));
-        assert_eq!(r.acquire_token(), Some(()));
-        assert_eq!(r.acquire_token(), None);
+        read(&r, address, true);
+        read(&r, address, true);
+        read(&r, address, true);
+        read(&r, address, false);
     }
 
     #[tokio::test]
     async fn filter_with_no_available_tokens() {
         let r = rate_limiter(Config {
             max_packets: 0,
-            period: Duration::from_millis(100),
+            period: 1,
         });
+
+        let address = "127.0.0.1:8080".parse().unwrap();
 
         // Check that other routes are not affected.
         assert_write_no_change(&r);
 
         // Check that we're rate limited.
-        assert!(r
-            .read(ReadContext::new(
-                Endpoints::new(vec![Endpoint::new("127.0.0.1:8080".parse().unwrap(),)])
-                    .unwrap()
-                    .into(),
-                "127.0.0.1:8080".parse().unwrap(),
-                vec![9],
-            ))
-            .is_none(),);
+        read(&r, address, false);
     }
 
     #[tokio::test]
-    async fn filter_with_available_tokens() {
+    async fn rate_limit_reads_for_multiple_sources() {
+        time::pause();
+
         let r = rate_limiter(Config {
-            max_packets: 1,
-            period: Duration::from_millis(100),
+            max_packets: 2,
+            period: 1,
         });
 
-        let result = r
-            .read(ReadContext::new(
-                Endpoints::new(vec![Endpoint::new("127.0.0.1:8080".parse().unwrap())])
-                    .unwrap()
-                    .into(),
-                "127.0.0.1:8080".parse().unwrap(),
-                vec![9],
-            ))
-            .unwrap();
-        assert_eq!(result.contents, vec![9]);
-        // We should be out of tokens now.
-        assert_eq!(None, r.acquire_token());
+        let address1 = "127.0.0.1:8080".parse().unwrap();
+        let address2 = "127.0.0.1:8081".parse().unwrap();
+
+        // Read until we exhaust tokens for both addresses.
+        read(&r, address1, true);
+        read(&r, address2, true);
+        read(&r, address1, true);
+        read(&r, address2, true);
+
+        // Check that we've exhausted their tokens.
+        read(&r, address1, false);
+        read(&r, address2, false);
+        read(&r, address1, false);
+        read(&r, address2, false);
+
+        // Advance time to refill tokens.
+        time::advance(Duration::from_secs(2)).await;
+
+        // Check that we are able to process packets again.
+        read(&r, address1, true);
+        read(&r, address2, true);
+        read(&r, address1, true);
+
+        // Advance time to to the end of the current window.
+        time::advance(Duration::from_secs(1)).await;
+
+        // Only the second address should have tokens left.
+        read(&r, address1, false);
+        read(&r, address2, true);
+
+        // Check that other routes are not affected.
+        assert_write_no_change(&r);
+    }
+
+    #[tokio::test]
+    async fn max_token_refills_is_never_exceeded_for_partially_filled_buckets() {
+        // Check that if a token bucket isn't being used up, continuous
+        // refills do not exceed the maximum number of tokens.
+        time::pause();
+
+        let r = rate_limiter(Config {
+            max_packets: 2,
+            period: 1,
+        });
+
+        let address = "127.0.0.1:8080".parse().unwrap();
+
+        // Acquire 1 token.
+        read(&r, address, true);
+
+        // Advance to some time in the future after multiple token refills.
+        time::advance(Duration::from_secs(10)).await;
+
+        // Check that we still have the 2 tokens within a window.
+        read(&r, address, true);
+        read(&r, address, true);
+        read(&r, address, false);
 
         // Check that other routes are not affected.
         assert_write_no_change(&r);
