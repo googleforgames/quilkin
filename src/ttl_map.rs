@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Google LLC
+ * Copyright 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -322,7 +322,7 @@ fn spawn_cleanup_task<V>(
         loop {
             tokio::select! {
                 _ = interval.tick() => {
-                    prune_sessions(&log, &map, &clock).await;
+                    prune_entries(&log, &map, &clock).await;
                 }
                 _ = &mut shutdown_rx => {
                     return;
@@ -332,7 +332,7 @@ fn spawn_cleanup_task<V>(
     });
 }
 
-async fn prune_sessions<V>(log: &Logger, map: &Arc<Map<V>>, clock: &Clock)
+async fn prune_entries<V>(log: &Logger, map: &Arc<Map<V>>, clock: &Clock)
 where
     V: Send + Sync + 'static,
 {
