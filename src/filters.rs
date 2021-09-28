@@ -33,7 +33,6 @@ pub mod debug;
 pub mod load_balancer;
 pub mod local_rate_limit;
 pub mod metadata;
-pub mod regex_bytes;
 pub mod token_router;
 
 /// Prelude containing all types and traits required to implement [`Filter`] and
