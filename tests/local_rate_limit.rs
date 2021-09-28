@@ -32,7 +32,7 @@ async fn local_rate_limit_filter() {
 
     let yaml = "
 max_packets: 2
-period: 1s
+period: 1
 ";
     let echo = t.run_echo_server().await;
 

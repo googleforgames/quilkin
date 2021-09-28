@@ -21,7 +21,7 @@ static:
     - name: quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit
       config:
         max_packets: 1000
-        period: 1s
+        period: 1
   endpoints:
     - address: 127.0.0.1:7001
 # ";
@@ -47,10 +47,9 @@ properties:
   period:
     type: string
     description: |
-      A human readable duration overwhich `max_packets` applies.
-      Examples: `1s` 1 second.
-      The minimum allowed value is 1s.
-    default: '1s' # 1 second
+      The duration in seconds overwhich `max_packets` applies.
+    default: 1 # 1 second
+    minimum: 1
 
 required: [ 'max_packets' ]
 ```

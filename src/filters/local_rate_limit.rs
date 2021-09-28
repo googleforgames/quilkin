@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-use std::convert::{TryFrom, TryInto};
+use std::convert::TryFrom;
 use std::net::SocketAddr;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -105,8 +105,8 @@ impl LocalRateLimit {
             let now_secs = self.state.now_relative_secs();
             let window_start_secs = bucket.value.window_start_time_secs.load(Ordering::Relaxed);
 
-            let elapsed = Duration::from_secs(now_secs - window_start_secs);
-            let start_new_window = elapsed > self.config.period;
+            let elapsed_secs = now_secs - window_start_secs;
+            let start_new_window = elapsed_secs > self.config.period as u64;
 
             // Check if allowing this packet will put us over the maximum.
             if prev_count >= self.config.max_packets {
@@ -184,10 +184,10 @@ impl FilterFactory for LocalRateLimitFactory {
             .require_config(args.config)?
             .deserialize::<Config, ProtoConfig>(self.name())?;
 
-        if config.period.lt(&Duration::from_secs(1)) {
+        if config.period < 1 {
             Err(Error::FieldInvalid {
                 field: "period".into(),
-                reason: "value must be at least 1s".into(),
+                reason: "value must be at least 1 second".into(),
             })
         } else {
             let filter = LocalRateLimit::new(
@@ -209,15 +209,14 @@ pub struct Config {
     /// The maximum number of packets allowed to be forwarded by the rate
     /// limiter in a given duration.
     pub max_packets: usize,
-    /// The duration during which max_packets applies. If none is provided, it
+    /// The duration in seconds during which max_packets applies. If none is provided, it
     /// defaults to one second.
-    #[serde(with = "humantime_serde", default = "default_period")]
-    pub period: Duration,
+    pub period: u32,
 }
 
 /// default value for [`Config::period`]
-fn default_period() -> Duration {
-    Duration::from_secs(1)
+fn default_period() -> u32 {
+    1
 }
 
 impl TryFrom<ProtoConfig> for Config {
@@ -226,18 +225,7 @@ impl TryFrom<ProtoConfig> for Config {
     fn try_from(p: ProtoConfig) -> Result<Self, Self::Error> {
         Ok(Self {
             max_packets: p.max_packets as usize,
-            period: p
-                .period
-                .map(|period| {
-                    period.try_into().map_err(|err| {
-                        ConvertProtoConfigError::new(
-                            format!("invalid duration: {:?}", err),
-                            Some("period".into()),
-                        )
-                    })
-                })
-                .transpose()?
-                .unwrap_or_else(default_period),
+            period: p.period.unwrap_or_else(default_period),
         })
     }
 }
@@ -286,18 +274,18 @@ mod tests {
     #[tokio::test]
     async fn config_minimum_period() {
         let factory = LocalRateLimitFactory::new(&logger());
-        let config1 = "
+        let config = "
 max_packets: 10
-period: 10ms
+period: 0
 ";
         let err = factory
             .create_filter(CreateFilterArgs {
-                config: Some(ConfigType::Static(&serde_yaml::from_str(config1).unwrap())),
+                config: Some(ConfigType::Static(&serde_yaml::from_str(config).unwrap())),
                 metrics_registry: Default::default(),
             })
             .err()
             .unwrap();
-        assert!(format!("{:?}", err).contains("value must be at least 1s"));
+        assert!(format!("{:?}", err).contains("value must be at least 1 second"));
     }
 
     #[test]
@@ -307,11 +295,11 @@ period: 10ms
                 "should succeed when all valid values are provided",
                 ProtoConfig {
                     max_packets: 10,
-                    period: Some(Duration::from_secs(2).into()),
+                    period: Some(2),
                 },
                 Some(Config {
                     max_packets: 10,
-                    period: Duration::from_secs(2),
+                    period: 2,
                 }),
             ),
             (
@@ -322,7 +310,7 @@ period: 10ms
                 },
                 Some(Config {
                     max_packets: 10,
-                    period: Duration::from_secs(1),
+                    period: 1,
                 }),
             ),
         ];
@@ -345,7 +333,7 @@ period: 10ms
         // Test that we always start with the max number of tokens available.
         let r = rate_limiter(Config {
             max_packets: 3,
-            period: Duration::from_secs(1),
+            period: 1,
         });
 
         let address = "127.0.0.1:8080".parse().unwrap();
@@ -360,7 +348,7 @@ period: 10ms
     async fn filter_with_no_available_tokens() {
         let r = rate_limiter(Config {
             max_packets: 0,
-            period: Duration::from_secs(1),
+            period: 1,
         });
 
         let address = "127.0.0.1:8080".parse().unwrap();
@@ -378,7 +366,7 @@ period: 10ms
 
         let r = rate_limiter(Config {
             max_packets: 2,
-            period: Duration::from_secs(1),
+            period: 1,
         });
 
         let address1 = "127.0.0.1:8080".parse().unwrap();
@@ -423,7 +411,7 @@ period: 10ms
 
         let r = rate_limiter(Config {
             max_packets: 2,
-            period: Duration::from_secs(1),
+            period: 1,
         });
 
         let address = "127.0.0.1:8080".parse().unwrap();
