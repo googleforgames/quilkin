@@ -1,17 +1,24 @@
-use regex::bytes::Regex as RegexBytes;
-
 /// Trait to implement different strategies for capturing packet data
-pub trait Capture {
+pub trait Capture: SizeCapture + RegexCapture {}
+
+pub trait SizeCapture {
     /// Capture the packet data from the contents. If remove is true, contents will be altered to
     /// not have the retrieved set of bytes.
     /// Returns the captured bytes.
     fn capture(&self, contents: &mut Vec<u8>, size: usize, remove: bool) -> Vec<u8>;
 }
 
+pub trait RegexCapture {
+    /// Capture the packet data from the contents. If remove is true, contents will be altered to
+    /// not have the retrieved set of bytes.
+    /// Returns the captured bytes.
+    fn capture(&self, contents: &mut Vec<u8>, remove: bool) -> Vec<u8>;
+}
+
 /// Capture from the end of the packet.
 pub struct Suffix;
 
-impl Capture for Suffix {
+impl SizeCapture for Suffix {
     fn capture(&self, contents: &mut Vec<u8>, size: usize, remove: bool) -> Vec<u8> {
         if remove {
             return contents.split_off(contents.len() - size);
@@ -28,7 +35,7 @@ impl Capture for Suffix {
 /// Capture from the start of the packet.
 pub struct Prefix;
 
-impl Capture for Prefix {
+impl SizeCapture for Prefix {
     fn capture(&self, contents: &mut Vec<u8>, size: usize, remove: bool) -> Vec<u8> {
         if remove {
             return contents.drain(..size).collect();
@@ -41,10 +48,8 @@ impl Capture for Prefix {
 /// Capture from the start of the packet.
 pub struct Regex;
 
-impl Capture for Regex {
-    fn capture(&self, contents: &mut Vec<u8>, size: usize, remove: bool) -> Vec<u8> {
-        if remove {
-            return contents.drain(..size).collect();
-        }
+impl RegexCapture for Regex {
+    fn capture(&self, contents: &mut Vec<u8>, remove: bool) -> Vec<u8> {
+        todo!();
     }
 }

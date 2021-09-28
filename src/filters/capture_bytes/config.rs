@@ -133,8 +133,6 @@ impl TryFrom<ProtoConfig> for Config {
         Ok(Self {
             strategy,
             metadata_key: p.metadata_key.unwrap_or_else(default_metadata_key),
-            //size: p.size as usize,
-            //remove: p.remove.unwrap_or_else(default_remove),
         })
     }
 }

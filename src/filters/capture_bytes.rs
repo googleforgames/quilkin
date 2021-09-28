@@ -43,10 +43,10 @@ struct CaptureBytes {
     capture: Box<dyn Capture + Sync + Send>,
     /// metrics reporter for this filter.
     metrics: Metrics,
+    regex: Option<regex::bytes::Regex>,
     metadata_key: Arc<String>,
     remove: bool,
     size: Option<usize>,
-    expression: Option<String>,
     passthrough: Option<bool>,
 }
 
@@ -57,20 +57,20 @@ impl CaptureBytes {
                 log: base.new(o!("source" => "extensions::CaptureBytes")),
                 capture: config.strategy.as_capture(),
                 metrics,
+                regex: None,
                 metadata_key: Arc::new(config.metadata_key),
                 remove,
                 size: Some(size),
-                expression: None,
                 passthrough: None,
             },
             Strategy::Suffix { size, remove } => CaptureBytes {
                 log: base.new(o!("source" => "extensions::CaptureBytes")),
                 capture: config.strategy.as_capture(),
                 metrics,
+                regex: None,
                 metadata_key: Arc::new(config.metadata_key),
                 remove,
                 size: Some(size),
-                expression: None,
                 passthrough: None,
             },
             Strategy::Regex {
@@ -81,10 +81,10 @@ impl CaptureBytes {
                 log: base.new(o!("source" => "extensions::CaptureBytes")),
                 capture: config.strategy.as_capture(),
                 metrics,
+                regex: Some(regex::bytes::Regex::new(&expression).unwrap()),
                 metadata_key: Arc::new(config.metadata_key),
                 remove,
                 size: None,
-                expression: Some(expression),
                 passthrough: Some(passthrough),
             },
         }
