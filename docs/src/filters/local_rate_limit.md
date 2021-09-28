@@ -32,6 +32,11 @@ static:
 ```
 To configure a rate limiter, we specify the maximum rate at which the proxy is allowed to forward packets. In the example above, we configured the proxy to forward a maximum of 1000 packets per second).
 
+> Be aware that due to some optimizations in the current rate limiter implementation, the enforced maximum number of packets is not always exact.
+> It is in theory possible that the rate limiter allows a few packets through, however in practice this would be a rare occurrence
+> and the maximum number of such packets that is in the worse case `N-1` where `N` is the number of threads used to process packets.
+> For example, a configuration allowing 1000 packets per second could potentially allow 1004 packets during some time window if we have up to 4 threads.
+
 > Packets that that exceeds the maximum configured rate are dropped.
 
 ### Configuration Options
