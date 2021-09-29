@@ -58,7 +58,7 @@ impl FilterSet {
         Self::with(
             std::array::IntoIter::new([
                 filters::debug::factory(base),
-                filters::local_rate_limit::factory(),
+                filters::local_rate_limit::factory(base),
                 filters::concatenate_bytes::factory(),
                 filters::load_balancer::factory(),
                 filters::capture_bytes::factory(base),
