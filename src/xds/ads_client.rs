@@ -535,6 +535,7 @@ mod tests {
             ListenerManagerArgs::new(
                 Registry::default(),
                 FilterRegistry::default(),
+                None,
                 filter_chain_updates_tx,
             ),
             shutdown_rx,

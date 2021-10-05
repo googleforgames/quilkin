@@ -26,11 +26,13 @@ mod builder;
 mod config_type;
 mod error;
 
-use crate::endpoint::Endpoint;
+use crate::endpoint::{base64_set, Endpoint};
 
 pub(crate) use self::error::ValueInvalidArgs;
 
 pub use self::{builder::Builder, config_type::ConfigType, error::ValidationError};
+use crate::capture_bytes::Strategy;
+use std::collections::HashSet;
 
 base64_serde_type!(Base64Standard, base64::STANDARD);
 
@@ -155,32 +157,187 @@ pub struct ManagementServer {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+/// Represents a filter chain that is associated with a set of packet versions.
+/// The filter will be used to process only those packets that match any of its
+/// associated versions.
+pub struct VersionedStaticFilterChain {
+    #[serde(with = "base64_set")]
+    /// A list of packet versions that this filter chain will process packets for.
+    /// Each version is provided as a Standard Base64 encoding with padding.
+    pub versions: base64_set::Set,
+    /// The list of filters that make up the filter chain.
+    pub filters: Vec<Filter>,
+}
+
+/// default value for [`CaptureVersion::remove`].
+fn default_capture_version_remove() -> bool {
+    true
+}
+
+/// Configures how to collect version information from a packet.
+///
+/// The collected sequence of bytes and will matched
+/// against the current versioned filter chains that the proxy is
+/// running with.
+///
+/// If a match is found, the matching filter chain is used to process
+/// the packet.
+///
+/// Note that once the version for the first packet in a session has been set,
+/// all subsequent packets for that session must use the same version otherwise
+/// they will be dropped.
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct CaptureVersion {
+    /// Strategy to use to capture the version.
+    pub strategy: Strategy,
+    /// Number of bytes to capture as the version.
+    pub size: usize,
+    #[serde(default = "default_capture_version_remove")]
+    /// Whether or not to remove the remove bytes from the original packet
+    /// after capture.
+    pub remove: bool,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub enum StaticFilterChainConfig {
+    #[serde(rename = "versioned")]
+    /// In versioned mode, version information is collected from each packet
+    /// and matched against a set of filter chains. If a match is found, that
+    /// filter chain is used to process the packet.
+    Versioned {
+        /// Configures how to capture the version from packets.
+        capture_version: CaptureVersion,
+        /// Set of filter chain configurations.
+        filter_chains: Vec<VersionedStaticFilterChain>,
+    },
+
+    #[serde(rename = "filters")]
+    /// In non-versioned mode, a single filter chain is used to process
+    /// all packets.
+    NonVersioned(#[serde(default)] Vec<Filter>),
+}
+
+impl Default for StaticFilterChainConfig {
+    /// Default is an empty filter chain.
+    fn default() -> Self {
+        StaticFilterChainConfig::NonVersioned(vec![])
+    }
+}
+
+/// Version configuration for filter chains that will be received
+/// dynamically from a management server.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct VersionedDynamicFilterChainConfig {
+    /// Configures how to capture the version from packets.
+    pub capture_version: CaptureVersion,
+}
+
+/// Configuration for filter chains that will be received
+/// dynamically from  a management server.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct DynamicFilterChainConfig {
+    /// Enable versioned filter chains.
+    pub versioned: VersionedDynamicFilterChainConfig,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub enum Source {
     #[serde(rename = "static")]
+    /// Configures Quilkin with fixed endpoint and filter values.
+    /// These values do not change at runtime.
     Static {
         #[serde(default)]
-        filters: Vec<Filter>,
-
+        /// Filter chain configuration.
+        filter_chain: StaticFilterChainConfig,
+        /// List of upstream endpoint to forward packets to.
         endpoints: Vec<Endpoint>,
     },
     #[serde(rename = "dynamic")]
+    /// Configures Quilkin to retrieve endpoint and filter values from
+    /// a management server.
+    /// This enables Quilkin to run with configuration that can be updated at runtime.
     Dynamic {
+        /// Configures filter chains received from the management server.
+        filter_chain: Option<DynamicFilterChainConfig>,
+        /// Management server configuration.
+        /// Multiple servers can be configured for redundancy -
+        /// the proxy will retry establishing a connection in a round robin manner
+        /// in case of errors.
         management_servers: Vec<ManagementServer>,
     },
 }
 
 impl Source {
-    /// Returns the list of filters if the config is a static config and None otherwise.
-    /// This is a convenience function and should only be used for doc tests and tests.
-    pub fn get_static_filters(&self) -> Option<&[Filter]> {
+    /// Returns the list of filters if the config contains a static, non versioned
+    /// filter chain. It returns None otherwise.
+    ///
+    /// NOTE: This is a convenience function and should only be used for doc tests and tests.
+    pub fn get_static_non_versioned_filters(&self) -> Option<&[Filter]> {
         match self {
             Source::Static {
-                filters,
+                filter_chain,
                 endpoints: _,
-            } => Some(filters),
+            } => match filter_chain {
+                StaticFilterChainConfig::Versioned { .. } => None,
+                StaticFilterChainConfig::NonVersioned(filters) => Some(filters),
+            },
             Source::Dynamic {
+                filter_chain: _,
                 management_servers: _,
             } => None,
+        }
+    }
+
+    /// Returns the list of filters if the config contains a static, versioned
+    /// filter chain. It returns None otherwise.
+    ///
+    /// NOTE: This is a convenience function and should only be used for doc tests and tests.
+    pub fn get_static_versioned_filters(&self) -> Option<&[VersionedStaticFilterChain]> {
+        match self {
+            Source::Static {
+                filter_chain,
+                endpoints: _,
+            } => match filter_chain {
+                StaticFilterChainConfig::NonVersioned(_) => None,
+                StaticFilterChainConfig::Versioned {
+                    capture_version: _,
+                    filter_chains,
+                } => Some(filter_chains),
+            },
+            Source::Dynamic {
+                filter_chain: _,
+                management_servers: _,
+            } => None,
+        }
+    }
+
+    /// Returns the [`CaptureVersion`] for the config if one was provided.
+    ///
+    /// NOTE: This is a convenience function and should only be used for doc tests and tests.
+    pub fn get_capture_version(&self) -> Option<CaptureVersion> {
+        match self {
+            Source::Static {
+                filter_chain,
+                endpoints: _,
+            } => match filter_chain {
+                StaticFilterChainConfig::Versioned {
+                    capture_version,
+                    filter_chains: _,
+                } => Some(capture_version.clone()),
+                StaticFilterChainConfig::NonVersioned(_) => None,
+            },
+            Source::Dynamic {
+                filter_chain,
+                management_servers: _,
+            } => filter_chain
+                .as_ref()
+                .map(|config| config.versioned.capture_version.clone()),
         }
     }
 }
@@ -193,6 +350,39 @@ pub struct Filter {
     pub config: Option<serde_yaml::Value>,
 }
 
+/// Validates the filter chain version provided in a configuration.
+pub(crate) struct ValidateFilterChainVersions<'a>(
+    /// Set of versions for each versioned filter chain.
+    pub Vec<&'a base64_set::Set>,
+);
+
+impl<'a> ValidateFilterChainVersions<'_> {
+    pub fn validate(self) -> Result<(), ValidationError> {
+        // Check for any version duplicates across all filter chains.
+        let num_versions = self
+            .0
+            .iter()
+            .map(|versions| versions.iter().collect::<Vec<_>>())
+            .flatten()
+            .count();
+        let num_versions_without_duplicates = self
+            .0
+            .iter()
+            .copied()
+            .flatten()
+            .collect::<HashSet<_>>()
+            .len();
+
+        if num_versions != num_versions_without_duplicates {
+            return Err(ValidationError::NotUnique(
+                "filter chain versions".to_string(),
+            ));
+        }
+
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use serde_yaml::Value;
@@ -200,6 +390,7 @@ mod tests {
     use super::*;
 
     use crate::endpoint::Metadata;
+    use std::collections::BTreeSet;
 
     fn parse_config(yaml: &str) -> Config {
         Config::from_reader(yaml.as_bytes()).unwrap()
@@ -208,7 +399,7 @@ mod tests {
     fn assert_static_endpoints(source: &Source, expected_endpoints: Vec<Endpoint>) {
         match source {
             Source::Static {
-                filters: _,
+                filter_chain: _,
                 endpoints,
             } => {
                 assert_eq!(&expected_endpoints, endpoints,);
@@ -219,7 +410,10 @@ mod tests {
 
     fn assert_management_servers(source: &Source, expected: Vec<ManagementServer>) {
         match source {
-            Source::Dynamic { management_servers } => {
+            Source::Dynamic {
+                filter_chain: _,
+                management_servers,
+            } => {
                 assert_eq!(&expected, management_servers,);
             }
             _ => unreachable!("expected dynamic config source"),
@@ -268,14 +462,15 @@ static:
     }
 
     #[test]
-    fn parse_filter_config() {
+    fn parse_non_versioned_filter_chain() {
         let yaml = "
 version: v1alpha1
 proxy:
   id: client-proxy
   port: 7000 # the port to receive traffic to locally
 static:
-  filters: # new filters section
+  filter_chain:
+    filters: # new filters section
     - name: quilkin.core.v1.rate-limiter
       config:
         map: of arbitrary key value pairs
@@ -289,7 +484,12 @@ static:
         ";
         let config = parse_config(yaml);
 
-        let filter = config.source.get_static_filters().unwrap().get(0).unwrap();
+        let filter = config
+            .source
+            .get_static_non_versioned_filters()
+            .unwrap()
+            .get(0)
+            .unwrap();
         assert_eq!("quilkin.core.v1.rate-limiter", filter.name);
         let config = filter.config.as_ref().unwrap();
         let filter_config = config.as_mapping().unwrap();
@@ -306,6 +506,111 @@ static:
         assert_eq!("be", could.get(1).unwrap().as_str().unwrap());
         assert_eq!(27, could.get(2).unwrap().as_i64().unwrap());
         assert!(could.get(3).unwrap().as_bool().unwrap());
+    }
+
+    #[test]
+    fn parse_static_versioned_filter_chain() {
+        let yaml = "
+version: v1alpha1
+proxy:
+  port: 7000
+static:
+  filter_chain:
+    versioned:
+      capture_version:
+        strategy: PREFIX
+        size: 1
+      filter_chains:
+      - versions:
+        - AA==
+        - AQ==
+        filters:
+        - name: quilkin.core.v1.test1
+          config:
+            id: test1
+        - name: quilkin.core.v1.test2
+          config:
+            id: test2
+      - versions:
+        - Ag==
+        filters:
+        - name: quilkin.core.v1.test3
+          config:
+            id: test3
+  endpoints:
+  - address: 127.0.0.1:7001
+        ";
+        let config = parse_config(yaml);
+
+        let capture_version = config.source.get_capture_version().unwrap();
+        assert_eq!(
+            CaptureVersion {
+                strategy: Strategy::Prefix,
+                size: 1,
+                remove: true
+            },
+            capture_version
+        );
+
+        let filter_chains = config.source.get_static_versioned_filters().unwrap();
+
+        assert_eq!(2, filter_chains.len());
+
+        let filter_chain_1 = filter_chains.get(0).unwrap();
+        let filter_chain_2 = filter_chains.get(1).unwrap();
+
+        let versions_1 = vec![vec![0], vec![1]].into_iter().collect::<BTreeSet<_>>();
+        assert_eq!(versions_1, filter_chain_1.versions);
+        assert_eq!(2, filter_chain_1.filters.len());
+        let filter_1 = &filter_chain_1.filters[0];
+        assert_eq!("quilkin.core.v1.test1", filter_1.name);
+        let config_1 = filter_1.config.as_ref().unwrap();
+        assert_eq!(
+            serde_json::json!({
+                "id": "test1"
+            }),
+            serde_json::to_value(config_1).unwrap()
+        );
+
+        let filter_2 = &filter_chain_1.filters[1];
+        assert_eq!("quilkin.core.v1.test2", filter_2.name);
+        let config_2 = filter_2.config.as_ref().unwrap();
+        assert_eq!(
+            serde_json::json!({
+                "id": "test2"
+            }),
+            serde_json::to_value(config_2).unwrap()
+        );
+
+        let versions_2 = vec![vec![2]].into_iter().collect::<BTreeSet<_>>();
+        assert_eq!(versions_2, filter_chain_2.versions);
+        assert_eq!(1, filter_chain_2.filters.len());
+        let filter_3 = &filter_chain_2.filters[0];
+        assert_eq!("quilkin.core.v1.test3", filter_3.name);
+        let config_3 = filter_3.config.as_ref().unwrap();
+        assert_eq!(
+            serde_json::json!({
+                "id": "test3"
+            }),
+            serde_json::to_value(config_3).unwrap()
+        );
+    }
+
+    #[test]
+    fn parse_static_filter_chain_default() {
+        let yaml = "
+version: v1alpha1
+proxy:
+  port: 7000
+static:
+  endpoints:
+  - address: 127.0.0.1:7001
+        ";
+        let config = parse_config(yaml);
+
+        let filter_chains = config.source.get_static_non_versioned_filters().unwrap();
+
+        assert_eq!(0, filter_chains.len());
     }
 
     #[test]
@@ -383,19 +688,10 @@ static:
     }
 
     #[test]
-    fn parse_dynamic_source() {
+    fn parse_dynamic_management_servers() {
         let yaml = "
 version: v1alpha1
 dynamic:
-  filters:
-    - name: quilkin.core.v1.rate-limiter
-      config:
-        map: of arbitrary key value pairs
-        could:
-          - also
-          - be
-          - 27
-          - true
   management_servers:
     - address: 127.0.0.1:25999
     - address: 127.0.0.1:30000
@@ -412,6 +708,39 @@ dynamic:
                     address: "127.0.0.1:30000".into(),
                 },
             ],
+        );
+    }
+
+    #[test]
+    fn parse_dynamic_filter_chain() {
+        let yaml = "
+version: v1alpha1
+dynamic:
+  filter_chain:
+    versioned:
+      capture_version:
+        strategy: SUFFIX
+        size: 1
+  management_servers:
+    - address: 127.0.0.1:25999
+";
+        let config = parse_config(yaml);
+
+        let capture_version = config.source.get_capture_version().unwrap();
+        assert_eq!(
+            CaptureVersion {
+                strategy: Strategy::Suffix,
+                size: 1,
+                remove: true
+            },
+            capture_version
+        );
+
+        assert_management_servers(
+            &config.source,
+            vec![ManagementServer {
+                address: "127.0.0.1:25999".into(),
+            }],
         );
     }
 

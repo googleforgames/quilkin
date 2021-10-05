@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-pub use session::{Packet, Session, SessionKey};
+pub(crate) use session::{Packet, Session, SessionArgs, SessionKey};
 pub use session_manager::SESSION_TIMEOUT_SECONDS;
 
 pub(crate) mod error;

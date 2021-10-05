@@ -17,16 +17,17 @@ quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit
 #   let yaml = "
 version: v1alpha1
 static:
-  filters:
-    - name: quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit
-      config:
-        max_packets: 1000
-        period: 1
+  filter_chain:
+    filters:
+      - name: quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit
+        config:
+          max_packets: 1000
+          period: 1
   endpoints:
     - address: 127.0.0.1:7001
 # ";
 #   let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-# assert_eq!(config.source.get_static_filters().unwrap().len(), 1);
+# assert_eq!(config.source.get_static_non_versioned_filters().unwrap().len(), 1);
 #   quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
 # }
 ```

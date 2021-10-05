@@ -15,10 +15,11 @@
  */
 
 use crate::filters::{
-    manager::ListenerManagerArgs, CreateFilterArgs, FilterChain as ProxyFilterChain, FilterRegistry,
+    manager::ListenerManagerArgs, CreateFilterArgs, FilterChain as ProxyFilterChain,
+    FilterChainSource, FilterRegistry,
 };
 use crate::xds::envoy::config::listener::v3::{
-    filter::ConfigType as LdsConfigType, FilterChain, Listener,
+    filter::ConfigType as LdsConfigType, Filter, FilterChain, Listener,
 };
 use crate::xds::envoy::service::discovery::v3::{DiscoveryRequest, DiscoveryResponse};
 use crate::xds::error::Error;
@@ -26,11 +27,15 @@ use crate::xds::LISTENER_TYPE;
 
 use std::sync::Arc;
 
+use crate::config::{CaptureVersion, ValidateFilterChainVersions};
+use crate::endpoint::base64_set;
+use crate::filters::chain::Version as FilterChainVersion;
 use crate::xds::ads_client::send_discovery_req;
 use bytes::Bytes;
 use prometheus::Registry;
 use prost::Message;
 use slog::{debug, warn, Logger};
+use std::collections::HashMap;
 use tokio::sync::mpsc;
 
 /// Tracks FilterChain resources on the LDS DiscoveryResponses and
@@ -41,6 +46,8 @@ pub(crate) struct ListenerManager {
 
     metrics_registry: Registry,
 
+    capture_version: Option<CaptureVersion>,
+
     // Registry to lookup filter factories by name.
     filter_registry: FilterRegistry,
 
@@ -48,7 +55,22 @@ pub(crate) struct ListenerManager {
     discovery_req_tx: mpsc::Sender<DiscoveryRequest>,
 
     // Sends listener state updates to the caller.
-    filter_chain_updates_tx: mpsc::Sender<Arc<ProxyFilterChain>>,
+    filter_chain_updates_tx: mpsc::Sender<Arc<FilterChainSource>>,
+}
+
+/// An error returned while processing a versioned filter chain resource.
+struct ProcessVersionedFilterChainError {
+    filter_chain_index: usize,
+    message: String,
+}
+
+impl From<ProcessVersionedFilterChainError> for Error {
+    fn from(err: ProcessVersionedFilterChainError) -> Self {
+        Error::new(format!(
+            "invalid FilterChain at index {}: {}",
+            err.filter_chain_index, err.message
+        ))
+    }
 }
 
 impl ListenerManager {
@@ -60,6 +82,7 @@ impl ListenerManager {
         ListenerManager {
             log,
             metrics_registry: args.metrics_registry,
+            capture_version: args.capture_version,
             filter_registry: args.filter_registry,
             discovery_req_tx,
             filter_chain_updates_tx: args.filter_chain_updates_tx,
@@ -80,9 +103,9 @@ impl ListenerManager {
             .map_err(|err| err.message);
 
         let error_message = match result {
-            Ok(filter_chain) => {
+            Ok(filter_chain_source) => {
                 self.filter_chain_updates_tx
-                    .send(Arc::new(filter_chain))
+                    .send(filter_chain_source)
                     .await
                     .map_err(|err| {
                         warn!(self.log, "Failed to send filter chain update on channel");
@@ -108,12 +131,26 @@ impl ListenerManager {
         .await;
     }
 
+    // Returns an empty filter chain implementation.
+    fn empty_filter_chain(&self) -> Result<Arc<FilterChainSource>, Error> {
+        match self.capture_version.clone() {
+            Some(capture_version) => Ok(FilterChainSource::versioned(
+                capture_version,
+                Default::default(),
+            )),
+            None => Ok(FilterChainSource::non_versioned(ProxyFilterChain::new(
+                vec![],
+                &self.metrics_registry,
+            )?)),
+        }
+    }
+
     async fn process_listener_response(
         &mut self,
         mut resources: Vec<prost_types::Any>,
-    ) -> Result<ProxyFilterChain, Error> {
+    ) -> Result<Arc<FilterChainSource>, Error> {
         let resource = match resources.len() {
-            0 => return Ok(ProxyFilterChain::new(vec![], &self.metrics_registry)?),
+            0 => return self.empty_filter_chain(),
             1 => resources.swap_remove(0),
             n => {
                 return Err(Error::new(format!(
@@ -123,29 +160,107 @@ impl ListenerManager {
             }
         };
 
-        let mut listener = Listener::decode(Bytes::from(resource.value))
+        let listener = Listener::decode(Bytes::from(resource.value))
             .map_err(|err| Error::new(format!("listener decode error: {}", err.to_string())))?;
 
-        let lds_filter_chain = match listener.filter_chains.len() {
-            0 => return Ok(ProxyFilterChain::new(vec![], &self.metrics_registry)?),
-            1 => listener.filter_chains.swap_remove(0),
-            n => {
-                return Err(Error::new(format!(
-                    "at most 1 filter chain can be provided: got {}",
-                    n
-                )))
-            }
-        };
+        let mut lds_filter_chains = listener.filter_chains;
+        if lds_filter_chains.is_empty() {
+            return self.empty_filter_chain();
+        }
 
-        self.process_filter_chain(lds_filter_chain)
+        // If running with versioned filter chains, only accept filter chain
+        // resources that include versions.
+        match self.capture_version {
+            Some(ref capture_version) => {
+                self.process_versioned_filter_chain(capture_version.clone(), lds_filter_chains)
+            }
+            None => {
+                if lds_filter_chains.len() != 1 {
+                    return Err(Error::new(format!(
+                        "at most 1 filter chain can be provided when using a non-versioned filter chain: got {}",
+                        lds_filter_chains.len()
+                    )));
+                }
+
+                self.process_filter_chain(lds_filter_chains.swap_remove(0).filters)
+                    .map(FilterChainSource::non_versioned)
+            }
+        }
     }
 
-    fn process_filter_chain(
+    fn process_versioned_filter_chain(
         &self,
-        lds_filter_chain: FilterChain,
-    ) -> Result<ProxyFilterChain, Error> {
+        capture_version: CaptureVersion,
+        lds_filter_chains: Vec<FilterChain>,
+    ) -> Result<Arc<FilterChainSource>, Error> {
+        let mut filter_chains: HashMap<FilterChainVersion, Arc<ProxyFilterChain>> = HashMap::new();
+        // Track version matches across all filter chains.
+        let mut filter_chain_versions = Vec::<base64_set::Set>::new();
+
+        for (i, lds_filter_chain) in lds_filter_chains.into_iter().enumerate() {
+            // Get the versions handled by the filter chain.
+            let versions: Vec<FilterChainVersion> = lds_filter_chain
+                .filter_chain_match
+                .map(|filter_chain_match| {
+                    filter_chain_match
+                        .application_protocols
+                        .into_iter()
+                        .enumerate()
+                        .map(|(i, value)| {
+                            base64::decode(&value)
+                                .map(FilterChainVersion::from)
+                                .map_err(|err| ProcessVersionedFilterChainError {
+                                    filter_chain_index: i,
+                                    message: format!(
+                                        "version {} is not a valid base64 string: {:?}",
+                                        value, err
+                                    ),
+                                })
+                        })
+                        .collect::<Result<_, _>>()
+                })
+                .transpose()?
+                // Since we're running with versioned filter chains, each LDS FilterChain
+                // resource must have a FilterChainMatch to match versions against.
+                .ok_or_else(|| ProcessVersionedFilterChainError {
+                    filter_chain_index: i,
+                    message:
+                        "no FilterChainMatch was provided while versioned filter chain is enabled"
+                            .into(),
+                })?;
+
+            filter_chain_versions.push(
+                versions
+                    .iter()
+                    .map(|version| version.as_ref())
+                    .cloned()
+                    .collect(),
+            );
+
+            let filter_chain = Arc::new(
+                self.process_filter_chain(lds_filter_chain.filters)
+                    .map_err(|err| ProcessVersionedFilterChainError {
+                        filter_chain_index: i,
+                        message: err.message,
+                    })?,
+            );
+
+            for version in versions.into_iter() {
+                filter_chains.insert(version, filter_chain.clone());
+            }
+        }
+
+        // Validate versions across all filter chains.
+        ValidateFilterChainVersions(filter_chain_versions.iter().collect())
+            .validate()
+            .map_err(|err| Error::new(format!("{}", err)))?;
+
+        Ok(FilterChainSource::versioned(capture_version, filter_chains))
+    }
+
+    fn process_filter_chain(&self, lds_filters: Vec<Filter>) -> Result<ProxyFilterChain, Error> {
         let mut filters = vec![];
-        for filter in lds_filter_chain.filters {
+        for filter in lds_filters {
             let config = filter
                 .config_type
                 .map(|config| match config {
@@ -196,15 +311,18 @@ impl ListenerManager {
 #[cfg(test)]
 mod tests {
     use super::ListenerManager;
-    use crate::filters::{manager::ListenerManagerArgs, prelude::*};
+    use crate::filters::{manager::ListenerManagerArgs, prelude::*, FilterChainSource};
     use crate::test_utils::logger;
     use crate::xds::envoy::config::listener::v3::{
-        filter::ConfigType, Filter as LdsFilter, FilterChain as LdsFilterChain, Listener,
+        filter::ConfigType, Filter as LdsFilter, FilterChain as LdsFilterChain, FilterChainMatch,
+        Listener,
     };
     use crate::xds::envoy::service::discovery::v3::{DiscoveryRequest, DiscoveryResponse};
 
     use std::time::Duration;
 
+    use crate::capture_bytes::Strategy;
+    use crate::config::CaptureVersion;
     use crate::endpoint::{Endpoint, Endpoints, UpstreamEndpoints};
     use crate::filters::{ConvertProtoConfigError, DynFilterFactory, FilterRegistry, FilterSet};
     use crate::xds::LISTENER_TYPE;
@@ -212,6 +330,7 @@ mod tests {
     use prost::Message;
     use serde::{Deserialize, Serialize};
     use std::convert::TryFrom;
+    use std::sync::Arc;
     use tokio::sync::mpsc;
     use tokio::time;
 
@@ -284,91 +403,40 @@ mod tests {
         // Test that we can feed the manager a Listener resource containing
         // LDS filters and it can build up a filter chain from it.
 
-        // Prepare a filter registry with the filter factories we need for the test.
-        let filter_registry = new_registry();
-        let (filter_chain_updates_tx, mut filter_chain_updates_rx) = mpsc::channel(10);
-        let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel(10);
-        let mut manager = ListenerManager::new(
-            logger(),
-            ListenerManagerArgs::new(
-                Registry::default(),
-                filter_registry,
-                filter_chain_updates_tx,
-            ),
-            discovery_req_tx,
-        );
+        let (mut manager, mut filter_chain_updates_rx, mut discovery_req_rx) =
+            create_listener_manager(None);
 
         // Create two LDS filters forming the filter chain.
-        let filters = vec!["world", "!"]
-            .into_iter()
-            .map(|value| LdsFilter {
-                name: APPEND_TYPE_URL.into(),
-                config_type: Some(ConfigType::TypedConfig({
-                    let mut buf = vec![];
-                    ProtoAppend {
-                        value: Some(value.into()),
-                    }
-                    .encode(&mut buf)
-                    .unwrap();
-                    prost_types::Any {
-                        type_url: APPEND_TYPE_URL.into(),
-                        value: buf,
-                    }
-                })),
-            })
-            .collect();
-
-        // Create Listener proto message.
-        let lds_listener = create_lds_listener(
-            "test-listener".into(),
-            vec![create_lds_filter_chain(filters)],
+        let lds_resource = create_lds_proto(
+            "test",
+            vec![create_lds_filter_chain(
+                vec![
+                    create_append_filter_proto("world"),
+                    create_append_filter_proto("!"),
+                ],
+                None,
+            )],
         );
-
-        let mut buf = vec![];
-        lds_listener.encode(&mut buf).unwrap();
-        let lds_resource = prost_types::Any {
-            type_url: LISTENER_TYPE.into(),
-            value: buf,
-        };
 
         // Send the proto message as a DiscoveryResponse to the manager.
         manager
-            .on_listener_response(DiscoveryResponse {
-                version_info: "test-version".into(),
-                resources: vec![lds_resource],
-                canary: false,
-                type_url: LISTENER_TYPE.into(),
-                nonce: "test-nonce".into(),
-                control_plane: None,
-            })
+            .on_listener_response(create_discovery_response(
+                "test-version",
+                "test-nonce",
+                lds_resource,
+            ))
             .await;
 
         // Expect an ACK DiscoveryRequest from the manager.
-        let discovery_req = time::timeout(Duration::from_secs(5), discovery_req_rx.recv())
-            .await
-            .unwrap()
-            .unwrap();
+        assert_discovery_request_ack(&mut discovery_req_rx, "test-version", "test-nonce").await;
 
-        assert_eq!(
-            DiscoveryRequest {
-                version_info: "test-version".into(),
-                response_nonce: "test-nonce".into(),
-                type_url: LISTENER_TYPE.into(),
-                resource_names: vec![],
-                node: None,
-                error_detail: None,
-            },
-            discovery_req,
-        );
-
-        // Expect a filter chain update from the manager.
-        let filter_chain = time::timeout(Duration::from_secs(5), filter_chain_updates_rx.recv())
-            .await
-            .unwrap()
-            .unwrap();
+        // Wait for a filter chain update from the manager.
+        let filter_chain_source = wait_for_filter_chain_update(&mut filter_chain_updates_rx).await;
 
         // Test the new filter chain's functionality. It should append to payloads.
-        let response = filter_chain
+        let response = filter_chain_source
+            .get_filter_chain_non_versioned()
+            .unwrap()
             .read(ReadContext::new(
                 UpstreamEndpoints::from(
                     Endpoints::new(vec![Endpoint::new("127.0.0.1:8080".parse().unwrap())]).unwrap(),
@@ -385,99 +453,167 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn listener_manager_create_empty_filter_chain() {
-        // Test that we send an empty filter chain update if the LDS Listener resource feed the manager a Listener resource containing
-        // contains no filter chain.
+    async fn listener_manager_create_versioned_filter_chains_from_lds_listener() {
+        // Test that we can feed the manager a Listener resource containing
+        // versioned LDS filters and it can build up versioned filter chains from it.
 
-        // Prepare a filter registry with the filter factories we need for the test.
-        let filter_registry = new_registry();
-        let (filter_chain_updates_tx, mut filter_chain_updates_rx) = mpsc::channel(10);
-        let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel(10);
-        let mut manager = ListenerManager::new(
-            logger(),
-            ListenerManagerArgs::new(
-                Registry::default(),
-                filter_registry,
-                filter_chain_updates_tx,
-            ),
-            discovery_req_tx,
+        let (mut manager, mut filter_chain_updates_rx, mut discovery_req_rx) =
+            create_listener_manager(Some(CaptureVersion {
+                strategy: Strategy::Prefix,
+                size: 1,
+                remove: true,
+            }));
+
+        // Send an update containing two LDS filter chains with different versioned.
+        let lds_resource = create_lds_proto(
+            "test",
+            vec![
+                create_lds_filter_chain(
+                    vec![create_append_filter_proto("filter-0")],
+                    with_versions(vec!["AA==".into(), "AQ==".into()]),
+                ),
+                create_lds_filter_chain(
+                    vec![create_append_filter_proto("filter-1")],
+                    with_versions(vec!["Ag==".into()]),
+                ),
+            ],
         );
 
+        // Send the proto message as a DiscoveryResponse to the manager.
+        manager
+            .on_listener_response(create_discovery_response(
+                "test-version",
+                "test-nonce",
+                lds_resource,
+            ))
+            .await;
+
+        // Expect an ACK DiscoveryRequest from the manager.
+        assert_discovery_request_ack(&mut discovery_req_rx, "test-version", "test-nonce").await;
+
+        // Wait for a filter chain update from the manager.
+        let filter_chain_source = wait_for_filter_chain_update(&mut filter_chain_updates_rx).await;
+
+        let tests = vec![
+            (vec![0], "filter-0"),
+            (vec![1], "filter-0"),
+            (vec![2], "filter-1"),
+        ];
+
+        for (version, expected) in tests {
+            let packet = vec![version.clone(), String::from("hello-").into_bytes()].concat();
+
+            // Test the new filter chain's functionality. It should append to payloads
+            // based on the packet's version.
+            let got = filter_chain_source.get_filter_chain(packet).unwrap();
+            let response = got
+                .filter_chain
+                .read(ReadContext::new(
+                    UpstreamEndpoints::from(
+                        Endpoints::new(vec![Endpoint::new("127.0.0.1:8080".parse().unwrap())])
+                            .unwrap(),
+                    ),
+                    "127.0.0.1:8081".parse().unwrap(),
+                    got.packet,
+                ))
+                .unwrap();
+
+            // Check that the version we extracted is what we expect.
+            assert_eq!(&version, got.version.unwrap().as_ref());
+
+            assert_eq!(
+                format!("hello-{}", expected),
+                String::from_utf8(response.contents).unwrap()
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn listener_manager_empty_filter_chain_type() {
+        // Test that the manager creates an empty versioned or non-versioned
+        // filter chain for an empty LDS filter chain depending on whether it is
+        // running with versioned filter chains enabled.
+
+        let tests = vec![
+            None,
+            Some(CaptureVersion {
+                strategy: Strategy::Prefix,
+                size: 1,
+                remove: true,
+            }),
+        ];
+        for version in tests {
+            let (mut manager, mut filter_chain_updates_rx, mut discovery_req_rx) =
+                create_listener_manager(version.clone());
+
+            let (version_info, nonce) = ("1".to_string(), "1".to_string());
+            manager
+                .on_listener_response(create_discovery_response(
+                    "1",
+                    "1",
+                    create_lds_proto("test", vec![]),
+                ))
+                .await;
+
+            // Expect an ACK DiscoveryRequest from the manager.
+            assert_discovery_request_ack(&mut discovery_req_rx, version_info, nonce).await;
+
+            // Wait for a filter chain update from the manager.
+            let filter_chain_source =
+                wait_for_filter_chain_update(&mut filter_chain_updates_rx).await;
+
+            if version.is_some() {
+                // Check that a versioned filter chain was created.
+                assert!(filter_chain_source
+                    .get_filter_chain_non_versioned()
+                    .is_none())
+            } else {
+                // Check that a non versioned filter chain was created.
+                assert!(filter_chain_source
+                    .get_filter_chain_non_versioned()
+                    .is_some())
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn listener_manager_create_empty_filter_chain() {
+        // Test that the manager creates an empty filter chain update if the LDS
+        //  Listener resource no filter chain.
+
+        let (mut manager, mut filter_chain_updates_rx, mut discovery_req_rx) =
+            create_listener_manager(None);
+
         let test_cases = vec![
-            (
-                vec![LdsFilter {
-                    name: APPEND_TYPE_URL.into(),
-                    config_type: Some(ConfigType::TypedConfig({
-                        let mut buf = vec![];
-                        ProtoAppend {
-                            value: Some("world".into()),
-                        }
-                        .encode(&mut buf)
-                        .unwrap();
-                        prost_types::Any {
-                            type_url: APPEND_TYPE_URL.into(),
-                            value: buf,
-                        }
-                    })),
-                }],
-                "hello-world",
-            ),
+            (vec![create_append_filter_proto("world")], "hello-world"),
             (vec![], "hello-"),
         ];
 
         for (i, (filter, expected_payload)) in test_cases.into_iter().enumerate() {
-            // Send a response with a filter chain.
-            let lds_listener = create_lds_listener(
-                format!("test-listener-{}", i),
-                vec![create_lds_filter_chain(filter)],
-            );
-            let mut buf = vec![];
-            lds_listener.encode(&mut buf).unwrap();
-            let lds_resource = prost_types::Any {
-                type_url: LISTENER_TYPE.into(),
-                value: buf,
-            };
-
             let (version_info, nonce) = (format!("version-{}", i), format!("nonce-{}", i));
             // Send the proto message as a DiscoveryResponse to the manager.
             manager
-                .on_listener_response(DiscoveryResponse {
-                    version_info: version_info.clone(),
-                    resources: vec![lds_resource],
-                    canary: false,
-                    type_url: LISTENER_TYPE.into(),
-                    nonce: nonce.clone(),
-                    control_plane: None,
-                })
+                .on_listener_response(create_discovery_response(
+                    version_info.clone(),
+                    nonce.clone(),
+                    create_lds_proto(
+                        format!("test-listener-{}", i),
+                        vec![create_lds_filter_chain(filter, None)],
+                    ),
+                ))
                 .await;
 
             // Expect an ACK DiscoveryRequest from the manager.
-            let discovery_req = time::timeout(Duration::from_secs(5), discovery_req_rx.recv())
-                .await
-                .unwrap()
-                .unwrap();
+            assert_discovery_request_ack(&mut discovery_req_rx, version_info, nonce).await;
 
-            assert_eq!(
-                DiscoveryRequest {
-                    version_info,
-                    response_nonce: nonce,
-                    type_url: LISTENER_TYPE.into(),
-                    resource_names: vec![],
-                    node: None,
-                    error_detail: None,
-                },
-                discovery_req,
-            );
-
-            // Expect a filter chain update from the manager.
-            let filter_chain =
-                time::timeout(Duration::from_secs(5), filter_chain_updates_rx.recv())
-                    .await
-                    .unwrap()
-                    .unwrap();
+            // Wait for a filter chain update from the manager.
+            let filter_chain_source =
+                wait_for_filter_chain_update(&mut filter_chain_updates_rx).await;
 
             // Test the new filter chain's functionality.
-            let response = filter_chain
+            let response = filter_chain_source
+                .get_filter_chain_non_versioned()
+                .unwrap()
                 .read(ReadContext::new(
                     UpstreamEndpoints::from(
                         Endpoints::new(vec![Endpoint::new("127.0.0.1:8080".parse().unwrap())])
@@ -499,53 +635,29 @@ mod tests {
     async fn listener_manager_reject_updates() {
         // Test that the manager returns NACK DiscoveryRequests for updates it failed to process.
 
-        let filter_registry = new_registry();
-        let (filter_chain_updates_tx, _filter_chain_updates_rx) = mpsc::channel(10);
-        let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel(10);
-        let mut manager = ListenerManager::new(
-            logger(),
-            ListenerManagerArgs::new(
-                Registry::default(),
-                filter_registry,
-                filter_chain_updates_tx,
-            ),
-            discovery_req_tx,
-        );
-
         let test_cases = vec![
             (
                 // The filter is explicitly configured to reject
                 // config with this value.
-                vec![create_lds_filter_chain(vec![LdsFilter {
-                    name: APPEND_TYPE_URL.into(),
-                    config_type: Some(ConfigType::TypedConfig({
-                        let mut buf = vec![];
-                        ProtoAppend {
-                            value: Some("reject".into()),
-                        }
-                        .encode(&mut buf)
-                        .unwrap();
-                        prost_types::Any {
-                            type_url: APPEND_TYPE_URL.into(),
-                            value: buf,
-                        }
-                    })),
-                }])],
+                None,
+                vec![create_lds_filter_chain(vec![create_append_filter_proto("reject")], None)],
                 "reject requested",
             ),
             (
                 // Filter does not exist in the filter registry.
+                None,
                 vec![create_lds_filter_chain(vec![LdsFilter {
                     name: "MissingFilter".into(),
                     config_type: Some(ConfigType::TypedConfig(prost_types::Any {
                         type_url: "MissingFilter".into(),
                         value: vec![],
                     })),
-                }])],
+                }], None)],
                 "filter `MissingFilter` not found",
             ),
             (
-                // Multiple filter chains.
+                // Multiple filter chains when running with non-versioned filter chains.
+                None,
                 (0..2)
                     .into_iter()
                     .map(|_| {
@@ -555,52 +667,48 @@ mod tests {
                                 type_url: "MissingFilter".into(),
                                 value: vec![],
                             })),
-                        }])
+                        }], None)
                     })
                     .collect(),
-                "at most 1 filter chain can be provided: got 2",
+                "at most 1 filter chain can be provided when using a non-versioned filter chain: got 2",
+            ),
+            (
+                // Duplicate filter chain versions
+                Some(CaptureVersion{
+                    strategy: Strategy::Prefix,
+                    size: 1,
+                    remove: true,
+                }),
+                (0..2)
+                    .into_iter()
+                    .map(|_| vec![create_append_filter_proto("hello")])
+                    .map(|filter|
+                        create_lds_filter_chain(filter, with_versions(vec!["AA==".into()]))
+                    )
+                    .collect(),
+                "filter chain versions is not unique",
             ),
         ];
-        for (filter_chains, error_message) in test_cases {
-            let lds_listener = create_lds_listener("test-listener".into(), filter_chains);
 
-            let mut buf = vec![];
-            lds_listener.encode(&mut buf).unwrap();
-            let lds_resource = prost_types::Any {
-                type_url: LISTENER_TYPE.into(),
-                value: buf,
-            };
+        for (capture_version, filter_chains, error_message) in test_cases {
+            let (mut manager, _filter_chain_updates_rx, mut discovery_req_rx) =
+                create_listener_manager(capture_version);
 
             manager
-                .on_listener_response(DiscoveryResponse {
-                    version_info: "test-version".into(),
-                    resources: vec![lds_resource],
-                    canary: false,
-                    type_url: LISTENER_TYPE.into(),
-                    nonce: "test-nonce".into(),
-                    control_plane: None,
-                })
+                .on_listener_response(create_discovery_response(
+                    "test-version",
+                    "test-nonce",
+                    create_lds_proto("test", filter_chains),
+                ))
                 .await;
 
-            let mut discovery_req = time::timeout(Duration::from_secs(5), discovery_req_rx.recv())
-                .await
-                .unwrap()
-                .unwrap();
-
-            let error_detail = discovery_req.error_detail.take().expect("expected error");
-            assert_eq!(
-                DiscoveryRequest {
-                    version_info: "test-version".into(),
-                    response_nonce: "test-nonce".into(),
-                    type_url: LISTENER_TYPE.into(),
-                    resource_names: vec![],
-                    node: None,
-                    error_detail: None,
-                },
-                discovery_req,
-            );
-
-            assert!(error_detail.message.contains(error_message));
+            assert_discovery_request_nack(
+                &mut discovery_req_rx,
+                "test-version",
+                "test-nonce",
+                error_message,
+            )
+            .await;
         }
     }
 
@@ -608,26 +716,20 @@ mod tests {
     async fn listener_manager_reject_multiple_listeners() {
         // Test that the manager returns NACK DiscoveryRequests for updates with multiple listeners.
 
-        let (filter_chain_updates_tx, _filter_chain_updates_rx) = mpsc::channel(10);
-        let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel(10);
-        let mut manager = ListenerManager::new(
-            logger(),
-            ListenerManagerArgs::new(
-                Registry::default(),
-                FilterRegistry::new(FilterSet::default(&logger())),
-                filter_chain_updates_tx,
-            ),
-            discovery_req_tx,
-        );
+        let (mut manager, _filter_chain_updates_rx, mut discovery_req_rx) =
+            create_listener_manager(None);
         let lds_listener = create_lds_listener(
             "test-listener".into(),
-            vec![create_lds_filter_chain(vec![LdsFilter {
-                name: "MissingFilter".into(),
-                config_type: Some(ConfigType::TypedConfig(prost_types::Any {
-                    type_url: "MissingFilter".into(),
-                    value: vec![],
-                })),
-            }])],
+            vec![create_lds_filter_chain(
+                vec![LdsFilter {
+                    name: "MissingFilter".into(),
+                    config_type: Some(ConfigType::TypedConfig(prost_types::Any {
+                        type_url: "MissingFilter".into(),
+                        value: vec![],
+                    })),
+                }],
+                None,
+            )],
         );
 
         let mut buf = vec![];
@@ -648,16 +750,147 @@ mod tests {
             })
             .await;
 
+        assert_discovery_request_nack(
+            &mut discovery_req_rx,
+            "test-version",
+            "test-nonce",
+            "at most 1 listener can be specified: got 2",
+        )
+        .await;
+    }
+
+    fn create_lds_proto(
+        name: impl Into<String>,
+        filter_chains: Vec<LdsFilterChain>,
+    ) -> prost_types::Any {
+        let lds_listener = create_lds_listener(name.into(), filter_chains);
+
+        let mut buf = vec![];
+        lds_listener.encode(&mut buf).unwrap();
+        prost_types::Any {
+            type_url: LISTENER_TYPE.into(),
+            value: buf,
+        }
+    }
+
+    fn create_append_filter_proto(value: impl Into<prost::alloc::string::String>) -> LdsFilter {
+        LdsFilter {
+            name: APPEND_TYPE_URL.into(),
+            config_type: Some(ConfigType::TypedConfig({
+                let mut buf = vec![];
+                ProtoAppend {
+                    value: Some(value.into()),
+                }
+                .encode(&mut buf)
+                .unwrap();
+                prost_types::Any {
+                    type_url: APPEND_TYPE_URL.into(),
+                    value: buf,
+                }
+            })),
+        }
+    }
+
+    fn with_versions(
+        versions: impl Into<prost::alloc::vec::Vec<prost::alloc::string::String>>,
+    ) -> Option<FilterChainMatch> {
+        Some(FilterChainMatch {
+            destination_port: Default::default(),
+            prefix_ranges: Default::default(),
+            address_suffix: Default::default(),
+            suffix_len: Default::default(),
+            source_type: Default::default(),
+            source_prefix_ranges: Default::default(),
+            source_ports: Default::default(),
+            server_names: Default::default(),
+            transport_protocol: Default::default(),
+            application_protocols: versions.into(),
+        })
+    }
+
+    fn create_listener_manager(
+        // filter_chain_updates_tx: mpsc::Sender<Arc<FilterChainSource>>,
+        // discovery_req_tx: mpsc::Sender<DiscoveryRequest>,
+        capture_version: Option<CaptureVersion>,
+    ) -> (
+        ListenerManager,
+        mpsc::Receiver<Arc<FilterChainSource>>,
+        mpsc::Receiver<DiscoveryRequest>,
+    ) {
+        let (filter_chain_updates_tx, filter_chain_updates_rx) = mpsc::channel(10);
+        let (discovery_req_tx, discovery_req_rx) = mpsc::channel(10);
+        let manager = ListenerManager::new(
+            logger(),
+            ListenerManagerArgs::new(
+                Registry::default(),
+                new_registry(),
+                capture_version,
+                filter_chain_updates_tx,
+            ),
+            discovery_req_tx,
+        );
+
+        (manager, filter_chain_updates_rx, discovery_req_rx)
+    }
+
+    fn create_discovery_response(
+        version_info: impl Into<prost::alloc::string::String>,
+        nonce: impl Into<prost::alloc::string::String>,
+        resource: prost_types::Any,
+    ) -> DiscoveryResponse {
+        DiscoveryResponse {
+            version_info: version_info.into(),
+            resources: vec![resource],
+            canary: false,
+            type_url: LISTENER_TYPE.into(),
+            nonce: nonce.into(),
+            control_plane: None,
+        }
+    }
+
+    async fn assert_discovery_request_ack(
+        discovery_req_rx: &mut mpsc::Receiver<DiscoveryRequest>,
+        version_info: impl Into<prost::alloc::string::String>,
+        response_nonce: impl Into<prost::alloc::string::String>,
+    ) {
+        assert_discovery_request(
+            discovery_req_rx,
+            version_info,
+            response_nonce,
+            Option::<String>::None,
+        )
+        .await
+    }
+    async fn assert_discovery_request_nack(
+        discovery_req_rx: &mut mpsc::Receiver<DiscoveryRequest>,
+        version_info: impl Into<prost::alloc::string::String>,
+        response_nonce: impl Into<prost::alloc::string::String>,
+        contains_error_message: impl Into<String>,
+    ) {
+        assert_discovery_request(
+            discovery_req_rx,
+            version_info,
+            response_nonce,
+            Some(contains_error_message),
+        )
+        .await
+    }
+    async fn assert_discovery_request(
+        discovery_req_rx: &mut mpsc::Receiver<DiscoveryRequest>,
+        version_info: impl Into<prost::alloc::string::String>,
+        response_nonce: impl Into<prost::alloc::string::String>,
+        contains_error_message: Option<impl Into<String>>,
+    ) {
         let mut discovery_req = time::timeout(Duration::from_secs(5), discovery_req_rx.recv())
             .await
-            .unwrap()
+            .expect("timed out waiting for DiscoveryRequest back to server")
             .unwrap();
 
-        let error_detail = discovery_req.error_detail.take().expect("expected error");
+        let error_detail = discovery_req.error_detail.take();
         assert_eq!(
             DiscoveryRequest {
-                version_info: "test-version".into(),
-                response_nonce: "test-nonce".into(),
+                version_info: version_info.into(),
+                response_nonce: response_nonce.into(),
                 type_url: LISTENER_TYPE.into(),
                 resource_names: vec![],
                 node: None,
@@ -666,16 +899,34 @@ mod tests {
             discovery_req,
         );
 
-        assert_eq!(
-            error_detail.message,
-            "at most 1 listener can be specified: got 2"
-        );
+        if let Some(error_message) = contains_error_message {
+            let error_detail = error_detail.unwrap();
+            let error_message = error_message.into();
+            if !error_detail.message.contains(&error_message) {
+                unreachable!(format!(
+                    "[{}] does not contain [{}]",
+                    error_detail.message, error_message
+                ),)
+            }
+        } else {
+            assert!(error_detail.is_none())
+        }
+    }
+
+    async fn wait_for_filter_chain_update<T>(rx: &mut mpsc::Receiver<T>) -> T {
+        time::timeout(Duration::from_secs(5), rx.recv())
+            .await
+            .unwrap()
+            .unwrap()
     }
 
     #[allow(deprecated)]
-    fn create_lds_filter_chain(filters: Vec<LdsFilter>) -> LdsFilterChain {
+    fn create_lds_filter_chain(
+        filters: Vec<LdsFilter>,
+        filter_chain_match: Option<FilterChainMatch>,
+    ) -> LdsFilterChain {
         LdsFilterChain {
-            filter_chain_match: None,
+            filter_chain_match,
             filters,
             use_proxy_proto: None,
             metadata: None,

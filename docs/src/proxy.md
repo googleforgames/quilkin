@@ -45,8 +45,9 @@ The proxy exposes the following general metrics (See the metrics sub-sections fo
 
   The total number of packets (not associated with any session) that were dropped by proxy.
   Not that packets reflected by this metric were dropped at an earlier stage before they were associated with any session. For session based metrics, see the list of [session metrics][session-metrics] instead.
-  * `reason = NoConfiguredEndpoints`
+  * `reason`
     - `NoConfiguredEndpoints`: No upstream endpoints were available to send the packet to. This can occur e.g if the endpoints cluster was scaled down to zero and the proxy is configured via a control plane.
+    - `NoFilterChainMatched`: Either no filter chain was found with a version matching the packet, or no version could be captured from the packet.
 
 - `quilkin_cluster_active` (Gauge)
 

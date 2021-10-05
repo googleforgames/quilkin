@@ -16,9 +16,10 @@ quilkin.extensions.filters.token_router.v1alpha1.TokenRouter
 # let yaml = "
 version: v1alpha1
 static:
-  filters:
-    - name: quilkin.extensions.filters.token_router.v1alpha1.TokenRouter
-      config:
+  filter_chain:
+    filters:
+      - name: quilkin.extensions.filters.token_router.v1alpha1.TokenRouter
+        config:
           metadataKey: myapp.com/myownkey
   endpoints: 
     - address: 127.0.0.1:26000
@@ -34,7 +35,7 @@ static:
             - bmt1eTcweA==
 # ";
 # let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-# assert_eq!(config.source.get_static_filters().unwrap().len(), 1);
+# assert_eq!(config.source.get_static_non_versioned_filters().unwrap().len(), 1);
 # quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
 ```
 
@@ -81,12 +82,13 @@ For example, a configuration would look like:
 # let yaml = "
 version: v1alpha1
 static:
-  filters:
-    - name: quilkin.extensions.filters.capture_bytes.v1alpha1.CaptureBytes # Capture and remove the authentication token
-      config:
+  filter_chain:
+    filters:
+      - name: quilkin.extensions.filters.capture_bytes.v1alpha1.CaptureBytes # Capture and remove the authentication token
+        config:
           size: 3
           remove: true
-    - name: quilkin.extensions.filters.token_router.v1alpha1.TokenRouter
+      - name: quilkin.extensions.filters.token_router.v1alpha1.TokenRouter
   endpoints: 
     - address: 127.0.0.1:26000
       metadata:
@@ -101,7 +103,7 @@ static:
             - bmt1eTcweA==
 # ";
 # let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-# assert_eq!(config.source.get_static_filters().unwrap().len(), 2);
+# assert_eq!(config.source.get_static_non_versioned_filters().unwrap().len(), 2);
 # quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
 ```
 

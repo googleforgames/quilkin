@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
+use crate::filters::chain::FilterChainSource;
 use crate::{
     cluster::cluster_manager::{ClusterManager, InitializeError, SharedClusterManager},
     config::ManagementServer,
     endpoint::Endpoints,
     filters::{
         manager::{FilterManager, ListenerManagerArgs, SharedFilterManager},
-        FilterChain, FilterRegistry,
+        FilterRegistry,
     },
     xds::ads_client::{AdsClient, ClusterUpdate, ExecutionResult, UPDATES_CHANNEL_BUFFER_SIZE},
 };
@@ -46,12 +47,12 @@ impl StaticResourceManagers {
     pub(super) fn new(
         metrics_registry: &Registry,
         endpoints: Endpoints,
-        filter_chain: Arc<FilterChain>,
+        filter_chain_source: Arc<FilterChainSource>,
     ) -> Result<StaticResourceManagers, InitializeError> {
         Ok(Self {
             cluster_manager: ClusterManager::fixed(metrics_registry, endpoints)
                 .map_err(|err| InitializeError::Message(format!("{:?}", err)))?,
-            filter_manager: FilterManager::fixed(filter_chain),
+            filter_manager: FilterManager::fixed(filter_chain_source),
         })
     }
 }
@@ -74,6 +75,7 @@ impl DynamicResourceManagers {
         xds_node_id: String,
         metrics_registry: Registry,
         filter_registry: FilterRegistry,
+        filter_chain_source: Arc<FilterChainSource>,
         management_servers: Vec<ManagementServer>,
         shutdown_rx: watch::Receiver<()>,
     ) -> Result<DynamicResourceManagers, InitializeError> {
@@ -86,6 +88,7 @@ impl DynamicResourceManagers {
         let listener_manager_args = ListenerManagerArgs::new(
             metrics_registry.clone(),
             filter_registry,
+            filter_chain_source.get_capture_version(),
             filter_chain_updates_tx,
         );
 
@@ -111,7 +114,7 @@ impl DynamicResourceManagers {
 
         let filter_manager = FilterManager::dynamic(
             base_logger.new(o!("source" => "FilterManager")),
-            &metrics_registry,
+            filter_chain_source,
             filter_chain_updates_rx,
             shutdown_rx,
         )
@@ -166,12 +169,13 @@ impl DynamicResourceManagers {
     }
 
     fn filter_chain_updates_channel() -> (
-        mpsc::Sender<Arc<FilterChain>>,
-        mpsc::Receiver<Arc<FilterChain>>,
+        mpsc::Sender<Arc<FilterChainSource>>,
+        mpsc::Receiver<Arc<FilterChainSource>>,
     ) {
         mpsc::channel(UPDATES_CHANNEL_BUFFER_SIZE)
     }
 }
+
 #[cfg(test)]
 mod tests {
 
@@ -209,6 +213,7 @@ mod tests {
             listener_manager_args: ListenerManagerArgs::new(
                 Registry::default(),
                 FilterRegistry::default(),
+                None,
                 filter_chain_updates_tx,
             ),
             execution_result_tx,

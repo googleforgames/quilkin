@@ -21,22 +21,26 @@ use prometheus::{IntCounterVec, Registry, Result as MetricsResult};
 #[derive(Clone)]
 pub struct Metrics {
     pub packets_dropped_no_endpoints: GenericCounter<AtomicU64>,
+    pub packets_dropped_no_filter_chain_matched: GenericCounter<AtomicU64>,
 }
 
 impl Metrics {
     pub fn new(registry: &Registry) -> MetricsResult<Self> {
         let subsystem = "proxy";
+        let packets_dropped = IntCounterVec::new(
+            opts(
+                "packets_dropped_total",
+                subsystem,
+                "Total number of packets dropped by the proxy",
+            ),
+            &["reason"],
+        )?
+        .register_if_not_exists(registry)?;
         Ok(Self {
-            packets_dropped_no_endpoints: IntCounterVec::new(
-                opts(
-                    "packets_dropped_total",
-                    subsystem,
-                    "Total number of packets dropped by the proxy",
-                ),
-                &["reason"],
-            )?
-            .register_if_not_exists(registry)?
-            .get_metric_with_label_values(&["NoConfiguredEndpoints"])?,
+            packets_dropped_no_endpoints: packets_dropped
+                .get_metric_with_label_values(&["NoConfiguredEndpoints"])?,
+            packets_dropped_no_filter_chain_matched: packets_dropped
+                .get_metric_with_label_values(&["NoFilterChainMatched"])?,
         })
     }
 }

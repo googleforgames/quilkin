@@ -25,6 +25,8 @@ use tokio::select;
 use tokio::sync::{mpsc, watch};
 use tokio::time::{Duration, Instant};
 
+use crate::config::LOG_SAMPLING_RATE;
+use crate::filters::chain::Version as FilterChainVersion;
 use crate::{
     endpoint::Endpoint,
     filters::{manager::SharedFilterManager, Filter, WriteContext},
@@ -35,10 +37,12 @@ use crate::{
 type Result<T> = std::result::Result<T, Error>;
 
 /// Session encapsulates a UDP stream session
-pub struct Session {
+pub(crate) struct Session {
     log: Logger,
     metrics: Metrics,
     filter_manager: SharedFilterManager,
+    /// The filter chain version to use to process all packets in this session.
+    filter_chain_version: Option<Arc<FilterChainVersion>>,
     /// created_at is time at which the session was created
     created_at: Instant,
     socket: Arc<UdpSocket>,
@@ -97,34 +101,39 @@ impl Packet {
     }
 }
 
+/// Input arguments to create a session.
+pub(crate) struct SessionArgs {
+    pub log: Logger,
+    pub metrics: Metrics,
+    pub filter_manager: SharedFilterManager,
+    pub filter_chain_version: Option<Arc<FilterChainVersion>>,
+    pub from: SocketAddr,
+    pub dest: Endpoint,
+    pub sender: mpsc::Sender<Packet>,
+    pub ttl: Duration,
+}
+
 impl Session {
     /// new creates a new Session, and starts the process of receiving udp sockets
     /// from its ephemeral port from endpoint(s)
-    pub async fn new(
-        base: &Logger,
-        metrics: Metrics,
-        filter_manager: SharedFilterManager,
-        from: SocketAddr,
-        dest: Endpoint,
-        sender: mpsc::Sender<Packet>,
-        ttl: Duration,
-    ) -> Result<Self> {
-        let log = base
-            .new(o!("source" => "proxy::Session", "from" => from, "dest_address" => dest.address));
+    pub async fn new(args: SessionArgs) -> Result<Self> {
+        let log = args.log
+            .new(o!("source" => "proxy::Session", "from" => args.from, "dest_address" => args.dest.address));
         let addr = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 0);
         let socket = Arc::new(UdpSocket::bind(addr).await.map_err(Error::BindUdpSocket)?);
         let (shutdown_tx, shutdown_rx) = watch::channel::<()>(());
 
         let expiration = Arc::new(AtomicU64::new(0));
-        Self::do_update_expiration(&expiration, ttl)?;
+        Self::do_update_expiration(&expiration, args.ttl)?;
 
         let s = Session {
-            metrics,
+            metrics: args.metrics,
             log,
-            filter_manager,
+            filter_manager: args.filter_manager,
+            filter_chain_version: args.filter_chain_version.clone(),
             socket: socket.clone(),
-            from,
-            dest,
+            from: args.from,
+            dest: args.dest,
             created_at: Instant::now(),
             expiration,
             shutdown_tx,
@@ -133,13 +142,20 @@ impl Session {
 
         s.metrics.sessions_total.inc();
         s.metrics.active_sessions.inc();
-        s.run(ttl, socket, sender, shutdown_rx);
+        s.run(
+            args.filter_chain_version,
+            args.ttl,
+            socket,
+            args.sender,
+            shutdown_rx,
+        );
         Ok(s)
     }
 
     /// run starts processing received udp packets on its UdpSocket
     fn run(
         &self,
+        filter_chain_version: Option<Arc<FilterChainVersion>>,
         ttl: Duration,
         socket: Arc<UdpSocket>,
         mut sender: mpsc::Sender<Packet>,
@@ -168,6 +184,7 @@ impl Session {
                                 Session::process_recv_packet(
                                     &log,
                                     &metrics,
+                                    filter_chain_version.as_ref(),
                                     &mut sender,
                                     &expiration,
                                     ttl,
@@ -207,6 +224,7 @@ impl Session {
     async fn process_recv_packet(
         log: &Logger,
         metrics: &Metrics,
+        filter_chain_version: Option<&Arc<FilterChainVersion>>,
         sender: &mut mpsc::Sender<Packet>,
         expiration: &Arc<AtomicU64>,
         ttl: Duration,
@@ -228,10 +246,51 @@ impl Session {
             warn!(log, "Error updating session expiration"; "error" => %err)
         }
 
+        // Get the filter chain to process this upstream packet.
         let filter_chain = {
             let filter_manager_guard = filter_manager.read();
-            filter_manager_guard.get_filter_chain()
+            let filter_chain_source = filter_manager_guard.get_filter_chain_source();
+
+            // If running with a versioned filter implementation, retrieve the
+            // filter chain matching the session's version (i.e the version that was used to
+            // process the initial downstream packet).
+            match filter_chain_version {
+                Some(version) => match filter_chain_source.get_filter_chain_for_version(version) {
+                    Ok(filter_chain) => filter_chain,
+                    Err(err) => {
+                        if metrics.packets_dropped_total.get() % LOG_SAMPLING_RATE == 0 {
+                            warn!(
+                                log,
+                                "Packets are being dropped because their version did not match any filter chain";
+                                "count" => metrics.packets_dropped_total.get(),
+                                "error" => format!("{}", err),
+                            )
+                        }
+                        metrics.packets_dropped_total.inc();
+                        return;
+                    }
+                },
+                None => {
+                    // Filter chain implementation must be static since we don't have a
+                    // configuration to capture a version.
+                    if let Some(filter_chain) = filter_chain_source.get_filter_chain_non_versioned()
+                    {
+                        filter_chain
+                    } else {
+                        if metrics.packets_dropped_total.get() % LOG_SAMPLING_RATE == 0 {
+                            warn!(
+                                log,
+                                "BUG: Packets are being dropped due to a mis-configured filter chain: failed to retrieve the non-versioned filter chain";
+                                "count" => metrics.packets_dropped_total.get(),
+                            )
+                        }
+                        metrics.packets_dropped_total.inc();
+                        return;
+                    }
+                }
+            }
         };
+
         if let Some(response) =
             filter_chain.write(WriteContext::new(endpoint, from, to, packet.to_vec()))
         {
@@ -273,7 +332,20 @@ impl Session {
     }
 
     /// Sends a packet to the Session's dest.
-    pub async fn send(&self, buf: &[u8]) -> Result<Option<usize>> {
+    pub async fn send(
+        &self,
+        buf: &[u8],
+        filter_chain_version: Option<&FilterChainVersion>,
+    ) -> Result<Option<usize>> {
+        if filter_chain_version
+            != self
+                .filter_chain_version
+                .as_ref()
+                .map(|chain| chain.as_ref())
+        {
+            return Err(Error::VersionMismatch);
+        }
+
         trace!(self.log, "Sending packet";
         "dest_address" => &self.dest.address,
         "contents" => debug::bytes_to_string(buf));
@@ -325,12 +397,17 @@ mod tests {
     use prometheus::Registry;
     use tokio::time::timeout;
 
-    use crate::filters::FilterChain;
-    use crate::test_utils::{new_test_chain, TestHelper};
+    use crate::filters::chain::Version as FilterChainVersion;
+    use crate::filters::{FilterChain, FilterChainSource};
+    use crate::test_utils::{append_bytes_filter, new_registry, new_test_chain, TestHelper};
 
+    use crate::capture_bytes::Strategy;
+    use crate::config::{
+        CaptureVersion, VersionedStaticFilterChain as VersionedStaticFilterChainConfig,
+    };
     use crate::endpoint::Endpoint;
     use crate::filters::manager::FilterManager;
-    use crate::proxy::sessions::session::ReceivedPacketContext;
+    use crate::proxy::sessions::session::{ReceivedPacketContext, SessionArgs};
     use tokio::sync::mpsc;
 
     #[tokio::test]
@@ -342,15 +419,18 @@ mod tests {
         let (send_packet, mut recv_packet) = mpsc::channel::<Packet>(5);
         let registry = Registry::default();
 
-        let sess = Session::new(
-            &t.log,
-            Metrics::new(&registry).unwrap(),
-            FilterManager::fixed(Arc::new(FilterChain::new(vec![], &registry).unwrap())),
-            addr,
-            endpoint,
-            send_packet,
-            Duration::from_secs(20),
-        )
+        let sess = Session::new(SessionArgs {
+            log: t.log.clone(),
+            metrics: Metrics::new(&registry).unwrap(),
+            filter_manager: FilterManager::fixed(FilterChainSource::non_versioned(
+                FilterChain::new(vec![], &registry).unwrap(),
+            )),
+            filter_chain_version: None,
+            from: addr,
+            dest: endpoint,
+            sender: send_packet,
+            ttl: Duration::from_secs(20),
+        })
         .await
         .unwrap();
 
@@ -370,7 +450,7 @@ mod tests {
             socket.send_to(&buf[..size], &recv_addr).await.unwrap();
         });
 
-        sess.send(b"hello").await.unwrap();
+        sess.send(b"hello", None).await.unwrap();
 
         let packet = recv_packet
             .recv()
@@ -392,18 +472,68 @@ mod tests {
         let endpoint = Endpoint::new(addr);
         let registry = Registry::default();
 
-        let session = Session::new(
-            &t.log,
-            Metrics::new(&Registry::default()).unwrap(),
-            FilterManager::fixed(Arc::new(FilterChain::new(vec![], &registry).unwrap())),
-            addr,
-            endpoint.clone(),
+        let session = Session::new(SessionArgs {
+            log: t.log.clone(),
+            metrics: Metrics::new(&Registry::default()).unwrap(),
+            filter_manager: FilterManager::fixed(FilterChainSource::non_versioned(
+                FilterChain::new(vec![], &registry).unwrap(),
+            )),
+            filter_chain_version: None,
+            from: addr,
+            dest: endpoint.clone(),
             sender,
-            Duration::from_millis(1000),
-        )
+            ttl: Duration::from_millis(1000),
+        })
         .await
         .unwrap();
-        session.send(msg.as_bytes()).await.unwrap();
+        session.send(msg.as_bytes(), None).await.unwrap();
+        assert_eq!(msg, ep.packet_rx.await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn session_with_versioned_filter_chain_send_packet() {
+        // Test that a drops any downstream received packets that doesn't
+        // use the same version as it was configured with.
+        let t = TestHelper::default();
+
+        let (sender, _) = mpsc::channel::<Packet>(1);
+        let ep = t.open_socket_and_recv_single_packet().await;
+        let addr = ep.socket.local_addr().unwrap();
+
+        let capture_version = CaptureVersion {
+            strategy: Strategy::Prefix,
+            size: 1,
+            remove: true,
+        };
+        let version: FilterChainVersion = vec![1].into();
+        let session = Session::new(SessionArgs {
+            log: t.log.clone(),
+            metrics: Metrics::new(&Registry::default()).unwrap(),
+            filter_manager: FilterManager::fixed(FilterChainSource::versioned(
+                capture_version,
+                Default::default(),
+            )),
+            filter_chain_version: Some(Arc::new(version.clone())),
+            from: addr,
+            dest: Endpoint::new(addr),
+            sender,
+            ttl: Duration::from_millis(1000),
+        })
+        .await
+        .unwrap();
+
+        let msg = "hello";
+
+        // Send with a wrong version.
+        assert!(session
+            .send(msg.as_bytes(), Some(&vec![2].into()))
+            .await
+            .is_err());
+
+        // Send with no version.
+        assert!(session.send(msg.as_bytes(), None).await.is_err());
+
+        session.send(msg.as_bytes(), Some(&version)).await.unwrap();
         assert_eq!(msg, ep.packet_rx.await.unwrap());
     }
 
@@ -412,7 +542,7 @@ mod tests {
         let t = TestHelper::default();
         let registry = Registry::default();
 
-        let chain = Arc::new(FilterChain::new(vec![], &registry).unwrap());
+        let chain = FilterChain::new(vec![], &registry).unwrap();
         let endpoint = Endpoint::new("127.0.1.1:80".parse().unwrap());
         let dest = "127.0.0.1:88".parse().unwrap();
         let (mut sender, mut receiver) = mpsc::channel::<Packet>(10);
@@ -429,12 +559,13 @@ mod tests {
         Session::process_recv_packet(
             &t.log,
             &Metrics::new(&Registry::default()).unwrap(),
+            None,
             &mut sender,
             &expiration,
             Duration::from_secs(10),
             ReceivedPacketContext {
                 packet: msg.as_bytes(),
-                filter_manager: FilterManager::fixed(chain),
+                filter_manager: FilterManager::fixed(FilterChainSource::non_versioned(chain)),
                 endpoint: &endpoint,
                 from: endpoint.address,
                 to: dest,
@@ -463,11 +594,12 @@ mod tests {
         Session::process_recv_packet(
             &t.log,
             &Metrics::new(&registry).unwrap(),
+            None,
             &mut sender,
             &expiration,
             Duration::from_secs(10),
             ReceivedPacketContext {
-                filter_manager: FilterManager::fixed(chain),
+                filter_manager: FilterManager::fixed(FilterChainSource::non_versioned(chain)),
                 packet: msg.as_bytes(),
                 endpoint: &endpoint,
                 from: endpoint.address,
@@ -489,6 +621,77 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn session_upstream_received_packet_select_versioned_filter_chain() {
+        // Test that when a session receives a packet, it selects a versioned filter
+        // that matches its configured version.
+        let t = TestHelper::default();
+        let metrics_registry = &Registry::default();
+
+        let filter_chain_source = FilterChainSource::versioned_from_config(
+            &new_registry(&t.log),
+            metrics_registry,
+            CaptureVersion {
+                strategy: Strategy::Prefix,
+                size: 1,
+                remove: true,
+            },
+            vec![
+                VersionedStaticFilterChainConfig {
+                    versions: vec![vec![0], vec![1]].into_iter().collect(),
+                    filters: vec![append_bytes_filter("filter-0")],
+                },
+                VersionedStaticFilterChainConfig {
+                    versions: vec![vec![2]].into_iter().collect(),
+                    filters: vec![append_bytes_filter("filter-1")],
+                },
+            ],
+        )
+        .unwrap();
+
+        let server = Endpoint::new("127.0.1.1:80".parse().unwrap());
+        let client = "127.0.0.1:88".parse().unwrap();
+        let (mut packet_tx, mut packet_rx) = mpsc::channel::<Packet>(10);
+
+        let tests = vec![
+            (vec![0], "filter-0"),
+            (vec![1], "filter-0"),
+            (vec![2], "filter-1"),
+        ];
+
+        // Process a packet with each version and check that the correct filter
+        // chain was used to process it.
+        for (version, expected) in tests {
+            Session::process_recv_packet(
+                &t.log,
+                &Metrics::new(&Registry::default()).unwrap(),
+                Some(&Arc::new(version.into())),
+                &mut packet_tx,
+                &Arc::new(AtomicU64::new(0)),
+                Duration::from_secs(10),
+                ReceivedPacketContext {
+                    packet: "hello-".as_bytes(),
+                    filter_manager: FilterManager::fixed(filter_chain_source.clone()),
+                    endpoint: &server,
+                    from: server.address,
+                    to: client,
+                },
+            )
+            .await;
+
+            let packet = timeout(Duration::from_secs(5), packet_rx.recv())
+                .await
+                .expect("Timed out waiting to receive a packet")
+                .unwrap();
+
+            assert_eq!(
+                format!("hello-{}", expected),
+                from_utf8(packet.contents.as_slice()).unwrap()
+            );
+            assert_eq!(client, packet.dest);
+        }
+    }
+
+    #[tokio::test]
     async fn session_new_metrics() {
         let t = TestHelper::default();
         let ep = t.open_socket_and_recv_single_packet().await;
@@ -497,15 +700,18 @@ mod tests {
         let (send_packet, _) = mpsc::channel::<Packet>(5);
         let registry = Registry::default();
 
-        let session = Session::new(
-            &t.log,
-            Metrics::new(&Registry::default()).unwrap(),
-            FilterManager::fixed(Arc::new(FilterChain::new(vec![], &registry).unwrap())),
-            addr,
-            endpoint,
-            send_packet,
-            Duration::from_secs(10),
-        )
+        let session = Session::new(SessionArgs {
+            log: t.log.clone(),
+            metrics: Metrics::new(&Registry::default()).unwrap(),
+            filter_manager: FilterManager::fixed(FilterChainSource::non_versioned(
+                FilterChain::new(vec![], &registry).unwrap(),
+            )),
+            filter_chain_version: None,
+            from: addr,
+            dest: endpoint,
+            sender: send_packet,
+            ttl: Duration::from_secs(10),
+        })
         .await
         .unwrap();
 
@@ -521,18 +727,21 @@ mod tests {
         let endpoint = t.open_socket_and_recv_single_packet().await;
         let addr = endpoint.socket.local_addr().unwrap();
         let registry = Registry::default();
-        let session = Session::new(
-            &t.log,
-            Metrics::new(&registry).unwrap(),
-            FilterManager::fixed(Arc::new(FilterChain::new(vec![], &registry).unwrap())),
-            addr,
-            Endpoint::new(addr),
+        let session = Session::new(SessionArgs {
+            log: t.log.clone(),
+            metrics: Metrics::new(&registry).unwrap(),
+            filter_manager: FilterManager::fixed(FilterChainSource::non_versioned(
+                FilterChain::new(vec![], &registry).unwrap(),
+            )),
+            filter_chain_version: None,
+            from: addr,
+            dest: Endpoint::new(addr),
             sender,
-            Duration::from_secs(10),
-        )
+            ttl: Duration::from_secs(10),
+        })
         .await
         .unwrap();
-        session.send(b"hello").await.unwrap();
+        session.send(b"hello", None).await.unwrap();
         endpoint.packet_rx.await.unwrap();
 
         assert_eq!(session.metrics.tx_bytes_total.get(), 5);
@@ -546,15 +755,18 @@ mod tests {
         let endpoint = t.open_socket_and_recv_single_packet().await;
         let addr = endpoint.socket.local_addr().unwrap();
         let registry = Registry::default();
-        let session = Session::new(
-            &t.log,
-            Metrics::new(&registry).unwrap(),
-            FilterManager::fixed(Arc::new(FilterChain::new(vec![], &registry).unwrap())),
-            addr,
-            Endpoint::new(addr),
-            send_packet,
-            Duration::from_secs(10),
-        )
+        let session = Session::new(SessionArgs {
+            log: t.log.clone(),
+            metrics: Metrics::new(&registry).unwrap(),
+            filter_manager: FilterManager::fixed(FilterChainSource::non_versioned(
+                FilterChain::new(vec![], &registry).unwrap(),
+            )),
+            filter_chain_version: None,
+            from: addr,
+            dest: Endpoint::new(addr),
+            sender: send_packet,
+            ttl: Duration::from_secs(10),
+        })
         .await
         .unwrap();
 

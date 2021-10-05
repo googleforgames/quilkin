@@ -28,7 +28,27 @@ There are a few things we note here:
 * The filter chain is consulted for every received packet, and its filters are traversed in reverse order for packets travelling in the opposite direction.
   A packet received downstream will be fed into `append` and the result from `drop` is forwarded upstream - a packet received upstream will be fed into `drop` and the result from `append` is forwarded downstream.
 
-* Exactly one filter chain is specified and used to process all packets that flow through Quilkin.
+### Versioning Filter Chains
+
+Each packet that flows through Quilkin is processed by exactly one filter chain. However, we can configure Quilkin with
+either a single non-versioned filter chain, or multiple versioned filter chains. In the case of the latter, each filter chain
+is associated with a unique set of *versions*.
+
+A version is a byte sequence that tells Quilkin when to select a filter chain to process a packet received downstream.
+When running with versioned filter chains, Quilkin will first try to capture version from each downstream packet,
+and match it against that of the configured filter chains.
+If a matching filter is found then it is selected to process that packet, otherwise the packet is dropped.
+
+As a result, versioning filter chains enables us to process different _types_ of packets using different filter chains.
+
+Versioning can be useful when e.g using the same proxy across different types of clients, backwards compatibility scenarios
+where older client versions need to be temporarily supported etc.
+
+> Versions are not captured on packets received upstream.
+
+> All packets belonging to a session must contain the same version. Quilkin enforces that the version contained
+> by the first received packet in the session is the same for all subsequent packets. Non-conforming packets are dropped.
+
 
 **Metrics**
 
@@ -52,28 +72,75 @@ There are a few things we note here:
 # let yaml = "
 version: v1alpha1
 static:
-  filters:
-    - name: quilkin.extensions.filters.debug.v1alpha1.Debug
-      config:
-        id: debug-1
-    - name: quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit
-      config:
-        max_packets: 10
-        period: 1
+  filter_chain:
+    filters:
+      - name: quilkin.extensions.filters.debug.v1alpha1.Debug
+        config:
+          id: debug-1
+      - name: quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit
+        config:
+          max_packets: 10
+          period: 1
   endpoints:
     - address: 127.0.0.1:7001
 # ";
 # let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-# assert_eq!(config.source.get_static_filters().unwrap().len(), 2);
+# assert_eq!(config.source.get_static_non_versioned_filters().unwrap().len(), 2);
 # quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
 # }
 ```
 
-We specify our filter chain in the `.filters` section of the proxy's configuration which has takes a sequence of [FilterConfig](#filter-config) objects. Each object describes all information necessary to create a single filter.
+We specify our filter chain in the `.filter_chain` section of the proxy's configuration.
+In this example, we specify a single non-versioned filter chain by passing a sequence of [FilterConfig](#filter-config) objects.
+Each object describes all information necessary to create a single filter.
 
 The above example creates a filter chain comprising a [Debug](debug.md) filter followed by a [Rate limiter](./local_rate_limit.md) filter - the effect is that every packet will be logged and the proxy will not forward more than 10 packets per second.
 
 > The sequence determines the filter chain order so its ordering matters - the chain starts with the filter corresponding the first filter config and ends with the filter corresponding the last filter config in the sequence.
+
+```rust
+# let yaml = "
+version: v1alpha1
+static:
+  filter_chain:
+    versioned:
+      capture_version:
+        strategy: PREFIX
+        size: 1
+        remove: true
+      filter_chains:
+      - versions:
+        - AA== # 0
+        - AQ== # 1
+        filters:
+        - name: quilkin.extensions.filters.debug.v1alpha1.Debug
+          config:
+            id: v0-or-v1-packet
+      - versions:
+        - Ag== # 2
+        filters:
+        - name: quilkin.extensions.filters.debug.v1alpha1.Debug
+          config:
+            id: v2-packet
+  endpoints:
+    - address: 127.0.0.1:7001
+# ";
+# let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
+# assert_eq!(config.source.get_static_versioned_filters().unwrap().len(), 2);
+# quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
+```
+
+In this example, we specified two versioned filter chains across 3 different packet versions.
+The effect is that any downstream packet that does not contain a `0`, `1` or `2` in its first byte will
+be dropped, otherwise they will be handled by the corresponding `Debug` filter i.e packets containing
+`0` or `1` will be logged under `v0-or-v1-packet` while those containing `2` will be logged under `v2-packet`.
+
+Note that this only affects packets received downstream - i.e a packet received upstream in response to
+a `v2` packet will still be logged with `v2-packet` by the same filter but Quilkin does not try to
+capture any version from it.
+
+> The configured versions must be unique across all filter chains otherwise the configuration is rejected.
+> i.e. there can't be ambiguity around what filter chain is selected to process a packet.
 
 ### Filter Dynamic Metadata
 

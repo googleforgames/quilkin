@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+pub(crate) mod capture_bytes;
 mod cluster;
 pub mod metadata;
 pub(crate) mod metrics;

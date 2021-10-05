@@ -34,7 +34,7 @@ pub const SESSION_TIMEOUT_SECONDS: u64 = 60;
 const SESSION_EXPIRY_POLL_INTERVAL: u64 = 60;
 
 #[derive(Clone)]
-pub struct SessionManager(Sessions);
+pub(crate) struct SessionManager(Sessions);
 
 impl SessionManager {
     pub fn new(log: Logger, shutdown_rx: watch::Receiver<()>) -> Self {
@@ -122,10 +122,10 @@ mod tests {
     use tokio::sync::{mpsc, watch, RwLock};
 
     use crate::endpoint::Endpoint;
-    use crate::filters::{manager::FilterManager, FilterChain};
+    use crate::filters::{manager::FilterManager, FilterChain, FilterChainSource};
     use crate::proxy::sessions::metrics::Metrics;
     use crate::proxy::sessions::session_manager::Sessions;
-    use crate::proxy::sessions::{Packet, Session, SessionKey};
+    use crate::proxy::sessions::{Packet, Session, SessionArgs, SessionKey};
     use crate::test_utils::TestHelper;
 
     use super::SessionManager;
@@ -161,15 +161,18 @@ mod tests {
             let mut sessions = sessions.write().await;
             sessions.insert(
                 key.clone(),
-                Session::new(
-                    &t.log,
-                    Metrics::new(&registry).unwrap(),
-                    FilterManager::fixed(Arc::new(FilterChain::new(vec![], &registry).unwrap())),
+                Session::new(SessionArgs {
+                    log: t.log.clone(),
+                    metrics: Metrics::new(&registry).unwrap(),
+                    filter_manager: FilterManager::fixed(FilterChainSource::non_versioned(
+                        FilterChain::new(vec![], &registry).unwrap(),
+                    )),
+                    filter_chain_version: None,
                     from,
-                    endpoint.clone(),
-                    send,
+                    dest: endpoint.clone(),
+                    sender: send,
                     ttl,
-                )
+                })
                 .await
                 .unwrap(),
             );
@@ -222,15 +225,18 @@ mod tests {
             let mut sessions = sessions.write().await;
             sessions.insert(
                 key.clone(),
-                Session::new(
-                    &t.log,
-                    Metrics::new(&registry).unwrap(),
-                    FilterManager::fixed(Arc::new(FilterChain::new(vec![], &registry).unwrap())),
+                Session::new(SessionArgs {
+                    log: t.log.clone(),
+                    metrics: Metrics::new(&registry).unwrap(),
+                    filter_manager: FilterManager::fixed(FilterChainSource::non_versioned(
+                        FilterChain::new(vec![], &registry).unwrap(),
+                    )),
+                    filter_chain_version: None,
                     from,
-                    endpoint.clone(),
-                    send,
+                    dest: endpoint.clone(),
+                    sender: send,
                     ttl,
-                )
+                })
                 .await
                 .unwrap(),
             );

@@ -55,6 +55,7 @@ pub use self::{
 };
 
 pub(crate) use self::chain::FilterChain;
+pub(crate) use self::chain::FilterChainSource;
 
 /// Trait for routing and manipulating packets.
 ///

@@ -28,6 +28,9 @@ use crate::config::{Builder as ConfigBuilder, Config};
 use crate::endpoint::{Endpoint, Endpoints};
 use crate::filters::{prelude::*, FilterChain, FilterRegistry, FilterSet};
 use crate::proxy::{Builder, PendingValidation};
+use std::fmt::Debug;
+use std::future::Future;
+use std::time::Duration;
 
 pub struct TestFilterFactory {}
 impl FilterFactory for TestFilterFactory {
@@ -76,6 +79,34 @@ impl Filter for TestFilter {
             .append(&mut format!(":our:{}:{}", ctx.from, ctx.to).into_bytes());
         Some(ctx.into())
     }
+}
+
+// Helper function to create a ConcatenateBytes filter that 'APPEND's
+// the specified value to packets on reads and writes.
+#[cfg(test)]
+pub(crate) fn append_bytes_filter(value: &str) -> crate::config::Filter {
+    let yaml = format!(
+        "
+on_read: APPEND
+on_write: APPEND
+bytes: {}
+",
+        base64::encode(value)
+    );
+    crate::config::Filter {
+        name: crate::filters::concatenate_bytes::NAME.into(),
+        config: serde_yaml::from_str(&yaml).unwrap(),
+    }
+}
+
+pub async fn wait_for<T>(fut: impl Future<Output = T>) -> Result<T, tokio::time::error::Elapsed> {
+    tokio::time::timeout(Duration::from_secs(5), fut).await
+}
+
+pub async fn wait_for_ok<T, E: Debug>(
+    fut: impl Future<Output = Result<T, E>>,
+) -> Result<T, tokio::time::error::Elapsed> {
+    Ok(wait_for(fut).await?.unwrap())
 }
 
 // logger returns a standard out, non structured terminal logger, suitable for using in tests,
@@ -327,17 +358,15 @@ pub fn ep(id: u8) -> Endpoint {
     }
 }
 
-pub fn new_test_chain(registry: &prometheus::Registry) -> Arc<FilterChain> {
-    Arc::new(
-        FilterChain::new(
-            vec![(
-                "TestFilter".into(),
-                TestFilterFactory::create_empty_filter(),
-            )],
-            registry,
-        )
-        .unwrap(),
+pub fn new_test_chain(registry: &prometheus::Registry) -> FilterChain {
+    FilterChain::new(
+        vec![(
+            "TestFilter".into(),
+            TestFilterFactory::create_empty_filter(),
+        )],
+        registry,
     )
+    .unwrap()
 }
 
 pub fn new_registry(log: &slog::Logger) -> FilterRegistry {

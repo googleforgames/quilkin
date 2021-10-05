@@ -34,11 +34,13 @@ use crate::proxy::builder::{ValidatedConfig, ValidatedSource};
 use crate::proxy::server::error::Error;
 use crate::proxy::sessions::metrics::Metrics as SessionMetrics;
 use crate::proxy::sessions::session_manager::SessionManager;
-use crate::proxy::sessions::{Packet, Session, SessionKey, SESSION_TIMEOUT_SECONDS};
+use crate::proxy::sessions::{Packet, Session, SessionArgs, SessionKey, SESSION_TIMEOUT_SECONDS};
 use crate::proxy::Admin;
 use crate::utils::debug;
 
 use super::metrics::Metrics;
+use crate::config::LOG_SAMPLING_RATE;
+use crate::filters::chain::Version as FilterChainVersion;
 
 pub mod error;
 pub(super) mod metrics;
@@ -148,23 +150,27 @@ impl Server {
     ) -> Result<(SharedClusterManager, SharedFilterManager)> {
         match &self.config.source {
             ValidatedSource::Static {
-                filter_chain,
+                filter_chain_source,
                 endpoints,
             } => {
                 let manager = StaticResourceManagers::new(
                     &self.metrics.registry,
                     endpoints.clone(),
-                    filter_chain.clone(),
+                    filter_chain_source.clone(),
                 )
                 .map_err(|err| Error::Initialize(format!("{}", err)))?;
                 Ok((manager.cluster_manager, manager.filter_manager))
             }
-            ValidatedSource::Dynamic { management_servers } => {
+            ValidatedSource::Dynamic {
+                filter_chain_source,
+                management_servers,
+            } => {
                 let manager = DynamicResourceManagers::new(
                     self.log.clone(),
                     self.config.proxy.id.clone(),
                     self.metrics.registry.clone(),
                     self.filter_registry.clone(),
+                    filter_chain_source.clone(),
                     management_servers.to_vec(),
                     shutdown_rx,
                 )
@@ -334,15 +340,48 @@ impl Server {
             }
         };
 
-        let filter_chain = {
+        let (packet, filter_chain_version, filter_chain) = {
             let filter_manager_guard = args.filter_manager.read();
-            filter_manager_guard.get_filter_chain()
+            match filter_manager_guard
+                .get_filter_chain_source()
+                .get_filter_chain(packet)
+            {
+                Ok(value) => (value.packet, value.version, value.filter_chain),
+                Err(err) => {
+                    if args
+                        .proxy_metrics
+                        .packets_dropped_no_filter_chain_matched
+                        .get()
+                        % LOG_SAMPLING_RATE
+                        == 0
+                    {
+                        warn!(
+                            args.log,
+                            "Packets are being dropped downstream because their version did not match any filter chain";
+                            "count" => args.proxy_metrics.packets_dropped_no_filter_chain_matched.get(),
+                            "error" => format!("{}", err),
+                        )
+                    }
+
+                    args.proxy_metrics
+                        .packets_dropped_no_filter_chain_matched
+                        .inc();
+                    return;
+                }
+            }
         };
         let result = filter_chain.read(ReadContext::new(endpoints, recv_addr, packet));
 
         if let Some(response) = result {
             for endpoint in response.endpoints.iter() {
-                Self::session_send_packet(&response.contents, recv_addr, endpoint, args).await;
+                Self::session_send_packet(
+                    &response.contents,
+                    filter_chain_version.as_ref(),
+                    recv_addr,
+                    endpoint,
+                    args,
+                )
+                .await;
             }
         }
     }
@@ -350,6 +389,7 @@ impl Server {
     /// Send a packet received from `recv_addr` to an endpoint.
     async fn session_send_packet(
         packet: &[u8],
+        filter_chain_version: Option<&FilterChainVersion>,
         recv_addr: SocketAddr,
         endpoint: &Endpoint,
         args: &ProcessDownstreamReceiveConfig,
@@ -363,7 +403,14 @@ impl Server {
         let guard = args.session_manager.get_sessions().await;
         if let Some(session) = guard.get(&session_key) {
             // If it exists then send the packet, we're done.
-            Self::session_send_packet_helper(&args.log, session, packet, args.session_ttl).await
+            Self::session_send_packet_helper(
+                &args.log,
+                session,
+                filter_chain_version,
+                packet,
+                args.session_ttl,
+            )
+            .await
         } else {
             // If it does not exist, grab a write lock so that we can create it.
             //
@@ -381,19 +428,26 @@ impl Server {
             if let Some(session) = guard.get(&session_key) {
                 // If the session now exists then we have less work to do,
                 // simply send the packet.
-                Self::session_send_packet_helper(&args.log, session, packet, args.session_ttl)
-                    .await;
-            } else {
-                // Otherwise, create the session and insert into the map.
-                match Session::new(
+                Self::session_send_packet_helper(
                     &args.log,
-                    args.session_metrics.clone(),
-                    args.filter_manager.clone(),
-                    session_key.source,
-                    endpoint.clone(),
-                    args.send_packets.clone(),
+                    session,
+                    filter_chain_version,
+                    packet,
                     args.session_ttl,
                 )
+                .await;
+            } else {
+                // Otherwise, create the session and insert into the map.
+                match Session::new(SessionArgs {
+                    log: args.log.clone(),
+                    metrics: args.session_metrics.clone(),
+                    filter_manager: args.filter_manager.clone(),
+                    filter_chain_version: filter_chain_version.cloned().map(Arc::new),
+                    from: session_key.source,
+                    dest: endpoint.clone(),
+                    sender: args.send_packets.clone(),
+                    ttl: args.session_ttl,
+                })
                 .await
                 {
                     Ok(session) => {
@@ -411,6 +465,7 @@ impl Server {
                             Self::session_send_packet_helper(
                                 &args.log,
                                 session,
+                                filter_chain_version,
                                 packet,
                                 args.session_ttl,
                             )
@@ -435,10 +490,11 @@ impl Server {
     async fn session_send_packet_helper(
         log: &Logger,
         session: &Session,
+        filter_chain_version: Option<&FilterChainVersion>,
         packet: &[u8],
         ttl: Duration,
     ) {
-        match session.send(packet).await {
+        match session.send(packet, filter_chain_version).await {
             Ok(_) => {
                 if let Err(err) = session.update_expiration(ttl) {
                     warn!(log, "Error updating session expiration"; "error" => %err)
@@ -502,7 +558,7 @@ mod tests {
     use crate::config;
     use crate::config::Builder as ConfigBuilder;
     use crate::endpoint::{Endpoint, Endpoints};
-    use crate::filters::{manager::FilterManager, FilterChain};
+    use crate::filters::{manager::FilterManager, FilterChain, FilterChainSource};
     use crate::proxy::sessions::Packet;
     use crate::proxy::Builder;
     use crate::test_utils::{
@@ -626,7 +682,7 @@ mod tests {
 
         async fn test(
             name: String,
-            chain: Arc<FilterChain>,
+            chain: FilterChain,
             expected: Expected,
             registry: &prometheus::Registry,
             shutdown_rx: watch::Receiver<()>,
@@ -659,7 +715,7 @@ mod tests {
                 Endpoints::new(vec![Endpoint::new(endpoint_address)]).unwrap(),
             )
             .unwrap();
-            let filter_manager = FilterManager::fixed(chain.clone());
+            let filter_manager = FilterManager::fixed(FilterChainSource::non_versioned(chain));
             for worker_id in 0..num_workers {
                 let (packet_tx, packet_rx) = mpsc::channel(num_workers);
                 packet_txs.push(packet_tx);
@@ -718,7 +774,7 @@ mod tests {
 
         let (_shutdown_tx, shutdown_rx) = watch::channel(());
         let registry = Registry::default();
-        let chain = Arc::new(FilterChain::new(vec![], &registry).unwrap());
+        let chain = FilterChain::new(vec![], &registry).unwrap();
         let result = test(
             "no filter".to_string(),
             chain,
@@ -768,7 +824,7 @@ mod tests {
                 Endpoints::new(vec![Endpoint::new(endpoint.socket.local_addr().unwrap())]).unwrap(),
             )
             .unwrap(),
-            filter_manager: FilterManager::fixed(Arc::new(
+            filter_manager: FilterManager::fixed(FilterChainSource::non_versioned(
                 FilterChain::new(vec![], &registry).unwrap(),
             )),
             socket: socket.clone(),

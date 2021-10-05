@@ -14,31 +14,14 @@
  *  limitations under the License.
  */
 
-use std::fmt::{self, Display, Formatter};
-
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum Error {
+    #[error("failed to bind to UDP socket on address: {0}")]
     BindUdpSocket(tokio::io::Error),
+    #[error("failed to send a packet to the destination address: {0}")]
     SendToDst(std::io::Error),
+    #[error("failed to update session expiration time: {0}")]
     UpdateSessionExpiration(String),
+    #[error("packet was dropped because it has a different version from the session's configured version")]
+    VersionMismatch,
 }
-
-impl Display for Error {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            Error::BindUdpSocket(inner) => {
-                write!(f, "failed to bind to UDP socket on address: {}", inner)
-            }
-            Error::SendToDst(inner) => write!(
-                f,
-                "failed to send a packet to the destination address: {}",
-                inner
-            ),
-            Error::UpdateSessionExpiration(reason) => {
-                write!(f, "failed to update session expiration time: {}", reason)
-            }
-        }
-    }
-}
-
-impl std::error::Error for Error {}

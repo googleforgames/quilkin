@@ -47,8 +47,12 @@ properties:
       Static configuration of endpoints and filters.
       NOTE: Exactly one of `static` or `dynamic` can be specified.
     properties:
-      filter:
-        '$ref': '#/definitions/filterchain'
+      filter_chain:
+        NOTE: Exactly of of `filters` or `versioned` can be specified
+        filters: # A non versioned filter chain.
+          '$ref': '#/definitions/filterchain'
+        versioned: # Multiple versioned filter chains.
+          '$ref': '#/definitions/versioned_filterchain'
       endpoints:
         '$ref': '#/definitions/endpoints'
     required:
@@ -59,6 +63,18 @@ properties:
       Dynamic configuration of endpoints and filters.
       NOTE: Exactly one of `static` or `dynamic` can be specified.
     properties:
+      filter_chain:
+        type: object
+        description: |
+          Configuration around any static behavior filter chains.
+        properties:
+          versioned:
+            type: object
+            description: |
+              Version information for filter chains.
+            properties:
+              capture_version:
+                '$ref': '#/definitions/capture_version'
       management_servers:
         type: array
         description: |
@@ -82,6 +98,60 @@ required:
   - version
 
 definitions:
+  capture_version:
+    type: object
+    description: |
+      Configures how to capture bytes containing version information from downstream packets.
+    properties:
+      strategy:
+        type: string
+        description: |
+          The selected strategy for capturing the version from the incoming packet.
+        enum:
+        - SUFFIX: Retrieve bytes from the end of the packet.
+        - PREFIX: Retrieve bytes from the beginnning of the packet.
+        default: SUFFIX
+      size:
+        type: integer
+        description: |
+          The number of bytes in the packet to capture using the applied strategy.
+      remove:
+        type: boolean
+        default: false
+        description: |
+          Whether or not to remove the captured bytes from the packet before passing it along to the next filter in the
+          filter chain.
+      required: ['strategy', 'size']
+  versioned_filterchain:
+    type object:
+    description: |
+      Configures a set of versioned filter chains and how to capture packet versions.
+    properties:
+      capture_version:
+        '$ref': '#/definitions/capture_version'
+    filter_chains:
+      type: array
+      description: |
+        A set of filter chains and their associated versions.
+      items:
+        type: object
+        properties:
+          versions:
+            type: array
+            description: |
+              A set of Standard base64 encoded (with padding) bytes.
+              This contains the bytes that will be matched against any capture bytes from packets
+              in order to select the corresponding filter chain.
+              Note that the values must be unique across all filter chains - i.e there can't be
+              ambiguity around what filter chain processes a packet.
+            items
+              type: string
+              example: ['AA==']
+          filters: # A filter chain.
+            '$ref': '#/definitions/filterchain'
+        required:
+        - versions
+        - filters
   filterchain:
     type: array
     description: |

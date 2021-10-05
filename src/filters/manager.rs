@@ -14,27 +14,34 @@
  * limitations under the License.
  */
 
-use crate::filters::{chain::Error as FilterChainError, FilterChain, FilterRegistry};
+use crate::filters::{chain::Error as FilterChainError, FilterRegistry};
 
 use std::sync::Arc;
 
+use crate::config::CaptureVersion;
+use crate::filters::chain::FilterChainSource;
 use parking_lot::RwLock;
 use prometheus::Registry;
 use slog::{debug, o, warn, Logger};
 use tokio::sync::mpsc;
 use tokio::sync::watch;
 
-pub type SharedFilterManager = Arc<RwLock<FilterManager>>;
+pub(crate) type SharedFilterManager = Arc<RwLock<FilterManager>>;
 
 /// FilterManager creates and updates the filter chain.
-pub struct FilterManager {
-    /// The current filter chain.
-    filter_chain: Arc<FilterChain>,
+pub(crate) struct FilterManager {
+    /// The current filter chain implementation.
+    filter_chain_source: Arc<FilterChainSource>,
 }
 
 /// ListenerManagerArgs contains arguments when invoking the LDS resource manager.
 pub(crate) struct ListenerManagerArgs {
-    pub filter_chain_updates_tx: mpsc::Sender<Arc<FilterChain>>,
+    /// The configuration for how to capture version from packets.
+    /// This is used to validate versioned filters received from
+    /// the management server as well as when re-creating new filter
+    /// chain instances afterwards.
+    pub capture_version: Option<CaptureVersion>,
+    pub filter_chain_updates_tx: mpsc::Sender<Arc<FilterChainSource>>,
     pub filter_registry: FilterRegistry,
     pub metrics_registry: Registry,
 }
@@ -43,9 +50,11 @@ impl ListenerManagerArgs {
     pub fn new(
         metrics_registry: Registry,
         filter_registry: FilterRegistry,
-        filter_chain_updates_tx: mpsc::Sender<Arc<FilterChain>>,
+        capture_version: Option<CaptureVersion>,
+        filter_chain_updates_tx: mpsc::Sender<Arc<FilterChainSource>>,
     ) -> ListenerManagerArgs {
         ListenerManagerArgs {
+            capture_version,
             filter_chain_updates_tx,
             filter_registry,
             metrics_registry,
@@ -54,33 +63,34 @@ impl ListenerManagerArgs {
 }
 
 impl FilterManager {
-    fn update(&mut self, filter_chain: Arc<FilterChain>) {
-        self.filter_chain = filter_chain;
+    fn update(&mut self, filter_chain_source: Arc<FilterChainSource>) {
+        self.filter_chain_source = filter_chain_source;
     }
 
-    /// Returns the current filter chain.
-    pub fn get_filter_chain(&self) -> Arc<FilterChain> {
-        self.filter_chain.clone()
+    /// Returns the current filter chain implementation.
+    pub fn get_filter_chain_source(&self) -> &FilterChainSource {
+        self.filter_chain_source.as_ref()
     }
 
-    /// Returns a new instance backed only by the provided filter chain.
-    pub fn fixed(filter_chain: Arc<FilterChain>) -> SharedFilterManager {
-        Arc::new(RwLock::new(FilterManager { filter_chain }))
+    /// Returns a new instance backed only by the provided filter chain implementation.
+    pub fn fixed(filter_chain_source: Arc<FilterChainSource>) -> SharedFilterManager {
+        Arc::new(RwLock::new(FilterManager {
+            filter_chain_source,
+        }))
     }
 
     /// Returns a new instance backed by a stream of filter chain updates.
     /// Updates from the provided stream will be reflected in the current filter chain.
     pub fn dynamic(
         base_logger: Logger,
-        metrics_registry: &Registry,
-        filter_chain_updates_rx: mpsc::Receiver<Arc<FilterChain>>,
+        filter_chain_source: Arc<FilterChainSource>,
+        filter_chain_updates_rx: mpsc::Receiver<Arc<FilterChainSource>>,
         shutdown_rx: watch::Receiver<()>,
     ) -> Result<SharedFilterManager, FilterChainError> {
         let log = Self::create_logger(base_logger);
 
         let filter_manager = Arc::new(RwLock::new(FilterManager {
-            // Start out with an empty filter chain.
-            filter_chain: Arc::new(FilterChain::new(vec![], metrics_registry)?),
+            filter_chain_source,
         }));
 
         // Start a task in the background to receive LDS updates
@@ -100,7 +110,7 @@ impl FilterManager {
     fn spawn_updater(
         log: Logger,
         filter_manager: SharedFilterManager,
-        mut filter_chain_updates_rx: mpsc::Receiver<Arc<FilterChain>>,
+        mut filter_chain_updates_rx: mpsc::Receiver<Arc<FilterChainSource>>,
         mut shutdown_rx: watch::Receiver<()>,
     ) {
         tokio::spawn(async move {
@@ -108,9 +118,9 @@ impl FilterManager {
                 tokio::select! {
                     update = filter_chain_updates_rx.recv() => {
                         match update {
-                            Some(filter_chain) => {
+                            Some(filter_chain_source) => {
                                 debug!(log, "Received a filter chain update.");
-                                filter_manager.write().update(filter_chain);
+                                filter_manager.write().update(filter_chain_source);
                             }
                             None => {
                                 warn!(log, "Exiting filter chain update receive loop because the sender dropped the channel.");
@@ -135,10 +145,11 @@ impl FilterManager {
 #[cfg(test)]
 mod tests {
     use super::FilterManager;
-    use crate::filters::{Filter, FilterChain, FilterInstance, ReadContext, ReadResponse};
+    use crate::filters::{
+        Filter, FilterChain, FilterChainSource, FilterInstance, ReadContext, ReadResponse,
+    };
     use crate::test_utils::logger;
 
-    use std::sync::Arc;
     use std::time::Duration;
 
     use crate::endpoint::{Endpoint, Endpoints, UpstreamEndpoints};
@@ -149,8 +160,9 @@ mod tests {
     #[tokio::test]
     async fn dynamic_filter_manager_update_filter_chain() {
         let registry = prometheus::Registry::default();
-        let filter_manager =
-            FilterManager::fixed(Arc::new(FilterChain::new(vec![], &registry).unwrap()));
+        let filter_manager = FilterManager::fixed(FilterChainSource::non_versioned(
+            FilterChain::new(vec![], &registry).unwrap(),
+        ));
         let (filter_chain_updates_tx, filter_chain_updates_rx) = mpsc::channel(10);
         let (_shutdown_tx, shutdown_rx) = watch::channel(());
 
@@ -163,7 +175,11 @@ mod tests {
 
         let filter_chain = {
             let manager_guard = filter_manager.read();
-            manager_guard.get_filter_chain().clone()
+            manager_guard
+                .get_filter_chain_source()
+                .get_filter_chain(vec![])
+                .unwrap()
+                .filter_chain
         };
 
         let test_endpoints =
@@ -182,17 +198,18 @@ mod tests {
                 None
             }
         }
-        let filter_chain = Arc::new(
-            FilterChain::new(
-                vec![(
-                    "Drop".into(),
-                    FilterInstance::new(serde_json::Value::Null, Box::new(Drop) as Box<dyn Filter>),
-                )],
-                &registry,
-            )
-            .unwrap(),
-        );
-        assert!(filter_chain_updates_tx.send(filter_chain).await.is_ok());
+        let filter_chain = FilterChain::new(
+            vec![(
+                "Drop".into(),
+                FilterInstance::new(serde_json::Value::Null, Box::new(Drop) as Box<dyn Filter>),
+            )],
+            &registry,
+        )
+        .unwrap();
+        assert!(filter_chain_updates_tx
+            .send(FilterChainSource::non_versioned(filter_chain))
+            .await
+            .is_ok());
 
         let mut num_iterations = 0;
         loop {
@@ -200,7 +217,11 @@ mod tests {
             // The new filter chain drops packets instead.
             let filter_chain = {
                 let manager_guard = filter_manager.read();
-                manager_guard.get_filter_chain().clone()
+                manager_guard
+                    .get_filter_chain_source()
+                    .get_filter_chain(vec![])
+                    .unwrap()
+                    .filter_chain
             };
             if filter_chain
                 .read(ReadContext::new(
@@ -227,8 +248,9 @@ mod tests {
         // Test that we shut down the background task if we receive a shutdown signal.
 
         let registry = prometheus::Registry::default();
-        let filter_manager =
-            FilterManager::fixed(Arc::new(FilterChain::new(vec![], &registry).unwrap()));
+        let filter_manager = FilterManager::fixed(FilterChainSource::non_versioned(
+            FilterChain::new(vec![], &registry).unwrap(),
+        ));
         let (filter_chain_updates_tx, filter_chain_updates_rx) = mpsc::channel(10);
         let (shutdown_tx, shutdown_rx) = watch::channel(());
 
@@ -247,7 +269,11 @@ mod tests {
 
         // Send a filter chain update on the channel. This should fail
         // since the listening task should have shut down.
-        let filter_chain = Arc::new(FilterChain::new(vec![], &registry).unwrap());
-        assert!(filter_chain_updates_tx.send(filter_chain).await.is_err());
+        assert!(filter_chain_updates_tx
+            .send(FilterChainSource::non_versioned(
+                FilterChain::new(vec![], &registry).unwrap()
+            ))
+            .await
+            .is_err());
     }
 }

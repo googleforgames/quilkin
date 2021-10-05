@@ -93,7 +93,7 @@ pub struct Metadata {
 /// boundary. Accepts a list of strings representing Base64 encoded data,
 /// this list is then converted into its binary representation while in memory,
 /// and then encoded back as a list of base64 strings.
-mod base64_set {
+pub(crate) mod base64_set {
     use serde::de::Error;
 
     pub type Set<T = Vec<u8>> = std::collections::BTreeSet<T>;

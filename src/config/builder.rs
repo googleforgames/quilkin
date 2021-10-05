@@ -15,6 +15,10 @@
  */
 
 use super::{Config, Filter};
+use crate::config::{
+    CaptureVersion, DynamicFilterChainConfig, ManagementServer, StaticFilterChainConfig,
+    VersionedStaticFilterChain,
+};
 use crate::{
     config::{Admin, Proxy, Source, Version},
     endpoint::Endpoint,
@@ -35,7 +39,7 @@ impl Builder {
             port: 0,
             admin: Admin::default(),
             source: Source::Static {
-                filters: vec![],
+                filter_chain: StaticFilterChainConfig::NonVersioned(vec![]),
                 endpoints: vec![],
             },
         }
@@ -46,7 +50,38 @@ impl Builder {
     }
 
     pub fn with_static(self, filters: Vec<Filter>, endpoints: Vec<Endpoint>) -> Self {
-        let source = Source::Static { filters, endpoints };
+        let source = Source::Static {
+            filter_chain: StaticFilterChainConfig::NonVersioned(filters),
+            endpoints,
+        };
+        Builder { source, ..self }
+    }
+
+    pub fn with_static_versioned(
+        self,
+        capture_version: CaptureVersion,
+        filter_chains: Vec<VersionedStaticFilterChain>,
+        endpoints: Vec<Endpoint>,
+    ) -> Self {
+        let source = Source::Static {
+            filter_chain: StaticFilterChainConfig::Versioned {
+                capture_version,
+                filter_chains,
+            },
+            endpoints,
+        };
+        Builder { source, ..self }
+    }
+
+    pub fn with_dynamic(
+        self,
+        filter_chain_config: Option<DynamicFilterChainConfig>,
+        management_servers: Vec<ManagementServer>,
+    ) -> Self {
+        let source = Source::Dynamic {
+            filter_chain: filter_chain_config,
+            management_servers,
+        };
         Builder { source, ..self }
     }
 

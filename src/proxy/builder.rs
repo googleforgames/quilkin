@@ -20,8 +20,12 @@ use prometheus::Registry;
 use slog::{o, Drain, Logger};
 use tonic::transport::Endpoint as TonicEndpoint;
 
-use crate::config::{Config, ManagementServer, Proxy, Source, ValidationError, ValueInvalidArgs};
+use crate::config::{
+    Config, ManagementServer, Proxy, Source, StaticFilterChainConfig, ValidateFilterChainVersions,
+    ValidationError, ValueInvalidArgs,
+};
 use crate::endpoint::Endpoints;
+use crate::filters::chain::FilterChainSource;
 use crate::filters::{chain::Error as FilterChainError, FilterChain, FilterRegistry, FilterSet};
 use crate::proxy::server::metrics::Metrics as ProxyMetrics;
 use crate::proxy::sessions::metrics::Metrics as SessionMetrics;
@@ -29,10 +33,11 @@ use crate::proxy::{Admin as ProxyAdmin, Health, Metrics, Server};
 
 pub(super) enum ValidatedSource {
     Static {
-        filter_chain: Arc<FilterChain>,
+        filter_chain_source: Arc<FilterChainSource>,
         endpoints: Endpoints,
     },
     Dynamic {
+        filter_chain_source: Arc<FilterChainSource>,
         management_servers: Vec<ManagementServer>,
     },
 }
@@ -120,7 +125,7 @@ impl ValidatedConfig {
     ) -> Result<Self, Error> {
         let validated_source = match &config.source {
             Source::Static {
-                filters,
+                filter_chain,
                 endpoints: config_endpoints,
             } => {
                 if config_endpoints
@@ -138,16 +143,43 @@ impl ValidatedConfig {
                 let endpoints = Endpoints::new(config_endpoints.clone())
                     .ok_or_else(|| ValidationError::EmptyList("static.endpoints".into()))?;
 
+                let filter_chain_source = match filter_chain {
+                    StaticFilterChainConfig::Versioned {
+                        capture_version,
+                        filter_chains,
+                    } => {
+                        ValidateFilterChainVersions(
+                            filter_chains
+                                .iter()
+                                .map(|config| &config.versions)
+                                .collect(),
+                        )
+                        .validate()?;
+
+                        FilterChainSource::versioned_from_config(
+                            filter_registry,
+                            &metrics.registry,
+                            capture_version.clone(),
+                            filter_chains.clone(),
+                        )?
+                    }
+                    StaticFilterChainConfig::NonVersioned(filters) => {
+                        FilterChainSource::non_versioned_from_config(
+                            filter_registry,
+                            &metrics.registry,
+                            filters.clone(),
+                        )?
+                    }
+                };
                 ValidatedSource::Static {
-                    filter_chain: Arc::new(FilterChain::try_create(
-                        filters.clone(),
-                        filter_registry,
-                        &metrics.registry,
-                    )?),
+                    filter_chain_source,
                     endpoints,
                 }
             }
-            Source::Dynamic { management_servers } => {
+            Source::Dynamic {
+                filter_chain,
+                management_servers,
+            } => {
                 if management_servers.is_empty() {
                     return Err(ValidationError::EmptyList(
                         "dynamic.management_servers".to_string(),
@@ -184,7 +216,20 @@ impl ValidatedConfig {
                     }
                 }
 
+                // Dynamic config always starts out with an empty filter chain.
+                let filter_chain_source = match filter_chain {
+                    Some(filter_chain_config) => FilterChainSource::versioned(
+                        filter_chain_config.versioned.capture_version.clone(),
+                        Default::default(),
+                    ),
+                    None => FilterChainSource::non_versioned(FilterChain::new(
+                        vec![],
+                        &metrics.registry,
+                    )?),
+                };
+
                 ValidatedSource::Dynamic {
+                    filter_chain_source,
                     management_servers: management_servers.clone(),
                 }
             }
@@ -264,7 +309,6 @@ pub fn logger() -> Logger {
 
 #[cfg(test)]
 mod tests {
-    use std::convert::TryFrom;
     use std::sync::Arc;
 
     use crate::config::{Config, ValidationError};
@@ -278,18 +322,14 @@ mod tests {
     }
 
     fn validate_unwrap_ok(yaml: &'static str) -> Builder<Validated> {
-        Builder::try_from(Arc::new(parse_config(yaml)))
-            .unwrap()
+        Builder::from(Arc::new(parse_config(yaml)))
             .validate()
             .unwrap()
     }
 
     #[track_caller]
     fn validate_unwrap_err(yaml: &'static str) -> ValidationError {
-        match Builder::try_from(Arc::new(parse_config(yaml)))
-            .unwrap()
-            .validate()
-        {
+        match Builder::from(Arc::new(parse_config(yaml))).validate() {
             Err(Error::InvalidConfig(err)) => err,
             Err(err) => unreachable!(format!("expected ValidationError, got {}", err)),
             Ok(_) => unreachable!("config validation should have failed!"),
@@ -339,8 +379,7 @@ dynamic:
     }
 
     #[test]
-    fn validate() {
-        // client - valid
+    fn validate_static_source() {
         let yaml = "
 version: v1alpha1
 static:
@@ -351,27 +390,86 @@ static:
         let _ = validate_unwrap_ok(yaml);
 
         let yaml = "
+# Filter chain versions
+version: v1alpha1
+static:
+  filter_chain:
+    versioned:
+      capture_version:
+        strategy: PREFIX
+        size: 1
+      filter_chains:
+      - versions:
+        - AQ==
+        filters:
+        - name: quilkin.extensions.filters.debug.v1alpha1.Debug
+      - versions:
+        - AA==
+        filters:
+        - name: quilkin.extensions.filters.debug.v1alpha1.Debug
+      - versions:
+        # Check that we allow versions of different sizes
+        - gAA=
+        filters:
+        - name: quilkin.extensions.filters.debug.v1alpha1.Debug
+
+  endpoints:
+  - address: 127.0.0.1:25999
+";
+        let _ = validate_unwrap_ok(yaml);
+    }
+
+    #[test]
+    fn invalid_static_source() {
+        let tests = vec![
+            (
+                "
 # Non unique addresses.
 version: v1alpha1
 static:
   endpoints:
     - address: 127.0.0.1:25999
     - address: 127.0.0.1:25999
-";
-        assert_eq!(
-            ValidationError::NotUnique("static.endpoints.address".to_string()).to_string(),
-            validate_unwrap_err(yaml).to_string()
-        );
-
-        let yaml = "
+",
+                ValidationError::NotUnique("static.endpoints.address".to_string()),
+            ),
+            (
+                "
 # Empty endpoints list
 version: v1alpha1
 static:
   endpoints: []
-";
-        assert_eq!(
-            ValidationError::EmptyList("static.endpoints".to_string()).to_string(),
-            validate_unwrap_err(yaml).to_string()
-        );
+",
+                ValidationError::EmptyList("static.endpoints".to_string()),
+            ),
+            (
+                "
+# Duplicate filter chain versions
+version: v1alpha1
+static:
+  filter_chain:
+    versioned:
+      capture_version:
+        strategy: PREFIX
+        size: 1
+      filter_chains:
+      - versions:
+        - AA==
+        filters:
+        - name: quilkin.extensions.filters.debug.v1alpha1.Debug
+      - versions:
+        - AA==
+        filters:
+        - name: quilkin.extensions.filters.debug.v1alpha1.Debug
+
+  endpoints:
+  - address: 127.0.0.1:25999
+",
+                ValidationError::NotUnique("filter chain versions".to_string()),
+            ),
+        ];
+        for (yaml, expected) in tests {
+            assert_eq!(expected, validate_unwrap_err(yaml));
+        }
     }
 }

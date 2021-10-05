@@ -13,9 +13,10 @@ quilkin.extensions.filters.compress.v1alpha1.Compress
 # let yaml = "
 version: v1alpha1
 static:
-  filters:
-    - name: quilkin.extensions.filters.compress.v1alpha1.Compress
-      config:
+  filter_chain:
+    filters:
+      - name: quilkin.extensions.filters.compress.v1alpha1.Compress
+        config:
           on_read: COMPRESS
           on_write: DECOMPRESS
           mode: SNAPPY
@@ -23,7 +24,7 @@ static:
     - address: 127.0.0.1:7001
 # ";
 # let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-# assert_eq!(config.source.get_static_filters().unwrap().len(), 1);
+# assert_eq!(config.source.get_static_non_versioned_filters().unwrap().len(), 1);
 # quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
 ```
 

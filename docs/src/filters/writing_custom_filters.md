@@ -149,8 +149,9 @@ version: v1alpha1
 proxy:
   port: 7001
 static:
-  filters:
-  - name: greet.v1
+  filter_chain:
+    filters:
+    - name: greet.v1
   endpoints:
   - address: 127.0.0.1:4321
 ```
