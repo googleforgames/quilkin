@@ -51,7 +51,7 @@ either = "1.6.1"
 hyper = "0.14.2"
 num_cpus = "1.13.0"
 parking_lot = "0.11.0"
-prometheus = { version = "0.12", default-features = false }
+prometheus = { version = "0.13", default-features = false }
 prost = "0.8.0"
 prost-types = "0.8.0"
 rand = "0.8"
