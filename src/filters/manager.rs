@@ -135,14 +135,13 @@ impl FilterManager {
 #[cfg(test)]
 mod tests {
     use super::FilterManager;
-    use crate::filters::{Filter, FilterChain, ReadContext, ReadResponse};
+    use crate::filters::{Filter, FilterChain, FilterInstance, ReadContext, ReadResponse};
     use crate::test_utils::logger;
 
     use std::sync::Arc;
     use std::time::Duration;
 
-    use crate::cluster::Endpoint;
-    use crate::config::{Endpoints, UpstreamEndpoints};
+    use crate::endpoint::{Endpoint, Endpoints, UpstreamEndpoints};
     use tokio::sync::mpsc;
     use tokio::sync::watch;
     use tokio::time::sleep;
@@ -167,10 +166,8 @@ mod tests {
             manager_guard.get_filter_chain().clone()
         };
 
-        let test_endpoints = Endpoints::new(vec![Endpoint::from_address(
-            "127.0.0.1:8080".parse().unwrap(),
-        )])
-        .unwrap();
+        let test_endpoints =
+            Endpoints::new(vec![Endpoint::new("127.0.0.1:8080".parse().unwrap())]).unwrap();
         let response = filter_chain.read(ReadContext::new(
             UpstreamEndpoints::from(test_endpoints.clone()),
             "127.0.0.1:8081".parse().unwrap(),
@@ -185,8 +182,16 @@ mod tests {
                 None
             }
         }
-        let filter_chain =
-            Arc::new(FilterChain::new(vec![("Drop".into(), Box::new(Drop))], &registry).unwrap());
+        let filter_chain = Arc::new(
+            FilterChain::new(
+                vec![(
+                    "Drop".into(),
+                    FilterInstance::new(serde_json::Value::Null, Box::new(Drop) as Box<dyn Filter>),
+                )],
+                &registry,
+            )
+            .unwrap(),
+        );
         assert!(filter_chain_updates_tx.send(filter_chain).await.is_ok());
 
         let mut num_iterations = 0;

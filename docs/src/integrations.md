@@ -135,7 +135,7 @@ while also providing the most redundancy and security for your dedicated game se
 ## What Next?
 
 * Have a look at the [example configurations](https://github.com/googleforgames/quilkin/blob/main/examples) for basic configuration examples.
-* Review the [set of filters](./extensions/filters/filters.md) that are available.
+* Review the [set of filters](./filters.md) that are available.
 
 ---
 

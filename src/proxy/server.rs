@@ -28,13 +28,13 @@ use metrics::Metrics as ProxyMetrics;
 use resource_manager::{DynamicResourceManagers, StaticResourceManagers};
 
 use crate::cluster::cluster_manager::SharedClusterManager;
-use crate::cluster::Endpoint;
+use crate::endpoint::Endpoint;
 use crate::filters::{manager::SharedFilterManager, Filter, FilterRegistry, ReadContext};
 use crate::proxy::builder::{ValidatedConfig, ValidatedSource};
 use crate::proxy::server::error::Error;
 use crate::proxy::sessions::metrics::Metrics as SessionMetrics;
 use crate::proxy::sessions::session_manager::SessionManager;
-use crate::proxy::sessions::{Packet, Session, SESSION_TIMEOUT_SECONDS};
+use crate::proxy::sessions::{Packet, Session, SessionKey, SESSION_TIMEOUT_SECONDS};
 use crate::proxy::Admin;
 use crate::utils::debug;
 
@@ -102,10 +102,6 @@ impl Server {
     pub async fn run(self, mut shutdown_rx: watch::Receiver<()>) -> Result<()> {
         self.log_config();
 
-        if let Some(admin) = &self.admin {
-            admin.run(shutdown_rx.clone());
-        }
-
         let socket = Arc::new(Server::bind(self.config.proxy.port).await?);
         let session_manager = SessionManager::new(self.log.clone(), shutdown_rx.clone());
         let (send_packets, receive_packets) = mpsc::channel::<Packet>(1024);
@@ -114,6 +110,15 @@ impl Server {
 
         let (cluster_manager, filter_manager) =
             self.create_resource_managers(shutdown_rx.clone()).await?;
+
+        if let Some(admin) = &self.admin {
+            admin.run(
+                cluster_manager.clone(),
+                filter_manager.clone(),
+                shutdown_rx.clone(),
+            );
+        }
+
         self.run_receive_packet(socket.clone(), receive_packets);
         let recv_loop = self.run_recv_from(RunRecvFromArgs {
             cluster_manager,
@@ -349,7 +354,10 @@ impl Server {
         endpoint: &Endpoint,
         args: &ProcessDownstreamReceiveConfig,
     ) {
-        let session_key = (recv_addr, endpoint.address);
+        let session_key = SessionKey {
+            source: recv_addr,
+            destination: endpoint.address,
+        };
 
         // Grab a read lock and find the session.
         let guard = args.session_manager.get_sessions().await;
@@ -381,7 +389,7 @@ impl Server {
                     &args.log,
                     args.session_metrics.clone(),
                     args.filter_manager.clone(),
-                    session_key.0,
+                    session_key.source,
                     endpoint.clone(),
                     args.send_packets.clone(),
                     args.session_ttl,
@@ -411,7 +419,7 @@ impl Server {
                             warn!(
                                 args.log,
                                 "Could not find session";
-                                "key" => format!("({}:{})", session_key.0.to_string(), session_key.1.to_string())
+                                "key" => format!("({}:{})", session_key.source.to_string(), session_key.destination.to_string())
                             )
                         }
                     }
@@ -467,7 +475,7 @@ impl Server {
 
     /// log_config outputs a log of what is configured
     fn log_config(&self) {
-        info!(self.log, "Starting"; "port" => self.config.proxy.port);
+        info!(self.log, "Starting"; "port" => self.config.proxy.port, "proxy_id" => &self.config.proxy.id);
     }
 
     /// bind binds the local configured port
@@ -492,7 +500,8 @@ mod tests {
 
     use crate::cluster::cluster_manager::ClusterManager;
     use crate::config;
-    use crate::config::{Builder as ConfigBuilder, EndPoint, Endpoints};
+    use crate::config::Builder as ConfigBuilder;
+    use crate::endpoint::{Endpoint, Endpoints};
     use crate::filters::{manager::FilterManager, FilterChain};
     use crate::proxy::sessions::Packet;
     use crate::proxy::Builder;
@@ -515,8 +524,8 @@ mod tests {
             .with_static(
                 vec![],
                 vec![
-                    EndPoint::new(endpoint1.socket.local_addr().unwrap()),
-                    EndPoint::new(endpoint2.socket.local_addr().unwrap()),
+                    Endpoint::new(endpoint1.socket.local_addr().unwrap()),
+                    Endpoint::new(endpoint2.socket.local_addr().unwrap()),
                 ],
             )
             .build();
@@ -543,7 +552,7 @@ mod tests {
             .with_port(local_addr.port())
             .with_static(
                 vec![],
-                vec![EndPoint::new(endpoint.socket.local_addr().unwrap())],
+                vec![Endpoint::new(endpoint.socket.local_addr().unwrap())],
             )
             .build();
         t.run_server_with_config(config);
@@ -571,7 +580,7 @@ mod tests {
                     name: "TestFilter".to_string(),
                     config: None,
                 }],
-                vec![EndPoint::new(endpoint.socket.local_addr().unwrap())],
+                vec![Endpoint::new(endpoint.socket.local_addr().unwrap())],
             )
             .build();
         t.run_server_with_builder(
@@ -647,7 +656,7 @@ mod tests {
 
             let cluster_manager = ClusterManager::fixed(
                 registry,
-                Endpoints::new(vec![Endpoint::from_address(endpoint_address)]).unwrap(),
+                Endpoints::new(vec![Endpoint::new(endpoint_address)]).unwrap(),
             )
             .unwrap();
             let filter_manager = FilterManager::fixed(chain.clone());
@@ -691,7 +700,7 @@ mod tests {
 
             let map = session_manager.get_sessions().await;
             assert_eq!(expected.session_len, map.len());
-            let build_key = (receive_addr, endpoint.socket.local_addr().unwrap());
+            let build_key = (receive_addr, endpoint.socket.local_addr().unwrap()).into();
             assert!(map.contains_key(&build_key));
             let session = map.get(&build_key).unwrap();
             let now_secs = SystemTime::now()
@@ -756,10 +765,7 @@ mod tests {
         server.run_recv_from(RunRecvFromArgs {
             cluster_manager: ClusterManager::fixed(
                 &registry,
-                Endpoints::new(vec![Endpoint::from_address(
-                    endpoint.socket.local_addr().unwrap(),
-                )])
-                .unwrap(),
+                Endpoints::new(vec![Endpoint::new(endpoint.socket.local_addr().unwrap())]).unwrap(),
             )
             .unwrap(),
             filter_manager: FilterManager::fixed(Arc::new(

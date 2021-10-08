@@ -31,7 +31,7 @@ impl Metrics {
                 "LocalRateLimit",
                 "Total number of packets dropped due to rate limiting",
             ))?
-            .register(registry)?,
+            .register_if_not_exists(registry)?,
         })
     }
 }

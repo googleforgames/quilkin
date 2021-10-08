@@ -15,17 +15,16 @@
  */
 
 use std::collections::HashMap;
-use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use slog::{debug, warn, Logger};
 use tokio::sync::{watch, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
-use crate::proxy::sessions::Session;
+use crate::proxy::sessions::{Session, SessionKey};
 
-// Tracks current sessions keyed by key (source_address,destination_address) pair.
-type SessionsMap = HashMap<(SocketAddr, SocketAddr), Session>;
+// Tracks current sessions by their [`SessionKey`]
+type SessionsMap = HashMap<SessionKey, Session>;
 type Sessions = Arc<RwLock<SessionsMap>>;
 
 /// SESSION_TIMEOUT_SECONDS is the default session timeout.
@@ -122,11 +121,11 @@ mod tests {
     use prometheus::Registry;
     use tokio::sync::{mpsc, watch, RwLock};
 
-    use crate::cluster::Endpoint;
+    use crate::endpoint::Endpoint;
     use crate::filters::{manager::FilterManager, FilterChain};
     use crate::proxy::sessions::metrics::Metrics;
     use crate::proxy::sessions::session_manager::Sessions;
-    use crate::proxy::sessions::{Packet, Session};
+    use crate::proxy::sessions::{Packet, Session, SessionKey};
     use crate::test_utils::TestHelper;
 
     use super::SessionManager;
@@ -140,7 +139,7 @@ mod tests {
         let (send, _recv) = mpsc::channel::<Packet>(1);
         let (_shutdown_tx, shutdown_rx) = watch::channel(());
 
-        let endpoint = Endpoint::from_address(to);
+        let endpoint = Endpoint::new(to);
 
         let ttl = Duration::from_secs(1);
         let poll_interval = Duration::from_millis(1);
@@ -154,14 +153,14 @@ mod tests {
             shutdown_rx,
         );
 
-        let key = (from, to);
+        let key = SessionKey::from((from, to));
 
         // Insert key.
         {
             let registry = Registry::default();
             let mut sessions = sessions.write().await;
             sessions.insert(
-                key,
+                key.clone(),
                 Session::new(
                     &t.log,
                     Metrics::new(&registry).unwrap(),
@@ -213,16 +212,16 @@ mod tests {
         let from: SocketAddr = "127.0.0.1:7000".parse().unwrap();
         let to: SocketAddr = "127.0.0.1:7001".parse().unwrap();
         let (send, _recv) = mpsc::channel::<Packet>(1);
-        let endpoint = Endpoint::from_address(to);
+        let endpoint = Endpoint::new(to);
 
-        let key = (from, to);
+        let key = SessionKey::from((from, to));
         let ttl = Duration::from_secs(1);
 
         {
             let registry = Registry::default();
             let mut sessions = sessions.write().await;
             sessions.insert(
-                key,
+                key.clone(),
                 Session::new(
                     &t.log,
                     Metrics::new(&registry).unwrap(),

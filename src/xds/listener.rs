@@ -205,8 +205,7 @@ mod tests {
 
     use std::time::Duration;
 
-    use crate::cluster::Endpoint;
-    use crate::config::{Endpoints, UpstreamEndpoints};
+    use crate::endpoint::{Endpoint, Endpoints, UpstreamEndpoints};
     use crate::filters::{ConvertProtoConfigError, DynFilterFactory, FilterRegistry, FilterSet};
     use crate::xds::LISTENER_TYPE;
     use prometheus::Registry;
@@ -260,8 +259,8 @@ mod tests {
             APPEND_TYPE_URL
         }
 
-        fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
-            let filter = args
+        fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
+            let (config_json, filter) = args
                 .config
                 .map(|config| config.deserialize::<Append, ProtoAppend>(self.name()))
                 .transpose()?
@@ -272,7 +271,10 @@ mod tests {
                     reason: "reject requested".into(),
                 })
             } else {
-                Ok(Box::new(filter))
+                Ok(FilterInstance::new(
+                    config_json,
+                    Box::new(filter) as Box<dyn Filter>,
+                ))
             }
         }
     }
@@ -369,10 +371,7 @@ mod tests {
         let response = filter_chain
             .read(ReadContext::new(
                 UpstreamEndpoints::from(
-                    Endpoints::new(vec![Endpoint::from_address(
-                        "127.0.0.1:8080".parse().unwrap(),
-                    )])
-                    .unwrap(),
+                    Endpoints::new(vec![Endpoint::new("127.0.0.1:8080".parse().unwrap())]).unwrap(),
                 ),
                 "127.0.0.1:8081".parse().unwrap(),
                 "hello-".into(),
@@ -481,10 +480,8 @@ mod tests {
             let response = filter_chain
                 .read(ReadContext::new(
                     UpstreamEndpoints::from(
-                        Endpoints::new(vec![Endpoint::from_address(
-                            "127.0.0.1:8080".parse().unwrap(),
-                        )])
-                        .unwrap(),
+                        Endpoints::new(vec![Endpoint::new("127.0.0.1:8080".parse().unwrap())])
+                            .unwrap(),
                     ),
                     "127.0.0.1:8081".parse().unwrap(),
                     "hello-".into(),

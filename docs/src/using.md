@@ -15,9 +15,9 @@ The release binary can be downloaded from the
 
 Quilkin needs to be run with an accompanying [configuration file](./proxy-configuration.md), like so:
 
-`quilkin --config="configuration.yaml"`
+`quilkin run --config="configuration.yaml"`
 
-If you require debug output, you can run the same command can be run with the `quilkin-debug` binary.
+To view debug output, run the same command with the `quilkin-debug` binary.
 
 You can also use the shorthand of `-c` instead of `--config` if you so desire.
 

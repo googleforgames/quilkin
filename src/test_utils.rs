@@ -24,8 +24,8 @@ use slog_term::{FullFormat, PlainSyncDecorator};
 use tokio::net::UdpSocket;
 use tokio::sync::{mpsc, oneshot, watch};
 
-use crate::cluster::Endpoint;
-use crate::config::{Builder as ConfigBuilder, Config, EndPoint, Endpoints};
+use crate::config::{Builder as ConfigBuilder, Config};
+use crate::endpoint::{Endpoint, Endpoints};
 use crate::filters::{prelude::*, FilterChain, FilterRegistry, FilterSet};
 use crate::proxy::{Builder, PendingValidation};
 
@@ -35,8 +35,17 @@ impl FilterFactory for TestFilterFactory {
         "TestFilter"
     }
 
-    fn create_filter(&self, _: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
-        Ok(Box::new(TestFilter {}))
+    fn create_filter(&self, _: CreateFilterArgs) -> Result<FilterInstance, Error> {
+        Ok(Self::create_empty_filter())
+    }
+}
+
+impl TestFilterFactory {
+    pub(crate) fn create_empty_filter() -> FilterInstance {
+        FilterInstance::new(
+            serde_json::Value::Null,
+            Box::new(TestFilter {}) as Box<dyn Filter>,
+        )
     }
 }
 
@@ -262,7 +271,7 @@ pub fn assert_filter_read_no_change<F>(filter: &F)
 where
     F: Filter,
 {
-    let endpoints = vec![Endpoint::from_address("127.0.0.1:80".parse().unwrap())];
+    let endpoints = vec![Endpoint::new("127.0.0.1:80".parse().unwrap())];
     let from = "127.0.0.1:90".parse().unwrap();
     let contents = "hello".to_string().into_bytes();
 
@@ -287,7 +296,7 @@ pub fn assert_write_no_change<F>(filter: &F)
 where
     F: Filter,
 {
-    let endpoint = Endpoint::from_address("127.0.0.1:90".parse().unwrap());
+    let endpoint = Endpoint::new("127.0.0.1:90".parse().unwrap());
     let contents = "hello".to_string().into_bytes();
 
     match filter.write(WriteContext::new(
@@ -304,18 +313,27 @@ where
 pub fn config_with_dummy_endpoint() -> ConfigBuilder {
     ConfigBuilder::empty().with_static(
         vec![],
-        vec![EndPoint::new("127.0.0.1:8080".parse().unwrap())],
+        vec![Endpoint {
+            address: "127.0.0.1:8080".parse().unwrap(),
+            ..<_>::default()
+        }],
     )
 }
 /// Creates a dummy endpoint with `id` as a suffix.
-pub fn ep(id: u8) -> EndPoint {
-    EndPoint::new(format!("127.0.0.{:?}:8080", id).parse().unwrap())
+pub fn ep(id: u8) -> Endpoint {
+    Endpoint {
+        address: format!("127.0.0.{}:8080", id).parse().unwrap(),
+        ..<_>::default()
+    }
 }
 
 pub fn new_test_chain(registry: &prometheus::Registry) -> Arc<FilterChain> {
     Arc::new(
         FilterChain::new(
-            vec![("TestFilter".into(), Box::new(TestFilter {}))],
+            vec![(
+                "TestFilter".into(),
+                TestFilterFactory::create_empty_filter(),
+            )],
             registry,
         )
         .unwrap(),

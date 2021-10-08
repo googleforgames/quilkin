@@ -15,82 +15,80 @@
  */
 
 ///! Complex integration tests that incorporate multiple elements
+use std::{net::SocketAddr, str::from_utf8};
 
-#[cfg(test)]
-mod tests {
-    use std::net::SocketAddr;
-    use std::str::from_utf8;
+use tokio::time::{timeout, Duration};
 
-    use tokio::time::{timeout, Duration};
+use quilkin::{
+    config::{Builder, Filter},
+    endpoint::Endpoint,
+    filters::{compress, concatenate_bytes},
+    test_utils::TestHelper,
+};
 
-    use quilkin::config::{Builder, EndPoint, Filter};
-    use quilkin::filters::{compress, concatenate_bytes};
-    use quilkin::test_utils::TestHelper;
+#[tokio::test]
+async fn filter_order() {
+    let mut t = TestHelper::default();
 
-    #[tokio::test]
-    async fn filter_order() {
-        let mut t = TestHelper::default();
-
-        let yaml_concat_read = "
+    let yaml_concat_read = "
 on_read: APPEND
 bytes: eHl6 #xyz
 ";
 
-        let yaml_concat_write = "
+    let yaml_concat_write = "
 on_write: APPEND
 bytes: YWJj #abc
 ";
 
-        let yaml_compress = "
+    let yaml_compress = "
 on_read: COMPRESS
 on_write: DECOMPRESS
 ";
 
-        let echo = t
-            .run_echo_server_with_tap(move |_, bytes, _| {
-                assert!(
-                    from_utf8(bytes).is_err(),
-                    "Should be compressed, and therefore unable to be turned into a string"
-                );
-            })
-            .await;
+    let echo = t
+        .run_echo_server_with_tap(move |_, bytes, _| {
+            assert!(
+                from_utf8(bytes).is_err(),
+                "Should be compressed, and therefore unable to be turned into a string"
+            );
+        })
+        .await;
 
-        let server_port = 12346;
-        let server_config = Builder::empty()
-            .with_port(server_port)
-            .with_static(
-                vec![
-                    Filter {
-                        name: concatenate_bytes::factory().name().into(),
-                        config: serde_yaml::from_str(yaml_concat_read).unwrap(),
-                    },
-                    Filter {
-                        name: concatenate_bytes::factory().name().into(),
-                        config: serde_yaml::from_str(yaml_concat_write).unwrap(),
-                    },
-                    Filter {
-                        name: compress::factory(&t.log).name().into(),
-                        config: serde_yaml::from_str(yaml_compress).unwrap(),
-                    },
-                ],
-                vec![EndPoint::new(echo)],
-            )
-            .build();
+    let server_port = 12346;
+    let server_config = Builder::empty()
+        .with_port(server_port)
+        .with_static(
+            vec![
+                Filter {
+                    name: concatenate_bytes::factory().name().into(),
+                    config: serde_yaml::from_str(yaml_concat_read).unwrap(),
+                },
+                Filter {
+                    name: concatenate_bytes::factory().name().into(),
+                    config: serde_yaml::from_str(yaml_concat_write).unwrap(),
+                },
+                Filter {
+                    name: compress::factory(&t.log).name().into(),
+                    config: serde_yaml::from_str(yaml_compress).unwrap(),
+                },
+            ],
+            vec![Endpoint::new(echo)],
+        )
+        .build();
 
-        t.run_server_with_config(server_config);
+    t.run_server_with_config(server_config);
 
-        // let's send the packet
-        let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
+    // let's send the packet
+    let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
 
-        let local_addr: SocketAddr = format!("127.0.0.1:{}", server_port).parse().unwrap();
-        socket.send_to(b"hello", &local_addr).await.unwrap();
+    let local_addr: SocketAddr = format!("127.0.0.1:{}", server_port).parse().unwrap();
+    socket.send_to(b"hello", &local_addr).await.unwrap();
 
-        assert_eq!(
-            "helloxyzabc",
-            timeout(Duration::from_secs(5), recv_chan.recv())
-                .await
-                .expect("should have received a packet")
-                .unwrap()
-        );
-    }
+    assert_eq!(
+        "helloxyzabc",
+        timeout(Duration::from_secs(5), recv_chan.recv())
+            .await
+            .expect("should have received a packet")
+            .unwrap()
+    );
 }

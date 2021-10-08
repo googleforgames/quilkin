@@ -25,7 +25,8 @@ use serde::{Deserialize, Serialize};
 use slog::{error, o, Logger};
 
 use crate::{
-    config::{RetainedItems, LOG_SAMPLING_RATE},
+    config::LOG_SAMPLING_RATE,
+    endpoint::RetainedItems,
     filters::{metadata::CAPTURED_BYTES, prelude::*},
 };
 
@@ -74,18 +75,28 @@ impl FilterFactory for TokenRouterFactory {
         NAME
     }
 
-    fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
-        let config: Config = args
+    fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
+        let (config_json, config) = args
             .config
             .map(|config| config.deserialize::<Config, ProtoConfig>(self.name()))
-            .transpose()?
-            .unwrap_or_default();
+            .unwrap_or_else(|| {
+                let config = Config::default();
+                serde_json::to_value(&config)
+                    .map_err(|err| {
+                        Error::DeserializeFailed(format!(
+                            "failed to JSON deserialize default config: {}",
+                            err
+                        ))
+                    })
+                    .map(|config_json| (config_json, config))
+            })?;
 
-        Ok(Box::new(TokenRouter::new(
-            &self.log,
-            config,
-            Metrics::new(&args.metrics_registry)?,
-        )))
+        let filter = TokenRouter::new(&self.log, config, Metrics::new(&args.metrics_registry)?);
+
+        Ok(FilterInstance::new(
+            config_json,
+            Box::new(filter) as Box<dyn Filter>,
+        ))
     }
 }
 
@@ -105,7 +116,10 @@ impl Filter for TokenRouter {
                 None
             }
             Some(value) => match value.downcast_ref::<Vec<u8>>() {
-                Some(token) => match ctx.endpoints.retain(|e| e.tokens.contains(token)) {
+                Some(token) => match ctx
+                    .endpoints
+                    .retain(|e| e.metadata.known.tokens.contains(token))
+                {
                     RetainedItems::None => {
                         self.metrics.packets_dropped_no_endpoint_match.inc();
                         None
@@ -173,13 +187,12 @@ mod tests {
     use prometheus::Registry;
     use serde_yaml::{Mapping, Value};
 
-    use crate::config::Endpoints;
+    use crate::endpoint::{Endpoint, Endpoints, Metadata};
     use crate::test_utils::{assert_write_no_change, logger};
 
     use super::{
         default_metadata_key, Config, Metrics, ProtoConfig, TokenRouter, TokenRouterFactory,
     };
-    use crate::cluster::Endpoint;
     use crate::filters::{
         metadata::CAPTURED_BYTES, CreateFilterArgs, Filter, FilterFactory, ReadContext,
     };
@@ -242,7 +255,8 @@ mod tests {
                 Registry::default(),
                 Some(&Value::Mapping(map)),
             ))
-            .unwrap();
+            .unwrap()
+            .filter;
         let mut ctx = new_ctx();
         ctx.metadata
             .insert(Arc::new(TOKEN_KEY.into()), Box::new(b"123".to_vec()));
@@ -259,7 +273,8 @@ mod tests {
                 Registry::default(),
                 Some(&Value::Mapping(map)),
             ))
-            .unwrap();
+            .unwrap()
+            .filter;
         let mut ctx = new_ctx();
         ctx.metadata
             .insert(Arc::new(CAPTURED_BYTES.into()), Box::new(b"123".to_vec()));
@@ -272,7 +287,8 @@ mod tests {
 
         let filter = factory
             .create_filter(CreateFilterArgs::fixed(Registry::default(), None))
-            .unwrap();
+            .unwrap()
+            .filter;
         let mut ctx = new_ctx();
         ctx.metadata
             .insert(Arc::new(CAPTURED_BYTES.into()), Box::new(b"123".to_vec()));
@@ -326,15 +342,17 @@ mod tests {
     }
 
     fn new_ctx() -> ReadContext {
-        let endpoint1 = Endpoint::new(
+        let endpoint1 = Endpoint::with_metadata(
             "127.0.0.1:80".parse().unwrap(),
-            vec!["123".into()].into_iter().collect(),
-            None,
+            Metadata {
+                tokens: vec!["123".into()].into_iter().collect(),
+            },
         );
-        let endpoint2 = Endpoint::new(
+        let endpoint2 = Endpoint::with_metadata(
             "127.0.0.1:90".parse().unwrap(),
-            vec!["456".into()].into_iter().collect(),
-            None,
+            Metadata {
+                tokens: vec!["456".into()].into_iter().collect(),
+            },
         );
 
         ReadContext::new(

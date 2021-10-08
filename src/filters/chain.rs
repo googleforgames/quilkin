@@ -19,6 +19,7 @@ use prometheus::{Error as PrometheusError, Histogram, HistogramOpts, Registry};
 use crate::config::{Filter as FilterConfig, ValidationError};
 use crate::filters::{prelude::*, FilterRegistry};
 use crate::metrics::CollectorExt;
+use std::sync::Arc;
 
 const FILTER_LABEL: &str = "filter";
 
@@ -29,7 +30,7 @@ const FILTER_LABEL: &str = "filter";
 /// through all of the filters in the chain. If any of the filters in the chain
 /// return `None`, then the chain is broken, and `None` is returned.
 pub struct FilterChain {
-    filters: Vec<(String, Box<dyn Filter>)>,
+    filters: Vec<(String, FilterInstance)>,
     filter_read_duration_seconds: Vec<Histogram>,
     filter_write_duration_seconds: Vec<Histogram>,
 }
@@ -52,10 +53,7 @@ impl From<PrometheusError> for Error {
 }
 
 impl FilterChain {
-    pub fn new(
-        filters: Vec<(String, Box<dyn Filter>)>,
-        registry: &Registry,
-    ) -> Result<Self, Error> {
+    pub fn new(filters: Vec<(String, FilterInstance)>, registry: &Registry) -> Result<Self, Error> {
         Ok(Self {
             filter_read_duration_seconds: filters
                 .iter()
@@ -114,6 +112,13 @@ impl FilterChain {
 
         FilterChain::new(filters, metrics_registry)
     }
+
+    /// Returns an iterator over the current filters' configs.
+    pub(crate) fn get_configs(&self) -> impl Iterator<Item = (&str, Arc<serde_json::Value>)> {
+        self.filters
+            .iter()
+            .map(|(config_json, config)| (config_json.as_str(), config.config.clone()))
+    }
 }
 
 impl Filter for FilterChain {
@@ -121,10 +126,10 @@ impl Filter for FilterChain {
         self.filters
             .iter()
             .zip(self.filter_read_duration_seconds.iter())
-            .try_fold(ctx, |ctx, ((_, filter), histogram)| {
+            .try_fold(ctx, |ctx, ((_, instance), histogram)| {
                 Some(ReadContext::with_response(
                     ctx.from,
-                    histogram.observe_closure_duration(|| filter.read(ctx))?,
+                    histogram.observe_closure_duration(|| instance.filter.read(ctx))?,
                 ))
             })
             .map(ReadResponse::from)
@@ -135,12 +140,12 @@ impl Filter for FilterChain {
             .iter()
             .rev()
             .zip(self.filter_write_duration_seconds.iter().rev())
-            .try_fold(ctx, |ctx, ((_, filter), histogram)| {
+            .try_fold(ctx, |ctx, ((_, instance), histogram)| {
                 Some(WriteContext::with_response(
                     ctx.endpoint,
                     ctx.from,
                     ctx.to,
-                    histogram.observe_closure_duration(|| filter.write(ctx))?,
+                    histogram.observe_closure_duration(|| instance.filter.write(ctx))?,
                 ))
             })
             .map(WriteResponse::from)
@@ -151,13 +156,14 @@ impl Filter for FilterChain {
 mod tests {
     use std::str::from_utf8;
 
-    use crate::config;
-    use crate::config::{Endpoints, UpstreamEndpoints};
-    use crate::filters::{debug, FilterRegistry, FilterSet};
-    use crate::test_utils::{logger, new_test_chain, TestFilter};
+    use crate::{
+        config,
+        endpoint::{Endpoint, Endpoints, UpstreamEndpoints},
+        filters::{debug, FilterRegistry, FilterSet},
+        test_utils::{logger, new_test_chain, TestFilterFactory},
+    };
 
     use super::*;
-    use crate::cluster::Endpoint;
 
     #[test]
     fn from_config() {
@@ -186,8 +192,8 @@ mod tests {
 
     fn endpoints() -> Vec<Endpoint> {
         vec![
-            Endpoint::from_address("127.0.0.1:80".parse().unwrap()),
-            Endpoint::from_address("127.0.0.1:90".parse().unwrap()),
+            Endpoint::new("127.0.0.1:80".parse().unwrap()),
+            Endpoint::new("127.0.0.1:90".parse().unwrap()),
         ]
     }
 
@@ -251,8 +257,14 @@ mod tests {
         let registry = prometheus::Registry::default();
         let chain = FilterChain::new(
             vec![
-                ("TestFilter".into(), Box::new(TestFilter {})),
-                ("TestFilter".into(), Box::new(TestFilter {})),
+                (
+                    "TestFilter".into(),
+                    TestFilterFactory::create_empty_filter(),
+                ),
+                (
+                    "TestFilter".into(),
+                    TestFilterFactory::create_empty_filter(),
+                ),
             ],
             &registry,
         )
@@ -302,5 +314,48 @@ mod tests {
                 .downcast_ref::<String>()
                 .unwrap()
         );
+    }
+
+    #[test]
+    fn get_configs() {
+        struct TestFilter2 {}
+        impl Filter for TestFilter2 {}
+
+        let registry = prometheus::Registry::default();
+        let filter_chain = FilterChain::new(
+            vec![
+                (
+                    "TestFilter".into(),
+                    TestFilterFactory::create_empty_filter(),
+                ),
+                (
+                    "TestFilter2".into(),
+                    FilterInstance {
+                        config: Arc::new(serde_json::json!({
+                            "k1": "v1",
+                            "k2": 2
+                        })),
+                        filter: Box::new(TestFilter2 {}),
+                    },
+                ),
+            ],
+            &registry,
+        )
+        .unwrap();
+
+        let configs = filter_chain.get_configs().collect::<Vec<_>>();
+        assert_eq!(
+            vec![
+                ("TestFilter", Arc::new(serde_json::Value::Null)),
+                (
+                    "TestFilter2",
+                    Arc::new(serde_json::json!({
+                        "k1": "v1",
+                        "k2": 2
+                    }))
+                )
+            ],
+            configs
+        )
     }
 }

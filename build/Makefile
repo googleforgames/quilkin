@@ -47,7 +47,10 @@ version:
 	@echo $(package_version)
 
 # Run all tests
-test: ensure-build-image
+test: ensure-build-image test-quilkin test-examples
+
+# test only the quilkin crate
+test-quilkin: ensure-build-image
 	docker run --rm $(common_rust_args) \
      		--entrypoint=cargo $(BUILD_IMAGE_TAG) deny check
 	docker run --rm $(common_rust_args) \
@@ -56,6 +59,13 @@ test: ensure-build-image
  		--entrypoint=cargo $(BUILD_IMAGE_TAG) fmt -- --check
 	docker run --rm $(common_rust_args) \
      		--entrypoint=cargo $(BUILD_IMAGE_TAG) test
+
+# Run tests against the examples
+test-examples: ensure-build-image
+	docker run --rm $(common_rust_args) -w /workspace/examples/quilkin-filter-example \
+		--entrypoint=cargo $(BUILD_IMAGE_TAG) clippy --tests -- -D warnings
+	docker run --rm $(common_rust_args) -w /workspace/examples/quilkin-filter-example \
+		--entrypoint=cargo $(BUILD_IMAGE_TAG) fmt -- --check
 
 # Build all binaries, images and related artifacts
 build: binary-archive build-image
@@ -87,7 +97,7 @@ build-macos-binary:
 	docker run --rm -v $(project_path):/workspace -w /workspace \
 		-v $(CARGO_HOME)/registry:/root/.cargo/registry \
         joseluisq/rust-linux-darwin-builder:$(rust_toolchain) \
-        	sh -c "cargo build --target x86_64-apple-darwin && cargo build --release --target x86_64-apple-darwin"
+        	sh -c "rustup target add x86_64-apple-darwin && cargo build --target x86_64-apple-darwin && cargo build --release --target x86_64-apple-darwin"
 
 # Build release and debug container images.
 # Use IMAGE_NAME argument to specify the container registry and image name. Defaults to 'quilkin'.
@@ -100,6 +110,17 @@ build-image:
 		--entrypoint=bash $(BUILD_IMAGE_TAG) -c './image/archive_dependencies.sh'
 	docker build -t $(IMAGE_NAME):$(package_version)-debug --build-arg PROFILE=debug -f $(project_path)/image/Dockerfile $(project_path)
 	docker build -t $(IMAGE_NAME):$(package_version) --build-arg PROFILE=release -f $(project_path)/image/Dockerfile $(project_path)
+
+# Runs mdbook and cargo doc in the same directory structure as what is hosted on Github pages.
+# Open http://localhost:3000/book/index.html or http://localhost:3000/api/quilkin/index.html after running. Pages will live reload on change.
+# (the .html extension is required for hot reload, but pages will display without it)
+docs: ensure-build-image
+	@echo "📭 Open browser to http://localhost:3000/book/index.html or http://localhost:3000/api/quilkin/index.html (the .html extension is required for hot reload)"
+	docker run -it --rm $(common_rust_args) -p 3000:3000 \
+		--entrypoint=bash $(BUILD_IMAGE_TAG) -c \
+		 	'mkdir /tmp/docs && (live-server -p 3000 /tmp/docs &) && \
+			mkdir -p ./target/doc; ln -s $$(pwd)/target/doc /tmp/docs/api && \
+			cargo watch -s "cargo doc --workspace --no-deps && cd docs && mdbook build --dest-dir /tmp/docs/book"'
 
 # Start an interactive shell inside the build image
 # Useful for testing, or adhoc cargo commands

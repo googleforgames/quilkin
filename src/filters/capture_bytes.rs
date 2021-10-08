@@ -102,13 +102,15 @@ impl FilterFactory for CaptureBytesFactory {
         NAME
     }
 
-    fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
-        Ok(Box::new(CaptureBytes::new(
-            &self.log,
-            self.require_config(args.config)?
-                .deserialize::<Config, ProtoConfig>(self.name())?,
-            Metrics::new(&args.metrics_registry)?,
-        )))
+    fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
+        let (config_json, config) = self
+            .require_config(args.config)?
+            .deserialize::<Config, ProtoConfig>(self.name())?;
+        let filter = CaptureBytes::new(&self.log, config, Metrics::new(&args.metrics_registry)?);
+        Ok(FilterInstance::new(
+            config_json,
+            Box::new(filter) as Box<dyn Filter>,
+        ))
     }
 }
 
@@ -119,14 +121,13 @@ mod tests {
     use prometheus::Registry;
     use serde_yaml::{Mapping, Value};
 
-    use crate::config::Endpoints;
+    use crate::endpoint::{Endpoint, Endpoints};
     use crate::test_utils::{assert_write_no_change, logger};
 
     use super::{CaptureBytes, CaptureBytesFactory, Config, Metrics, Strategy};
 
     use super::capture::{Capture, Prefix, Suffix};
 
-    use crate::cluster::Endpoint;
     use crate::filters::{
         metadata::CAPTURED_BYTES, CreateFilterArgs, Filter, FilterFactory, ReadContext,
     };
@@ -161,7 +162,8 @@ mod tests {
                 Registry::default(),
                 Some(&Value::Mapping(map)),
             ))
-            .unwrap();
+            .unwrap()
+            .filter;
         assert_end_strategy(filter.as_ref(), TOKEN_KEY, true);
     }
 
@@ -175,7 +177,8 @@ mod tests {
                 Registry::default(),
                 Some(&Value::Mapping(map)),
             ))
-            .unwrap();
+            .unwrap()
+            .filter;
         assert_end_strategy(filter.as_ref(), CAPTURED_BYTES, false);
     }
 
@@ -213,7 +216,7 @@ mod tests {
             remove: true,
         };
         let filter = capture_bytes(config);
-        let endpoints = vec![Endpoint::from_address("127.0.0.1:81".parse().unwrap())];
+        let endpoints = vec![Endpoint::new("127.0.0.1:81".parse().unwrap())];
         let response = filter.read(ReadContext::new(
             Endpoints::new(endpoints).unwrap().into(),
             "127.0.0.1:80".parse().unwrap(),
@@ -268,7 +271,7 @@ mod tests {
     where
         F: Filter + ?Sized,
     {
-        let endpoints = vec![Endpoint::from_address("127.0.0.1:81".parse().unwrap())];
+        let endpoints = vec![Endpoint::new("127.0.0.1:81".parse().unwrap())];
         let response = filter
             .read(ReadContext::new(
                 Endpoints::new(endpoints).unwrap().into(),

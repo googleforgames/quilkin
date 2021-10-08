@@ -20,8 +20,10 @@ pub struct Error {
 }
 
 impl Error {
-    pub fn new(message: String) -> Self {
-        Error { message }
+    pub fn new<S: std::fmt::Display>(message: S) -> Self {
+        Error {
+            message: message.to_string(),
+        }
     }
 }
 

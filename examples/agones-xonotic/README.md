@@ -25,7 +25,7 @@ Instead of connecting Xonotic directly, take the IP and port from the Agones hos
 `${GAMESERVER_IP}` and `${GAMESERVER_PORT}` values in a local copy of `client-compress.yaml`. Run this configuration 
 locally as:
 
-`quilkin -c ./client-compress.yaml`
+`quilkin run -c ./client-compress.yaml`
 
 From there connect to the local client proxy on "127.0.0.1:7000" via the "Multiplayer > Address" field in the 
 Xonotic client, and Quilkin will take care of compressing the data for you without having to change either the 

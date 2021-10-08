@@ -28,7 +28,7 @@ static:
 ```
 
 The load balancing policy (the strategy to use to select what endpoint to send traffic to) is configurable.
-In the example above, packets will be distributed by selecting endpoints in turn, in round robin fashion
+In the example above, packets will be distributed by selecting endpoints in turn, in round robin fashion.
 
 ### Configuration Options
 
@@ -41,6 +41,7 @@ properties:
     enum:
       - ROUND_ROBIN # Send packets by selecting endpoints in turn.
       - RANDOM      # Send packets by randomly selecting endpoints.
+      - HASH        # Send packets by hashing the source IP and port.
     default: ROUND_ROBIN
 ```
 

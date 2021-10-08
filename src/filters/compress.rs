@@ -163,13 +163,15 @@ impl FilterFactory for CompressFactory {
         NAME
     }
 
-    fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
-        Ok(Box::new(Compress::new(
-            &self.log,
-            self.require_config(args.config)?
-                .deserialize::<Config, ProtoConfig>(self.name())?,
-            Metrics::new(&args.metrics_registry)?,
-        )))
+    fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
+        let (config_json, config) = self
+            .require_config(args.config)?
+            .deserialize::<Config, ProtoConfig>(self.name())?;
+        let filter = Compress::new(&self.log, config, Metrics::new(&args.metrics_registry)?);
+        Ok(FilterInstance::new(
+            config_json,
+            Box::new(filter) as Box<dyn Filter>,
+        ))
     }
 }
 
@@ -180,8 +182,7 @@ mod tests {
     use prometheus::Registry;
     use serde_yaml::{Mapping, Value};
 
-    use crate::cluster::Endpoint;
-    use crate::config::{Endpoints, UpstreamEndpoints};
+    use crate::endpoint::{Endpoint, Endpoints, UpstreamEndpoints};
     use crate::filters::{
         compress::{compressor::Snappy, Compressor},
         CreateFilterArgs, Filter, FilterFactory, ReadContext, WriteContext,
@@ -301,7 +302,8 @@ mod tests {
                 Registry::default(),
                 Some(&Value::Mapping(map)),
             ))
-            .expect("should create a filter");
+            .expect("should create a filter")
+            .filter;
         assert_downstream(filter.as_ref());
     }
 
@@ -322,7 +324,10 @@ mod tests {
         let config = Value::Mapping(map);
         let args = CreateFilterArgs::fixed(Registry::default(), Some(&config));
 
-        let filter = factory.create_filter(args).expect("should create a filter");
+        let filter = factory
+            .create_filter(args)
+            .expect("should create a filter")
+            .filter;
         assert_downstream(filter.as_ref());
     }
 
@@ -344,10 +349,7 @@ mod tests {
         let read_response = compress
             .read(ReadContext::new(
                 UpstreamEndpoints::from(
-                    Endpoints::new(vec![Endpoint::from_address(
-                        "127.0.0.1:80".parse().unwrap(),
-                    )])
-                    .unwrap(),
+                    Endpoints::new(vec![Endpoint::new("127.0.0.1:80".parse().unwrap())]).unwrap(),
                 ),
                 "127.0.0.1:8080".parse().unwrap(),
                 expected.clone(),
@@ -373,7 +375,7 @@ mod tests {
         // write decompress
         let write_response = compress
             .write(WriteContext::new(
-                &Endpoint::from_address("127.0.0.1:80".parse().unwrap()),
+                &Endpoint::new("127.0.0.1:80".parse().unwrap()),
                 "127.0.0.1:8080".parse().unwrap(),
                 "127.0.0.1:8081".parse().unwrap(),
                 read_response.contents.clone(),
@@ -438,7 +440,7 @@ mod tests {
         );
 
         let write_response = compression.write(WriteContext::new(
-            &Endpoint::from_address("127.0.0.1:80".parse().unwrap()),
+            &Endpoint::new("127.0.0.1:80".parse().unwrap()),
             "127.0.0.1:8080".parse().unwrap(),
             "127.0.0.1:8081".parse().unwrap(),
             b"hello".to_vec(),
@@ -460,10 +462,7 @@ mod tests {
 
         let read_response = compression.read(ReadContext::new(
             UpstreamEndpoints::from(
-                Endpoints::new(vec![Endpoint::from_address(
-                    "127.0.0.1:80".parse().unwrap(),
-                )])
-                .unwrap(),
+                Endpoints::new(vec![Endpoint::new("127.0.0.1:80".parse().unwrap())]).unwrap(),
             ),
             "127.0.0.1:8080".parse().unwrap(),
             b"hello".to_vec(),
@@ -491,10 +490,7 @@ mod tests {
 
         let read_response = compression.read(ReadContext::new(
             UpstreamEndpoints::from(
-                Endpoints::new(vec![Endpoint::from_address(
-                    "127.0.0.1:80".parse().unwrap(),
-                )])
-                .unwrap(),
+                Endpoints::new(vec![Endpoint::new("127.0.0.1:80".parse().unwrap())]).unwrap(),
             ),
             "127.0.0.1:8080".parse().unwrap(),
             b"hello".to_vec(),
@@ -502,7 +498,7 @@ mod tests {
         assert_eq!(b"hello".to_vec(), read_response.unwrap().contents);
 
         let write_response = compression.write(WriteContext::new(
-            &Endpoint::from_address("127.0.0.1:80".parse().unwrap()),
+            &Endpoint::new("127.0.0.1:80".parse().unwrap()),
             "127.0.0.1:8080".parse().unwrap(),
             "127.0.0.1:8081".parse().unwrap(),
             b"hello".to_vec(),
@@ -560,7 +556,7 @@ mod tests {
         // write compress
         let write_response = filter
             .write(WriteContext::new(
-                &Endpoint::from_address("127.0.0.1:80".parse().unwrap()),
+                &Endpoint::new("127.0.0.1:80".parse().unwrap()),
                 "127.0.0.1:8080".parse().unwrap(),
                 "127.0.0.1:8081".parse().unwrap(),
                 expected.clone(),
@@ -579,10 +575,7 @@ mod tests {
         let read_response = filter
             .read(ReadContext::new(
                 UpstreamEndpoints::from(
-                    Endpoints::new(vec![Endpoint::from_address(
-                        "127.0.0.1:80".parse().unwrap(),
-                    )])
-                    .unwrap(),
+                    Endpoints::new(vec![Endpoint::new("127.0.0.1:80".parse().unwrap())]).unwrap(),
                 ),
                 "127.0.0.1:8080".parse().unwrap(),
                 write_response.contents.clone(),

@@ -26,7 +26,7 @@ static SERVER_INIT: Lazy<()> = Lazy::new(|| {
             .with_port(8000)
             .with_static(
                 vec![],
-                vec![quilkin::config::EndPoint::new(
+                vec![quilkin::endpoint::Endpoint::new(
                     FEEDBACK_LOOP_ADDR.parse().unwrap(),
                 )],
             )

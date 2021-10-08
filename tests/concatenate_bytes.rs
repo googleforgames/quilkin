@@ -14,50 +14,50 @@
  * limitations under the License.
  */
 
-#[cfg(test)]
-mod tests {
-    use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
-    use tokio::time::{timeout, Duration};
+use tokio::time::{timeout, Duration};
 
-    use quilkin::config::{Builder, EndPoint, Filter};
-    use quilkin::filters::concatenate_bytes;
-    use quilkin::test_utils::TestHelper;
+use quilkin::{
+    config::{Builder, Filter},
+    endpoint::Endpoint,
+    filters::concatenate_bytes,
+    test_utils::TestHelper,
+};
 
-    #[tokio::test]
-    async fn concatenate_bytes() {
-        let mut t = TestHelper::default();
-        let yaml = "
+#[tokio::test]
+async fn concatenate_bytes() {
+    let mut t = TestHelper::default();
+    let yaml = "
 on_read: APPEND
 bytes: YWJj #abc
 ";
-        let echo = t.run_echo_server().await;
+    let echo = t.run_echo_server().await;
 
-        let server_port = 12346;
-        let server_config = Builder::empty()
-            .with_port(server_port)
-            .with_static(
-                vec![Filter {
-                    name: concatenate_bytes::factory().name().into(),
-                    config: serde_yaml::from_str(yaml).unwrap(),
-                }],
-                vec![EndPoint::new(echo)],
-            )
-            .build();
-        t.run_server_with_config(server_config);
+    let server_port = 12346;
+    let server_config = Builder::empty()
+        .with_port(server_port)
+        .with_static(
+            vec![Filter {
+                name: concatenate_bytes::factory().name().into(),
+                config: serde_yaml::from_str(yaml).unwrap(),
+            }],
+            vec![Endpoint::new(echo)],
+        )
+        .build();
+    t.run_server_with_config(server_config);
 
-        // let's send the packet
-        let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
+    // let's send the packet
+    let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
 
-        let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port);
-        socket.send_to(b"hello", &local_addr).await.unwrap();
+    let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port);
+    socket.send_to(b"hello", &local_addr).await.unwrap();
 
-        assert_eq!(
-            "helloabc",
-            timeout(Duration::from_secs(5), recv_chan.recv())
-                .await
-                .expect("should have received a packet")
-                .unwrap()
-        );
-    }
+    assert_eq!(
+        "helloabc",
+        timeout(Duration::from_secs(5), recv_chan.recv())
+            .await
+            .expect("should have received a packet")
+            .unwrap()
+    );
 }

@@ -38,7 +38,8 @@ struct LoadBalancer {
 
 impl Filter for LoadBalancer {
     fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
-        self.endpoint_chooser.choose_endpoints(&mut ctx.endpoints);
+        self.endpoint_chooser
+            .choose_endpoints(&mut ctx.endpoints, ctx.from);
         Some(ctx.into())
     }
 }
@@ -50,14 +51,17 @@ impl FilterFactory for LoadBalancerFilterFactory {
         NAME
     }
 
-    fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
-        let config: Config = self
+    fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
+        let (config_json, config) = self
             .require_config(args.config)?
             .deserialize::<Config, ProtoConfig>(self.name())?;
-
-        Ok(Box::new(LoadBalancer {
+        let filter = LoadBalancer {
             endpoint_chooser: config.policy.as_endpoint_chooser(),
-        }))
+        };
+        Ok(FilterInstance::new(
+            config_json,
+            Box::new(filter) as Box<dyn Filter>,
+        ))
     }
 }
 
@@ -66,11 +70,12 @@ mod tests {
     use std::collections::HashSet;
     use std::net::SocketAddr;
 
-    use crate::cluster::Endpoint;
-    use crate::config::Endpoints;
-    use crate::filters::{
-        load_balancer::LoadBalancerFilterFactory, CreateFilterArgs, Filter, FilterFactory,
-        ReadContext,
+    use crate::{
+        endpoint::{Endpoint, Endpoints},
+        filters::{
+            load_balancer::LoadBalancerFilterFactory, CreateFilterArgs, Filter, FilterFactory,
+            ReadContext,
+        },
     };
     use prometheus::Registry;
 
@@ -82,23 +87,25 @@ mod tests {
                 Some(&serde_yaml::from_str(config).unwrap()),
             ))
             .unwrap()
+            .filter
     }
 
     fn get_response_addresses(
         filter: &dyn Filter,
         input_addresses: &[SocketAddr],
+        source: SocketAddr,
     ) -> Vec<SocketAddr> {
         filter
             .read(ReadContext::new(
                 Endpoints::new(
                     input_addresses
                         .iter()
-                        .map(|addr| Endpoint::from_address(*addr))
+                        .map(|addr| Endpoint::new(*addr))
                         .collect(),
                 )
                 .unwrap()
                 .into(),
-                "127.0.0.1:8080".parse().unwrap(),
+                source,
                 vec![],
             ))
             .unwrap()
@@ -128,7 +135,11 @@ policy: ROUND_ROBIN
             assert_eq!(
                 expected_sequence,
                 (0..addresses.len())
-                    .map(|_| get_response_addresses(filter.as_ref(), &addresses))
+                    .map(|_| get_response_addresses(
+                        filter.as_ref(),
+                        &addresses,
+                        "127.0.0.1:8080".parse().unwrap()
+                    ))
                     .collect::<Vec<_>>()
             );
         }
@@ -151,7 +162,13 @@ policy: RANDOM
         let mut result_sequences = vec![];
         for _ in 0..10 {
             let sequence = (0..addresses.len())
-                .map(|_| get_response_addresses(filter.as_ref(), &addresses))
+                .map(|_| {
+                    get_response_addresses(
+                        filter.as_ref(),
+                        &addresses,
+                        "127.0.0.1:8080".parse().unwrap(),
+                    )
+                })
                 .collect::<Vec<_>>();
             result_sequences.push(sequence);
         }
@@ -174,5 +191,113 @@ policy: RANDOM
                 .any(|seq| seq != &result_sequences[0]),
             "the same sequence of addresses were chosen for random load balancer"
         );
+    }
+
+    #[test]
+    fn hash_load_balancer_policy() {
+        let addresses = vec![
+            "127.0.0.1:8080".parse().unwrap(),
+            "127.0.0.2:8080".parse().unwrap(),
+            "127.0.0.3:8080".parse().unwrap(),
+        ];
+        let source_ips = vec!["127.1.1.1", "127.2.2.2", "127.3.3.3"];
+        let source_ports = vec!["11111", "22222", "33333", "44444", "55555"];
+
+        let yaml = "
+policy: HASH
+";
+        let filter = create_filter(yaml);
+
+        // Run a few selection rounds through the addresses.
+        let mut result_sequences = vec![];
+        for _ in 0..10 {
+            let sequence = (0..addresses.len())
+                .map(|_| {
+                    get_response_addresses(
+                        filter.as_ref(),
+                        &addresses,
+                        "127.0.0.1:8080".parse().unwrap(),
+                    )
+                })
+                .collect::<Vec<_>>();
+            result_sequences.push(sequence);
+        }
+
+        // Verify that all packets went the same way
+        assert_eq!(
+            1,
+            result_sequences
+                .into_iter()
+                .flatten()
+                .flatten()
+                .collect::<HashSet<_>>()
+                .len(),
+        );
+
+        // Run a few selection rounds through the address
+        // this time vary the port for a single IP
+        let mut result_sequences = vec![];
+        for port in &source_ports {
+            let sequence = (0..addresses.len())
+                .map(|_| {
+                    get_response_addresses(
+                        filter.as_ref(),
+                        &addresses,
+                        format!("127.0.0.1:{}", port).parse().unwrap(),
+                    )
+                })
+                .collect::<Vec<_>>();
+            result_sequences.push(sequence);
+        }
+
+        // Verify that more than 1 path was picked
+        assert_ne!(
+            1,
+            result_sequences
+                .into_iter()
+                .flatten()
+                .flatten()
+                .collect::<HashSet<_>>()
+                .len(),
+        );
+
+        // Run a few selection rounds through the addresses
+        // This time vary the source IP and port
+        let mut result_sequences = vec![];
+        for ip in source_ips {
+            for port in &source_ports {
+                let sequence = (0..addresses.len())
+                    .map(|_| {
+                        get_response_addresses(
+                            filter.as_ref(),
+                            &addresses,
+                            format!("{}:{}", ip, port).parse().unwrap(),
+                        )
+                    })
+                    .collect::<Vec<_>>();
+                result_sequences.push(sequence);
+            }
+        }
+
+        // Check that every address was chosen at least once.
+        assert_eq!(
+            addresses.into_iter().collect::<HashSet<_>>(),
+            result_sequences
+                .clone()
+                .into_iter()
+                .flatten()
+                .flatten()
+                .collect::<HashSet<_>>(),
+        );
+
+        // Check that there is at least one different sequence of addresses.
+        assert!(
+            &result_sequences[1..]
+                .iter()
+                .any(|seq| seq != &result_sequences[0]),
+            "the same sequence of addresses were chosen for hash load balancer"
+        );
+
+        //
     }
 }

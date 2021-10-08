@@ -16,9 +16,9 @@
 
 use std::sync::Arc;
 
-use crate::filters::{CreateFilterArgs, Error, Filter, FilterMap, FilterSet};
+use crate::filters::{CreateFilterArgs, Error, FilterInstance, FilterMap, FilterSet};
 
-/// Registry of all [`Filter`]s that can be applied in the system.
+/// Registry of all [`Filter`][crate::filters::Filter]s that can be applied in the system.
 ///
 /// **Note:** Cloning [`FilterRegistry`], clones a new reference to the data and
 /// does not clone the data itself. In other words the clone is "shallow" and
@@ -42,10 +42,10 @@ impl FilterRegistry {
         }
     }
 
-    /// Creates and returns a new dynamic instance of [`Filter`] for a given
-    /// `key`. Errors if ther filter cannot be found, or if there is a
+    /// Creates and returns a new dynamic instance of [`Filter`][crate::filters::Filter] for a given
+    /// `key`. Errors if the filter cannot be found, or if there is a
     /// configuration issue.
-    pub fn get(&self, key: &str, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
+    pub fn get(&self, key: &str, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
         match self.registry.get(key).map(|p| p.create_filter(args)) {
             None => Err(Error::NotFound(key.to_owned())),
             Some(filter) => filter,
@@ -60,9 +60,8 @@ mod tests {
     use crate::test_utils::{logger, new_registry};
 
     use super::*;
-    use crate::cluster::Endpoint;
-    use crate::config::Endpoints;
-    use crate::filters::{ReadContext, ReadResponse, WriteContext, WriteResponse};
+    use crate::endpoint::{Endpoint, Endpoints};
+    use crate::filters::{Filter, ReadContext, ReadResponse, WriteContext, WriteResponse};
     use prometheus::Registry;
 
     struct TestFilter {}
@@ -101,18 +100,17 @@ mod tests {
                 &String::from("TestFilter"),
                 CreateFilterArgs::fixed(Registry::default(), None),
             )
-            .unwrap();
+            .unwrap()
+            .filter;
 
         let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080);
-        let endpoint = Endpoint::from_address(addr);
+        let endpoint = Endpoint::new(addr);
 
         assert!(filter
             .read(ReadContext::new(
-                Endpoints::new(vec![Endpoint::from_address(
-                    "127.0.0.1:8080".parse().unwrap(),
-                )])
-                .unwrap()
-                .into(),
+                Endpoints::new(vec![Endpoint::new("127.0.0.1:8080".parse().unwrap(),)])
+                    .unwrap()
+                    .into(),
                 addr,
                 vec![]
             ))
