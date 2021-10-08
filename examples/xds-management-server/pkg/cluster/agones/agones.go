@@ -24,9 +24,10 @@ import (
 	"time"
 
 	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
+	"agones.dev/agones/pkg/client/informers/externalversions"
+
 	agones "agones.dev/agones/pkg/client/clientset/versioned"
 	log "github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"quilkin.dev/xds-management-server/pkg/cluster"
@@ -63,13 +64,11 @@ func NewProvider(logger *log.Logger, config Config) (*Provider, error) {
 // Run spawns a goroutine in the background that watches Agones GameServers
 // and exposes them as endpoints via the returned Cluster channel.
 func (p *Provider) Run(ctx context.Context) (<-chan []cluster.Cluster, error) {
-	gameServerListWatch := cache.NewListWatchFromClient(
-		p.agonesClient.AgonesV1().RESTClient(),
-		"gameservers",
-		p.config.GameServersNamespace,
-		fields.Everything())
-
-	gameServerInformer := cache.NewSharedInformer(gameServerListWatch, &agonesv1.GameServer{}, 0)
+	informerFactory := externalversions.NewSharedInformerFactoryWithOptions(
+		p.agonesClient,
+		0,
+		externalversions.WithNamespace(p.config.GameServersNamespace))
+	gameServerInformer := informerFactory.Agones().V1().GameServers().Informer()
 	gameServerStore := gameServerInformer.GetStore()
 	go gameServerInformer.Run(ctx.Done())
 

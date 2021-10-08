@@ -27,7 +27,7 @@ import (
 	k8scorev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/clock"
-	informersv1 "k8s.io/client-go/informers/core/v1"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"quilkin.dev/xds-management-server/pkg/filterchain"
@@ -82,9 +82,15 @@ func NewProvider(
 	k8sClient kubernetes.Interface,
 	podNamespace string,
 	proxyRefreshInterval time.Duration) (*Provider, error) {
-	podInformer := informersv1.NewFilteredPodInformer(k8sClient, podNamespace, 0, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, func(options *metav1.ListOptions) {
-		options.LabelSelector = labelSelectorProxyRole
-	})
+	informerFactory := informers.NewSharedInformerFactoryWithOptions(
+		k8sClient,
+		0,
+		informers.WithNamespace(podNamespace),
+		informers.WithTweakListOptions(func(options *metav1.ListOptions) {
+			options.LabelSelector = labelSelectorProxyRole
+		}),
+	)
+	podInformer := informerFactory.Core().V1().Pods().Informer()
 	go podInformer.Run(ctx.Done())
 
 	return &Provider{
