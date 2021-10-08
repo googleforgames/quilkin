@@ -51,15 +51,13 @@ The project has two binaries depending on the external source of configuration:
        # ...
        # The rest of the body contains filter specific configuration or
        # is empty if the filter has no configuration.
-
      }
    }]
    ```
    Example:
    ```yaml
    clusters:
-   - 'c-a':
-     name: cluster-a
+   - name: cluster-a
      endpoints:
      - ip: 123.0.0.1
        port": 29
