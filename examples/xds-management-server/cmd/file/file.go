@@ -1,3 +1,19 @@
+/*
+ * Copyright 2021 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package main
 
 import (
@@ -19,7 +35,7 @@ import (
 
 type flags struct {
 	Config string `name:"config" help:"Resource config file path." type:"path" default:"config.yaml"`
-	Port   int16  `name:"int16" help:"Server listening port." default:"18000"`
+	Port   int16  `name:"port" help:"Server listening port." default:"18000"`
 }
 
 func main() {
