@@ -15,6 +15,7 @@
  */
 
 mod cluster;
+pub mod log;
 pub mod metadata;
 pub(crate) mod metrics;
 pub(crate) mod prost;
@@ -36,7 +37,9 @@ pub type Result<T, E = runner::Error> = std::result::Result<T, E>;
 #[doc(inline)]
 pub use self::{
     config::Config,
-    proxy::{logger, Builder, PendingValidation, Server, Validated},
+    proxy::{
+        builder::from_config as builder_from_config, Builder, PendingValidation, Server, Validated,
+    },
     runner::{run, run_with_config},
 };
 

@@ -17,33 +17,34 @@
 use std::convert::TryFrom;
 
 use serde::{Deserialize, Serialize};
-use slog::{info, o, Logger};
+use slog::o;
 
 use crate::filters::prelude::*;
 
 crate::include_proto!("quilkin.extensions.filters.debug.v1alpha1");
 use self::quilkin::extensions::filters::debug::v1alpha1::Debug as ProtoDebug;
+use crate::info;
+use crate::log::SharedLogger;
 
 /// Debug logs all incoming and outgoing packets
-#[derive(Debug)]
 struct Debug {
-    log: Logger,
+    log: SharedLogger,
 }
 
 pub const NAME: &str = "quilkin.extensions.filters.debug.v1alpha1.Debug";
 
 /// Creates a new factory for generating debug filters.
-pub fn factory(base: &Logger) -> DynFilterFactory {
+pub fn factory(base: &SharedLogger) -> DynFilterFactory {
     Box::from(DebugFactory::new(base))
 }
 
 impl Debug {
     /// Constructor for the Debug. Pass in a "id" to append a string to your log messages from this
     /// Filter.
-    fn new(base: &Logger, id: Option<String>) -> Self {
+    fn new(base: &SharedLogger, id: Option<String>) -> Self {
         let log = match id {
-            None => base.new(o!("source" => "extensions::Debug")),
-            Some(id) => base.new(o!("source" => "extensions::Debug", "id" => id)),
+            None => base.child(o!("source" => "extensions::Debug")),
+            Some(id) => base.child(o!("source" => "extensions::Debug", "id" => id)),
         };
 
         Debug { log }
@@ -76,11 +77,11 @@ fn packet_to_string(contents: Vec<u8>) -> String {
 
 /// Factory for the Debug
 struct DebugFactory {
-    log: Logger,
+    log: SharedLogger,
 }
 
 impl DebugFactory {
-    pub fn new(base: &Logger) -> Self {
+    pub fn new(base: &SharedLogger) -> Self {
         DebugFactory { log: base.clone() }
     }
 }
@@ -127,26 +128,27 @@ mod tests {
     use serde_yaml::Mapping;
     use serde_yaml::Value;
 
-    use crate::test_utils::{assert_filter_read_no_change, assert_write_no_change, logger};
+    use crate::test_utils::{assert_filter_read_no_change, assert_write_no_change};
 
     use super::*;
+    use crate::log::test_logger;
     use prometheus::Registry;
 
     #[test]
     fn read() {
-        let df = Debug::new(&logger(), None);
+        let df = Debug::new(&test_logger(), None);
         assert_filter_read_no_change(&df);
     }
 
     #[test]
     fn write() {
-        let df = Debug::new(&logger(), None);
+        let df = Debug::new(&test_logger(), None);
         assert_write_no_change(&df);
     }
 
     #[test]
     fn from_config_with_id() {
-        let log = logger();
+        let log = test_logger();
         let mut map = Mapping::new();
         let factory = DebugFactory::new(&log);
 
@@ -161,7 +163,7 @@ mod tests {
 
     #[test]
     fn from_config_without_id() {
-        let log = logger();
+        let log = test_logger();
         let mut map = Mapping::new();
         let factory = DebugFactory::new(&log);
 
@@ -176,7 +178,7 @@ mod tests {
 
     #[test]
     fn from_config_should_error() {
-        let log = logger();
+        let log = test_logger();
         let mut map = Mapping::new();
         let factory = DebugFactory::new(&log);
 

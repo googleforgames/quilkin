@@ -22,7 +22,7 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[tokio::main]
 async fn main() -> quilkin::Result<()> {
-    let log = quilkin::logger();
+    let log = quilkin::log::create_default_rate_limited_logger();
     let version: std::borrow::Cow<'static, str> = if cfg!(debug_assertions) {
         format!("{}+debug", VERSION).into()
     } else {
@@ -48,7 +48,7 @@ async fn main() -> quilkin::Result<()> {
         )
         .get_matches();
 
-    slog::info!(log, "Starting Quilkin"; "version" => &*version);
+    quilkin::info!(log, "Starting Quilkin"; "version" => &*version);
 
     match cli.subcommand() {
         ("run", Some(matches)) => {

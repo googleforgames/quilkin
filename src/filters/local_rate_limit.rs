@@ -21,7 +21,6 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
-use slog::Logger;
 
 use metrics::Metrics;
 
@@ -32,11 +31,12 @@ mod metrics;
 
 crate::include_proto!("quilkin.extensions.filters.local_rate_limit.v1alpha1");
 use self::quilkin::extensions::filters::local_rate_limit::v1alpha1::LocalRateLimit as ProtoConfig;
+use crate::log::SharedLogger;
 
 pub const NAME: &str = "quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit";
 
 /// Creates a new factory for generating rate limiting filters.
-pub fn factory(base: &Logger) -> DynFilterFactory {
+pub fn factory(base: &SharedLogger) -> DynFilterFactory {
     Box::from(LocalRateLimitFactory::new(base))
 }
 
@@ -82,7 +82,7 @@ struct LocalRateLimit {
 impl LocalRateLimit {
     /// new returns a new LocalRateLimit. It spawns a future in the background
     /// that periodically refills the rate limiter's tokens.
-    fn new(log: Logger, config: Config, metrics: Metrics) -> Self {
+    fn new(log: SharedLogger, config: Config, metrics: Metrics) -> Self {
         LocalRateLimit {
             state: TtlMap::new(log, SESSION_TIMEOUT_SECONDS, SESSION_EXPIRY_POLL_INTERVAL),
             config,
@@ -165,11 +165,11 @@ impl Filter for LocalRateLimit {
 
 /// Creates instances of [`LocalRateLimit`].
 struct LocalRateLimitFactory {
-    log: Logger,
+    log: SharedLogger,
 }
 
 impl LocalRateLimitFactory {
-    pub fn new(base: &Logger) -> Self {
+    pub fn new(base: &SharedLogger) -> Self {
         LocalRateLimitFactory { log: base.clone() }
     }
 }
@@ -246,12 +246,13 @@ mod tests {
         local_rate_limit::{metrics::Metrics, Config, LocalRateLimit},
         CreateFilterArgs, Filter, FilterFactory, ReadContext,
     };
-    use crate::test_utils::{assert_write_no_change, logger};
+    use crate::log::test_logger;
+    use crate::test_utils::assert_write_no_change;
     use std::net::SocketAddr;
 
     fn rate_limiter(config: Config) -> LocalRateLimit {
         LocalRateLimit::new(
-            logger(),
+            test_logger(),
             config,
             Metrics::new(&Registry::default()).unwrap(),
         )
@@ -273,7 +274,7 @@ mod tests {
 
     #[tokio::test]
     async fn config_minimum_period() {
-        let factory = LocalRateLimitFactory::new(&logger());
+        let factory = LocalRateLimitFactory::new(&test_logger());
         let config = "
 max_packets: 10
 period: 0

@@ -20,26 +20,28 @@ mod metrics;
 
 crate::include_proto!("quilkin.extensions.filters.compress.v1alpha1");
 
-use slog::{o, warn, Logger};
+use slog::o;
 
-use crate::{config::LOG_SAMPLING_RATE, filters::prelude::*};
+use crate::filters::prelude::*;
 
 use self::quilkin::extensions::filters::compress::v1alpha1::Compress as ProtoConfig;
 use compressor::Compressor;
 use metrics::Metrics;
 
+use crate::log::SharedLogger;
+use crate::warn;
 pub use config::{Action, Config, Mode};
 
 pub const NAME: &str = "quilkin.extensions.filters.compress.v1alpha1.Compress";
 
 /// Returns a factory for creating compression filters.
-pub fn factory(base: &Logger) -> DynFilterFactory {
+pub fn factory(base: &SharedLogger) -> DynFilterFactory {
     Box::from(CompressFactory::new(base))
 }
 
 /// Filter for compressing and decompressing packet data
 struct Compress {
-    log: Logger,
+    log: SharedLogger,
     metrics: Metrics,
     compression_mode: Mode,
     on_read: Action,
@@ -48,9 +50,9 @@ struct Compress {
 }
 
 impl Compress {
-    fn new(base: &Logger, config: Config, metrics: Metrics) -> Self {
+    fn new(base: &SharedLogger, config: Config, metrics: Metrics) -> Self {
         Self {
-            log: base.new(o!("source" => "extensions::Compress")),
+            log: base.child(o!("source" => "extensions::Compress")),
             metrics,
             compressor: config.mode.as_compressor(),
             compression_mode: config.mode,
@@ -61,22 +63,18 @@ impl Compress {
 
     /// Track a failed attempt at compression
     fn failed_compression<T>(&self, err: &dyn std::error::Error) -> Option<T> {
-        if self.metrics.packets_dropped_compress.get() % LOG_SAMPLING_RATE == 0 {
-            warn!(self.log, "Packets are being dropped as they could not be compressed";
+        warn!(self.log, "Packets are being dropped as they could not be compressed";
                             "mode" => #?self.compression_mode, "error" => %err,
                             "count" => self.metrics.packets_dropped_compress.get());
-        }
         self.metrics.packets_dropped_compress.inc();
         None
     }
 
     /// Track a failed attempt at decompression
     fn failed_decompression<T>(&self, err: &dyn std::error::Error) -> Option<T> {
-        if self.metrics.packets_dropped_decompress.get() % LOG_SAMPLING_RATE == 0 {
-            warn!(self.log, "Packets are being dropped as they could not be decompressed";
+        warn!(self.log, "Packets are being dropped as they could not be decompressed";
                             "mode" => #?self.compression_mode, "error" => %err,
                             "count" => self.metrics.packets_dropped_decompress.get());
-        }
         self.metrics.packets_dropped_decompress.inc();
         None
     }
@@ -149,11 +147,11 @@ impl Filter for Compress {
 }
 
 struct CompressFactory {
-    log: Logger,
+    log: SharedLogger,
 }
 
 impl CompressFactory {
-    pub fn new(base: &Logger) -> Self {
+    pub fn new(base: &SharedLogger) -> Self {
         CompressFactory { log: base.clone() }
     }
 }
@@ -187,13 +185,13 @@ mod tests {
         compress::{compressor::Snappy, Compressor},
         CreateFilterArgs, Filter, FilterFactory, ReadContext, WriteContext,
     };
-    use crate::test_utils::logger;
 
     use super::quilkin::extensions::filters::compress::v1alpha1::{
         compress::{Action as ProtoAction, ActionValue, Mode as ProtoMode, ModeValue},
         Compress as ProtoConfig,
     };
     use super::{Action, Compress, CompressFactory, Config, Metrics, Mode};
+    use crate::log::test_logger;
 
     #[test]
     fn convert_proto_config() {
@@ -286,7 +284,7 @@ mod tests {
 
     #[test]
     fn default_mode_factory() {
-        let log = logger();
+        let log = test_logger();
         let factory = CompressFactory::new(&log);
         let mut map = Mapping::new();
         map.insert(
@@ -309,7 +307,7 @@ mod tests {
 
     #[test]
     fn config_factory() {
-        let log = logger();
+        let log = test_logger();
         let factory = CompressFactory::new(&log);
         let mut map = Mapping::new();
         map.insert(Value::String("mode".into()), Value::String("SNAPPY".into()));
@@ -333,7 +331,7 @@ mod tests {
 
     #[test]
     fn upstream() {
-        let log = logger();
+        let log = test_logger();
         let compress = Compress::new(
             &log,
             Config {
@@ -399,7 +397,7 @@ mod tests {
 
     #[test]
     fn downstream() {
-        let log = logger();
+        let log = test_logger();
         let compress = Compress::new(
             &log,
             Config {
@@ -428,7 +426,7 @@ mod tests {
 
     #[test]
     fn failed_decompress() {
-        let log = logger();
+        let log = test_logger();
         let compression = Compress::new(
             &log,
             Config {
@@ -477,7 +475,7 @@ mod tests {
 
     #[test]
     fn do_nothing() {
-        let log = logger();
+        let log = test_logger();
         let compression = Compress::new(
             &log,
             Config {

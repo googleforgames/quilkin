@@ -19,24 +19,29 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use slog::{debug, error, o, trace, warn, Logger};
+use slog::o;
 use tokio::net::UdpSocket;
 use tokio::select;
 use tokio::sync::{mpsc, watch};
 use tokio::time::{Duration, Instant};
 
 use crate::{
+    debug,
     endpoint::Endpoint,
+    error,
     filters::{manager::SharedFilterManager, Filter, WriteContext},
+    log::SharedLogger,
     proxy::sessions::{error::Error, metrics::Metrics},
+    trace,
     utils::debug,
+    warn,
 };
 
 type Result<T> = std::result::Result<T, Error>;
 
 /// Session encapsulates a UDP stream session
 pub struct Session {
-    log: Logger,
+    log: SharedLogger,
     metrics: Metrics,
     filter_manager: SharedFilterManager,
     /// created_at is time at which the session was created
@@ -101,7 +106,7 @@ impl Session {
     /// new creates a new Session, and starts the process of receiving udp sockets
     /// from its ephemeral port from endpoint(s)
     pub async fn new(
-        base: &Logger,
+        base: &SharedLogger,
         metrics: Metrics,
         filter_manager: SharedFilterManager,
         from: SocketAddr,
@@ -109,8 +114,9 @@ impl Session {
         sender: mpsc::Sender<Packet>,
         ttl: Duration,
     ) -> Result<Self> {
-        let log = base
-            .new(o!("source" => "proxy::Session", "from" => from, "dest_address" => dest.address));
+        let log = base.child(
+            o!("source" => "proxy::Session", "from" => from, "dest_address" => dest.address),
+        );
         let addr = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 0);
         let socket = Arc::new(UdpSocket::bind(addr).await.map_err(Error::BindUdpSocket)?);
         let (shutdown_tx, shutdown_rx) = watch::channel::<()>(());
@@ -205,7 +211,7 @@ impl Session {
 
     /// process_recv_packet processes a packet that is received by this session.
     async fn process_recv_packet(
-        log: &Logger,
+        log: &SharedLogger,
         metrics: &Metrics,
         sender: &mut mpsc::Sender<Packet>,
         expiration: &Arc<AtomicU64>,

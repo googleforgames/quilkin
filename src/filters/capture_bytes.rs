@@ -21,7 +21,7 @@ mod proto;
 
 use std::sync::Arc;
 
-use slog::{o, warn, Logger};
+use slog::o;
 
 use crate::filters::prelude::*;
 
@@ -29,17 +29,19 @@ use capture::Capture;
 use metrics::Metrics;
 use proto::quilkin::extensions::filters::capture_bytes::v1alpha1::CaptureBytes as ProtoConfig;
 
+use crate::log::SharedLogger;
+use crate::warn;
 pub use config::{Config, Strategy};
 
 pub const NAME: &str = "quilkin.extensions.filters.capture_bytes.v1alpha1.CaptureBytes";
 
 /// Creates a new factory for generating capture filters.
-pub fn factory(base: &Logger) -> DynFilterFactory {
+pub fn factory(base: &SharedLogger) -> DynFilterFactory {
     Box::from(CaptureBytesFactory::new(base))
 }
 
 struct CaptureBytes {
-    log: Logger,
+    log: SharedLogger,
     capture: Box<dyn Capture + Sync + Send>,
     /// metrics reporter for this filter.
     metrics: Metrics,
@@ -49,9 +51,9 @@ struct CaptureBytes {
 }
 
 impl CaptureBytes {
-    fn new(base: &Logger, config: Config, metrics: Metrics) -> Self {
+    fn new(base: &SharedLogger, config: Config, metrics: Metrics) -> Self {
         CaptureBytes {
-            log: base.new(o!("source" => "extensions::CaptureBytes")),
+            log: base.child(o!("source" => "extensions::CaptureBytes")),
             capture: config.strategy.as_capture(),
             metrics,
             metadata_key: Arc::new(config.metadata_key),
@@ -66,13 +68,11 @@ impl Filter for CaptureBytes {
         // if the capture size is bigger than the packet size, then we drop the packet,
         // and occasionally warn
         if ctx.contents.len() < self.size {
-            if self.metrics.packets_dropped_total.get() % 1000 == 0 {
-                warn!(
-                    self.log,
-                    "Packets are being dropped due to their length being less than {} bytes",
-                    self.size; "count" => self.metrics.packets_dropped_total.get()
-                );
-            }
+            warn!(
+                self.log,
+                "Packets are being dropped due to their length being less than {} bytes",
+                self.size; "count" => self.metrics.packets_dropped_total.get()
+            );
             self.metrics.packets_dropped_total.inc();
             return None;
         }
@@ -88,11 +88,11 @@ impl Filter for CaptureBytes {
 }
 
 struct CaptureBytesFactory {
-    log: Logger,
+    log: SharedLogger,
 }
 
 impl CaptureBytesFactory {
-    pub fn new(base: &Logger) -> Self {
+    pub fn new(base: &SharedLogger) -> Self {
         CaptureBytesFactory { log: base.clone() }
     }
 }
@@ -122,7 +122,7 @@ mod tests {
     use serde_yaml::{Mapping, Value};
 
     use crate::endpoint::{Endpoint, Endpoints};
-    use crate::test_utils::{assert_write_no_change, logger};
+    use crate::test_utils::assert_write_no_change;
 
     use super::{CaptureBytes, CaptureBytesFactory, Config, Metrics, Strategy};
 
@@ -131,12 +131,13 @@ mod tests {
     use crate::filters::{
         metadata::CAPTURED_BYTES, CreateFilterArgs, Filter, FilterFactory, ReadContext,
     };
+    use crate::log::test_logger;
 
     const TOKEN_KEY: &str = "TOKEN";
 
     fn capture_bytes(config: Config) -> CaptureBytes {
         CaptureBytes::new(
-            &logger(),
+            &test_logger(),
             config,
             Metrics::new(&Registry::default()).unwrap(),
         )
@@ -144,7 +145,7 @@ mod tests {
 
     #[test]
     fn factory_valid_config_all() {
-        let factory = CaptureBytesFactory::new(&logger());
+        let factory = CaptureBytesFactory::new(&test_logger());
         let mut map = Mapping::new();
         map.insert(
             Value::String("strategy".into()),
@@ -169,7 +170,7 @@ mod tests {
 
     #[test]
     fn factory_valid_config_defaults() {
-        let factory = CaptureBytesFactory::new(&logger());
+        let factory = CaptureBytesFactory::new(&test_logger());
         let mut map = Mapping::new();
         map.insert(Value::String("size".into()), Value::Number(3.into()));
         let filter = factory
@@ -184,7 +185,7 @@ mod tests {
 
     #[test]
     fn factory_invalid_config() {
-        let factory = CaptureBytesFactory::new(&logger());
+        let factory = CaptureBytesFactory::new(&test_logger());
         let mut map = Mapping::new();
         map.insert(Value::String("size".into()), Value::String("WRONG".into()));
 

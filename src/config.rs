@@ -31,12 +31,9 @@ use crate::endpoint::Endpoint;
 pub(crate) use self::error::ValueInvalidArgs;
 
 pub use self::{builder::Builder, config_type::ConfigType, error::ValidationError};
+use crate::log::SharedLogger;
 
 base64_serde_type!(Base64Standard, base64::STANDARD);
-
-// For some log messages on the hot path (potentially per-packet), we log 1 out
-// of every `LOG_SAMPLING_RATE` occurrences to avoid spamming the logs.
-pub(crate) const LOG_SAMPLING_RATE: u64 = 1000;
 
 /// Config is the configuration of a proxy
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -62,7 +59,7 @@ impl Config {
     /// error if the found configuration is invalid, or if no configuration
     /// could be found at any location.
     pub fn find(
-        log: &slog::Logger,
+        log: &SharedLogger,
         path: Option<&str>,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         const ENV_CONFIG_PATH: &str = "QUILKIN_CONFIG";
@@ -76,7 +73,7 @@ impl Config {
         )
         .canonicalize()?;
 
-        slog::info!(log, "Found configuration file"; "path" => config_path.display());
+        crate::info!(log, "Found configuration file"; "path" => config_path.display());
 
         std::fs::File::open(&config_path)
             .or_else(|error| {

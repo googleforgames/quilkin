@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+use crate::log::SharedLogger;
+use crate::warn;
 use crate::{
     cluster::cluster_manager::{ClusterManager, InitializeError, SharedClusterManager},
     config::ManagementServer,
@@ -25,7 +27,7 @@ use crate::{
     xds::ads_client::{AdsClient, ClusterUpdate, ExecutionResult, UPDATES_CHANNEL_BUFFER_SIZE},
 };
 use prometheus::Registry;
-use slog::{o, warn, Logger};
+use slog::o;
 use std::sync::Arc;
 use tokio::sync::{mpsc, oneshot, watch};
 
@@ -58,7 +60,7 @@ impl StaticResourceManagers {
 
 /// Contains arguments to the `spawn_ads_client` function.
 struct SpawnAdsClient {
-    log: Logger,
+    log: SharedLogger,
     metrics_registry: Registry,
     node_id: String,
     management_servers: Vec<ManagementServer>,
@@ -70,14 +72,14 @@ struct SpawnAdsClient {
 
 impl DynamicResourceManagers {
     pub(super) async fn new(
-        base_logger: Logger,
+        base_logger: SharedLogger,
         xds_node_id: String,
         metrics_registry: Registry,
         filter_registry: FilterRegistry,
         management_servers: Vec<ManagementServer>,
         shutdown_rx: watch::Receiver<()>,
     ) -> Result<DynamicResourceManagers, InitializeError> {
-        let log = base_logger.new(o!("source" => "server::DynamicResourceManager"));
+        let log = base_logger.child(o!("source" => "server::DynamicResourceManager"));
 
         let (cluster_updates_tx, cluster_updates_rx) = Self::cluster_updates_channel();
         let (filter_chain_updates_tx, filter_chain_updates_rx) =
@@ -91,7 +93,7 @@ impl DynamicResourceManagers {
 
         let (execution_result_tx, execution_result_rx) = oneshot::channel::<ExecutionResult>();
         Self::spawn_ads_client(SpawnAdsClient {
-            log: log.clone(),
+            log,
             metrics_registry: metrics_registry.clone(),
             node_id: xds_node_id,
             management_servers,
@@ -102,7 +104,7 @@ impl DynamicResourceManagers {
         })?;
 
         let cluster_manager = ClusterManager::dynamic(
-            base_logger.new(o!("source" => "ClusterManager")),
+            base_logger.child(o!("source" => "ClusterManager")),
             &metrics_registry,
             cluster_updates_rx,
             shutdown_rx.clone(),
@@ -110,7 +112,7 @@ impl DynamicResourceManagers {
         .map_err(|err| InitializeError::Message(format!("{:?}", err)))?;
 
         let filter_manager = FilterManager::dynamic(
-            base_logger.new(o!("source" => "FilterManager")),
+            base_logger.child(o!("source" => "FilterManager")),
             &metrics_registry,
             filter_chain_updates_rx,
             shutdown_rx,
@@ -178,10 +180,10 @@ mod tests {
     use super::DynamicResourceManagers;
     use crate::config::ManagementServer;
     use crate::filters::{manager::ListenerManagerArgs, FilterRegistry};
-    use crate::test_utils::logger;
 
     use std::time::Duration;
 
+    use crate::log::test_logger;
     use crate::proxy::server::resource_manager::SpawnAdsClient;
     use prometheus::Registry;
     use tokio::sync::mpsc;
@@ -199,7 +201,7 @@ mod tests {
         let (_shutdown_tx, shutdown_rx) = watch::channel(());
 
         DynamicResourceManagers::spawn_ads_client(SpawnAdsClient {
-            log: logger(),
+            log: test_logger(),
             metrics_registry: Registry::default(),
             node_id: "id".into(),
             management_servers: vec![ManagementServer {

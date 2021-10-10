@@ -16,12 +16,11 @@
 
 use std::iter::FromIterator;
 
-use slog::Logger;
-
 use crate::filters::{self, DynFilterFactory};
 
 #[cfg(doc)]
 use crate::filters::{FilterFactory, FilterRegistry};
+use crate::log::SharedLogger;
 
 /// A map of [`FilterFactory::name`]s to [`DynFilterFactory`] values.
 pub type FilterMap = std::collections::HashMap<&'static str, DynFilterFactory>;
@@ -42,7 +41,7 @@ impl FilterSet {
     /// - [`capture_bytes`][filters::capture_bytes]
     /// - [`token_router`][filters::token_router]
     /// - [`compress`][filters::compress]
-    pub fn default(base: &Logger) -> Self {
+    pub fn default(base: &SharedLogger) -> Self {
         Self::default_with(base, Option::into_iter(None))
     }
 
@@ -52,7 +51,7 @@ impl FilterSet {
     ///
     /// See [`FilterSet::default`] for a list of the current defaults.
     pub fn default_with(
-        base: &Logger,
+        base: &SharedLogger,
         filters: impl IntoIterator<Item = DynFilterFactory>,
     ) -> Self {
         Self::with(

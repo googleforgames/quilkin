@@ -18,7 +18,6 @@ use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::result::Result as StdResult;
 use std::sync::Arc;
 
-use slog::{debug, error, info, trace, warn, Logger};
 use tokio::net::UdpSocket;
 use tokio::sync::{mpsc, watch};
 use tokio::task::JoinHandle;
@@ -37,8 +36,10 @@ use crate::proxy::sessions::session_manager::SessionManager;
 use crate::proxy::sessions::{Packet, Session, SessionKey, SESSION_TIMEOUT_SECONDS};
 use crate::proxy::Admin;
 use crate::utils::debug;
+use crate::{debug, error, info, trace, warn};
 
 use super::metrics::Metrics;
+use crate::log::SharedLogger;
 
 pub mod error;
 pub(super) mod metrics;
@@ -49,7 +50,7 @@ type Result<T> = std::result::Result<T, Error>;
 /// Server is the UDP server main implementation
 pub struct Server {
     // We use pub(super) to limit instantiation only to the Builder.
-    pub(super) log: Logger,
+    pub(super) log: SharedLogger,
     pub(super) config: Arc<ValidatedConfig>,
     // Admin may be turned off, primarily for testing.
     pub(super) admin: Option<Admin>,
@@ -86,7 +87,7 @@ struct DownstreamReceiveWorkerConfig {
 /// Contains arguments to process a received downstream packet, through the
 /// filter chain and session pipeline.
 struct ProcessDownstreamReceiveConfig {
-    log: Logger,
+    log: SharedLogger,
     proxy_metrics: ProxyMetrics,
     session_metrics: SessionMetrics,
     cluster_manager: SharedClusterManager,
@@ -278,7 +279,7 @@ impl Server {
     // loop, receiving packets from a queue and processing them through
     // the filter chain.
     fn spawn_downstream_receive_workers(
-        log: Logger,
+        log: SharedLogger,
         worker_configs: Vec<DownstreamReceiveWorkerConfig>,
     ) {
         for DownstreamReceiveWorkerConfig {
@@ -433,7 +434,7 @@ impl Server {
 
     // A helper function to push a session's packet on its socket.
     async fn session_send_packet_helper(
-        log: &Logger,
+        log: &SharedLogger,
         session: &Session,
         packet: &[u8],
         ttl: Duration,
@@ -492,7 +493,6 @@ mod tests {
     use std::time::{SystemTime, UNIX_EPOCH};
 
     use prometheus::Registry;
-    use slog::info;
     use tokio::sync::mpsc;
     use tokio::time;
     use tokio::time::timeout;
@@ -503,11 +503,10 @@ mod tests {
     use crate::config::Builder as ConfigBuilder;
     use crate::endpoint::{Endpoint, Endpoints};
     use crate::filters::{manager::FilterManager, FilterChain};
+    use crate::info;
+    use crate::proxy::builder;
     use crate::proxy::sessions::Packet;
-    use crate::proxy::Builder;
-    use crate::test_utils::{
-        config_with_dummy_endpoint, logger, new_registry, new_test_chain, TestHelper,
-    };
+    use crate::test_utils::{config_with_dummy_endpoint, new_registry, new_test_chain, TestHelper};
 
     use super::*;
 
@@ -570,7 +569,7 @@ mod tests {
     async fn run_with_filter() {
         let mut t = TestHelper::default();
 
-        let registry = new_registry(&logger());
+        let registry = new_registry(&t.log);
         let endpoint = t.open_socket_and_recv_single_packet().await;
         let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12367);
         let config = ConfigBuilder::empty()
@@ -584,7 +583,7 @@ mod tests {
             )
             .build();
         t.run_server_with_builder(
-            Builder::from(Arc::new(config))
+            builder::from_config(Arc::new(config), t.log.clone())
                 .with_filter_registry(registry)
                 .disable_admin(),
         );
@@ -759,7 +758,10 @@ mod tests {
         let (send_packets, mut recv_packets) = mpsc::channel::<Packet>(1);
 
         let config = Arc::new(config_with_dummy_endpoint().build());
-        let server = Builder::from(config).validate().unwrap().build();
+        let server = builder::from_config(config, t.log.clone())
+            .validate()
+            .unwrap()
+            .build();
         let registry = Registry::default();
 
         server.run_recv_from(RunRecvFromArgs {
@@ -811,7 +813,10 @@ mod tests {
             unreachable!("failed to send packet over channel");
         }
         let config = Arc::new(config_with_dummy_endpoint().build());
-        let server = Builder::from(config).validate().unwrap().build();
+        let server = builder::from_config(config, t.log.clone())
+            .validate()
+            .unwrap()
+            .build();
         server.run_receive_packet(endpoint.socket, recv_packet);
         assert_eq!(msg, endpoint.packet_rx.await.unwrap());
     }

@@ -31,10 +31,11 @@ static SERVER_INIT: Lazy<()> = Lazy::new(|| {
                 )],
             )
             .build();
-        let server = quilkin::Builder::from(std::sync::Arc::new(config))
-            .validate()
-            .unwrap()
-            .build();
+        let server =
+            quilkin::builder_from_config(std::sync::Arc::new(config), quilkin::log::test_logger())
+                .validate()
+                .unwrap()
+                .build();
 
         runtime.block_on(async move {
             let (_shutdown_tx, shutdown_rx) = tokio::sync::watch::channel::<()>(());

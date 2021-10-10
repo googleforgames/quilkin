@@ -14,21 +14,23 @@
  *  limitations under the License.
  */
 
+use crate::log::SharedLogger;
+use crate::warn;
 use hyper::{Body, Response, StatusCode};
 use prometheus::{Encoder, Registry, TextEncoder};
-use slog::{o, warn, Logger};
+use slog::o;
 
 /// Metrics contains metrics configuration for the server.
 #[derive(Clone)]
 pub struct Metrics {
-    log: Logger,
+    log: SharedLogger,
     pub(crate) registry: Registry,
 }
 
 impl Metrics {
-    pub fn new(base: &Logger, registry: Registry) -> Self {
+    pub fn new(base: &SharedLogger, registry: Registry) -> Self {
         Metrics {
-            log: base.new(o!("source" => "proxy::Metrics")),
+            log: base.child(o!("source" => "proxy::Metrics")),
             registry,
         }
     }
@@ -64,13 +66,12 @@ mod tests {
     use hyper::StatusCode;
     use prometheus::Registry;
 
+    use crate::log::test_logger;
     use crate::proxy::Metrics;
-    use crate::test_utils::logger;
 
     #[tokio::test]
     async fn collect_metrics() {
-        let log = logger();
-        let metrics = Metrics::new(&log, Registry::default());
+        let metrics = Metrics::new(&test_logger(), Registry::default());
         let response = metrics.collect_metrics();
         assert_eq!(response.status(), StatusCode::OK);
     }

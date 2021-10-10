@@ -20,14 +20,14 @@ use std::{
 };
 
 use serde_yaml::{Mapping, Value};
-use slog::info;
 
 use quilkin::{
+    builder_from_config,
     config::{Builder as ConfigBuilder, Filter},
     endpoint::Endpoint,
     filters::debug,
+    info,
     test_utils::{new_registry, TestHelper},
-    Builder as ProxyBuilder,
 };
 
 #[tokio::test]
@@ -53,7 +53,7 @@ async fn test_filter() {
     // Run server proxy.
     let registry = new_registry(&t.log);
     t.run_server_with_builder(
-        ProxyBuilder::from(Arc::new(server_config))
+        builder_from_config(Arc::new(server_config), t.log.clone())
             .with_filter_registry(registry)
             .disable_admin(),
     );
@@ -77,7 +77,7 @@ async fn test_filter() {
     // Run client proxy.
     let registry = new_registry(&t.log);
     t.run_server_with_builder(
-        ProxyBuilder::from(Arc::new(client_config))
+        builder_from_config(Arc::new(client_config), t.log.clone())
             .with_filter_registry(registry)
             .disable_admin(),
     );

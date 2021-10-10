@@ -17,13 +17,15 @@
 use dashmap::mapref::entry::Entry as DashMapEntry;
 use dashmap::mapref::one::{Ref, RefMut};
 use dashmap::DashMap;
-use slog::{warn, Logger};
 use std::hash::Hash;
 use std::net::SocketAddr;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::oneshot::{channel, Receiver, Sender};
+
+use crate::log::SharedLogger;
+use crate::warn;
 
 // Clippy isn't recognizing that these imports are used conditionally.
 #[allow(unused_imports)]
@@ -40,7 +42,7 @@ pub(crate) struct Value<V> {
 }
 
 impl<V> Value<V> {
-    fn new(value: V, log: &Logger, ttl: Duration, clock: Clock) -> Value<V> {
+    fn new(value: V, log: &SharedLogger, ttl: Duration, clock: Clock) -> Value<V> {
         let value = Value {
             value,
             expires_at: Arc::new(AtomicU64::new(0)),
@@ -58,7 +60,7 @@ impl<V> Value<V> {
     }
 
     /// Update the value's expiration time to (now + TTL).
-    fn update_expiration(&self, log: &Logger, ttl: Duration) {
+    fn update_expiration(&self, log: &SharedLogger, ttl: Duration) {
         match self.clock.compute_expiration_secs(ttl) {
             Ok(new_expiration_time) => {
                 self.expires_at
@@ -74,7 +76,7 @@ impl<V> Value<V> {
 /// Map contains the hash map implementation.
 struct Map<V> {
     inner: DashMap<SocketAddr, Value<V>>,
-    log: Logger,
+    log: SharedLogger,
     ttl: Duration,
     clock: Clock,
     shutdown_tx: Option<Sender<()>>,
@@ -101,13 +103,13 @@ impl<V> TtlMap<V>
 where
     V: Send + Sync + 'static,
 {
-    pub fn new(log: Logger, ttl: Duration, poll_interval: Duration) -> Self {
+    pub fn new(log: SharedLogger, ttl: Duration, poll_interval: Duration) -> Self {
         Self::initialize(log, DashMap::new(), ttl, poll_interval)
     }
 
     #[allow(dead_code)]
     pub fn with_capacity(
-        log: Logger,
+        log: SharedLogger,
         ttl: Duration,
         poll_interval: Duration,
         capacity: usize,
@@ -116,7 +118,7 @@ where
     }
 
     fn initialize(
-        log: Logger,
+        log: SharedLogger,
         inner: DashMap<SocketAddr, Value<V>>,
         ttl: Duration,
         poll_interval: Duration,
@@ -227,7 +229,7 @@ where
 /// A view into an occupied entry in the map.
 pub(crate) struct OccupiedEntry<'a, K, V> {
     inner: DashMapEntry<'a, K, V>,
-    log: &'a Logger,
+    log: &'a SharedLogger,
     ttl: Duration,
     clock: Clock,
 }
@@ -235,7 +237,7 @@ pub(crate) struct OccupiedEntry<'a, K, V> {
 /// A view into a vacant entry in the map.
 pub(crate) struct VacantEntry<'a, K, V> {
     inner: DashMapEntry<'a, K, V>,
-    log: &'a Logger,
+    log: &'a SharedLogger,
     ttl: Duration,
     clock: Clock,
 }
@@ -308,7 +310,7 @@ where
 }
 
 fn spawn_cleanup_task<V>(
-    log: Logger,
+    log: SharedLogger,
     map: Arc<Map<V>>,
     poll_interval: Duration,
     clock: Clock,
@@ -332,7 +334,7 @@ fn spawn_cleanup_task<V>(
     });
 }
 
-async fn prune_entries<V>(log: &Logger, map: &Arc<Map<V>>, clock: &Clock)
+async fn prune_entries<V>(log: &SharedLogger, map: &Arc<Map<V>>, clock: &Clock)
 where
     V: Send + Sync + 'static,
 {
@@ -414,7 +416,7 @@ impl Clock {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utils::logger;
+    use crate::log::test_logger;
     use tokio::time;
 
     #[tokio::test]
@@ -422,8 +424,11 @@ mod tests {
         let one = "127.0.0.1:8080".parse().unwrap();
         let two = "127.0.0.2:8080".parse().unwrap();
 
-        let map =
-            TtlMap::<usize>::new(logger(), Duration::from_secs(10), Duration::from_millis(10));
+        let map = TtlMap::<usize>::new(
+            test_logger(),
+            Duration::from_secs(10),
+            Duration::from_millis(10),
+        );
         map.insert(one, 1);
         assert_eq!(map.len(), 1);
         map.insert(two, 2);
@@ -435,8 +440,11 @@ mod tests {
         let one = "127.0.0.1:8080".parse().unwrap();
         let two = "127.0.0.2:8080".parse().unwrap();
 
-        let map =
-            TtlMap::<usize>::new(logger(), Duration::from_secs(10), Duration::from_millis(10));
+        let map = TtlMap::<usize>::new(
+            test_logger(),
+            Duration::from_secs(10),
+            Duration::from_millis(10),
+        );
         map.insert(one, 1);
         map.insert(two, 2);
 
@@ -451,8 +459,11 @@ mod tests {
 
         let one = "127.0.0.1:8080".parse().unwrap();
 
-        let map =
-            TtlMap::<usize>::new(logger(), Duration::from_secs(10), Duration::from_millis(10));
+        let map = TtlMap::<usize>::new(
+            test_logger(),
+            Duration::from_secs(10),
+            Duration::from_millis(10),
+        );
         map.insert(one, 1);
 
         let exp1 = map.get(one).unwrap().expiration_secs();
@@ -475,8 +486,11 @@ mod tests {
         let two = "127.0.0.2:8080".parse().unwrap();
         let three = "127.0.0.3:8080".parse().unwrap();
 
-        let map =
-            TtlMap::<usize>::new(logger(), Duration::from_secs(10), Duration::from_millis(10));
+        let map = TtlMap::<usize>::new(
+            test_logger(),
+            Duration::from_secs(10),
+            Duration::from_millis(10),
+        );
         map.insert(one, 1);
         map.insert(two, 2);
 
@@ -489,8 +503,11 @@ mod tests {
     async fn entry_occupied_insert_and_get() {
         let one = "127.0.0.1:8080".parse().unwrap();
 
-        let map =
-            TtlMap::<usize>::new(logger(), Duration::from_secs(10), Duration::from_millis(10));
+        let map = TtlMap::<usize>::new(
+            test_logger(),
+            Duration::from_secs(10),
+            Duration::from_millis(10),
+        );
         map.insert(one, 1);
 
         match map.entry(one) {
@@ -508,8 +525,11 @@ mod tests {
     async fn entry_occupied_get_mut() {
         let one = "127.0.0.1:8080".parse().unwrap();
 
-        let map =
-            TtlMap::<usize>::new(logger(), Duration::from_secs(10), Duration::from_millis(10));
+        let map = TtlMap::<usize>::new(
+            test_logger(),
+            Duration::from_secs(10),
+            Duration::from_millis(10),
+        );
         map.insert(one, 1);
 
         match map.entry(one) {
@@ -526,8 +546,11 @@ mod tests {
     async fn entry_vacant_insert() {
         let one = "127.0.0.1:8080".parse().unwrap();
 
-        let map =
-            TtlMap::<usize>::new(logger(), Duration::from_secs(10), Duration::from_millis(10));
+        let map = TtlMap::<usize>::new(
+            test_logger(),
+            Duration::from_secs(10),
+            Duration::from_millis(10),
+        );
 
         match map.entry(one) {
             Entry::Vacant(entry) => {
@@ -548,8 +571,11 @@ mod tests {
 
         let one = "127.0.0.1:8080".parse().unwrap();
 
-        let map =
-            TtlMap::<usize>::new(logger(), Duration::from_secs(10), Duration::from_millis(10));
+        let map = TtlMap::<usize>::new(
+            test_logger(),
+            Duration::from_secs(10),
+            Duration::from_millis(10),
+        );
         map.insert(one, 1);
 
         let exp1 = map.get(one).unwrap().expiration_secs();
@@ -572,8 +598,11 @@ mod tests {
 
         let one = "127.0.0.1:8080".parse().unwrap();
 
-        let map =
-            TtlMap::<usize>::new(logger(), Duration::from_secs(10), Duration::from_millis(10));
+        let map = TtlMap::<usize>::new(
+            test_logger(),
+            Duration::from_secs(10),
+            Duration::from_millis(10),
+        );
         map.insert(one, 1);
 
         let exp1 = map.get(one).unwrap().expiration_secs();
@@ -596,8 +625,11 @@ mod tests {
 
         let one = "127.0.0.1:8080".parse().unwrap();
 
-        let map =
-            TtlMap::<usize>::new(logger(), Duration::from_secs(10), Duration::from_millis(10));
+        let map = TtlMap::<usize>::new(
+            test_logger(),
+            Duration::from_secs(10),
+            Duration::from_millis(10),
+        );
         map.insert(one, 1);
 
         let exp1 = map.get(one).unwrap().expiration_secs();
@@ -623,8 +655,11 @@ mod tests {
 
         let one = "127.0.0.1:8080".parse().unwrap();
 
-        let map =
-            TtlMap::<usize>::new(logger(), Duration::from_secs(10), Duration::from_millis(10));
+        let map = TtlMap::<usize>::new(
+            test_logger(),
+            Duration::from_secs(10),
+            Duration::from_millis(10),
+        );
 
         let exp1 = match map.entry(one) {
             Entry::Vacant(entry) => entry.insert(9).expiration_secs(),
@@ -650,7 +685,7 @@ mod tests {
         let one = "127.0.0.1:8080".parse().unwrap();
 
         let ttl = Duration::from_secs(12);
-        let map = TtlMap::<usize>::new(logger(), ttl, Duration::from_millis(10));
+        let map = TtlMap::<usize>::new(test_logger(), ttl, Duration::from_millis(10));
 
         let exp = match map.entry(one) {
             Entry::Vacant(entry) => entry.insert(9).expiration_secs(),
@@ -669,7 +704,11 @@ mod tests {
         let one = "127.0.0.1:8080".parse().unwrap();
         let two = "127.0.0.2:8080".parse().unwrap();
 
-        let map = TtlMap::<usize>::new(logger(), Duration::from_secs(5), Duration::from_secs(1));
+        let map = TtlMap::<usize>::new(
+            test_logger(),
+            Duration::from_secs(5),
+            Duration::from_secs(1),
+        );
         map.insert(one, 1);
         map.insert(two, 2);
 

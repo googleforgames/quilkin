@@ -16,21 +16,23 @@
 
 use std::sync::atomic::AtomicBool;
 
+use crate::error;
+use crate::log::SharedLogger;
 use hyper::{Body, Response, StatusCode};
-use slog::{error, o, Logger};
+use slog::o;
 use std::panic;
 use std::sync::atomic::Ordering::Relaxed;
 use std::sync::Arc;
 
 pub struct Health {
-    log: Logger,
+    log: SharedLogger,
     healthy: Arc<AtomicBool>,
 }
 
 impl Health {
-    pub fn new(base: &Logger) -> Self {
+    pub fn new(base: &SharedLogger) -> Self {
         let health = Self {
-            log: base.new(o!("source" => "proxy::Health")),
+            log: base.child(o!("source" => "proxy::Health")),
             healthy: Arc::new(AtomicBool::new(true)),
         };
 
@@ -60,14 +62,14 @@ impl Health {
 
 #[cfg(test)]
 mod tests {
+    use crate::log::test_logger;
     use crate::proxy::health::Health;
-    use crate::test_utils::logger;
     use hyper::StatusCode;
     use std::panic;
 
     #[test]
     fn panic_hook() {
-        let log = logger();
+        let log = test_logger();
         let health = Health::new(&log);
 
         let response = health.check_healthy();

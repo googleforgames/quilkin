@@ -19,7 +19,7 @@ use std::collections::HashMap;
 use crate::xds::google::rpc::Status as GrpcStatus;
 use backoff::{backoff::Backoff, exponential::ExponentialBackoff, Clock, SystemClock};
 use prometheus::{Registry, Result as MetricsResult};
-use slog::{debug, error, info, o, warn, Logger};
+use slog::o;
 use tokio::{
     sync::{mpsc, watch},
     task::JoinHandle,
@@ -33,6 +33,7 @@ use tonic::{
 use crate::cluster::Cluster;
 use crate::config::ManagementServer;
 use crate::filters::manager::ListenerManagerArgs;
+use crate::log::SharedLogger;
 use crate::xds::cluster::ClusterManager;
 use crate::xds::envoy::config::core::v3::Node;
 use crate::xds::envoy::service::discovery::v3::{
@@ -41,12 +42,13 @@ use crate::xds::envoy::service::discovery::v3::{
 use crate::xds::listener::ListenerManager;
 use crate::xds::metrics::Metrics;
 use crate::xds::{CLUSTER_TYPE, ENDPOINT_TYPE, LISTENER_TYPE};
+use crate::{debug, error, info, warn};
 use prometheus::core::{AtomicU64, GenericGauge};
 use tokio::sync::mpsc::error::SendError;
 
 /// AdsClient is a client that can talk to an XDS server using the ADS protocol.
 pub(crate) struct AdsClient {
-    log: Logger,
+    log: SharedLogger,
     metrics: Metrics,
 }
 
@@ -65,7 +67,7 @@ impl ResourceHandlers {
 
 /// Represents the required arguments to start an rpc session with a server.
 struct RpcSessionArgs<'a> {
-    log: Logger,
+    log: SharedLogger,
     metrics: Metrics,
     server_addr: String,
     node_id: String,
@@ -117,8 +119,8 @@ pub type ExecutionResult = Result<(), ExecutionError>;
 pub const UPDATES_CHANNEL_BUFFER_SIZE: usize = 1;
 
 impl AdsClient {
-    pub fn new(base_logger: Logger, metrics_registry: &Registry) -> MetricsResult<Self> {
-        let log = base_logger.new(o!("source" => "xds::AdsClient"));
+    pub fn new(base_logger: SharedLogger, metrics_registry: &Registry) -> MetricsResult<Self> {
+        let log = base_logger.child(o!("source" => "xds::AdsClient"));
         let metrics = Metrics::new(metrics_registry)?;
         Ok(Self { log, metrics })
     }
@@ -309,7 +311,7 @@ impl AdsClient {
 
     #[allow(deprecated)]
     async fn send_initial_cds_and_lds_request(
-        log: &Logger,
+        log: &SharedLogger,
         metrics: &Metrics,
         node_id: String,
         rpc_tx: &mut mpsc::Sender<DiscoveryRequest>,
@@ -358,7 +360,7 @@ impl AdsClient {
 
     // Spawns a task that runs a receive loop.
     fn run_receive_loop(
-        log: Logger,
+        log: SharedLogger,
         metrics: Metrics,
         mut client: AggregatedDiscoveryServiceClient<TonicChannel>,
         rpc_rx: mpsc::Receiver<DiscoveryRequest>,
@@ -434,7 +436,7 @@ impl AdsClient {
     }
 
     async fn send_discovery_request(
-        log: &Logger,
+        log: &SharedLogger,
         metrics: &Metrics,
         req: DiscoveryRequest,
         req_tx: &mut mpsc::Sender<DiscoveryRequest>,
@@ -452,7 +454,7 @@ impl AdsClient {
     }
 
     async fn backoff<C: Clock>(
-        log: &Logger,
+        log: &SharedLogger,
         backoff: &mut ExponentialBackoff<C>,
     ) -> Result<(), ExecutionError> {
         let delay = backoff.next_backoff().ok_or_else(|| {
@@ -467,7 +469,7 @@ impl AdsClient {
 
 // Send a Discovery request with the provided arguments on the channel.
 pub(super) async fn send_discovery_req(
-    log: Logger,
+    log: SharedLogger,
     type_url: &'static str,
     version_info: String,
     response_nonce: String,
@@ -507,7 +509,6 @@ mod tests {
     use super::AdsClient;
     use crate::config::ManagementServer;
     use crate::filters::FilterRegistry;
-    use crate::proxy::logger;
     use crate::xds::ads_client::ListenerManagerArgs;
     use crate::xds::envoy::service::discovery::v3::DiscoveryRequest;
     use crate::xds::google::rpc::Status as GrpcStatus;
@@ -515,6 +516,7 @@ mod tests {
 
     use std::time::Duration;
 
+    use crate::log::test_logger;
     use prometheus::Registry;
     use tokio::sync::{mpsc, watch};
 
@@ -526,19 +528,21 @@ mod tests {
         let (_shutdown_tx, shutdown_rx) = watch::channel::<()>(());
         let (cluster_updates_tx, _) = mpsc::channel(10);
         let (filter_chain_updates_tx, _) = mpsc::channel(10);
-        let run = AdsClient::new(logger(), &Registry::default()).unwrap().run(
-            "test-id".into(),
-            vec![ManagementServer {
-                address: "localhost:18000".into(),
-            }],
-            cluster_updates_tx,
-            ListenerManagerArgs::new(
-                Registry::default(),
-                FilterRegistry::default(),
-                filter_chain_updates_tx,
-            ),
-            shutdown_rx,
-        );
+        let run = AdsClient::new(test_logger(), &Registry::default())
+            .unwrap()
+            .run(
+                "test-id".into(),
+                vec![ManagementServer {
+                    address: "localhost:18000".into(),
+                }],
+                cluster_updates_tx,
+                ListenerManagerArgs::new(
+                    Registry::default(),
+                    FilterRegistry::default(),
+                    filter_chain_updates_tx,
+                ),
+                shutdown_rx,
+            );
 
         let execution_result =
             tokio::time::timeout(std::time::Duration::from_millis(100), run).await;
@@ -553,7 +557,7 @@ mod tests {
 
         for error_message in vec![Some("Boo!".into()), None] {
             super::send_discovery_req(
-                logger(),
+                test_logger(),
                 CLUSTER_TYPE,
                 "101".into(),
                 "nonce-101".into(),

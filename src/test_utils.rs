@@ -19,15 +19,16 @@ use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::str::from_utf8;
 use std::sync::Arc;
 
-use slog::{o, warn, Drain, Logger};
-use slog_term::{FullFormat, PlainSyncDecorator};
 use tokio::net::UdpSocket;
 use tokio::sync::{mpsc, oneshot, watch};
 
 use crate::config::{Builder as ConfigBuilder, Config};
 use crate::endpoint::{Endpoint, Endpoints};
 use crate::filters::{prelude::*, FilterChain, FilterRegistry, FilterSet};
-use crate::proxy::{Builder, PendingValidation};
+use crate::log::SharedLogger;
+use crate::proxy::builder::{self, Builder, PendingValidation};
+use crate::warn;
+use std::time::Duration;
 
 pub struct TestFilterFactory {}
 impl FilterFactory for TestFilterFactory {
@@ -78,16 +79,8 @@ impl Filter for TestFilter {
     }
 }
 
-// logger returns a standard out, non structured terminal logger, suitable for using in tests,
-// since it's more human readable.
-pub fn logger() -> Logger {
-    let plain = PlainSyncDecorator::new(std::io::stdout());
-    let drain = FullFormat::new(plain).build().fuse();
-    Logger::root(drain, o!())
-}
-
 pub struct TestHelper {
-    pub log: Logger,
+    pub log: SharedLogger,
     /// Channel to subscribe to, and trigger the shutdown of created resources.
     shutdown_ch: Option<(watch::Sender<()>, watch::Receiver<()>)>,
     server_shutdown_tx: Vec<Option<watch::Sender<()>>>,
@@ -130,7 +123,7 @@ impl Drop for TestHelper {
 impl Default for TestHelper {
     fn default() -> Self {
         TestHelper {
-            log: logger(),
+            log: crate::log::test_logger(),
             shutdown_ch: None,
             server_shutdown_tx: vec![],
         }
@@ -234,7 +227,9 @@ impl TestHelper {
     /// Admin is disabled for this method, as the majority of tests will not need it, and it makes it
     /// easier to avoid issues with port collisions.
     pub fn run_server_with_config(&mut self, config: Config) {
-        self.run_server_with_builder(Builder::from(Arc::new(config)).disable_admin());
+        self.run_server_with_builder(
+            builder::from_config(Arc::new(config), self.log.clone()).disable_admin(),
+        );
     }
 
     pub fn run_server_with_builder(&mut self, builder: Builder<PendingValidation>) {
@@ -340,11 +335,36 @@ pub fn new_test_chain(registry: &prometheus::Registry) -> Arc<FilterChain> {
     )
 }
 
-pub fn new_registry(log: &slog::Logger) -> FilterRegistry {
+pub fn new_registry(log: &SharedLogger) -> FilterRegistry {
     FilterRegistry::new(FilterSet::default_with(
         log,
         std::array::IntoIter::new([DynFilterFactory::from(Box::from(TestFilterFactory {}))]),
     ))
+}
+
+/// Helper test function to poll a condition periodically with a timeout.
+///
+/// The poll function returns [None] if the condition has not been met otherwise
+/// the function returns the returned value.
+pub async fn eventually<T, F: Fn() -> Option<T>>(
+    f: F,
+    poll_interval: Duration,
+    timeout: Duration,
+) -> Option<T> {
+    let start = tokio::time::Instant::now();
+    loop {
+        match f() {
+            None => {
+                if start.elapsed() >= timeout {
+                    return None;
+                }
+                tokio::time::sleep(poll_interval).await;
+            }
+            value => {
+                return value;
+            }
+        }
+    }
 }
 
 #[cfg(test)]

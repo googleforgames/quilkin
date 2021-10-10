@@ -18,10 +18,11 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use slog::{debug, warn, Logger};
 use tokio::sync::{watch, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
+use crate::log::SharedLogger;
 use crate::proxy::sessions::{Session, SessionKey};
+use crate::{debug, warn};
 
 // Tracks current sessions by their [`SessionKey`]
 type SessionsMap = HashMap<SessionKey, Session>;
@@ -37,11 +38,11 @@ const SESSION_EXPIRY_POLL_INTERVAL: u64 = 60;
 pub struct SessionManager(Sessions);
 
 impl SessionManager {
-    pub fn new(log: Logger, shutdown_rx: watch::Receiver<()>) -> Self {
+    pub fn new(log: SharedLogger, shutdown_rx: watch::Receiver<()>) -> Self {
         let poll_interval = Duration::from_secs(SESSION_EXPIRY_POLL_INTERVAL);
         let sessions: Sessions = Arc::new(RwLock::new(HashMap::new()));
 
-        Self::run_prune_sessions(log.clone(), sessions.clone(), poll_interval, shutdown_rx);
+        Self::run_prune_sessions(log, sessions.clone(), poll_interval, shutdown_rx);
 
         Self(sessions)
     }
@@ -59,7 +60,7 @@ impl SessionManager {
     /// Pruning will occur ~ every interval period. So the timeout expiration may sometimes
     /// exceed the expected, but we don't have to write lock the Sessions map as often to clean up.
     fn run_prune_sessions(
-        log: Logger,
+        log: SharedLogger,
         mut sessions: Sessions,
         poll_interval: Duration,
         mut shutdown_rx: watch::Receiver<()>,
@@ -86,7 +87,7 @@ impl SessionManager {
     /// Removes expired [`Session`]s from `sessions`. This should be run
     /// regularly such as on a time interval. This will only write lock
     /// `sessions` if it first finds expired sessions.
-    async fn prune_sessions(log: &Logger, sessions: &mut Sessions) {
+    async fn prune_sessions(log: &SharedLogger, sessions: &mut Sessions) {
         let now = if let Ok(now) = SystemTime::now().duration_since(UNIX_EPOCH) {
             now.as_secs()
         } else {

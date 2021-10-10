@@ -16,17 +16,19 @@
 
 use std::sync::Arc;
 
-use slog::{debug, info, o};
+use crate::{debug, info};
+use slog::o;
 use tokio::{signal, sync::watch};
 
 use crate::{
     config::Config,
     filters::{DynFilterFactory, FilterRegistry, FilterSet},
-    proxy::Builder,
+    proxy::builder,
 };
 
 #[cfg(doc)]
 use crate::filters::FilterFactory;
+use crate::log::SharedLogger;
 
 pub type Error = Box<dyn std::error::Error>;
 
@@ -35,7 +37,7 @@ pub type Error = Box<dyn std::error::Error>;
 pub async fn run(
     filter_factories: impl IntoIterator<Item = DynFilterFactory>,
 ) -> Result<(), Error> {
-    let log = crate::proxy::logger();
+    let log = crate::log::create_default_rate_limited_logger();
     run_with_config(
         log.clone(),
         Config::find(&log, None).map(Arc::new)?,
@@ -47,12 +49,12 @@ pub async fn run(
 /// Start and run a proxy. Any passed in [`FilterFactory`]s are included
 /// alongside the default filter factories.
 pub async fn run_with_config(
-    base_log: slog::Logger,
+    base_log: SharedLogger,
     config: Arc<Config>,
     filter_factories: impl IntoIterator<Item = DynFilterFactory>,
 ) -> Result<(), Error> {
-    let log = base_log.new(o!("source" => "run"));
-    let server = Builder::from(config)
+    let log = base_log.child(o!("source" => "run"));
+    let server = builder::from_config(config, log.clone())
         .with_log(base_log)
         .with_filter_registry(FilterRegistry::new(FilterSet::default_with(
             &log,

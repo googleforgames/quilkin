@@ -35,7 +35,7 @@ static:
 # ";
 # let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 # assert_eq!(config.source.get_static_filters().unwrap().len(), 1);
-# quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
+# quilkin::builder_from_config(std::sync::Arc::new(config), quilkin::log::test_logger()).validate().unwrap();
 ```
 
 View the [CaptureBytes](./capture_bytes.md) filter documentation for more details.
@@ -102,7 +102,7 @@ static:
 # ";
 # let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 # assert_eq!(config.source.get_static_filters().unwrap().len(), 2);
-# quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
+# quilkin::builder_from_config(std::sync::Arc::new(config), quilkin::log::test_logger()).validate().unwrap();
 ```
 
 On the game client side the [ConcatenateBytes](./concatenate_bytes.md) filter could also be used to add authentication

@@ -18,9 +18,11 @@ use crate::filters::{chain::Error as FilterChainError, FilterChain, FilterRegist
 
 use std::sync::Arc;
 
+use crate::log::SharedLogger;
+use crate::{debug, warn};
 use parking_lot::RwLock;
 use prometheus::Registry;
-use slog::{debug, o, warn, Logger};
+use slog::o;
 use tokio::sync::mpsc;
 use tokio::sync::watch;
 
@@ -71,7 +73,7 @@ impl FilterManager {
     /// Returns a new instance backed by a stream of filter chain updates.
     /// Updates from the provided stream will be reflected in the current filter chain.
     pub fn dynamic(
-        base_logger: Logger,
+        base_logger: SharedLogger,
         metrics_registry: &Registry,
         filter_chain_updates_rx: mpsc::Receiver<Arc<FilterChain>>,
         shutdown_rx: watch::Receiver<()>,
@@ -98,7 +100,7 @@ impl FilterManager {
     /// Spawns a task in the background that listens for filter chain updates and
     /// updates the filter manager's current filter in turn.
     fn spawn_updater(
-        log: Logger,
+        log: SharedLogger,
         filter_manager: SharedFilterManager,
         mut filter_chain_updates_rx: mpsc::Receiver<Arc<FilterChain>>,
         mut shutdown_rx: watch::Receiver<()>,
@@ -127,8 +129,8 @@ impl FilterManager {
         });
     }
 
-    fn create_logger(base_logger: Logger) -> Logger {
-        base_logger.new(o!("source" => "FilterManager"))
+    fn create_logger(base_logger: SharedLogger) -> SharedLogger {
+        base_logger.child(o!("source" => "FilterManager"))
     }
 }
 
@@ -136,12 +138,12 @@ impl FilterManager {
 mod tests {
     use super::FilterManager;
     use crate::filters::{Filter, FilterChain, FilterInstance, ReadContext, ReadResponse};
-    use crate::test_utils::logger;
 
     use std::sync::Arc;
     use std::time::Duration;
 
     use crate::endpoint::{Endpoint, Endpoints, UpstreamEndpoints};
+    use crate::log::test_logger;
     use tokio::sync::mpsc;
     use tokio::sync::watch;
     use tokio::time::sleep;
@@ -155,7 +157,7 @@ mod tests {
         let (_shutdown_tx, shutdown_rx) = watch::channel(());
 
         FilterManager::spawn_updater(
-            logger(),
+            test_logger(),
             filter_manager.clone(),
             filter_chain_updates_rx,
             shutdown_rx,
@@ -233,7 +235,7 @@ mod tests {
         let (shutdown_tx, shutdown_rx) = watch::channel(());
 
         FilterManager::spawn_updater(
-            logger(),
+            test_logger(),
             filter_manager.clone(),
             filter_chain_updates_rx,
             shutdown_rx,

@@ -20,15 +20,17 @@ use std::sync::Arc;
 
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Method, Request, Response, Server as HyperServer, StatusCode};
-use slog::{error, info, o, Logger};
+use slog::o;
 use tokio::sync::watch;
 
 use crate::cluster::cluster_manager::SharedClusterManager;
 use crate::filters::manager::SharedFilterManager;
+use crate::log::SharedLogger;
 use crate::proxy::{config_dump, Health, Metrics};
+use crate::{error, info};
 
 pub struct Admin {
-    log: Logger,
+    log: SharedLogger,
     /// The address that the Admin server starts on
     addr: SocketAddr,
     metrics: Arc<Metrics>,
@@ -44,9 +46,14 @@ struct HandleRequestArgs {
 }
 
 impl Admin {
-    pub fn new(base: &Logger, addr: SocketAddr, metrics: Arc<Metrics>, heath: Health) -> Self {
+    pub fn new(
+        base: &SharedLogger,
+        addr: SocketAddr,
+        metrics: Arc<Metrics>,
+        heath: Health,
+    ) -> Self {
         Admin {
-            log: base.new(o!("source" => "proxy::Admin")),
+            log: base.child(o!("source" => "proxy::Admin")),
             addr,
             metrics,
             health: Arc::new(heath),

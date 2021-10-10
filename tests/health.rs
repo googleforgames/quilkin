@@ -16,10 +16,10 @@
 use std::{panic, sync::Arc};
 
 use quilkin::{
+    builder_from_config,
     config::{Admin, Builder},
     endpoint::Endpoint,
     test_utils::TestHelper,
-    Builder as ProxyBuilder,
 };
 
 #[tokio::test]
@@ -35,7 +35,7 @@ async fn health_server() {
             address: "[::]:9093".parse().unwrap(),
         })
         .build();
-    t.run_server_with_builder(ProxyBuilder::from(Arc::new(server_config)));
+    t.run_server_with_builder(builder_from_config(Arc::new(server_config), t.log.clone()));
 
     let resp = reqwest::get("http://localhost:9093/live")
         .await

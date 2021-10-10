@@ -113,7 +113,7 @@ mod tests {
     use crate::endpoint::{Endpoint, Endpoints};
     use crate::filters::manager::FilterManager;
     use crate::filters::{CreateFilterArgs, FilterChain};
-    use crate::test_utils::logger;
+    use crate::log::test_logger;
     use prometheus::Registry;
     use std::sync::Arc;
 
@@ -132,7 +132,7 @@ id: hello
         )
         .unwrap();
 
-        let debug_factory = crate::filters::debug::factory(&logger());
+        let debug_factory = crate::filters::debug::factory(&test_logger());
         let debug_filter = debug_factory
             .create_filter(CreateFilterArgs::fixed(
                 registry.clone(),

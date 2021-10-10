@@ -17,12 +17,13 @@
 use std::{collections::HashSet, convert::TryInto, marker::PhantomData, sync::Arc};
 
 use prometheus::Registry;
-use slog::{o, Drain, Logger};
+use slog::o;
 use tonic::transport::Endpoint as TonicEndpoint;
 
 use crate::config::{Config, ManagementServer, Proxy, Source, ValidationError, ValueInvalidArgs};
 use crate::endpoint::Endpoints;
 use crate::filters::{chain::Error as FilterChainError, FilterChain, FilterRegistry, FilterSet};
+use crate::log::SharedLogger;
 use crate::proxy::server::metrics::Metrics as ProxyMetrics;
 use crate::proxy::sessions::metrics::Metrics as SessionMetrics;
 use crate::proxy::{Admin as ProxyAdmin, Health, Metrics, Server};
@@ -87,7 +88,7 @@ impl ValidationStatus for PendingValidation {
 
 /// Represents the components needed to create a Server.
 pub struct Builder<V> {
-    log: Logger,
+    log: SharedLogger,
     config: Arc<Config>,
     filter_registry: FilterRegistry,
     admin: Option<ProxyAdmin>,
@@ -95,20 +96,17 @@ pub struct Builder<V> {
     validation_status: V,
 }
 
-impl From<Arc<Config>> for Builder<PendingValidation> {
-    fn from(config: Arc<Config>) -> Self {
-        let log = logger();
-        let metrics = Arc::new(Metrics::new(&log, Registry::default()));
-        let health = Health::new(&log);
-        let admin = ProxyAdmin::new(&log, config.admin.address, metrics.clone(), health);
-        Builder {
-            config,
-            filter_registry: FilterRegistry::new(FilterSet::default(&log)),
-            admin: Some(admin),
-            metrics,
-            log,
-            validation_status: PendingValidation,
-        }
+pub fn from_config(config: Arc<Config>, log: SharedLogger) -> Builder<PendingValidation> {
+    let metrics = Arc::new(Metrics::new(&log, Registry::default()));
+    let health = Health::new(&log);
+    let admin = ProxyAdmin::new(&log, config.admin.address, metrics.clone(), health);
+    Builder {
+        config,
+        filter_registry: FilterRegistry::new(FilterSet::default(&log)),
+        admin: Some(admin),
+        metrics,
+        log,
+        validation_status: PendingValidation,
     }
 }
 
@@ -199,7 +197,7 @@ impl ValidatedConfig {
 }
 
 impl Builder<PendingValidation> {
-    pub fn with_log(self, log: Logger) -> Self {
+    pub fn with_log(self, log: SharedLogger) -> Self {
         Self { log, ..self }
     }
 
@@ -237,7 +235,7 @@ impl Builder<PendingValidation> {
 impl Builder<Validated> {
     pub fn build(self) -> Server {
         Server {
-            log: self.log.new(o!("source" => "server::Server")),
+            log: self.log.child(o!("source" => "server::Server")),
             config: Arc::new(self.validation_status.0),
             proxy_metrics: ProxyMetrics::new(&self.metrics.registry)
                 .expect("proxy metrics should be setup properly"),
@@ -250,27 +248,15 @@ impl Builder<Validated> {
     }
 }
 
-/// Create a new `slog::Logger` instance using the default
-/// quilkin configuration.
-pub fn logger() -> Logger {
-    let drain = slog_json::Json::new(std::io::stdout())
-        .set_pretty(false)
-        .add_default_keys()
-        .build()
-        .fuse();
-    let drain = slog_async::Async::new(drain).build().fuse();
-    slog::Logger::root(drain, o!())
-}
-
 #[cfg(test)]
 mod tests {
-    use std::convert::TryFrom;
     use std::sync::Arc;
 
     use crate::config::{Config, ValidationError};
     use crate::proxy::builder::Validated;
 
-    use super::{Builder, Error};
+    use super::{from_config, Builder, Error};
+    use crate::log::test_logger;
 
     #[track_caller]
     fn parse_config(yaml: &str) -> Config {
@@ -278,18 +264,14 @@ mod tests {
     }
 
     fn validate_unwrap_ok(yaml: &'static str) -> Builder<Validated> {
-        Builder::try_from(Arc::new(parse_config(yaml)))
-            .unwrap()
+        from_config(Arc::new(parse_config(yaml)), test_logger())
             .validate()
             .unwrap()
     }
 
     #[track_caller]
     fn validate_unwrap_err(yaml: &'static str) -> ValidationError {
-        match Builder::try_from(Arc::new(parse_config(yaml)))
-            .unwrap()
-            .validate()
-        {
+        match from_config(Arc::new(parse_config(yaml)), test_logger()).validate() {
             Err(Error::InvalidConfig(err)) => err,
             Err(err) => unreachable!(format!("expected ValidationError, got {}", err)),
             Ok(_) => unreachable!("config validation should have failed!"),

@@ -19,13 +19,12 @@ use std::{
     sync::Arc,
 };
 
-use slog::info;
-
 use quilkin::{
+    builder_from_config,
     config::{Admin, Builder as ConfigBuilder},
     endpoint::Endpoint,
+    info,
     test_utils::TestHelper,
-    Builder,
 };
 
 #[tokio::test]
@@ -44,7 +43,7 @@ async fn metrics_server() {
             address: "[::]:9092".parse().unwrap(),
         })
         .build();
-    t.run_server_with_builder(Builder::from(Arc::new(server_config)));
+    t.run_server_with_builder(builder_from_config(Arc::new(server_config), t.log.clone()));
 
     // create a local client
     let client_port = 12347;
@@ -58,7 +57,7 @@ async fn metrics_server() {
             ))],
         )
         .build();
-    t.run_server_with_builder(Builder::from(Arc::new(client_config)));
+    t.run_server_with_builder(builder_from_config(Arc::new(client_config), t.log.clone()));
 
     // let's send the packet
     let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;

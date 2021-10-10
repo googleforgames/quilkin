@@ -160,14 +160,15 @@ mod tests {
         config,
         endpoint::{Endpoint, Endpoints, UpstreamEndpoints},
         filters::{debug, FilterRegistry, FilterSet},
-        test_utils::{logger, new_test_chain, TestFilterFactory},
+        test_utils::{new_test_chain, TestFilterFactory},
     };
 
     use super::*;
+    use crate::log::test_logger;
 
     #[test]
     fn from_config() {
-        let log = logger();
+        let log = test_logger();
         let provider = debug::factory(&log);
 
         // everything is fine

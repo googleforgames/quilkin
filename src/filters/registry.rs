@@ -57,11 +57,12 @@ impl FilterRegistry {
 mod tests {
     use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
-    use crate::test_utils::{logger, new_registry};
+    use crate::test_utils::new_registry;
 
     use super::*;
     use crate::endpoint::{Endpoint, Endpoints};
     use crate::filters::{Filter, ReadContext, ReadResponse, WriteContext, WriteResponse};
+    use crate::log::test_logger;
     use prometheus::Registry;
 
     struct TestFilter {}
@@ -78,7 +79,7 @@ mod tests {
 
     #[test]
     fn insert_and_get() {
-        let reg = new_registry(&logger());
+        let reg = new_registry(&test_logger());
 
         match reg.get(
             &String::from("not.found"),

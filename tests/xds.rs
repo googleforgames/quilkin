@@ -137,11 +137,12 @@ use quilkin_proto::extensions::filters::concatenate_bytes::v1alpha1::concatenate
 use quilkin_proto::extensions::filters::concatenate_bytes::v1alpha1::ConcatenateBytes;
 
 use quilkin::config::Config;
-use quilkin::test_utils::{logger, TestHelper};
-use quilkin::Builder;
+use quilkin::test_utils::TestHelper;
+use quilkin::{builder_from_config, info};
 
 use prost::Message;
-use slog::{info, o, Logger};
+use quilkin::log::{test_logger, SharedLogger};
+use slog::o;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -158,7 +159,7 @@ const LISTENER_TYPE: &str = "type.googleapis.com/envoy.config.listener.v3.Listen
 // forwards DiscoveryResponse(s) to the client. A rx chan is passed in upon creation
 // and can be used by the test to drive the DiscoveryResponses sent by the server to the client.
 struct ControlPlane {
-    log: Logger,
+    log: SharedLogger,
     source_discovery_response_rx:
         tokio::sync::Mutex<Option<mpsc::Receiver<Result<DiscoveryResponse, tonic::Status>>>>,
     shutdown_rx: watch::Receiver<()>,
@@ -233,8 +234,8 @@ dynamic:
     ";
 
     let config: Arc<Config> = Arc::new(serde_yaml::from_str(config).unwrap());
-    let server = Builder::from(config)
-        .with_log(logger())
+    let server = builder_from_config(config, t.log.clone())
+        .with_log(test_logger())
         .validate()
         .unwrap()
         .build();
@@ -243,7 +244,7 @@ dynamic:
     let (discovery_response_tx, discovery_response_rx) = mpsc::channel(1);
 
     let mut control_plane_shutdown_rx = shutdown_rx.clone();
-    let log = t.log.new(o!("source" => "control-plane"));
+    let log = t.log.child(o!("source" => "control-plane"));
     tokio::spawn(async move {
         let server = ADSServer::new(ControlPlane {
             source_discovery_response_rx: tokio::sync::Mutex::new(Some(discovery_response_rx)),
