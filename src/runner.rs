@@ -23,7 +23,7 @@ use tokio::{
 };
 
 use crate::{
-    config::{Config, TestSuite},
+    config::{Config, Source, TestSuite},
     endpoint::Endpoint,
     filters::{DynFilterFactory, FilterRegistry, FilterSet},
     proxy::Builder,
@@ -101,30 +101,42 @@ pub async fn run_with_config(
 /// alongside the default filter factories.
 pub async fn test(
     base_log: slog::Logger,
-    mut testsuite: TestSuite,
+    testsuite: TestSuite,
     filter_factories: impl IntoIterator<Item = DynFilterFactory>,
 ) -> Result<()> {
-    let socket = std::net::UdpSocket::bind((Ipv4Addr::UNSPECIFIED, 0)).unwrap();
-    let mut receiver = socket.local_addr().unwrap();
-    receiver.set_ip(Ipv4Addr::LOCALHOST.into());
-
-    std::thread::spawn(move || {
-        let mut packet = [0; 0xffff];
-        loop {
-            let (length, addr) = socket.recv_from(&mut packet).unwrap();
-            let packet = &packet[..length];
-            socket.send_to(packet, addr).unwrap();
-        }
-    });
-
     let log = base_log.new(o!("source" => "run"));
 
-    {
-        let endpoints = testsuite.config.source.get_static_endpoints_mut().unwrap();
-        *endpoints = vec![Endpoint::new(receiver)];
-    }
+    let config = if testsuite.use_echo_server {
+        let mut echo_config = testsuite.config.clone();
+        let socket = std::net::UdpSocket::bind((Ipv4Addr::UNSPECIFIED, 0)).unwrap();
+        let mut receiver = socket.local_addr().unwrap();
+        receiver.set_ip(Ipv4Addr::LOCALHOST.into());
 
-    let builder = Builder::from(Arc::new(dbg!(testsuite.config)))
+        std::thread::spawn(move || {
+            let mut packet = [0; 0xffff];
+            loop {
+                let (length, addr) = socket.recv_from(&mut packet).unwrap();
+                let packet = &packet[..length];
+                socket.send_to(packet, addr).unwrap();
+            }
+        });
+
+        echo_config.source = Source::Static {
+            filters: testsuite
+                .config
+                .source
+                .get_static_filters()
+                .map(ToOwned::to_owned)
+                .unwrap_or_default(),
+            endpoints: vec![Endpoint::new(receiver)],
+        };
+
+        echo_config
+    } else {
+        testsuite.config
+    };
+
+    let builder = Builder::from(Arc::new(config))
         .with_log(base_log)
         .disable_admin()
         .with_filter_registry(FilterRegistry::new(FilterSet::default_with(

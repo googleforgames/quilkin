@@ -96,10 +96,7 @@ impl Config {
     /// or the `/etc/quilkin` directory (on unix platforms only). Returns an
     /// error if the found configuration is invalid, or if no configuration
     /// could be found at any location.
-    pub fn find(
-        log: &slog::Logger,
-        path: Option<&str>,
-    ) -> Result<Self> {
+    pub fn find(log: &slog::Logger, path: Option<&str>) -> Result<Self> {
         find_config_file(log, path)
             .map_err(From::from)
             .and_then(|s| serde_yaml::from_str(&s).map_err(From::from))
@@ -188,15 +185,6 @@ impl Source {
     /// Returns a slice list of endpoints if the configuration
     /// is [`Self::Static`].
     pub fn get_static_endpoints(&self) -> Option<&[Endpoint]> {
-        match self {
-            Source::Static { endpoints, .. } => Some(endpoints),
-            _ => None,
-        }
-    }
-
-    /// Returns a mutable reference to the list of endpoints if the
-    /// configuration is [`Self::Static`].
-    pub fn get_static_endpoints_mut(&mut self) -> Option<&mut Vec<Endpoint>> {
         match self {
             Source::Static { endpoints, .. } => Some(endpoints),
             _ => None,

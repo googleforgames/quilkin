@@ -31,9 +31,12 @@ async fn main() -> quilkin::Result<()> {
         VERSION.into()
     };
 
-    let config_arg = Arg::with_name("config")
+    const CONFIG_ARG: &str = "config";
+    const ECHO_SERVER_ARG: &str = "echo-server";
+
+    let config_arg = Arg::with_name(CONFIG_ARG)
         .short("c")
-        .long("config")
+        .long(CONFIG_ARG)
         .value_name("CONFIG")
         .help("The YAML configuration file")
         .takes_value(true);
@@ -51,7 +54,12 @@ async fn main() -> quilkin::Result<()> {
         .subcommand(
             SubCommand::with_name("test")
                 .about("Execute one or more sets of tests.")
-                .arg(config_arg),
+                .arg(config_arg)
+                .arg(Arg::with_name(ECHO_SERVER_ARG).long(ECHO_SERVER_ARG).help(
+                    "Spawns a simple echo server for checking test \
+                           output instead of sending data to `endpoints`. \
+                           Default: `true` if `endpoints` is empty.",
+                )),
         )
         .get_matches();
 
@@ -60,15 +68,26 @@ async fn main() -> quilkin::Result<()> {
     match cli.subcommand() {
         ("run", Some(matches)) => {
             let config =
-                quilkin::config::Config::find(&log, matches.value_of("config")).map(Arc::new)?;
+                quilkin::config::Config::find(&log, matches.value_of(CONFIG_ARG)).map(Arc::new)?;
 
             quilkin::run_with_config(log, config, vec![]).await
         }
 
         ("test", Some(matches)) => {
-            let config = quilkin::config::TestSuite::find(&log, matches.value_of("config"))?;
+            let mut testsuite =
+                quilkin::config::TestSuite::find(&log, matches.value_of(CONFIG_ARG))?;
 
-            quilkin::test(log, config, vec![]).await
+            if testsuite
+                .config
+                .source
+                .get_static_endpoints()
+                .map_or(false, |ep| ep.is_empty())
+                || matches.is_present(ECHO_SERVER_ARG)
+            {
+                testsuite.use_echo_server = true;
+            }
+
+            quilkin::test(log, testsuite, vec![]).await
         }
 
         (_, _) => unreachable!(),

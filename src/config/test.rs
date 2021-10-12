@@ -3,7 +3,6 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use prometheus::proto::MetricType;
 use serde::{
     de::{Error, MapAccess, Visitor},
     Deserialize, Deserializer, Serialize,
@@ -15,11 +14,18 @@ use super::{error::TestSuiteDecodeError, Config};
 pub struct TestSuite {
     pub config: Config,
     pub options: TestConfig,
+    /// Whether Quilkin should spawn an echo server for the tests or use the
+    /// endpoints provided in the config.
+    pub use_echo_server: bool,
 }
 
 #[derive(Deserialize)]
 pub struct TestConfig {
+    /// The path to the configuration file to test. If `None`, then the
+    /// `TestConfig` must be included inline after a `Config` with a `---`
+    /// document separator.
     pub config: Option<PathBuf>,
+    /// The set of tests to be ran.
     pub tests: std::collections::HashMap<String, TestCase>,
 }
 
@@ -46,7 +52,11 @@ impl TestSuite {
                     .as_deref()
                     .ok_or(TestSuiteDecodeError::MissingConfigInTestOptions)?;
                 let config = serde_yaml::from_reader(std::fs::File::open(path)?)?;
-                Self { config, options }
+                Self {
+                    config,
+                    options,
+                    use_echo_server: false,
+                }
             } else {
                 let mut de = serde_yaml::Deserializer::from_str(src);
                 let config =
@@ -54,7 +64,11 @@ impl TestSuite {
                 let options = TestConfig::deserialize(
                     de.next().ok_or(TestSuiteDecodeError::MissingTestOptions)?,
                 )?;
-                Self { config, options }
+                Self {
+                    config,
+                    options,
+                    use_echo_server: false,
+                }
             },
         )
     }
@@ -66,61 +80,38 @@ pub struct TestCase {
     pub input: Data,
     /// What we expect Quilkin to send to the game server.
     pub output: Data,
-    /// Metrics we expect to be set.
-    pub metrics: Option<std::collections::HashMap<String, MetricComparison>>,
 }
 
-#[derive(Deserialize)]
-pub struct MetricComparison {
-    pub name: String,
-    #[serde(deserialize_with = "metric_type_from_str")]
-    pub r#type: MetricType,
-    pub r#value: f64,
-}
-
-fn metric_type_from_str<'de, D>(deserializer: D) -> Result<MetricType, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    const METRIC_TYPES: &[(&str, MetricType)] = &[
-        ("counter", MetricType::COUNTER),
-        ("gauge", MetricType::GAUGE),
-        ("histogram", MetricType::HISTOGRAM),
-        ("summary", MetricType::SUMMARY),
-        ("untyped", MetricType::UNTYPED),
-    ];
-
-    let input = <&str>::deserialize(deserializer)?.to_lowercase();
-
-    METRIC_TYPES
-        .iter()
-        .find(|(key, _)| *key == input)
-        .map(|(_, value)| *value)
-        .ok_or_else(|| {
-            Error::custom(format!(
-                "Invalid Prometheus metric type. Expected: {}",
-                itertools::Itertools::intersperse(
-                    METRIC_TYPES.iter().map(|(key, _)| format!("`{}`", key)),
-                    String::from(", ")
-                )
-                .collect::<String>(),
-            ))
-        })
-}
-
-pub enum Data {
-    String(String),
-    Binary(Vec<u8>),
-    Base64(Vec<u8>),
-}
+/// The test data provided to quilkin. Currently can be provided as a string of
+/// text, an array of bytes, or an object containing `type` and `value` fields,
+/// currently valid combinations are as follows;
+///
+/// - type: `base64`, `value` is base64 encoded data.
+pub struct Data(Vec<u8>);
 
 impl Data {
     pub fn as_bytes(&self) -> &[u8] {
-        match self {
-            Self::String(string) => string.as_bytes(),
-            Self::Binary(bytes) => bytes,
-            Self::Base64(bytes) => bytes,
-        }
+        &self.0
+    }
+}
+
+impl std::ops::Deref for Data {
+    type Target = Vec<u8>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl std::ops::DerefMut for Data {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl AsRef<[u8]> for Data {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
     }
 }
 
@@ -149,14 +140,14 @@ impl<'de> Deserialize<'de> for Data {
             where
                 E: Error,
             {
-                Ok(Data::String(value.to_owned()))
+                Ok(Data(value.to_owned().into_bytes()))
             }
 
             fn visit_bytes<E>(self, value: &[u8]) -> Result<Self::Value, E>
             where
                 E: Error,
             {
-                Ok(Data::Binary(value.to_owned()))
+                Ok(Data(value.to_owned()))
             }
 
             fn visit_map<M>(self, map: M) -> Result<Self::Value, M::Error>
@@ -171,9 +162,7 @@ impl<'de> Deserialize<'de> for Data {
                     DataObject::deserialize(serde::de::value::MapAccessDeserializer::new(map))?;
 
                 match (&*object.r#type.to_lowercase(), object.value) {
-                    ("base64", value) => base64::decode(&value)
-                        .map_err(Error::custom)
-                        .map(Data::Base64),
+                    ("base64", value) => base64::decode(&value).map_err(Error::custom).map(Data),
                     (key, _) => Err(Error::custom(format!("Unknown data type: `{}`", key))),
                 }
             }
