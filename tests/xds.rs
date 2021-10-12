@@ -131,14 +131,17 @@ use envoy::service::discovery::v3::aggregated_discovery_service_server::{
 use envoy::service::discovery::v3::{
     DeltaDiscoveryRequest, DeltaDiscoveryResponse, DiscoveryRequest, DiscoveryResponse,
 };
-use quilkin_proto::extensions::filters::concatenate_bytes::v1alpha1::concatenate_bytes::{
-    Strategy, StrategyValue,
+use quilkin_proto::extensions::filters::concatenate_bytes::v1alpha1::{
+    concatenate_bytes::{Strategy, StrategyValue},
+    ConcatenateBytes,
 };
-use quilkin_proto::extensions::filters::concatenate_bytes::v1alpha1::ConcatenateBytes;
 
-use quilkin::config::Config;
-use quilkin::test_utils::{logger, TestHelper};
-use quilkin::Builder;
+use quilkin::{
+    config::Config,
+    endpoint::EndpointAddress,
+    test_utils::{logger, TestHelper},
+    Builder,
+};
 
 use prost::Message;
 use slog::{info, o, Logger};
@@ -380,7 +383,7 @@ fn cluster_discovery_response(
     name: String,
     version_info: &str,
     nonce: &str,
-    endpoint_addr: SocketAddr,
+    endpoint_addr: EndpointAddress,
 ) -> DiscoveryResponse {
     let cluster = create_cluster_resource(&name, endpoint_addr);
     let mut value = vec![];
@@ -401,7 +404,7 @@ fn cluster_discovery_response(
 }
 
 #[allow(deprecated)]
-fn create_cluster_resource(name: &str, endpoint_addr: SocketAddr) -> Cluster {
+fn create_cluster_resource(name: &str, endpoint_addr: EndpointAddress) -> Cluster {
     Cluster {
         name: name.into(),
         transport_socket_matches: vec![],
@@ -449,7 +452,9 @@ fn create_cluster_resource(name: &str, endpoint_addr: SocketAddr) -> Cluster {
     }
 }
 
-fn create_endpoint_resource(cluster_name: &str, address: SocketAddr) -> ClusterLoadAssignment {
+fn create_endpoint_resource(cluster_name: &str, address: EndpointAddress) -> ClusterLoadAssignment {
+    let address = address.to_socket_addr().unwrap();
+
     ClusterLoadAssignment {
         cluster_name: cluster_name.into(),
         endpoints: vec![LocalityLbEndpoints {

@@ -52,10 +52,9 @@ async fn metrics_server() {
         .with_port(client_port)
         .with_static(
             vec![],
-            vec![Endpoint::new(SocketAddr::new(
-                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
-                server_port,
-            ))],
+            vec![Endpoint::new(
+                (IpAddr::V4(Ipv4Addr::LOCALHOST), server_port).into(),
+            )],
         )
         .build();
     t.run_server_with_builder(Builder::from(Arc::new(client_config)));

@@ -55,7 +55,8 @@ policy: ROUND_ROBIN
             echo_addresses
                 .iter()
                 .enumerate()
-                .map(|(_, addr)| Endpoint::new(*addr))
+                .map(|(_, addr)| addr.clone())
+                .map(Endpoint::new)
                 .collect(),
         )
         .build();
@@ -68,6 +69,9 @@ policy: ROUND_ROBIN
         socket.send_to(b"hello", &server_addr).await.unwrap();
         assert_eq!(recv_chan.recv().await.unwrap(), "hello");
 
-        assert_eq!(addr, selected_endpoint.lock().unwrap().take().unwrap());
+        assert_eq!(
+            addr,
+            selected_endpoint.lock().unwrap().take().unwrap().into()
+        );
     }
 }

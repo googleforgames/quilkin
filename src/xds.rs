@@ -108,6 +108,5 @@ const LISTENER_TYPE: &str = "type.googleapis.com/envoy.config.listener.v3.Listen
 
 pub(crate) mod ads_client;
 pub(crate) mod cluster;
-pub(crate) mod error;
 pub(crate) mod listener;
 mod metrics;
