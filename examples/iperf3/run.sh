@@ -18,45 +18,34 @@
 set -eo pipefail
 set +x
 
-path=$(dirname "$0")
-# array of background process pids
-pids=()
-
-QUILKIN_PATH="${QUILKIN_PATH:-$path/../../target/release/quilkin}"
-CONFIG="${CONFIG:-$path/proxy.yaml}"
-PARALLEL="${PARALLEL:-50}"
-BANDWIDTH="${BANDWIDTH:-3M}"
-
-function cleanup() {
-  echo "Cleaning up..."
-  for p in "${pids[@]}"; do
-    kill -SIGTERM "$p" || true
-  done
-
-  echo "Perf test complete!"
-}
-trap cleanup EXIT
+# Number of parallel streams to test simultaneously. Default: (maximum: 128)
+PARALLEL="${PARALLEL:-128}"
+# The bitrate for each stream.
+BANDWIDTH="${BANDWIDTH:-10M}"
+# The size of the packet payload. Default: The size of a UDP packet with no
+# IPv4 segmentation.
+MTU="${MTU:-512}"
+# The port for the iperf client, useful for comparing direct connections with
+# proxied connections.
+PORT="${PORT:-8000}"
 
 # This tunnel is needed because iperf3 requires a tcp handshake before starting the UDP load test
 echo "Starting socat tcp tunnel..."
-socat tcp-listen:8000,reuseaddr,fork tcp:localhost:8001 > socat.log &
-pids+=($!)
+socat tcp-listen:8000,reuseaddr,fork tcp:localhost:8001 > /quilkin/socat.log &
+
 echo "Starting iperf3 server..."
-iperf3 --server --interval 10 --port 8001 > server.log &
-pids+=($!)
+iperf3 --server --interval 10 --port 8001 > /quilkin/server.log &
+
 echo "Starting quilkin server..."
-"$QUILKIN_PATH" run -c "$CONFIG" > quilkin.log &
-pids+=($!)
+quilkin run > /quilkin/quilkin.log &
 
 echo "Waiting for startup..."
 # Wait for both processes to start up.
 sleep 5
 
-echo "Running iperf3 client..."
-
 set -x
-iperf3 --client 127.0.0.1 --port 8000 --interval 10 --parallel $PARALLEL --bidir --bandwidth $BANDWIDTH --time 60 --udp | tee client.log
+iperf3 --client 127.0.0.1 --port $PORT -l $MTU --interval 10 --parallel $PARALLEL --bidir --bandwidth $BANDWIDTH --time 60 --udp | tee client.log
 set +x
 
 echo "Taking a snapshot of Quilkin metrics..."
-wget -O metrics.json http://localhost:9091/metrics
+wget -q -O metrics.json http://localhost:9091/metrics
