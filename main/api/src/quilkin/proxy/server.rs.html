@@ -816,6 +816,11 @@
 <span id="816">816</span>
 <span id="817">817</span>
 <span id="818">818</span>
+<span id="819">819</span>
+<span id="820">820</span>
+<span id="821">821</span>
+<span id="822">822</span>
+<span id="823">823</span>
 </pre><pre class="rust">
 <span class="comment">/*
  * Copyright 2020 Google LLC
@@ -834,7 +839,6 @@
  */</span>
 
 <span class="kw">use</span> <span class="ident">std::net</span>::{<span class="ident">Ipv4Addr</span>, <span class="ident">SocketAddr</span>, <span class="ident">SocketAddrV4</span>};
-<span class="kw">use</span> <span class="ident">std::result::Result</span> <span class="kw">as</span> <span class="ident">StdResult</span>;
 <span class="kw">use</span> <span class="ident">std::sync::Arc</span>;
 
 <span class="kw">use</span> <span class="ident">slog</span>::{<span class="ident">debug</span>, <span class="ident">error</span>, <span class="ident">info</span>, <span class="ident">trace</span>, <span class="ident">warn</span>, <span class="ident">Logger</span>};
@@ -850,20 +854,17 @@
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::endpoint::Endpoint</span>;
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::filters</span>::{<span class="ident">manager::SharedFilterManager</span>, <span class="ident">Filter</span>, <span class="ident">FilterRegistry</span>, <span class="ident">ReadContext</span>};
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::proxy::builder</span>::{<span class="ident">ValidatedConfig</span>, <span class="ident">ValidatedSource</span>};
-<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::proxy::server::error::Error</span>;
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::proxy::sessions::metrics::Metrics</span> <span class="kw">as</span> <span class="ident">SessionMetrics</span>;
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::proxy::sessions::session_manager::SessionManager</span>;
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::proxy::sessions</span>::{<span class="ident">Packet</span>, <span class="ident">Session</span>, <span class="ident">SessionKey</span>, <span class="ident">SESSION_TIMEOUT_SECONDS</span>};
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::proxy::Admin</span>;
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::utils::debug</span>;
+<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::Result</span>;
 
 <span class="kw">use</span> <span class="kw">super</span><span class="ident">::metrics::Metrics</span>;
 
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">error</span>;
 <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">mod</span> <span class="ident">metrics</span>;
 <span class="kw">mod</span> <span class="ident">resource_manager</span>;
-
-<span class="kw">type</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">std::result::Result</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
 
 <span class="doccomment">/// Server is the UDP server main implementation</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Server</span> {
@@ -949,11 +950,13 @@
             <span class="ident">shutdown_rx</span>: <span class="ident">shutdown_rx</span>.<span class="ident">clone</span>(),
         });
 
+        <span class="macro">slog::info!</span>(<span class="self">self</span>.<span class="ident">log</span>, <span class="string">&quot;Quilkin is ready.&quot;</span>);
+
         <span class="macro">tokio::select!</span> {
             <span class="ident">join_result</span> <span class="op">=</span> <span class="ident">recv_loop</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="ident">join_result</span>
-                    .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">join_err</span><span class="op">|</span> <span class="ident">Error::RecvLoop</span>(<span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">join_err</span>)))
-                    .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">inner</span><span class="op">|</span> <span class="ident">inner</span>.<span class="ident">map_err</span>(<span class="ident">Error::RecvLoop</span>))
+                    .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">eyre::eyre!</span>(<span class="ident">error</span>))
+                    .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">inner</span><span class="op">|</span> <span class="ident">inner</span>)
             }
             <span class="kw">_</span> <span class="op">=</span> <span class="ident">shutdown_rx</span>.<span class="ident">changed</span>() <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="prelude-val">Ok</span>(())
@@ -975,7 +978,9 @@
                     <span class="ident">endpoints</span>.<span class="ident">clone</span>(),
                     <span class="ident">filter_chain</span>.<span class="ident">clone</span>(),
                 )
-                .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="ident">Error::Initialize</span>(<span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">err</span>)))<span class="question-mark">?</span>;
+                .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
+                    <span class="macro">eyre::eyre!</span>(<span class="ident">err</span>).<span class="ident">wrap_err</span>(<span class="string">&quot;Failed to initialise static resource manager.&quot;</span>)
+                })<span class="question-mark">?</span>;
                 <span class="prelude-val">Ok</span>((<span class="ident">manager</span>.<span class="ident">cluster_manager</span>, <span class="ident">manager</span>.<span class="ident">filter_manager</span>))
             }
             <span class="ident">ValidatedSource::Dynamic</span> { <span class="ident">management_servers</span> } <span class="op">=</span><span class="op">&gt;</span> {
@@ -988,7 +993,9 @@
                     <span class="ident">shutdown_rx</span>,
                 )
                 .<span class="kw">await</span>
-                .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="ident">Error::Initialize</span>(<span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">err</span>)))<span class="question-mark">?</span>;
+                .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
+                    <span class="macro">eyre::eyre!</span>(<span class="ident">err</span>).<span class="ident">wrap_err</span>(<span class="string">&quot;Failed to initialise xDS management servers.&quot;</span>)
+                })<span class="question-mark">?</span>;
 
                 <span class="kw">let</span> <span class="ident">execution_result_rx</span> <span class="op">=</span> <span class="ident">manager</span>.<span class="ident">execution_result_rx</span>;
                 <span class="comment">// Spawn a task to check for an error if the XDS client</span>
@@ -1015,7 +1022,7 @@
     <span class="doccomment">/// This function also spawns the set of worker tasks responsible for consuming packets</span>
     <span class="doccomment">/// off the aforementioned queue and processing them through the filter chain and session</span>
     <span class="doccomment">/// pipeline.</span>
-    <span class="kw">fn</span> <span class="ident">run_recv_from</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">args</span>: <span class="ident">RunRecvFromArgs</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">JoinHandle</span><span class="op">&lt;</span><span class="ident">StdResult</span><span class="op">&lt;</span>(), <span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">run_recv_from</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">args</span>: <span class="ident">RunRecvFromArgs</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">JoinHandle</span><span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">session_manager</span> <span class="op">=</span> <span class="ident">args</span>.<span class="ident">session_manager</span>;
         <span class="kw">let</span> <span class="ident">log</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">log</span>.<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">proxy_metrics</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">proxy_metrics</span>.<span class="ident">clone</span>();
@@ -1077,16 +1084,17 @@
                         {
                             <span class="comment">// We cannot recover from this error since</span>
                             <span class="comment">// it implies that the receiver has been dropped.</span>
-                            <span class="kw">let</span> <span class="ident">reason</span> <span class="op">=</span>
-                                <span class="string">&quot;Failed to send received packet over channel to worker&quot;</span>.<span class="ident">into</span>();
-                            <span class="macro">error!</span>(<span class="ident">log</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">reason</span>);
-                            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">reason</span>);
+                            <span class="kw">let</span> <span class="ident">error</span> <span class="op">=</span> <span class="macro">eyre::eyre!</span>(
+                                <span class="string">&quot;Failed to send received packet over channel to worker&quot;</span>
+                            );
+                            <span class="macro">error!</span>(<span class="ident">log</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">error</span>);
+                            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">error</span>);
                         }
                     }
-                    <span class="ident">err</span> <span class="op">=</span><span class="op">&gt;</span> {
-                        <span class="comment">// Socket error, we cannot recover from this so return an error instead.</span>
-                        <span class="macro">error!</span>(<span class="ident">log</span>, <span class="string">&quot;Error processing receive socket&quot;</span>; <span class="string">&quot;error&quot;</span> <span class="op">=</span><span class="op">&gt;</span> #<span class="question-mark">?</span><span class="ident">err</span>);
-                        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;error processing receive socket: {:?}&quot;</span>, <span class="ident">err</span>));
+                    <span class="prelude-val">Err</span>(<span class="ident">error</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                        <span class="kw">let</span> <span class="ident">error</span> <span class="op">=</span> <span class="macro">eyre::eyre!</span>(<span class="ident">error</span>).<span class="ident">wrap_err</span>(<span class="string">&quot;Error processing receive socket&quot;</span>);
+                        <span class="macro">error!</span>(<span class="ident">log</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">error</span>);
+                        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">error</span>);
                     }
                 }
             }
@@ -1300,7 +1308,9 @@
     <span class="doccomment">/// bind binds the local configured port</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">bind</span>(<span class="ident">port</span>: <span class="ident">u16</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">UdpSocket</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span> <span class="ident">SocketAddrV4::new</span>(<span class="ident">Ipv4Addr::new</span>(<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>), <span class="ident">port</span>);
-        <span class="ident">UdpSocket::bind</span>(<span class="ident">addr</span>).<span class="kw">await</span>.<span class="ident">map_err</span>(<span class="ident">Error::Bind</span>)
+        <span class="ident">UdpSocket::bind</span>(<span class="ident">addr</span>)
+            .<span class="kw">await</span>
+            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">eyre::eyre!</span>(<span class="ident">error</span>))
     }
 }
 
