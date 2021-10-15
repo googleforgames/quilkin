@@ -23,18 +23,15 @@ use crate::{
     config::Config,
     filters::{DynFilterFactory, FilterRegistry, FilterSet},
     proxy::Builder,
+    Result,
 };
 
 #[cfg(doc)]
 use crate::filters::FilterFactory;
 
-pub type Error = Box<dyn std::error::Error>;
-
 /// Calls [`run`] with the [`Config`] found by [`Config::find`] and the
 /// default [`FilterSet`].
-pub async fn run(
-    filter_factories: impl IntoIterator<Item = DynFilterFactory>,
-) -> Result<(), Error> {
+pub async fn run(filter_factories: impl IntoIterator<Item = DynFilterFactory>) -> Result<()> {
     let log = crate::proxy::logger();
     run_with_config(
         log.clone(),
@@ -50,7 +47,7 @@ pub async fn run_with_config(
     base_log: slog::Logger,
     config: Arc<Config>,
     filter_factories: impl IntoIterator<Item = DynFilterFactory>,
-) -> Result<(), Error> {
+) -> Result<()> {
     let log = base_log.new(o!("source" => "run"));
     let server = Builder::from(config)
         .with_log(base_log)
@@ -89,7 +86,7 @@ pub async fn run_with_config(
 
     if let Err(err) = server.run(shutdown_rx).await {
         info!(log, "Shutting down with error"; "error" => %err);
-        Err(Error::from(err))
+        Err(err)
     } else {
         Ok(())
     }

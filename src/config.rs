@@ -61,10 +61,7 @@ impl Config {
     /// or the `/etc/quilkin` directory (on unix platforms only). Returns an
     /// error if the found configuration is invalid, or if no configuration
     /// could be found at any location.
-    pub fn find(
-        log: &slog::Logger,
-        path: Option<&str>,
-    ) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn find(log: &slog::Logger, path: Option<&str>) -> crate::Result<Self> {
         const ENV_CONFIG_PATH: &str = "QUILKIN_CONFIG";
         const CONFIG_FILE: &str = "quilkin.yaml";
 
