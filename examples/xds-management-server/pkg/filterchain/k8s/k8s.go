@@ -21,15 +21,16 @@ import (
 	"reflect"
 	"time"
 
+	"k8s.io/apimachinery/pkg/labels"
+	v1 "k8s.io/client-go/listers/core/v1"
+
 	envoylistener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/types/known/wrapperspb"
-	k8scorev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/cache"
 	"quilkin.dev/xds-management-server/pkg/filterchain"
 	filters2 "quilkin.dev/xds-management-server/pkg/filters"
 	debugfilterv1alpha "quilkin.dev/xds-management-server/pkg/filters/debug/v1alpha1"
@@ -65,7 +66,7 @@ type proxyPod struct {
 type Provider struct {
 	logger *log.Logger
 	// podStore contains the current list of all pods.
-	podStore cache.Store
+	podLister v1.PodLister
 	// proxyRefreshInterval is how often to check pods for updates.
 	proxyRefreshInterval time.Duration
 	// proxyFilterChainCh is the channel on which proxies filter chains are made available.
@@ -90,13 +91,13 @@ func NewProvider(
 			options.LabelSelector = labelSelectorProxyRole
 		}),
 	)
-	podInformer := informerFactory.Core().V1().Pods().Informer()
-	go podInformer.Run(ctx.Done())
+	podInformer := informerFactory.Core().V1().Pods()
+	go podInformer.Informer().Run(ctx.Done())
 
 	return &Provider{
 		logger:               logger,
 		clock:                clock,
-		podStore:             podInformer.GetStore(),
+		podLister:            podInformer.Lister(),
 		proxyRefreshInterval: proxyRefreshInterval,
 		proxyFilterChainCh:   make(chan filterchain.ProxyFilterChain, 1000),
 	}, nil
@@ -119,9 +120,14 @@ func (p *Provider) run(ctx context.Context) {
 	for {
 		select {
 		case <-ticker.C():
-			pods := p.podStore.List()
+			pods, err := p.podLister.List(labels.Everything())
+			if err != nil {
+				p.logger.WithError(err).Warn("failed to list pods")
+				continue
+			}
+
 			for i := range pods {
-				pod := pods[i].(*k8scorev1.Pod)
+				pod := pods[i]
 
 				proxy, existingProxy := proxies[pod.Name]
 				if !existingProxy {
