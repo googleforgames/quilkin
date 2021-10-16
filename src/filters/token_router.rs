@@ -73,17 +73,28 @@ impl FilterFactory for TokenRouterFactory {
         NAME
     }
 
-    fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
-        let config: Config = args
+    fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
+        let (config_json, config) = args
             .config
             .map(|config| config.deserialize::<Config, ProtoConfig>(self.name()))
-            .transpose()?
-            .unwrap_or_default();
+            .unwrap_or_else(|| {
+                let config = Config::default();
+                serde_json::to_value(&config)
+                    .map_err(|err| {
+                        Error::DeserializeFailed(format!(
+                            "failed to JSON deserialize default config: {}",
+                            err
+                        ))
+                    })
+                    .map(|config_json| (config_json, config))
+            })?;
 
-        Ok(Box::new(TokenRouter::new(
-            config,
-            Metrics::new(&args.metrics_registry)?,
-        )))
+        let filter = TokenRouter::new(config, Metrics::new(&args.metrics_registry)?);
+
+        Ok(FilterInstance::new(
+            config_json,
+            Box::new(filter) as Box<dyn Filter>,
+        ))
     }
 }
 
@@ -237,7 +248,8 @@ mod tests {
                 Registry::default(),
                 Some(&Value::Mapping(map)),
             ))
-            .unwrap();
+            .unwrap()
+            .filter;
         let mut ctx = new_ctx();
         ctx.metadata
             .insert(Arc::new(TOKEN_KEY.into()), Box::new(b"123".to_vec()));
@@ -254,7 +266,8 @@ mod tests {
                 Registry::default(),
                 Some(&Value::Mapping(map)),
             ))
-            .unwrap();
+            .unwrap()
+            .filter;
         let mut ctx = new_ctx();
         ctx.metadata
             .insert(Arc::new(CAPTURED_BYTES.into()), Box::new(b"123".to_vec()));
@@ -267,7 +280,8 @@ mod tests {
 
         let filter = factory
             .create_filter(CreateFilterArgs::fixed(Registry::default(), None))
-            .unwrap();
+            .unwrap()
+            .filter;
         let mut ctx = new_ctx();
         ctx.metadata
             .insert(Arc::new(CAPTURED_BYTES.into()), Box::new(b"123".to_vec()));

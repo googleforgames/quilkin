@@ -23,6 +23,7 @@ pub use sessions::SessionKey;
 
 mod admin;
 mod builder;
+mod config_dump;
 mod health;
 mod metrics;
 mod server;

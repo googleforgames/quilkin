@@ -17,25 +17,22 @@
 use std::sync::Arc;
 
 use tokio::{signal, sync::watch};
-use tracing::{info, span, Level};
+use tracing::{debug, info, span, Level};
 
 use crate::{
     config::Config,
     filters::{DynFilterFactory, FilterRegistry, FilterSet},
     proxy::logger,
     proxy::Builder,
+    Result,
 };
 
 #[cfg(doc)]
 use crate::filters::FilterFactory;
 
-pub type Error = Box<dyn std::error::Error>;
-
 /// Calls [`run`] with the [`Config`] found by [`Config::find`] and the
 /// default [`FilterSet`].
-pub async fn run(
-    filter_factories: impl IntoIterator<Item = DynFilterFactory>,
-) -> Result<(), Error> {
+pub async fn run(filter_factories: impl IntoIterator<Item = DynFilterFactory>) -> Result<()> {
     run_with_config(Config::find(None).map(Arc::new)?, filter_factories).await
 }
 
@@ -44,7 +41,7 @@ pub async fn run(
 pub async fn run_with_config(
     config: Arc<Config>,
     filter_factories: impl IntoIterator<Item = DynFilterFactory>,
-) -> Result<(), Error> {
+) -> Result<()> {
     let base_log = logger(); // TODO: remove this, when tracing is replaceed in Server
     let span = span!(Level::INFO, "source::run");
     let _enter = span.enter();
@@ -57,19 +54,35 @@ pub async fn run_with_config(
         .validate()?
         .build();
 
+    #[cfg(target_os = "linux")]
+    let mut sig_term_fut = signal::unix::signal(signal::unix::SignalKind::terminate())?;
+
     let (shutdown_tx, shutdown_rx) = watch::channel::<()>(());
     tokio::spawn(async move {
+        #[cfg(target_os = "linux")]
+        let sig_term = sig_term_fut.recv();
+        #[cfg(not(target_os = "linux"))]
+        let sig_term = std::future::pending();
+
+        tokio::select! {
+            _ = signal::ctrl_c() => {
+                debug!("Received SIGINT")
+            }
+            _ = sig_term => {
+                debug!("Received SIGTERM")
+            }
+        }
+
+        info!("Shutting down");
         // Don't unwrap in order to ensure that we execute
         // any subsequent shutdown tasks.
-        signal::ctrl_c().await.ok();
         shutdown_tx.send(()).ok();
     });
 
     if let Err(err) = server.run(shutdown_rx).await {
         info! (error = %err, "Shutting down with error");
-        Err(Error::from(err))
+        Err(err)
     } else {
-        info!("Shutting down");
         Ok(())
     }
 }

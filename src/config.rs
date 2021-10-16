@@ -61,7 +61,8 @@ impl Config {
     /// or the `/etc/quilkin` directory (on unix platforms only). Returns an
     /// error if the found configuration is invalid, or if no configuration
     /// could be found at any location.
-    pub fn find(path: Option<&str>) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn find(path: Option<&str>) -> crate::Result<Self> {
+
         const ENV_CONFIG_PATH: &str = "QUILKIN_CONFIG";
         const CONFIG_FILE: &str = "quilkin.yaml";
 
@@ -108,8 +109,14 @@ pub struct Proxy {
     pub port: u16,
 }
 
+#[cfg(not(target_os = "linux"))]
 fn default_proxy_id() -> String {
     Uuid::new_v4().to_hyphenated().to_string()
+}
+
+#[cfg(target_os = "linux")]
+fn default_proxy_id() -> String {
+    sys_info::hostname().unwrap_or_else(|_| Uuid::new_v4().to_hyphenated().to_string())
 }
 
 fn default_proxy_port() -> u16 {
@@ -255,7 +262,7 @@ static:
         let config = parse_config(yaml);
 
         assert_eq!(config.proxy.port, 7000);
-        assert_eq!(config.proxy.id.len(), 36);
+        assert!(config.proxy.id.len() > 1);
     }
 
     #[test]

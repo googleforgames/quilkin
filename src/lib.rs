@@ -20,6 +20,7 @@ pub(crate) mod metrics;
 pub(crate) mod prost;
 mod proxy;
 mod runner;
+pub(crate) mod ttl_map;
 pub(crate) mod utils;
 pub(crate) mod xds;
 
@@ -30,7 +31,7 @@ pub mod filters;
 #[doc(hidden)]
 pub mod test_utils;
 
-pub type Result<T, E = runner::Error> = std::result::Result<T, E>;
+pub type Result<T, E = eyre::Error> = std::result::Result<T, E>;
 
 #[doc(inline)]
 pub use self::{

@@ -23,6 +23,7 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 #[tokio::main]
 async fn main() -> quilkin::Result<()> {
     tracing_subscriber::fmt().json().with_target(false).init();
+    stable_eyre::install()?;
     let version: std::borrow::Cow<'static, str> = if cfg!(debug_assertions) {
         format!("{}+debug", VERSION).into()
     } else {
@@ -46,11 +47,6 @@ async fn main() -> quilkin::Result<()> {
                 .about("Start Quilkin process.")
                 .arg(config_arg.clone()),
         )
-        .subcommand(
-            SubCommand::with_name("test")
-                .about("Execute one or more sets of tests.")
-                .arg(config_arg),
-        )
         .get_matches();
 
     info!(version = &*version, "Starting Quilkin");
@@ -60,8 +56,6 @@ async fn main() -> quilkin::Result<()> {
 
             quilkin::run_with_config(config, vec![]).await
         }
-
-        ("test", Some(_matches)) => todo!(),
 
         (_, _) => unreachable!(),
     }

@@ -15,7 +15,6 @@
  */
 
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
-use std::result::Result as StdResult;
 use std::sync::Arc;
 
 use slog::{debug, error, info, trace, warn, Logger};
@@ -31,20 +30,17 @@ use crate::cluster::cluster_manager::SharedClusterManager;
 use crate::endpoint::Endpoint;
 use crate::filters::{manager::SharedFilterManager, Filter, FilterRegistry, ReadContext};
 use crate::proxy::builder::{ValidatedConfig, ValidatedSource};
-use crate::proxy::server::error::Error;
 use crate::proxy::sessions::metrics::Metrics as SessionMetrics;
 use crate::proxy::sessions::session_manager::SessionManager;
 use crate::proxy::sessions::{Packet, Session, SessionKey, SESSION_TIMEOUT_SECONDS};
 use crate::proxy::Admin;
 use crate::utils::debug;
+use crate::Result;
 
 use super::metrics::Metrics;
 
-pub mod error;
 pub(super) mod metrics;
 mod resource_manager;
-
-type Result<T> = std::result::Result<T, Error>;
 
 /// Server is the UDP server main implementation
 pub struct Server {
@@ -102,10 +98,6 @@ impl Server {
     pub async fn run(self, mut shutdown_rx: watch::Receiver<()>) -> Result<()> {
         self.log_config();
 
-        if let Some(admin) = &self.admin {
-            admin.run(shutdown_rx.clone());
-        }
-
         let socket = Arc::new(Server::bind(self.config.proxy.port).await?);
         let session_manager = SessionManager::new(self.log.clone(), shutdown_rx.clone());
         let (send_packets, receive_packets) = mpsc::channel::<Packet>(1024);
@@ -114,6 +106,15 @@ impl Server {
 
         let (cluster_manager, filter_manager) =
             self.create_resource_managers(shutdown_rx.clone()).await?;
+
+        if let Some(admin) = &self.admin {
+            admin.run(
+                cluster_manager.clone(),
+                filter_manager.clone(),
+                shutdown_rx.clone(),
+            );
+        }
+
         self.run_receive_packet(socket.clone(), receive_packets);
         let recv_loop = self.run_recv_from(RunRecvFromArgs {
             cluster_manager,
@@ -125,11 +126,13 @@ impl Server {
             shutdown_rx: shutdown_rx.clone(),
         });
 
+        slog::info!(self.log, "Quilkin is ready.");
+
         tokio::select! {
             join_result = recv_loop => {
                 join_result
-                    .map_err(|join_err| Error::RecvLoop(format!("{}", join_err)))
-                    .and_then(|inner| inner.map_err(Error::RecvLoop))
+                    .map_err(|error| eyre::eyre!(error))
+                    .and_then(|inner| inner)
             }
             _ = shutdown_rx.changed() => {
                 Ok(())
@@ -151,7 +154,9 @@ impl Server {
                     endpoints.clone(),
                     filter_chain.clone(),
                 )
-                .map_err(|err| Error::Initialize(format!("{}", err)))?;
+                .map_err(|err| {
+                    eyre::eyre!(err).wrap_err("Failed to initialise static resource manager.")
+                })?;
                 Ok((manager.cluster_manager, manager.filter_manager))
             }
             ValidatedSource::Dynamic { management_servers } => {
@@ -164,7 +169,9 @@ impl Server {
                     shutdown_rx,
                 )
                 .await
-                .map_err(|err| Error::Initialize(format!("{}", err)))?;
+                .map_err(|err| {
+                    eyre::eyre!(err).wrap_err("Failed to initialise xDS management servers.")
+                })?;
 
                 let execution_result_rx = manager.execution_result_rx;
                 // Spawn a task to check for an error if the XDS client
@@ -191,7 +198,7 @@ impl Server {
     /// This function also spawns the set of worker tasks responsible for consuming packets
     /// off the aforementioned queue and processing them through the filter chain and session
     /// pipeline.
-    fn run_recv_from(&self, args: RunRecvFromArgs) -> JoinHandle<StdResult<(), String>> {
+    fn run_recv_from(&self, args: RunRecvFromArgs) -> JoinHandle<Result<()>> {
         let session_manager = args.session_manager;
         let log = self.log.clone();
         let proxy_metrics = self.proxy_metrics.clone();
@@ -253,16 +260,17 @@ impl Server {
                         {
                             // We cannot recover from this error since
                             // it implies that the receiver has been dropped.
-                            let reason =
-                                "Failed to send received packet over channel to worker".into();
-                            error!(log, "{}", reason);
-                            return Err(reason);
+                            let error = eyre::eyre!(
+                                "Failed to send received packet over channel to worker"
+                            );
+                            error!(log, "{}", error);
+                            return Err(error);
                         }
                     }
-                    err => {
-                        // Socket error, we cannot recover from this so return an error instead.
-                        error!(log, "Error processing receive socket"; "error" => #?err);
-                        return Err(format!("error processing receive socket: {:?}", err));
+                    Err(error) => {
+                        let error = eyre::eyre!(error).wrap_err("Error processing receive socket");
+                        error!(log, "{}", error);
+                        return Err(error);
                     }
                 }
             }
@@ -470,13 +478,15 @@ impl Server {
 
     /// log_config outputs a log of what is configured
     fn log_config(&self) {
-        info!(self.log, "Starting"; "port" => self.config.proxy.port);
+        info!(self.log, "Starting"; "port" => self.config.proxy.port, "proxy_id" => &self.config.proxy.id);
     }
 
     /// bind binds the local configured port
     async fn bind(port: u16) -> Result<UdpSocket> {
         let addr = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), port);
-        UdpSocket::bind(addr).await.map_err(Error::Bind)
+        UdpSocket::bind(addr)
+            .await
+            .map_err(|error| eyre::eyre!(error))
     }
 }
 

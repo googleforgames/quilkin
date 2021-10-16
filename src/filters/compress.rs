@@ -158,12 +158,15 @@ impl FilterFactory for CompressFactory {
         NAME
     }
 
-    fn create_filter(&self, args: CreateFilterArgs) -> Result<Box<dyn Filter>, Error> {
-        Ok(Box::new(Compress::new(
-            self.require_config(args.config)?
-                .deserialize::<Config, ProtoConfig>(self.name())?,
-            Metrics::new(&args.metrics_registry)?,
-        )))
+    fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
+        let (config_json, config) = self
+            .require_config(args.config)?
+            .deserialize::<Config, ProtoConfig>(self.name())?;
+        let filter = Compress::new(config, Metrics::new(&args.metrics_registry)?);
+        Ok(FilterInstance::new(
+            config_json,
+            Box::new(filter) as Box<dyn Filter>,
+        ))
     }
 }
 
@@ -293,7 +296,8 @@ mod tests {
                 Registry::default(),
                 Some(&Value::Mapping(map)),
             ))
-            .expect("should create a filter");
+            .expect("should create a filter")
+            .filter;
         assert_downstream(filter.as_ref());
     }
 
@@ -313,7 +317,10 @@ mod tests {
         let config = Value::Mapping(map);
         let args = CreateFilterArgs::fixed(Registry::default(), Some(&config));
 
-        let filter = factory.create_filter(args).expect("should create a filter");
+        let filter = factory
+            .create_filter(args)
+            .expect("should create a filter")
+            .filter;
         assert_downstream(filter.as_ref());
     }
 
