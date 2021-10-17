@@ -21,7 +21,7 @@ mod metrics;
 crate::include_proto!("quilkin.extensions.filters.compress.v1alpha1");
 
 use crate::{config::LOG_SAMPLING_RATE, filters::prelude::*};
-use tracing::{instrument, warn};
+use tracing::warn;
 
 use self::quilkin::extensions::filters::compress::v1alpha1::Compress as ProtoConfig;
 use compressor::Compressor;
@@ -78,7 +78,7 @@ impl Compress {
 }
 
 impl Filter for Compress {
-    #[instrument(skip(self, ctx))]
+    #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
     fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
         let original_size = ctx.contents.len();
 
@@ -111,7 +111,7 @@ impl Filter for Compress {
         }
     }
 
-    #[instrument(skip(self, ctx))]
+    #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
     fn write(&self, mut ctx: WriteContext) -> Option<WriteResponse> {
         let original_size = ctx.contents.len();
         match self.on_write {

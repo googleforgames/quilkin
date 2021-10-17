@@ -22,7 +22,7 @@ mod proto;
 use std::sync::Arc;
 
 use crate::filters::prelude::*;
-use tracing::{instrument, warn};
+use tracing::warn;
 
 use capture::Capture;
 use metrics::Metrics;
@@ -59,7 +59,7 @@ impl CaptureBytes {
 }
 
 impl Filter for CaptureBytes {
-    #[instrument(skip(self, ctx))]
+    #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
     fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
         // if the capture size is bigger than the packet size, then we drop the packet,
         // and occasionally warn

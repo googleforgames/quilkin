@@ -21,7 +21,6 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
-use slog::Logger;
 
 use metrics::Metrics;
 
@@ -36,8 +35,8 @@ use self::quilkin::extensions::filters::local_rate_limit::v1alpha1::LocalRateLim
 pub const NAME: &str = "quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit";
 
 /// Creates a new factory for generating rate limiting filters.
-pub fn factory(base: &Logger) -> DynFilterFactory {
-    Box::from(LocalRateLimitFactory::new(base))
+pub fn factory() -> DynFilterFactory {
+    Box::from(LocalRateLimitFactory::new())
 }
 
 // TODO: we should make these values configurable and transparent to the filter.
@@ -82,9 +81,9 @@ struct LocalRateLimit {
 impl LocalRateLimit {
     /// new returns a new LocalRateLimit. It spawns a future in the background
     /// that periodically refills the rate limiter's tokens.
-    fn new(log: Logger, config: Config, metrics: Metrics) -> Self {
+    fn new(config: Config, metrics: Metrics) -> Self {
         LocalRateLimit {
-            state: TtlMap::new(log, SESSION_TIMEOUT_SECONDS, SESSION_EXPIRY_POLL_INTERVAL),
+            state: TtlMap::new(SESSION_TIMEOUT_SECONDS, SESSION_EXPIRY_POLL_INTERVAL),
             config,
             metrics,
         }
@@ -164,13 +163,11 @@ impl Filter for LocalRateLimit {
 }
 
 /// Creates instances of [`LocalRateLimit`].
-struct LocalRateLimitFactory {
-    log: Logger,
-}
+struct LocalRateLimitFactory {}
 
 impl LocalRateLimitFactory {
-    pub fn new(base: &Logger) -> Self {
-        LocalRateLimitFactory { log: base.clone() }
+    pub fn new() -> Self {
+        LocalRateLimitFactory {}
     }
 }
 
@@ -190,11 +187,7 @@ impl FilterFactory for LocalRateLimitFactory {
                 reason: "value must be at least 1 second".into(),
             })
         } else {
-            let filter = LocalRateLimit::new(
-                self.log.clone(),
-                config,
-                Metrics::new(&args.metrics_registry)?,
-            );
+            let filter = LocalRateLimit::new(config, Metrics::new(&args.metrics_registry)?);
             Ok(FilterInstance::new(
                 config_json,
                 Box::new(filter) as Box<dyn Filter>,
@@ -246,15 +239,11 @@ mod tests {
         local_rate_limit::{metrics::Metrics, Config, LocalRateLimit},
         CreateFilterArgs, Filter, FilterFactory, ReadContext,
     };
-    use crate::test_utils::{assert_write_no_change, logger};
+    use crate::test_utils::assert_write_no_change;
     use std::net::SocketAddr;
 
     fn rate_limiter(config: Config) -> LocalRateLimit {
-        LocalRateLimit::new(
-            logger(),
-            config,
-            Metrics::new(&Registry::default()).unwrap(),
-        )
+        LocalRateLimit::new(config, Metrics::new(&Registry::default()).unwrap())
     }
 
     /// Send a packet to the filter and assert whether or not it was processed.
@@ -273,7 +262,7 @@ mod tests {
 
     #[tokio::test]
     async fn config_minimum_period() {
-        let factory = LocalRateLimitFactory::new(&logger());
+        let factory = LocalRateLimitFactory::new();
         let config = "
 max_packets: 10
 period: 0

@@ -22,7 +22,7 @@ use std::convert::TryFrom;
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
-use tracing::{error, instrument};
+use tracing::error;
 
 use crate::{
     config::LOG_SAMPLING_RATE,
@@ -99,7 +99,7 @@ impl FilterFactory for TokenRouterFactory {
 }
 
 impl Filter for TokenRouter {
-    #[instrument(skip(self, ctx))]
+    #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
     fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
         match ctx.metadata.get(self.metadata_key.as_ref()) {
             None => {

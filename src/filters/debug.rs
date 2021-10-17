@@ -18,7 +18,7 @@ use std::convert::TryFrom;
 
 use crate::filters::prelude::*;
 use serde::{Deserialize, Serialize};
-use tracing::{info, instrument};
+use tracing::info;
 
 crate::include_proto!("quilkin.extensions.filters.debug.v1alpha1");
 use self::quilkin::extensions::filters::debug::v1alpha1::Debug as ProtoDebug;
@@ -44,13 +44,13 @@ impl Debug {
 }
 
 impl Filter for Debug {
-    #[instrument(skip(self, ctx))]
+    #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
     fn read(&self, ctx: ReadContext) -> Option<ReadResponse> {
         info!(from = ?ctx.from, contents = ?packet_to_string(ctx.contents.clone()), "Read filter event");
         Some(ctx.into())
     }
 
-    #[instrument(skip(self, ctx))]
+    #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
     fn write(&self, ctx: WriteContext) -> Option<WriteResponse> {
         info!(endpoint = ?ctx.endpoint.address, from = ?ctx.from,
              to = ?ctx.to, contents = ?packet_to_string(ctx.contents.clone()), "Write filter event");
