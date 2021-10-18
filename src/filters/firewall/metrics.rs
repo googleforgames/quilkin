@@ -14,22 +14,27 @@
  * limitations under the License.
  */
 
-use prometheus::core::{AtomicU64, GenericCounter};
-use prometheus::{IntCounterVec, Registry, Result as MetricsResult};
+use prometheus::{
+    core::{AtomicU64, GenericCounter},
+    IntCounterVec, Registry, Result as MetricsResult,
+};
 
 use crate::metrics::{filter_opts, CollectorExt};
 
+const READ: &str = "read";
+const WRITE: &str = "write";
+
 /// Register and manage metrics for this filter
 pub(super) struct Metrics {
-    pub(super) packets_denied_on_read: GenericCounter<AtomicU64>,
-    pub(super) packets_denied_on_write: GenericCounter<AtomicU64>,
-    pub(super) packets_allowed_on_read: GenericCounter<AtomicU64>,
-    pub(super) packets_allowed_on_write: GenericCounter<AtomicU64>,
+    pub(super) packets_denied_read: GenericCounter<AtomicU64>,
+    pub(super) packets_denied_write: GenericCounter<AtomicU64>,
+    pub(super) packets_allowed_read: GenericCounter<AtomicU64>,
+    pub(super) packets_allowed_write: GenericCounter<AtomicU64>,
 }
 
 impl Metrics {
     pub(super) fn new(registry: &Registry) -> MetricsResult<Self> {
-        let event_labels = vec!["events"];
+        let event_labels = &["event"];
 
         let deny_metric = IntCounterVec::new(
             filter_opts(
@@ -37,7 +42,7 @@ impl Metrics {
                 "Firewall",
                 "Total number of packets denied. Labels: event.",
             ),
-            &event_labels,
+            event_labels,
         )?
         .register_if_not_exists(registry)?;
 
@@ -47,19 +52,15 @@ impl Metrics {
                 "Firewall",
                 "Total number of packets allowed. Labels: event.",
             ),
-            &event_labels,
+            event_labels,
         )?
         .register_if_not_exists(registry)?;
 
         Ok(Metrics {
-            packets_denied_on_read: deny_metric
-                .get_metric_with_label_values(vec!["on_read"].as_slice())?,
-            packets_denied_on_write: deny_metric
-                .get_metric_with_label_values(vec!["on_write"].as_slice())?,
-            packets_allowed_on_read: allow_metric
-                .get_metric_with_label_values(vec!["on_read"].as_slice())?,
-            packets_allowed_on_write: allow_metric
-                .get_metric_with_label_values(vec!["on_write"].as_slice())?,
+            packets_denied_read: deny_metric.get_metric_with_label_values(&[READ])?,
+            packets_denied_write: deny_metric.get_metric_with_label_values(&[WRITE])?,
+            packets_allowed_read: allow_metric.get_metric_with_label_values(&[READ])?,
+            packets_allowed_write: allow_metric.get_metric_with_label_values(&[WRITE])?,
         })
     }
 }

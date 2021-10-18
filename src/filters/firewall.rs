@@ -14,19 +14,21 @@
  * limitations under the License.
  */
 
-crate::include_proto!("quilkin.extensions.filters.firewall.v1alpha1");
+//! Filter for allowing/blocking traffic by IP and port.
+
+use slog::{debug, o, Logger};
+
+use crate::filters::firewall::metrics::Metrics;
+use crate::filters::prelude::*;
 
 use self::quilkin::extensions::filters::firewall::v1alpha1::Firewall as ProtoConfig;
-use crate::filters::firewall::config::{Action, Config, Rule};
-use crate::filters::firewall::metrics::Metrics;
-use crate::filters::{
-    CreateFilterArgs, DynFilterFactory, Error, Filter, FilterFactory, FilterInstance, ReadContext,
-    ReadResponse, WriteContext, WriteResponse,
-};
-use slog::{debug, o, Logger};
+
+crate::include_proto!("quilkin.extensions.filters.firewall.v1alpha1");
 
 mod config;
 mod metrics;
+
+pub use config::{Action, Config, PortRange, PortRangeError, Rule};
 
 pub const NAME: &str = "quilkin.extensions.filters.compress.v1alpha1.Firewall";
 
@@ -87,12 +89,12 @@ impl Filter for Firewall {
                 return match rule.action {
                     Action::Allow => {
                         debug!(self.log, "Allow"; "event" => "read", "from" =>  ctx.from.to_string());
-                        self.metrics.packets_allowed_on_read.inc();
+                        self.metrics.packets_allowed_read.inc();
                         Some(ctx.into())
                     }
                     Action::Deny => {
                         debug!(self.log, "Deny"; "event" => "read", "from" => ctx.from );
-                        self.metrics.packets_denied_on_read.inc();
+                        self.metrics.packets_denied_read.inc();
                         None
                     }
                 };
@@ -100,7 +102,7 @@ impl Filter for Firewall {
         }
 
         debug!(self.log, "default: Deny"; "event" => "read", "from" => ctx.from.to_string());
-        self.metrics.packets_denied_on_read.inc();
+        self.metrics.packets_denied_read.inc();
         None
     }
 
@@ -110,12 +112,12 @@ impl Filter for Firewall {
                 return match rule.action {
                     Action::Allow => {
                         debug!(self.log, "Allow"; "event" => "write", "from" =>  ctx.from.to_string());
-                        self.metrics.packets_allowed_on_write.inc();
+                        self.metrics.packets_allowed_write.inc();
                         Some(ctx.into())
                     }
                     Action::Deny => {
                         debug!(self.log, "Deny"; "event" => "write", "from" => ctx.from );
-                        self.metrics.packets_denied_on_write.inc();
+                        self.metrics.packets_denied_write.inc();
                         None
                     }
                 };
@@ -123,16 +125,18 @@ impl Filter for Firewall {
         }
 
         debug!(self.log, "default: Deny"; "event" => "write", "from" => ctx.from.to_string());
-        self.metrics.packets_denied_on_write.inc();
+        self.metrics.packets_denied_write.inc();
         None
     }
 }
 #[cfg(test)]
 mod tests {
+    use prometheus::Registry;
+    use std::net::Ipv4Addr;
+
     use crate::endpoint::{Endpoint, Endpoints, UpstreamEndpoints};
     use crate::filters::firewall::config::PortRange;
     use crate::test_utils::logger;
-    use prometheus::Registry;
 
     use super::*;
 
@@ -144,35 +148,36 @@ mod tests {
             on_read: vec![Rule {
                 action: Action::Allow,
                 source: "192.168.75.0/24".parse().unwrap(),
-                ports: vec![PortRange { min: 10, max: 100 }],
+                ports: vec![PortRange::new(10, 100).unwrap()],
             }],
             on_write: vec![],
         };
 
+        let local_ip = [192, 168, 75, 20];
         let ctx = ReadContext::new(
             UpstreamEndpoints::from(
-                Endpoints::new(vec![Endpoint::new("127.0.0.1:8080".parse().unwrap())]).unwrap(),
+                Endpoints::new(vec![Endpoint::new((Ipv4Addr::LOCALHOST, 8080).into())]).unwrap(),
             ),
-            "192.168.75.20:80".parse().unwrap(),
+            (local_ip, 80).into(),
             vec![],
         );
         assert!(firewall.read(ctx).is_some());
-        assert_eq!(1, firewall.metrics.packets_allowed_on_read.get());
-        assert_eq!(0, firewall.metrics.packets_denied_on_read.get());
+        assert_eq!(1, firewall.metrics.packets_allowed_read.get());
+        assert_eq!(0, firewall.metrics.packets_denied_read.get());
 
         let ctx = ReadContext::new(
             UpstreamEndpoints::from(
-                Endpoints::new(vec![Endpoint::new("127.0.0.1:8080".parse().unwrap())]).unwrap(),
+                Endpoints::new(vec![Endpoint::new((Ipv4Addr::LOCALHOST, 8080).into())]).unwrap(),
             ),
-            "192.168.75.20:2000".parse().unwrap(),
+            (local_ip, 2000).into(),
             vec![],
         );
         assert!(firewall.read(ctx).is_none());
-        assert_eq!(1, firewall.metrics.packets_allowed_on_read.get());
-        assert_eq!(1, firewall.metrics.packets_denied_on_read.get());
+        assert_eq!(1, firewall.metrics.packets_allowed_read.get());
+        assert_eq!(1, firewall.metrics.packets_denied_read.get());
 
-        assert_eq!(0, firewall.metrics.packets_allowed_on_write.get());
-        assert_eq!(0, firewall.metrics.packets_denied_on_write.get());
+        assert_eq!(0, firewall.metrics.packets_allowed_write.get());
+        assert_eq!(0, firewall.metrics.packets_denied_write.get());
     }
 
     #[test]
@@ -184,32 +189,34 @@ mod tests {
             on_write: vec![Rule {
                 action: Action::Allow,
                 source: "192.168.75.0/24".parse().unwrap(),
-                ports: vec![PortRange { min: 10, max: 100 }],
+                ports: vec![PortRange::new(10, 100).unwrap()],
             }],
         };
 
-        let endpoint = Endpoint::new("127.0.0.1:80".parse().unwrap());
+        let endpoint = Endpoint::new((Ipv4Addr::LOCALHOST, 80).into());
+        let local_addr = (Ipv4Addr::LOCALHOST, 8081).into();
+
         let ctx = WriteContext::new(
             &endpoint,
-            "192.168.75.20:80".parse().unwrap(),
-            "127.0.0.1:8081".parse().unwrap(),
+            ([192, 168, 75, 20], 80).into(),
+            local_addr,
             vec![],
         );
         assert!(firewall.write(ctx).is_some());
-        assert_eq!(1, firewall.metrics.packets_allowed_on_write.get());
-        assert_eq!(0, firewall.metrics.packets_denied_on_write.get());
+        assert_eq!(1, firewall.metrics.packets_allowed_write.get());
+        assert_eq!(0, firewall.metrics.packets_denied_write.get());
 
         let ctx = WriteContext::new(
             &endpoint,
-            "192.168.77.20:80".parse().unwrap(),
-            "127.0.0.1:8081".parse().unwrap(),
+            ([192, 168, 77, 20], 80).into(),
+            local_addr,
             vec![],
         );
         assert!(!firewall.write(ctx).is_some());
-        assert_eq!(1, firewall.metrics.packets_allowed_on_write.get());
-        assert_eq!(1, firewall.metrics.packets_denied_on_write.get());
+        assert_eq!(1, firewall.metrics.packets_allowed_write.get());
+        assert_eq!(1, firewall.metrics.packets_denied_write.get());
 
-        assert_eq!(0, firewall.metrics.packets_allowed_on_read.get());
-        assert_eq!(0, firewall.metrics.packets_denied_on_read.get());
+        assert_eq!(0, firewall.metrics.packets_allowed_read.get());
+        assert_eq!(0, firewall.metrics.packets_denied_read.get());
     }
 }
