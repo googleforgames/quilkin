@@ -18,6 +18,8 @@
 set -eo pipefail
 set +x
 
+mkdir -p /quilkin
+
 # Number of parallel streams to test simultaneously. Default: (maximum: 128)
 PARALLEL="${PARALLEL:-128}"
 # The bitrate for each stream.
@@ -44,7 +46,7 @@ echo "Waiting for startup..."
 sleep 5
 
 set -x
-iperf3 --client 127.0.0.1 --port $PORT -l $MTU --interval 10 --parallel $PARALLEL --bidir --bandwidth $BANDWIDTH --time 60 --udp | tee client.log
+iperf3 --client 127.0.0.1 --port $PORT -l $MTU --interval 10 --parallel $PARALLEL --bidir --bandwidth $BANDWIDTH --time 60 --udp | tee /quilkin/client.log
 set +x
 
 echo "Taking a snapshot of Quilkin metrics..."

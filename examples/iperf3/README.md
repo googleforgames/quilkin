@@ -37,6 +37,10 @@ to be set, such as bandwidth and source.
 
 Several files are captured during the process and stored in `/quilkin`:
 
+```
+docker run -it -v /tmp/quilkin:/quilkin quilkin-iperf
+```
+
 * client.log - output from the iperf3 client.
 * metrics.json - a copy of the Quilkin prometheus metrics on test completion.
 * quilkin.log - output from Quilkin.
