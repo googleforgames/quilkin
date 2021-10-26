@@ -155,8 +155,9 @@ impl TryFrom<EnvoySocketAddress> for EndpointAddress {
 
     fn try_from(value: EnvoySocketAddress) -> Result<Self, Self::Error> {
         use crate::xds::envoy::config::core::v3::socket_address::PortSpecifier;
-        Ok(Self {
-            host: value.address.parse().unwrap(),
+
+        let address = Self {
+            host: value.address.parse()?,
             port: match value.port_specifier {
                 Some(PortSpecifier::PortValue(value)) => Some(value.try_into()?),
                 Some(PortSpecifier::NamedPort(_)) => {
@@ -164,7 +165,12 @@ impl TryFrom<EnvoySocketAddress> for EndpointAddress {
                 }
                 None => None,
             },
-        })
+        };
+
+        // Ensure the address from envoy resolves to an address.
+        address.to_socket_addrs()?;
+
+        Ok(address)
     }
 }
 
