@@ -90,7 +90,7 @@ impl TryFrom<ProtoConfig> for Config {
                 )
             })
             .transpose()?
-            .unwrap_or_else(Mode::default);
+            .unwrap_or_default();
 
         let on_read = p
             .on_read
@@ -104,7 +104,7 @@ impl TryFrom<ProtoConfig> for Config {
                 )
             })
             .transpose()?
-            .unwrap_or_else(Action::default);
+            .unwrap_or_default();
 
         let on_write = p
             .on_write
@@ -118,7 +118,7 @@ impl TryFrom<ProtoConfig> for Config {
                 )
             })
             .transpose()?
-            .unwrap_or_else(Action::default);
+            .unwrap_or_default();
 
         Ok(Self {
             mode,

@@ -76,7 +76,7 @@ impl TryFrom<ProtoConfig> for Config {
                 )
             })
             .transpose()?
-            .unwrap_or_else(Strategy::default);
+            .unwrap_or_default();
 
         let on_write = p
             .on_write
@@ -90,7 +90,7 @@ impl TryFrom<ProtoConfig> for Config {
                 )
             })
             .transpose()?
-            .unwrap_or_else(Strategy::default);
+            .unwrap_or_default();
 
         Ok(Self {
             on_read,
