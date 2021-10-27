@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-#[allow(warnings)]
 quilkin::include_proto!("xds.core.v3");
-#[allow(warnings)]
 quilkin::include_proto!("google.rpc");
 
 #[allow(warnings)]
