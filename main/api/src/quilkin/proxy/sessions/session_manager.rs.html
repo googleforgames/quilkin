@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src&#x2F;proxy&#x2F;sessions&#x2F;session_manager.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>session_manager.rs - source</title><link rel="stylesheet" type="text/css" href="../../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../../../ayu.css" disabled ><script id="default-settings" ></script><script src="../../../../storage.js"></script><script src="../../../../crates.js"></script><noscript><link rel="stylesheet" href="../../../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../../../favicon.svg"><link rel="alternate icon" type="image/png" href="../../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../../../quilkin/index.html'><div class='logo-container rust-logo'><img src='../../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input"name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../../../wheel.svg"></a></div></form></nav><section id="main" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">  1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src&#x2F;proxy&#x2F;sessions&#x2F;session_manager.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>session_manager.rs - source</title><link rel="stylesheet" type="text/css" href="../../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../../../ayu.css" disabled ><script id="default-settings" ></script><script src="../../../../storage.js"></script><script src="../../../../crates.js"></script><noscript><link rel="stylesheet" href="../../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../../favicon.svg"><style type="text/css">#crate-search{background-image:url("../../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../../../quilkin/index.html'><div class='logo-container rust-logo'><img src='../../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../../../wheel.svg"></a></div></form></nav><section id="main" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">  1</span>
 <span id="2">  2</span>
 <span id="3">  3</span>
 <span id="4">  4</span>
@@ -265,8 +265,7 @@
 <span id="265">265</span>
 <span id="266">266</span>
 <span id="267">267</span>
-</pre><pre class="rust">
-<span class="comment">/*
+</pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
@@ -289,7 +288,7 @@
 <span class="kw">use</span> <span class="ident">slog</span>::{<span class="ident">debug</span>, <span class="ident">warn</span>, <span class="ident">Logger</span>};
 <span class="kw">use</span> <span class="ident">tokio::sync</span>::{<span class="ident">watch</span>, <span class="ident">RwLock</span>, <span class="ident">RwLockReadGuard</span>, <span class="ident">RwLockWriteGuard</span>};
 
-<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::proxy::sessions</span>::{<span class="ident">Session</span>, <span class="ident">SessionKey</span>};
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::proxy::sessions</span>::{<span class="ident">Session</span>, <span class="ident">SessionKey</span>};
 
 <span class="comment">// Tracks current sessions by their [`SessionKey`]</span>
 <span class="kw">type</span> <span class="ident">SessionsMap</span> <span class="op">=</span> <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">SessionKey</span>, <span class="ident">Session</span><span class="op">&gt;</span>;
@@ -309,7 +308,7 @@
         <span class="kw">let</span> <span class="ident">poll_interval</span> <span class="op">=</span> <span class="ident">Duration::from_secs</span>(<span class="ident">SESSION_EXPIRY_POLL_INTERVAL</span>);
         <span class="kw">let</span> <span class="ident">sessions</span>: <span class="ident">Sessions</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">RwLock::new</span>(<span class="ident">HashMap::new</span>()));
 
-        <span class="self">Self</span><span class="ident">::run_prune_sessions</span>(<span class="ident">log</span>.<span class="ident">clone</span>(), <span class="ident">sessions</span>.<span class="ident">clone</span>(), <span class="ident">poll_interval</span>, <span class="ident">shutdown_rx</span>);
+        <span class="ident"><span class="self">Self</span>::run_prune_sessions</span>(<span class="ident">log</span>.<span class="ident">clone</span>(), <span class="ident">sessions</span>.<span class="ident">clone</span>(), <span class="ident">poll_interval</span>, <span class="ident">shutdown_rx</span>);
 
         <span class="self">Self</span>(<span class="ident">sessions</span>)
     }
@@ -343,7 +342,7 @@
                     }
                     <span class="kw">_</span> <span class="op">=</span> <span class="ident">interval</span>.<span class="ident">tick</span>() <span class="op">=</span><span class="op">&gt;</span> {
                         <span class="macro">debug!</span>(<span class="ident">log</span>, <span class="string">&quot;Attempting to Prune Sessions&quot;</span>);
-                        <span class="self">Self</span><span class="ident">::prune_sessions</span>(<span class="kw-2">&amp;</span><span class="ident">log</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">sessions</span>).<span class="kw">await</span>;
+                        <span class="ident"><span class="self">Self</span>::prune_sessions</span>(<span class="kw-2">&amp;</span><span class="ident">log</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">sessions</span>).<span class="kw">await</span>;
 
                     }
                 }
@@ -389,14 +388,14 @@
     <span class="kw">use</span> <span class="ident">prometheus::Registry</span>;
     <span class="kw">use</span> <span class="ident">tokio::sync</span>::{<span class="ident">mpsc</span>, <span class="ident">watch</span>, <span class="ident">RwLock</span>};
 
-    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::endpoint::Endpoint</span>;
-    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::filters</span>::{<span class="ident">manager::FilterManager</span>, <span class="ident">FilterChain</span>};
-    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::proxy::sessions::metrics::Metrics</span>;
-    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::proxy::sessions::session_manager::Sessions</span>;
-    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::proxy::sessions</span>::{<span class="ident">Packet</span>, <span class="ident">Session</span>, <span class="ident">SessionKey</span>};
-    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::test_utils::TestHelper</span>;
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::endpoint::Endpoint</span>;
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters</span>::{<span class="ident">manager::FilterManager</span>, <span class="ident">FilterChain</span>};
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::proxy::sessions::metrics::Metrics</span>;
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::proxy::sessions::session_manager::Sessions</span>;
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::proxy::sessions</span>::{<span class="ident">Packet</span>, <span class="ident">Session</span>, <span class="ident">SessionKey</span>};
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::test_utils::TestHelper</span>;
 
-    <span class="kw">use</span> <span class="kw">super</span><span class="ident">::SessionManager</span>;
+    <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::SessionManager</span>;
 
     <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">run_prune_sessions</span>() {
@@ -533,7 +532,7 @@
         }
     }
 }
-</pre></div>
+</code></pre></div>
 </section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="quilkin" data-search-index-js="../../../../search-index.js" data-search-js="../../../../search.js"></div>
     <script src="../../../../main.js"></script><script src="../../../../source-script.js"></script><script src="../../../../source-files.js"></script>
 </body></html>

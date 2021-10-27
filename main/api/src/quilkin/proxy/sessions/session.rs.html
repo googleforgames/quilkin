@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src&#x2F;proxy&#x2F;sessions&#x2F;session.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>session.rs - source</title><link rel="stylesheet" type="text/css" href="../../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../../../ayu.css" disabled ><script id="default-settings" ></script><script src="../../../../storage.js"></script><script src="../../../../crates.js"></script><noscript><link rel="stylesheet" href="../../../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../../../favicon.svg"><link rel="alternate icon" type="image/png" href="../../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../../../quilkin/index.html'><div class='logo-container rust-logo'><img src='../../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input"name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../../../wheel.svg"></a></div></form></nav><section id="main" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">  1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src&#x2F;proxy&#x2F;sessions&#x2F;session.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>session.rs - source</title><link rel="stylesheet" type="text/css" href="../../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../../../ayu.css" disabled ><script id="default-settings" ></script><script src="../../../../storage.js"></script><script src="../../../../crates.js"></script><noscript><link rel="stylesheet" href="../../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../../favicon.svg"><style type="text/css">#crate-search{background-image:url("../../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../../../quilkin/index.html'><div class='logo-container rust-logo'><img src='../../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../../../wheel.svg"></a></div></form></nav><section id="main" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">  1</span>
 <span id="2">  2</span>
 <span id="3">  3</span>
 <span id="4">  4</span>
@@ -567,8 +567,7 @@
 <span id="567">567</span>
 <span id="568">568</span>
 <span id="569">569</span>
-</pre><pre class="rust">
-<span class="comment">/*
+</pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
@@ -686,7 +685,7 @@
         <span class="kw">let</span> (<span class="ident">shutdown_tx</span>, <span class="ident">shutdown_rx</span>) <span class="op">=</span> <span class="ident">watch::channel</span>::<span class="op">&lt;</span>()<span class="op">&gt;</span>(());
 
         <span class="kw">let</span> <span class="ident">expiration</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">AtomicU64::new</span>(<span class="number">0</span>));
-        <span class="self">Self</span><span class="ident">::do_update_expiration</span>(<span class="kw-2">&amp;</span><span class="ident">expiration</span>, <span class="ident">ttl</span>)<span class="question-mark">?</span>;
+        <span class="ident"><span class="self">Self</span>::do_update_expiration</span>(<span class="kw-2">&amp;</span><span class="ident">expiration</span>, <span class="ident">ttl</span>)<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="ident">s</span> <span class="op">=</span> <span class="ident">Session</span> {
             <span class="ident">metrics</span>,
@@ -816,7 +815,7 @@
 
     <span class="doccomment">/// update_expiration set the increments the expiration value by the session timeout</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">update_expiration</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ttl</span>: <span class="ident">Duration</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="self">Self</span><span class="ident">::do_update_expiration</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">expiration</span>, <span class="ident">ttl</span>)
+        <span class="ident"><span class="self">Self</span>::do_update_expiration</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">expiration</span>, <span class="ident">ttl</span>)
     }
 
     <span class="doccomment">/// do_update_expiration increments the expiration value by the session timeout (internal)</span>
@@ -895,12 +894,12 @@
     <span class="kw">use</span> <span class="ident">prometheus::Registry</span>;
     <span class="kw">use</span> <span class="ident">tokio::time::timeout</span>;
 
-    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::filters::FilterChain</span>;
-    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::test_utils</span>::{<span class="ident">new_test_chain</span>, <span class="ident">TestHelper</span>};
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters::FilterChain</span>;
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::test_utils</span>::{<span class="ident">new_test_chain</span>, <span class="ident">TestHelper</span>};
 
-    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::endpoint::Endpoint</span>;
-    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::filters::manager::FilterManager</span>;
-    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::proxy::sessions::session::ReceivedPacketContext</span>;
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::endpoint::Endpoint</span>;
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters::manager::FilterManager</span>;
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::proxy::sessions::session::ReceivedPacketContext</span>;
     <span class="kw">use</span> <span class="ident">tokio::sync::mpsc</span>;
 
     <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
@@ -1137,7 +1136,7 @@
         <span class="macro">assert_eq!</span>(<span class="ident">metrics</span>.<span class="ident">active_sessions</span>.<span class="ident">get</span>(), <span class="number">0</span>);
     }
 }
-</pre></div>
+</code></pre></div>
 </section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="quilkin" data-search-index-js="../../../../search-index.js" data-search-js="../../../../search.js"></div>
     <script src="../../../../main.js"></script><script src="../../../../source-script.js"></script><script src="../../../../source-files.js"></script>
 </body></html>
