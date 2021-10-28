@@ -15,12 +15,15 @@
  */
 use std::{panic, sync::Arc};
 
+use hyper::{Client, Uri};
 use quilkin::{
     config::{Admin, Builder},
     endpoint::Endpoint,
     test_utils::TestHelper,
     Builder as ProxyBuilder,
 };
+
+const LIVE_ADDRESS: &str = "http://localhost:9093/live";
 
 #[tokio::test]
 async fn health_server() {
@@ -37,19 +40,22 @@ async fn health_server() {
         .build();
     t.run_server_with_builder(ProxyBuilder::from(Arc::new(server_config)));
 
-    let resp = reqwest::get("http://localhost:9093/live")
+    let client = Client::new();
+    let resp = client
+        .get(Uri::from_static(LIVE_ADDRESS))
         .await
+        .map(|resp| resp.into_body())
+        .map(hyper::body::to_bytes)
         .unwrap()
-        .text()
         .await
         .unwrap();
 
-    assert_eq!("ok", resp);
+    assert_eq!("ok", String::from_utf8(resp.to_vec()).unwrap());
 
     let _ = panic::catch_unwind(|| {
         panic!("oh no!");
     });
 
-    let resp = reqwest::get("http://localhost:9093/live").await.unwrap();
+    let resp = client.get(Uri::from_static(LIVE_ADDRESS)).await.unwrap();
     assert!(resp.status().is_server_error(), "Should be unhealthy");
 }
