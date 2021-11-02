@@ -339,13 +339,6 @@ impl ClusterManager {
         Ok(existing_endpoints)
     }
 
-    // Notify that we are about to reconnect the GRPC stream.
-    pub(in crate::xds) fn on_reconnect(&mut self) {
-        // Reset any last seen version and nonce since we'll be working
-        // with a new connection from now on with a clean slate.
-        self.last_seen_cluster_load_assignment_version = None
-    }
-
     // Send a CDS ACK/NACK request to the server.
     async fn send_cluster_discovery_req(
         &mut self,

@@ -41,7 +41,6 @@ test = true
 quilkin-macros = { version = "0.3.0-dev", path = "./macros" }
 
 # Crates.io
-backoff = "0.3.0"
 base64 = "0.13.0"
 base64-serde = "0.6.1"
 bytes = "1.1.0"
@@ -68,6 +67,7 @@ tokio-stream = "0.1.7"
 tonic = "0.5.2"
 uuid = { version = "0.8.2", default-features = false, features = ["v4"] }
 thiserror = "1.0.30"
+tryhard = "0.4.0"
 eyre = "0.6.5"
 stable-eyre = "0.2.2"
 ipnetwork = "0.18.0"

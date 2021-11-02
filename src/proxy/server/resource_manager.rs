@@ -22,7 +22,7 @@ use crate::{
         manager::{FilterManager, ListenerManagerArgs, SharedFilterManager},
         FilterChain, FilterRegistry,
     },
-    xds::ads_client::{AdsClient, ClusterUpdate, ExecutionResult, UPDATES_CHANNEL_BUFFER_SIZE},
+    xds::ads_client::{AdsClient, ClusterUpdate, UPDATES_CHANNEL_BUFFER_SIZE},
 };
 use prometheus::Registry;
 use slog::{o, warn, Logger};
@@ -39,7 +39,7 @@ pub(super) struct StaticResourceManagers {
 pub(super) struct DynamicResourceManagers {
     pub(super) cluster_manager: SharedClusterManager,
     pub(super) filter_manager: SharedFilterManager,
-    pub(super) execution_result_rx: oneshot::Receiver<ExecutionResult>,
+    pub(super) execution_result_rx: oneshot::Receiver<crate::Result<()>>,
 }
 
 impl StaticResourceManagers {
@@ -64,7 +64,7 @@ struct SpawnAdsClient {
     management_servers: Vec<ManagementServer>,
     cluster_updates_tx: mpsc::Sender<ClusterUpdate>,
     listener_manager_args: ListenerManagerArgs,
-    execution_result_tx: oneshot::Sender<ExecutionResult>,
+    execution_result_tx: oneshot::Sender<crate::Result<()>>,
     shutdown_rx: watch::Receiver<()>,
 }
 
@@ -89,7 +89,7 @@ impl DynamicResourceManagers {
             filter_chain_updates_tx,
         );
 
-        let (execution_result_tx, execution_result_rx) = oneshot::channel::<ExecutionResult>();
+        let (execution_result_tx, execution_result_rx) = oneshot::channel::<crate::Result<()>>();
         Self::spawn_ads_client(SpawnAdsClient {
             log: log.clone(),
             metrics_registry: metrics_registry.clone(),
