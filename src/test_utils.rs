@@ -25,7 +25,7 @@ use tokio::net::UdpSocket;
 use tokio::sync::{mpsc, oneshot, watch};
 
 use crate::config::{Builder as ConfigBuilder, Config};
-use crate::endpoint::{Endpoint, Endpoints};
+use crate::endpoint::{Endpoint, EndpointAddress, Endpoints};
 use crate::filters::{prelude::*, FilterChain, FilterRegistry, FilterSet};
 use crate::proxy::{Builder, PendingValidation};
 
@@ -196,14 +196,14 @@ impl TestHelper {
 
     /// Runs a simple UDP server that echos back payloads.
     /// Returns the server's address.
-    pub async fn run_echo_server(&mut self) -> SocketAddr {
+    pub async fn run_echo_server(&mut self) -> EndpointAddress {
         self.run_echo_server_with_tap(|_, _, _| {}).await
     }
 
     /// Runs a simple UDP server that echos back payloads.
     /// The provided function is invoked for each received payload.
     /// Returns the server's address.
-    pub async fn run_echo_server_with_tap<F>(&mut self, tap: F) -> SocketAddr
+    pub async fn run_echo_server_with_tap<F>(&mut self, tap: F) -> EndpointAddress
     where
         F: Fn(SocketAddr, &[u8], SocketAddr) + Send + 'static,
     {
@@ -227,7 +227,7 @@ impl TestHelper {
                 }
             }
         });
-        addr
+        addr.into()
     }
 
     /// Run a proxy server with a supplied config.
@@ -271,7 +271,7 @@ pub fn assert_filter_read_no_change<F>(filter: &F)
 where
     F: Filter,
 {
-    let endpoints = vec![Endpoint::new("127.0.0.1:80".parse().unwrap())];
+    let endpoints = vec!["127.0.0.1:80".parse::<Endpoint>().unwrap()];
     let from = "127.0.0.1:90".parse().unwrap();
     let contents = "hello".to_string().into_bytes();
 
@@ -296,12 +296,12 @@ pub fn assert_write_no_change<F>(filter: &F)
 where
     F: Filter,
 {
-    let endpoint = Endpoint::new("127.0.0.1:90".parse().unwrap());
+    let endpoint = "127.0.0.1:90".parse::<Endpoint>().unwrap();
     let contents = "hello".to_string().into_bytes();
 
     match filter.write(WriteContext::new(
         &endpoint,
-        endpoint.address,
+        endpoint.address.clone(),
         "127.0.0.1:70".parse().unwrap(),
         contents.clone(),
     )) {
@@ -359,7 +359,7 @@ mod tests {
         let msg = "hello";
         endpoint
             .socket
-            .send_to(msg.as_bytes(), &echo_addr)
+            .send_to(msg.as_bytes(), &echo_addr.to_socket_addr().unwrap())
             .await
             .unwrap();
         assert_eq!(msg, endpoint.packet_rx.await.unwrap());

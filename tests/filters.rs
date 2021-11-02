@@ -67,10 +67,9 @@ async fn test_filter() {
                 name: "TestFilter".to_string(),
                 config: None,
             }],
-            vec![Endpoint::new(SocketAddr::new(
-                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
-                server_port,
-            ))],
+            vec![Endpoint::new(
+                SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port).into(),
+            )],
         )
         .build();
 
@@ -146,10 +145,9 @@ async fn debug_filter() {
                 name: factory.name().into(),
                 config: Some(serde_yaml::Value::Mapping(map)),
             }],
-            vec![Endpoint::new(SocketAddr::new(
-                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
-                server_port,
-            ))],
+            vec![Endpoint::new(
+                SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port).into(),
+            )],
         )
         .build();
     t.run_server_with_config(client_config);

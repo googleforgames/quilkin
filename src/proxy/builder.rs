@@ -125,7 +125,7 @@ impl ValidatedConfig {
             } => {
                 if config_endpoints
                     .iter()
-                    .map(|ep| ep.address)
+                    .map(|ep| ep.address.clone())
                     .collect::<HashSet<_>>()
                     .len()
                     != config_endpoints.len()

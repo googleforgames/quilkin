@@ -18,16 +18,17 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use rand::{thread_rng, Rng};
 
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
-use std::net::SocketAddr;
+use std::{
+    collections::hash_map::DefaultHasher,
+    hash::{Hash, Hasher},
+};
 
-use crate::endpoint::UpstreamEndpoints;
+use crate::filters::ReadContext;
 
 /// EndpointChooser chooses from a set of endpoints that a proxy is connected to.
 pub trait EndpointChooser: Send + Sync {
     /// choose_endpoints asks for the next endpoint(s) to use.
-    fn choose_endpoints(&self, endpoints: &mut UpstreamEndpoints, from: SocketAddr);
+    fn choose_endpoints(&self, endpoints: &mut ReadContext);
 }
 
 /// RoundRobinEndpointChooser chooses endpoints in round-robin order.
@@ -44,11 +45,11 @@ impl RoundRobinEndpointChooser {
 }
 
 impl EndpointChooser for RoundRobinEndpointChooser {
-    fn choose_endpoints(&self, endpoints: &mut UpstreamEndpoints, _from: SocketAddr) {
+    fn choose_endpoints(&self, ctx: &mut ReadContext) {
         let count = self.next_endpoint.fetch_add(1, Ordering::Relaxed);
         // Note: Unwrap is safe here because the index is guaranteed to be in range.
-        let num_endpoints = endpoints.size();
-        endpoints.keep(count % num_endpoints)
+        let num_endpoints = ctx.endpoints.size();
+        ctx.endpoints.keep(count % num_endpoints)
             .expect("BUG: unwrap should have been safe because index into endpoints list should be in range");
     }
 }
@@ -57,10 +58,10 @@ impl EndpointChooser for RoundRobinEndpointChooser {
 pub struct RandomEndpointChooser;
 
 impl EndpointChooser for RandomEndpointChooser {
-    fn choose_endpoints(&self, endpoints: &mut UpstreamEndpoints, _from: SocketAddr) {
+    fn choose_endpoints(&self, ctx: &mut ReadContext) {
         // Note: Unwrap is safe here because the index is guaranteed to be in range.
-        let idx = (&mut thread_rng()).gen_range(0..endpoints.size());
-        endpoints.keep(idx)
+        let idx = (&mut thread_rng()).gen_range(0..ctx.endpoints.size());
+        ctx.endpoints.keep(idx)
             .expect("BUG: unwrap should have been safe because index into endpoints list should be in range");
     }
 }
@@ -69,11 +70,11 @@ impl EndpointChooser for RandomEndpointChooser {
 pub struct HashEndpointChooser;
 
 impl EndpointChooser for HashEndpointChooser {
-    fn choose_endpoints(&self, endpoints: &mut UpstreamEndpoints, from: SocketAddr) {
-        let num_endpoints = endpoints.size();
+    fn choose_endpoints(&self, ctx: &mut ReadContext) {
+        let num_endpoints = ctx.endpoints.size();
         let mut hasher = DefaultHasher::new();
-        from.hash(&mut hasher);
-        endpoints.keep(hasher.finish() as usize % num_endpoints)
+        ctx.from.hash(&mut hasher);
+        ctx.endpoints.keep(hasher.finish() as usize % num_endpoints)
             .expect("BUG: unwrap should have been safe because index into endpoints list should be in range");
     }
 }

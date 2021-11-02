@@ -52,14 +52,14 @@ impl Debug {
 
 impl Filter for Debug {
     fn read(&self, ctx: ReadContext) -> Option<ReadResponse> {
-        info!(self.log, "Read filter event"; "from" => ctx.from, "contents" => packet_to_string(ctx.contents.clone()));
+        info!(self.log, "Read filter event"; "from" => &ctx.from, "contents" => packet_to_string(ctx.contents.clone()));
         Some(ctx.into())
     }
 
     fn write(&self, ctx: WriteContext) -> Option<WriteResponse> {
-        info!(self.log, "Write filter event"; "endpoint" => ctx.endpoint.address,
-        "from" => ctx.from,
-        "to" => ctx.to,
+        info!(self.log, "Write filter event"; "endpoint" => &ctx.endpoint.address,
+        "from" => &ctx.from,
+        "to" => &ctx.to,
         "contents" => packet_to_string(ctx.contents.clone()));
         Some(ctx.into())
     }

@@ -38,8 +38,7 @@ struct LoadBalancer {
 
 impl Filter for LoadBalancer {
     fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
-        self.endpoint_chooser
-            .choose_endpoints(&mut ctx.endpoints, ctx.from);
+        self.endpoint_chooser.choose_endpoints(&mut ctx);
         Some(ctx.into())
     }
 }
@@ -68,10 +67,9 @@ impl FilterFactory for LoadBalancerFilterFactory {
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;
-    use std::net::SocketAddr;
 
     use crate::{
-        endpoint::{Endpoint, Endpoints},
+        endpoint::{Endpoint, EndpointAddress, Endpoints},
         filters::{
             load_balancer::LoadBalancerFilterFactory, CreateFilterArgs, Filter, FilterFactory,
             ReadContext,
@@ -92,44 +90,40 @@ mod tests {
 
     fn get_response_addresses(
         filter: &dyn Filter,
-        input_addresses: &[SocketAddr],
-        source: SocketAddr,
-    ) -> Vec<SocketAddr> {
+        input_addresses: &[EndpointAddress],
+        source: EndpointAddress,
+    ) -> Vec<EndpointAddress> {
         filter
             .read(ReadContext::new(
-                Endpoints::new(
-                    input_addresses
-                        .iter()
-                        .map(|addr| Endpoint::new(*addr))
-                        .collect(),
-                )
-                .unwrap()
-                .into(),
+                Endpoints::new(input_addresses.iter().cloned().map(Endpoint::new).collect())
+                    .unwrap()
+                    .into(),
                 source,
                 vec![],
             ))
             .unwrap()
             .endpoints
             .iter()
-            .map(|ep| ep.address)
+            .map(|ep| ep.address.clone())
             .collect::<Vec<_>>()
     }
 
     #[test]
     fn round_robin_load_balancer_policy() {
-        let addresses = vec![
-            "127.0.0.1:8080".parse().unwrap(),
-            "127.0.0.2:8080".parse().unwrap(),
-            "127.0.0.3:8080".parse().unwrap(),
+        let addresses: Vec<EndpointAddress> = vec![
+            ([127, 0, 0, 1], 8080).into(),
+            ([127, 0, 0, 2], 8080).into(),
+            ([127, 0, 0, 3], 8080).into(),
         ];
 
-        let yaml = "
-policy: ROUND_ROBIN
-";
+        let yaml = "policy: ROUND_ROBIN";
         let filter = create_filter(yaml);
 
         // Check that we repeat the same addresses in sequence forever.
-        let expected_sequence = addresses.iter().map(|addr| vec![*addr]).collect::<Vec<_>>();
+        let expected_sequence = addresses
+            .iter()
+            .map(|addr| vec![addr.clone()])
+            .collect::<Vec<_>>();
 
         for _ in 0..10 {
             assert_eq!(
@@ -195,7 +189,7 @@ policy: RANDOM
 
     #[test]
     fn hash_load_balancer_policy() {
-        let addresses = vec![
+        let addresses: Vec<EndpointAddress> = vec![
             "127.0.0.1:8080".parse().unwrap(),
             "127.0.0.2:8080".parse().unwrap(),
             "127.0.0.3:8080".parse().unwrap(),

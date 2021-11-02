@@ -33,7 +33,7 @@ async fn health_server() {
     let server_port = 12349;
     let server_config = Builder::empty()
         .with_port(server_port)
-        .with_static(vec![], vec![Endpoint::new("127.0.0.1:0".parse().unwrap())])
+        .with_static(vec![], vec!["127.0.0.1:0".parse::<Endpoint>().unwrap()])
         .with_admin(Admin {
             address: "[::]:9093".parse().unwrap(),
         })

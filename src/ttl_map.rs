@@ -19,7 +19,6 @@ use dashmap::mapref::one::{Ref, RefMut};
 use dashmap::DashMap;
 use slog::{warn, Logger};
 use std::hash::Hash;
-use std::net::SocketAddr;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
@@ -30,6 +29,8 @@ use tokio::sync::oneshot::{channel, Receiver, Sender};
 use std::time::{SystemTime, UNIX_EPOCH};
 #[allow(unused_imports)]
 use tokio::time::Instant;
+
+use crate::endpoint::EndpointAddress;
 
 /// A wrapper around the value of an entry in the map.
 /// It contains the value's ttl.
@@ -73,7 +74,7 @@ impl<V> Value<V> {
 
 /// Map contains the hash map implementation.
 struct Map<V> {
-    inner: DashMap<SocketAddr, Value<V>>,
+    inner: DashMap<EndpointAddress, Value<V>>,
     log: Logger,
     ttl: Duration,
     clock: Clock,
@@ -117,7 +118,7 @@ where
 
     fn initialize(
         log: Logger,
-        inner: DashMap<SocketAddr, Value<V>>,
+        inner: DashMap<EndpointAddress, Value<V>>,
         ttl: Duration,
         poll_interval: Duration,
     ) -> Self {
@@ -153,8 +154,8 @@ where
 {
     #[allow(dead_code)]
     /// Returns a reference to value corresponding to key.
-    pub fn get(&self, key: SocketAddr) -> Option<Ref<SocketAddr, Value<V>>> {
-        let value = self.0.inner.get(&key);
+    pub fn get(&self, key: &EndpointAddress) -> Option<Ref<EndpointAddress, Value<V>>> {
+        let value = self.0.inner.get(key);
         if let Some(ref value) = value {
             value.update_expiration(&self.0.log, self.0.ttl)
         }
@@ -165,8 +166,8 @@ where
     #[allow(dead_code)]
     /// Returns a mutable reference to value corresponding to key.
     /// The value will be reset to expire at the configured TTL after the time of retrieval.
-    pub fn get_mut(&self, key: SocketAddr) -> Option<RefMut<SocketAddr, Value<V>>> {
-        let value = self.0.inner.get_mut(&key);
+    pub fn get_mut(&self, key: &EndpointAddress) -> Option<RefMut<EndpointAddress, Value<V>>> {
+        let value = self.0.inner.get_mut(key);
         if let Some(ref value) = value {
             value.update_expiration(&self.0.log, self.0.ttl);
         }
@@ -183,15 +184,15 @@ where
 
     #[allow(dead_code)]
     /// Returns true if the map contains a value for the specified key.
-    pub fn contains_key(&self, key: SocketAddr) -> bool {
-        self.0.inner.contains_key(&key)
+    pub fn contains_key(&self, key: &EndpointAddress) -> bool {
+        self.0.inner.contains_key(key)
     }
 
     #[allow(dead_code)]
     /// Inserts a key-value pair into the map.
     /// The value will be set to expire at the configured TTL after the time of insertion.
     /// If a previous value existed for this key, that value is returned.
-    pub fn insert(&self, key: SocketAddr, value: V) -> Option<V> {
+    pub fn insert(&self, key: EndpointAddress, value: V) -> Option<V> {
         self.0
             .inner
             .insert(
@@ -204,7 +205,7 @@ where
     /// Returns an API for in-place updates of the specified key-value pair.
     /// Note: This acquires a write lock on the map's shard that corresponds
     /// to the entry.
-    pub fn entry(&self, key: SocketAddr) -> Entry<SocketAddr, Value<V>> {
+    pub fn entry(&self, key: EndpointAddress) -> Entry<EndpointAddress, Value<V>> {
         let log = &self.0.log;
         let ttl = self.0.ttl;
         match self.0.inner.entry(key) {
@@ -415,12 +416,19 @@ impl Clock {
 mod tests {
     use super::*;
     use crate::test_utils::logger;
+    use std::net::Ipv4Addr;
     use tokio::time;
+
+    fn address_pair() -> (EndpointAddress, EndpointAddress) {
+        (
+            (Ipv4Addr::LOCALHOST, 8080).into(),
+            ([127, 0, 0, 2], 8080).into(),
+        )
+    }
 
     #[tokio::test]
     async fn len() {
-        let one = "127.0.0.1:8080".parse().unwrap();
-        let two = "127.0.0.2:8080".parse().unwrap();
+        let (one, two) = address_pair();
 
         let map =
             TtlMap::<usize>::new(logger(), Duration::from_secs(10), Duration::from_millis(10));
@@ -432,16 +440,15 @@ mod tests {
 
     #[tokio::test]
     async fn insert_and_get() {
-        let one = "127.0.0.1:8080".parse().unwrap();
-        let two = "127.0.0.2:8080".parse().unwrap();
+        let (one, two) = address_pair();
 
         let map =
             TtlMap::<usize>::new(logger(), Duration::from_secs(10), Duration::from_millis(10));
-        map.insert(one, 1);
-        map.insert(two, 2);
+        map.insert(one.clone(), 1);
+        map.insert(two.clone(), 2);
 
-        assert_eq!(map.get(one).unwrap().value, 1);
-        assert_eq!(map.get(two).unwrap().value, 2);
+        assert_eq!(map.get(&one).unwrap().value, 1);
+        assert_eq!(map.get(&two).unwrap().value, 2);
     }
 
     #[tokio::test]
@@ -449,19 +456,19 @@ mod tests {
         // Test that when we insert or retrieve an item, we update its expiration.
         time::pause();
 
-        let one = "127.0.0.1:8080".parse().unwrap();
+        let (one, _) = address_pair();
 
         let map =
             TtlMap::<usize>::new(logger(), Duration::from_secs(10), Duration::from_millis(10));
-        map.insert(one, 1);
+        map.insert(one.clone(), 1);
 
-        let exp1 = map.get(one).unwrap().expiration_secs();
+        let exp1 = map.get(&one).unwrap().expiration_secs();
 
         time::advance(Duration::from_secs(2)).await;
-        let exp2 = map.get(one).unwrap().expiration_secs();
+        let exp2 = map.get(&one).unwrap().expiration_secs();
 
         time::advance(Duration::from_secs(3)).await;
-        let exp3 = map.get(one).unwrap().expiration_secs();
+        let exp3 = map.get(&one).unwrap().expiration_secs();
 
         assert!(exp1 < exp2);
         assert_eq!(2, exp2 - exp1);
@@ -471,29 +478,28 @@ mod tests {
 
     #[tokio::test]
     async fn contains_key() {
-        let one = "127.0.0.1:8080".parse().unwrap();
-        let two = "127.0.0.2:8080".parse().unwrap();
-        let three = "127.0.0.3:8080".parse().unwrap();
+        let (one, two) = address_pair();
+        let three = ([127, 0, 0, 3], 8080).into();
 
         let map =
             TtlMap::<usize>::new(logger(), Duration::from_secs(10), Duration::from_millis(10));
-        map.insert(one, 1);
-        map.insert(two, 2);
+        map.insert(one.clone(), 1);
+        map.insert(two.clone(), 2);
 
-        assert!(map.contains_key(one));
-        assert!(!map.contains_key(three));
-        assert!(map.contains_key(two));
+        assert!(map.contains_key(&one));
+        assert!(!map.contains_key(&three));
+        assert!(map.contains_key(&two));
     }
 
     #[tokio::test]
     async fn entry_occupied_insert_and_get() {
-        let one = "127.0.0.1:8080".parse().unwrap();
+        let (one, _) = address_pair();
 
         let map =
             TtlMap::<usize>::new(logger(), Duration::from_secs(10), Duration::from_millis(10));
-        map.insert(one, 1);
+        map.insert(one.clone(), 1);
 
-        match map.entry(one) {
+        match map.entry(one.clone()) {
             Entry::Occupied(mut entry) => {
                 assert_eq!(entry.get().value, 1);
                 entry.insert(5);
@@ -501,35 +507,35 @@ mod tests {
             _ => unreachable!("expected occupied entry"),
         }
 
-        assert_eq!(map.get(one).unwrap().value, 5);
+        assert_eq!(map.get(&one).unwrap().value, 5);
     }
 
     #[tokio::test]
     async fn entry_occupied_get_mut() {
-        let one = "127.0.0.1:8080".parse().unwrap();
+        let (one, _) = address_pair();
 
         let map =
             TtlMap::<usize>::new(logger(), Duration::from_secs(10), Duration::from_millis(10));
-        map.insert(one, 1);
+        map.insert(one.clone(), 1);
 
-        match map.entry(one) {
+        match map.entry(one.clone()) {
             Entry::Occupied(mut entry) => {
                 entry.get_mut().value = 5;
             }
             _ => unreachable!("expected occupied entry"),
         }
 
-        assert_eq!(map.get(one).unwrap().value, 5);
+        assert_eq!(map.get(&one).unwrap().value, 5);
     }
 
     #[tokio::test]
     async fn entry_vacant_insert() {
-        let one = "127.0.0.1:8080".parse().unwrap();
+        let (one, _) = address_pair();
 
         let map =
             TtlMap::<usize>::new(logger(), Duration::from_secs(10), Duration::from_millis(10));
 
-        match map.entry(one) {
+        match map.entry(one.clone()) {
             Entry::Vacant(entry) => {
                 let mut e = entry.insert(1);
                 assert_eq!(e.value, 1);
@@ -538,7 +544,7 @@ mod tests {
             _ => unreachable!("expected occupied entry"),
         }
 
-        assert_eq!(map.get(one).unwrap().value, 5);
+        assert_eq!(map.get(&one).unwrap().value, 5);
     }
 
     #[tokio::test]
@@ -546,17 +552,17 @@ mod tests {
         // Test that when we get a value via OccupiedEntry, we update its expiration.
         time::pause();
 
-        let one = "127.0.0.1:8080".parse().unwrap();
+        let (one, _) = address_pair();
 
         let map =
             TtlMap::<usize>::new(logger(), Duration::from_secs(10), Duration::from_millis(10));
-        map.insert(one, 1);
+        map.insert(one.clone(), 1);
 
-        let exp1 = map.get(one).unwrap().expiration_secs();
+        let exp1 = map.get(&one).unwrap().expiration_secs();
 
         time::advance(Duration::from_secs(2)).await;
 
-        let exp2 = match map.entry(one) {
+        let exp2 = match map.entry(one.clone()) {
             Entry::Occupied(entry) => entry.get().expiration_secs(),
             _ => unreachable!("expected occupied entry"),
         };
@@ -570,13 +576,13 @@ mod tests {
         // Test that when we get_mut a value via OccupiedEntry, we update its expiration.
         time::pause();
 
-        let one = "127.0.0.1:8080".parse().unwrap();
+        let (one, _) = address_pair();
 
         let map =
             TtlMap::<usize>::new(logger(), Duration::from_secs(10), Duration::from_millis(10));
-        map.insert(one, 1);
+        map.insert(one.clone(), 1);
 
-        let exp1 = map.get(one).unwrap().expiration_secs();
+        let exp1 = map.get(&one).unwrap().expiration_secs();
 
         time::advance(Duration::from_secs(2)).await;
 
@@ -594,22 +600,22 @@ mod tests {
         // Test that when we replace a value via OccupiedEntry, we update its expiration.
         time::pause();
 
-        let one = "127.0.0.1:8080".parse().unwrap();
+        let (one, _) = address_pair();
 
         let map =
             TtlMap::<usize>::new(logger(), Duration::from_secs(10), Duration::from_millis(10));
-        map.insert(one, 1);
+        map.insert(one.clone(), 1);
 
-        let exp1 = map.get(one).unwrap().expiration_secs();
+        let exp1 = map.get(&one).unwrap().expiration_secs();
 
         time::advance(Duration::from_secs(2)).await;
 
-        let old_exp1 = match map.entry(one) {
+        let old_exp1 = match map.entry(one.clone()) {
             Entry::Occupied(mut entry) => entry.insert(9).expiration_secs(),
             _ => unreachable!("expected occupied entry"),
         };
 
-        let exp2 = map.get(one).unwrap().expiration_secs();
+        let exp2 = map.get(&one).unwrap().expiration_secs();
 
         assert_eq!(exp1, old_exp1);
         assert!(exp1 < exp2);
@@ -621,19 +627,19 @@ mod tests {
         // Test that when we insert a value via VacantEntry, we update its expiration.
         time::pause();
 
-        let one = "127.0.0.1:8080".parse().unwrap();
+        let (one, _) = address_pair();
 
         let map =
             TtlMap::<usize>::new(logger(), Duration::from_secs(10), Duration::from_millis(10));
 
-        let exp1 = match map.entry(one) {
+        let exp1 = match map.entry(one.clone()) {
             Entry::Vacant(entry) => entry.insert(9).expiration_secs(),
             _ => unreachable!("expected vacant entry"),
         };
 
         time::advance(Duration::from_secs(2)).await;
 
-        let exp2 = map.get(one).unwrap().expiration_secs();
+        let exp2 = map.get(&one).unwrap().expiration_secs();
 
         // Initial expiration should be set at our configured ttl.
         assert_eq!(10, exp1);
@@ -647,7 +653,7 @@ mod tests {
         // Test that when we expire entries at our configured ttl.
         time::pause();
 
-        let one = "127.0.0.1:8080".parse().unwrap();
+        let (one, _) = address_pair();
 
         let ttl = Duration::from_secs(12);
         let map = TtlMap::<usize>::new(logger(), ttl, Duration::from_millis(10));
@@ -666,31 +672,30 @@ mod tests {
         // Test that we delete expired entries from the ttl map.
         time::pause();
 
-        let one = "127.0.0.1:8080".parse().unwrap();
-        let two = "127.0.0.2:8080".parse().unwrap();
+        let (one, two) = address_pair();
 
         let map = TtlMap::<usize>::new(logger(), Duration::from_secs(5), Duration::from_secs(1));
-        map.insert(one, 1);
-        map.insert(two, 2);
+        map.insert(one.clone(), 1);
+        map.insert(two.clone(), 2);
 
-        assert!(map.contains_key(one));
-        assert!(map.contains_key(two));
+        assert!(map.contains_key(&one));
+        assert!(map.contains_key(&two));
 
         time::advance(Duration::from_secs(4)).await;
 
         // Read one key so that it does not expire at the original ttl.
-        let _ = map.get(two).unwrap();
+        let _ = map.get(&two).unwrap();
 
         // Check that only the un-read key is deleted.
         time::advance(Duration::from_secs(4)).await;
-        assert!(!map.contains_key(one));
-        assert!(map.contains_key(two));
+        assert!(!map.contains_key(&one));
+        assert!(map.contains_key(&two));
         assert_eq!(map.len(), 1);
 
         // Check that the second key is eventually deleted.
         time::advance(Duration::from_secs(3)).await;
-        assert!(!map.contains_key(one));
-        assert!(!map.contains_key(two));
+        assert!(!map.contains_key(&one));
+        assert!(!map.contains_key(&two));
         assert_eq!(map.len(), 0);
     }
 }

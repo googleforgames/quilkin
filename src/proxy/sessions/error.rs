@@ -19,7 +19,6 @@ use std::fmt::{self, Display, Formatter};
 #[derive(Debug)]
 pub enum Error {
     BindUdpSocket(tokio::io::Error),
-    SendToDst(std::io::Error),
     UpdateSessionExpiration(String),
 }
 
@@ -29,11 +28,6 @@ impl Display for Error {
             Error::BindUdpSocket(inner) => {
                 write!(f, "failed to bind to UDP socket on address: {}", inner)
             }
-            Error::SendToDst(inner) => write!(
-                f,
-                "failed to send a packet to the destination address: {}",
-                inner
-            ),
             Error::UpdateSessionExpiration(reason) => {
                 write!(f, "failed to update session expiration time: {}", reason)
             }
