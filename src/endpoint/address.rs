@@ -50,6 +50,14 @@ impl EndpointAddress {
 }
 
 impl EndpointAddress {
+    /// Returns the port for the endpoint address, or `0` if no port
+    /// was specified.
+    pub fn port(&self) -> u16 {
+        self.port.unwrap_or(0)
+    }
+
+    /// Returns the socket address for the endpoint, resolving any DNS entries
+    /// if present.
     pub fn to_socket_addr(&self) -> crate::Result<SocketAddr> {
         let no_valid_socket_err = || eyre::eyre!("No valid socket address found.");
         if let Some(port) = self.port {
