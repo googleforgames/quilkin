@@ -36,12 +36,6 @@
 <span id="36">36</span>
 <span id="37">37</span>
 <span id="38">38</span>
-<span id="39">39</span>
-<span id="40">40</span>
-<span id="41">41</span>
-<span id="42">42</span>
-<span id="43">43</span>
-<span id="44">44</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -63,7 +57,6 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Error</span> {
     <span class="ident">BindUdpSocket</span>(<span class="ident">tokio::io::Error</span>),
-    <span class="ident">SendToDst</span>(<span class="ident">std::io::Error</span>),
     <span class="ident">UpdateSessionExpiration</span>(<span class="ident">String</span>),
 }
 
@@ -73,11 +66,6 @@
             <span class="ident">Error::BindUdpSocket</span>(<span class="ident">inner</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;failed to bind to UDP socket on address: {}&quot;</span>, <span class="ident">inner</span>)
             }
-            <span class="ident">Error::SendToDst</span>(<span class="ident">inner</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(
-                <span class="ident">f</span>,
-                <span class="string">&quot;failed to send a packet to the destination address: {}&quot;</span>,
-                <span class="ident">inner</span>
-            ),
             <span class="ident">Error::UpdateSessionExpiration</span>(<span class="ident">reason</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;failed to update session expiration time: {}&quot;</span>, <span class="ident">reason</span>)
             }

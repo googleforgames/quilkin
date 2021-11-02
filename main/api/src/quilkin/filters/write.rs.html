@@ -112,9 +112,9 @@
  * limitations under the License.
  */</span>
 
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">any::Any</span>, <span class="ident">collections::HashMap</span>, <span class="ident">net::SocketAddr</span>};
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">any::Any</span>, <span class="ident">collections::HashMap</span>};
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::endpoint::Endpoint</span>;
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">EndpointAddress</span>};
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">doc</span>)]</span>
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters::Filter</span>;
@@ -125,9 +125,9 @@
     <span class="doccomment">/// The upstream endpoint that we&#39;re expecting packets from.</span>
     <span class="kw">pub</span> <span class="ident">endpoint</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Endpoint</span>,
     <span class="doccomment">/// The source of the received packet.</span>
-    <span class="kw">pub</span> <span class="ident">from</span>: <span class="ident">SocketAddr</span>,
+    <span class="kw">pub</span> <span class="ident">from</span>: <span class="ident">EndpointAddress</span>,
     <span class="doccomment">/// The destination of the received packet.</span>
-    <span class="kw">pub</span> <span class="ident">to</span>: <span class="ident">SocketAddr</span>,
+    <span class="kw">pub</span> <span class="ident">to</span>: <span class="ident">EndpointAddress</span>,
     <span class="doccomment">/// Contents of the received packet.</span>
     <span class="kw">pub</span> <span class="ident">contents</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Arbitrary values that can be passed from one filter to another</span>
@@ -156,8 +156,8 @@
     <span class="doccomment">/// Creates a new [`WriteContext`]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">endpoint</span>: <span class="kw-2">&amp;</span><span class="ident">Endpoint</span>,
-        <span class="ident">from</span>: <span class="ident">SocketAddr</span>,
-        <span class="ident">to</span>: <span class="ident">SocketAddr</span>,
+        <span class="ident">from</span>: <span class="ident">EndpointAddress</span>,
+        <span class="ident">to</span>: <span class="ident">EndpointAddress</span>,
         <span class="ident">contents</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">WriteContext</span> {
         <span class="ident">WriteContext</span> {
@@ -172,8 +172,8 @@
     <span class="doccomment">/// Creates a new [`WriteContext`] from a given [`WriteResponse`].</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_response</span>(
         <span class="ident">endpoint</span>: <span class="kw-2">&amp;</span><span class="ident">Endpoint</span>,
-        <span class="ident">from</span>: <span class="ident">SocketAddr</span>,
-        <span class="ident">to</span>: <span class="ident">SocketAddr</span>,
+        <span class="ident">from</span>: <span class="ident">EndpointAddress</span>,
+        <span class="ident">to</span>: <span class="ident">EndpointAddress</span>,
         <span class="ident">response</span>: <span class="ident">WriteResponse</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">WriteContext</span> {
         <span class="ident">WriteContext</span> {

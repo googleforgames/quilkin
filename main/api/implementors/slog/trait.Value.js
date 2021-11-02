@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["quilkin"] = [{"text":"impl Value for <a class=\"struct\" href=\"quilkin/endpoint/struct.EndpointAddress.html\" title=\"struct quilkin::endpoint::EndpointAddress\">EndpointAddress</a>","synthetic":false,"types":["quilkin::endpoint::address::EndpointAddress"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

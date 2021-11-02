@@ -1029,38 +1029,6 @@
 <span id="1029">1029</span>
 <span id="1030">1030</span>
 <span id="1031">1031</span>
-<span id="1032">1032</span>
-<span id="1033">1033</span>
-<span id="1034">1034</span>
-<span id="1035">1035</span>
-<span id="1036">1036</span>
-<span id="1037">1037</span>
-<span id="1038">1038</span>
-<span id="1039">1039</span>
-<span id="1040">1040</span>
-<span id="1041">1041</span>
-<span id="1042">1042</span>
-<span id="1043">1043</span>
-<span id="1044">1044</span>
-<span id="1045">1045</span>
-<span id="1046">1046</span>
-<span id="1047">1047</span>
-<span id="1048">1048</span>
-<span id="1049">1049</span>
-<span id="1050">1050</span>
-<span id="1051">1051</span>
-<span id="1052">1052</span>
-<span id="1053">1053</span>
-<span id="1054">1054</span>
-<span id="1055">1055</span>
-<span id="1056">1056</span>
-<span id="1057">1057</span>
-<span id="1058">1058</span>
-<span id="1059">1059</span>
-<span id="1060">1060</span>
-<span id="1061">1061</span>
-<span id="1062">1062</span>
-<span id="1063">1063</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -1079,8 +1047,7 @@
 
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">collections</span>::{<span class="ident">HashMap</span>, <span class="ident">HashSet</span>},
-    <span class="ident">convert::TryFrom</span>,
-    <span class="ident">net::SocketAddr</span>,
+    <span class="ident">convert</span>::{<span class="ident">TryFrom</span>, <span class="ident">TryInto</span>},
 };
 
 <span class="kw">use</span> <span class="ident">bytes::Bytes</span>;
@@ -1090,19 +1057,17 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">cluster</span>::{<span class="ident">Cluster</span> <span class="kw">as</span> <span class="ident">ProxyCluster</span>, <span class="ident">ClusterLocalities</span>, <span class="ident">Locality</span>, <span class="ident">LocalityEndpoints</span>},
-    <span class="ident">endpoint::Endpoint</span>,
+    <span class="ident">endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">EndpointAddress</span>},
     <span class="ident">metadata::MetadataView</span>,
     <span class="ident">xds</span>::{
         <span class="ident">ads_client::send_discovery_req</span>,
         <span class="ident">envoy</span>::{
             <span class="ident">config</span>::{
                 <span class="ident">cluster::v3</span>::{<span class="ident">cluster</span>, <span class="ident">Cluster</span>},
-                <span class="ident">core::v3</span>::{<span class="ident">address</span>, <span class="ident">socket_address</span>},
                 <span class="ident">endpoint::v3</span>::{<span class="ident">lb_endpoint</span>, <span class="ident">ClusterLoadAssignment</span>},
             },
             <span class="ident">service::discovery::v3</span>::{<span class="ident">DiscoveryRequest</span>, <span class="ident">DiscoveryResponse</span>},
         },
-        <span class="ident">error::Error</span>,
         <span class="ident">CLUSTER_TYPE</span>, <span class="ident">ENDPOINT_TYPE</span>,
     },
 };
@@ -1162,7 +1127,7 @@
             .<span class="ident">process_cluster_response</span>(<span class="ident">response</span>.<span class="ident">resources</span>)
             .<span class="kw">await</span>
             .<span class="ident">err</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="ident">err</span>.<span class="ident">message</span>);
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="ident">err</span>.<span class="ident">to_string</span>());
 
         <span class="self">self</span>.<span class="ident">send_cluster_discovery_req</span>(<span class="ident">response</span>.<span class="ident">version_info</span>, <span class="ident">response</span>.<span class="ident">nonce</span>, <span class="ident">error_message</span>)
             .<span class="kw">await</span>;
@@ -1171,30 +1136,30 @@
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_cluster_response</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">resources</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">prost_types::Any</span><span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident"><span class="kw">crate</span>::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">temp_cluster_set</span> <span class="op">=</span> <span class="ident">HashMap::new</span>();
         <span class="kw">for</span> <span class="ident">resource</span> <span class="kw">in</span> <span class="ident">resources</span> {
             <span class="kw">let</span> <span class="ident">cluster</span> <span class="op">=</span> <span class="ident">Cluster::decode</span>(<span class="ident">Bytes::from</span>(<span class="ident">resource</span>.<span class="ident">value</span>))
-                .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="ident">Error::new</span>(<span class="macro">format!</span>(<span class="string">&quot;cluster decode error: {}&quot;</span>, <span class="ident">err</span>.<span class="ident">to_string</span>())))<span class="question-mark">?</span>;
+                .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">eyre::eyre!</span>(<span class="ident">error</span>).<span class="ident">wrap_err</span>(<span class="string">&quot;cluster decode error&quot;</span>))<span class="question-mark">?</span>;
 
-            <span class="comment">// If this cluster doesn&#39;t use IP addresses return an error.</span>
-            <span class="ident">cluster</span>
-                .<span class="ident">cluster_discovery_type</span>
-                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">discovery_type</span><span class="op">|</span> <span class="kw">match</span> <span class="ident">discovery_type</span> {
-                    <span class="comment">// See envoy::config::cluster::v3::cluster::DiscoveryType for corresponding values.</span>
-                    <span class="ident">cluster::ClusterDiscoveryType::Type</span>(<span class="ident">discovery_type</span>) <span class="kw">if</span> <span class="ident">discovery_type</span> <span class="op">=</span><span class="op">=</span> <span class="number">0</span> <span class="op">=</span><span class="op">&gt;</span> {
-                        <span class="prelude-val">Ok</span>(())
-                    }
-                    <span class="ident">cluster::ClusterDiscoveryType::Type</span>(<span class="ident">discovery_type</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="macro">format!</span>(
+            <span class="kw">match</span> <span class="ident">cluster</span>.<span class="ident">cluster_discovery_type</span> {
+                <span class="comment">// See envoy::config::cluster::v3::cluster::DiscoveryType for corresponding values.</span>
+                <span class="prelude-val">Some</span>(<span class="ident">cluster::ClusterDiscoveryType::Type</span>(<span class="ident">typ</span>)) <span class="kw">if</span> <span class="ident">typ</span> <span class="op">=</span><span class="op">=</span> <span class="number">0</span> <span class="op">=</span><span class="op">&gt;</span> {}
+                <span class="prelude-val">Some</span>(<span class="ident">cluster::ClusterDiscoveryType::Type</span>(<span class="ident">typ</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(
                         <span class="string">&quot;unsupported cluster type &#39;{}&#39;: Only STATIC is supported&quot;</span>,
-                        <span class="ident">discovery_type</span>
-                    )),
-                    <span class="ident">cluster::ClusterDiscoveryType::ClusterType</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                        <span class="prelude-val">Err</span>(<span class="string">&quot;Custom cluster types are not supported&quot;</span>.<span class="ident">into</span>())
-                    }
-                })
-                .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="prelude-val">Err</span>(<span class="string">&quot;no cluster_discovery_type was provided in request&quot;</span>.<span class="ident">into</span>()))
-                .<span class="ident">map_err</span>(<span class="ident">Error::new</span>)<span class="question-mark">?</span>;
+                        <span class="ident">typ</span>
+                    ))
+                }
+                <span class="prelude-val">Some</span>(<span class="ident">cluster::ClusterDiscoveryType::ClusterType</span>(<span class="kw">_</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">&quot;custom cluster types are unsupported.&quot;</span>))
+                }
+                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(
+                        <span class="string">&quot;no cluster_discovery_type was provided in request&quot;</span>
+                    ))
+                }
+            }
 
             <span class="kw">let</span> <span class="ident">localities</span> <span class="op">=</span> <span class="ident">cluster</span>
                 .<span class="ident">load_assignment</span>
@@ -1250,7 +1215,7 @@
             .<span class="ident">process_cluster_load_assignment_response</span>(<span class="ident">response</span>.<span class="ident">resources</span>)
             .<span class="kw">await</span>
             .<span class="ident">err</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="ident">err</span>.<span class="ident">message</span>);
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="ident">err</span>.<span class="ident">to_string</span>());
 
         <span class="self">self</span>.<span class="ident">send_cluster_load_assignment_discovery_req</span>(
             <span class="ident">response</span>.<span class="ident">version_info</span>,
@@ -1263,14 +1228,11 @@
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_cluster_load_assignment_response</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">resources</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">prost_types::Any</span><span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident"><span class="kw">crate</span>::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">for</span> <span class="ident">resource</span> <span class="kw">in</span> <span class="ident">resources</span> {
             <span class="kw">let</span> <span class="ident">assignment</span> <span class="op">=</span>
-                <span class="ident">ClusterLoadAssignment::decode</span>(<span class="ident">Bytes::from</span>(<span class="ident">resource</span>.<span class="ident">value</span>)).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-                    <span class="ident">Error::new</span>(<span class="macro">format!</span>(
-                        <span class="string">&quot;cluster load assignment decode error: {}&quot;</span>,
-                        <span class="ident">err</span>.<span class="ident">to_string</span>()
-                    ))
+                <span class="ident">ClusterLoadAssignment::decode</span>(<span class="ident">Bytes::from</span>(<span class="ident">resource</span>.<span class="ident">value</span>)).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
+                    <span class="macro">eyre::eyre!</span>(<span class="ident">error</span>).<span class="ident">wrap_err</span>(<span class="string">&quot;cluster load assignment decode error&quot;</span>)
                 })<span class="question-mark">?</span>;
 
             <span class="kw">match</span> <span class="self">self</span>.<span class="ident">clusters</span>.<span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="ident">assignment</span>.<span class="ident">cluster_name</span>) {
@@ -1315,7 +1277,7 @@
     <span class="doccomment">/// components that we&#39;re interested in.</span>
     <span class="kw">fn</span> <span class="ident">process_cluster_load_assignment</span>(
         <span class="kw-2">mut</span> <span class="ident">assignment</span>: <span class="ident">ClusterLoadAssignment</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ClusterLocalities</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident"><span class="kw">crate</span>::Result</span><span class="op">&lt;</span><span class="ident">ClusterLocalities</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">existing_endpoints</span> <span class="op">=</span> <span class="ident">HashMap::new</span>();
 
         <span class="kw">for</span> <span class="ident">lb_locality</span> <span class="kw">in</span> <span class="ident">assignment</span>.<span class="ident">endpoints</span> {
@@ -1343,55 +1305,26 @@
                     <span class="ident">lb_endpoint::HostIdentifier::EndpointName</span>(<span class="ident">name_reference</span>) <span class="op">=</span><span class="op">&gt;</span> {
                         <span class="kw">match</span> <span class="ident">assignment</span>.<span class="ident">named_endpoints</span>.<span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="ident">name_reference</span>) {
                             <span class="prelude-val">Some</span>(<span class="ident">endpoint</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">endpoint</span>),
-                            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">Error::new</span>(<span class="macro">format!</span>(
+                            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(
                                 <span class="string">&quot;no endpoint found name reference {}&quot;</span>,
                                 <span class="ident">name_reference</span>
-                            ))),
+                            )),
                         }
                     }
                 }<span class="question-mark">?</span>;
 
                 <span class="comment">// Extract the endpoint&#39;s address.</span>
-                <span class="kw">let</span> <span class="ident">address</span> <span class="op">=</span> <span class="ident">endpoint</span>
+                <span class="kw">let</span> <span class="ident">address</span>: <span class="ident">EndpointAddress</span> <span class="op">=</span> <span class="ident">endpoint</span>
                     .<span class="ident">address</span>
                     .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">address</span><span class="op">|</span> <span class="ident">address</span>.<span class="ident">address</span>)
-                    .<span class="ident">map</span>(<span class="op">|</span><span class="ident">address</span><span class="op">|</span> <span class="kw">match</span> <span class="ident">address</span> {
-                        <span class="ident">address::Address::SocketAddress</span>(<span class="ident">sock_addr</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                            <span class="comment">// We only support IP addresses so anything else is an error.</span>
-                            <span class="kw">let</span> <span class="ident">address</span> <span class="op">=</span>
-                                <span class="ident">sock_addr</span>
-                                    .<span class="ident">address</span>
-                                    .<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">std::net::IpAddr</span><span class="op">&gt;</span>()
-                                    .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-                                        <span class="ident">Error::new</span>(<span class="macro">format!</span>(<span class="string">&quot;invalid ip address: {}&quot;</span>, <span class="ident">err</span>))
-                                    })<span class="question-mark">?</span>;
-                            <span class="ident">sock_addr</span>
-                                .<span class="ident">port_specifier</span>
-                                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">port_specifier</span><span class="op">|</span> <span class="kw">match</span> <span class="ident">port_specifier</span> {
-                                    <span class="ident">socket_address::PortSpecifier::PortValue</span>(<span class="ident">port</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                                        <span class="prelude-val">Ok</span>((<span class="ident">address</span>, <span class="ident">port</span> <span class="kw">as</span> <span class="ident">u16</span>))
-                                    }
-                                    <span class="ident">socket_address::PortSpecifier::NamedPort</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">Error::new</span>(
-                                        <span class="string">&quot;named_port on socket addresses is not supported&quot;</span>,
-                                    )),
-                                })
-                                .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> {
-                                    <span class="prelude-val">Err</span>(<span class="ident">Error::new</span>(<span class="string">&quot;no port specifier was provided&quot;</span>))
-                                })
-                        }
-                        <span class="ident">invalid</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">Error::new</span>(<span class="macro">format!</span>(
-                            <span class="string">&quot;unsupported endpoint address type: {:?}&quot;</span>,
-                            <span class="ident">invalid</span>
-                        ))),
-                    })
-                    .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="prelude-val">Err</span>(<span class="ident">Error::new</span>(<span class="string">&quot;received `Endpoint` with no `address`&quot;</span>)))<span class="question-mark">?</span>;
+                    .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">eyre::eyre!</span>(<span class="string">&quot;No address provided.&quot;</span>))<span class="question-mark">?</span>
+                    .<span class="ident">try_into</span>()<span class="question-mark">?</span>;
 
                 <span class="ident">endpoints</span>.<span class="ident">push</span>(<span class="ident">Endpoint::with_metadata</span>(
-                    <span class="ident">SocketAddr::from</span>(<span class="ident">address</span>),
+                    <span class="macro">dbg!</span>(<span class="ident">address</span>),
                     <span class="ident">metadata</span>
                         .<span class="ident">map</span>(<span class="ident">MetadataView::try_from</span>)
-                        .<span class="ident">transpose</span>()
-                        .<span class="ident">map_err</span>(<span class="ident">Error::new</span>)<span class="question-mark">?</span>
+                        .<span class="ident">transpose</span>()<span class="question-mark">?</span>
                         .<span class="ident">unwrap_or_default</span>(),
                 ));
             }
@@ -1468,7 +1401,7 @@
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span> {
     <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">ClusterManager</span>, <span class="ident">ProxyCluster</span>};
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::endpoint::Endpoint</span> <span class="kw">as</span> <span class="ident">ProxyEndpoint</span>;
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::endpoint</span>::{<span class="ident">Endpoint</span> <span class="kw">as</span> <span class="ident">ProxyEndpoint</span>, <span class="ident">EndpointAddress</span>};
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::test_utils::logger</span>;
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::xds::envoy::config::cluster::v3</span>::{<span class="ident">cluster::ClusterDiscoveryType</span>, <span class="ident">Cluster</span>};
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::xds::envoy::config::core::v3</span>::{
@@ -1602,7 +1535,7 @@
                     .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="prelude-val">None</span>)
                     .<span class="ident">unwrap</span>()
                     .<span class="ident">endpoints</span>,
-                <span class="macro">vec!</span>[<span class="ident">ProxyEndpoint::new</span>(<span class="ident">expected_socket_addr</span>)]
+                <span class="macro">vec!</span>[<span class="ident">ProxyEndpoint::new</span>(<span class="ident">expected_socket_addr</span>.<span class="ident">into</span>())]
             );
             <span class="macro">assert_eq!</span>(
                 <span class="ident">cm</span>.<span class="ident">clusters</span>
@@ -1755,8 +1688,8 @@
         <span class="kw">let</span> <span class="ident">cluster_a</span> <span class="op">=</span> <span class="ident">cluster_state</span>.<span class="ident">get</span>(<span class="string">&quot;a&quot;</span>).<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="ident">cluster_b</span> <span class="op">=</span> <span class="ident">cluster_state</span>.<span class="ident">get</span>(<span class="string">&quot;b&quot;</span>).<span class="ident">unwrap</span>();
 
-        <span class="ident">assert_cluster_has_lone_static_address</span>(<span class="ident">cluster_a</span>, <span class="string">&quot;127.0.0.1:2020&quot;</span>);
-        <span class="ident">assert_cluster_has_lone_static_address</span>(<span class="ident">cluster_b</span>, <span class="string">&quot;127.0.0.1:2020&quot;</span>);
+        <span class="ident">assert_cluster_has_lone_static_address</span>(<span class="ident">cluster_a</span>, <span class="kw-2">&amp;</span>([<span class="number">127</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">1</span>], <span class="number">2020</span>).<span class="ident">into</span>());
+        <span class="ident">assert_cluster_has_lone_static_address</span>(<span class="ident">cluster_b</span>, <span class="kw-2">&amp;</span>([<span class="number">127</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">1</span>], <span class="number">2020</span>).<span class="ident">into</span>());
 
         <span class="comment">// Update one of the clusters and check that the new cluster set is sent downstream.</span>
         <span class="ident">cm</span>.<span class="ident">on_cluster_response</span>(<span class="ident">cluster_discovery_response_with_update</span>(
@@ -1793,8 +1726,8 @@
         <span class="kw">let</span> <span class="ident">cluster_a</span> <span class="op">=</span> <span class="ident">cluster_state</span>.<span class="ident">get</span>(<span class="string">&quot;a&quot;</span>).<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="ident">cluster_b</span> <span class="op">=</span> <span class="ident">cluster_state</span>.<span class="ident">get</span>(<span class="string">&quot;b&quot;</span>).<span class="ident">unwrap</span>();
 
-        <span class="ident">assert_cluster_has_lone_static_address</span>(<span class="ident">cluster_a</span>, <span class="string">&quot;127.0.0.10:3030&quot;</span>);
-        <span class="ident">assert_cluster_has_lone_static_address</span>(<span class="ident">cluster_b</span>, <span class="string">&quot;127.0.0.1:2020&quot;</span>);
+        <span class="ident">assert_cluster_has_lone_static_address</span>(<span class="ident">cluster_a</span>, <span class="kw-2">&amp;</span>([<span class="number">127</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">10</span>], <span class="number">3030</span>).<span class="ident">into</span>());
+        <span class="ident">assert_cluster_has_lone_static_address</span>(<span class="ident">cluster_b</span>, <span class="kw-2">&amp;</span>([<span class="number">127</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">1</span>], <span class="number">2020</span>).<span class="ident">into</span>());
     }
 
     <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
@@ -1849,8 +1782,8 @@
         <span class="kw">let</span> <span class="ident">cluster_a</span> <span class="op">=</span> <span class="ident">cluster_state</span>.<span class="ident">get</span>(<span class="string">&quot;a&quot;</span>).<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="ident">cluster_b</span> <span class="op">=</span> <span class="ident">cluster_state</span>.<span class="ident">get</span>(<span class="string">&quot;b&quot;</span>).<span class="ident">unwrap</span>();
 
-        <span class="ident">assert_cluster_has_lone_static_address</span>(<span class="ident">cluster_a</span>, <span class="string">&quot;127.0.0.1:2020&quot;</span>);
-        <span class="ident">assert_cluster_has_lone_static_address</span>(<span class="ident">cluster_b</span>, <span class="string">&quot;127.0.0.9:4040&quot;</span>);
+        <span class="ident">assert_cluster_has_lone_static_address</span>(<span class="ident">cluster_a</span>, <span class="kw-2">&amp;</span>([<span class="number">127</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">1</span>], <span class="number">2020</span>).<span class="ident">into</span>());
+        <span class="ident">assert_cluster_has_lone_static_address</span>(<span class="ident">cluster_b</span>, <span class="kw-2">&amp;</span>([<span class="number">127</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">9</span>], <span class="number">4040</span>).<span class="ident">into</span>());
     }
 
     <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
@@ -2117,10 +2050,13 @@
         <span class="macro">assert_eq!</span>(<span class="ident">nonce</span>, <span class="kw-2">&amp;</span><span class="ident">req</span>.<span class="ident">response_nonce</span>);
     }
 
-    <span class="kw">fn</span> <span class="ident">assert_cluster_has_lone_static_address</span>(<span class="ident">cluster</span>: <span class="kw-2">&amp;</span><span class="ident">ProxyCluster</span>, <span class="ident">expected_addr</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) {
+    <span class="kw">fn</span> <span class="ident">assert_cluster_has_lone_static_address</span>(
+        <span class="ident">cluster</span>: <span class="kw-2">&amp;</span><span class="ident">ProxyCluster</span>,
+        <span class="ident">expected_addr</span>: <span class="kw-2">&amp;</span><span class="ident">EndpointAddress</span>,
+    ) {
         <span class="macro">assert_eq!</span>(
-            <span class="ident">cluster</span>.<span class="ident">localities</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="prelude-val">None</span>).<span class="ident">unwrap</span>().<span class="ident">endpoints</span>[<span class="number">0</span>].<span class="ident">address</span>,
-            <span class="ident">expected_addr</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>()
+            <span class="kw-2">&amp;</span><span class="ident">cluster</span>.<span class="ident">localities</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="prelude-val">None</span>).<span class="ident">unwrap</span>().<span class="ident">endpoints</span>[<span class="number">0</span>].<span class="ident">address</span>,
+            <span class="ident">expected_addr</span>,
         )
     }
 }
