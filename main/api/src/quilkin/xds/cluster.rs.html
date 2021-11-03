@@ -1022,13 +1022,6 @@
 <span id="1022">1022</span>
 <span id="1023">1023</span>
 <span id="1024">1024</span>
-<span id="1025">1025</span>
-<span id="1026">1026</span>
-<span id="1027">1027</span>
-<span id="1028">1028</span>
-<span id="1029">1029</span>
-<span id="1030">1030</span>
-<span id="1031">1031</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -1333,13 +1326,6 @@
         }
 
         <span class="prelude-val">Ok</span>(<span class="ident">existing_endpoints</span>)
-    }
-
-    <span class="comment">// Notify that we are about to reconnect the GRPC stream.</span>
-    <span class="kw">pub</span>(<span class="kw">in</span> <span class="ident"><span class="kw">crate</span>::xds</span>) <span class="kw">fn</span> <span class="ident">on_reconnect</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
-        <span class="comment">// Reset any last seen version and nonce since we&#39;ll be working</span>
-        <span class="comment">// with a new connection from now on with a clean slate.</span>
-        <span class="self">self</span>.<span class="ident">last_seen_cluster_load_assignment_version</span> <span class="op">=</span> <span class="prelude-val">None</span>
     }
 
     <span class="comment">// Send a CDS ACK/NACK request to the server.</span>

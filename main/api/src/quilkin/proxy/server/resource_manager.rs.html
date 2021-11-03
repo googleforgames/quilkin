@@ -249,7 +249,7 @@
         <span class="ident">manager</span>::{<span class="ident">FilterManager</span>, <span class="ident">ListenerManagerArgs</span>, <span class="ident">SharedFilterManager</span>},
         <span class="ident">FilterChain</span>, <span class="ident">FilterRegistry</span>,
     },
-    <span class="ident">xds::ads_client</span>::{<span class="ident">AdsClient</span>, <span class="ident">ClusterUpdate</span>, <span class="ident">ExecutionResult</span>, <span class="ident">UPDATES_CHANNEL_BUFFER_SIZE</span>},
+    <span class="ident">xds::ads_client</span>::{<span class="ident">AdsClient</span>, <span class="ident">ClusterUpdate</span>, <span class="ident">UPDATES_CHANNEL_BUFFER_SIZE</span>},
 };
 <span class="kw">use</span> <span class="ident">prometheus::Registry</span>;
 <span class="kw">use</span> <span class="ident">slog</span>::{<span class="ident">o</span>, <span class="ident">warn</span>, <span class="ident">Logger</span>};
@@ -266,7 +266,7 @@
 <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct</span> <span class="ident">DynamicResourceManagers</span> {
     <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">cluster_manager</span>: <span class="ident">SharedClusterManager</span>,
     <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">filter_manager</span>: <span class="ident">SharedFilterManager</span>,
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">execution_result_rx</span>: <span class="ident">oneshot::Receiver</span><span class="op">&lt;</span><span class="ident">ExecutionResult</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">execution_result_rx</span>: <span class="ident">oneshot::Receiver</span><span class="op">&lt;</span><span class="ident"><span class="kw">crate</span>::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">StaticResourceManagers</span> {
@@ -291,7 +291,7 @@
     <span class="ident">management_servers</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ManagementServer</span><span class="op">&gt;</span>,
     <span class="ident">cluster_updates_tx</span>: <span class="ident">mpsc::Sender</span><span class="op">&lt;</span><span class="ident">ClusterUpdate</span><span class="op">&gt;</span>,
     <span class="ident">listener_manager_args</span>: <span class="ident">ListenerManagerArgs</span>,
-    <span class="ident">execution_result_tx</span>: <span class="ident">oneshot::Sender</span><span class="op">&lt;</span><span class="ident">ExecutionResult</span><span class="op">&gt;</span>,
+    <span class="ident">execution_result_tx</span>: <span class="ident">oneshot::Sender</span><span class="op">&lt;</span><span class="ident"><span class="kw">crate</span>::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">shutdown_rx</span>: <span class="ident">watch::Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
 }
 
@@ -316,7 +316,7 @@
             <span class="ident">filter_chain_updates_tx</span>,
         );
 
-        <span class="kw">let</span> (<span class="ident">execution_result_tx</span>, <span class="ident">execution_result_rx</span>) <span class="op">=</span> <span class="ident">oneshot::channel</span>::<span class="op">&lt;</span><span class="ident">ExecutionResult</span><span class="op">&gt;</span>();
+        <span class="kw">let</span> (<span class="ident">execution_result_tx</span>, <span class="ident">execution_result_rx</span>) <span class="op">=</span> <span class="ident">oneshot::channel</span>::<span class="op">&lt;</span><span class="ident"><span class="kw">crate</span>::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span>();
         <span class="ident"><span class="self">Self</span>::spawn_ads_client</span>(<span class="ident">SpawnAdsClient</span> {
             <span class="ident">log</span>: <span class="ident">log</span>.<span class="ident">clone</span>(),
             <span class="ident">metrics_registry</span>: <span class="ident">metrics_registry</span>.<span class="ident">clone</span>(),
