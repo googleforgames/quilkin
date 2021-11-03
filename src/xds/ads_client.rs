@@ -147,6 +147,7 @@ impl AdsClient {
                 log: log.clone(),
                 metrics: metrics.clone(),
                 node_id: node_id.clone(),
+                // server_iter is guaranteed to always have at least one entry.
                 addr: server_iter
                     .next()
                     .map(|server| server.address.to_string())
