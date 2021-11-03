@@ -113,7 +113,6 @@ impl SessionManager {
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
-    use std::net::SocketAddr;
     use std::ops::Add;
     use std::sync::Arc;
     use std::time::Duration;
@@ -121,7 +120,7 @@ mod tests {
     use prometheus::Registry;
     use tokio::sync::{mpsc, watch, RwLock};
 
-    use crate::endpoint::Endpoint;
+    use crate::endpoint::{Endpoint, EndpointAddress};
     use crate::filters::{manager::FilterManager, FilterChain};
     use crate::proxy::sessions::metrics::Metrics;
     use crate::proxy::sessions::session_manager::Sessions;
@@ -130,16 +129,22 @@ mod tests {
 
     use super::SessionManager;
 
+    fn address_pair() -> (EndpointAddress, EndpointAddress) {
+        (
+            (std::net::Ipv4Addr::LOCALHOST, 7000).into(),
+            (std::net::Ipv4Addr::LOCALHOST, 7001).into(),
+        )
+    }
+
     #[tokio::test]
     async fn run_prune_sessions() {
         let t = TestHelper::default();
         let sessions = Arc::new(RwLock::new(HashMap::new()));
-        let from: SocketAddr = "127.0.0.1:7000".parse().unwrap();
-        let to: SocketAddr = "127.0.0.1:7001".parse().unwrap();
+        let (from, to) = address_pair();
         let (send, _recv) = mpsc::channel::<Packet>(1);
         let (_shutdown_tx, shutdown_rx) = watch::channel(());
 
-        let endpoint = Endpoint::new(to);
+        let endpoint = Endpoint::new(to.clone());
 
         let ttl = Duration::from_secs(1);
         let poll_interval = Duration::from_millis(1);
@@ -153,7 +158,7 @@ mod tests {
             shutdown_rx,
         );
 
-        let key = SessionKey::from((from, to));
+        let key = SessionKey::from((from.clone(), to.clone()));
 
         // Insert key.
         {
@@ -209,12 +214,11 @@ mod tests {
     async fn prune_sessions() {
         let t = TestHelper::default();
         let mut sessions: Sessions = Arc::new(RwLock::new(HashMap::new()));
-        let from: SocketAddr = "127.0.0.1:7000".parse().unwrap();
-        let to: SocketAddr = "127.0.0.1:7001".parse().unwrap();
+        let (from, to) = address_pair();
         let (send, _recv) = mpsc::channel::<Packet>(1);
-        let endpoint = Endpoint::new(to);
+        let endpoint = Endpoint::new(to.clone());
 
-        let key = SessionKey::from((from, to));
+        let key = SessionKey::from((from.clone(), to.clone()));
         let ttl = Duration::from_secs(1);
 
         {

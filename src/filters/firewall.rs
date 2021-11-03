@@ -85,7 +85,7 @@ impl Firewall {
 impl Filter for Firewall {
     fn read(&self, ctx: ReadContext) -> Option<ReadResponse> {
         for rule in &self.on_read {
-            if rule.contains(ctx.from) {
+            if rule.contains(ctx.from.to_socket_addr().ok()?) {
                 return match rule.action {
                     Action::Allow => {
                         debug!(self.log, "Allow"; "event" => "read", "from" =>  ctx.from.to_string());
@@ -108,7 +108,7 @@ impl Filter for Firewall {
 
     fn write(&self, ctx: WriteContext) -> Option<WriteResponse> {
         for rule in &self.on_write {
-            if rule.contains(ctx.from) {
+            if rule.contains(ctx.from.to_socket_addr().ok()?) {
                 return match rule.action {
                     Action::Allow => {
                         debug!(self.log, "Allow"; "event" => "write", "from" =>  ctx.from.to_string());
@@ -194,12 +194,12 @@ mod tests {
         };
 
         let endpoint = Endpoint::new((Ipv4Addr::LOCALHOST, 80).into());
-        let local_addr = (Ipv4Addr::LOCALHOST, 8081).into();
+        let local_addr: crate::endpoint::EndpointAddress = (Ipv4Addr::LOCALHOST, 8081).into();
 
         let ctx = WriteContext::new(
             &endpoint,
             ([192, 168, 75, 20], 80).into(),
-            local_addr,
+            local_addr.clone(),
             vec![],
         );
         assert!(firewall.write(ctx).is_some());
