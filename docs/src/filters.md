@@ -71,7 +71,7 @@ static:
 
 We specify our filter chain in the `.filters` section of the proxy's configuration which has takes a sequence of [FilterConfig](#filter-config) objects. Each object describes all information necessary to create a single filter.
 
-The above example creates a filter chain comprising a [Debug](debug.md) filter followed by a [Rate limiter](./local_rate_limit.md) filter - the effect is that every packet will be logged and the proxy will not forward more than 10 packets per second.
+The above example creates a filter chain comprising a [Debug] filter followed by a [LocalRateLimit] filter - the effect is that every packet will be logged and the proxy will not forward more than 10 packets per second.
 
 > The sequence determines the filter chain order so its ordering matters - the chain starts with the filter corresponding the first filter config and ends with the filter corresponding the last filter config in the sequence.
 
@@ -101,12 +101,12 @@ Quilkin includes several filters out of the box.
 
 | Filter                                    | Description                    |
 | ----------------------------------------- | ------------------------------ |
-| [Debug](debug.md)                | Logs every packet              |
-| [LocalRateLimiter](./local_rate_limit.md) | Limit the frequency of packets. |
-| [ConcatenateBytes](./concatenate_bytes.md) | Add authentication tokens to packets. |
-| [CaptureBytes](capture_bytes.md) | Capture specific bytes from a packet and store them in [filter dynamic metadata](#filter-dynamic-metadata). |
-| [TokenRouter](token_router.md) | Send packets to endpoints based on metadata. |
-| [Compress](./compress.md) | Compress and decompress packets data. |
+| [Debug]                | Logs every packet.              |
+| [LocalRateLimit] | Limit the frequency of packets. |
+| [ConcatenateBytes](./filters/concatenate_bytes.md) | Add authentication tokens to packets. |
+| [CaptureBytes] | Capture specific bytes from a packet and store them in [filter dynamic metadata](#filter-dynamic-metadata). |
+| [TokenRouter] | Send packets to endpoints based on metadata. |
+| [Compress](./filters/compress.md) | Compress and decompress packets data. |
 
 ### FilterConfig <a name="filter-config"></a>
 Represents configuration for a filter instance.
@@ -129,5 +129,7 @@ properties:
 required: [ 'name', 'config' ]
 ```
 
-[CaptureBytes]: ./capture_bytes.md
-[TokenRouter]: ./token_router.md
+[CaptureBytes]: ./filters/capture_bytes.md
+[TokenRouter]: ./filters/token_router.md
+[Debug]: ./filters/debug.md
+[LocalRateLimit]: ./filters/local_rate_limit.md
