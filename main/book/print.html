@@ -76,7 +76,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><div><strong aria-hidden="true">2.</strong> Quickstart</div></li><li><ol class="section"><li class="chapter-item expanded "><a href="quickstart-netcat.html"><strong aria-hidden="true">2.1.</strong> Netcat</a></li><li class="chapter-item expanded "><a href="quickstart-agones-xonotic.html"><strong aria-hidden="true">2.2.</strong> Agones + Xonotic</a></li></ol></li><li class="chapter-item expanded "><a href="using.html"><strong aria-hidden="true">3.</strong> Usage</a></li><li class="chapter-item expanded "><a href="examples.html"><strong aria-hidden="true">4.</strong> Examples</a></li><li class="chapter-item expanded "><a href="session.html"><strong aria-hidden="true">5.</strong> Session</a></li><li class="chapter-item expanded "><a href="proxy.html"><strong aria-hidden="true">6.</strong> Proxy</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="proxy-configuration.html"><strong aria-hidden="true">6.1.</strong> Proxy Configuration</a></li></ol></li><li class="chapter-item expanded "><a href="filters.html"><strong aria-hidden="true">7.</strong> Filters</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="filters/capture_bytes.html"><strong aria-hidden="true">7.1.</strong> Capture Bytes</a></li><li class="chapter-item expanded "><a href="filters/compress.html"><strong aria-hidden="true">7.2.</strong> Compress</a></li><li class="chapter-item expanded "><a href="filters/debug.html"><strong aria-hidden="true">7.3.</strong> Debug</a></li><li class="chapter-item expanded "><a href="filters/load_balancer.html"><strong aria-hidden="true">7.4.</strong> Load Balancer</a></li><li class="chapter-item expanded "><a href="filters/local_rate_limit.html"><strong aria-hidden="true">7.5.</strong> Local Rate Limit</a></li><li class="chapter-item expanded "><a href="filters/token_router.html"><strong aria-hidden="true">7.6.</strong> Token Router</a></li><li class="chapter-item expanded "><a href="filters/writing_custom_filters.html"><strong aria-hidden="true">7.7.</strong> Writing Custom Filters</a></li></ol></li><li class="chapter-item expanded "><a href="integrations.html"><strong aria-hidden="true">8.</strong> Integrations</a></li><li class="chapter-item expanded "><a href="admin.html"><strong aria-hidden="true">9.</strong> Administration</a></li><li class="chapter-item expanded "><a href="faq.html"><strong aria-hidden="true">10.</strong> FAQ</a></li><li class="chapter-item expanded "><a href="xds.html"><strong aria-hidden="true">11.</strong> xDS</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><div><strong aria-hidden="true">2.</strong> Quickstart</div></li><li><ol class="section"><li class="chapter-item expanded "><a href="quickstart-netcat.html"><strong aria-hidden="true">2.1.</strong> Netcat</a></li><li class="chapter-item expanded "><a href="quickstart-agones-xonotic.html"><strong aria-hidden="true">2.2.</strong> Agones + Xonotic</a></li></ol></li><li class="chapter-item expanded "><a href="using.html"><strong aria-hidden="true">3.</strong> Usage</a></li><li class="chapter-item expanded "><a href="examples.html"><strong aria-hidden="true">4.</strong> Examples</a></li><li class="chapter-item expanded "><a href="session.html"><strong aria-hidden="true">5.</strong> Session</a></li><li class="chapter-item expanded "><a href="proxy.html"><strong aria-hidden="true">6.</strong> Proxy</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="proxy-configuration.html"><strong aria-hidden="true">6.1.</strong> Proxy Configuration</a></li></ol></li><li class="chapter-item expanded "><a href="filters.html"><strong aria-hidden="true">7.</strong> Filters</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="filters/capture_bytes.html"><strong aria-hidden="true">7.1.</strong> Capture Bytes</a></li><li class="chapter-item expanded "><a href="filters/concatenate_bytes.html"><strong aria-hidden="true">7.2.</strong> Concatenate Bytes</a></li><li class="chapter-item expanded "><a href="filters/compress.html"><strong aria-hidden="true">7.3.</strong> Compress</a></li><li class="chapter-item expanded "><a href="filters/debug.html"><strong aria-hidden="true">7.4.</strong> Debug</a></li><li class="chapter-item expanded "><a href="filters/load_balancer.html"><strong aria-hidden="true">7.5.</strong> Load Balancer</a></li><li class="chapter-item expanded "><a href="filters/local_rate_limit.html"><strong aria-hidden="true">7.6.</strong> Local Rate Limit</a></li><li class="chapter-item expanded "><a href="filters/token_router.html"><strong aria-hidden="true">7.7.</strong> Token Router</a></li><li class="chapter-item expanded "><a href="filters/writing_custom_filters.html"><strong aria-hidden="true">7.8.</strong> Writing Custom Filters</a></li></ol></li><li class="chapter-item expanded "><a href="integrations.html"><strong aria-hidden="true">8.</strong> Integrations</a></li><li class="chapter-item expanded "><a href="admin.html"><strong aria-hidden="true">9.</strong> Administration</a></li><li class="chapter-item expanded "><a href="faq.html"><strong aria-hidden="true">10.</strong> FAQ</a></li><li class="chapter-item expanded "><a href="xds.html"><strong aria-hidden="true">11.</strong> xDS</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -655,7 +655,7 @@ static:
 </span><span class="boring">}
 </span></code></pre></pre>
 <p>We specify our filter chain in the <code>.filters</code> section of the proxy's configuration which has takes a sequence of <a href="filters.html#filter-config">FilterConfig</a> objects. Each object describes all information necessary to create a single filter.</p>
-<p>The above example creates a filter chain comprising a <a href="debug.html">Debug</a> filter followed by a <a href="./local_rate_limit.html">Rate limiter</a> filter - the effect is that every packet will be logged and the proxy will not forward more than 10 packets per second.</p>
+<p>The above example creates a filter chain comprising a <a href="./filters/debug.html">Debug</a> filter followed by a <a href="./filters/local_rate_limit.html">LocalRateLimit</a> filter - the effect is that every packet will be logged and the proxy will not forward more than 10 packets per second.</p>
 <blockquote>
 <p>The sequence determines the filter chain order so its ordering matters - the chain starts with the filter corresponding the first filter config and ends with the filter corresponding the last filter config in the sequence.</p>
 </blockquote>
@@ -664,24 +664,24 @@ static:
 This enables sharing dynamic information at runtime, e.g information about the current packet that might be useful to other filters that process that packet.</p>
 <p>At packet processing time each packet is associated with <em>filter dynamic metadata</em> (a set of key-value pairs). Each key is a unique string while value is an arbitrary value.
 When a filter processes a packet, it can choose to consult the associated dynamic metadata for more information or itself add/update or remove key-values from the set.</p>
-<p>As an example, the built-in <a href="./capture_bytes.html">CaptureBytes</a> filter is one such filter that populates a packet's filter metadata.
-<a href="./capture_bytes.html">CaptureBytes</a> extracts information (a configurable byte sequence) from each packet and appends it to the packet's dynamic metadata for other filters to leverage.
-On the other hand, the built-in <a href="./token_router.html">TokenRouter</a> filter selects what endpoint to route a packet by consulting the packet's dynamic metadata for a routing token.
-Consequently, we can build a filter chain with a <a href="./capture_bytes.html">CaptureBytes</a> filter preceeding a <a href="./token_router.html">TokenRouter</a> filter, both configured to write and read the same key in the dynamic metadata entry. The effect would be that packets are routed to upstream endpoints based on token information extracted from their contents.</p>
+<p>As an example, the built-in <a href="./filters/capture_bytes.html">CaptureBytes</a> filter is one such filter that populates a packet's filter metadata.
+<a href="./filters/capture_bytes.html">CaptureBytes</a> extracts information (a configurable byte sequence) from each packet and appends it to the packet's dynamic metadata for other filters to leverage.
+On the other hand, the built-in <a href="./filters/token_router.html">TokenRouter</a> filter selects what endpoint to route a packet by consulting the packet's dynamic metadata for a routing token.
+Consequently, we can build a filter chain with a <a href="./filters/capture_bytes.html">CaptureBytes</a> filter preceeding a <a href="./filters/token_router.html">TokenRouter</a> filter, both configured to write and read the same key in the dynamic metadata entry. The effect would be that packets are routed to upstream endpoints based on token information extracted from their contents.</p>
 <h4 id="well-known-dynamic-metadata"><a class="header" href="#well-known-dynamic-metadata">Well Known Dynamic Metadata</a></h4>
 <p>The following metadata are currently used by Quilkin core and built-in filters.</p>
 <table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>quilkin.dev/captured_bytes</code></td><td><code>Vec&lt;u8&gt;</code></td><td>The default key under which the <a href="./capture_bytes.html">CaptureBytes</a> filter puts the byte slices it extracts from each packet.</td></tr>
+<tr><td><code>quilkin.dev/captured_bytes</code></td><td><code>Vec&lt;u8&gt;</code></td><td>The default key under which the <a href="./filters/capture_bytes.html">CaptureBytes</a> filter puts the byte slices it extracts from each packet.</td></tr>
 </tbody></table>
 <h3 id="built-in-filters-a-namebuilt-in-filtersa"><a class="header" href="#built-in-filters-a-namebuilt-in-filtersa">Built-in filters <a name="built-in-filters"></a></a></h3>
 <p>Quilkin includes several filters out of the box.</p>
 <table><thead><tr><th>Filter</th><th>Description</th></tr></thead><tbody>
-<tr><td><a href="debug.html">Debug</a></td><td>Logs every packet</td></tr>
-<tr><td><a href="./local_rate_limit.html">LocalRateLimiter</a></td><td>Limit the frequency of packets.</td></tr>
-<tr><td><a href="./concatenate_bytes.html">ConcatenateBytes</a></td><td>Add authentication tokens to packets.</td></tr>
-<tr><td><a href="capture_bytes.html">CaptureBytes</a></td><td>Capture specific bytes from a packet and store them in <a href="filters.html#filter-dynamic-metadata">filter dynamic metadata</a>.</td></tr>
-<tr><td><a href="token_router.html">TokenRouter</a></td><td>Send packets to endpoints based on metadata.</td></tr>
-<tr><td><a href="./compress.html">Compress</a></td><td>Compress and decompress packets data.</td></tr>
+<tr><td><a href="./filters/debug.html">Debug</a></td><td>Logs every packet.</td></tr>
+<tr><td><a href="./filters/local_rate_limit.html">LocalRateLimit</a></td><td>Limit the frequency of packets.</td></tr>
+<tr><td><a href="./filters/concatenate_bytes.html">ConcatenateBytes</a></td><td>Add authentication tokens to packets.</td></tr>
+<tr><td><a href="./filters/capture_bytes.html">CaptureBytes</a></td><td>Capture specific bytes from a packet and store them in <a href="filters.html#filter-dynamic-metadata">filter dynamic metadata</a>.</td></tr>
+<tr><td><a href="./filters/token_router.html">TokenRouter</a></td><td>Send packets to endpoints based on metadata.</td></tr>
+<tr><td><a href="./filters/compress.html">Compress</a></td><td>Compress and decompress packets data.</td></tr>
 </tbody></table>
 <h3 id="filterconfig-a-namefilter-configa"><a class="header" href="#filterconfig-a-namefilter-configa">FilterConfig <a name="filter-config"></a></a></h3>
 <p>Represents configuration for a filter instance.</p>
@@ -766,13 +766,61 @@ static:
 A counter of the total number of packets that have been dropped due to their length being less than the configured
 <code>size</code>.</li>
 </ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="concatenatebytes"><a class="header" href="#concatenatebytes">ConcatenateBytes</a></h1>
+<p>The <code>ConcatenateBytes</code> filter's job is to add a byte packet to either the beginning or end of each UDP packet that passes
+through. This is commonly used to provide an auth token to each packet, so they can be routed appropriately.</p>
+<h4 id="filter-name-1"><a class="header" href="#filter-name-1">Filter name</a></h4>
+<pre><code class="language-text">quilkin.extensions.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
+</code></pre>
+<h3 id="configuration-examples-2"><a class="header" href="#configuration-examples-2">Configuration Examples</a></h3>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span><span class="boring">let yaml = &quot;
+</span>version: v1alpha1
+static:
+  filters:
+    - name: quilkin.extensions.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
+      config:
+          on_read: APPEND
+          on_write: DO_NOTHING
+          bytes: MXg3aWp5Ng==
+  endpoints:
+    - address: 127.0.0.1:7001
+<span class="boring">&quot;;
+</span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
+</span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 1);
+</span><span class="boring">quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
+</span><span class="boring">}
+</span></code></pre></pre>
+<h3 id="configuration-options-1"><a class="header" href="#configuration-options-1">Configuration Options</a></h3>
+<pre><code class="language-yaml">properties:
+  on_read:
+    type: string
+    description: |
+      Either append or prepend the `bytes` data to each packet filtered on read of the listening port.
+    default: DO_NOTHING
+    enum: ['DO_NOTHING', 'APPEND', 'PREPEND']
+  on_write:
+    type: string
+    description: |
+      Either append or prepend the `bytes` data to each packet filtered on write of the listening port.
+    default: DO_NOTHING
+    enum: ['DO_NOTHING', 'APPEND', 'PREPEND']    
+  bytes:
+    type: string
+    description: |
+      Base64 encoded string of the byte array to add to each packet as it is filtered.
+</code></pre>
+<h3 id="metrics-3"><a class="header" href="#metrics-3">Metrics</a></h3>
+<p>This filter currently exports no metrics.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="compress"><a class="header" href="#compress">Compress</a></h1>
 <p>The <code>Compress</code> filter's job is to provide a variety of compression implementations for compression 
 and subsequent decompression of UDP data when sent between systems, such as a game client and game server.</p>
-<h4 id="filter-name-1"><a class="header" href="#filter-name-1">Filter name</a></h4>
+<h4 id="filter-name-2"><a class="header" href="#filter-name-2">Filter name</a></h4>
 <pre><code class="language-text">quilkin.extensions.filters.compress.v1alpha1.Compress
 </code></pre>
-<h3 id="configuration-examples-2"><a class="header" href="#configuration-examples-2">Configuration Examples</a></h3>
+<h3 id="configuration-examples-3"><a class="header" href="#configuration-examples-3">Configuration Examples</a></h3>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -801,7 +849,7 @@ decompressed when traffic is returned from the dedicated game server before bein
 attention to the order it is placed in your <a href="filters/filters.html">Filter configuration</a>. Most of the time it will likely be
 the first or last Filter configured to ensure it is compressing the entire set of data being sent.</p>
 </blockquote>
-<h3 id="configuration-options-1"><a class="header" href="#configuration-options-1">Configuration Options</a></h3>
+<h3 id="configuration-options-2"><a class="header" href="#configuration-options-2">Configuration Options</a></h3>
 <pre><code class="language-yaml">properties:
   on_read:
     '$ref': '#/definitions/action'
@@ -837,7 +885,7 @@ other compression library; instead, it aims for very high speeds and reasonable 
 <p>Currently, this filter only provides the <a href="http://google.github.io/snappy/">Snappy</a> compression format via the
 <a href="https://github.com/BurntSushi/rust-snappy">rust-snappy</a> crate, but more will be
 provided in the future.</p>
-<h3 id="metrics-3"><a class="header" href="#metrics-3">Metrics</a></h3>
+<h3 id="metrics-4"><a class="header" href="#metrics-4">Metrics</a></h3>
 <ul>
 <li><code>quilkin_filter_Compress_packets_dropped_total</code>
 Total number of packets dropped as they could not be processed.
@@ -862,10 +910,10 @@ Total number of compressed bytes either received or sent.</li>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="debug"><a class="header" href="#debug">Debug</a></h1>
 <p>The Debug filter logs all incoming and outgoing packets to standard output.</p>
 <p>This filter is useful in debugging deployments where the packets strictly contain valid <code>UTF-8</code> encoded strings. A generic error message is instead logged if conversion from bytes to <code>UTF-8</code> fails.</p>
-<h4 id="filter-name-2"><a class="header" href="#filter-name-2">Filter name</a></h4>
+<h4 id="filter-name-3"><a class="header" href="#filter-name-3">Filter name</a></h4>
 <pre><code class="language-text">quilkin.extensions.filters.debug_filter.v1alpha1.Debug
 </code></pre>
-<h3 id="configuration-examples-3"><a class="header" href="#configuration-examples-3">Configuration Examples</a></h3>
+<h3 id="configuration-examples-4"><a class="header" href="#configuration-examples-4">Configuration Examples</a></h3>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -884,21 +932,21 @@ static:
 </span><span class="boring">quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>
-<h3 id="configuration-options-2"><a class="header" href="#configuration-options-2">Configuration Options</a></h3>
+<h3 id="configuration-options-3"><a class="header" href="#configuration-options-3">Configuration Options</a></h3>
 <pre><code class="language-yaml">properties:
   id:
     type: string
     description: |
       An identifier that will be included with each log message.
 </code></pre>
-<h3 id="metrics-4"><a class="header" href="#metrics-4">Metrics</a></h3>
+<h3 id="metrics-5"><a class="header" href="#metrics-5">Metrics</a></h3>
 <p>This filter currently exports no metrics.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="loadbalancer"><a class="header" href="#loadbalancer">LoadBalancer</a></h1>
 <p>The <code>LoadBalancer</code> filter distributes packets received downstream among all upstream endpoints.</p>
-<h4 id="filter-name-3"><a class="header" href="#filter-name-3">Filter name</a></h4>
+<h4 id="filter-name-4"><a class="header" href="#filter-name-4">Filter name</a></h4>
 <pre><code class="language-text">quilkin.extensions.filters.load_balancer.v1alpha1.LoadBalancer
 </code></pre>
-<h3 id="configuration-examples-4"><a class="header" href="#configuration-examples-4">Configuration Examples</a></h3>
+<h3 id="configuration-examples-5"><a class="header" href="#configuration-examples-5">Configuration Examples</a></h3>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">#[tokio::main]
 </span><span class="boring">async fn main() {
 </span><span class="boring">  let yaml = &quot;
@@ -918,7 +966,7 @@ static:
 </span></code></pre></pre>
 <p>The load balancing policy (the strategy to use to select what endpoint to send traffic to) is configurable.
 In the example above, packets will be distributed by selecting endpoints in turn, in round robin fashion.</p>
-<h3 id="configuration-options-3"><a class="header" href="#configuration-options-3">Configuration Options</a></h3>
+<h3 id="configuration-options-4"><a class="header" href="#configuration-options-4">Configuration Options</a></h3>
 <pre><code class="language-yaml">properties:
   policy:
     type: string
@@ -930,15 +978,15 @@ In the example above, packets will be distributed by selecting endpoints in turn
       - HASH        # Send packets by hashing the source IP and port.
     default: ROUND_ROBIN
 </code></pre>
-<h3 id="metrics-5"><a class="header" href="#metrics-5">Metrics</a></h3>
+<h3 id="metrics-6"><a class="header" href="#metrics-6">Metrics</a></h3>
 <p>This filter currently does not expose any metrics.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="localratelimit"><a class="header" href="#localratelimit">LocalRateLimit</a></h1>
 <p>The LocalRateLimit filter controls the frequency at which packets received downstream are forwarded upstream by the proxy.<br />
 Rate limiting is done independently per source (IP, Port) combination.</p>
-<h4 id="filter-name-4"><a class="header" href="#filter-name-4">Filter name</a></h4>
+<h4 id="filter-name-5"><a class="header" href="#filter-name-5">Filter name</a></h4>
 <pre><code class="language-text">quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit
 </code></pre>
-<h3 id="configuration-examples-5"><a class="header" href="#configuration-examples-5">Configuration Examples</a></h3>
+<h3 id="configuration-examples-6"><a class="header" href="#configuration-examples-6">Configuration Examples</a></h3>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">// Wrap this example within an async main function since the
 </span><span class="boring">// local_rate_limit filter spawns a task on initialization
 </span><span class="boring">#[tokio::main]
@@ -969,7 +1017,7 @@ For example, a configuration allowing 1000 packets per second could potentially 
 <blockquote>
 <p>Packets that that exceeds the maximum configured rate are dropped.</p>
 </blockquote>
-<h3 id="configuration-options-4"><a class="header" href="#configuration-options-4">Configuration Options</a></h3>
+<h3 id="configuration-options-5"><a class="header" href="#configuration-options-5">Configuration Options</a></h3>
 <pre><code class="language-yaml">properties:
   max_packets:
     type: integer
@@ -986,7 +1034,7 @@ For example, a configuration allowing 1000 packets per second could potentially 
 
 required: [ 'max_packets' ]
 </code></pre>
-<h3 id="metrics-6"><a class="header" href="#metrics-6">Metrics</a></h3>
+<h3 id="metrics-7"><a class="header" href="#metrics-7">Metrics</a></h3>
 <ul>
 <li><code>quilkin_filter_LocalRateLimit_packets_dropped</code><br />
 A counter over the total number of packets that have exceeded the configured maximum rate limit and have been dropped as a result.</li>
@@ -996,10 +1044,10 @@ A counter over the total number of packets that have exceeded the configured max
 <p>This Filter provides this functionality by comparing a byte array token found in the
 <a href="filters/./filters.html#filter-dynamic-metadata">Filter Dynamic Metadata</a> from a previous Filter, and comparing it to
 <a href="filters/../../proxy.html#upstream-endpoint">Endpoint's tokens</a>, and sending packets to those Endpoints only if there is a match.</p>
-<h4 id="filter-name-5"><a class="header" href="#filter-name-5">Filter name</a></h4>
+<h4 id="filter-name-6"><a class="header" href="#filter-name-6">Filter name</a></h4>
 <pre><code class="language-text">quilkin.extensions.filters.token_router.v1alpha1.TokenRouter
 </code></pre>
-<h3 id="configuration-examples-6"><a class="header" href="#configuration-examples-6">Configuration Examples</a></h3>
+<h3 id="configuration-examples-7"><a class="header" href="#configuration-examples-7">Configuration Examples</a></h3>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -1029,7 +1077,7 @@ static:
 </span><span class="boring">}
 </span></code></pre></pre>
 <p>View the <a href="filters/./capture_bytes.html">CaptureBytes</a> filter documentation for more details.</p>
-<h3 id="configuration-options-5"><a class="header" href="#configuration-options-5">Configuration Options</a></h3>
+<h3 id="configuration-options-6"><a class="header" href="#configuration-options-6">Configuration Options</a></h3>
 <pre><code class="language-yaml">properties:
   metadataKey:
     type: string
@@ -1037,7 +1085,7 @@ static:
     description: | 
       The key under which the token is stored in the Filter dynamic metadata.
 </code></pre>
-<h3 id="metrics-7"><a class="header" href="#metrics-7">Metrics</a></h3>
+<h3 id="metrics-8"><a class="header" href="#metrics-8">Metrics</a></h3>
 <ul>
 <li><code>quilkin_filter_TokenRouter_packets_dropped</code><br />
 A counter of the total number of packets that have been dropped. This is also provided with a <code>Reason</code> label, as there
@@ -1566,7 +1614,7 @@ balanced via the Client Proxy to multiple Server Proxies for even greater redund
 <p>This provides a liveness probe endpoint, most commonly used in 
 <a href="https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-command">Kubernetes based systems</a>.</p>
 <p>Will return an HTTP status of 200 when all health checks pass.</p>
-<h2 id="metrics-8"><a class="header" href="#metrics-8">/metrics</a></h2>
+<h2 id="metrics-9"><a class="header" href="#metrics-9">/metrics</a></h2>
 <p>Outputs <a href="https://prometheus.io/">Prometheus</a> formatted metrics for this proxy.</p>
 <p>See the <a href="./proxy.html#metrics">Proxy Metrics</a> documentation for what metrics are available.</p>
 <h2 id="config"><a class="header" href="#config">/config</a></h2>
@@ -1651,7 +1699,7 @@ Quilkin implements the <strong>Aggregated Discovery Service (ADS)</strong> <em>S
 </ul>
 </li>
 </ul>
-<h4 id="metrics-9"><a class="header" href="#metrics-9">Metrics</a></h4>
+<h4 id="metrics-10"><a class="header" href="#metrics-10">Metrics</a></h4>
 <p>Quilkin exposes the following metrics around the management servers and its resources:</p>
 <ul>
 <li>

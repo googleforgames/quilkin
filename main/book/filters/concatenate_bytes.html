@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Capture Bytes - Quilkin Book</title>
+        <title>Concatenate Bytes - Quilkin Book</title>
         <!-- Custom HTML head -->
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
@@ -75,7 +75,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><div><strong aria-hidden="true">2.</strong> Quickstart</div></li><li><ol class="section"><li class="chapter-item expanded "><a href="../quickstart-netcat.html"><strong aria-hidden="true">2.1.</strong> Netcat</a></li><li class="chapter-item expanded "><a href="../quickstart-agones-xonotic.html"><strong aria-hidden="true">2.2.</strong> Agones + Xonotic</a></li></ol></li><li class="chapter-item expanded "><a href="../using.html"><strong aria-hidden="true">3.</strong> Usage</a></li><li class="chapter-item expanded "><a href="../examples.html"><strong aria-hidden="true">4.</strong> Examples</a></li><li class="chapter-item expanded "><a href="../session.html"><strong aria-hidden="true">5.</strong> Session</a></li><li class="chapter-item expanded "><a href="../proxy.html"><strong aria-hidden="true">6.</strong> Proxy</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../proxy-configuration.html"><strong aria-hidden="true">6.1.</strong> Proxy Configuration</a></li></ol></li><li class="chapter-item expanded "><a href="../filters.html"><strong aria-hidden="true">7.</strong> Filters</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../filters/capture_bytes.html" class="active"><strong aria-hidden="true">7.1.</strong> Capture Bytes</a></li><li class="chapter-item expanded "><a href="../filters/concatenate_bytes.html"><strong aria-hidden="true">7.2.</strong> Concatenate Bytes</a></li><li class="chapter-item expanded "><a href="../filters/compress.html"><strong aria-hidden="true">7.3.</strong> Compress</a></li><li class="chapter-item expanded "><a href="../filters/debug.html"><strong aria-hidden="true">7.4.</strong> Debug</a></li><li class="chapter-item expanded "><a href="../filters/load_balancer.html"><strong aria-hidden="true">7.5.</strong> Load Balancer</a></li><li class="chapter-item expanded "><a href="../filters/local_rate_limit.html"><strong aria-hidden="true">7.6.</strong> Local Rate Limit</a></li><li class="chapter-item expanded "><a href="../filters/token_router.html"><strong aria-hidden="true">7.7.</strong> Token Router</a></li><li class="chapter-item expanded "><a href="../filters/writing_custom_filters.html"><strong aria-hidden="true">7.8.</strong> Writing Custom Filters</a></li></ol></li><li class="chapter-item expanded "><a href="../integrations.html"><strong aria-hidden="true">8.</strong> Integrations</a></li><li class="chapter-item expanded "><a href="../admin.html"><strong aria-hidden="true">9.</strong> Administration</a></li><li class="chapter-item expanded "><a href="../faq.html"><strong aria-hidden="true">10.</strong> FAQ</a></li><li class="chapter-item expanded "><a href="../xds.html"><strong aria-hidden="true">11.</strong> xDS</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><div><strong aria-hidden="true">2.</strong> Quickstart</div></li><li><ol class="section"><li class="chapter-item expanded "><a href="../quickstart-netcat.html"><strong aria-hidden="true">2.1.</strong> Netcat</a></li><li class="chapter-item expanded "><a href="../quickstart-agones-xonotic.html"><strong aria-hidden="true">2.2.</strong> Agones + Xonotic</a></li></ol></li><li class="chapter-item expanded "><a href="../using.html"><strong aria-hidden="true">3.</strong> Usage</a></li><li class="chapter-item expanded "><a href="../examples.html"><strong aria-hidden="true">4.</strong> Examples</a></li><li class="chapter-item expanded "><a href="../session.html"><strong aria-hidden="true">5.</strong> Session</a></li><li class="chapter-item expanded "><a href="../proxy.html"><strong aria-hidden="true">6.</strong> Proxy</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../proxy-configuration.html"><strong aria-hidden="true">6.1.</strong> Proxy Configuration</a></li></ol></li><li class="chapter-item expanded "><a href="../filters.html"><strong aria-hidden="true">7.</strong> Filters</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../filters/capture_bytes.html"><strong aria-hidden="true">7.1.</strong> Capture Bytes</a></li><li class="chapter-item expanded "><a href="../filters/concatenate_bytes.html" class="active"><strong aria-hidden="true">7.2.</strong> Concatenate Bytes</a></li><li class="chapter-item expanded "><a href="../filters/compress.html"><strong aria-hidden="true">7.3.</strong> Compress</a></li><li class="chapter-item expanded "><a href="../filters/debug.html"><strong aria-hidden="true">7.4.</strong> Debug</a></li><li class="chapter-item expanded "><a href="../filters/load_balancer.html"><strong aria-hidden="true">7.5.</strong> Load Balancer</a></li><li class="chapter-item expanded "><a href="../filters/local_rate_limit.html"><strong aria-hidden="true">7.6.</strong> Local Rate Limit</a></li><li class="chapter-item expanded "><a href="../filters/token_router.html"><strong aria-hidden="true">7.7.</strong> Token Router</a></li><li class="chapter-item expanded "><a href="../filters/writing_custom_filters.html"><strong aria-hidden="true">7.8.</strong> Writing Custom Filters</a></li></ol></li><li class="chapter-item expanded "><a href="../integrations.html"><strong aria-hidden="true">8.</strong> Integrations</a></li><li class="chapter-item expanded "><a href="../admin.html"><strong aria-hidden="true">9.</strong> Administration</a></li><li class="chapter-item expanded "><a href="../faq.html"><strong aria-hidden="true">10.</strong> FAQ</a></li><li class="chapter-item expanded "><a href="../xds.html"><strong aria-hidden="true">11.</strong> xDS</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -134,15 +134,11 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="capturebytes"><a class="header" href="#capturebytes">CaptureBytes</a></h1>
-<p>The <code>CaptureBytes</code> filter's job is to find a series of bytes within a packet, and capture it into
-<a href="./filter.html#filter-dynamic-metadata">Filter Dynamic Metadata</a>, so that it can be utilised by filters further
-down the chain.</p>
-<p>This is often used as a way of retrieving authentication tokens from a packet, and used in combination with
-<a href="./concatenate_bytes.html">ConcatenateBytes</a> and 
-<a href="token_router.html">TokenRouter</a> filter to provide common packet routing utilities.</p>
+                        <h1 id="concatenatebytes"><a class="header" href="#concatenatebytes">ConcatenateBytes</a></h1>
+<p>The <code>ConcatenateBytes</code> filter's job is to add a byte packet to either the beginning or end of each UDP packet that passes
+through. This is commonly used to provide an auth token to each packet, so they can be routed appropriately.</p>
 <h4 id="filter-name"><a class="header" href="#filter-name">Filter name</a></h4>
-<pre><code class="language-text">quilkin.extensions.filters.capture_bytes.v1alpha1.CaptureBytes
+<pre><code class="language-text">quilkin.extensions.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
 </code></pre>
 <h3 id="configuration-examples"><a class="header" href="#configuration-examples">Configuration Examples</a></h3>
 <pre><pre class="playground"><code class="language-rust">
@@ -152,12 +148,11 @@ down the chain.</p>
 </span>version: v1alpha1
 static:
   filters:
-    - name: quilkin.extensions.filters.capture_bytes.v1alpha1.CaptureBytes
+    - name: quilkin.extensions.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
       config:
-          strategy: PREFIX
-          metadataKey: myapp.com/myownkey
-          size: 3
-          remove: false
+          on_read: APPEND
+          on_write: DO_NOTHING
+          bytes: MXg3aWp5Ng==
   endpoints:
     - address: 127.0.0.1:7001
 <span class="boring">&quot;;
@@ -168,46 +163,34 @@ static:
 </span></code></pre></pre>
 <h3 id="configuration-options"><a class="header" href="#configuration-options">Configuration Options</a></h3>
 <pre><code class="language-yaml">properties:
-  strategy:
+  on_read:
     type: string
     description: |
-      The selected strategy for capturing the series of bytes from the incoming packet.
-       - SUFFIX: Retrieve bytes from the end of the packet.
-       - PREFIX: Retrieve bytes from the beginnning of the packet.
-    default: &quot;SUFFIX&quot;
-    enum: ['PREFIX', 'SUFFIX']
-  metadataKey:
+      Either append or prepend the `bytes` data to each packet filtered on read of the listening port.
+    default: DO_NOTHING
+    enum: ['DO_NOTHING', 'APPEND', 'PREPEND']
+  on_write:
     type: string
-    default: quilkin.dev/captured_bytes
-    description: | 
-      The key under which the captured bytes are stored in the Filter invocation values.
-  size:
-    type: integer
     description: |
-      The number of bytes in the packet to capture using the applied strategy.
-  remove:
-    type: boolean
-    default: false
+      Either append or prepend the `bytes` data to each packet filtered on write of the listening port.
+    default: DO_NOTHING
+    enum: ['DO_NOTHING', 'APPEND', 'PREPEND']    
+  bytes:
+    type: string
     description: |
-      Whether or not to remove the captured bytes from the packet before passing it along to the next filter in the
-      chain.
-  required: ['size']
+      Base64 encoded string of the byte array to add to each packet as it is filtered.
 </code></pre>
 <h3 id="metrics"><a class="header" href="#metrics">Metrics</a></h3>
-<ul>
-<li><code>quilkin_filter_CaptureBytes_packets_dropped</code><br />
-A counter of the total number of packets that have been dropped due to their length being less than the configured
-<code>size</code>.</li>
-</ul>
+<p>This filter currently exports no metrics.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../filters.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../filters/capture_bytes.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
-                            <a rel="next" href="../filters/concatenate_bytes.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="../filters/compress.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         <div style="clear: both"></div>
@@ -216,10 +199,10 @@ A counter of the total number of packets that have been dropped due to their len
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../filters.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../filters/capture_bytes.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
-                    <a rel="next" href="../filters/concatenate_bytes.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next" href="../filters/compress.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
