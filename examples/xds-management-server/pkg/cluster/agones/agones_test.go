@@ -18,6 +18,7 @@ package agones
 
 import (
 	"os"
+	"sort"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -119,6 +120,10 @@ func TestGetEndpointsFromStoreMultipleEndpoints(t *testing.T) {
 
 	endpoints := getEndpointsFromStore(logger, store)
 	require.Len(t, endpoints, 2)
+
+	sort.Slice(endpoints, func(i, j int) bool {
+		return endpoints[i].Port < endpoints[j].Port
+	})
 
 	require.EqualValues(t, 21, endpoints[0].Port)
 	require.EqualValues(t, 22, endpoints[1].Port)

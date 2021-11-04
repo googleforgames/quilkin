@@ -133,8 +133,9 @@ func TestProviderPushNewFilterChainWhenPodIsUpdated(t *testing.T) {
 	require.Contains(t, pfc.FilterChain.Filters[0].String(), filters.DebugFilterName)
 
 	// Update the pod to turn off debug.
-	pod.Annotations[annotationKeyDebug] = "false"
-	fakeWatch.Add(pod)
+	updatedPod := testPod("pod-1")
+	updatedPod.Annotations[annotationKeyDebug] = "false"
+	fakeWatch.Add(updatedPod)
 
 	// Check that the generated filter chain has no filter.
 	pfc = waitForFilterChainUpdate(t, fakeClock, filterChainCh)
