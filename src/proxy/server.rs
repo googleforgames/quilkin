@@ -15,7 +15,6 @@
  */
 
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
-use std::result::Result as StdResult;
 use std::sync::Arc;
 
 use slog::{debug, error, info, trace, warn, Logger};
@@ -28,23 +27,20 @@ use metrics::Metrics as ProxyMetrics;
 use resource_manager::{DynamicResourceManagers, StaticResourceManagers};
 
 use crate::cluster::cluster_manager::SharedClusterManager;
-use crate::endpoint::Endpoint;
+use crate::endpoint::{Endpoint, EndpointAddress};
 use crate::filters::{manager::SharedFilterManager, Filter, FilterRegistry, ReadContext};
 use crate::proxy::builder::{ValidatedConfig, ValidatedSource};
-use crate::proxy::server::error::Error;
 use crate::proxy::sessions::metrics::Metrics as SessionMetrics;
 use crate::proxy::sessions::session_manager::SessionManager;
 use crate::proxy::sessions::{Packet, Session, SessionKey, SESSION_TIMEOUT_SECONDS};
 use crate::proxy::Admin;
 use crate::utils::debug;
+use crate::Result;
 
 use super::metrics::Metrics;
 
-pub mod error;
 pub(super) mod metrics;
 mod resource_manager;
-
-type Result<T> = std::result::Result<T, Error>;
 
 /// Server is the UDP server main implementation
 pub struct Server {
@@ -130,11 +126,13 @@ impl Server {
             shutdown_rx: shutdown_rx.clone(),
         });
 
+        slog::info!(self.log, "Quilkin is ready.");
+
         tokio::select! {
             join_result = recv_loop => {
                 join_result
-                    .map_err(|join_err| Error::RecvLoop(format!("{}", join_err)))
-                    .and_then(|inner| inner.map_err(Error::RecvLoop))
+                    .map_err(|error| eyre::eyre!(error))
+                    .and_then(|inner| inner)
             }
             _ = shutdown_rx.changed() => {
                 Ok(())
@@ -156,7 +154,9 @@ impl Server {
                     endpoints.clone(),
                     filter_chain.clone(),
                 )
-                .map_err(|err| Error::Initialize(format!("{}", err)))?;
+                .map_err(|err| {
+                    eyre::eyre!(err).wrap_err("Failed to initialise static resource manager.")
+                })?;
                 Ok((manager.cluster_manager, manager.filter_manager))
             }
             ValidatedSource::Dynamic { management_servers } => {
@@ -169,7 +169,9 @@ impl Server {
                     shutdown_rx,
                 )
                 .await
-                .map_err(|err| Error::Initialize(format!("{}", err)))?;
+                .map_err(|err| {
+                    eyre::eyre!(err).wrap_err("Failed to initialise xDS management servers.")
+                })?;
 
                 let execution_result_rx = manager.execution_result_rx;
                 // Spawn a task to check for an error if the XDS client
@@ -196,7 +198,7 @@ impl Server {
     /// This function also spawns the set of worker tasks responsible for consuming packets
     /// off the aforementioned queue and processing them through the filter chain and session
     /// pipeline.
-    fn run_recv_from(&self, args: RunRecvFromArgs) -> JoinHandle<StdResult<(), String>> {
+    fn run_recv_from(&self, args: RunRecvFromArgs) -> JoinHandle<Result<()>> {
         let session_manager = args.session_manager;
         let log = self.log.clone();
         let proxy_metrics = self.proxy_metrics.clone();
@@ -258,16 +260,17 @@ impl Server {
                         {
                             // We cannot recover from this error since
                             // it implies that the receiver has been dropped.
-                            let reason =
-                                "Failed to send received packet over channel to worker".into();
-                            error!(log, "{}", reason);
-                            return Err(reason);
+                            let error = eyre::eyre!(
+                                "Failed to send received packet over channel to worker"
+                            );
+                            error!(log, "{}", error);
+                            return Err(error);
                         }
                     }
-                    err => {
-                        // Socket error, we cannot recover from this so return an error instead.
-                        error!(log, "Error processing receive socket"; "error" => #?err);
-                        return Err(format!("error processing receive socket: {:?}", err));
+                    Err(error) => {
+                        let error = eyre::eyre!(error).wrap_err("Error processing receive socket");
+                        error!(log, "{}", error);
+                        return Err(error);
                     }
                 }
             }
@@ -295,7 +298,7 @@ impl Server {
                     tokio::select! {
                       packet = packet_rx.recv() => {
                         match packet {
-                          Some((recv_addr, packet)) => Self::process_downstream_received_packet((recv_addr, packet), &receive_config).await,
+                          Some((recv_addr, packet)) => Self::process_downstream_received_packet((recv_addr.into(), packet), &receive_config).await,
                           None => {
                             debug!(log, "Worker-{} exiting: work sender channel was closed.", worker_id);
                             return;
@@ -314,7 +317,7 @@ impl Server {
 
     /// Processes a packet by running it through the filter chain.
     async fn process_downstream_received_packet(
-        packet: (SocketAddr, Vec<u8>),
+        packet: (EndpointAddress, Vec<u8>),
         args: &ProcessDownstreamReceiveConfig,
     ) {
         let (recv_addr, packet) = packet;
@@ -322,7 +325,7 @@ impl Server {
         trace!(
             args.log,
             "Packet Received";
-            "from" => recv_addr,
+            "from" => &recv_addr,
             "contents" => debug::bytes_to_string(&packet),
         );
 
@@ -338,11 +341,12 @@ impl Server {
             let filter_manager_guard = args.filter_manager.read();
             filter_manager_guard.get_filter_chain()
         };
-        let result = filter_chain.read(ReadContext::new(endpoints, recv_addr, packet));
+        let result = filter_chain.read(ReadContext::new(endpoints, recv_addr.clone(), packet));
 
         if let Some(response) = result {
             for endpoint in response.endpoints.iter() {
-                Self::session_send_packet(&response.contents, recv_addr, endpoint, args).await;
+                Self::session_send_packet(&response.contents, recv_addr.clone(), endpoint, args)
+                    .await;
             }
         }
     }
@@ -350,13 +354,13 @@ impl Server {
     /// Send a packet received from `recv_addr` to an endpoint.
     async fn session_send_packet(
         packet: &[u8],
-        recv_addr: SocketAddr,
+        recv_addr: EndpointAddress,
         endpoint: &Endpoint,
         args: &ProcessDownstreamReceiveConfig,
     ) {
         let session_key = SessionKey {
             source: recv_addr,
-            destination: endpoint.address,
+            destination: endpoint.address.clone(),
         };
 
         // Grab a read lock and find the session.
@@ -389,7 +393,7 @@ impl Server {
                     &args.log,
                     args.session_metrics.clone(),
                     args.filter_manager.clone(),
-                    session_key.source,
+                    session_key.source.clone(),
                     endpoint.clone(),
                     args.send_packets.clone(),
                     args.session_ttl,
@@ -465,11 +469,20 @@ impl Server {
                     "contents" => debug::bytes_to_string(packet.contents()),
                 );
 
-                if let Err(err) = socket.send_to(packet.contents(), &packet.dest()).await {
+                let address = match packet.dest().to_socket_addr() {
+                    Ok(address) => address,
+                    Err(error) => {
+                        error!(log, "Error resolving address"; "dest" => %packet.dest(), "error" => %error);
+                        continue;
+                    }
+                };
+
+                if let Err(err) = socket.send_to(packet.contents(), address).await {
                     error!(log, "Error sending packet"; "dest" => %packet.dest(), "error" => %err);
                 }
             }
             debug!(log, "Receiver closed");
+            Ok::<_, eyre::Error>(())
         });
     }
 
@@ -481,7 +494,9 @@ impl Server {
     /// bind binds the local configured port
     async fn bind(port: u16) -> Result<UdpSocket> {
         let addr = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), port);
-        UdpSocket::bind(addr).await.map_err(Error::Bind)
+        UdpSocket::bind(addr)
+            .await
+            .map_err(|error| eyre::eyre!(error))
     }
 }
 
@@ -518,14 +533,14 @@ mod tests {
         let endpoint1 = t.open_socket_and_recv_single_packet().await;
         let endpoint2 = t.open_socket_and_recv_single_packet().await;
 
-        let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12358);
+        let local_addr = (Ipv4Addr::UNSPECIFIED, 12358);
         let config = ConfigBuilder::empty()
-            .with_port(local_addr.port())
+            .with_port(local_addr.1)
             .with_static(
                 vec![],
                 vec![
-                    Endpoint::new(endpoint1.socket.local_addr().unwrap()),
-                    Endpoint::new(endpoint2.socket.local_addr().unwrap()),
+                    Endpoint::new(endpoint1.socket.local_addr().unwrap().into()),
+                    Endpoint::new(endpoint2.socket.local_addr().unwrap().into()),
                 ],
             )
             .build();
@@ -552,7 +567,7 @@ mod tests {
             .with_port(local_addr.port())
             .with_static(
                 vec![],
-                vec![Endpoint::new(endpoint.socket.local_addr().unwrap())],
+                vec![Endpoint::new(endpoint.socket.local_addr().unwrap().into())],
             )
             .build();
         t.run_server_with_config(config);
@@ -580,7 +595,7 @@ mod tests {
                     name: "TestFilter".to_string(),
                     config: None,
                 }],
-                vec![Endpoint::new(endpoint.socket.local_addr().unwrap())],
+                vec![Endpoint::new(endpoint.socket.local_addr().unwrap().into())],
             )
             .build();
         t.run_server_with_builder(
@@ -648,7 +663,7 @@ mod tests {
             let time_increment = 10;
             time::advance(Duration::from_secs(time_increment)).await;
 
-            let endpoint_address = endpoint.socket.local_addr().unwrap();
+            let endpoint_address = endpoint.socket.local_addr().unwrap().into();
 
             let num_workers = 2;
             let mut packet_txs = Vec::with_capacity(num_workers);
@@ -700,7 +715,11 @@ mod tests {
 
             let map = session_manager.get_sessions().await;
             assert_eq!(expected.session_len, map.len());
-            let build_key = (receive_addr, endpoint.socket.local_addr().unwrap()).into();
+            let build_key = (
+                receive_addr.into(),
+                endpoint.socket.local_addr().unwrap().into(),
+            )
+                .into();
             assert!(map.contains_key(&build_key));
             let session = map.get(&build_key).unwrap();
             let now_secs = SystemTime::now()
@@ -765,7 +784,10 @@ mod tests {
         server.run_recv_from(RunRecvFromArgs {
             cluster_manager: ClusterManager::fixed(
                 &registry,
-                Endpoints::new(vec![Endpoint::new(endpoint.socket.local_addr().unwrap())]).unwrap(),
+                Endpoints::new(vec![Endpoint::new(
+                    endpoint.socket.local_addr().unwrap().into(),
+                )])
+                .unwrap(),
             )
             .unwrap(),
             filter_manager: FilterManager::fixed(Arc::new(
@@ -802,7 +824,7 @@ mod tests {
         let endpoint = t.open_socket_and_recv_single_packet().await;
         if send_packet
             .send(Packet::new(
-                endpoint.socket.local_addr().unwrap(),
+                endpoint.socket.local_addr().unwrap().into(),
                 msg.as_bytes().to_vec(),
             ))
             .await

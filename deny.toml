@@ -14,6 +14,14 @@
 # limitations under the License.
 #
 
+# Only affects local time, and we only depend on time 0.1 and chrono through slog,
+# which we're moving away from.
+[advisories]
+ignore = [
+    "RUSTSEC-2020-0071",
+    "RUSTSEC-2020-0159",
+]
+
 # This section is considered when running `cargo deny check licenses`
 # More documentation for the licenses section can be found here:
 # https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html

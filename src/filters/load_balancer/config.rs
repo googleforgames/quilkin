@@ -52,7 +52,7 @@ impl TryFrom<ProtoConfig> for Config {
                 )
             })
             .transpose()?
-            .unwrap_or_else(Policy::default);
+            .unwrap_or_default();
         Ok(Self { policy })
     }
 }

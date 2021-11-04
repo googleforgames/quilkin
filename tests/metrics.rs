@@ -52,10 +52,9 @@ async fn metrics_server() {
         .with_port(client_port)
         .with_static(
             vec![],
-            vec![Endpoint::new(SocketAddr::new(
-                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
-                server_port,
-            ))],
+            vec![Endpoint::new(
+                (IpAddr::V4(Ipv4Addr::LOCALHOST), server_port).into(),
+            )],
         )
         .build();
     t.run_server_with_builder(Builder::from(Arc::new(client_config)));
@@ -69,13 +68,18 @@ async fn metrics_server() {
     socket.send_to(b"hello", &local_addr).await.unwrap();
 
     let _ = recv_chan.recv().await.unwrap();
+    let client = hyper::Client::new();
 
-    let resp = reqwest::get("http://localhost:9092/metrics")
+    let resp = client
+        .get(hyper::Uri::from_static("http://localhost:9092/metrics"))
         .await
+        .map(|resp| resp.into_body())
+        .map(hyper::body::to_bytes)
         .unwrap()
-        .text()
         .await
         .unwrap();
 
-    assert!(resp.contains("quilkin_session_tx_packets_total 1"));
+    assert!(String::from_utf8(resp.to_vec())
+        .unwrap()
+        .contains("quilkin_session_tx_packets_total 1"));
 }

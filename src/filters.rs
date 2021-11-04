@@ -30,6 +30,7 @@ pub mod capture_bytes;
 pub mod compress;
 pub mod concatenate_bytes;
 pub mod debug;
+pub mod firewall;
 pub mod load_balancer;
 pub mod local_rate_limit;
 pub mod metadata;

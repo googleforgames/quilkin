@@ -14,19 +14,24 @@
  * limitations under the License.
  */
 
-use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::{
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc,
+    },
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use slog::{debug, error, o, trace, warn, Logger};
-use tokio::net::UdpSocket;
-use tokio::select;
-use tokio::sync::{mpsc, watch};
-use tokio::time::{Duration, Instant};
+use tokio::{
+    net::UdpSocket,
+    select,
+    sync::{mpsc, watch},
+    time::{Duration, Instant},
+};
 
 use crate::{
-    endpoint::Endpoint,
+    endpoint::{Endpoint, EndpointAddress},
     filters::{manager::SharedFilterManager, Filter, WriteContext},
     proxy::sessions::{error::Error, metrics::Metrics},
     utils::debug,
@@ -45,7 +50,7 @@ pub struct Session {
     /// dest is where to send data to
     dest: Endpoint,
     /// from is the original sender
-    from: SocketAddr,
+    from: EndpointAddress,
     /// The time at which the session is considered expired and can be removed.
     expiration: Arc<AtomicU64>,
     /// a channel to broadcast on if we are shutting down this Session
@@ -55,15 +60,15 @@ pub struct Session {
 // A (source, destination) address pair that uniquely identifies a session.
 #[derive(Clone, Eq, Hash, PartialEq, Debug, PartialOrd, Ord)]
 pub struct SessionKey {
-    pub source: SocketAddr,
-    pub destination: SocketAddr,
+    pub source: EndpointAddress,
+    pub destination: EndpointAddress,
 }
 
-impl From<(SocketAddr, SocketAddr)> for SessionKey {
-    fn from(pair: (SocketAddr, SocketAddr)) -> Self {
+impl From<(EndpointAddress, EndpointAddress)> for SessionKey {
+    fn from((source, destination): (EndpointAddress, EndpointAddress)) -> Self {
         SessionKey {
-            source: pair.0,
-            destination: pair.1,
+            source,
+            destination,
         }
     }
 }
@@ -73,26 +78,26 @@ struct ReceivedPacketContext<'a> {
     packet: &'a [u8],
     filter_manager: SharedFilterManager,
     endpoint: &'a Endpoint,
-    from: SocketAddr,
-    to: SocketAddr,
+    from: EndpointAddress,
+    to: EndpointAddress,
 }
 
 /// Packet represents a packet that needs to go somewhere
 pub struct Packet {
-    dest: SocketAddr,
+    dest: EndpointAddress,
     contents: Vec<u8>,
 }
 
 impl Packet {
-    pub fn new(dest: SocketAddr, contents: Vec<u8>) -> Packet {
+    pub fn new(dest: EndpointAddress, contents: Vec<u8>) -> Packet {
         Packet { dest, contents }
     }
 
-    pub fn dest(&self) -> SocketAddr {
-        self.dest
+    pub fn dest(&self) -> &EndpointAddress {
+        &self.dest
     }
 
-    pub fn contents(&self) -> &Vec<u8> {
+    pub fn contents(&self) -> &[u8] {
         &self.contents
     }
 }
@@ -104,14 +109,14 @@ impl Session {
         base: &Logger,
         metrics: Metrics,
         filter_manager: SharedFilterManager,
-        from: SocketAddr,
+        from: EndpointAddress,
         dest: Endpoint,
         sender: mpsc::Sender<Packet>,
         ttl: Duration,
     ) -> Result<Self> {
         let log = base
-            .new(o!("source" => "proxy::Session", "from" => from, "dest_address" => dest.address));
-        let addr = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 0);
+            .new(o!("source" => "proxy::Session", "from" => from.clone(), "dest_address" => dest.address.clone()));
+        let addr = (std::net::Ipv4Addr::UNSPECIFIED, 0);
         let socket = Arc::new(UdpSocket::bind(addr).await.map_err(Error::BindUdpSocket)?);
         let (shutdown_tx, shutdown_rx) = watch::channel::<()>(());
 
@@ -146,7 +151,7 @@ impl Session {
         mut shutdown_rx: watch::Receiver<()>,
     ) {
         let log = self.log.clone();
-        let from = self.from;
+        let from = self.from.clone();
         let expiration = self.expiration.clone();
         let filter_manager = self.filter_manager.clone();
         let endpoint = self.dest.clone();
@@ -175,8 +180,8 @@ impl Session {
                                         filter_manager: filter_manager.clone(),
                                         packet: &buf[..size],
                                         endpoint: &endpoint,
-                                        from: recv_addr,
-                                        to: from,
+                                        from: recv_addr.into(),
+                                        to: from.clone(),
                                     }).await
                             }
                         };
@@ -198,8 +203,8 @@ impl Session {
     /// key returns the key to be used for this session in a SessionMap
     pub fn key(&self) -> SessionKey {
         SessionKey {
-            source: self.from,
-            destination: self.dest.address,
+            source: self.from.clone(),
+            destination: self.dest.address.clone(),
         }
     }
 
@@ -220,7 +225,7 @@ impl Session {
             to,
         } = packet_ctx;
 
-        trace!(log, "Received packet"; "from" => from,
+        trace!(log, "Received packet"; "from" => from.clone(),
             "endpoint_addr" => &endpoint.address,
             "contents" => debug::bytes_to_string(packet));
 
@@ -232,9 +237,12 @@ impl Session {
             let filter_manager_guard = filter_manager.read();
             filter_manager_guard.get_filter_chain()
         };
-        if let Some(response) =
-            filter_chain.write(WriteContext::new(endpoint, from, to, packet.to_vec()))
-        {
+        if let Some(response) = filter_chain.write(WriteContext::new(
+            endpoint,
+            from,
+            to.clone(),
+            packet.to_vec(),
+        )) {
             if let Err(err) = sender.send(Packet::new(to, response.contents)).await {
                 metrics.rx_errors_total.inc();
                 error!(log, "Error sending packet to channel"; "error" => %err);
@@ -273,7 +281,7 @@ impl Session {
     }
 
     /// Sends a packet to the Session's dest.
-    pub async fn send(&self, buf: &[u8]) -> Result<Option<usize>> {
+    pub async fn send(&self, buf: &[u8]) -> crate::Result<Option<usize>> {
         trace!(self.log, "Sending packet";
         "dest_address" => &self.dest.address,
         "contents" => debug::bytes_to_string(buf));
@@ -287,14 +295,17 @@ impl Session {
             })
             .map_err(|err| {
                 self.metrics.tx_errors_total.inc();
-                Error::SendToDst(err)
+                eyre::eyre!(err).wrap_err("Error sending to destination.")
             })
     }
 
     /// Sends `buf` to the session's destination address. On success, returns
     /// the number of bytes written.
-    pub async fn do_send(&self, buf: &[u8]) -> std::result::Result<usize, std::io::Error> {
-        self.socket.send_to(buf, &self.dest.address).await
+    pub async fn do_send(&self, buf: &[u8]) -> crate::Result<usize> {
+        self.socket
+            .send_to(buf, &self.dest.address.to_socket_addr()?)
+            .await
+            .map_err(|error| eyre::eyre!(error))
     }
 }
 
@@ -309,16 +320,21 @@ impl Drop for Session {
             warn!(self.log, "Error sending session shutdown signal"; "error" => error.to_string());
         }
 
-        debug!(self.log, "Session closed"; "from" => self.from, "dest_address" => &self.dest.address);
+        debug!(self.log, "Session closed"; "from" => &self.from, "dest_address" => &self.dest.address);
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::str::from_utf8;
-    use std::sync::atomic::{AtomicU64, Ordering};
-    use std::sync::Arc;
-    use std::time::{Duration, SystemTime, UNIX_EPOCH};
+    use std::{
+        net::Ipv4Addr,
+        str::from_utf8,
+        sync::{
+            atomic::{AtomicU64, Ordering},
+            Arc,
+        },
+        time::{Duration, SystemTime, UNIX_EPOCH},
+    };
 
     use super::{Metrics, Packet, Session};
 
@@ -328,7 +344,7 @@ mod tests {
     use crate::filters::FilterChain;
     use crate::test_utils::{new_test_chain, TestHelper};
 
-    use crate::endpoint::Endpoint;
+    use crate::endpoint::{Endpoint, EndpointAddress};
     use crate::filters::manager::FilterManager;
     use crate::proxy::sessions::session::ReceivedPacketContext;
     use tokio::sync::mpsc;
@@ -337,8 +353,8 @@ mod tests {
     async fn session_new() {
         let t = TestHelper::default();
         let socket = t.create_socket().await;
-        let addr = socket.local_addr().unwrap();
-        let endpoint = Endpoint::new(addr);
+        let addr: EndpointAddress = socket.local_addr().unwrap().into();
+        let endpoint = Endpoint::new(addr.clone());
         let (send_packet, mut recv_packet) = mpsc::channel::<Packet>(5);
         let registry = Registry::default();
 
@@ -346,7 +362,7 @@ mod tests {
             &t.log,
             Metrics::new(&registry).unwrap(),
             FilterManager::fixed(Arc::new(FilterChain::new(vec![], &registry).unwrap())),
-            addr,
+            addr.clone(),
             endpoint,
             send_packet,
             Duration::from_secs(20),
@@ -388,8 +404,8 @@ mod tests {
         // without a filter
         let (sender, _) = mpsc::channel::<Packet>(1);
         let ep = t.open_socket_and_recv_single_packet().await;
-        let addr = ep.socket.local_addr().unwrap();
-        let endpoint = Endpoint::new(addr);
+        let addr: EndpointAddress = ep.socket.local_addr().unwrap().into();
+        let endpoint = Endpoint::new(addr.clone());
         let registry = Registry::default();
 
         let session = Session::new(
@@ -414,7 +430,7 @@ mod tests {
 
         let chain = Arc::new(FilterChain::new(vec![], &registry).unwrap());
         let endpoint = Endpoint::new("127.0.1.1:80".parse().unwrap());
-        let dest = "127.0.0.1:88".parse().unwrap();
+        let dest: EndpointAddress = (Ipv4Addr::LOCALHOST, 88).into();
         let (mut sender, mut receiver) = mpsc::channel::<Packet>(10);
         let expiration = Arc::new(AtomicU64::new(
             SystemTime::now()
@@ -436,8 +452,8 @@ mod tests {
                 packet: msg.as_bytes(),
                 filter_manager: FilterManager::fixed(chain),
                 endpoint: &endpoint,
-                from: endpoint.address,
-                to: dest,
+                from: endpoint.address.clone(),
+                to: dest.clone(),
             },
         )
         .await;
@@ -470,8 +486,8 @@ mod tests {
                 filter_manager: FilterManager::fixed(chain),
                 packet: msg.as_bytes(),
                 endpoint: &endpoint,
-                from: endpoint.address,
-                to: dest,
+                from: endpoint.address.clone(),
+                to: dest.clone(),
             },
         )
         .await;
@@ -492,8 +508,8 @@ mod tests {
     async fn session_new_metrics() {
         let t = TestHelper::default();
         let ep = t.open_socket_and_recv_single_packet().await;
-        let addr = ep.socket.local_addr().unwrap();
-        let endpoint = Endpoint::new(addr);
+        let addr: EndpointAddress = ep.socket.local_addr().unwrap().into();
+        let endpoint = Endpoint::new(addr.clone());
         let (send_packet, _) = mpsc::channel::<Packet>(5);
         let registry = Registry::default();
 
@@ -519,13 +535,13 @@ mod tests {
 
         let (sender, _) = mpsc::channel::<Packet>(1);
         let endpoint = t.open_socket_and_recv_single_packet().await;
-        let addr = endpoint.socket.local_addr().unwrap();
+        let addr: EndpointAddress = endpoint.socket.local_addr().unwrap().into();
         let registry = Registry::default();
         let session = Session::new(
             &t.log,
             Metrics::new(&registry).unwrap(),
             FilterManager::fixed(Arc::new(FilterChain::new(vec![], &registry).unwrap())),
-            addr,
+            addr.clone(),
             Endpoint::new(addr),
             sender,
             Duration::from_secs(10),
@@ -544,13 +560,13 @@ mod tests {
         let t = TestHelper::default();
         let (send_packet, _) = mpsc::channel::<Packet>(5);
         let endpoint = t.open_socket_and_recv_single_packet().await;
-        let addr = endpoint.socket.local_addr().unwrap();
+        let addr: EndpointAddress = endpoint.socket.local_addr().unwrap().into();
         let registry = Registry::default();
         let session = Session::new(
             &t.log,
             Metrics::new(&registry).unwrap(),
             FilterManager::fixed(Arc::new(FilterChain::new(vec![], &registry).unwrap())),
-            addr,
+            addr.clone(),
             Endpoint::new(addr),
             send_packet,
             Duration::from_secs(10),

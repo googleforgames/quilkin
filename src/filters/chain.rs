@@ -128,7 +128,7 @@ impl Filter for FilterChain {
             .zip(self.filter_read_duration_seconds.iter())
             .try_fold(ctx, |ctx, ((_, instance), histogram)| {
                 Some(ReadContext::with_response(
-                    ctx.from,
+                    ctx.from.clone(),
                     histogram.observe_closure_duration(|| instance.filter.read(ctx))?,
                 ))
             })
@@ -143,8 +143,8 @@ impl Filter for FilterChain {
             .try_fold(ctx, |ctx, ((_, instance), histogram)| {
                 Some(WriteContext::with_response(
                     ctx.endpoint,
-                    ctx.from,
-                    ctx.to,
+                    ctx.from.clone(),
+                    ctx.to.clone(),
                     histogram.observe_closure_duration(|| instance.filter.write(ctx))?,
                 ))
             })
@@ -234,7 +234,7 @@ mod tests {
         let response = chain
             .write(WriteContext::new(
                 &endpoints_fixture[0],
-                endpoints_fixture[0].address,
+                endpoints_fixture[0].address.clone(),
                 "127.0.0.1:70".parse().unwrap(),
                 b"hello".to_vec(),
             ))
@@ -299,7 +299,7 @@ mod tests {
         let response = chain
             .write(WriteContext::new(
                 &endpoints_fixture[0],
-                endpoints_fixture[0].address,
+                endpoints_fixture[0].address.clone(),
                 "127.0.0.1:70".parse().unwrap(),
                 b"hello".to_vec(),
             ))

@@ -94,7 +94,7 @@ impl TryFrom<ProtoConfig> for Config {
                 )
             })
             .transpose()?
-            .unwrap_or_else(Strategy::default);
+            .unwrap_or_default();
 
         Ok(Self {
             strategy,

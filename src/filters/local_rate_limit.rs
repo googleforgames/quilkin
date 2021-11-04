@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
+mod metrics;
+
 use std::convert::TryFrom;
-use std::net::SocketAddr;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
@@ -23,12 +24,13 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use slog::Logger;
 
+use crate::{
+    endpoint::EndpointAddress,
+    filters::prelude::*,
+    ttl_map::{Entry, TtlMap},
+};
+
 use metrics::Metrics;
-
-use crate::filters::prelude::*;
-use crate::ttl_map::{Entry, TtlMap};
-
-mod metrics;
 
 crate::include_proto!("quilkin.extensions.filters.local_rate_limit.v1alpha1");
 use self::quilkin::extensions::filters::local_rate_limit::v1alpha1::LocalRateLimit as ProtoConfig;
@@ -94,7 +96,7 @@ impl LocalRateLimit {
     /// for rate limiting. It returns whether there exists a token for the corresponding
     /// address in the current period - determining whether or not the packet
     /// should be forwarded or dropped.
-    fn acquire_token(&self, address: SocketAddr) -> Option<()> {
+    fn acquire_token(&self, address: &EndpointAddress) -> Option<()> {
         if self.config.max_packets == 0 {
             return None;
         }
@@ -130,7 +132,7 @@ impl LocalRateLimit {
             return Some(());
         }
 
-        match self.state.entry(address) {
+        match self.state.entry(address.clone()) {
             Entry::Occupied(entry) => {
                 // It is possible that some other task has added the item since we
                 // checked for it. If so, only increment the counter - no need to
@@ -154,7 +156,7 @@ impl LocalRateLimit {
 
 impl Filter for LocalRateLimit {
     fn read(&self, ctx: ReadContext) -> Option<ReadResponse> {
-        self.acquire_token(ctx.from)
+        self.acquire_token(&ctx.from)
             .map(|()| ctx.into())
             .or_else(|| {
                 self.metrics.packets_dropped_total.inc();
@@ -232,22 +234,20 @@ impl TryFrom<ProtoConfig> for Config {
 
 #[cfg(test)]
 mod tests {
-    use std::convert::TryFrom;
-    use std::time::Duration;
+    use std::{convert::TryFrom, net::Ipv4Addr, time::Duration};
 
     use prometheus::Registry;
     use tokio::time;
 
     use super::ProtoConfig;
     use crate::config::ConfigType;
-    use crate::endpoint::{Endpoint, Endpoints};
+    use crate::endpoint::{Endpoint, EndpointAddress, Endpoints};
     use crate::filters::local_rate_limit::LocalRateLimitFactory;
     use crate::filters::{
         local_rate_limit::{metrics::Metrics, Config, LocalRateLimit},
         CreateFilterArgs, Filter, FilterFactory, ReadContext,
     };
     use crate::test_utils::{assert_write_no_change, logger};
-    use std::net::SocketAddr;
 
     fn rate_limiter(config: Config) -> LocalRateLimit {
         LocalRateLimit::new(
@@ -257,12 +257,19 @@ mod tests {
         )
     }
 
-    /// Send a packet to the filter and assert whether or not it was processed.
-    fn read(r: &LocalRateLimit, address: SocketAddr, should_succeed: bool) {
-        let endpoints =
-            Endpoints::new(vec![Endpoint::new("127.0.0.1:8089".parse().unwrap())]).unwrap();
+    fn address_pair() -> (EndpointAddress, EndpointAddress) {
+        (
+            (Ipv4Addr::LOCALHOST, 8080).into(),
+            (Ipv4Addr::LOCALHOST, 8081).into(),
+        )
+    }
 
-        let result = r.read(ReadContext::new(endpoints.into(), address, vec![9]));
+    /// Send a packet to the filter and assert whether or not it was processed.
+    fn read(r: &LocalRateLimit, address: &EndpointAddress, should_succeed: bool) {
+        let endpoints =
+            Endpoints::new(vec![Endpoint::new((Ipv4Addr::LOCALHOST, 8089).into())]).unwrap();
+
+        let result = r.read(ReadContext::new(endpoints.into(), address.clone(), vec![9]));
 
         if should_succeed {
             assert_eq!(result.unwrap().contents, vec![9]);
@@ -336,12 +343,12 @@ period: 0
             period: 1,
         });
 
-        let address = "127.0.0.1:8080".parse().unwrap();
+        let (address, _) = address_pair();
 
-        read(&r, address, true);
-        read(&r, address, true);
-        read(&r, address, true);
-        read(&r, address, false);
+        read(&r, &address, true);
+        read(&r, &address, true);
+        read(&r, &address, true);
+        read(&r, &address, false);
     }
 
     #[tokio::test]
@@ -351,13 +358,13 @@ period: 0
             period: 1,
         });
 
-        let address = "127.0.0.1:8080".parse().unwrap();
+        let (address, _) = address_pair();
 
         // Check that other routes are not affected.
         assert_write_no_change(&r);
 
         // Check that we're rate limited.
-        read(&r, address, false);
+        read(&r, &address, false);
     }
 
     #[tokio::test]
@@ -369,35 +376,34 @@ period: 0
             period: 1,
         });
 
-        let address1 = "127.0.0.1:8080".parse().unwrap();
-        let address2 = "127.0.0.1:8081".parse().unwrap();
+        let (address1, address2) = address_pair();
 
         // Read until we exhaust tokens for both addresses.
-        read(&r, address1, true);
-        read(&r, address2, true);
-        read(&r, address1, true);
-        read(&r, address2, true);
+        read(&r, &address1, true);
+        read(&r, &address2, true);
+        read(&r, &address1, true);
+        read(&r, &address2, true);
 
         // Check that we've exhausted their tokens.
-        read(&r, address1, false);
-        read(&r, address2, false);
-        read(&r, address1, false);
-        read(&r, address2, false);
+        read(&r, &address1, false);
+        read(&r, &address2, false);
+        read(&r, &address1, false);
+        read(&r, &address2, false);
 
         // Advance time to refill tokens.
         time::advance(Duration::from_secs(2)).await;
 
         // Check that we are able to process packets again.
-        read(&r, address1, true);
-        read(&r, address2, true);
-        read(&r, address1, true);
+        read(&r, &address1, true);
+        read(&r, &address2, true);
+        read(&r, &address1, true);
 
         // Advance time to to the end of the current window.
         time::advance(Duration::from_secs(1)).await;
 
         // Only the second address should have tokens left.
-        read(&r, address1, false);
-        read(&r, address2, true);
+        read(&r, &address1, false);
+        read(&r, &address2, true);
 
         // Check that other routes are not affected.
         assert_write_no_change(&r);
@@ -414,18 +420,18 @@ period: 0
             period: 1,
         });
 
-        let address = "127.0.0.1:8080".parse().unwrap();
+        let (address, _) = address_pair();
 
         // Acquire 1 token.
-        read(&r, address, true);
+        read(&r, &address, true);
 
         // Advance to some time in the future after multiple token refills.
         time::advance(Duration::from_secs(10)).await;
 
         // Check that we still have the 2 tokens within a window.
-        read(&r, address, true);
-        read(&r, address, true);
-        read(&r, address, false);
+        read(&r, &address, true);
+        read(&r, &address, true);
+        read(&r, &address, false);
 
         // Check that other routes are not affected.
         assert_write_no_change(&r);

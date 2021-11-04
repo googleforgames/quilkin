@@ -31,7 +31,7 @@ pub mod filters;
 #[doc(hidden)]
 pub mod test_utils;
 
-pub type Result<T, E = runner::Error> = std::result::Result<T, E>;
+pub type Result<T, E = eyre::Error> = std::result::Result<T, E>;
 
 #[doc(inline)]
 pub use self::{

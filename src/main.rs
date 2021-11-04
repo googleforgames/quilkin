@@ -22,6 +22,8 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[tokio::main]
 async fn main() -> quilkin::Result<()> {
+    stable_eyre::install()?;
+
     let log = quilkin::logger();
     let version: std::borrow::Cow<'static, str> = if cfg!(debug_assertions) {
         format!("{}+debug", VERSION).into()
