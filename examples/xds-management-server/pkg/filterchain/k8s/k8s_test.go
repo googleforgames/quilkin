@@ -24,15 +24,15 @@ import (
 	"testing"
 	"time"
 
+	servertesting "quilkin.dev/xds-management-server/pkg/testing"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	kubernetesv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/fake"
-	testing2 "k8s.io/client-go/testing"
+	k8stesting "k8s.io/client-go/testing"
 	"quilkin.dev/xds-management-server/pkg/filterchain"
 	"quilkin.dev/xds-management-server/pkg/filters"
 )
@@ -44,16 +44,16 @@ func TestProviderCreateFilterChainForWatchedPods(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	client, watcherStarted := testClient()
+	m := servertesting.NewMocks()
 
-	p, fakeClock := testProvider(ctx, t, client)
+	p, fakeClock, fakeWatch := testProvider(t, m)
 	filterChainCh := p.Run(ctx)
-	<-watcherStarted
 
 	// A new pod is created.
 	pod1 := testPod("pod-1")
 	pod1.Annotations[annotationKeyDebug] = "true"
-	createPod(ctx, t, client, pod1)
+
+	fakeWatch.Add(pod1)
 
 	pfc := waitForFilterChainUpdate(t, fakeClock, filterChainCh)
 
@@ -66,23 +66,22 @@ func TestProviderCreateProxySpecificFilterChain(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	client, watcherStarted := testClient()
+	m := servertesting.NewMocks()
 
-	p, fakeClock := testProvider(ctx, t, client)
+	p, fakeClock, fakeWatch := testProvider(t, m)
 	filterChainCh := p.Run(ctx)
-	<-watcherStarted
 
 	pod1 := testPod("pod-1")
 	pod1.Annotations[annotationKeyDebug] = "true"
-	createPod(ctx, t, client, pod1)
+	fakeWatch.Add(pod1)
 
 	pod2 := testPod("pod-2")
 	pod2.Annotations[annotationKeyDebug] = "false"
-	createPod(ctx, t, client, pod2)
+	fakeWatch.Add(pod2)
 
 	pod3 := testPod("pod-3")
 	pod3.Annotations[annotationKeyDebug] = "true"
-	createPod(ctx, t, client, pod3)
+	fakeWatch.Add(pod3)
 
 	// Wait for a filter chain to be delivered for each pod
 	pfcs := []filterchain.ProxyFilterChain{
@@ -119,16 +118,15 @@ func TestProviderPushNewFilterChainWhenPodIsUpdated(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	client, watcherStarted := testClient()
+	m := servertesting.NewMocks()
 
-	p, fakeClock := testProvider(ctx, t, client)
+	p, fakeClock, fakeWatch := testProvider(t, m)
 	filterChainCh := p.Run(ctx)
-	<-watcherStarted
 
 	// Create the pod with debug enabled.
 	pod := testPod("pod-1")
 	pod.Annotations[annotationKeyDebug] = "true"
-	createPod(ctx, t, client, pod)
+	fakeWatch.Add(pod)
 
 	// Check that the generated filter chain has the debug filter.
 	pfc := waitForFilterChainUpdate(t, fakeClock, filterChainCh)
@@ -136,11 +134,7 @@ func TestProviderPushNewFilterChainWhenPodIsUpdated(t *testing.T) {
 
 	// Update the pod to turn off debug.
 	pod.Annotations[annotationKeyDebug] = "false"
-	_, err := client.
-		CoreV1().
-		Pods(pod.Namespace).
-		Update(ctx, pod, metav1.UpdateOptions{})
-	require.NoError(t, err, "failed to create pod")
+	fakeWatch.Add(pod)
 
 	// Check that the generated filter chain has no filter.
 	pfc = waitForFilterChainUpdate(t, fakeClock, filterChainCh)
@@ -159,14 +153,11 @@ func TestProviderIgnoreNonProxyPods(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	client, watcherStarted := testClient()
+	m := servertesting.NewMocks()
 
-	p, fakeClock := testProvider(ctx, t, client)
+	p, fakeClock, fakeWatch := testProvider(t, m)
 	filterChainCh := p.Run(ctx)
-	<-watcherStarted
-
-	// A new pod is created but in a different namespace.
-	createPod(ctx, t, client, &kubernetesv1.Pod{
+	fakeWatch.Add(&kubernetesv1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "pod-1",
 			Namespace: "quilkin-2",
@@ -186,17 +177,22 @@ func TestProviderIgnoreNonProxyPods(t *testing.T) {
 	require.EqualValues(t, filterchain.ProxyFilterChain{}, empty)
 }
 
-func testProvider(ctx context.Context, t *testing.T, client kubernetes.Interface) (*Provider, *clock.FakeClock) {
+func testProvider(
+	t *testing.T,
+	mocks *servertesting.Mocks,
+) (*Provider, *clock.FakeClock, *watch.FakeWatcher) {
 	fakeClock := clock.NewFakeClock(time.Now())
-	p, err := NewProvider(
-		ctx,
+
+	fakeWatch := watch.NewFake()
+	mocks.K8sClient.AddWatchReactor("pods", k8stesting.DefaultWatchReactor(fakeWatch, nil))
+	mocks.StartInformers(t, mocks.K8sInformerFactory.Core().V1().Pods().Informer().HasSynced)
+
+	p := NewProvider(
 		testLogger(),
 		fakeClock,
-		client,
-		defaultProxyNamespace,
+		mocks.K8sInformerFactory.Core().V1().Pods().Lister(),
 		defaultUpdateInterval)
-	require.NoError(t, err, "failed to create provider")
-	return p, fakeClock
+	return p, fakeClock, fakeWatch
 }
 
 func testPod(name string) *kubernetesv1.Pod {
@@ -205,32 +201,11 @@ func testPod(name string) *kubernetesv1.Pod {
 			Name:        name,
 			Namespace:   defaultProxyNamespace,
 			Annotations: map[string]string{},
+			Labels: map[string]string{
+				"quilkin.dev/role": "proxy",
+			},
 		},
 	}
-}
-
-func testClient() (kubernetes.Interface, <-chan struct{}) {
-	// From the kubernetes example docs...
-	// The fake client doesn't support resource version. Any writes to the client
-	// after the informer's initial LIST and before the informer establishing the
-	// watcher will be missed by the informer. Therefore we wait until the watcher
-	// starts.
-	watcherStarted := make(chan struct{})
-
-	client := fake.NewSimpleClientset()
-	client.PrependWatchReactor("*", func(action testing2.Action) (handled bool, ret watch.Interface, err error) {
-		rs := action.GetResource()
-		ns := action.GetNamespace()
-
-		w, err := client.Tracker().Watch(rs, ns)
-		if err != nil {
-			return false, nil, err
-		}
-		close(watcherStarted)
-		return true, w, nil
-	})
-
-	return client, watcherStarted
 }
 
 func waitForFilterChainUpdate(
@@ -253,14 +228,6 @@ func waitForFilterChainUpdate(
 	}, 10*time.Second, 1*time.Millisecond)
 
 	return pfc
-}
-
-func createPod(ctx context.Context, t *testing.T, client kubernetes.Interface, pod *kubernetesv1.Pod) {
-	_, err := client.
-		CoreV1().
-		Pods(pod.Namespace).
-		Create(ctx, pod, metav1.CreateOptions{})
-	require.NoError(t, err, "failed to create pod")
 }
 
 func testLogger() *log.Logger {

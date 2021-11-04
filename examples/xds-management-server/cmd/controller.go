@@ -22,8 +22,18 @@ import (
 	"os/signal"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/informers"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"quilkin.dev/xds-management-server/pkg/cluster"
+	"quilkin.dev/xds-management-server/pkg/filterchain"
+
+	agones "agones.dev/agones/pkg/client/clientset/versioned"
+
 	"k8s.io/apimachinery/pkg/util/clock"
 
+	"agones.dev/agones/pkg/client/informers/externalversions"
 	agonescluster "quilkin.dev/xds-management-server/pkg/cluster/agones"
 	k8sfilterchain "quilkin.dev/xds-management-server/pkg/filterchain/k8s"
 	"quilkin.dev/xds-management-server/pkg/k8s"
@@ -41,6 +51,54 @@ type flags struct {
 	GameServersNamespace    string        `name:"game-server-namespace" help:"Namespace under which the game-servers run." default:"gameservers"`
 	GameServersPollInterval time.Duration `name:"game-server-poll-interval" help:"How long to wait in-between checking for game-server updates." default:"1s"`
 	ProxyPollInterval       time.Duration `name:"proxy-interval" help:"How long to wait in-between checking for proxy updates." default:"1s"`
+}
+
+func createAgonesClusterProvider(
+	ctx context.Context,
+	logger *log.Logger,
+	k8sConfig *rest.Config,
+	flags *flags,
+) cluster.Provider {
+	agonesClient, err := agones.NewForConfig(k8sConfig)
+	if err != nil {
+		log.WithError(err).Fatal("failed to create Agones clientset")
+	}
+
+	informerFactory := externalversions.NewSharedInformerFactoryWithOptions(
+		agonesClient,
+		0,
+		externalversions.WithNamespace(flags.GameServersNamespace))
+	informerFactory.Start(ctx.Done())
+	gameServerInformer := informerFactory.Agones().V1().GameServers().Informer()
+
+	return agonescluster.NewProvider(logger, gameServerInformer, agonescluster.Config{
+		GameServersNamespace:    flags.GameServersNamespace,
+		GameServersPollInterval: flags.GameServersPollInterval,
+	})
+}
+
+func createFilterChainProvider(
+	ctx context.Context,
+	logger *log.Logger,
+	k8sClient *kubernetes.Clientset,
+	flags *flags,
+) filterchain.Provider {
+
+	informerFactory := informers.NewSharedInformerFactoryWithOptions(
+		k8sClient,
+		0,
+		informers.WithNamespace(flags.ProxyNamespace),
+		informers.WithTweakListOptions(func(options *metav1.ListOptions) {
+			options.LabelSelector = k8sfilterchain.LabelSelectorProxyRole
+		}),
+	)
+	informerFactory.Start(ctx.Done())
+
+	return k8sfilterchain.NewProvider(
+		logger,
+		clock.RealClock{},
+		informerFactory.Core().V1().Pods().Lister(),
+		flags.ProxyPollInterval)
 }
 
 func main() {
@@ -64,32 +122,13 @@ func main() {
 	if err != nil {
 		log.WithError(err).Fatal("failed to create k8s client")
 	}
-
-	clusterProvider, err := agonescluster.NewProvider(logger, agonescluster.Config{
-		K8sConfig:               k8sConfig,
-		GameServersNamespace:    flags.GameServersNamespace,
-		GameServersPollInterval: flags.GameServersPollInterval,
-	})
-	if err != nil {
-		log.WithError(err).Fatal("failed to create Agones cluster provider")
-	}
-
-	filterChainProvider, err := k8sfilterchain.NewProvider(
-		ctx,
-		logger,
-		clock.RealClock{},
-		k8sClient,
-		flags.ProxyNamespace,
-		flags.ProxyPollInterval)
-	if err != nil {
-		log.WithError(err).Fatal("failed to create k8s filter-chain provider")
-	}
-
+	clusterProvider := createAgonesClusterProvider(ctx, logger, k8sConfig, &flags)
 	clusterCh, err := clusterProvider.Run(ctx)
 	if err != nil {
 		log.WithError(err).Fatal("failed to create start cluster provider")
 	}
 
+	filterChainProvider := createFilterChainProvider(ctx, logger, k8sClient, &flags)
 	filterChainCh := filterChainProvider.Run(ctx)
 
 	snapshotUpdater := snapshot.NewUpdater(

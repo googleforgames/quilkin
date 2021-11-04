@@ -18,63 +18,17 @@ package agones
 
 import (
 	"os"
-	"sync"
 	"testing"
+
+	"k8s.io/apimachinery/pkg/runtime"
+	k8stesting "k8s.io/client-go/testing"
 
 	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	servertesting "quilkin.dev/xds-management-server/pkg/testing"
 )
-
-type testStore struct {
-	mu    *sync.Mutex
-	items []interface{}
-}
-
-func newTestGameServerStore() *testStore {
-	return &testStore{
-		mu: &sync.Mutex{},
-	}
-}
-
-func (s *testStore) Set(items []interface{}) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.items = items
-}
-func (s *testStore) List() []interface{} {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	return s.items
-}
-
-func (s *testStore) Add(_ interface{}) error {
-	panic("NotImplemented")
-}
-func (s *testStore) Update(_ interface{}) error {
-	panic("NotImplemented")
-}
-func (s *testStore) Delete(_ interface{}) error {
-	panic("NotImplemented")
-}
-func (s *testStore) ListKeys() []string {
-	panic("NotImplemented")
-}
-func (s *testStore) Get(_ interface{}) (item interface{}, exists bool, err error) {
-	panic("NotImplemented")
-}
-func (s *testStore) GetByKey(_ string) (item interface{}, exists bool, err error) {
-	panic("NotImplemented")
-}
-func (s *testStore) Replace([]interface{}, string) error {
-	panic("NotImplemented")
-}
-func (s *testStore) Resync() error {
-	panic("NotImplemented")
-}
 
 const defaultGameServerPort = 73
 
@@ -96,29 +50,32 @@ func testGameServer(name string) *agonesv1.GameServer {
 	}
 }
 
-func TestGetEndpointsFromStoreEndpointInfo(t *testing.T) {
-	store := newTestGameServerStore()
+func setListGameServers(mock *servertesting.Mocks, gs ...agonesv1.GameServer) {
+	mock.AgonesClient.AddReactor("list", "gameservers", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+		return true, &agonesv1.GameServerList{Items: gs}, nil
+	})
+}
 
+func TestGetEndpointsFromStoreEndpointInfo(t *testing.T) {
 	logger := &log.Logger{}
 	logger.SetOutput(os.Stdout)
 	logger.SetLevel(log.ErrorLevel)
+	m := servertesting.NewMocks()
 
-	require.Empty(t, getEndpointsFromStore(logger, store))
+	gs1 := testGameServer("gs-1")
+	gs1.Status.State = agonesv1.GameServerStateCreating
 
-	gs := testGameServer("gs-2")
-	gs.Annotations["quilkin.dev/tokens"] = "abc,xyz,ijk"
-	gs.Status.Ports[0].Port = 22
-	gs.Status.Address = "127.0.0.2"
+	gs2 := testGameServer("gs-2")
+	gs2.Annotations["quilkin.dev/tokens"] = "abc,xyz,ijk"
+	gs2.Status.Ports[0].Port = 22
+	gs2.Status.Address = "127.0.0.2"
 
-	store.Set([]interface{}{
-		&agonesv1.GameServer{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "gs-1",
-				Namespace: "gameservers",
-			},
-		},
-		gs,
-	})
+	setListGameServers(m, *gs1, *gs2)
+
+	gsInformer := m.AgonesInformerFactory.Agones().V1().GameServers().Informer()
+	_, cancel := m.StartInformers(t, gsInformer.HasSynced)
+	defer cancel()
+	store := gsInformer.GetStore()
 
 	endpoints := getEndpointsFromStore(logger, store)
 	require.Len(t, endpoints, 1)
@@ -141,26 +98,24 @@ func TestGetEndpointsFromStoreEndpointInfo(t *testing.T) {
 }
 
 func TestGetEndpointsFromStoreMultipleEndpoints(t *testing.T) {
-	store := newTestGameServerStore()
-
 	logger := &log.Logger{}
 	logger.SetOutput(os.Stdout)
 	logger.SetLevel(log.ErrorLevel)
+	m := servertesting.NewMocks()
 
 	gs1, gs2 := testGameServer("gs-1"), testGameServer("gs-2")
 	gs1.Status.Ports[0].Port = 21
 	gs2.Status.Ports[0].Port = 22
+	gs3 := testGameServer("gs-3")
+	gs3.Status.State = agonesv1.GameServerStateCreating
 
-	store.Set([]interface{}{
-		gs1,
-		&agonesv1.GameServer{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "gs-1",
-				Namespace: "gameservers",
-			},
-		},
-		gs2,
-	})
+	setListGameServers(m, *gs1, *gs2)
+
+	gsInformer := m.AgonesInformerFactory.Agones().V1().GameServers().Informer()
+	_, cancel := m.StartInformers(t, gsInformer.HasSynced)
+	defer cancel()
+
+	store := gsInformer.GetStore()
 
 	endpoints := getEndpointsFromStore(logger, store)
 	require.Len(t, endpoints, 2)
@@ -170,11 +125,10 @@ func TestGetEndpointsFromStoreMultipleEndpoints(t *testing.T) {
 }
 
 func TestGetEndpointsFromStoreIgnoredGameServers(t *testing.T) {
-	store := newTestGameServerStore()
-
 	logger := &log.Logger{}
 	logger.SetOutput(os.Stdout)
 	logger.SetLevel(log.ErrorLevel)
+	m := servertesting.NewMocks()
 
 	emptyStatus := &agonesv1.GameServer{
 		ObjectMeta: metav1.ObjectMeta{
@@ -192,14 +146,13 @@ func TestGetEndpointsFromStoreIgnoredGameServers(t *testing.T) {
 	noPorts := testGameServer("gs-no-ports")
 	noPorts.Status.Ports = []agonesv1.GameServerStatusPort{}
 
-	for _, gs := range []*agonesv1.GameServer{
-		emptyStatus, missingAddress, nonAllocated, noPorts,
-	} {
-		store.Set([]interface{}{gs})
-		require.Empty(t, getEndpointsFromStore(logger, store))
-	}
+	setListGameServers(m, *emptyStatus, *missingAddress, *nonAllocated, *noPorts, *testGameServer("gs-valid"))
 
-	store.Set([]interface{}{testGameServer("gs-valid")})
+	gsInformer := m.AgonesInformerFactory.Agones().V1().GameServers().Informer()
+	_, cancel := m.StartInformers(t, gsInformer.HasSynced)
+	defer cancel()
+
+	store := gsInformer.GetStore()
 	endpoints := getEndpointsFromStore(logger, store)
 	require.Len(t, endpoints, 1)
 }

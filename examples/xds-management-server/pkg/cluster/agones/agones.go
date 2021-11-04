@@ -18,59 +18,42 @@ package agones
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 	"strings"
 	"time"
 
 	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
-	"agones.dev/agones/pkg/client/informers/externalversions"
-
-	agones "agones.dev/agones/pkg/client/clientset/versioned"
 	log "github.com/sirupsen/logrus"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"quilkin.dev/xds-management-server/pkg/cluster"
 )
 
 // Provider implements the Provider interface, exposing Agones GameServers as endpoints.
 type Provider struct {
-	config       Config
-	logger       *log.Logger
-	agonesClient agones.Interface
+	config     Config
+	logger     *log.Logger
+	gsInformer cache.SharedIndexInformer
 }
 
 // Config contains the Agones provider's configuration.
 type Config struct {
-	K8sConfig               *rest.Config
 	GameServersNamespace    string
 	GameServersPollInterval time.Duration
 }
 
 // NewProvider returns a new Provider instance.
-func NewProvider(logger *log.Logger, config Config) (*Provider, error) {
-	agonesClient, err := agones.NewForConfig(config.K8sConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create Agones clientset")
-	}
-
+func NewProvider(logger *log.Logger, gsInformer cache.SharedIndexInformer, config Config) *Provider {
 	return &Provider{
-		agonesClient: agonesClient,
-		logger:       logger,
-		config:       config,
-	}, nil
+		logger:     logger,
+		config:     config,
+		gsInformer: gsInformer,
+	}
 }
 
 // Run spawns a goroutine in the background that watches Agones GameServers
 // and exposes them as endpoints via the returned Cluster channel.
 func (p *Provider) Run(ctx context.Context) (<-chan []cluster.Cluster, error) {
-	informerFactory := externalversions.NewSharedInformerFactoryWithOptions(
-		p.agonesClient,
-		0,
-		externalversions.WithNamespace(p.config.GameServersNamespace))
-	gameServerInformer := informerFactory.Agones().V1().GameServers().Informer()
-	gameServerStore := gameServerInformer.GetStore()
-	go gameServerInformer.Run(ctx.Done())
+	gameServerStore := p.gsInformer.GetStore()
 
 	clusterCh := make(chan []cluster.Cluster)
 

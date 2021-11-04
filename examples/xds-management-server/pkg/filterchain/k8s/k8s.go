@@ -27,20 +27,19 @@ import (
 	envoylistener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/types/known/wrapperspb"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/clock"
-	"k8s.io/client-go/informers"
-	"k8s.io/client-go/kubernetes"
 	"quilkin.dev/xds-management-server/pkg/filterchain"
 	filters2 "quilkin.dev/xds-management-server/pkg/filters"
 	debugfilterv1alpha "quilkin.dev/xds-management-server/pkg/filters/debug/v1alpha1"
 )
 
 const (
-	annotationKeyPrefix    = "quilkin.dev/"
-	labelKeyRole           = annotationKeyPrefix + "role"
-	annotationKeyDebug     = annotationKeyPrefix + "debug-packets"
-	labelSelectorProxyRole = labelKeyRole + "=proxy"
+	annotationKeyPrefix = "quilkin.dev/"
+	labelKeyRole        = annotationKeyPrefix + "role"
+	annotationKeyDebug  = annotationKeyPrefix + "debug-packets"
+	labelProxy          = "proxy"
+	// LabelSelectorProxyRole is the label selector for proxy pods.
+	LabelSelectorProxyRole = labelKeyRole + "=" + labelProxy
 	defaultProxyNamespace  = "quilkin"
 )
 
@@ -77,30 +76,17 @@ type Provider struct {
 
 // NewProvider returns a new provider.
 func NewProvider(
-	ctx context.Context,
 	logger *log.Logger,
 	clock clock.Clock,
-	k8sClient kubernetes.Interface,
-	podNamespace string,
-	proxyRefreshInterval time.Duration) (*Provider, error) {
-	informerFactory := informers.NewSharedInformerFactoryWithOptions(
-		k8sClient,
-		0,
-		informers.WithNamespace(podNamespace),
-		informers.WithTweakListOptions(func(options *metav1.ListOptions) {
-			options.LabelSelector = labelSelectorProxyRole
-		}),
-	)
-	podInformer := informerFactory.Core().V1().Pods()
-	go podInformer.Informer().Run(ctx.Done())
-
+	podLister v1.PodLister,
+	proxyRefreshInterval time.Duration) *Provider {
 	return &Provider{
 		logger:               logger,
 		clock:                clock,
-		podLister:            podInformer.Lister(),
+		podLister:            podLister,
 		proxyRefreshInterval: proxyRefreshInterval,
 		proxyFilterChainCh:   make(chan filterchain.ProxyFilterChain, 1000),
-	}, nil
+	}
 }
 
 // Run is a blocking function that periodically checks proxy pod annotations on
@@ -128,6 +114,11 @@ func (p *Provider) run(ctx context.Context) {
 
 			for i := range pods {
 				pod := pods[i]
+
+				// If this is not a proxy pod ignore it.
+				if pod.Labels[labelKeyRole] != labelProxy {
+					continue
+				}
 
 				proxy, existingProxy := proxies[pod.Name]
 				if !existingProxy {
