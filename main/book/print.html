@@ -76,7 +76,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><div><strong aria-hidden="true">2.</strong> Quickstart</div></li><li><ol class="section"><li class="chapter-item expanded "><a href="quickstart-netcat.html"><strong aria-hidden="true">2.1.</strong> Netcat</a></li><li class="chapter-item expanded "><a href="quickstart-agones-xonotic.html"><strong aria-hidden="true">2.2.</strong> Agones + Xonotic</a></li></ol></li><li class="chapter-item expanded "><a href="using.html"><strong aria-hidden="true">3.</strong> Usage</a></li><li class="chapter-item expanded "><a href="examples.html"><strong aria-hidden="true">4.</strong> Examples</a></li><li class="chapter-item expanded "><a href="session.html"><strong aria-hidden="true">5.</strong> Session</a></li><li class="chapter-item expanded "><a href="proxy.html"><strong aria-hidden="true">6.</strong> Proxy</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="proxy-configuration.html"><strong aria-hidden="true">6.1.</strong> Proxy Configuration</a></li></ol></li><li class="chapter-item expanded "><a href="filters.html"><strong aria-hidden="true">7.</strong> Filters</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="filters/capture_bytes.html"><strong aria-hidden="true">7.1.</strong> Capture Bytes</a></li><li class="chapter-item expanded "><a href="filters/concatenate_bytes.html"><strong aria-hidden="true">7.2.</strong> Concatenate Bytes</a></li><li class="chapter-item expanded "><a href="filters/compress.html"><strong aria-hidden="true">7.3.</strong> Compress</a></li><li class="chapter-item expanded "><a href="filters/debug.html"><strong aria-hidden="true">7.4.</strong> Debug</a></li><li class="chapter-item expanded "><a href="filters/load_balancer.html"><strong aria-hidden="true">7.5.</strong> Load Balancer</a></li><li class="chapter-item expanded "><a href="filters/local_rate_limit.html"><strong aria-hidden="true">7.6.</strong> Local Rate Limit</a></li><li class="chapter-item expanded "><a href="filters/token_router.html"><strong aria-hidden="true">7.7.</strong> Token Router</a></li><li class="chapter-item expanded "><a href="filters/writing_custom_filters.html"><strong aria-hidden="true">7.8.</strong> Writing Custom Filters</a></li></ol></li><li class="chapter-item expanded "><a href="integrations.html"><strong aria-hidden="true">8.</strong> Integrations</a></li><li class="chapter-item expanded "><a href="admin.html"><strong aria-hidden="true">9.</strong> Administration</a></li><li class="chapter-item expanded "><a href="faq.html"><strong aria-hidden="true">10.</strong> FAQ</a></li><li class="chapter-item expanded "><a href="xds.html"><strong aria-hidden="true">11.</strong> xDS</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><div><strong aria-hidden="true">2.</strong> Quickstart</div></li><li><ol class="section"><li class="chapter-item expanded "><a href="quickstart-netcat.html"><strong aria-hidden="true">2.1.</strong> Netcat</a></li><li class="chapter-item expanded "><a href="quickstart-agones-xonotic.html"><strong aria-hidden="true">2.2.</strong> Agones + Xonotic</a></li></ol></li><li class="chapter-item expanded "><a href="using.html"><strong aria-hidden="true">3.</strong> Usage</a></li><li class="chapter-item expanded "><a href="examples.html"><strong aria-hidden="true">4.</strong> Examples</a></li><li class="chapter-item expanded "><a href="session.html"><strong aria-hidden="true">5.</strong> Session</a></li><li class="chapter-item expanded "><a href="proxy.html"><strong aria-hidden="true">6.</strong> Proxy</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="proxy-configuration.html"><strong aria-hidden="true">6.1.</strong> Proxy Configuration</a></li></ol></li><li class="chapter-item expanded "><a href="filters.html"><strong aria-hidden="true">7.</strong> Filters</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="filters/capture_bytes.html"><strong aria-hidden="true">7.1.</strong> Capture Bytes</a></li><li class="chapter-item expanded "><a href="filters/concatenate_bytes.html"><strong aria-hidden="true">7.2.</strong> Concatenate Bytes</a></li><li class="chapter-item expanded "><a href="filters/compress.html"><strong aria-hidden="true">7.3.</strong> Compress</a></li><li class="chapter-item expanded "><a href="filters/debug.html"><strong aria-hidden="true">7.4.</strong> Debug</a></li><li class="chapter-item expanded "><a href="filters/load_balancer.html"><strong aria-hidden="true">7.5.</strong> Load Balancer</a></li><li class="chapter-item expanded "><a href="filters/local_rate_limit.html"><strong aria-hidden="true">7.6.</strong> Local Rate Limit</a></li><li class="chapter-item expanded "><a href="filters/token_router.html"><strong aria-hidden="true">7.7.</strong> Token Router</a></li><li class="chapter-item expanded "><a href="filters/firewall.html"><strong aria-hidden="true">7.8.</strong> Firewall</a></li><li class="chapter-item expanded "><a href="filters/writing_custom_filters.html"><strong aria-hidden="true">7.9.</strong> Writing Custom Filters</a></li></ol></li><li class="chapter-item expanded "><a href="integrations.html"><strong aria-hidden="true">8.</strong> Integrations</a></li><li class="chapter-item expanded "><a href="admin.html"><strong aria-hidden="true">9.</strong> Administration</a></li><li class="chapter-item expanded "><a href="faq.html"><strong aria-hidden="true">10.</strong> FAQ</a></li><li class="chapter-item expanded "><a href="xds.html"><strong aria-hidden="true">11.</strong> xDS</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -682,6 +682,7 @@ Consequently, we can build a filter chain with a <a href="./filters/capture_byte
 <tr><td><a href="./filters/capture_bytes.html">CaptureBytes</a></td><td>Capture specific bytes from a packet and store them in <a href="filters.html#filter-dynamic-metadata">filter dynamic metadata</a>.</td></tr>
 <tr><td><a href="./filters/token_router.html">TokenRouter</a></td><td>Send packets to endpoints based on metadata.</td></tr>
 <tr><td><a href="./filters/compress.html">Compress</a></td><td>Compress and decompress packets data.</td></tr>
+<tr><td><a href="./filters/firewall.html">Firewall</a></td><td>Allowing/blocking traffic by IP and port.</td></tr>
 </tbody></table>
 <h3 id="filterconfig-a-namefilter-configa"><a class="header" href="#filterconfig-a-namefilter-configa">FilterConfig <a name="filter-config"></a></a></h3>
 <p>Represents configuration for a filter instance.</p>
@@ -1140,6 +1141,94 @@ static:
 </span></code></pre></pre>
 <p>On the game client side the <a href="filters/./concatenate_bytes.html">ConcatenateBytes</a> filter could also be used to add authentication
 tokens to outgoing packets.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="firewall"><a class="header" href="#firewall">Firewall</a></h1>
+<p>The <code>Firewall</code> filter's job is to allow or block traffic depending on if the incoming traffic's IP and port matches
+the rules set on the Firewall filter.</p>
+<h4 id="filter-name-7"><a class="header" href="#filter-name-7">Filter name</a></h4>
+<pre><code class="language-text">quilkin.extensions.filters.firewall.v1alpha1.Firewall
+</code></pre>
+<h3 id="configuration-examples-8"><a class="header" href="#configuration-examples-8">Configuration Examples</a></h3>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span><span class="boring">let yaml = &quot;
+</span>version: v1alpha1
+static:
+  filters:
+    - name: quilkin.extensions.filters.firewall.v1alpha1.Firewall
+      config:
+        on_read:
+          - action: ALLOW
+            source: 192.168.51.0/24
+            ports:
+               - 10
+               - 1000-7000
+        on_write: 
+          - action: DENY
+            source: 192.168.51.0/24
+            ports:
+               - 7000
+  endpoints:
+    - address: 127.0.0.1:7001
+<span class="boring">&quot;;
+</span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
+</span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 1);
+</span><span class="boring">quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
+</span><span class="boring">}
+</span></code></pre></pre>
+<h3 id="configuration-options-a-hreffiltersapiquilkinfiltersfirewallstructconfightmlrust-doca"><a class="header" href="#configuration-options-a-hreffiltersapiquilkinfiltersfirewallstructconfightmlrust-doca">Configuration Options (<a href="filters/../../api/quilkin/filters/firewall/struct.Config.html">Rust Doc</a>)</a></h3>
+<pre><code class="language-yaml">properties:
+  on_read:
+    '$ref': '#/definitions/rules'
+    description: Rules to match against when reading packets to the local listening port.
+  on_write:
+    type: array
+    '$ref': '#/definitions/rules'
+    description: Rules to match against when writing packets to the local listening port.
+
+definitions:
+  rules:
+    type: array
+    description: Rules to match against when writing packets to the local listening port.
+    items:
+      type: object
+      properties:
+        action:
+          type: string
+          description: |
+            Whether or not a matching Rule should Allow or Deny access
+            - DENY: If the rule matches, block the traffic.
+            - ALLOW: If the rule matches, allow the traffic through.
+          enum: ['ALLOW', 'DENY']
+        source:
+          type: string
+          description: A CIDR network range, either in a v4 or v6 format.
+        ports:
+          type: array
+          description: Array of singular ports or port ranges to match against.
+          items:
+            type: string
+            description: |
+              Either in the format of &quot;10&quot; for a singular port or &quot;10-100&quot; for a port range where 
+              min is inclusive, and max is exclusive.
+      required: ['action', 'source', 'ports']
+</code></pre>
+<h4 id="rule-evaluation"><a class="header" href="#rule-evaluation">Rule Evaluation</a></h4>
+<p>The Firewall filter supports DENY and ALLOW actions for access control. When multiple DENY and ALLOW actions are used 
+for a workload at the same time, the evaluation is processed in the order it is configured, with the first matching 
+rule deciding if the request is allowed or denied:</p>
+<ol>
+<li>If a rule action is ALLOW, and it matches the request, then the entire request is allowed.</li>
+<li>If a rule action is DENY and it matches the request, then the entire request is denied.</li>
+<li>If none of the configured rules match, then the request is denied.</li>
+</ol>
+<h3 id="metrics-9"><a class="header" href="#metrics-9">Metrics</a></h3>
+<ul>
+<li><code>quilkin_filter_Firewall_packets_denied_total</code> Total number of packets denied.</li>
+<li><code>quilkin_filter_Firewall_packets_allowed_total</code> Total number of packets allowed.</li>
+</ul>
+<p>Both metrics have the label <code>event</code>, with a value of <code>read</code> or <code>write</code> which corresponds to either <code>on_read</code> or 
+<code>on_write</code> events within the Filter.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="writing-custom-filters"><a class="header" href="#writing-custom-filters">Writing Custom Filters</a></h1>
 <p>Quilkin provides an extensible implementation of <a href="filters/../filters.html">Filters</a> that allows us to plug in custom implementations to fit our needs.
 This document provides an overview of the API and how we can go about writing our own <a href="filters/../filters.html">Filters</a>.</p>
@@ -1614,7 +1703,7 @@ balanced via the Client Proxy to multiple Server Proxies for even greater redund
 <p>This provides a liveness probe endpoint, most commonly used in 
 <a href="https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-command">Kubernetes based systems</a>.</p>
 <p>Will return an HTTP status of 200 when all health checks pass.</p>
-<h2 id="metrics-9"><a class="header" href="#metrics-9">/metrics</a></h2>
+<h2 id="metrics-10"><a class="header" href="#metrics-10">/metrics</a></h2>
 <p>Outputs <a href="https://prometheus.io/">Prometheus</a> formatted metrics for this proxy.</p>
 <p>See the <a href="./proxy.html#metrics">Proxy Metrics</a> documentation for what metrics are available.</p>
 <h2 id="config"><a class="header" href="#config">/config</a></h2>
@@ -1699,7 +1788,7 @@ Quilkin implements the <strong>Aggregated Discovery Service (ADS)</strong> <em>S
 </ul>
 </li>
 </ul>
-<h4 id="metrics-10"><a class="header" href="#metrics-10">Metrics</a></h4>
+<h4 id="metrics-11"><a class="header" href="#metrics-11">Metrics</a></h4>
 <p>Quilkin exposes the following metrics around the management servers and its resources:</p>
 <ul>
 <li>
