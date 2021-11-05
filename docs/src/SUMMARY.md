@@ -17,6 +17,7 @@
     - [Load Balancer](./filters/load_balancer.md)
     - [Local Rate Limit](./filters/local_rate_limit.md)
     - [Token Router](./filters/token_router.md)
+    - [Firewall](./filters/firewall.md)
     - [Writing Custom Filters](./filters/writing_custom_filters.md)
 - [Integrations](./integrations.md)
 - [Administration](./admin.md)

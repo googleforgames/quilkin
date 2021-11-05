@@ -107,6 +107,7 @@ Quilkin includes several filters out of the box.
 | [CaptureBytes] | Capture specific bytes from a packet and store them in [filter dynamic metadata](#filter-dynamic-metadata). |
 | [TokenRouter] | Send packets to endpoints based on metadata. |
 | [Compress](./filters/compress.md) | Compress and decompress packets data. |
+| [Firewall](./filters/firewall.md) | Allowing/blocking traffic by IP and port. |
 
 ### FilterConfig <a name="filter-config"></a>
 Represents configuration for a filter instance.
