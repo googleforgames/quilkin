@@ -30,7 +30,7 @@ static:
 The load balancing policy (the strategy to use to select what endpoint to send traffic to) is configurable.
 In the example above, packets will be distributed by selecting endpoints in turn, in round robin fashion.
 
-### Configuration Options
+### Configuration Options ([Rust Doc](../../api/quilkin/filters/load_balancer/struct.Config.html))
 
 ```yaml
 properties:

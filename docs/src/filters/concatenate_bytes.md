@@ -27,7 +27,7 @@ static:
 # quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
 ```
 
-### Configuration Options
+### Configuration Options ([Rust Doc](../../api/quilkin/filters/concatenate_bytes/struct.Config.html))
 
 ```yaml
 properties:
