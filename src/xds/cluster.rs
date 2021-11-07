@@ -16,8 +16,7 @@
 
 use std::{
     collections::{HashMap, HashSet},
-    convert::TryFrom,
-    net::SocketAddr,
+    convert::{TryFrom, TryInto},
 };
 
 use bytes::Bytes;
@@ -27,19 +26,17 @@ use tokio::sync::mpsc;
 
 use crate::{
     cluster::{Cluster as ProxyCluster, ClusterLocalities, Locality, LocalityEndpoints},
-    endpoint::Endpoint,
+    endpoint::{Endpoint, EndpointAddress},
     metadata::MetadataView,
     xds::{
         ads_client::send_discovery_req,
         envoy::{
             config::{
                 cluster::v3::{cluster, Cluster},
-                core::v3::{address, socket_address},
                 endpoint::v3::{lb_endpoint, ClusterLoadAssignment},
             },
             service::discovery::v3::{DiscoveryRequest, DiscoveryResponse},
         },
-        error::Error,
         CLUSTER_TYPE, ENDPOINT_TYPE,
     },
 };
@@ -99,7 +96,7 @@ impl ClusterManager {
             .process_cluster_response(response.resources)
             .await
             .err()
-            .map(|err| err.message);
+            .map(|err| err.to_string());
 
         self.send_cluster_discovery_req(response.version_info, response.nonce, error_message)
             .await;
@@ -108,30 +105,30 @@ impl ClusterManager {
     async fn process_cluster_response(
         &mut self,
         resources: Vec<prost_types::Any>,
-    ) -> Result<(), Error> {
+    ) -> crate::Result<()> {
         let mut temp_cluster_set = HashMap::new();
         for resource in resources {
             let cluster = Cluster::decode(Bytes::from(resource.value))
-                .map_err(|err| Error::new(format!("cluster decode error: {}", err.to_string())))?;
+                .map_err(|error| eyre::eyre!(error).wrap_err("cluster decode error"))?;
 
-            // If this cluster doesn't use IP addresses return an error.
-            cluster
-                .cluster_discovery_type
-                .map(|discovery_type| match discovery_type {
-                    // See envoy::config::cluster::v3::cluster::DiscoveryType for corresponding values.
-                    cluster::ClusterDiscoveryType::Type(discovery_type) if discovery_type == 0 => {
-                        Ok(())
-                    }
-                    cluster::ClusterDiscoveryType::Type(discovery_type) => Err(format!(
+            match cluster.cluster_discovery_type {
+                // See envoy::config::cluster::v3::cluster::DiscoveryType for corresponding values.
+                Some(cluster::ClusterDiscoveryType::Type(typ)) if typ == 0 => {}
+                Some(cluster::ClusterDiscoveryType::Type(typ)) => {
+                    return Err(eyre::eyre!(
                         "unsupported cluster type '{}': Only STATIC is supported",
-                        discovery_type
-                    )),
-                    cluster::ClusterDiscoveryType::ClusterType(_) => {
-                        Err("Custom cluster types are not supported".into())
-                    }
-                })
-                .unwrap_or_else(|| Err("no cluster_discovery_type was provided in request".into()))
-                .map_err(Error::new)?;
+                        typ
+                    ))
+                }
+                Some(cluster::ClusterDiscoveryType::ClusterType(_)) => {
+                    return Err(eyre::eyre!("custom cluster types are unsupported."))
+                }
+                None => {
+                    return Err(eyre::eyre!(
+                        "no cluster_discovery_type was provided in request"
+                    ))
+                }
+            }
 
             let localities = cluster
                 .load_assignment
@@ -187,7 +184,7 @@ impl ClusterManager {
             .process_cluster_load_assignment_response(response.resources)
             .await
             .err()
-            .map(|err| err.message);
+            .map(|err| err.to_string());
 
         self.send_cluster_load_assignment_discovery_req(
             response.version_info,
@@ -200,14 +197,11 @@ impl ClusterManager {
     async fn process_cluster_load_assignment_response(
         &mut self,
         resources: Vec<prost_types::Any>,
-    ) -> Result<(), Error> {
+    ) -> crate::Result<()> {
         for resource in resources {
             let assignment =
-                ClusterLoadAssignment::decode(Bytes::from(resource.value)).map_err(|err| {
-                    Error::new(format!(
-                        "cluster load assignment decode error: {}",
-                        err.to_string()
-                    ))
+                ClusterLoadAssignment::decode(Bytes::from(resource.value)).map_err(|error| {
+                    eyre::eyre!(error).wrap_err("cluster load assignment decode error")
                 })?;
 
             match self.clusters.get_mut(&assignment.cluster_name) {
@@ -252,7 +246,7 @@ impl ClusterManager {
     /// components that we're interested in.
     fn process_cluster_load_assignment(
         mut assignment: ClusterLoadAssignment,
-    ) -> Result<ClusterLocalities, Error> {
+    ) -> crate::Result<ClusterLocalities> {
         let mut existing_endpoints = HashMap::new();
 
         for lb_locality in assignment.endpoints {
@@ -280,55 +274,26 @@ impl ClusterManager {
                     lb_endpoint::HostIdentifier::EndpointName(name_reference) => {
                         match assignment.named_endpoints.remove(&name_reference) {
                             Some(endpoint) => Ok(endpoint),
-                            None => Err(Error::new(format!(
+                            None => Err(eyre::eyre!(
                                 "no endpoint found name reference {}",
                                 name_reference
-                            ))),
+                            )),
                         }
                     }
                 }?;
 
                 // Extract the endpoint's address.
-                let address = endpoint
+                let address: EndpointAddress = endpoint
                     .address
                     .and_then(|address| address.address)
-                    .map(|address| match address {
-                        address::Address::SocketAddress(sock_addr) => {
-                            // We only support IP addresses so anything else is an error.
-                            let address =
-                                sock_addr
-                                    .address
-                                    .parse::<std::net::IpAddr>()
-                                    .map_err(|err| {
-                                        Error::new(format!("invalid ip address: {}", err))
-                                    })?;
-                            sock_addr
-                                .port_specifier
-                                .map(|port_specifier| match port_specifier {
-                                    socket_address::PortSpecifier::PortValue(port) => {
-                                        Ok((address, port as u16))
-                                    }
-                                    socket_address::PortSpecifier::NamedPort(_) => Err(Error::new(
-                                        "named_port on socket addresses is not supported",
-                                    )),
-                                })
-                                .unwrap_or_else(|| {
-                                    Err(Error::new("no port specifier was provided"))
-                                })
-                        }
-                        invalid => Err(Error::new(format!(
-                            "unsupported endpoint address type: {:?}",
-                            invalid
-                        ))),
-                    })
-                    .unwrap_or_else(|| Err(Error::new("received `Endpoint` with no `address`")))?;
+                    .ok_or_else(|| eyre::eyre!("No address provided."))?
+                    .try_into()?;
 
                 endpoints.push(Endpoint::with_metadata(
-                    SocketAddr::from(address),
+                    dbg!(address),
                     metadata
                         .map(MetadataView::try_from)
-                        .transpose()
-                        .map_err(Error::new)?
+                        .transpose()?
                         .unwrap_or_default(),
                 ));
             }
@@ -337,13 +302,6 @@ impl ClusterManager {
         }
 
         Ok(existing_endpoints)
-    }
-
-    // Notify that we are about to reconnect the GRPC stream.
-    pub(in crate::xds) fn on_reconnect(&mut self) {
-        // Reset any last seen version and nonce since we'll be working
-        // with a new connection from now on with a clean slate.
-        self.last_seen_cluster_load_assignment_version = None
     }
 
     // Send a CDS ACK/NACK request to the server.
@@ -405,7 +363,7 @@ impl ClusterManager {
 #[cfg(test)]
 mod tests {
     use super::{ClusterManager, ProxyCluster};
-    use crate::endpoint::Endpoint as ProxyEndpoint;
+    use crate::endpoint::{Endpoint as ProxyEndpoint, EndpointAddress};
     use crate::test_utils::logger;
     use crate::xds::envoy::config::cluster::v3::{cluster::ClusterDiscoveryType, Cluster};
     use crate::xds::envoy::config::core::v3::{
@@ -539,7 +497,7 @@ mod tests {
                     .get(&None)
                     .unwrap()
                     .endpoints,
-                vec![ProxyEndpoint::new(expected_socket_addr)]
+                vec![ProxyEndpoint::new(expected_socket_addr.into())]
             );
             assert_eq!(
                 cm.clusters
@@ -692,8 +650,8 @@ mod tests {
         let cluster_a = cluster_state.get("a").unwrap();
         let cluster_b = cluster_state.get("b").unwrap();
 
-        assert_cluster_has_lone_static_address(cluster_a, "127.0.0.1:2020");
-        assert_cluster_has_lone_static_address(cluster_b, "127.0.0.1:2020");
+        assert_cluster_has_lone_static_address(cluster_a, &([127, 0, 0, 1], 2020).into());
+        assert_cluster_has_lone_static_address(cluster_b, &([127, 0, 0, 1], 2020).into());
 
         // Update one of the clusters and check that the new cluster set is sent downstream.
         cm.on_cluster_response(cluster_discovery_response_with_update(
@@ -730,8 +688,8 @@ mod tests {
         let cluster_a = cluster_state.get("a").unwrap();
         let cluster_b = cluster_state.get("b").unwrap();
 
-        assert_cluster_has_lone_static_address(cluster_a, "127.0.0.10:3030");
-        assert_cluster_has_lone_static_address(cluster_b, "127.0.0.1:2020");
+        assert_cluster_has_lone_static_address(cluster_a, &([127, 0, 0, 10], 3030).into());
+        assert_cluster_has_lone_static_address(cluster_b, &([127, 0, 0, 1], 2020).into());
     }
 
     #[tokio::test]
@@ -786,8 +744,8 @@ mod tests {
         let cluster_a = cluster_state.get("a").unwrap();
         let cluster_b = cluster_state.get("b").unwrap();
 
-        assert_cluster_has_lone_static_address(cluster_a, "127.0.0.1:2020");
-        assert_cluster_has_lone_static_address(cluster_b, "127.0.0.9:4040");
+        assert_cluster_has_lone_static_address(cluster_a, &([127, 0, 0, 1], 2020).into());
+        assert_cluster_has_lone_static_address(cluster_b, &([127, 0, 0, 9], 4040).into());
     }
 
     #[tokio::test]
@@ -1054,10 +1012,13 @@ mod tests {
         assert_eq!(nonce, &req.response_nonce);
     }
 
-    fn assert_cluster_has_lone_static_address(cluster: &ProxyCluster, expected_addr: &str) {
+    fn assert_cluster_has_lone_static_address(
+        cluster: &ProxyCluster,
+        expected_addr: &EndpointAddress,
+    ) {
         assert_eq!(
-            cluster.localities.get(&None).unwrap().endpoints[0].address,
-            expected_addr.parse().unwrap()
+            &cluster.localities.get(&None).unwrap().endpoints[0].address,
+            expected_addr,
         )
     }
 }

@@ -55,12 +55,12 @@ impl FilterRegistry {
 
 #[cfg(test)]
 mod tests {
-    use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+    use std::net::Ipv4Addr;
 
     use crate::test_utils::new_registry;
 
     use super::*;
-    use crate::endpoint::{Endpoint, Endpoints};
+    use crate::endpoint::{Endpoint, EndpointAddress, Endpoints};
     use crate::filters::{Filter, ReadContext, ReadResponse, WriteContext, WriteResponse};
     use prometheus::Registry;
 
@@ -103,20 +103,18 @@ mod tests {
             .unwrap()
             .filter;
 
-        let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080);
-        let endpoint = Endpoint::new(addr);
+        let addr: EndpointAddress = (Ipv4Addr::LOCALHOST, 8080).into();
+        let endpoint = Endpoint::new(addr.clone());
 
         assert!(filter
             .read(ReadContext::new(
-                Endpoints::new(vec![Endpoint::new("127.0.0.1:8080".parse().unwrap(),)])
-                    .unwrap()
-                    .into(),
-                addr,
+                Endpoints::new(vec![endpoint.clone()]).unwrap().into(),
+                addr.clone(),
                 vec![]
             ))
             .is_some());
         assert!(filter
-            .write(WriteContext::new(&endpoint, addr, addr, vec![],))
+            .write(WriteContext::new(&endpoint, addr.clone(), addr, vec![],))
             .is_some());
     }
 }

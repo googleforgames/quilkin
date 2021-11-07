@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-use std::{any::Any, collections::HashMap, net::SocketAddr};
+use std::{any::Any, collections::HashMap};
 
-use crate::endpoint::Endpoint;
+use crate::endpoint::{Endpoint, EndpointAddress};
 
 #[cfg(doc)]
 use crate::filters::Filter;
@@ -28,9 +28,9 @@ pub struct WriteContext<'a> {
     /// The upstream endpoint that we're expecting packets from.
     pub endpoint: &'a Endpoint,
     /// The source of the received packet.
-    pub from: SocketAddr,
+    pub from: EndpointAddress,
     /// The destination of the received packet.
-    pub to: SocketAddr,
+    pub to: EndpointAddress,
     /// Contents of the received packet.
     pub contents: Vec<u8>,
     /// Arbitrary values that can be passed from one filter to another
@@ -59,8 +59,8 @@ impl WriteContext<'_> {
     /// Creates a new [`WriteContext`]
     pub fn new(
         endpoint: &Endpoint,
-        from: SocketAddr,
-        to: SocketAddr,
+        from: EndpointAddress,
+        to: EndpointAddress,
         contents: Vec<u8>,
     ) -> WriteContext {
         WriteContext {
@@ -75,8 +75,8 @@ impl WriteContext<'_> {
     /// Creates a new [`WriteContext`] from a given [`WriteResponse`].
     pub fn with_response(
         endpoint: &Endpoint,
-        from: SocketAddr,
-        to: SocketAddr,
+        from: EndpointAddress,
+        to: EndpointAddress,
         response: WriteResponse,
     ) -> WriteContext {
         WriteContext {

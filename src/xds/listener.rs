@@ -21,7 +21,6 @@ use crate::xds::envoy::config::listener::v3::{
     filter::ConfigType as LdsConfigType, FilterChain, Listener,
 };
 use crate::xds::envoy::service::discovery::v3::{DiscoveryRequest, DiscoveryResponse};
-use crate::xds::error::Error;
 use crate::xds::LISTENER_TYPE;
 
 use std::sync::Arc;
@@ -77,7 +76,7 @@ impl ListenerManager {
         let result = self
             .process_listener_response(response.resources)
             .await
-            .map_err(|err| err.message);
+            .map_err(|err| err.to_string());
 
         let error_message = match result {
             Ok(filter_chain) => {
@@ -111,29 +110,29 @@ impl ListenerManager {
     async fn process_listener_response(
         &mut self,
         mut resources: Vec<prost_types::Any>,
-    ) -> Result<ProxyFilterChain, Error> {
+    ) -> crate::Result<ProxyFilterChain> {
         let resource = match resources.len() {
             0 => return Ok(ProxyFilterChain::new(vec![], &self.metrics_registry)?),
             1 => resources.swap_remove(0),
             n => {
-                return Err(Error::new(format!(
+                return Err(eyre::eyre!(
                     "at most 1 listener can be specified: got {}",
                     n
-                )))
+                ))
             }
         };
 
         let mut listener = Listener::decode(Bytes::from(resource.value))
-            .map_err(|err| Error::new(format!("listener decode error: {}", err.to_string())))?;
+            .map_err(|err| eyre::eyre!("listener decode error: {}", err.to_string()))?;
 
         let lds_filter_chain = match listener.filter_chains.len() {
             0 => return Ok(ProxyFilterChain::new(vec![], &self.metrics_registry)?),
             1 => listener.filter_chains.swap_remove(0),
             n => {
-                return Err(Error::new(format!(
+                return Err(eyre::eyre!(
                     "at most 1 filter chain can be provided: got {}",
                     n
-                )))
+                ))
             }
         };
 
@@ -143,28 +142,22 @@ impl ListenerManager {
     fn process_filter_chain(
         &self,
         lds_filter_chain: FilterChain,
-    ) -> Result<ProxyFilterChain, Error> {
+    ) -> crate::Result<ProxyFilterChain> {
         let mut filters = vec![];
         for filter in lds_filter_chain.filters {
             let config = filter
                 .config_type
                 .map(|config| match config {
                     LdsConfigType::TypedConfig(config) => Ok(config),
-                    invalid => Err(Error::new(format!(
-                        "unsupported filter.config_type: {:?}",
-                        invalid
-                    ))),
+                    invalid => Err(eyre::eyre!("unsupported filter.config_type: {:?}", invalid)),
                 })
                 .transpose()?;
+
             let create_filter_args =
                 CreateFilterArgs::dynamic(self.metrics_registry.clone(), config);
 
             let name = filter.name;
-            let filter = self
-                .filter_registry
-                .get(&name, create_filter_args)
-                .map_err(|err| Error::new(format!("{}", err)))?;
-
+            let filter = self.filter_registry.get(&name, create_filter_args)?;
             filters.push((name, filter));
         }
 

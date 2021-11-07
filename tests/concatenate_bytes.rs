@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::net::Ipv4Addr;
 
 use tokio::time::{timeout, Duration};
 
@@ -50,7 +50,7 @@ bytes: YWJj #abc
     // let's send the packet
     let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
 
-    let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port);
+    let local_addr = (Ipv4Addr::LOCALHOST, server_port);
     socket.send_to(b"hello", &local_addr).await.unwrap();
 
     assert_eq!(

@@ -27,7 +27,7 @@ use metrics::Metrics as ProxyMetrics;
 use resource_manager::{DynamicResourceManagers, StaticResourceManagers};
 
 use crate::cluster::cluster_manager::SharedClusterManager;
-use crate::endpoint::Endpoint;
+use crate::endpoint::{Endpoint, EndpointAddress};
 use crate::filters::{manager::SharedFilterManager, Filter, FilterRegistry, ReadContext};
 use crate::proxy::builder::{ValidatedConfig, ValidatedSource};
 use crate::proxy::sessions::metrics::Metrics as SessionMetrics;
@@ -298,7 +298,7 @@ impl Server {
                     tokio::select! {
                       packet = packet_rx.recv() => {
                         match packet {
-                          Some((recv_addr, packet)) => Self::process_downstream_received_packet((recv_addr, packet), &receive_config).await,
+                          Some((recv_addr, packet)) => Self::process_downstream_received_packet((recv_addr.into(), packet), &receive_config).await,
                           None => {
                             debug!(log, "Worker-{} exiting: work sender channel was closed.", worker_id);
                             return;
@@ -317,7 +317,7 @@ impl Server {
 
     /// Processes a packet by running it through the filter chain.
     async fn process_downstream_received_packet(
-        packet: (SocketAddr, Vec<u8>),
+        packet: (EndpointAddress, Vec<u8>),
         args: &ProcessDownstreamReceiveConfig,
     ) {
         let (recv_addr, packet) = packet;
@@ -325,7 +325,7 @@ impl Server {
         trace!(
             args.log,
             "Packet Received";
-            "from" => recv_addr,
+            "from" => &recv_addr,
             "contents" => debug::bytes_to_string(&packet),
         );
 
@@ -341,11 +341,12 @@ impl Server {
             let filter_manager_guard = args.filter_manager.read();
             filter_manager_guard.get_filter_chain()
         };
-        let result = filter_chain.read(ReadContext::new(endpoints, recv_addr, packet));
+        let result = filter_chain.read(ReadContext::new(endpoints, recv_addr.clone(), packet));
 
         if let Some(response) = result {
             for endpoint in response.endpoints.iter() {
-                Self::session_send_packet(&response.contents, recv_addr, endpoint, args).await;
+                Self::session_send_packet(&response.contents, recv_addr.clone(), endpoint, args)
+                    .await;
             }
         }
     }
@@ -353,13 +354,13 @@ impl Server {
     /// Send a packet received from `recv_addr` to an endpoint.
     async fn session_send_packet(
         packet: &[u8],
-        recv_addr: SocketAddr,
+        recv_addr: EndpointAddress,
         endpoint: &Endpoint,
         args: &ProcessDownstreamReceiveConfig,
     ) {
         let session_key = SessionKey {
             source: recv_addr,
-            destination: endpoint.address,
+            destination: endpoint.address.clone(),
         };
 
         // Grab a read lock and find the session.
@@ -392,7 +393,7 @@ impl Server {
                     &args.log,
                     args.session_metrics.clone(),
                     args.filter_manager.clone(),
-                    session_key.source,
+                    session_key.source.clone(),
                     endpoint.clone(),
                     args.send_packets.clone(),
                     args.session_ttl,
@@ -468,11 +469,20 @@ impl Server {
                     "contents" => debug::bytes_to_string(packet.contents()),
                 );
 
-                if let Err(err) = socket.send_to(packet.contents(), &packet.dest()).await {
+                let address = match packet.dest().to_socket_addr() {
+                    Ok(address) => address,
+                    Err(error) => {
+                        error!(log, "Error resolving address"; "dest" => %packet.dest(), "error" => %error);
+                        continue;
+                    }
+                };
+
+                if let Err(err) = socket.send_to(packet.contents(), address).await {
                     error!(log, "Error sending packet"; "dest" => %packet.dest(), "error" => %err);
                 }
             }
             debug!(log, "Receiver closed");
+            Ok::<_, eyre::Error>(())
         });
     }
 
@@ -521,14 +531,14 @@ mod tests {
         let endpoint1 = t.open_socket_and_recv_single_packet().await;
         let endpoint2 = t.open_socket_and_recv_single_packet().await;
 
-        let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12358);
+        let local_addr = (Ipv4Addr::UNSPECIFIED, 12358);
         let config = ConfigBuilder::empty()
-            .with_port(local_addr.port())
+            .with_port(local_addr.1)
             .with_static(
                 vec![],
                 vec![
-                    Endpoint::new(endpoint1.socket.local_addr().unwrap()),
-                    Endpoint::new(endpoint2.socket.local_addr().unwrap()),
+                    Endpoint::new(endpoint1.socket.local_addr().unwrap().into()),
+                    Endpoint::new(endpoint2.socket.local_addr().unwrap().into()),
                 ],
             )
             .build();
@@ -555,7 +565,7 @@ mod tests {
             .with_port(local_addr.port())
             .with_static(
                 vec![],
-                vec![Endpoint::new(endpoint.socket.local_addr().unwrap())],
+                vec![Endpoint::new(endpoint.socket.local_addr().unwrap().into())],
             )
             .build();
         t.run_server_with_config(config);
@@ -583,7 +593,7 @@ mod tests {
                     name: "TestFilter".to_string(),
                     config: None,
                 }],
-                vec![Endpoint::new(endpoint.socket.local_addr().unwrap())],
+                vec![Endpoint::new(endpoint.socket.local_addr().unwrap().into())],
             )
             .build();
         t.run_server_with_builder(
@@ -651,7 +661,7 @@ mod tests {
             let time_increment = 10;
             time::advance(Duration::from_secs(time_increment)).await;
 
-            let endpoint_address = endpoint.socket.local_addr().unwrap();
+            let endpoint_address = endpoint.socket.local_addr().unwrap().into();
 
             let num_workers = 2;
             let mut packet_txs = Vec::with_capacity(num_workers);
@@ -703,7 +713,11 @@ mod tests {
 
             let map = session_manager.get_sessions().await;
             assert_eq!(expected.session_len, map.len());
-            let build_key = (receive_addr, endpoint.socket.local_addr().unwrap()).into();
+            let build_key = (
+                receive_addr.into(),
+                endpoint.socket.local_addr().unwrap().into(),
+            )
+                .into();
             assert!(map.contains_key(&build_key));
             let session = map.get(&build_key).unwrap();
             let now_secs = SystemTime::now()
@@ -768,7 +782,10 @@ mod tests {
         server.run_recv_from(RunRecvFromArgs {
             cluster_manager: ClusterManager::fixed(
                 &registry,
-                Endpoints::new(vec![Endpoint::new(endpoint.socket.local_addr().unwrap())]).unwrap(),
+                Endpoints::new(vec![Endpoint::new(
+                    endpoint.socket.local_addr().unwrap().into(),
+                )])
+                .unwrap(),
             )
             .unwrap(),
             filter_manager: FilterManager::fixed(Arc::new(
@@ -805,7 +822,7 @@ mod tests {
         let endpoint = t.open_socket_and_recv_single_packet().await;
         if send_packet
             .send(Packet::new(
-                endpoint.socket.local_addr().unwrap(),
+                endpoint.socket.local_addr().unwrap().into(),
                 msg.as_bytes().to_vec(),
             ))
             .await

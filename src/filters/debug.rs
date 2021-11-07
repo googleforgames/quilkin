@@ -46,14 +46,14 @@ impl Debug {
 impl Filter for Debug {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
     fn read(&self, ctx: ReadContext) -> Option<ReadResponse> {
-        info!(from = ?ctx.from, contents = ?packet_to_string(ctx.contents.clone()), "Read filter event");
+        info!(from = ?&ctx.from, contents = ?packet_to_string(ctx.contents.clone()), "Read filter event");
         Some(ctx.into())
     }
 
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
     fn write(&self, ctx: WriteContext) -> Option<WriteResponse> {
-        info!(endpoint = ?ctx.endpoint.address, from = ?ctx.from,
-             to = ?ctx.to, contents = ?packet_to_string(ctx.contents.clone()), "Write filter event");
+        info!(endpoint = ?ctx.endpoint.address, from = ?&ctx.from,
+            to = ?&ctx.to, contents = ?packet_to_string(ctx.contents.clone()), "Write filter event");
         Some(ctx.into())
     }
 }

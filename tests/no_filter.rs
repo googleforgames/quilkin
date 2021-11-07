@@ -46,10 +46,9 @@ async fn echo() {
         .with_port(client_port)
         .with_static(
             vec![],
-            vec![Endpoint::new(SocketAddr::new(
-                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
-                server_port,
-            ))],
+            vec![Endpoint::new(
+                (IpAddr::V4(Ipv4Addr::LOCALHOST), server_port).into(),
+            )],
         )
         .build();
     t.run_server_with_config(client_config);
@@ -58,7 +57,7 @@ async fn echo() {
     let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
 
     // game_client
-    let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), client_port);
+    let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), client_port);
     socket.send_to(b"hello", &local_addr).await.unwrap();
 
     assert_eq!("hello", recv_chan.recv().await.unwrap());

@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-use std::{any::Any, collections::HashMap, net::SocketAddr, sync::Arc};
+use std::{any::Any, collections::HashMap, sync::Arc};
 
-use crate::endpoint::UpstreamEndpoints;
+use crate::endpoint::{EndpointAddress, UpstreamEndpoints};
 #[cfg(doc)]
 use crate::filters::Filter;
 
@@ -30,7 +30,7 @@ pub struct ReadContext {
     /// The upstream endpoints that the packet will be forwarded to.
     pub endpoints: UpstreamEndpoints,
     /// The source of the received packet.
-    pub from: SocketAddr,
+    pub from: EndpointAddress,
     /// Contents of the received packet.
     pub contents: Vec<u8>,
     /// Arbitrary values that can be passed from one filter to another.
@@ -39,7 +39,7 @@ pub struct ReadContext {
 
 impl ReadContext {
     /// Creates a new [`ReadContext`].
-    pub fn new(endpoints: UpstreamEndpoints, from: SocketAddr, contents: Vec<u8>) -> Self {
+    pub fn new(endpoints: UpstreamEndpoints, from: EndpointAddress, contents: Vec<u8>) -> Self {
         Self {
             endpoints,
             from,
@@ -49,7 +49,7 @@ impl ReadContext {
     }
 
     /// Creates a new [`ReadContext`] from a given [`ReadResponse`].
-    pub fn with_response(from: SocketAddr, response: ReadResponse) -> Self {
+    pub fn with_response(from: EndpointAddress, response: ReadResponse) -> Self {
         Self {
             endpoints: response.endpoints,
             from,

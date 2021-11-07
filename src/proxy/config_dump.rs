@@ -121,15 +121,10 @@ mod tests {
         let registry = Registry::default();
         let cluster_manager = ClusterManager::fixed(
             &registry,
-            Endpoints::new(vec![Endpoint::new("127.0.0.1:8080".parse().unwrap())]).unwrap(),
+            Endpoints::new(vec![Endpoint::new(([127, 0, 0, 1], 8080).into())]).unwrap(),
         )
         .unwrap();
-        let debug_config = &serde_yaml::from_str(
-            "
-id: hello
-",
-        )
-        .unwrap();
+        let debug_config = &serde_yaml::from_str("id: hello").unwrap();
 
         let debug_factory = crate::filters::debug::factory();
         let debug_filter = debug_factory
@@ -155,7 +150,10 @@ id: hello
             "clusters": [{
               "name": "default-quilkin-cluster",
               "endpoints": [{
-                  "address": "127.0.0.1:8080",
+                  "address": {
+                      "host": "127.0.0.1",
+                      "port": 8080,
+                  },
                   "metadata": {
                       "quilkin.dev": {
                           "tokens": []

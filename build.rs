@@ -35,6 +35,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "proto/quilkin/extensions/filters/load_balancer/v1alpha1/load_balancer.proto",
         "proto/quilkin/extensions/filters/local_rate_limit/v1alpha1/local_rate_limit.proto",
         "proto/quilkin/extensions/filters/token_router/v1alpha1/token_router.proto",
+        "proto/quilkin/extensions/filters/firewall/v1alpha1/firewall.proto",
     ]
     .iter()
     .map(|name| std::env::current_dir().unwrap().join(name))

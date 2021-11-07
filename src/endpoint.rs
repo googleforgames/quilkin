@@ -16,9 +16,13 @@
 
 //! Types representing where the data is the sent.
 
-use std::{net::SocketAddr, sync::Arc};
+mod address;
+
+use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
+
+pub use address::EndpointAddress;
 
 type EndpointMetadata = crate::metadata::MetadataView<Metadata>;
 
@@ -27,14 +31,14 @@ type EndpointMetadata = crate::metadata::MetadataView<Metadata>;
 #[non_exhaustive]
 #[serde(deny_unknown_fields)]
 pub struct Endpoint {
-    pub address: SocketAddr,
+    pub address: EndpointAddress,
     #[serde(default)]
     pub metadata: EndpointMetadata,
 }
 
 impl Endpoint {
     /// Creates a new [`Endpoint`] with no metadata.
-    pub fn new(address: SocketAddr) -> Self {
+    pub fn new(address: EndpointAddress) -> Self {
         Self {
             address,
             ..<_>::default()
@@ -42,7 +46,7 @@ impl Endpoint {
     }
 
     /// Creates a new [`Endpoint`] with the specified `metadata`.
-    pub fn with_metadata(address: SocketAddr, metadata: impl Into<EndpointMetadata>) -> Self {
+    pub fn with_metadata(address: EndpointAddress, metadata: impl Into<EndpointMetadata>) -> Self {
         Self {
             address,
             metadata: metadata.into(),
@@ -54,9 +58,20 @@ impl Endpoint {
 impl Default for Endpoint {
     fn default() -> Self {
         Self {
-            address: std::net::SocketAddrV6::new(std::net::Ipv6Addr::UNSPECIFIED, 0, 0, 0).into(),
+            address: EndpointAddress::UNSPECIFIED,
             metadata: <_>::default(),
         }
+    }
+}
+
+impl std::str::FromStr for Endpoint {
+    type Err = <EndpointAddress as std::str::FromStr>::Err;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self {
+            address: s.parse()?,
+            ..Self::default()
+        })
     }
 }
 
@@ -445,6 +460,12 @@ mod tests {
                 }
             })
         );
+    }
+
+    #[test]
+    fn parse_dns_endpoints() {
+        let localhost = "address: localhost:80";
+        serde_yaml::from_str::<Endpoint>(localhost).unwrap();
     }
 
     #[test]
