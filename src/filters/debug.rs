@@ -24,7 +24,6 @@ crate::include_proto!("quilkin.extensions.filters.debug.v1alpha1");
 use self::quilkin::extensions::filters::debug::v1alpha1::Debug as ProtoDebug;
 
 /// Debug logs all incoming and outgoing packets
-#[derive(Debug)]
 struct Debug {}
 
 pub const NAME: &str = "quilkin.extensions.filters.debug.v1alpha1.Debug";

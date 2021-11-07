@@ -72,7 +72,6 @@ pub trait FilterFactory: Sync + Send {
 }
 
 /// Arguments needed to create a new filter.
-#[derive(Debug)]
 pub struct CreateFilterArgs<'a> {
     /// Configuration for the filter.
     pub config: Option<ConfigType<'a>>,

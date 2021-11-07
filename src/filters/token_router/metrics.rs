@@ -19,7 +19,6 @@ use prometheus::{IntCounterVec, Registry, Result as MetricsResult};
 use crate::metrics::{filter_opts, CollectorExt};
 
 /// Register and manage metrics for this filter
-#[derive(Debug)]
 pub(super) struct Metrics {
     pub(super) packets_dropped_no_token_found: GenericCounter<AtomicU64>,
     pub(super) packets_dropped_invalid_token: GenericCounter<AtomicU64>,

@@ -59,7 +59,7 @@ impl FilterSet {
                 filters::capture_bytes::factory(),
                 filters::token_router::factory(),
                 filters::compress::factory(),
-                filters::firewall::factory(base),
+                filters::firewall::factory(),
             ])
             .chain(filters),
         )

@@ -23,7 +23,6 @@ use crate::filters::Filter;
 
 /// The input arguments to [`Filter::write`].
 #[non_exhaustive]
-#[derive(Debug)]
 pub struct WriteContext<'a> {
     /// The upstream endpoint that we're expecting packets from.
     pub endpoint: &'a Endpoint,

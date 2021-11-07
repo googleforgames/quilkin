@@ -43,7 +43,6 @@ pub fn factory() -> DynFilterFactory {
 
 /// Filter that only allows packets to be passed to Endpoints that have a matching
 /// connection_id to the token stored in the Filter's dynamic metadata.
-#[derive(Debug)]
 struct TokenRouter {
     metadata_key: Arc<String>,
     metrics: Metrics,
@@ -59,7 +58,6 @@ impl TokenRouter {
 }
 
 /// Factory for the TokenRouter filter
-#[derive(Debug)]
 struct TokenRouterFactory {}
 
 impl TokenRouterFactory {

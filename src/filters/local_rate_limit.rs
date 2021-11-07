@@ -240,8 +240,7 @@ mod tests {
         local_rate_limit::{metrics::Metrics, Config, LocalRateLimit},
         CreateFilterArgs, Filter, FilterFactory, ReadContext,
     };
-    use crate::test_utils::{assert_write_no_change};
-
+    use crate::test_utils::assert_write_no_change;
 
     fn rate_limiter(config: Config) -> LocalRateLimit {
         LocalRateLimit::new(config, Metrics::new(&Registry::default()).unwrap())
