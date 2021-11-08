@@ -40,7 +40,7 @@ static:
 
 View the [CaptureBytes](./capture_bytes.md) filter documentation for more details.
 
-### Configuration Options
+### Configuration Options ([Rust Doc](../../api/quilkin/filters/token_router/struct.Config.html))
 
 ```yaml
 properties:
