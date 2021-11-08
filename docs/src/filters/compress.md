@@ -35,7 +35,7 @@ decompressed when traffic is returned from the dedicated game server before bein
   attention to the order it is placed in your [Filter configuration](filters.md). Most of the time it will likely be
   the first or last Filter configured to ensure it is compressing the entire set of data being sent.
 
-### Configuration Options
+### Configuration Options ([Rust Doc](../../api/quilkin/filters/compress/struct.Config.html))
 
 ```yaml
 properties:

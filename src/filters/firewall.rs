@@ -30,7 +30,7 @@ mod metrics;
 
 pub use config::{Action, Config, PortRange, PortRangeError, Rule};
 
-pub const NAME: &str = "quilkin.extensions.filters.compress.v1alpha1.Firewall";
+pub const NAME: &str = "quilkin.extensions.filters.firewall.v1alpha1.Firewall";
 
 pub fn factory(base: &Logger) -> DynFilterFactory {
     Box::from(FirewallFactory::new(base))

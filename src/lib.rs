@@ -53,4 +53,5 @@ mod external_doc_tests {
     #![doc = include_str!("../docs/src/filters/capture_bytes.md")]
     #![doc = include_str!("../docs/src/filters/token_router.md")]
     #![doc = include_str!("../docs/src/filters/compress.md")]
+    #![doc = include_str!("../docs/src/filters/firewall.md")]
 }
