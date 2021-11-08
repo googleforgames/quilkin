@@ -76,9 +76,8 @@ func TestGetEndpointsFromStoreEndpointInfo(t *testing.T) {
 	gsInformer := m.AgonesInformerFactory.Agones().V1().GameServers().Informer()
 	_, cancel := m.StartInformers(t, gsInformer.HasSynced)
 	defer cancel()
-	store := gsInformer.GetStore()
 
-	endpoints := getEndpointsFromStore(logger, store)
+	endpoints := getEndpointsFromStore(logger, m.AgonesInformerFactory.Agones().V1().GameServers().Lister())
 	require.Len(t, endpoints, 1)
 
 	ep := endpoints[0]
@@ -116,9 +115,7 @@ func TestGetEndpointsFromStoreMultipleEndpoints(t *testing.T) {
 	_, cancel := m.StartInformers(t, gsInformer.HasSynced)
 	defer cancel()
 
-	store := gsInformer.GetStore()
-
-	endpoints := getEndpointsFromStore(logger, store)
+	endpoints := getEndpointsFromStore(logger, m.AgonesInformerFactory.Agones().V1().GameServers().Lister())
 	require.Len(t, endpoints, 2)
 
 	sort.Slice(endpoints, func(i, j int) bool {
@@ -157,7 +154,6 @@ func TestGetEndpointsFromStoreIgnoredGameServers(t *testing.T) {
 	_, cancel := m.StartInformers(t, gsInformer.HasSynced)
 	defer cancel()
 
-	store := gsInformer.GetStore()
-	endpoints := getEndpointsFromStore(logger, store)
+	endpoints := getEndpointsFromStore(logger, m.AgonesInformerFactory.Agones().V1().GameServers().Lister())
 	require.Len(t, endpoints, 1)
 }

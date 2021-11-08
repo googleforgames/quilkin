@@ -22,17 +22,19 @@ import (
 	"strings"
 	"time"
 
+	"k8s.io/apimachinery/pkg/labels"
+
 	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
+	v1 "agones.dev/agones/pkg/client/listers/agones/v1"
 	log "github.com/sirupsen/logrus"
-	"k8s.io/client-go/tools/cache"
 	"quilkin.dev/xds-management-server/pkg/cluster"
 )
 
 // Provider implements the Provider interface, exposing Agones GameServers as endpoints.
 type Provider struct {
-	config     Config
-	logger     *log.Logger
-	gsInformer cache.SharedIndexInformer
+	config   Config
+	logger   *log.Logger
+	gsLister v1.GameServerLister
 }
 
 // Config contains the Agones provider's configuration.
@@ -42,26 +44,24 @@ type Config struct {
 }
 
 // NewProvider returns a new Provider instance.
-func NewProvider(logger *log.Logger, gsInformer cache.SharedIndexInformer, config Config) *Provider {
+func NewProvider(logger *log.Logger, gsLister v1.GameServerLister, config Config) *Provider {
 	return &Provider{
-		logger:     logger,
-		config:     config,
-		gsInformer: gsInformer,
+		logger:   logger,
+		config:   config,
+		gsLister: gsLister,
 	}
 }
 
 // Run spawns a goroutine in the background that watches Agones GameServers
 // and exposes them as endpoints via the returned Cluster channel.
 func (p *Provider) Run(ctx context.Context) (<-chan []cluster.Cluster, error) {
-	gameServerStore := p.gsInformer.GetStore()
-
 	clusterCh := make(chan []cluster.Cluster)
 
 	go runClusterWatch(
 		ctx,
 		p.logger,
 		p.config.GameServersPollInterval,
-		gameServerStore,
+		p.gsLister,
 		clusterCh)
 
 	return clusterCh, nil
@@ -71,7 +71,7 @@ func runClusterWatch(
 	ctx context.Context,
 	logger *log.Logger,
 	gameServersPollInterval time.Duration,
-	gameServerStore cache.Store,
+	gsLister v1.GameServerLister,
 	clusterCh chan<- []cluster.Cluster,
 ) {
 	defer close(clusterCh)
@@ -83,7 +83,7 @@ func runClusterWatch(
 	for {
 		select {
 		case <-ticker.C:
-			currEndpoints := getEndpointsFromStore(logger, gameServerStore)
+			currEndpoints := getEndpointsFromStore(logger, gsLister)
 			if reflect.DeepEqual(currEndpoints, prevEndpoints) {
 				continue
 			}
@@ -102,14 +102,16 @@ func runClusterWatch(
 
 func getEndpointsFromStore(
 	logger *log.Logger,
-	gameServerStore cache.Store,
+	gsLister v1.GameServerLister,
 ) []cluster.Endpoint {
-	gameServers := gameServerStore.List()
+	gameServers, err := gsLister.List(labels.Everything())
+	if err != nil {
+		log.WithError(err).Warn("failed to list game servers")
+		return []cluster.Endpoint{}
+	}
 
 	var endpoints []cluster.Endpoint
-	for i := range gameServers {
-		gs := gameServers[i].(*agonesv1.GameServer)
-
+	for _, gs := range gameServers {
 		gsLogger := logger.WithFields(log.Fields{
 			"gameserver": gs.Name,
 		})

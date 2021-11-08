@@ -69,9 +69,8 @@ func createAgonesClusterProvider(
 		0,
 		externalversions.WithNamespace(flags.GameServersNamespace))
 	informerFactory.Start(ctx.Done())
-	gameServerInformer := informerFactory.Agones().V1().GameServers().Informer()
 
-	return agonescluster.NewProvider(logger, gameServerInformer, agonescluster.Config{
+	return agonescluster.NewProvider(logger, informerFactory.Agones().V1().GameServers().Lister(), agonescluster.Config{
 		GameServersNamespace:    flags.GameServersNamespace,
 		GameServersPollInterval: flags.GameServersPollInterval,
 	})
