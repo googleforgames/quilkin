@@ -19,7 +19,7 @@
 !.gcloudignore
 !.dockerignore
 !.github
-!examples/xds-management-server/ci/.golangci.yaml
+!xds/ci/.golangci.yaml
 
 *.iml
 
