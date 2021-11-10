@@ -26,7 +26,7 @@ static:
 # quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
 ```
 
-### Configuration Options
+### Configuration Options ([Rust Doc](../../api/quilkin/filters/debug/struct.Config.html))
 
 ```yaml
 properties:
