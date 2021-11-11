@@ -282,19 +282,6 @@
 <span id="282">282</span>
 <span id="283">283</span>
 <span id="284">284</span>
-<span id="285">285</span>
-<span id="286">286</span>
-<span id="287">287</span>
-<span id="288">288</span>
-<span id="289">289</span>
-<span id="290">290</span>
-<span id="291">291</span>
-<span id="292">292</span>
-<span id="293">293</span>
-<span id="294">294</span>
-<span id="295">295</span>
-<span id="296">296</span>
-<span id="297">297</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -318,9 +305,8 @@
 
 <span class="kw">use</span> <span class="ident">std::sync::Arc</span>;
 
-<span class="kw">use</span> <span class="ident">slog</span>::{<span class="ident">o</span>, <span class="ident">warn</span>, <span class="ident">Logger</span>};
-
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters::prelude</span>::<span class="kw-2">*</span>;
+<span class="kw">use</span> <span class="ident">tracing::warn</span>;
 
 <span class="kw">use</span> <span class="ident">capture::Capture</span>;
 <span class="kw">use</span> <span class="ident">metrics::Metrics</span>;
@@ -331,12 +317,11 @@
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">NAME</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;quilkin.extensions.filters.capture_bytes.v1alpha1.CaptureBytes&quot;</span>;
 
 <span class="doccomment">/// Creates a new factory for generating capture filters.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">factory</span>(<span class="ident">base</span>: <span class="kw-2">&amp;</span><span class="ident">Logger</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">DynFilterFactory</span> {
-    <span class="ident">Box::from</span>(<span class="ident">CaptureBytesFactory::new</span>(<span class="ident">base</span>))
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">factory</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">DynFilterFactory</span> {
+    <span class="ident">Box::from</span>(<span class="ident">CaptureBytesFactory::new</span>())
 }
 
 <span class="kw">struct</span> <span class="ident">CaptureBytes</span> {
-    <span class="ident">log</span>: <span class="ident">Logger</span>,
     <span class="ident">capture</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Capture</span> <span class="op">+</span> <span class="ident">Sync</span> <span class="op">+</span> <span class="ident">Send</span><span class="op">&gt;</span>,
     <span class="doccomment">/// metrics reporter for this filter.</span>
     <span class="ident">metrics</span>: <span class="ident">Metrics</span>,
@@ -346,9 +331,8 @@
 }
 
 <span class="kw">impl</span> <span class="ident">CaptureBytes</span> {
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">base</span>: <span class="kw-2">&amp;</span><span class="ident">Logger</span>, <span class="ident">config</span>: <span class="ident">Config</span>, <span class="ident">metrics</span>: <span class="ident">Metrics</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">config</span>: <span class="ident">Config</span>, <span class="ident">metrics</span>: <span class="ident">Metrics</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="ident">CaptureBytes</span> {
-            <span class="ident">log</span>: <span class="ident">base</span>.<span class="ident">new</span>(<span class="macro">o!</span>(<span class="string">&quot;source&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;extensions::CaptureBytes&quot;</span>)),
             <span class="ident">capture</span>: <span class="ident">config</span>.<span class="ident">strategy</span>.<span class="ident">as_capture</span>(),
             <span class="ident">metrics</span>,
             <span class="ident">metadata_key</span>: <span class="ident">Arc::new</span>(<span class="ident">config</span>.<span class="ident">metadata_key</span>),
@@ -359,16 +343,13 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Filter</span> <span class="kw">for</span> <span class="ident">CaptureBytes</span> {
+    <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;instrument&quot;</span>, <span class="ident">tracing::instrument</span>(<span class="ident">skip</span>(<span class="self">self</span>, <span class="ident">ctx</span>)))]</span>
     <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut</span> <span class="ident">ctx</span>: <span class="ident">ReadContext</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ReadResponse</span><span class="op">&gt;</span> {
         <span class="comment">// if the capture size is bigger than the packet size, then we drop the packet,</span>
         <span class="comment">// and occasionally warn</span>
         <span class="kw">if</span> <span class="ident">ctx</span>.<span class="ident">contents</span>.<span class="ident">len</span>() <span class="op">&lt;</span> <span class="self">self</span>.<span class="ident">size</span> {
             <span class="kw">if</span> <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_total</span>.<span class="ident">get</span>() <span class="op">%</span> <span class="number">1000</span> <span class="op">=</span><span class="op">=</span> <span class="number">0</span> {
-                <span class="macro">warn!</span>(
-                    <span class="self">self</span>.<span class="ident">log</span>,
-                    <span class="string">&quot;Packets are being dropped due to their length being less than {} bytes&quot;</span>,
-                    <span class="self">self</span>.<span class="ident">size</span>; <span class="string">&quot;count&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_total</span>.<span class="ident">get</span>()
-                );
+                <span class="macro">warn!</span>(<span class="ident">count</span> <span class="op">=</span> <span class="question-mark">?</span><span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_total</span>.<span class="ident">get</span>(), <span class="string">&quot;Packets are being dropped due to their length being less than {} bytes&quot;</span>, <span class="self">self</span>.<span class="ident">size</span>);
             }
             <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_total</span>.<span class="ident">inc</span>();
             <span class="kw">return</span> <span class="prelude-val">None</span>;
@@ -383,14 +364,11 @@
         <span class="prelude-val">Some</span>(<span class="ident">ctx</span>.<span class="ident">into</span>())
     }
 }
-
-<span class="kw">struct</span> <span class="ident">CaptureBytesFactory</span> {
-    <span class="ident">log</span>: <span class="ident">Logger</span>,
-}
+<span class="kw">struct</span> <span class="ident">CaptureBytesFactory</span> {}
 
 <span class="kw">impl</span> <span class="ident">CaptureBytesFactory</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">base</span>: <span class="kw-2">&amp;</span><span class="ident">Logger</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="ident">CaptureBytesFactory</span> { <span class="ident">log</span>: <span class="ident">base</span>.<span class="ident">clone</span>() }
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="ident">CaptureBytesFactory</span> {}
     }
 }
 
@@ -403,7 +381,7 @@
         <span class="kw">let</span> (<span class="ident">config_json</span>, <span class="ident">config</span>) <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">require_config</span>(<span class="ident">args</span>.<span class="ident">config</span>)<span class="question-mark">?</span>
             .<span class="ident">deserialize</span>::<span class="op">&lt;</span><span class="ident">Config</span>, <span class="ident">ProtoConfig</span><span class="op">&gt;</span>(<span class="self">self</span>.<span class="ident">name</span>())<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">CaptureBytes::new</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">log</span>, <span class="ident">config</span>, <span class="ident">Metrics::new</span>(<span class="kw-2">&amp;</span><span class="ident">args</span>.<span class="ident">metrics_registry</span>)<span class="question-mark">?</span>);
+        <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">CaptureBytes::new</span>(<span class="ident">config</span>, <span class="ident">Metrics::new</span>(<span class="kw-2">&amp;</span><span class="ident">args</span>.<span class="ident">metrics_registry</span>)<span class="question-mark">?</span>);
         <span class="prelude-val">Ok</span>(<span class="ident">FilterInstance::new</span>(
             <span class="ident">config_json</span>,
             <span class="ident">Box::new</span>(<span class="ident">filter</span>) <span class="kw">as</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Filter</span><span class="op">&gt;</span>,
@@ -419,7 +397,7 @@
     <span class="kw">use</span> <span class="ident">serde_yaml</span>::{<span class="ident">Mapping</span>, <span class="ident">Value</span>};
 
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">Endpoints</span>};
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::test_utils</span>::{<span class="ident">assert_write_no_change</span>, <span class="ident">logger</span>};
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::test_utils::assert_write_no_change</span>;
 
     <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">CaptureBytes</span>, <span class="ident">CaptureBytesFactory</span>, <span class="ident">Config</span>, <span class="ident">Metrics</span>, <span class="ident">Strategy</span>};
 
@@ -432,16 +410,12 @@
     <span class="kw">const</span> <span class="ident">TOKEN_KEY</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;TOKEN&quot;</span>;
 
     <span class="kw">fn</span> <span class="ident">capture_bytes</span>(<span class="ident">config</span>: <span class="ident">Config</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">CaptureBytes</span> {
-        <span class="ident">CaptureBytes::new</span>(
-            <span class="kw-2">&amp;</span><span class="ident">logger</span>(),
-            <span class="ident">config</span>,
-            <span class="ident">Metrics::new</span>(<span class="kw-2">&amp;</span><span class="ident">Registry::default</span>()).<span class="ident">unwrap</span>(),
-        )
+        <span class="ident">CaptureBytes::new</span>(<span class="ident">config</span>, <span class="ident">Metrics::new</span>(<span class="kw-2">&amp;</span><span class="ident">Registry::default</span>()).<span class="ident">unwrap</span>())
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">factory_valid_config_all</span>() {
-        <span class="kw">let</span> <span class="ident">factory</span> <span class="op">=</span> <span class="ident">CaptureBytesFactory::new</span>(<span class="kw-2">&amp;</span><span class="ident">logger</span>());
+        <span class="kw">let</span> <span class="ident">factory</span> <span class="op">=</span> <span class="ident">CaptureBytesFactory::new</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">Mapping::new</span>();
         <span class="ident">map</span>.<span class="ident">insert</span>(
             <span class="ident">Value::String</span>(<span class="string">&quot;strategy&quot;</span>.<span class="ident">into</span>()),
@@ -466,7 +440,7 @@
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">factory_valid_config_defaults</span>() {
-        <span class="kw">let</span> <span class="ident">factory</span> <span class="op">=</span> <span class="ident">CaptureBytesFactory::new</span>(<span class="kw-2">&amp;</span><span class="ident">logger</span>());
+        <span class="kw">let</span> <span class="ident">factory</span> <span class="op">=</span> <span class="ident">CaptureBytesFactory::new</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">Mapping::new</span>();
         <span class="ident">map</span>.<span class="ident">insert</span>(<span class="ident">Value::String</span>(<span class="string">&quot;size&quot;</span>.<span class="ident">into</span>()), <span class="ident">Value::Number</span>(<span class="number">3</span>.<span class="ident">into</span>()));
         <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">factory</span>
@@ -481,7 +455,7 @@
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">factory_invalid_config</span>() {
-        <span class="kw">let</span> <span class="ident">factory</span> <span class="op">=</span> <span class="ident">CaptureBytesFactory::new</span>(<span class="kw-2">&amp;</span><span class="ident">logger</span>());
+        <span class="kw">let</span> <span class="ident">factory</span> <span class="op">=</span> <span class="ident">CaptureBytesFactory::new</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">Mapping::new</span>();
         <span class="ident">map</span>.<span class="ident">insert</span>(<span class="ident">Value::String</span>(<span class="string">&quot;size&quot;</span>.<span class="ident">into</span>()), <span class="ident">Value::String</span>(<span class="string">&quot;WRONG&quot;</span>.<span class="ident">into</span>()));
 

@@ -1320,7 +1320,7 @@
             <span class="ident">logger</span>(),
             <span class="ident">ListenerManagerArgs::new</span>(
                 <span class="ident">Registry::default</span>(),
-                <span class="ident">FilterRegistry::new</span>(<span class="ident">FilterSet::default</span>(<span class="kw-2">&amp;</span><span class="ident">logger</span>())),
+                <span class="ident">FilterRegistry::new</span>(<span class="ident">FilterSet::default</span>()),
                 <span class="ident">filter_chain_updates_tx</span>,
             ),
             <span class="ident">discovery_req_tx</span>,

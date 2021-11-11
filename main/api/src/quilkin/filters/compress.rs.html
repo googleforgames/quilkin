@@ -576,16 +576,6 @@
 <span id="576">576</span>
 <span id="577">577</span>
 <span id="578">578</span>
-<span id="579">579</span>
-<span id="580">580</span>
-<span id="581">581</span>
-<span id="582">582</span>
-<span id="583">583</span>
-<span id="584">584</span>
-<span id="585">585</span>
-<span id="586">586</span>
-<span id="587">587</span>
-<span id="588">588</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -608,9 +598,8 @@
 
 <span class="macro">crate::include_proto!</span>(<span class="string">&quot;quilkin.extensions.filters.compress.v1alpha1&quot;</span>);
 
-<span class="kw">use</span> <span class="ident">slog</span>::{<span class="ident">o</span>, <span class="ident">warn</span>, <span class="ident">Logger</span>};
-
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">config::LOG_SAMPLING_RATE</span>, <span class="ident">filters::prelude</span>::<span class="kw-2">*</span>};
+<span class="kw">use</span> <span class="ident">tracing::warn</span>;
 
 <span class="kw">use</span> <span class="ident"><span class="self">self</span>::quilkin::extensions::filters::compress::v1alpha1::Compress</span> <span class="kw">as</span> <span class="ident">ProtoConfig</span>;
 <span class="kw">use</span> <span class="ident">compressor::Compressor</span>;
@@ -621,13 +610,12 @@
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">NAME</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;quilkin.extensions.filters.compress.v1alpha1.Compress&quot;</span>;
 
 <span class="doccomment">/// Returns a factory for creating compression filters.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">factory</span>(<span class="ident">base</span>: <span class="kw-2">&amp;</span><span class="ident">Logger</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">DynFilterFactory</span> {
-    <span class="ident">Box::from</span>(<span class="ident">CompressFactory::new</span>(<span class="ident">base</span>))
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">factory</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">DynFilterFactory</span> {
+    <span class="ident">Box::from</span>(<span class="ident">CompressFactory::new</span>())
 }
 
 <span class="doccomment">/// Filter for compressing and decompressing packet data</span>
 <span class="kw">struct</span> <span class="ident">Compress</span> {
-    <span class="ident">log</span>: <span class="ident">Logger</span>,
     <span class="ident">metrics</span>: <span class="ident">Metrics</span>,
     <span class="ident">compression_mode</span>: <span class="ident">Mode</span>,
     <span class="ident">on_read</span>: <span class="ident">Action</span>,
@@ -636,9 +624,8 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Compress</span> {
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">base</span>: <span class="kw-2">&amp;</span><span class="ident">Logger</span>, <span class="ident">config</span>: <span class="ident">Config</span>, <span class="ident">metrics</span>: <span class="ident">Metrics</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">config</span>: <span class="ident">Config</span>, <span class="ident">metrics</span>: <span class="ident">Metrics</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
-            <span class="ident">log</span>: <span class="ident">base</span>.<span class="ident">new</span>(<span class="macro">o!</span>(<span class="string">&quot;source&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;extensions::Compress&quot;</span>)),
             <span class="ident">metrics</span>,
             <span class="ident">compressor</span>: <span class="ident">config</span>.<span class="ident">mode</span>.<span class="ident">as_compressor</span>(),
             <span class="ident">compression_mode</span>: <span class="ident">config</span>.<span class="ident">mode</span>,
@@ -650,9 +637,8 @@
     <span class="doccomment">/// Track a failed attempt at compression</span>
     <span class="kw">fn</span> <span class="ident">failed_compression</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">err</span>: <span class="kw-2">&amp;</span><span class="kw">dyn</span> <span class="ident">std::error::Error</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_compress</span>.<span class="ident">get</span>() <span class="op">%</span> <span class="ident">LOG_SAMPLING_RATE</span> <span class="op">=</span><span class="op">=</span> <span class="number">0</span> {
-            <span class="macro">warn!</span>(<span class="self">self</span>.<span class="ident">log</span>, <span class="string">&quot;Packets are being dropped as they could not be compressed&quot;</span>;
-                            <span class="string">&quot;mode&quot;</span> <span class="op">=</span><span class="op">&gt;</span> #<span class="question-mark">?</span><span class="self">self</span>.<span class="ident">compression_mode</span>, <span class="string">&quot;error&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="op">%</span><span class="ident">err</span>,
-                            <span class="string">&quot;count&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_compress</span>.<span class="ident">get</span>());
+            <span class="macro">warn!</span>(<span class="ident">mode</span> <span class="op">=</span> <span class="question-mark">?</span><span class="self">self</span>.<span class="ident">compression_mode</span>, <span class="ident">error</span> <span class="op">=</span> <span class="op">%</span><span class="ident">err</span>, <span class="ident">count</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_compress</span>.<span class="ident">get</span>(),
+            <span class="string">&quot;Packets are being dropped as they could not be compressed&quot;</span>);
         }
         <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_compress</span>.<span class="ident">inc</span>();
         <span class="prelude-val">None</span>
@@ -661,9 +647,8 @@
     <span class="doccomment">/// Track a failed attempt at decompression</span>
     <span class="kw">fn</span> <span class="ident">failed_decompression</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">err</span>: <span class="kw-2">&amp;</span><span class="kw">dyn</span> <span class="ident">std::error::Error</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_decompress</span>.<span class="ident">get</span>() <span class="op">%</span> <span class="ident">LOG_SAMPLING_RATE</span> <span class="op">=</span><span class="op">=</span> <span class="number">0</span> {
-            <span class="macro">warn!</span>(<span class="self">self</span>.<span class="ident">log</span>, <span class="string">&quot;Packets are being dropped as they could not be decompressed&quot;</span>;
-                            <span class="string">&quot;mode&quot;</span> <span class="op">=</span><span class="op">&gt;</span> #<span class="question-mark">?</span><span class="self">self</span>.<span class="ident">compression_mode</span>, <span class="string">&quot;error&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="op">%</span><span class="ident">err</span>,
-                            <span class="string">&quot;count&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_decompress</span>.<span class="ident">get</span>());
+            <span class="macro">warn!</span>(<span class="ident">mode</span> <span class="op">=</span> <span class="question-mark">?</span><span class="self">self</span>.<span class="ident">compression_mode</span>, <span class="ident">error</span> <span class="op">=</span> <span class="op">%</span><span class="ident">err</span>, <span class="ident">count</span> <span class="op">=</span> <span class="question-mark">?</span><span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_decompress</span>.<span class="ident">get</span>(),
+            <span class="string">&quot;Packets are being dropped as they could not be decompressed&quot;</span>);
         }
         <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_decompress</span>.<span class="ident">inc</span>();
         <span class="prelude-val">None</span>
@@ -671,6 +656,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Filter</span> <span class="kw">for</span> <span class="ident">Compress</span> {
+    <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;instrument&quot;</span>, <span class="ident">tracing::instrument</span>(<span class="ident">skip</span>(<span class="self">self</span>, <span class="ident">ctx</span>)))]</span>
     <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut</span> <span class="ident">ctx</span>: <span class="ident">ReadContext</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ReadResponse</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">original_size</span> <span class="op">=</span> <span class="ident">ctx</span>.<span class="ident">contents</span>.<span class="ident">len</span>();
 
@@ -703,6 +689,7 @@
         }
     }
 
+    <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;instrument&quot;</span>, <span class="ident">tracing::instrument</span>(<span class="ident">skip</span>(<span class="self">self</span>, <span class="ident">ctx</span>)))]</span>
     <span class="kw">fn</span> <span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut</span> <span class="ident">ctx</span>: <span class="ident">WriteContext</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">WriteResponse</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">original_size</span> <span class="op">=</span> <span class="ident">ctx</span>.<span class="ident">contents</span>.<span class="ident">len</span>();
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">on_write</span> {
@@ -736,13 +723,11 @@
     }
 }
 
-<span class="kw">struct</span> <span class="ident">CompressFactory</span> {
-    <span class="ident">log</span>: <span class="ident">Logger</span>,
-}
+<span class="kw">struct</span> <span class="ident">CompressFactory</span> {}
 
 <span class="kw">impl</span> <span class="ident">CompressFactory</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">base</span>: <span class="kw-2">&amp;</span><span class="ident">Logger</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="ident">CompressFactory</span> { <span class="ident">log</span>: <span class="ident">base</span>.<span class="ident">clone</span>() }
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="ident">CompressFactory</span> {}
     }
 }
 
@@ -755,7 +740,7 @@
         <span class="kw">let</span> (<span class="ident">config_json</span>, <span class="ident">config</span>) <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">require_config</span>(<span class="ident">args</span>.<span class="ident">config</span>)<span class="question-mark">?</span>
             .<span class="ident">deserialize</span>::<span class="op">&lt;</span><span class="ident">Config</span>, <span class="ident">ProtoConfig</span><span class="op">&gt;</span>(<span class="self">self</span>.<span class="ident">name</span>())<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">Compress::new</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">log</span>, <span class="ident">config</span>, <span class="ident">Metrics::new</span>(<span class="kw-2">&amp;</span><span class="ident">args</span>.<span class="ident">metrics_registry</span>)<span class="question-mark">?</span>);
+        <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">Compress::new</span>(<span class="ident">config</span>, <span class="ident">Metrics::new</span>(<span class="kw-2">&amp;</span><span class="ident">args</span>.<span class="ident">metrics_registry</span>)<span class="question-mark">?</span>);
         <span class="prelude-val">Ok</span>(<span class="ident">FilterInstance::new</span>(
             <span class="ident">config_json</span>,
             <span class="ident">Box::new</span>(<span class="ident">filter</span>) <span class="kw">as</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Filter</span><span class="op">&gt;</span>,
@@ -769,13 +754,13 @@
 
     <span class="kw">use</span> <span class="ident">prometheus::Registry</span>;
     <span class="kw">use</span> <span class="ident">serde_yaml</span>::{<span class="ident">Mapping</span>, <span class="ident">Value</span>};
+    <span class="kw">use</span> <span class="ident">tracing_test::traced_test</span>;
 
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">Endpoints</span>, <span class="ident">UpstreamEndpoints</span>};
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters</span>::{
         <span class="ident">compress</span>::{<span class="ident">compressor::Snappy</span>, <span class="ident">Compressor</span>},
         <span class="ident">CreateFilterArgs</span>, <span class="ident">Filter</span>, <span class="ident">FilterFactory</span>, <span class="ident">ReadContext</span>, <span class="ident">WriteContext</span>,
     };
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::test_utils::logger</span>;
 
     <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::quilkin::extensions::filters::compress::v1alpha1</span>::{
         <span class="ident">compress</span>::{<span class="ident">Action</span> <span class="kw">as</span> <span class="ident">ProtoAction</span>, <span class="ident">ActionValue</span>, <span class="ident">Mode</span> <span class="kw">as</span> <span class="ident">ProtoMode</span>, <span class="ident">ModeValue</span>},
@@ -874,8 +859,7 @@
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">default_mode_factory</span>() {
-        <span class="kw">let</span> <span class="ident">log</span> <span class="op">=</span> <span class="ident">logger</span>();
-        <span class="kw">let</span> <span class="ident">factory</span> <span class="op">=</span> <span class="ident">CompressFactory::new</span>(<span class="kw-2">&amp;</span><span class="ident">log</span>);
+        <span class="kw">let</span> <span class="ident">factory</span> <span class="op">=</span> <span class="ident">CompressFactory::new</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">Mapping::new</span>();
         <span class="ident">map</span>.<span class="ident">insert</span>(
             <span class="ident">Value::String</span>(<span class="string">&quot;on_read&quot;</span>.<span class="ident">into</span>()),
@@ -897,8 +881,7 @@
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">config_factory</span>() {
-        <span class="kw">let</span> <span class="ident">log</span> <span class="op">=</span> <span class="ident">logger</span>();
-        <span class="kw">let</span> <span class="ident">factory</span> <span class="op">=</span> <span class="ident">CompressFactory::new</span>(<span class="kw-2">&amp;</span><span class="ident">log</span>);
+        <span class="kw">let</span> <span class="ident">factory</span> <span class="op">=</span> <span class="ident">CompressFactory::new</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">Mapping::new</span>();
         <span class="ident">map</span>.<span class="ident">insert</span>(<span class="ident">Value::String</span>(<span class="string">&quot;mode&quot;</span>.<span class="ident">into</span>()), <span class="ident">Value::String</span>(<span class="string">&quot;SNAPPY&quot;</span>.<span class="ident">into</span>()));
         <span class="ident">map</span>.<span class="ident">insert</span>(
@@ -921,9 +904,7 @@
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">upstream</span>() {
-        <span class="kw">let</span> <span class="ident">log</span> <span class="op">=</span> <span class="ident">logger</span>();
         <span class="kw">let</span> <span class="ident">compress</span> <span class="op">=</span> <span class="ident">Compress::new</span>(
-            <span class="kw-2">&amp;</span><span class="ident">log</span>,
             <span class="ident">Config</span> {
                 <span class="ident">mode</span>: <span class="ident">Default::default</span>(),
                 <span class="ident">on_read</span>: <span class="ident">Action::Compress</span>,
@@ -987,9 +968,7 @@
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">downstream</span>() {
-        <span class="kw">let</span> <span class="ident">log</span> <span class="op">=</span> <span class="ident">logger</span>();
         <span class="kw">let</span> <span class="ident">compress</span> <span class="op">=</span> <span class="ident">Compress::new</span>(
-            <span class="kw-2">&amp;</span><span class="ident">log</span>,
             <span class="ident">Config</span> {
                 <span class="ident">mode</span>: <span class="ident">Default::default</span>(),
                 <span class="ident">on_read</span>: <span class="ident">Action::Decompress</span>,
@@ -1014,11 +993,10 @@
         <span class="macro">assert_eq!</span>(<span class="number">0</span>, <span class="ident">compress</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_compress</span>.<span class="ident">get</span>());
     }
 
+    <span class="attribute">#[<span class="ident">traced_test</span>]</span>
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">failed_decompress</span>() {
-        <span class="kw">let</span> <span class="ident">log</span> <span class="op">=</span> <span class="ident">logger</span>();
         <span class="kw">let</span> <span class="ident">compression</span> <span class="op">=</span> <span class="ident">Compress::new</span>(
-            <span class="kw-2">&amp;</span><span class="ident">log</span>,
             <span class="ident">Config</span> {
                 <span class="ident">mode</span>: <span class="ident">Default::default</span>(),
                 <span class="ident">on_read</span>: <span class="ident">Action::Compress</span>,
@@ -1039,7 +1017,6 @@
         <span class="macro">assert_eq!</span>(<span class="number">0</span>, <span class="ident">compression</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_compress</span>.<span class="ident">get</span>());
 
         <span class="kw">let</span> <span class="ident">compression</span> <span class="op">=</span> <span class="ident">Compress::new</span>(
-            <span class="kw-2">&amp;</span><span class="ident">log</span>,
             <span class="ident">Config</span> {
                 <span class="ident">mode</span>: <span class="ident">Default::default</span>(),
                 <span class="ident">on_read</span>: <span class="ident">Action::Decompress</span>,
@@ -1056,6 +1033,11 @@
             <span class="string">b&quot;hello&quot;</span>.<span class="ident">to_vec</span>(),
         ));
 
+        <span class="macro">assert!</span>(<span class="ident">logs_contain</span>(
+            <span class="string">&quot;Packets are being dropped as they could not be decompressed&quot;</span>
+        ));
+        <span class="macro">assert!</span>(<span class="ident">logs_contain</span>(<span class="string">&quot;quilkin::filters::compress&quot;</span>)); <span class="comment">// the given name to the the logger by tracing</span>
+
         <span class="macro">assert!</span>(<span class="ident">read_response</span>.<span class="ident">is_none</span>());
         <span class="macro">assert_eq!</span>(<span class="number">1</span>, <span class="ident">compression</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_decompress</span>.<span class="ident">get</span>());
         <span class="macro">assert_eq!</span>(<span class="number">0</span>, <span class="ident">compression</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_compress</span>.<span class="ident">get</span>());
@@ -1065,9 +1047,7 @@
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">do_nothing</span>() {
-        <span class="kw">let</span> <span class="ident">log</span> <span class="op">=</span> <span class="ident">logger</span>();
         <span class="kw">let</span> <span class="ident">compression</span> <span class="op">=</span> <span class="ident">Compress::new</span>(
-            <span class="kw-2">&amp;</span><span class="ident">log</span>,
             <span class="ident">Config</span> {
                 <span class="ident">mode</span>: <span class="ident">Default::default</span>(),
                 <span class="ident">on_read</span>: <span class="ident">Action::default</span>(),

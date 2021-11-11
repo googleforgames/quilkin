@@ -113,11 +113,6 @@
 <span id="113">113</span>
 <span id="114">114</span>
 <span id="115">115</span>
-<span id="116">116</span>
-<span id="117">117</span>
-<span id="118">118</span>
-<span id="119">119</span>
-<span id="120">120</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -135,8 +130,6 @@
  */</span>
 
 <span class="kw">use</span> <span class="ident">std::iter::FromIterator</span>;
-
-<span class="kw">use</span> <span class="ident">slog::Logger</span>;
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters</span>::{<span class="self">self</span>, <span class="ident">DynFilterFactory</span>};
 
@@ -162,8 +155,8 @@
     <span class="doccomment">/// - [`capture_bytes`][filters::capture_bytes]</span>
     <span class="doccomment">/// - [`token_router`][filters::token_router]</span>
     <span class="doccomment">/// - [`compress`][filters::compress]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">default</span>(<span class="ident">base</span>: <span class="kw-2">&amp;</span><span class="ident">Logger</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="ident"><span class="self">Self</span>::default_with</span>(<span class="ident">base</span>, <span class="ident">Option::into_iter</span>(<span class="prelude-val">None</span>))
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="ident"><span class="self">Self</span>::default_with</span>(<span class="ident">Option::into_iter</span>(<span class="prelude-val">None</span>))
     }
 
     <span class="doccomment">/// Returns a `FilterSet` with the filters provided through `filters` in</span>
@@ -171,20 +164,17 @@
     <span class="doccomment">/// will override any defaults with a matching name.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// See [`FilterSet::default`] for a list of the current defaults.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">default_with</span>(
-        <span class="ident">base</span>: <span class="kw-2">&amp;</span><span class="ident">Logger</span>,
-        <span class="ident">filters</span>: <span class="kw">impl</span> <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">DynFilterFactory</span><span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">default_with</span>(<span class="ident">filters</span>: <span class="kw">impl</span> <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">DynFilterFactory</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="ident"><span class="self">Self</span>::with</span>(
             <span class="ident">std::array::IntoIter::new</span>([
-                <span class="ident">filters::debug::factory</span>(<span class="ident">base</span>),
-                <span class="ident">filters::local_rate_limit::factory</span>(<span class="ident">base</span>),
+                <span class="ident">filters::debug::factory</span>(),
+                <span class="ident">filters::local_rate_limit::factory</span>(),
                 <span class="ident">filters::concatenate_bytes::factory</span>(),
                 <span class="ident">filters::load_balancer::factory</span>(),
-                <span class="ident">filters::capture_bytes::factory</span>(<span class="ident">base</span>),
-                <span class="ident">filters::token_router::factory</span>(<span class="ident">base</span>),
-                <span class="ident">filters::compress::factory</span>(<span class="ident">base</span>),
-                <span class="ident">filters::firewall::factory</span>(<span class="ident">base</span>),
+                <span class="ident">filters::capture_bytes::factory</span>(),
+                <span class="ident">filters::token_router::factory</span>(),
+                <span class="ident">filters::compress::factory</span>(),
+                <span class="ident">filters::firewall::factory</span>(),
             ])
             .<span class="ident">chain</span>(<span class="ident">filters</span>),
         )

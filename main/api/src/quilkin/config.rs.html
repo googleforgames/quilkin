@@ -537,7 +537,7 @@
     <span class="doccomment">/// or the `/etc/quilkin` directory (on unix platforms only). Returns an</span>
     <span class="doccomment">/// error if the found configuration is invalid, or if no configuration</span>
     <span class="doccomment">/// could be found at any location.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">find</span>(<span class="ident">log</span>: <span class="kw-2">&amp;</span><span class="ident">slog::Logger</span>, <span class="ident">path</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident"><span class="kw">crate</span>::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">find</span>(<span class="ident">path</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident"><span class="kw">crate</span>::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
         <span class="kw">const</span> <span class="ident">ENV_CONFIG_PATH</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;QUILKIN_CONFIG&quot;</span>;
         <span class="kw">const</span> <span class="ident">CONFIG_FILE</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;quilkin.yaml&quot;</span>;
 
@@ -549,7 +549,7 @@
         )
         .<span class="ident">canonicalize</span>()<span class="question-mark">?</span>;
 
-        <span class="macro">slog::info!</span>(<span class="ident">log</span>, <span class="string">&quot;Found configuration file&quot;</span>; <span class="string">&quot;path&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">config_path</span>.<span class="ident">display</span>());
+        <span class="macro">tracing::info!</span>(<span class="ident">path</span> <span class="op">=</span> <span class="op">%</span><span class="ident">config_path</span>.<span class="ident">display</span>(), <span class="string">&quot;Found configuration file&quot;</span>);
 
         <span class="ident">std::fs::File::open</span>(<span class="kw-2">&amp;</span><span class="ident">config_path</span>)
             .<span class="ident">or_else</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {

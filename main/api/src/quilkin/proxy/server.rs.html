@@ -836,8 +836,6 @@
 <span id="836">836</span>
 <span id="837">837</span>
 <span id="838">838</span>
-<span id="839">839</span>
-<span id="840">840</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -1360,9 +1358,7 @@
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters</span>::{<span class="ident">manager::FilterManager</span>, <span class="ident">FilterChain</span>};
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::proxy::sessions::Packet</span>;
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::proxy::Builder</span>;
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::test_utils</span>::{
-        <span class="ident">config_with_dummy_endpoint</span>, <span class="ident">logger</span>, <span class="ident">new_registry</span>, <span class="ident">new_test_chain</span>, <span class="ident">TestHelper</span>,
-    };
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::test_utils</span>::{<span class="ident">config_with_dummy_endpoint</span>, <span class="ident">new_registry</span>, <span class="ident">new_test_chain</span>, <span class="ident">TestHelper</span>};
 
     <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
 
@@ -1425,7 +1421,7 @@
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">run_with_filter</span>() {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">t</span> <span class="op">=</span> <span class="ident">TestHelper::default</span>();
 
-        <span class="kw">let</span> <span class="ident">registry</span> <span class="op">=</span> <span class="ident">new_registry</span>(<span class="kw-2">&amp;</span><span class="ident">logger</span>());
+        <span class="kw">let</span> <span class="ident">registry</span> <span class="op">=</span> <span class="ident">new_registry</span>();
         <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="ident">t</span>.<span class="ident">open_socket_and_recv_single_packet</span>().<span class="kw">await</span>;
         <span class="kw">let</span> <span class="ident">local_addr</span> <span class="op">=</span> <span class="ident">SocketAddr::new</span>(<span class="ident">IpAddr::V4</span>(<span class="ident">Ipv4Addr::new</span>(<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>)), <span class="number">12367</span>);
         <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">ConfigBuilder::empty</span>()
