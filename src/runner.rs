@@ -16,12 +16,13 @@
 
 use std::sync::Arc;
 
-use slog::{debug, info, o};
 use tokio::{signal, sync::watch};
+use tracing::{debug, info, span, Level};
 
 use crate::{
     config::Config,
     filters::{DynFilterFactory, FilterRegistry, FilterSet},
+    proxy::logger,
     proxy::Builder,
     Result,
 };
@@ -32,27 +33,22 @@ use crate::filters::FilterFactory;
 /// Calls [`run`] with the [`Config`] found by [`Config::find`] and the
 /// default [`FilterSet`].
 pub async fn run(filter_factories: impl IntoIterator<Item = DynFilterFactory>) -> Result<()> {
-    let log = crate::proxy::logger();
-    run_with_config(
-        log.clone(),
-        Config::find(&log, None).map(Arc::new)?,
-        filter_factories,
-    )
-    .await
+    run_with_config(Config::find(None).map(Arc::new)?, filter_factories).await
 }
 
 /// Start and run a proxy. Any passed in [`FilterFactory`]s are included
 /// alongside the default filter factories.
 pub async fn run_with_config(
-    base_log: slog::Logger,
     config: Arc<Config>,
     filter_factories: impl IntoIterator<Item = DynFilterFactory>,
 ) -> Result<()> {
-    let log = base_log.new(o!("source" => "run"));
+    let base_log = logger(); // TODO: remove this, when tracing is replaceed in Server
+    let span = span!(Level::INFO, "source::run");
+    let _enter = span.enter();
+
     let server = Builder::from(config)
         .with_log(base_log)
         .with_filter_registry(FilterRegistry::new(FilterSet::default_with(
-            &log,
             filter_factories.into_iter(),
         )))
         .validate()?
@@ -62,7 +58,6 @@ pub async fn run_with_config(
     let mut sig_term_fut = signal::unix::signal(signal::unix::SignalKind::terminate())?;
 
     let (shutdown_tx, shutdown_rx) = watch::channel::<()>(());
-    let signal_log = log.clone();
     tokio::spawn(async move {
         #[cfg(target_os = "linux")]
         let sig_term = sig_term_fut.recv();
@@ -71,21 +66,21 @@ pub async fn run_with_config(
 
         tokio::select! {
             _ = signal::ctrl_c() => {
-                debug!(signal_log, "Received SIGINT")
+                debug!("Received SIGINT")
             }
             _ = sig_term => {
-                debug!(signal_log, "Received SIGTERM")
+                debug!("Received SIGTERM")
             }
         }
 
-        info!(signal_log, "Shutting down");
+        info!("Shutting down");
         // Don't unwrap in order to ensure that we execute
         // any subsequent shutdown tasks.
         shutdown_tx.send(()).ok();
     });
 
     if let Err(err) = server.run(shutdown_rx).await {
-        info!(log, "Shutting down with error"; "error" => %err);
+        info! (error = %err, "Shutting down with error");
         Err(err)
     } else {
         Ok(())

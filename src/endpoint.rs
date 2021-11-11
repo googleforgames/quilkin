@@ -189,6 +189,7 @@ impl std::convert::TryFrom<prost_types::Struct> for Metadata {
 /// UpstreamEndpoints represents a set of endpoints.
 /// This set is guaranteed to be non-empty - any operation that would
 /// cause the set to be empty will return an error instead.
+#[derive(Debug)]
 pub struct UpstreamEndpoints {
     /// All endpoints in the initial set - this list never
     /// changes after initialization.

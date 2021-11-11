@@ -105,7 +105,7 @@ async fn test(t: &mut TestHelper, server_port: u16, yaml: &str) -> Receiver<Stri
         .with_port(server_port)
         .with_static(
             vec![Filter {
-                name: firewall::factory(&t.log).name().into(),
+                name: firewall::factory().name().into(),
                 config: serde_yaml::from_str(yaml.as_str()).unwrap(),
             }],
             vec![Endpoint::new(echo)],

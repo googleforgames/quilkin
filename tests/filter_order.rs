@@ -68,7 +68,7 @@ on_write: DECOMPRESS
                     config: serde_yaml::from_str(yaml_concat_write).unwrap(),
                 },
                 Filter {
-                    name: compress::factory(&t.log).name().into(),
+                    name: compress::factory().name().into(),
                     config: serde_yaml::from_str(yaml_compress).unwrap(),
                 },
             ],
