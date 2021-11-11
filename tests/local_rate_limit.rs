@@ -18,7 +18,6 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use tokio::time::{timeout, Duration};
 
-use quilkin::test_utils::logger;
 use quilkin::{
     config::{Builder as ConfigBuilder, Filter},
     endpoint::Endpoint,
@@ -41,7 +40,7 @@ period: 1
         .with_port(server_port)
         .with_static(
             vec![Filter {
-                name: local_rate_limit::factory(&logger()).name().into(),
+                name: local_rate_limit::factory().name().into(),
                 config: serde_yaml::from_str(yaml).unwrap(),
             }],
             vec![Endpoint::new(echo)],

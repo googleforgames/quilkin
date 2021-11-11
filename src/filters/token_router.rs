@@ -22,7 +22,7 @@ use std::convert::TryFrom;
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
-use slog::{error, o, Logger};
+use tracing::error;
 
 use crate::{
     config::LOG_SAMPLING_RATE,
@@ -37,22 +37,20 @@ use self::quilkin::extensions::filters::token_router::v1alpha1::TokenRouter as P
 pub const NAME: &str = "quilkin.extensions.filters.token_router.v1alpha1.TokenRouter";
 
 /// Returns a factory for creating token routing filters.
-pub fn factory(base: &Logger) -> DynFilterFactory {
-    Box::from(TokenRouterFactory::new(base))
+pub fn factory() -> DynFilterFactory {
+    Box::from(TokenRouterFactory::new())
 }
 
 /// Filter that only allows packets to be passed to Endpoints that have a matching
 /// connection_id to the token stored in the Filter's dynamic metadata.
 struct TokenRouter {
-    log: Logger,
     metadata_key: Arc<String>,
     metrics: Metrics,
 }
 
 impl TokenRouter {
-    fn new(base: &Logger, config: Config, metrics: Metrics) -> Self {
+    fn new(config: Config, metrics: Metrics) -> Self {
         Self {
-            log: base.new(o!("source" => "extensions::TokenRouter")),
             metadata_key: Arc::new(config.metadata_key),
             metrics,
         }
@@ -60,13 +58,11 @@ impl TokenRouter {
 }
 
 /// Factory for the TokenRouter filter
-struct TokenRouterFactory {
-    log: Logger,
-}
+struct TokenRouterFactory {}
 
 impl TokenRouterFactory {
-    pub fn new(base: &Logger) -> Self {
-        TokenRouterFactory { log: base.clone() }
+    pub fn new() -> Self {
+        TokenRouterFactory {}
     }
 }
 
@@ -91,7 +87,7 @@ impl FilterFactory for TokenRouterFactory {
                     .map(|config_json| (config_json, config))
             })?;
 
-        let filter = TokenRouter::new(&self.log, config, Metrics::new(&args.metrics_registry)?);
+        let filter = TokenRouter::new(config, Metrics::new(&args.metrics_registry)?);
 
         Ok(FilterInstance::new(
             config_json,
@@ -101,15 +97,15 @@ impl FilterFactory for TokenRouterFactory {
 }
 
 impl Filter for TokenRouter {
+    #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
     fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
         match ctx.metadata.get(self.metadata_key.as_ref()) {
             None => {
                 if self.metrics.packets_dropped_no_token_found.get() % LOG_SAMPLING_RATE == 0 {
                     error!(
-                        self.log,
-                        "Packets are being dropped as no routing token was found in filter dynamic metadata";
-                        "count" => self.metrics.packets_dropped_no_token_found.get(),
-                        "metadata_key" => self.metadata_key.clone()
+                        count = ?self.metrics.packets_dropped_no_token_found.get(),
+                        metadata_key = ?self.metadata_key.clone(),
+                        "Packets are being dropped as no routing token was found in filter dynamic metadata"
                     );
                 }
                 self.metrics.packets_dropped_no_token_found.inc();
@@ -129,10 +125,9 @@ impl Filter for TokenRouter {
                 None => {
                     if self.metrics.packets_dropped_invalid_token.get() % LOG_SAMPLING_RATE == 0 {
                         error!(
-                            self.log,
-                            "Packets are being dropped as routing token has invalid type: expected Vec<u8>";
-                            "count" => self.metrics.packets_dropped_invalid_token.get(),
-                            "metadata_key" => self.metadata_key.clone()
+                            count = ?self.metrics.packets_dropped_invalid_token.get(),
+                            metadata_key = ?self.metadata_key.clone(),
+                            "Packets are being dropped as routing token has invalid type: expected Vec<u8>"
                         );
                     }
                     self.metrics.packets_dropped_invalid_token.inc();
@@ -188,7 +183,7 @@ mod tests {
     use serde_yaml::{Mapping, Value};
 
     use crate::endpoint::{Endpoint, Endpoints, Metadata};
-    use crate::test_utils::{assert_write_no_change, logger};
+    use crate::test_utils::assert_write_no_change;
 
     use super::{
         default_metadata_key, Config, Metrics, ProtoConfig, TokenRouter, TokenRouterFactory,
@@ -200,11 +195,7 @@ mod tests {
     const TOKEN_KEY: &str = "TOKEN";
 
     fn router(config: Config) -> TokenRouter {
-        TokenRouter::new(
-            &logger(),
-            config,
-            Metrics::new(&Registry::default()).unwrap(),
-        )
+        TokenRouter::new(config, Metrics::new(&Registry::default()).unwrap())
     }
 
     #[test]
@@ -243,7 +234,7 @@ mod tests {
 
     #[test]
     fn factory_custom_tokens() {
-        let factory = TokenRouterFactory::new(&logger());
+        let factory = TokenRouterFactory::new();
         let mut map = Mapping::new();
         map.insert(
             Value::String("metadataKey".into()),
@@ -265,7 +256,7 @@ mod tests {
 
     #[test]
     fn factory_empty_config() {
-        let factory = TokenRouterFactory::new(&logger());
+        let factory = TokenRouterFactory::new();
         let map = Mapping::new();
 
         let filter = factory
@@ -283,7 +274,7 @@ mod tests {
 
     #[test]
     fn factory_no_config() {
-        let factory = TokenRouterFactory::new(&logger());
+        let factory = TokenRouterFactory::new();
 
         let filter = factory
             .create_filter(CreateFilterArgs::fixed(Registry::default(), None))

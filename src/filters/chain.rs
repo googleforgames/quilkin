@@ -160,15 +160,14 @@ mod tests {
         config,
         endpoint::{Endpoint, Endpoints, UpstreamEndpoints},
         filters::{debug, FilterRegistry, FilterSet},
-        test_utils::{logger, new_test_chain, TestFilterFactory},
+        test_utils::{new_test_chain, TestFilterFactory},
     };
 
     use super::*;
 
     #[test]
     fn from_config() {
-        let log = logger();
-        let provider = debug::factory(&log);
+        let provider = debug::factory();
 
         // everything is fine
         let filter_configs = vec![config::Filter {
@@ -176,7 +175,7 @@ mod tests {
             config: Default::default(),
         }];
 
-        let registry = FilterRegistry::new(FilterSet::default(&log));
+        let registry = FilterRegistry::new(FilterSet::default());
         let chain =
             FilterChain::try_create(filter_configs, &registry, &Registry::default()).unwrap();
         assert_eq!(1, chain.filters.len());

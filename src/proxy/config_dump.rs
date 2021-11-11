@@ -113,7 +113,6 @@ mod tests {
     use crate::endpoint::{Endpoint, Endpoints};
     use crate::filters::manager::FilterManager;
     use crate::filters::{CreateFilterArgs, FilterChain};
-    use crate::test_utils::logger;
     use prometheus::Registry;
     use std::sync::Arc;
 
@@ -127,7 +126,7 @@ mod tests {
         .unwrap();
         let debug_config = &serde_yaml::from_str("id: hello").unwrap();
 
-        let debug_factory = crate::filters::debug::factory(&logger());
+        let debug_factory = crate::filters::debug::factory();
         let debug_filter = debug_factory
             .create_filter(CreateFilterArgs::fixed(
                 registry.clone(),

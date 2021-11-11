@@ -16,8 +16,6 @@
 
 use std::iter::FromIterator;
 
-use slog::Logger;
-
 use crate::filters::{self, DynFilterFactory};
 
 #[cfg(doc)]
@@ -42,8 +40,8 @@ impl FilterSet {
     /// - [`capture_bytes`][filters::capture_bytes]
     /// - [`token_router`][filters::token_router]
     /// - [`compress`][filters::compress]
-    pub fn default(base: &Logger) -> Self {
-        Self::default_with(base, Option::into_iter(None))
+    pub fn default() -> Self {
+        Self::default_with(Option::into_iter(None))
     }
 
     /// Returns a `FilterSet` with the filters provided through `filters` in
@@ -51,20 +49,17 @@ impl FilterSet {
     /// will override any defaults with a matching name.
     ///
     /// See [`FilterSet::default`] for a list of the current defaults.
-    pub fn default_with(
-        base: &Logger,
-        filters: impl IntoIterator<Item = DynFilterFactory>,
-    ) -> Self {
+    pub fn default_with(filters: impl IntoIterator<Item = DynFilterFactory>) -> Self {
         Self::with(
             std::array::IntoIter::new([
-                filters::debug::factory(base),
-                filters::local_rate_limit::factory(base),
+                filters::debug::factory(),
+                filters::local_rate_limit::factory(),
                 filters::concatenate_bytes::factory(),
                 filters::load_balancer::factory(),
-                filters::capture_bytes::factory(base),
-                filters::token_router::factory(base),
-                filters::compress::factory(base),
-                filters::firewall::factory(base),
+                filters::capture_bytes::factory(),
+                filters::token_router::factory(),
+                filters::compress::factory(),
+                filters::firewall::factory(),
             ])
             .chain(filters),
         )

@@ -51,7 +51,7 @@ async fn test_filter() {
         .build();
 
     // Run server proxy.
-    let registry = new_registry(&t.log);
+    let registry = new_registry();
     t.run_server_with_builder(
         ProxyBuilder::from(Arc::new(server_config))
             .with_filter_registry(registry)
@@ -74,7 +74,7 @@ async fn test_filter() {
         .build();
 
     // Run client proxy.
-    let registry = new_registry(&t.log);
+    let registry = new_registry();
     t.run_server_with_builder(
         ProxyBuilder::from(Arc::new(client_config))
             .with_filter_registry(registry)
@@ -112,7 +112,7 @@ async fn debug_filter() {
     let mut t = TestHelper::default();
 
     // handy for grabbing the configuration name
-    let factory = debug::factory(&t.log);
+    let factory = debug::factory();
 
     // create an echo server as an endpoint.
     let echo = t.run_echo_server().await;

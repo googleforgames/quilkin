@@ -16,7 +16,7 @@
 
 //! Filter for allowing/blocking traffic by IP and port.
 
-use slog::{debug, o, Logger};
+use tracing::debug;
 
 use crate::filters::firewall::metrics::Metrics;
 use crate::filters::prelude::*;
@@ -32,17 +32,15 @@ pub use config::{Action, Config, PortRange, PortRangeError, Rule};
 
 pub const NAME: &str = "quilkin.extensions.filters.firewall.v1alpha1.Firewall";
 
-pub fn factory(base: &Logger) -> DynFilterFactory {
-    Box::from(FirewallFactory::new(base))
+pub fn factory() -> DynFilterFactory {
+    Box::from(FirewallFactory::new())
 }
 
-struct FirewallFactory {
-    log: Logger,
-}
+struct FirewallFactory {}
 
 impl FirewallFactory {
-    pub fn new(base: &Logger) -> Self {
-        Self { log: base.clone() }
+    pub fn new() -> Self {
+        Self {}
     }
 }
 
@@ -56,7 +54,7 @@ impl FilterFactory for FirewallFactory {
             .require_config(args.config)?
             .deserialize::<Config, ProtoConfig>(self.name())?;
 
-        let filter = Firewall::new(&self.log, config, Metrics::new(&args.metrics_registry)?);
+        let filter = Firewall::new(config, Metrics::new(&args.metrics_registry)?);
         Ok(FilterInstance::new(
             config_json,
             Box::new(filter) as Box<dyn Filter>,
@@ -65,16 +63,14 @@ impl FilterFactory for FirewallFactory {
 }
 
 struct Firewall {
-    log: Logger,
     metrics: Metrics,
     on_read: Vec<Rule>,
     on_write: Vec<Rule>,
 }
 
 impl Firewall {
-    fn new(base: &Logger, config: Config, metrics: Metrics) -> Self {
+    fn new(config: Config, metrics: Metrics) -> Self {
         Self {
-            log: base.new(o!("source" => "extensions::Firewall")),
             metrics,
             on_read: config.on_read,
             on_write: config.on_write,
@@ -83,40 +79,53 @@ impl Firewall {
 }
 
 impl Filter for Firewall {
+    #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
     fn read(&self, ctx: ReadContext) -> Option<ReadResponse> {
         for rule in &self.on_read {
             if rule.contains(ctx.from.to_socket_addr().ok()?) {
                 return match rule.action {
                     Action::Allow => {
-                        debug!(self.log, "Allow"; "event" => "read", "from" =>  ctx.from.to_string());
+                        debug!(
+                            action = "Allow",
+                            event = "read",
+                            from = ?ctx.from.to_string()
+                        );
                         self.metrics.packets_allowed_read.inc();
                         Some(ctx.into())
                     }
                     Action::Deny => {
-                        debug!(self.log, "Deny"; "event" => "read", "from" => ctx.from );
+                        debug!(action = "Deny", event = "read", from = ?ctx.from);
                         self.metrics.packets_denied_read.inc();
                         None
                     }
                 };
             }
         }
-
-        debug!(self.log, "default: Deny"; "event" => "read", "from" => ctx.from.to_string());
+        debug!(
+            action = "default: Deny",
+            event = "read",
+            from = ?ctx.from.to_string()
+        );
         self.metrics.packets_denied_read.inc();
         None
     }
 
+    #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
     fn write(&self, ctx: WriteContext) -> Option<WriteResponse> {
         for rule in &self.on_write {
             if rule.contains(ctx.from.to_socket_addr().ok()?) {
                 return match rule.action {
                     Action::Allow => {
-                        debug!(self.log, "Allow"; "event" => "write", "from" =>  ctx.from.to_string());
+                        debug!(
+                            action = "Allow",
+                            event = "write",
+                            from = ?ctx.from.to_string()
+                        );
                         self.metrics.packets_allowed_write.inc();
                         Some(ctx.into())
                     }
                     Action::Deny => {
-                        debug!(self.log, "Deny"; "event" => "write", "from" => ctx.from );
+                        debug!(action = "Deny", event = "write", from = ?ctx.from);
                         self.metrics.packets_denied_write.inc();
                         None
                     }
@@ -124,7 +133,11 @@ impl Filter for Firewall {
             }
         }
 
-        debug!(self.log, "default: Deny"; "event" => "write", "from" => ctx.from.to_string());
+        debug!(
+            action = "default: Deny",
+            event = "write",
+            from = ?ctx.from.to_string()
+        );
         self.metrics.packets_denied_write.inc();
         None
     }
@@ -136,14 +149,14 @@ mod tests {
 
     use crate::endpoint::{Endpoint, Endpoints, UpstreamEndpoints};
     use crate::filters::firewall::config::PortRange;
-    use crate::test_utils::logger;
+    use tracing_test::traced_test;
 
     use super::*;
 
     #[test]
+    #[traced_test]
     fn read() {
         let firewall = Firewall {
-            log: logger(),
             metrics: Metrics::new(&Registry::default()).unwrap(),
             on_read: vec![Rule {
                 action: Action::Allow,
@@ -172,6 +185,9 @@ mod tests {
             (local_ip, 2000).into(),
             vec![],
         );
+        assert!(logs_contain("quilkin::filters::firewall")); // the given name to the the logger by tracing
+        assert!(logs_contain("Allow"));
+
         assert!(firewall.read(ctx).is_none());
         assert_eq!(1, firewall.metrics.packets_allowed_read.get());
         assert_eq!(1, firewall.metrics.packets_denied_read.get());
@@ -183,7 +199,6 @@ mod tests {
     #[test]
     fn write() {
         let firewall = Firewall {
-            log: logger(),
             metrics: Metrics::new(&Registry::default()).unwrap(),
             on_read: vec![],
             on_write: vec![Rule {
