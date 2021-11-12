@@ -14,11 +14,52 @@
  * limitations under the License.
  */
 
-use std::convert::TryFrom;
+use std::{collections::HashMap, convert::TryFrom, sync::Arc};
 
 use crate::xds::envoy::config::core::v3::Metadata as ProtoMetadata;
 
+/// Shared state between [`Filter`]s during processing for a single packet.
+pub type DynamicMetadata = HashMap<Arc<String>, Value>;
+
 pub const KEY: &str = "quilkin.dev";
+
+#[derive(Clone, Debug, PartialEq, PartialOrd)]
+pub enum Value {
+    Bool(bool),
+    Number(u64),
+    List(Vec<Value>),
+    String(String),
+    Bytes(bytes::Bytes),
+}
+
+impl Value {
+    /// Returns the inner `String` value of `self` if it
+    /// matches [`Value::String`].
+    pub fn as_bytes(&self) -> Option<&bytes::Bytes> {
+        match self {
+            Self::Bytes(value) => Some(value),
+            _ => None,
+        }
+    }
+
+    /// Returns the inner `String` value of `self` if it
+    /// matches [`Value::String`].
+    pub fn as_string(&self) -> Option<&str> {
+        match self {
+            Self::String(value) => Some(value),
+            _ => None,
+        }
+    }
+
+    /// Returns the inner `String` value of `self` if it
+    /// matches [`Value::String`].
+    pub fn as_mut_string(&mut self) -> Option<&mut String> {
+        match self {
+            Self::String(value) => Some(value),
+            _ => None,
+        }
+    }
+}
 
 /// Represents a view into the metadata object attached to another object. `T`
 /// represents metadata known to Quilkin under `quilkin.dev` (available under

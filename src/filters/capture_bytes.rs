@@ -21,8 +21,9 @@ mod proto;
 
 use std::sync::Arc;
 
-use crate::filters::prelude::*;
 use tracing::warn;
+
+use crate::{filters::prelude::*, metadata::Value};
 
 use capture::Capture;
 use metrics::Metrics;
@@ -75,7 +76,7 @@ impl Filter for CaptureBytes {
             .capture(&mut ctx.contents, self.size, self.remove);
 
         ctx.metadata
-            .insert(self.metadata_key.clone(), Box::new(token));
+            .insert(self.metadata_key.clone(), Value::Bytes(token.into()));
 
         Some(ctx.into())
     }
@@ -277,8 +278,8 @@ mod tests {
             .metadata
             .get(&Arc::new(key.into()))
             .unwrap()
-            .downcast_ref::<Vec<u8>>()
+            .as_bytes()
             .unwrap();
-        assert_eq!(b"abc", token.as_slice());
+        assert_eq!(b"abc", &**token);
     }
 }

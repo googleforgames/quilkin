@@ -28,6 +28,7 @@ use crate::{
     config::LOG_SAMPLING_RATE,
     endpoint::RetainedItems,
     filters::{metadata::CAPTURED_BYTES, prelude::*},
+    metadata::Value,
 };
 
 use metrics::Metrics;
@@ -111,10 +112,10 @@ impl Filter for TokenRouter {
                 self.metrics.packets_dropped_no_token_found.inc();
                 None
             }
-            Some(value) => match value.downcast_ref::<Vec<u8>>() {
-                Some(token) => match ctx
+            Some(value) => match value {
+                Value::Bytes(token) => match ctx
                     .endpoints
-                    .retain(|e| e.metadata.known.tokens.contains(token))
+                    .retain(|e| e.metadata.known.tokens.contains(&**token))
                 {
                     RetainedItems::None => {
                         self.metrics.packets_dropped_no_endpoint_match.inc();
@@ -122,7 +123,7 @@ impl Filter for TokenRouter {
                     }
                     _ => Some(ctx.into()),
                 },
-                None => {
+                _ => {
                     if self.metrics.packets_dropped_invalid_token.get() % LOG_SAMPLING_RATE == 0 {
                         error!(
                             count = ?self.metrics.packets_dropped_invalid_token.get(),
@@ -180,9 +181,10 @@ mod tests {
     use std::sync::Arc;
 
     use prometheus::Registry;
-    use serde_yaml::{Mapping, Value};
+    use serde_yaml::Mapping;
 
     use crate::endpoint::{Endpoint, Endpoints, Metadata};
+    use crate::metadata::Value;
     use crate::test_utils::assert_write_no_change;
 
     use super::{
@@ -237,20 +239,22 @@ mod tests {
         let factory = TokenRouterFactory::new();
         let mut map = Mapping::new();
         map.insert(
-            Value::String("metadataKey".into()),
-            Value::String(TOKEN_KEY.into()),
+            serde_yaml::Value::String("metadataKey".into()),
+            serde_yaml::Value::String(TOKEN_KEY.into()),
         );
 
         let filter = factory
             .create_filter(CreateFilterArgs::fixed(
                 Registry::default(),
-                Some(&Value::Mapping(map)),
+                Some(&serde_yaml::Value::Mapping(map)),
             ))
             .unwrap()
             .filter;
         let mut ctx = new_ctx();
-        ctx.metadata
-            .insert(Arc::new(TOKEN_KEY.into()), Box::new(b"123".to_vec()));
+        ctx.metadata.insert(
+            Arc::new(TOKEN_KEY.into()),
+            Value::Bytes(b"123".to_vec().into()),
+        );
         assert_read(filter.deref(), ctx);
     }
 
@@ -262,13 +266,15 @@ mod tests {
         let filter = factory
             .create_filter(CreateFilterArgs::fixed(
                 Registry::default(),
-                Some(&Value::Mapping(map)),
+                Some(&serde_yaml::Value::Mapping(map)),
             ))
             .unwrap()
             .filter;
         let mut ctx = new_ctx();
-        ctx.metadata
-            .insert(Arc::new(CAPTURED_BYTES.into()), Box::new(b"123".to_vec()));
+        ctx.metadata.insert(
+            Arc::new(CAPTURED_BYTES.into()),
+            Value::Bytes(b"123".to_vec().into()),
+        );
         assert_read(filter.deref(), ctx);
     }
 
@@ -281,8 +287,10 @@ mod tests {
             .unwrap()
             .filter;
         let mut ctx = new_ctx();
-        ctx.metadata
-            .insert(Arc::new(CAPTURED_BYTES.into()), Box::new(b"123".to_vec()));
+        ctx.metadata.insert(
+            Arc::new(CAPTURED_BYTES.into()),
+            Value::Bytes(b"123".to_vec().into()),
+        );
         assert_read(filter.deref(), ctx);
     }
 
@@ -295,14 +303,18 @@ mod tests {
         let filter = router(config);
 
         let mut ctx = new_ctx();
-        ctx.metadata
-            .insert(Arc::new(CAPTURED_BYTES.into()), Box::new(b"123".to_vec()));
+        ctx.metadata.insert(
+            Arc::new(CAPTURED_BYTES.into()),
+            Value::Bytes(b"123".to_vec().into()),
+        );
         assert_read(&filter, ctx);
 
         // invalid key
         let mut ctx = new_ctx();
-        ctx.metadata
-            .insert(Arc::new(CAPTURED_BYTES.into()), Box::new(b"567".to_vec()));
+        ctx.metadata.insert(
+            Arc::new(CAPTURED_BYTES.into()),
+            Value::Bytes(b"567".to_vec().into()),
+        );
 
         let option = filter.read(ctx);
         assert!(option.is_none());
@@ -317,7 +329,7 @@ mod tests {
         let mut ctx = new_ctx();
         ctx.metadata.insert(
             Arc::new(CAPTURED_BYTES.into()),
-            Box::new(String::from("wrong")),
+            Value::String(String::from("wrong")),
         );
         assert!(filter.read(ctx).is_none());
         assert_eq!(1, filter.metrics.packets_dropped_invalid_token.get());
