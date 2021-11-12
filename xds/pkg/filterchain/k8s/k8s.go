@@ -18,7 +18,9 @@ package k8s
 
 import (
 	"context"
+	"fmt"
 	"reflect"
+	"strconv"
 	"time"
 
 	"k8s.io/apimachinery/pkg/labels"
@@ -29,18 +31,23 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"k8s.io/apimachinery/pkg/util/clock"
 	"quilkin.dev/xds-management-server/pkg/filterchain"
-	filters2 "quilkin.dev/xds-management-server/pkg/filters"
+	filters "quilkin.dev/xds-management-server/pkg/filters"
+	capture_bytes_v1alpha1 "quilkin.dev/xds-management-server/pkg/filters/capture_bytes/v1alpha1"
 	debugfilterv1alpha "quilkin.dev/xds-management-server/pkg/filters/debug/v1alpha1"
+	tokenrouter_v1alpha1 "quilkin.dev/xds-management-server/pkg/filters/token_router/v1alpha1"
 )
 
 const (
 	annotationKeyPrefix = "quilkin.dev/"
 	labelKeyRole        = annotationKeyPrefix + "role"
-	annotationKeyDebug  = annotationKeyPrefix + "debug-packets"
 	labelProxy          = "proxy"
 	// LabelSelectorProxyRole is the label selector for proxy pods.
 	LabelSelectorProxyRole = labelKeyRole + "=" + labelProxy
-	defaultProxyNamespace  = "quilkin"
+	// Note: Annotations that configure the proxy filter chain must be added to the
+	//  `relevantAnnotations` list for the server to care about them.
+	annotationKeyDebug                  = annotationKeyPrefix + "debug-packets"
+	annotationKeyRoutingTokenSuffixSize = annotationKeyPrefix + "routing-token-suffix-size"
+	annotationKeyRoutingTokenPrefixSize = annotationKeyPrefix + "routing-token-prefix-size"
 )
 
 var _ filterchain.Provider = &Provider{}
@@ -48,6 +55,8 @@ var _ filterchain.Provider = &Provider{}
 // relevantAnnotations lists the pod annotations that we care about.
 var relevantAnnotations = []string{
 	annotationKeyDebug,
+	annotationKeyRoutingTokenSuffixSize,
+	annotationKeyRoutingTokenPrefixSize,
 }
 
 // proxyPod represents a proxy's pod connected to the server.
@@ -164,22 +173,89 @@ func (p *Provider) run(ctx context.Context) {
 }
 
 func createFilterChainForProxy(podAnnotations map[string]string) (*envoylistener.FilterChain, error) {
-	var filters []*envoylistener.Filter
+	var envoyFilters []*envoylistener.Filter
 
+	// If debug is enabled, then make sure its the first filter in the chain.
 	debugEnabled := podAnnotations[annotationKeyDebug] == "true"
 	if debugEnabled {
-		filter, err := filterchain.CreateXdsFilter(
-			filters2.DebugFilterName,
-			&debugfilterv1alpha.Debug{
-				Id: &wrapperspb.StringValue{Value: "debug-filter"},
-			},
-		)
+		filter, err := createDebugFilter()
 		if err != nil {
 			return nil, err
 		}
-
-		filters = append(filters, filter)
+		envoyFilters = append(envoyFilters, filter)
 	}
 
-	return &envoylistener.FilterChain{Filters: filters}, nil
+	// Add filters to route tokens if enabled.
+	routingFilters, err := createRoutingFilters(podAnnotations)
+	if err != nil {
+		return nil, err
+	}
+	envoyFilters = append(envoyFilters, routingFilters...)
+
+	return &envoylistener.FilterChain{Filters: envoyFilters}, nil
+}
+
+func createDebugFilter() (*envoylistener.Filter, error) {
+	filter, err := filterchain.CreateXdsFilter(
+		filters.DebugFilterName,
+		&debugfilterv1alpha.Debug{
+			Id: &wrapperspb.StringValue{Value: "debug-filter"},
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create debug filter: %w", err)
+	}
+	return filter, nil
+}
+
+func createRoutingFilters(podAnnotations map[string]string) ([]*envoylistener.Filter, error) {
+	tokenPrefixSizeValue, hasPrefix := podAnnotations[annotationKeyRoutingTokenPrefixSize]
+	tokenSuffixSizeValue, hasSuffix := podAnnotations[annotationKeyRoutingTokenSuffixSize]
+	if hasPrefix && hasSuffix {
+		return nil, fmt.Errorf(
+			"a pod can not have both %s and %s annotations set",
+			annotationKeyRoutingTokenSuffixSize,
+			annotationKeyRoutingTokenPrefixSize)
+	}
+
+	if !hasPrefix && !hasSuffix {
+		return []*envoylistener.Filter{}, nil
+	}
+
+	annotation := annotationKeyRoutingTokenSuffixSize
+	annotationValue := tokenSuffixSizeValue
+	strategy := capture_bytes_v1alpha1.CaptureBytes_Suffix
+	if hasPrefix {
+		annotation = annotationKeyRoutingTokenPrefixSize
+		annotationValue = tokenPrefixSizeValue
+		strategy = capture_bytes_v1alpha1.CaptureBytes_Prefix
+	}
+
+	tokenSize, err := strconv.ParseUint(annotationValue, 10, 32)
+	if err != nil {
+		return nil, fmt.Errorf("token size annotation %s does not contain an integer: %w",
+			annotation, err)
+	}
+	captureBytesFilter, err := filterchain.CreateXdsFilter(
+		filters.CaptureBytesFilterName,
+		&capture_bytes_v1alpha1.CaptureBytes{
+			Strategy: &capture_bytes_v1alpha1.CaptureBytes_StrategyValue{
+				Value: strategy,
+			},
+			Size:        uint32(tokenSize),
+			MetadataKey: nil,
+			Remove:      wrapperspb.Bool(true),
+		})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create CaptureBytes filter: %w", err)
+	}
+
+	tokenRouterFilter, err := filterchain.CreateXdsFilter(
+		filters.TokenRouterFilterName,
+		&tokenrouter_v1alpha1.TokenRouter{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create TokenRouter filter: %w", err)
+	}
+
+	return []*envoylistener.Filter{captureBytesFilter, tokenRouterFilter}, nil
 }

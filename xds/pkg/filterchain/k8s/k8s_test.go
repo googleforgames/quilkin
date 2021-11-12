@@ -24,6 +24,8 @@ import (
 	"testing"
 	"time"
 
+	envoylistener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
+
 	servertesting "quilkin.dev/xds-management-server/pkg/testing"
 
 	log "github.com/sirupsen/logrus"
@@ -178,6 +180,71 @@ func TestProviderIgnoreNonProxyPods(t *testing.T) {
 	require.EqualValues(t, filterchain.ProxyFilterChain{}, empty)
 }
 
+func TestProviderCreateRoutingFilterChain(t *testing.T) {
+	tests := []struct {
+		name             string
+		annotation       string
+		expectedStrategy string
+	}{
+		{
+			name:             "prefix",
+			annotation:       annotationKeyRoutingTokenPrefixSize,
+			expectedStrategy: "", // Prefix is enum 0 so its not explicitly serialised.
+		},
+		{
+			name:             "suffix",
+			annotation:       annotationKeyRoutingTokenSuffixSize,
+			expectedStrategy: "value:Suffix",
+		},
+	}
+
+	for i := range tests {
+		tt := tests[i]
+		t.Run(tt.name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+
+			m := servertesting.NewMocks()
+
+			p, fakeClock, fakeWatch := testProvider(t, m)
+			filterChainCh := p.Run(ctx)
+
+			// A new pod is created.
+			pod1 := testPod("pod-1")
+			pod1.Annotations[tt.annotation] = "2"
+			fakeWatch.Add(pod1)
+
+			pfc := waitForFilterChainUpdate(t, fakeClock, filterChainCh)
+
+			require.EqualValues(t, "pod-1", pfc.ProxyID)
+			// A capture bytes and token router filter should be present
+			require.Len(t, pfc.FilterChain.Filters, 2)
+
+			captureBytesFilter := pfc.FilterChain.Filters[0]
+			tokenRouterFilter := pfc.FilterChain.Filters[1]
+
+			requireFilterContains(t, captureBytesFilter, []string{
+				filters.CaptureBytesFilterName,
+				tt.expectedStrategy,
+				"size:2",
+				"remove:{value:true}",
+			})
+			requireFilterContains(t, tokenRouterFilter, []string{filters.TokenRouterFilterName})
+
+			// Check that both filters use the default metadata key.
+			require.NotContains(t, captureBytesFilter.String(), "metadataKey")
+			require.NotContains(t, tokenRouterFilter.String(), "metadataKey")
+		})
+	}
+}
+
+// Assert that the filter proto string contains an expected list of strings.
+func requireFilterContains(t *testing.T, filter *envoylistener.Filter, terms []string) {
+	for _, term := range terms {
+		require.Contains(t, filter.String(), term)
+	}
+}
+
 func testProvider(
 	t *testing.T,
 	mocks *servertesting.Mocks,
@@ -200,7 +267,7 @@ func testPod(name string) *kubernetesv1.Pod {
 	return &kubernetesv1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        name,
-			Namespace:   defaultProxyNamespace,
+			Namespace:   "quilkin",
 			Annotations: map[string]string{},
 			Labels: map[string]string{
 				"quilkin.dev/role": "proxy",

@@ -110,38 +110,37 @@ func makeEndpoint(
 	clusterName string,
 	endpoints []cluster.Endpoint,
 ) (*envoyendpoint.ClusterLoadAssignment, error) {
-	var endpointConfigs []*envoyendpoint.LocalityLbEndpoints
+	var lbEndpoints []*envoyendpoint.LbEndpoint
 	for _, ep := range endpoints {
 		metadata, err := parseMetadata(ep.Metadata)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create Endpoint resource: %w", err)
 		}
-		endpointConfigs = append(endpointConfigs, &envoyendpoint.LocalityLbEndpoints{
-			LbEndpoints: []*envoyendpoint.LbEndpoint{{
-				Metadata: &envoycore.Metadata{
-					FilterMetadata: metadata,
-				},
-				HostIdentifier: &envoyendpoint.LbEndpoint_Endpoint{
-					Endpoint: &envoyendpoint.Endpoint{
-						Address: &envoycore.Address{
-							Address: &envoycore.Address_SocketAddress{
-								SocketAddress: &envoycore.SocketAddress{
-									Protocol: envoycore.SocketAddress_UDP,
-									Address:  ep.IP,
-									PortSpecifier: &envoycore.SocketAddress_PortValue{
-										PortValue: uint32(ep.Port),
-									},
+		lbEndpoints = append(lbEndpoints, &envoyendpoint.LbEndpoint{
+			Metadata: &envoycore.Metadata{
+				FilterMetadata: metadata,
+			},
+			HostIdentifier: &envoyendpoint.LbEndpoint_Endpoint{
+				Endpoint: &envoyendpoint.Endpoint{
+					Address: &envoycore.Address{
+						Address: &envoycore.Address_SocketAddress{
+							SocketAddress: &envoycore.SocketAddress{
+								Protocol: envoycore.SocketAddress_UDP,
+								Address:  ep.IP,
+								PortSpecifier: &envoycore.SocketAddress_PortValue{
+									PortValue: uint32(ep.Port),
 								},
 							},
 						},
 					},
-				},
-			}},
+				}},
 		})
 	}
 
 	return &envoyendpoint.ClusterLoadAssignment{
 		ClusterName: clusterName,
-		Endpoints:   endpointConfigs,
+		Endpoints: []*envoyendpoint.LocalityLbEndpoints{
+			{LbEndpoints: lbEndpoints},
+		},
 	}, nil
 }

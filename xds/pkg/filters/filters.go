@@ -35,4 +35,8 @@ const (
 	DebugFilterName = "quilkin.extensions.filters.debug.v1alpha1.Debug"
 	// RateLimitFilterName is the name of the RateLimit filter
 	RateLimitFilterName = "quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit"
+	// CaptureBytesFilterName is the name of the CaptureBytes filter
+	CaptureBytesFilterName = "quilkin.extensions.filters.capture_bytes.v1alpha1.CaptureBytes"
+	// TokenRouterFilterName is the name of the TokenRouter filter
+	TokenRouterFilterName = "quilkin.extensions.filters.token_router.v1alpha1.TokenRouter"
 )

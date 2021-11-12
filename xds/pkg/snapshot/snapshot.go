@@ -20,6 +20,10 @@ import (
 	"context"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"quilkin.dev/xds-management-server/pkg/metrics"
+
 	"quilkin.dev/xds-management-server/pkg/cluster"
 	"quilkin.dev/xds-management-server/pkg/filterchain"
 
@@ -28,6 +32,21 @@ import (
 	"k8s.io/apimachinery/pkg/util/clock"
 
 	"quilkin.dev/xds-management-server/pkg/resources"
+)
+
+var (
+	snapshotErrorsTotal = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: metrics.Namespace,
+		Subsystem: metrics.Subsystem,
+		Name:      "snapshot_generation_errors_total",
+		Help:      "Total number of errors encountered while generating snapshots",
+	})
+	snapshotGeneratedTotal = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: metrics.Namespace,
+		Subsystem: metrics.Subsystem,
+		Name:      "snapshots_generated_total",
+		Help:      "Total number of snapshots generated across all proxies",
+	})
 )
 
 // Updater periodically generates xds config snapshots from resources
@@ -131,8 +150,13 @@ func (u *Updater) Run(ctx context.Context) {
 					continue
 				}
 
+				log.WithField("proxy_id", proxyID).Debug("Setting snapshot update")
+
 				if err := u.snapshotCache.SetSnapshot(proxyID, snapshot); err != nil {
+					snapshotErrorsTotal.Inc()
 					proxyLog.WithError(err).Warnf("Failed to set snapshot")
+				} else {
+					snapshotGeneratedTotal.Inc()
 				}
 			}
 

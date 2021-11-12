@@ -64,6 +64,33 @@ func TestMakeEndpoint(t *testing.T) {
 	require.EqualValues(t, "value-1", nestedValue.GetStringValue())
 }
 
+func TestMakeMultipleEndpointsInTheSameLocality(t *testing.T) {
+	ep, err := makeEndpoint("cluster-a", []cluster.Endpoint{{
+		IP:   "127.0.0.1",
+		Port: 22,
+	}, {
+		IP:   "127.0.0.2",
+		Port: 23,
+	}})
+
+	require.NoError(t, err)
+	require.Len(t, ep.Endpoints, 1)
+	require.Len(t, ep.Endpoints[0].LbEndpoints, 2)
+
+	lbe1 := ep.Endpoints[0].LbEndpoints[0]
+	lbe2 := ep.Endpoints[0].LbEndpoints[1]
+
+	gotEp := lbe1.HostIdentifier.(*envoyendpoint.LbEndpoint_Endpoint)
+	socketAddress := gotEp.Endpoint.Address.Address.(*envoycore.Address_SocketAddress).SocketAddress
+	require.EqualValues(t, "127.0.0.1", socketAddress.Address)
+	require.EqualValues(t, 22, socketAddress.PortSpecifier.(*envoycore.SocketAddress_PortValue).PortValue)
+
+	gotEp = lbe2.HostIdentifier.(*envoyendpoint.LbEndpoint_Endpoint)
+	socketAddress = gotEp.Endpoint.Address.Address.(*envoycore.Address_SocketAddress).SocketAddress
+	require.EqualValues(t, "127.0.0.2", socketAddress.Address)
+	require.EqualValues(t, 23, socketAddress.PortSpecifier.(*envoycore.SocketAddress_PortValue).PortValue)
+}
+
 func TestMakeEndpointWithoutMetadata(t *testing.T) {
 	ep, err := makeEndpoint("cluster-a", []cluster.Endpoint{{
 		IP:   "127.0.0.1",
