@@ -80,7 +80,7 @@ The above example creates a filter chain comprising a [Debug] filter followed by
 A filter within the filter chain can share data within another filter further along in the filter chain by propagating the desired data alongside the packet being processed.
 This enables sharing dynamic information at runtime, e.g information about the current packet that might be useful to other filters that process that packet.
 
-At packet processing time each packet is associated with _filter dynamic metadata_ (a set of key-value pairs). Each key is a unique string while value is an arbitrary value.
+At packet processing time each packet is associated with _filter dynamic metadata_ (a set of key-value pairs). Each key is a unique string while its value is an associated [`quilkin::metadata::Value`].
 When a filter processes a packet, it can choose to consult the associated dynamic metadata for more information or itself add/update or remove key-values from the set.
 
 As an example, the built-in [CaptureBytes] filter is one such filter that populates a packet's filter metadata.
@@ -94,7 +94,7 @@ The following metadata are currently used by Quilkin core and built-in filters.
 
 | Name | Type | Description |
 |------|------|-------------|
-| `quilkin.dev/captured_bytes` | `Vec<u8>` | The default key under which the [CaptureBytes] filter puts the byte slices it extracts from each packet. |
+| `quilkin.dev/captured_bytes` | `Bytes` | The default key under which the [CaptureBytes] filter puts the byte slices it extracts from each packet. |
 
 ### Built-in filters <a name="built-in-filters"></a>
 Quilkin includes several filters out of the box.
@@ -134,3 +134,4 @@ required: [ 'name', 'config' ]
 [TokenRouter]: ./filters/token_router.md
 [Debug]: ./filters/debug.md
 [LocalRateLimit]: ./filters/local_rate_limit.md
+[`quilkin::metadata::Value`]: https://docs.rs/quilkin/metadata/enum.Value.html

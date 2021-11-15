@@ -128,7 +128,7 @@ impl Filter for TokenRouter {
                         error!(
                             count = ?self.metrics.packets_dropped_invalid_token.get(),
                             metadata_key = ?self.metadata_key.clone(),
-                            "Packets are being dropped as routing token has invalid type: expected Vec<u8>"
+                            "Packets are being dropped as routing token has invalid type: expected Value::Bytes"
                         );
                     }
                     self.metrics.packets_dropped_invalid_token.inc();
