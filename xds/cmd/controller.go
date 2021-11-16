@@ -19,13 +19,10 @@ package main
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"os/signal"
 	"strings"
 	"time"
-
-	"k8s.io/client-go/tools/cache"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
@@ -97,18 +94,6 @@ func createAgonesClusterProvider(
 		externalversions.WithNamespace(flags.GameServersNamespace))
 	informerFactory.Start(ctx.Done())
 
-	gameServerInformer := informerFactory.Agones().V1().GameServers().Informer()
-	err = gameServerInformer.SetWatchErrorHandler(func(r *cache.Reflector, err error) {
-		if err == io.EOF {
-			// The informer shutdown successfully.
-			return
-		}
-		logger.WithError(err).Warn("GameServer Informer encountered an error")
-	})
-	if err != nil {
-		log.WithError(err).Fatal("failed to set error handler on pod informer")
-	}
-
 	return agonescluster.NewProvider(logger, informerFactory.Agones().V1().GameServers().Lister(), agonescluster.Config{
 		GameServersNamespace:    flags.GameServersNamespace,
 		GameServersPollInterval: flags.GameServersPollInterval,
@@ -154,18 +139,6 @@ func createFilterChainProvider(
 		}),
 	)
 	informerFactory.Start(ctx.Done())
-
-	podInformer := informerFactory.Core().V1().Pods().Informer()
-	err := podInformer.SetWatchErrorHandler(func(r *cache.Reflector, err error) {
-		if err == io.EOF {
-			// The informer shutdown successfully.
-			return
-		}
-		logger.WithError(err).Warn("Pod Informer encountered an error")
-	})
-	if err != nil {
-		log.WithError(err).Fatal("failed to set error handler on pod informer")
-	}
 
 	return k8sfilterchain.NewProvider(
 		logger,

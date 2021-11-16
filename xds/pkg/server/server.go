@@ -60,7 +60,7 @@ type Server struct {
 	adminPort int16
 }
 
-// NewServer returns a new Server
+// New returns a new Server
 func New(
 	logger *log.Logger,
 	xdsPort int16,
@@ -81,7 +81,9 @@ func New(
 	}
 }
 
-func (s *Server) startAdminServer(ctx context.Context, address string) {
+func (s *Server) startAdminServer(ctx context.Context) {
+	address := fmt.Sprintf(":%d", s.adminPort)
+
 	srv := &http.Server{Addr: address}
 
 	http.Handle("/metrics", promhttp.Handler())
@@ -148,7 +150,7 @@ func (s *Server) Run(ctx context.Context) error {
 		close(s.nodeIDCh)
 	}()
 
-	s.startAdminServer(ctx, fmt.Sprintf(":%d", s.adminPort))
+	s.startAdminServer(ctx)
 
 	listen, err := net.Listen("tcp", fmt.Sprintf(":%d", s.xdsPort))
 	if err != nil {
