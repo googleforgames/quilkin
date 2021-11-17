@@ -32,12 +32,12 @@ There are a few things we note here:
 
 **Metrics**
 
-* `filter_read_duration_seconds` The duration it took for a `filter`'s
+* `quilkin_filter_read_duration_seconds` The duration it took for a `filter`'s
   `read` implementation to execute.
   * Labels
     * `filter` The name of the filter being executed.
 
-* `filter_write_duration_seconds` The duration it took for a `filter`'s
+* `quilkin_filter_write_duration_seconds` The duration it took for a `filter`'s
   `write` implementation to execute.
   * Labels
     * `filter` The name of the filter being executed.
