@@ -50,4 +50,4 @@ iperf3 --client 127.0.0.1 --port $PORT -l $MTU --interval 10 --parallel $PARALLE
 set +x
 
 echo "Taking a snapshot of Quilkin metrics..."
-wget -q -O metrics.json http://localhost:9091/metrics
+wget -q -O /quilkin/metrics.json http://localhost:9091/metrics
