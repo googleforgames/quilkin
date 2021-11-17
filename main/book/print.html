@@ -662,7 +662,7 @@ static:
 <h3 id="filter-dynamic-metadata"><a class="header" href="#filter-dynamic-metadata">Filter Dynamic Metadata</a></h3>
 <p>A filter within the filter chain can share data within another filter further along in the filter chain by propagating the desired data alongside the packet being processed.
 This enables sharing dynamic information at runtime, e.g information about the current packet that might be useful to other filters that process that packet.</p>
-<p>At packet processing time each packet is associated with <em>filter dynamic metadata</em> (a set of key-value pairs). Each key is a unique string while value is an arbitrary value.
+<p>At packet processing time each packet is associated with <em>filter dynamic metadata</em> (a set of key-value pairs). Each key is a unique string while its value is an associated <a href="https://docs.rs/quilkin/metadata/enum.Value.html"><code>quilkin::metadata::Value</code></a>.
 When a filter processes a packet, it can choose to consult the associated dynamic metadata for more information or itself add/update or remove key-values from the set.</p>
 <p>As an example, the built-in <a href="./filters/capture_bytes.html">CaptureBytes</a> filter is one such filter that populates a packet's filter metadata.
 <a href="./filters/capture_bytes.html">CaptureBytes</a> extracts information (a configurable byte sequence) from each packet and appends it to the packet's dynamic metadata for other filters to leverage.
@@ -671,7 +671,7 @@ Consequently, we can build a filter chain with a <a href="./filters/capture_byte
 <h4 id="well-known-dynamic-metadata"><a class="header" href="#well-known-dynamic-metadata">Well Known Dynamic Metadata</a></h4>
 <p>The following metadata are currently used by Quilkin core and built-in filters.</p>
 <table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>quilkin.dev/captured_bytes</code></td><td><code>Vec&lt;u8&gt;</code></td><td>The default key under which the <a href="./filters/capture_bytes.html">CaptureBytes</a> filter puts the byte slices it extracts from each packet.</td></tr>
+<tr><td><code>quilkin.dev/captured_bytes</code></td><td><code>Bytes</code></td><td>The default key under which the <a href="./filters/capture_bytes.html">CaptureBytes</a> filter puts the byte slices it extracts from each packet.</td></tr>
 </tbody></table>
 <h3 id="built-in-filters-a-namebuilt-in-filtersa"><a class="header" href="#built-in-filters-a-namebuilt-in-filtersa">Built-in filters <a name="built-in-filters"></a></a></h3>
 <p>Quilkin includes several filters out of the box.</p>

@@ -363,6 +363,18 @@
 <span id="363">363</span>
 <span id="364">364</span>
 <span id="365">365</span>
+<span id="366">366</span>
+<span id="367">367</span>
+<span id="368">368</span>
+<span id="369">369</span>
+<span id="370">370</span>
+<span id="371">371</span>
+<span id="372">372</span>
+<span id="373">373</span>
+<span id="374">374</span>
+<span id="375">375</span>
+<span id="376">376</span>
+<span id="377">377</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -393,6 +405,7 @@
     <span class="ident">config::LOG_SAMPLING_RATE</span>,
     <span class="ident">endpoint::RetainedItems</span>,
     <span class="ident">filters</span>::{<span class="ident">metadata::CAPTURED_BYTES</span>, <span class="ident">prelude</span>::<span class="kw-2">*</span>},
+    <span class="ident">metadata::Value</span>,
 };
 
 <span class="kw">use</span> <span class="ident">metrics::Metrics</span>;
@@ -476,10 +489,10 @@
                 <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_no_token_found</span>.<span class="ident">inc</span>();
                 <span class="prelude-val">None</span>
             }
-            <span class="prelude-val">Some</span>(<span class="ident">value</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="ident">value</span>.<span class="ident">downcast_ref</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>() {
-                <span class="prelude-val">Some</span>(<span class="ident">token</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="ident">ctx</span>
+            <span class="prelude-val">Some</span>(<span class="ident">value</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="ident">value</span> {
+                <span class="ident">Value::Bytes</span>(<span class="ident">token</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="ident">ctx</span>
                     .<span class="ident">endpoints</span>
-                    .<span class="ident">retain</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">e</span>.<span class="ident">metadata</span>.<span class="ident">known</span>.<span class="ident">tokens</span>.<span class="ident">contains</span>(<span class="ident">token</span>))
+                    .<span class="ident">retain</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">e</span>.<span class="ident">metadata</span>.<span class="ident">known</span>.<span class="ident">tokens</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">token</span>))
                 {
                     <span class="ident">RetainedItems::None</span> <span class="op">=</span><span class="op">&gt;</span> {
                         <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_no_endpoint_match</span>.<span class="ident">inc</span>();
@@ -487,12 +500,12 @@
                     }
                     <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">ctx</span>.<span class="ident">into</span>()),
                 },
-                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
                     <span class="kw">if</span> <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_invalid_token</span>.<span class="ident">get</span>() <span class="op">%</span> <span class="ident">LOG_SAMPLING_RATE</span> <span class="op">=</span><span class="op">=</span> <span class="number">0</span> {
                         <span class="macro">error!</span>(
                             <span class="ident">count</span> <span class="op">=</span> <span class="question-mark">?</span><span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_invalid_token</span>.<span class="ident">get</span>(),
                             <span class="ident">metadata_key</span> <span class="op">=</span> <span class="question-mark">?</span><span class="self">self</span>.<span class="ident">metadata_key</span>.<span class="ident">clone</span>(),
-                            <span class="string">&quot;Packets are being dropped as routing token has invalid type: expected Vec&lt;u8&gt;&quot;</span>
+                            <span class="string">&quot;Packets are being dropped as routing token has invalid type: expected Value::Bytes&quot;</span>
                         );
                     }
                     <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_invalid_token</span>.<span class="ident">inc</span>();
@@ -545,9 +558,10 @@
     <span class="kw">use</span> <span class="ident">std::sync::Arc</span>;
 
     <span class="kw">use</span> <span class="ident">prometheus::Registry</span>;
-    <span class="kw">use</span> <span class="ident">serde_yaml</span>::{<span class="ident">Mapping</span>, <span class="ident">Value</span>};
+    <span class="kw">use</span> <span class="ident">serde_yaml::Mapping</span>;
 
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">Endpoints</span>, <span class="ident">Metadata</span>};
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::metadata::Value</span>;
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::test_utils::assert_write_no_change</span>;
 
     <span class="kw">use</span> <span class="kw">super</span>::{
@@ -602,20 +616,22 @@
         <span class="kw">let</span> <span class="ident">factory</span> <span class="op">=</span> <span class="ident">TokenRouterFactory::new</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">Mapping::new</span>();
         <span class="ident">map</span>.<span class="ident">insert</span>(
-            <span class="ident">Value::String</span>(<span class="string">&quot;metadataKey&quot;</span>.<span class="ident">into</span>()),
-            <span class="ident">Value::String</span>(<span class="ident">TOKEN_KEY</span>.<span class="ident">into</span>()),
+            <span class="ident">serde_yaml::Value::String</span>(<span class="string">&quot;metadataKey&quot;</span>.<span class="ident">into</span>()),
+            <span class="ident">serde_yaml::Value::String</span>(<span class="ident">TOKEN_KEY</span>.<span class="ident">into</span>()),
         );
 
         <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">factory</span>
             .<span class="ident">create_filter</span>(<span class="ident">CreateFilterArgs::fixed</span>(
                 <span class="ident">Registry::default</span>(),
-                <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="ident">Value::Mapping</span>(<span class="ident">map</span>)),
+                <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="ident">serde_yaml::Value::Mapping</span>(<span class="ident">map</span>)),
             ))
             .<span class="ident">unwrap</span>()
             .<span class="ident">filter</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ctx</span> <span class="op">=</span> <span class="ident">new_ctx</span>();
-        <span class="ident">ctx</span>.<span class="ident">metadata</span>
-            .<span class="ident">insert</span>(<span class="ident">Arc::new</span>(<span class="ident">TOKEN_KEY</span>.<span class="ident">into</span>()), <span class="ident">Box::new</span>(<span class="string">b&quot;123&quot;</span>.<span class="ident">to_vec</span>()));
+        <span class="ident">ctx</span>.<span class="ident">metadata</span>.<span class="ident">insert</span>(
+            <span class="ident">Arc::new</span>(<span class="ident">TOKEN_KEY</span>.<span class="ident">into</span>()),
+            <span class="ident">Value::Bytes</span>(<span class="string">b&quot;123&quot;</span>.<span class="ident">to_vec</span>().<span class="ident">into</span>()),
+        );
         <span class="ident">assert_read</span>(<span class="ident">filter</span>.<span class="ident">deref</span>(), <span class="ident">ctx</span>);
     }
 
@@ -627,13 +643,15 @@
         <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">factory</span>
             .<span class="ident">create_filter</span>(<span class="ident">CreateFilterArgs::fixed</span>(
                 <span class="ident">Registry::default</span>(),
-                <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="ident">Value::Mapping</span>(<span class="ident">map</span>)),
+                <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="ident">serde_yaml::Value::Mapping</span>(<span class="ident">map</span>)),
             ))
             .<span class="ident">unwrap</span>()
             .<span class="ident">filter</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ctx</span> <span class="op">=</span> <span class="ident">new_ctx</span>();
-        <span class="ident">ctx</span>.<span class="ident">metadata</span>
-            .<span class="ident">insert</span>(<span class="ident">Arc::new</span>(<span class="ident">CAPTURED_BYTES</span>.<span class="ident">into</span>()), <span class="ident">Box::new</span>(<span class="string">b&quot;123&quot;</span>.<span class="ident">to_vec</span>()));
+        <span class="ident">ctx</span>.<span class="ident">metadata</span>.<span class="ident">insert</span>(
+            <span class="ident">Arc::new</span>(<span class="ident">CAPTURED_BYTES</span>.<span class="ident">into</span>()),
+            <span class="ident">Value::Bytes</span>(<span class="string">b&quot;123&quot;</span>.<span class="ident">to_vec</span>().<span class="ident">into</span>()),
+        );
         <span class="ident">assert_read</span>(<span class="ident">filter</span>.<span class="ident">deref</span>(), <span class="ident">ctx</span>);
     }
 
@@ -646,8 +664,10 @@
             .<span class="ident">unwrap</span>()
             .<span class="ident">filter</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ctx</span> <span class="op">=</span> <span class="ident">new_ctx</span>();
-        <span class="ident">ctx</span>.<span class="ident">metadata</span>
-            .<span class="ident">insert</span>(<span class="ident">Arc::new</span>(<span class="ident">CAPTURED_BYTES</span>.<span class="ident">into</span>()), <span class="ident">Box::new</span>(<span class="string">b&quot;123&quot;</span>.<span class="ident">to_vec</span>()));
+        <span class="ident">ctx</span>.<span class="ident">metadata</span>.<span class="ident">insert</span>(
+            <span class="ident">Arc::new</span>(<span class="ident">CAPTURED_BYTES</span>.<span class="ident">into</span>()),
+            <span class="ident">Value::Bytes</span>(<span class="string">b&quot;123&quot;</span>.<span class="ident">to_vec</span>().<span class="ident">into</span>()),
+        );
         <span class="ident">assert_read</span>(<span class="ident">filter</span>.<span class="ident">deref</span>(), <span class="ident">ctx</span>);
     }
 
@@ -660,14 +680,18 @@
         <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">router</span>(<span class="ident">config</span>);
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ctx</span> <span class="op">=</span> <span class="ident">new_ctx</span>();
-        <span class="ident">ctx</span>.<span class="ident">metadata</span>
-            .<span class="ident">insert</span>(<span class="ident">Arc::new</span>(<span class="ident">CAPTURED_BYTES</span>.<span class="ident">into</span>()), <span class="ident">Box::new</span>(<span class="string">b&quot;123&quot;</span>.<span class="ident">to_vec</span>()));
+        <span class="ident">ctx</span>.<span class="ident">metadata</span>.<span class="ident">insert</span>(
+            <span class="ident">Arc::new</span>(<span class="ident">CAPTURED_BYTES</span>.<span class="ident">into</span>()),
+            <span class="ident">Value::Bytes</span>(<span class="string">b&quot;123&quot;</span>.<span class="ident">to_vec</span>().<span class="ident">into</span>()),
+        );
         <span class="ident">assert_read</span>(<span class="kw-2">&amp;</span><span class="ident">filter</span>, <span class="ident">ctx</span>);
 
         <span class="comment">// invalid key</span>
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ctx</span> <span class="op">=</span> <span class="ident">new_ctx</span>();
-        <span class="ident">ctx</span>.<span class="ident">metadata</span>
-            .<span class="ident">insert</span>(<span class="ident">Arc::new</span>(<span class="ident">CAPTURED_BYTES</span>.<span class="ident">into</span>()), <span class="ident">Box::new</span>(<span class="string">b&quot;567&quot;</span>.<span class="ident">to_vec</span>()));
+        <span class="ident">ctx</span>.<span class="ident">metadata</span>.<span class="ident">insert</span>(
+            <span class="ident">Arc::new</span>(<span class="ident">CAPTURED_BYTES</span>.<span class="ident">into</span>()),
+            <span class="ident">Value::Bytes</span>(<span class="string">b&quot;567&quot;</span>.<span class="ident">to_vec</span>().<span class="ident">into</span>()),
+        );
 
         <span class="kw">let</span> <span class="ident">option</span> <span class="op">=</span> <span class="ident">filter</span>.<span class="ident">read</span>(<span class="ident">ctx</span>);
         <span class="macro">assert!</span>(<span class="ident">option</span>.<span class="ident">is_none</span>());
@@ -682,7 +706,7 @@
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ctx</span> <span class="op">=</span> <span class="ident">new_ctx</span>();
         <span class="ident">ctx</span>.<span class="ident">metadata</span>.<span class="ident">insert</span>(
             <span class="ident">Arc::new</span>(<span class="ident">CAPTURED_BYTES</span>.<span class="ident">into</span>()),
-            <span class="ident">Box::new</span>(<span class="ident">String::from</span>(<span class="string">&quot;wrong&quot;</span>)),
+            <span class="ident">Value::String</span>(<span class="ident">String::from</span>(<span class="string">&quot;wrong&quot;</span>)),
         );
         <span class="macro">assert!</span>(<span class="ident">filter</span>.<span class="ident">read</span>(<span class="ident">ctx</span>).<span class="ident">is_none</span>());
         <span class="macro">assert_eq!</span>(<span class="number">1</span>, <span class="ident">filter</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_invalid_token</span>.<span class="ident">get</span>());

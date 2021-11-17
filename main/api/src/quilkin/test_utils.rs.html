@@ -364,6 +364,7 @@
 <span id="364">364</span>
 <span id="365">365</span>
 <span id="366">366</span>
+<span id="367">367</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -393,6 +394,7 @@
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::config</span>::{<span class="ident">Builder</span> <span class="kw">as</span> <span class="ident">ConfigBuilder</span>, <span class="ident">Config</span>};
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">EndpointAddress</span>, <span class="ident">Endpoints</span>};
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters</span>::{<span class="ident">prelude</span>::<span class="kw-2">*</span>, <span class="ident">FilterChain</span>, <span class="ident">FilterRegistry</span>, <span class="ident">FilterSet</span>};
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::metadata::Value</span>;
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::proxy</span>::{<span class="ident">Builder</span>, <span class="ident">PendingValidation</span>};
 
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TestFilterFactory</span> {}
@@ -423,8 +425,8 @@
         <span class="comment">// append values on each run</span>
         <span class="ident">ctx</span>.<span class="ident">metadata</span>
             .<span class="ident">entry</span>(<span class="ident">Arc::new</span>(<span class="string">&quot;downstream&quot;</span>.<span class="ident">into</span>()))
-            .<span class="ident">and_modify</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">e</span>.<span class="ident">downcast_mut</span>::<span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>().<span class="ident">unwrap</span>().<span class="ident">push_str</span>(<span class="string">&quot;:receive&quot;</span>))
-            .<span class="ident">or_insert_with</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Box::new</span>(<span class="string">&quot;receive&quot;</span>.<span class="ident">to_string</span>()));
+            .<span class="ident">and_modify</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">e</span>.<span class="ident">as_mut_string</span>().<span class="ident">unwrap</span>().<span class="ident">push_str</span>(<span class="string">&quot;:receive&quot;</span>))
+            .<span class="ident">or_insert_with</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Value::String</span>(<span class="string">&quot;receive&quot;</span>.<span class="ident">into</span>()));
 
         <span class="ident">ctx</span>.<span class="ident">contents</span>
             .<span class="ident">append</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="macro">format!</span>(<span class="string">&quot;:odr:{}&quot;</span>, <span class="ident">ctx</span>.<span class="ident">from</span>).<span class="ident">into_bytes</span>());
@@ -434,9 +436,9 @@
     <span class="kw">fn</span> <span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut</span> <span class="ident">ctx</span>: <span class="ident">WriteContext</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">WriteResponse</span><span class="op">&gt;</span> {
         <span class="comment">// append values on each run</span>
         <span class="ident">ctx</span>.<span class="ident">metadata</span>
-            .<span class="ident">entry</span>(<span class="string">&quot;upstream&quot;</span>.<span class="ident">into</span>())
-            .<span class="ident">and_modify</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">e</span>.<span class="ident">downcast_mut</span>::<span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>().<span class="ident">unwrap</span>().<span class="ident">push_str</span>(<span class="string">&quot;:receive&quot;</span>))
-            .<span class="ident">or_insert_with</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Box::new</span>(<span class="string">&quot;receive&quot;</span>.<span class="ident">to_string</span>()));
+            .<span class="ident">entry</span>(<span class="string">&quot;upstream&quot;</span>.<span class="ident">to_string</span>().<span class="ident">into</span>())
+            .<span class="ident">and_modify</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">e</span>.<span class="ident">as_mut_string</span>().<span class="ident">unwrap</span>().<span class="ident">push_str</span>(<span class="string">&quot;:receive&quot;</span>))
+            .<span class="ident">or_insert_with</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Value::String</span>(<span class="string">&quot;receive&quot;</span>.<span class="ident">to_string</span>()));
 
         <span class="ident">ctx</span>.<span class="ident">contents</span>
             .<span class="ident">append</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="macro">format!</span>(<span class="string">&quot;:our:{}:{}&quot;</span>, <span class="ident">ctx</span>.<span class="ident">from</span>, <span class="ident">ctx</span>.<span class="ident">to</span>).<span class="ident">into_bytes</span>());

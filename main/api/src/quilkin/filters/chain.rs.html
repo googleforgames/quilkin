@@ -600,7 +600,7 @@
         <span class="macro">assert_eq!</span>(
             <span class="string">&quot;receive&quot;</span>,
             <span class="ident">response</span>.<span class="ident">metadata</span>[<span class="kw-2">&amp;</span><span class="string">&quot;downstream&quot;</span>.<span class="ident">to_string</span>()]
-                .<span class="ident">downcast_ref</span>::<span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>()
+                .<span class="ident">as_string</span>()
                 .<span class="ident">unwrap</span>()
         );
 
@@ -615,8 +615,8 @@
 
         <span class="macro">assert_eq!</span>(
             <span class="string">&quot;receive&quot;</span>,
-            <span class="ident">response</span>.<span class="ident">metadata</span>[<span class="string">&quot;upstream&quot;</span>]
-                .<span class="ident">downcast_ref</span>::<span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>()
+            <span class="ident">response</span>.<span class="ident">metadata</span>[<span class="kw-2">&amp;</span><span class="string">&quot;upstream&quot;</span>.<span class="ident">to_string</span>()]
+                .<span class="ident">as_string</span>()
                 .<span class="ident">unwrap</span>()
         );
         <span class="macro">assert_eq!</span>(
@@ -665,7 +665,7 @@
         <span class="macro">assert_eq!</span>(
             <span class="string">&quot;receive:receive&quot;</span>,
             <span class="ident">response</span>.<span class="ident">metadata</span>[<span class="kw-2">&amp;</span><span class="string">&quot;downstream&quot;</span>.<span class="ident">to_string</span>()]
-                .<span class="ident">downcast_ref</span>::<span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>()
+                .<span class="ident">as_string</span>()
                 .<span class="ident">unwrap</span>()
         );
 
@@ -683,8 +683,8 @@
         );
         <span class="macro">assert_eq!</span>(
             <span class="string">&quot;receive:receive&quot;</span>,
-            <span class="ident">response</span>.<span class="ident">metadata</span>[<span class="string">&quot;upstream&quot;</span>]
-                .<span class="ident">downcast_ref</span>::<span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>()
+            <span class="ident">response</span>.<span class="ident">metadata</span>[<span class="kw-2">&amp;</span><span class="string">&quot;upstream&quot;</span>.<span class="ident">to_string</span>()]
+                .<span class="ident">as_string</span>()
                 .<span class="ident">unwrap</span>()
         );
     }
