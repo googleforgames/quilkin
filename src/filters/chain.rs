@@ -233,7 +233,7 @@ mod tests {
         assert_eq!(
             "receive",
             response.metadata[&"downstream".to_string()]
-                .downcast_ref::<String>()
+                .as_string()
                 .unwrap()
         );
 
@@ -248,8 +248,8 @@ mod tests {
 
         assert_eq!(
             "receive",
-            response.metadata["upstream"]
-                .downcast_ref::<String>()
+            response.metadata[&"upstream".to_string()]
+                .as_string()
                 .unwrap()
         );
         assert_eq!(
@@ -298,7 +298,7 @@ mod tests {
         assert_eq!(
             "receive:receive",
             response.metadata[&"downstream".to_string()]
-                .downcast_ref::<String>()
+                .as_string()
                 .unwrap()
         );
 
@@ -316,8 +316,8 @@ mod tests {
         );
         assert_eq!(
             "receive:receive",
-            response.metadata["upstream"]
-                .downcast_ref::<String>()
+            response.metadata[&"upstream".to_string()]
+                .as_string()
                 .unwrap()
         );
     }

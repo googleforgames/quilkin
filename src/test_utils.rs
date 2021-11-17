@@ -27,6 +27,7 @@ use tokio::sync::{mpsc, oneshot, watch};
 use crate::config::{Builder as ConfigBuilder, Config};
 use crate::endpoint::{Endpoint, EndpointAddress, Endpoints};
 use crate::filters::{prelude::*, FilterChain, FilterRegistry, FilterSet};
+use crate::metadata::Value;
 use crate::proxy::{Builder, PendingValidation};
 
 pub struct TestFilterFactory {}
@@ -57,8 +58,8 @@ impl Filter for TestFilter {
         // append values on each run
         ctx.metadata
             .entry(Arc::new("downstream".into()))
-            .and_modify(|e| e.downcast_mut::<String>().unwrap().push_str(":receive"))
-            .or_insert_with(|| Box::new("receive".to_string()));
+            .and_modify(|e| e.as_mut_string().unwrap().push_str(":receive"))
+            .or_insert_with(|| Value::String("receive".into()));
 
         ctx.contents
             .append(&mut format!(":odr:{}", ctx.from).into_bytes());
@@ -68,9 +69,9 @@ impl Filter for TestFilter {
     fn write(&self, mut ctx: WriteContext) -> Option<WriteResponse> {
         // append values on each run
         ctx.metadata
-            .entry("upstream".into())
-            .and_modify(|e| e.downcast_mut::<String>().unwrap().push_str(":receive"))
-            .or_insert_with(|| Box::new("receive".to_string()));
+            .entry("upstream".to_string().into())
+            .and_modify(|e| e.as_mut_string().unwrap().push_str(":receive"))
+            .or_insert_with(|| Value::String("receive".to_string()));
 
         ctx.contents
             .append(&mut format!(":our:{}:{}", ctx.from, ctx.to).into_bytes());
