@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
+use std::net::{Ipv4Addr, SocketAddrV4};
 use std::sync::Arc;
 
+use prometheus::HistogramTimer;
 use slog::{debug, error, info, trace, warn, Logger};
 use tokio::net::UdpSocket;
 use tokio::sync::{mpsc, watch};
@@ -26,16 +27,21 @@ use tokio::time::Duration;
 use metrics::Metrics as ProxyMetrics;
 use resource_manager::{DynamicResourceManagers, StaticResourceManagers};
 
-use crate::cluster::cluster_manager::SharedClusterManager;
-use crate::endpoint::{Endpoint, EndpointAddress};
-use crate::filters::{manager::SharedFilterManager, Filter, FilterRegistry, ReadContext};
-use crate::proxy::builder::{ValidatedConfig, ValidatedSource};
-use crate::proxy::sessions::metrics::Metrics as SessionMetrics;
-use crate::proxy::sessions::session_manager::SessionManager;
-use crate::proxy::sessions::{Packet, Session, SessionKey, SESSION_TIMEOUT_SECONDS};
-use crate::proxy::Admin;
-use crate::utils::debug;
-use crate::Result;
+use crate::{
+    cluster::cluster_manager::SharedClusterManager,
+    endpoint::{Endpoint, EndpointAddress},
+    filters::{manager::SharedFilterManager, Filter, FilterRegistry, ReadContext},
+    proxy::{
+        builder::{ValidatedConfig, ValidatedSource},
+        sessions::{
+            metrics::Metrics as SessionMetrics, session_manager::SessionManager, Session,
+            SessionArgs, SessionKey, UpstreamPacket, SESSION_TIMEOUT_SECONDS,
+        },
+        Admin,
+    },
+    utils::debug,
+    Result,
+};
 
 use super::metrics::Metrics;
 
@@ -62,8 +68,16 @@ struct RunRecvFromArgs {
     socket: Arc<UdpSocket>,
     session_manager: SessionManager,
     session_ttl: Duration,
-    send_packets: mpsc::Sender<Packet>,
+    send_packets: mpsc::Sender<UpstreamPacket>,
     shutdown_rx: watch::Receiver<()>,
+}
+
+/// Packet received from local port
+#[derive(Debug)]
+struct DownstreamPacket {
+    from: EndpointAddress,
+    contents: Vec<u8>,
+    timer: HistogramTimer,
 }
 
 /// Represents the required arguments to run a worker task that
@@ -72,7 +86,7 @@ struct DownstreamReceiveWorkerConfig {
     /// ID of the worker.
     worker_id: usize,
     /// Channel from which the worker picks up the downstream packets.
-    packet_rx: mpsc::Receiver<(SocketAddr, Vec<u8>)>,
+    packet_rx: mpsc::Receiver<DownstreamPacket>,
     /// Configuration required to process a received downstream packet.
     receive_config: ProcessDownstreamReceiveConfig,
     /// The worker task exits when a value is received from this shutdown channel.
@@ -89,7 +103,7 @@ struct ProcessDownstreamReceiveConfig {
     filter_manager: SharedFilterManager,
     session_manager: SessionManager,
     session_ttl: Duration,
-    send_packets: mpsc::Sender<Packet>,
+    send_packets: mpsc::Sender<UpstreamPacket>,
 }
 
 impl Server {
@@ -100,7 +114,7 @@ impl Server {
 
         let socket = Arc::new(Server::bind(self.config.proxy.port).await?);
         let session_manager = SessionManager::new(self.log.clone(), shutdown_rx.clone());
-        let (send_packets, receive_packets) = mpsc::channel::<Packet>(1024);
+        let (send_packets, receive_packets) = mpsc::channel::<UpstreamPacket>(1024);
 
         let session_ttl = Duration::from_secs(SESSION_TIMEOUT_SECONDS);
 
@@ -250,11 +264,16 @@ impl Server {
             loop {
                 match socket.recv_from(&mut buf).await {
                     Ok((size, recv_addr)) => {
+                        let timer = proxy_metrics.read_processing_time_seconds.start_timer();
                         let packet_tx = &mut packet_txs[next_worker % num_workers];
                         next_worker += 1;
 
                         if packet_tx
-                            .send((recv_addr, (&buf[..size]).to_vec()))
+                            .send(DownstreamPacket {
+                                from: recv_addr.into(),
+                                contents: (&buf[..size]).to_vec(),
+                                timer,
+                            })
                             .await
                             .is_err()
                         {
@@ -298,7 +317,7 @@ impl Server {
                     tokio::select! {
                       packet = packet_rx.recv() => {
                         match packet {
-                          Some((recv_addr, packet)) => Self::process_downstream_received_packet((recv_addr.into(), packet), &receive_config).await,
+                          Some(packet) => Self::process_downstream_received_packet(packet, &receive_config).await,
                           None => {
                             debug!(log, "Worker-{} exiting: work sender channel was closed.", worker_id);
                             return;
@@ -317,16 +336,14 @@ impl Server {
 
     /// Processes a packet by running it through the filter chain.
     async fn process_downstream_received_packet(
-        packet: (EndpointAddress, Vec<u8>),
+        packet: DownstreamPacket,
         args: &ProcessDownstreamReceiveConfig,
     ) {
-        let (recv_addr, packet) = packet;
-
         trace!(
             args.log,
             "Packet Received";
-            "from" => &recv_addr,
-            "contents" => debug::bytes_to_string(&packet),
+            "from" => &packet.from,
+            "contents" => debug::bytes_to_string(&packet.contents),
         );
 
         let endpoints = match args.cluster_manager.read().get_all_endpoints() {
@@ -341,14 +358,19 @@ impl Server {
             let filter_manager_guard = args.filter_manager.read();
             filter_manager_guard.get_filter_chain()
         };
-        let result = filter_chain.read(ReadContext::new(endpoints, recv_addr.clone(), packet));
+        let result = filter_chain.read(ReadContext::new(
+            endpoints,
+            packet.from.clone(),
+            packet.contents,
+        ));
 
         if let Some(response) = result {
             for endpoint in response.endpoints.iter() {
-                Self::session_send_packet(&response.contents, recv_addr.clone(), endpoint, args)
+                Self::session_send_packet(&response.contents, packet.from.clone(), endpoint, args)
                     .await;
             }
         }
+        packet.timer.stop_and_record();
     }
 
     /// Send a packet received from `recv_addr` to an endpoint.
@@ -391,12 +413,15 @@ impl Server {
                 // Otherwise, create the session and insert into the map.
                 match Session::new(
                     &args.log,
-                    args.session_metrics.clone(),
-                    args.filter_manager.clone(),
-                    session_key.source.clone(),
-                    endpoint.clone(),
-                    args.send_packets.clone(),
-                    args.session_ttl,
+                    SessionArgs {
+                        metrics: args.session_metrics.clone(),
+                        proxy_metrics: args.proxy_metrics.clone(),
+                        filter_manager: args.filter_manager.clone(),
+                        from: session_key.source.clone(),
+                        dest: endpoint.clone(),
+                        sender: args.send_packets.clone(),
+                        ttl: args.session_ttl,
+                    },
                 )
                 .await
                 {
@@ -457,7 +482,7 @@ impl Server {
     fn run_receive_packet(
         &self,
         socket: Arc<UdpSocket>,
-        mut receive_packets: mpsc::Receiver<Packet>,
+        mut receive_packets: mpsc::Receiver<UpstreamPacket>,
     ) {
         let log = self.log.clone();
         tokio::spawn(async move {
@@ -480,6 +505,7 @@ impl Server {
                 if let Err(err) = socket.send_to(packet.contents(), address).await {
                     error!(log, "Error sending packet"; "dest" => %packet.dest(), "error" => %err);
                 }
+                packet.stop_and_record();
             }
             debug!(log, "Receiver closed");
             Ok::<_, eyre::Error>(())
@@ -506,7 +532,7 @@ mod tests {
     use std::sync::Arc;
     use std::time::{SystemTime, UNIX_EPOCH};
 
-    use prometheus::Registry;
+    use prometheus::{Histogram, HistogramOpts, Registry};
     use slog::info;
     use tokio::sync::mpsc;
     use tokio::time;
@@ -518,7 +544,7 @@ mod tests {
     use crate::config::Builder as ConfigBuilder;
     use crate::endpoint::{Endpoint, Endpoints};
     use crate::filters::{manager::FilterManager, FilterChain};
-    use crate::proxy::sessions::Packet;
+    use crate::proxy::sessions::UpstreamPacket;
     use crate::proxy::Builder;
     use crate::test_utils::{config_with_dummy_endpoint, new_registry, new_test_chain, TestHelper};
 
@@ -656,7 +682,7 @@ mod tests {
             receive_addr.set_ip("127.0.0.1".parse().unwrap());
 
             let session_manager = SessionManager::new(t.log.clone(), shutdown_rx.clone());
-            let (send_packets, mut recv_packets) = mpsc::channel::<Packet>(1);
+            let (send_packets, mut recv_packets) = mpsc::channel::<UpstreamPacket>(1);
 
             let time_increment = 10;
             time::advance(Duration::from_secs(time_increment)).await;
@@ -673,20 +699,23 @@ mod tests {
             )
             .unwrap();
             let filter_manager = FilterManager::fixed(chain.clone());
+            let metrics = Arc::new(Metrics::new(&t.log, registry.clone()));
+            let proxy_metrics = ProxyMetrics::new(&metrics.registry).unwrap();
+
             for worker_id in 0..num_workers {
                 let (packet_tx, packet_rx) = mpsc::channel(num_workers);
                 packet_txs.push(packet_tx);
 
-                let metrics = Arc::new(Metrics::new(&t.log, registry.clone()));
-                let proxy_metrics = ProxyMetrics::new(&metrics.registry).unwrap();
+                let proxy_metrics = proxy_metrics.clone();
                 let session_metrics = SessionMetrics::new(&metrics.registry).unwrap();
+
                 worker_configs.push(DownstreamReceiveWorkerConfig {
                     worker_id,
                     packet_rx,
                     shutdown_rx: shutdown_rx.clone(),
                     receive_config: ProcessDownstreamReceiveConfig {
                         log: t.log.clone(),
-                        proxy_metrics,
+                        proxy_metrics: proxy_metrics.clone(),
                         session_metrics,
                         cluster_manager: cluster_manager.clone(),
                         filter_manager: filter_manager.clone(),
@@ -701,7 +730,11 @@ mod tests {
 
             for packet_tx in packet_txs {
                 packet_tx
-                    .send((receive_addr, msg.as_bytes().to_vec()))
+                    .send(DownstreamPacket {
+                        from: receive_addr.into(),
+                        contents: msg.as_bytes().to_vec(),
+                        timer: proxy_metrics.read_processing_time_seconds.start_timer(),
+                    })
                     .await
                     .unwrap();
             }
@@ -726,6 +759,14 @@ mod tests {
                 .as_secs();
             let diff = session.expiration() - now_secs;
             assert!((5..11).contains(&diff));
+
+            assert_eq!(
+                num_workers as u64,
+                proxy_metrics
+                    .read_processing_time_seconds
+                    .get_sample_count(),
+                "One packet is sent for each worker, and we should have a sample for each"
+            );
 
             Result {
                 msg: result,
@@ -773,7 +814,7 @@ mod tests {
         let endpoint = t.open_socket_and_recv_single_packet().await;
         let socket = t.create_socket().await;
         let session_manager = SessionManager::new(t.log.clone(), shutdown_rx.clone());
-        let (send_packets, mut recv_packets) = mpsc::channel::<Packet>(1);
+        let (send_packets, mut recv_packets) = mpsc::channel::<UpstreamPacket>(1);
 
         let config = Arc::new(config_with_dummy_endpoint().build());
         let server = Builder::from(config).validate().unwrap().build();
@@ -815,15 +856,18 @@ mod tests {
     async fn run_receive_packet() {
         let t = TestHelper::default();
 
+        let histogram = Histogram::with_opts(HistogramOpts::new("test", "test")).unwrap();
+
         let msg = "hello";
 
         // without a filter
-        let (send_packet, recv_packet) = mpsc::channel::<Packet>(1);
+        let (send_packet, recv_packet) = mpsc::channel::<UpstreamPacket>(1);
         let endpoint = t.open_socket_and_recv_single_packet().await;
         if send_packet
-            .send(Packet::new(
+            .send(UpstreamPacket::new(
                 endpoint.socket.local_addr().unwrap().into(),
                 msg.as_bytes().to_vec(),
+                histogram.start_timer(),
             ))
             .await
             .is_err()
@@ -834,5 +878,10 @@ mod tests {
         let server = Builder::from(config).validate().unwrap().build();
         server.run_receive_packet(endpoint.socket, recv_packet);
         assert_eq!(msg, endpoint.packet_rx.await.unwrap());
+        assert_eq!(
+            1_u64,
+            histogram.get_sample_count(),
+            "one packet sent, so there should be one sample"
+        );
     }
 }

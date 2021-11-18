@@ -120,12 +120,18 @@ mod tests {
     use prometheus::Registry;
     use tokio::sync::{mpsc, watch, RwLock};
 
-    use crate::endpoint::{Endpoint, EndpointAddress};
-    use crate::filters::{manager::FilterManager, FilterChain};
-    use crate::proxy::sessions::metrics::Metrics;
-    use crate::proxy::sessions::session_manager::Sessions;
-    use crate::proxy::sessions::{Packet, Session, SessionKey};
-    use crate::test_utils::TestHelper;
+    use crate::{
+        endpoint::{Endpoint, EndpointAddress},
+        filters::{manager::FilterManager, FilterChain},
+        proxy::{
+            server::metrics::Metrics as ProxyMetrics,
+            sessions::{
+                metrics::Metrics, session::SessionArgs, session_manager::Sessions, Session,
+                SessionKey, UpstreamPacket,
+            },
+        },
+        test_utils::TestHelper,
+    };
 
     use super::SessionManager;
 
@@ -141,7 +147,7 @@ mod tests {
         let t = TestHelper::default();
         let sessions = Arc::new(RwLock::new(HashMap::new()));
         let (from, to) = address_pair();
-        let (send, _recv) = mpsc::channel::<Packet>(1);
+        let (send, _recv) = mpsc::channel::<UpstreamPacket>(1);
         let (_shutdown_tx, shutdown_rx) = watch::channel(());
 
         let endpoint = Endpoint::new(to.clone());
@@ -168,12 +174,17 @@ mod tests {
                 key.clone(),
                 Session::new(
                     &t.log,
-                    Metrics::new(&registry).unwrap(),
-                    FilterManager::fixed(Arc::new(FilterChain::new(vec![], &registry).unwrap())),
-                    from,
-                    endpoint.clone(),
-                    send,
-                    ttl,
+                    SessionArgs {
+                        metrics: Metrics::new(&registry).unwrap(),
+                        proxy_metrics: ProxyMetrics::new(&registry).unwrap(),
+                        filter_manager: FilterManager::fixed(Arc::new(
+                            FilterChain::new(vec![], &registry).unwrap(),
+                        )),
+                        from,
+                        dest: endpoint.clone(),
+                        sender: send,
+                        ttl,
+                    },
                 )
                 .await
                 .unwrap(),
@@ -215,7 +226,7 @@ mod tests {
         let t = TestHelper::default();
         let mut sessions: Sessions = Arc::new(RwLock::new(HashMap::new()));
         let (from, to) = address_pair();
-        let (send, _recv) = mpsc::channel::<Packet>(1);
+        let (send, _recv) = mpsc::channel::<UpstreamPacket>(1);
         let endpoint = Endpoint::new(to.clone());
 
         let key = SessionKey::from((from.clone(), to.clone()));
@@ -228,12 +239,17 @@ mod tests {
                 key.clone(),
                 Session::new(
                     &t.log,
-                    Metrics::new(&registry).unwrap(),
-                    FilterManager::fixed(Arc::new(FilterChain::new(vec![], &registry).unwrap())),
-                    from,
-                    endpoint.clone(),
-                    send,
-                    ttl,
+                    SessionArgs {
+                        metrics: Metrics::new(&registry).unwrap(),
+                        proxy_metrics: ProxyMetrics::new(&registry).unwrap(),
+                        filter_manager: FilterManager::fixed(Arc::new(
+                            FilterChain::new(vec![], &registry).unwrap(),
+                        )),
+                        from,
+                        dest: endpoint.clone(),
+                        sender: send,
+                        ttl,
+                    },
                 )
                 .await
                 .unwrap(),

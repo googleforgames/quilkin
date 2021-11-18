@@ -14,18 +14,41 @@
  * limitations under the License.
  */
 
-use crate::metrics::{opts, CollectorExt};
 use prometheus::core::{AtomicU64, GenericCounter};
-use prometheus::{IntCounterVec, Registry, Result as MetricsResult};
+use prometheus::{
+    exponential_buckets, Histogram, HistogramVec, IntCounterVec, Registry, Result as MetricsResult,
+};
+
+use crate::metrics::{
+    histogram_opts, opts, CollectorExt, EVENT_LABEL, EVENT_READ_LABEL_VALUE,
+    EVENT_WRITE_LABEL_VALUE,
+};
 
 #[derive(Clone)]
 pub struct Metrics {
     pub packets_dropped_no_endpoints: GenericCounter<AtomicU64>,
+    pub read_processing_time_seconds: Histogram,
+    pub write_processing_time_seconds: Histogram,
 }
 
 impl Metrics {
     pub fn new(registry: &Registry) -> MetricsResult<Self> {
         let subsystem = "proxy";
+        let event_labels = &[EVENT_LABEL];
+
+        let processing_time = HistogramVec::new(
+            histogram_opts(
+                "processing_time_seconds",
+                subsystem,
+                "Total processing time for a packet",
+                // Less than a millisecond is good, so starting at a quarter of that.
+                // Any processing that goes over a second is way too long, so ending there.
+                Some(exponential_buckets(0.00025, 2.0, 13).unwrap()),
+            ),
+            event_labels,
+        )?
+        .register_if_not_exists(registry)?;
+
         Ok(Self {
             packets_dropped_no_endpoints: IntCounterVec::new(
                 opts(
@@ -37,6 +60,10 @@ impl Metrics {
             )?
             .register_if_not_exists(registry)?
             .get_metric_with_label_values(&["NoConfiguredEndpoints"])?,
+            read_processing_time_seconds: processing_time
+                .get_metric_with_label_values(&[EVENT_READ_LABEL_VALUE])?,
+            write_processing_time_seconds: processing_time
+                .get_metric_with_label_values(&[EVENT_WRITE_LABEL_VALUE])?,
         })
     }
 }

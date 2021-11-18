@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+use prometheus::HistogramTimer;
 use std::{
     sync::{
         atomic::{AtomicU64, Ordering},
@@ -33,7 +34,10 @@ use tokio::{
 use crate::{
     endpoint::{Endpoint, EndpointAddress},
     filters::{manager::SharedFilterManager, Filter, WriteContext},
-    proxy::sessions::{error::Error, metrics::Metrics},
+    proxy::{
+        server::metrics::Metrics as ProxyMetrics,
+        sessions::{error::Error, metrics::Metrics},
+    },
     utils::debug,
 };
 
@@ -43,6 +47,7 @@ type Result<T> = std::result::Result<T, Error>;
 pub struct Session {
     log: Logger,
     metrics: Metrics,
+    proxy_metrics: ProxyMetrics,
     filter_manager: SharedFilterManager,
     /// created_at is time at which the session was created
     created_at: Instant,
@@ -80,17 +85,23 @@ struct ReceivedPacketContext<'a> {
     endpoint: &'a Endpoint,
     from: EndpointAddress,
     to: EndpointAddress,
+    timer: HistogramTimer,
 }
 
-/// Packet represents a packet that needs to go somewhere
-pub struct Packet {
+/// Represents a data packet received by an Endpoint to this Session.
+pub struct UpstreamPacket {
     dest: EndpointAddress,
     contents: Vec<u8>,
+    timer: HistogramTimer,
 }
 
-impl Packet {
-    pub fn new(dest: EndpointAddress, contents: Vec<u8>) -> Packet {
-        Packet { dest, contents }
+impl UpstreamPacket {
+    pub fn new(dest: EndpointAddress, contents: Vec<u8>, timer: HistogramTimer) -> UpstreamPacket {
+        UpstreamPacket {
+            dest,
+            contents,
+            timer,
+        }
     }
 
     pub fn dest(&self) -> &EndpointAddress {
@@ -100,36 +111,44 @@ impl Packet {
     pub fn contents(&self) -> &[u8] {
         &self.contents
     }
+
+    /// stop and record the stored [HistogramTimer]
+    pub fn stop_and_record(self) {
+        self.timer.stop_and_record();
+    }
+}
+
+pub struct SessionArgs {
+    pub metrics: Metrics,
+    pub proxy_metrics: ProxyMetrics,
+    pub filter_manager: SharedFilterManager,
+    pub from: EndpointAddress,
+    pub dest: Endpoint,
+    pub sender: mpsc::Sender<UpstreamPacket>,
+    pub ttl: Duration,
 }
 
 impl Session {
     /// new creates a new Session, and starts the process of receiving udp sockets
     /// from its ephemeral port from endpoint(s)
-    pub async fn new(
-        base: &Logger,
-        metrics: Metrics,
-        filter_manager: SharedFilterManager,
-        from: EndpointAddress,
-        dest: Endpoint,
-        sender: mpsc::Sender<Packet>,
-        ttl: Duration,
-    ) -> Result<Self> {
+    pub async fn new(base: &Logger, args: SessionArgs) -> Result<Self> {
         let log = base
-            .new(o!("source" => "proxy::Session", "from" => from.clone(), "dest_address" => dest.address.clone()));
+            .new(o!("source" => "proxy::Session", "from" => args.from.clone(), "dest_address" => args.dest.address.clone()));
         let addr = (std::net::Ipv4Addr::UNSPECIFIED, 0);
         let socket = Arc::new(UdpSocket::bind(addr).await.map_err(Error::BindUdpSocket)?);
         let (shutdown_tx, shutdown_rx) = watch::channel::<()>(());
 
         let expiration = Arc::new(AtomicU64::new(0));
-        Self::do_update_expiration(&expiration, ttl)?;
+        Self::do_update_expiration(&expiration, args.ttl)?;
 
         let s = Session {
-            metrics,
+            metrics: args.metrics,
+            proxy_metrics: args.proxy_metrics,
             log,
-            filter_manager,
+            filter_manager: args.filter_manager,
             socket: socket.clone(),
-            from,
-            dest,
+            from: args.from,
+            dest: args.dest,
             created_at: Instant::now(),
             expiration,
             shutdown_tx,
@@ -138,7 +157,7 @@ impl Session {
 
         s.metrics.sessions_total.inc();
         s.metrics.active_sessions.inc();
-        s.run(ttl, socket, sender, shutdown_rx);
+        s.run(args.ttl, socket, args.sender, shutdown_rx);
         Ok(s)
     }
 
@@ -147,7 +166,7 @@ impl Session {
         &self,
         ttl: Duration,
         socket: Arc<UdpSocket>,
-        mut sender: mpsc::Sender<Packet>,
+        mut sender: mpsc::Sender<UpstreamPacket>,
         mut shutdown_rx: watch::Receiver<()>,
     ) {
         let log = self.log.clone();
@@ -156,6 +175,7 @@ impl Session {
         let filter_manager = self.filter_manager.clone();
         let endpoint = self.dest.clone();
         let metrics = self.metrics.clone();
+        let proxy_metrics = self.proxy_metrics.clone();
         tokio::spawn(async move {
             let mut buf: Vec<u8> = vec![0; 65535];
             loop {
@@ -182,6 +202,7 @@ impl Session {
                                         endpoint: &endpoint,
                                         from: recv_addr.into(),
                                         to: from.clone(),
+                                        timer: proxy_metrics.write_processing_time_seconds.start_timer(),
                                     }).await
                             }
                         };
@@ -212,7 +233,7 @@ impl Session {
     async fn process_recv_packet(
         log: &Logger,
         metrics: &Metrics,
-        sender: &mut mpsc::Sender<Packet>,
+        sender: &mut mpsc::Sender<UpstreamPacket>,
         expiration: &Arc<AtomicU64>,
         ttl: Duration,
         packet_ctx: ReceivedPacketContext<'_>,
@@ -223,6 +244,7 @@ impl Session {
             endpoint,
             from,
             to,
+            timer,
         } = packet_ctx;
 
         trace!(log, "Received packet"; "from" => from.clone(),
@@ -243,7 +265,10 @@ impl Session {
             to.clone(),
             packet.to_vec(),
         )) {
-            if let Err(err) = sender.send(Packet::new(to, response.contents)).await {
+            if let Err(err) = sender
+                .send(UpstreamPacket::new(to, response.contents, timer))
+                .await
+            {
                 metrics.rx_errors_total.inc();
                 error!(log, "Error sending packet to channel"; "error" => %err);
             }
@@ -336,9 +361,9 @@ mod tests {
         time::{Duration, SystemTime, UNIX_EPOCH},
     };
 
-    use super::{Metrics, Packet, Session};
+    use super::{Metrics, ProxyMetrics, Session, UpstreamPacket};
 
-    use prometheus::Registry;
+    use prometheus::{Histogram, HistogramOpts, Registry};
     use tokio::time::timeout;
 
     use crate::filters::FilterChain;
@@ -346,7 +371,7 @@ mod tests {
 
     use crate::endpoint::{Endpoint, EndpointAddress};
     use crate::filters::manager::FilterManager;
-    use crate::proxy::sessions::session::ReceivedPacketContext;
+    use crate::proxy::sessions::session::{ReceivedPacketContext, SessionArgs};
     use tokio::sync::mpsc;
 
     #[tokio::test]
@@ -355,17 +380,22 @@ mod tests {
         let socket = t.create_socket().await;
         let addr: EndpointAddress = socket.local_addr().unwrap().into();
         let endpoint = Endpoint::new(addr.clone());
-        let (send_packet, mut recv_packet) = mpsc::channel::<Packet>(5);
+        let (send_packet, mut recv_packet) = mpsc::channel::<UpstreamPacket>(5);
         let registry = Registry::default();
 
         let sess = Session::new(
             &t.log,
-            Metrics::new(&registry).unwrap(),
-            FilterManager::fixed(Arc::new(FilterChain::new(vec![], &registry).unwrap())),
-            addr.clone(),
-            endpoint,
-            send_packet,
-            Duration::from_secs(20),
+            SessionArgs {
+                metrics: Metrics::new(&registry).unwrap(),
+                proxy_metrics: ProxyMetrics::new(&registry).unwrap(),
+                filter_manager: FilterManager::fixed(Arc::new(
+                    FilterChain::new(vec![], &registry).unwrap(),
+                )),
+                from: addr.clone(),
+                dest: endpoint,
+                sender: send_packet,
+                ttl: Duration::from_secs(20),
+            },
         )
         .await
         .unwrap();
@@ -402,7 +432,7 @@ mod tests {
         let msg = "hello";
 
         // without a filter
-        let (sender, _) = mpsc::channel::<Packet>(1);
+        let (sender, _) = mpsc::channel::<UpstreamPacket>(1);
         let ep = t.open_socket_and_recv_single_packet().await;
         let addr: EndpointAddress = ep.socket.local_addr().unwrap().into();
         let endpoint = Endpoint::new(addr.clone());
@@ -410,12 +440,17 @@ mod tests {
 
         let session = Session::new(
             &t.log,
-            Metrics::new(&Registry::default()).unwrap(),
-            FilterManager::fixed(Arc::new(FilterChain::new(vec![], &registry).unwrap())),
-            addr,
-            endpoint.clone(),
-            sender,
-            Duration::from_millis(1000),
+            SessionArgs {
+                metrics: Metrics::new(&registry).unwrap(),
+                proxy_metrics: ProxyMetrics::new(&registry).unwrap(),
+                filter_manager: FilterManager::fixed(Arc::new(
+                    FilterChain::new(vec![], &registry).unwrap(),
+                )),
+                from: addr,
+                dest: endpoint.clone(),
+                sender,
+                ttl: Duration::from_millis(1000),
+            },
         )
         .await
         .unwrap();
@@ -427,11 +462,12 @@ mod tests {
     async fn process_recv_packet() {
         let t = TestHelper::default();
         let registry = Registry::default();
+        let histogram = Histogram::with_opts(HistogramOpts::new("test", "test")).unwrap();
 
         let chain = Arc::new(FilterChain::new(vec![], &registry).unwrap());
         let endpoint = Endpoint::new("127.0.1.1:80".parse().unwrap());
         let dest: EndpointAddress = (Ipv4Addr::LOCALHOST, 88).into();
-        let (mut sender, mut receiver) = mpsc::channel::<Packet>(10);
+        let (mut sender, mut receiver) = mpsc::channel::<UpstreamPacket>(10);
         let expiration = Arc::new(AtomicU64::new(
             SystemTime::now()
                 .duration_since(UNIX_EPOCH)
@@ -454,6 +490,7 @@ mod tests {
                 endpoint: &endpoint,
                 from: endpoint.address.clone(),
                 to: dest.clone(),
+                timer: histogram.start_timer(),
             },
         )
         .await;
@@ -488,6 +525,7 @@ mod tests {
                 endpoint: &endpoint,
                 from: endpoint.address.clone(),
                 to: dest.clone(),
+                timer: histogram.start_timer(),
             },
         )
         .await;
@@ -510,17 +548,22 @@ mod tests {
         let ep = t.open_socket_and_recv_single_packet().await;
         let addr: EndpointAddress = ep.socket.local_addr().unwrap().into();
         let endpoint = Endpoint::new(addr.clone());
-        let (send_packet, _) = mpsc::channel::<Packet>(5);
+        let (send_packet, _) = mpsc::channel::<UpstreamPacket>(5);
         let registry = Registry::default();
 
         let session = Session::new(
             &t.log,
-            Metrics::new(&Registry::default()).unwrap(),
-            FilterManager::fixed(Arc::new(FilterChain::new(vec![], &registry).unwrap())),
-            addr,
-            endpoint,
-            send_packet,
-            Duration::from_secs(10),
+            SessionArgs {
+                metrics: Metrics::new(&registry).unwrap(),
+                proxy_metrics: ProxyMetrics::new(&registry).unwrap(),
+                filter_manager: FilterManager::fixed(Arc::new(
+                    FilterChain::new(vec![], &registry).unwrap(),
+                )),
+                from: addr,
+                dest: endpoint,
+                sender: send_packet,
+                ttl: Duration::from_secs(10),
+            },
         )
         .await
         .unwrap();
@@ -533,18 +576,23 @@ mod tests {
     async fn send_to_metrics() {
         let t = TestHelper::default();
 
-        let (sender, _) = mpsc::channel::<Packet>(1);
+        let (sender, _) = mpsc::channel::<UpstreamPacket>(1);
         let endpoint = t.open_socket_and_recv_single_packet().await;
         let addr: EndpointAddress = endpoint.socket.local_addr().unwrap().into();
         let registry = Registry::default();
         let session = Session::new(
             &t.log,
-            Metrics::new(&registry).unwrap(),
-            FilterManager::fixed(Arc::new(FilterChain::new(vec![], &registry).unwrap())),
-            addr.clone(),
-            Endpoint::new(addr),
-            sender,
-            Duration::from_secs(10),
+            SessionArgs {
+                metrics: Metrics::new(&registry).unwrap(),
+                proxy_metrics: ProxyMetrics::new(&registry).unwrap(),
+                filter_manager: FilterManager::fixed(Arc::new(
+                    FilterChain::new(vec![], &registry).unwrap(),
+                )),
+                from: addr.clone(),
+                dest: Endpoint::new(addr),
+                sender,
+                ttl: Duration::from_secs(10),
+            },
         )
         .await
         .unwrap();
@@ -558,18 +606,23 @@ mod tests {
     #[tokio::test]
     async fn session_drop_metrics() {
         let t = TestHelper::default();
-        let (send_packet, _) = mpsc::channel::<Packet>(5);
+        let (send_packet, _) = mpsc::channel::<UpstreamPacket>(5);
         let endpoint = t.open_socket_and_recv_single_packet().await;
         let addr: EndpointAddress = endpoint.socket.local_addr().unwrap().into();
         let registry = Registry::default();
         let session = Session::new(
             &t.log,
-            Metrics::new(&registry).unwrap(),
-            FilterManager::fixed(Arc::new(FilterChain::new(vec![], &registry).unwrap())),
-            addr.clone(),
-            Endpoint::new(addr),
-            send_packet,
-            Duration::from_secs(10),
+            SessionArgs {
+                metrics: Metrics::new(&registry).unwrap(),
+                proxy_metrics: ProxyMetrics::new(&registry).unwrap(),
+                filter_manager: FilterManager::fixed(Arc::new(
+                    FilterChain::new(vec![], &registry).unwrap(),
+                )),
+                from: addr.clone(),
+                dest: Endpoint::new(addr),
+                sender: send_packet,
+                ttl: Duration::from_secs(10),
+            },
         )
         .await
         .unwrap();
