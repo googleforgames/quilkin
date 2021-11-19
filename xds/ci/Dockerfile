@@ -26,7 +26,8 @@ COPY pkg/ pkg/
 
 RUN go build -o /server cmd/controller.go
 
-FROM alpine:latest
+FROM gcr.io/distroless/static:nonroot
+
 WORKDIR /app
 COPY --from=0 /server ./
 
