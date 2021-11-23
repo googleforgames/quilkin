@@ -38,7 +38,7 @@ impl Metrics {
 
         let processing_time = HistogramVec::new(
             histogram_opts(
-                "processing_time_seconds",
+                "packet_processing_duration_seconds",
                 subsystem,
                 "Total processing time for a packet",
                 // Less than a millisecond is good, so starting at a quarter of that.
