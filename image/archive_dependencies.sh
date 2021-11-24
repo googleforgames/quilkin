@@ -31,10 +31,10 @@ rm dependencies-src.zip || true
 dependencies=("slog-json")
 
 zip="$(pwd)/dependencies-src.zip"
+
+echo "Archiving dependencies to: $zip"
 pushd "$CARGO_HOME/registry/src"
 for d in "${dependencies[@]}"; do
-  path=$(find . -type d -name "$d-*")
-  echo "Archiving $d:$path"
-  zip -rv "$zip" "$path"
+  find . -type d -name "$d-*" | xargs -I {} zip -rv "$zip" "{}"
 done
 popd
