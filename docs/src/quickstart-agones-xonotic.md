@@ -82,7 +82,7 @@ Run the following:
 kubectl apply -f https://raw.githubusercontent.com/googleforgames/quilkin/main/examples/agones-xonotic/sidecar-compress.yaml
 ```
 
-This will implement the [Compress](./extensions/filters/compress.md) filter in our Quilkin sidecar proxy in our new 
+This will implement the [Compress](./filters/compress.md) filter in our Quilkin sidecar proxy in our new 
 Fleet.
 
 Now you can run `kubectl get gameservers` until all your Agones `GameServers` are marked as `Ready` like so:
@@ -133,4 +133,4 @@ kubectl delete -f https://raw.githubusercontent.com/googleforgames/quilkin/main/
 ## What's Next?
 
 * Have a look at the [examples](https://github.com/googleforgames/quilkin/blob/main/examples) folder for configuration and usage examples.
-* Explore the [proxy configuration reference](./docs/proxy-configuration.md) for other configuration options. 
+* Explore the [proxy configuration reference](./proxy-configuration.md) for other configuration options. 

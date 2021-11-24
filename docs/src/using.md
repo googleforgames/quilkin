@@ -38,7 +38,7 @@ Whereas, if you need debugging logging, use the following tag:
 Mount your [configuration file](./proxy-configuration.md) at `/etc/quilkin/quilkin.yaml` to configure the Quilkin 
 instance inside the container.
 
-A [default configuration](https://github.com/googleforgames/quilkin/blob/examples/agones-sidecar/build/release/quilkin.yaml)
+A [default configuration](https://github.com/googleforgames/quilkin/blob/main/image/quilkin.yaml)
 is provided, such the container will start without a new configuration file, but it is configured to point to 
 `127.0.0.1:0` as a no-op configuration.
 

@@ -58,9 +58,9 @@ The proxy exposes the following general metrics (See the metrics sub-sections fo
 
 [sessions-doc]: ./session.md
 [session-metrics]: ./session.md#metrics
-[filters-doc]: ./extensions/filters/filters.md
+[filters-doc]: ./filters.md
 [endpoint]: #upstream-endpoint
 [proxy-configuration]: ./proxy-configuration.md
 [xds-endpoint-metadata]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint_components.proto#envoy-v3-api-field-config-endpoint-v3-lbendpoint-metadata
 [dynamic-configuration-doc]: ./xds.md
-[TokenRouter]: ./extensions/filters/token_router.md
+[TokenRouter]: ./filters/token_router.md
