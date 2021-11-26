@@ -283,7 +283,7 @@ packets that are incoming.</p>
 <p>Run the following:</p>
 <pre><code class="language-shell">kubectl apply -f https://raw.githubusercontent.com/googleforgames/quilkin/main/examples/agones-xonotic/sidecar-compress.yaml
 </code></pre>
-<p>This will implement the <a href="./extensions/filters/compress.html">Compress</a> filter in our Quilkin sidecar proxy in our new 
+<p>This will implement the <a href="./filters/compress.html">Compress</a> filter in our Quilkin sidecar proxy in our new 
 Fleet.</p>
 <p>Now you can run <code>kubectl get gameservers</code> until all your Agones <code>GameServers</code> are marked as <code>Ready</code> like so:</p>
 <pre><code class="language-shell">$ kubectl get gameservers
@@ -318,7 +318,7 @@ edit either!</p>
 <h2 id="whats-next"><a class="header" href="#whats-next">What's Next?</a></h2>
 <ul>
 <li>Have a look at the <a href="https://github.com/googleforgames/quilkin/blob/main/examples">examples</a> folder for configuration and usage examples.</li>
-<li>Explore the <a href="./docs/proxy-configuration.html">proxy configuration reference</a> for other configuration options. </li>
+<li>Explore the <a href="./proxy-configuration.html">proxy configuration reference</a> for other configuration options. </li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="using-quilkin"><a class="header" href="#using-quilkin">Using Quilkin</a></h1>
 <p>There are two choices for running Quilkin:</p>
@@ -345,7 +345,7 @@ each <a href="https://github.com/googleforgames/quilkin/releases">release</a>.</
 <p><code>us-docker.pkg.dev/quilkin/release/quilkin:{version}-debug</code></p>
 <p>Mount your <a href="./proxy-configuration.html">configuration file</a> at <code>/etc/quilkin/quilkin.yaml</code> to configure the Quilkin 
 instance inside the container.</p>
-<p>A <a href="https://github.com/googleforgames/quilkin/blob/examples/agones-sidecar/build/release/quilkin.yaml">default configuration</a>
+<p>A <a href="https://github.com/googleforgames/quilkin/blob/main/image/quilkin.yaml">default configuration</a>
 is provided, such the container will start without a new configuration file, but it is configured to point to 
 <code>127.0.0.1:0</code> as a no-op configuration.</p>
 <p>What's next:</p>
@@ -428,8 +428,8 @@ It is represented by an IP address and port. An upstream endpoint can optionally
 <p>Arbitrary key value pairs that are associated with the endpoint.
 These are visible to Filters when processing packets and can be used to provide more context about endpoints (e.g whether or not to route a packet to an endpoint).
 Keys must be of type string otherwise the configuration is rejected.</p>
-<p>Metadata associated with an endpoint contain arbitrary key value pairs which <a href="./extensions/filters/filters.html">Filters</a> can consult when processing packets (e.g they can contain information that determine whether or not to route a particular packet to an endpoint).</p>
-<p>In fact, the tokens associated with an endpoint are simply a special piece of metadata well known to Quilkin and is used by the built-in <a href="./extensions/filters/token_router.html">TokenRouter</a> filter to route packets.
+<p>Metadata associated with an endpoint contain arbitrary key value pairs which <a href="./filters.html">Filters</a> can consult when processing packets (e.g they can contain information that determine whether or not to route a particular packet to an endpoint).</p>
+<p>In fact, the tokens associated with an endpoint are simply a special piece of metadata well known to Quilkin and is used by the built-in <a href="./filters/token_router.html">TokenRouter</a> filter to route packets.
 Such well known values are placed within an object in the endpoint metadata, under the special key <code>quilkin.dev</code>. Currently, only the <code>tokens</code> entry is in use.</p>
 <p>As an example, the following shows the configuration for an endpoint with its metadata:</p>
 <pre><code class="language-yaml">static:
@@ -588,7 +588,9 @@ definitions:
 <li>Compress the packet.</li>
 <li>Do not forward (drop) the packet if its compressed length is over 512 bytes.</li>
 </ul>
-<p>We would create a filter corresponding to each step either by leveraging any <a href="filters.html#built-in-filters">existing filters</a> that do what we want or <a href="filters.html#writing-filters">writing one ourselves</a> and connect them to form the following filter chain:</p>
+<p>We would create a filter corresponding to each step either by leveraging any <a href="filters.html#built-in-filters">existing filters</a>
+that do what we want or <a href="./filters/writing_custom_filters.html">writing one ourselves</a> and connect them to form the 
+following filter chain:</p>
 <pre><code class="language-bash">append | compress | drop
 </code></pre>
 <p>When Quilkin consults our filter chain, it feeds the received packet into <code>append</code> and forwards the packet it receives (if any) from <code>drop</code> - i.e the output of <code>append</code> becomes the <code>input</code> into <code>compress</code> and so on in that order.</p>
@@ -662,7 +664,7 @@ static:
 <h3 id="filter-dynamic-metadata"><a class="header" href="#filter-dynamic-metadata">Filter Dynamic Metadata</a></h3>
 <p>A filter within the filter chain can share data within another filter further along in the filter chain by propagating the desired data alongside the packet being processed.
 This enables sharing dynamic information at runtime, e.g information about the current packet that might be useful to other filters that process that packet.</p>
-<p>At packet processing time each packet is associated with <em>filter dynamic metadata</em> (a set of key-value pairs). Each key is a unique string while its value is an associated <a href="https://docs.rs/quilkin/metadata/enum.Value.html"><code>quilkin::metadata::Value</code></a>.
+<p>At packet processing time each packet is associated with <em>filter dynamic metadata</em> (a set of key-value pairs). Each key is a unique string while its value is an associated <a href="../api/quilkin/metadata/enum.Value.html"><code>quilkin::metadata::Value</code></a>.
 When a filter processes a packet, it can choose to consult the associated dynamic metadata for more information or itself add/update or remove key-values from the set.</p>
 <p>As an example, the built-in <a href="./filters/capture_bytes.html">CaptureBytes</a> filter is one such filter that populates a packet's filter metadata.
 <a href="./filters/capture_bytes.html">CaptureBytes</a> extracts information (a configurable byte sequence) from each packet and appends it to the packet's dynamic metadata for other filters to leverage.
@@ -704,7 +706,7 @@ required: [ 'name', 'config' ]
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="capturebytes"><a class="header" href="#capturebytes">CaptureBytes</a></h1>
 <p>The <code>CaptureBytes</code> filter's job is to find a series of bytes within a packet, and capture it into
-<a href="filters/./filter.html#filter-dynamic-metadata">Filter Dynamic Metadata</a>, so that it can be utilised by filters further
+<a href="filters/../filters.html#filter-dynamic-metadata">Filter Dynamic Metadata</a>, so that it can be utilised by filters further
 down the chain.</p>
 <p>This is often used as a way of retrieving authentication tokens from a packet, and used in combination with
 <a href="filters/./concatenate_bytes.html">ConcatenateBytes</a> and 
@@ -847,7 +849,7 @@ sent to the local listening port and then compressed when heading up to a dedica
 decompressed when traffic is returned from the dedicated game server before being handed back to game client. </p>
 <blockquote>
 <p>It is worth noting that since the Compress filter modifies the <em>entire packet</em>, it is worth paying special
-attention to the order it is placed in your <a href="filters/filters.html">Filter configuration</a>. Most of the time it will likely be
+attention to the order it is placed in your <a href="filters/../filters.html">Filter configuration</a>. Most of the time it will likely be
 the first or last Filter configured to ensure it is compressing the entire set of data being sent.</p>
 </blockquote>
 <h3 id="configuration-options-a-hreffiltersapiquilkinfilterscompressstructconfightmlrust-doca"><a class="header" href="#configuration-options-a-hreffiltersapiquilkinfilterscompressstructconfightmlrust-doca">Configuration Options (<a href="filters/../../api/quilkin/filters/compress/struct.Config.html">Rust Doc</a>)</a></h3>
@@ -1043,8 +1045,8 @@ A counter over the total number of packets that have exceeded the configured max
 <div style="break-before: page; page-break-before: always;"></div><h1 id="tokenrouter"><a class="header" href="#tokenrouter">TokenRouter</a></h1>
 <p>The <code>TokenRouter</code> filter's job is to provide a mechanism to declare which Endpoints a packet should be sent to.</p>
 <p>This Filter provides this functionality by comparing a byte array token found in the
-<a href="filters/./filters.html#filter-dynamic-metadata">Filter Dynamic Metadata</a> from a previous Filter, and comparing it to
-<a href="filters/../../proxy.html#upstream-endpoint">Endpoint's tokens</a>, and sending packets to those Endpoints only if there is a match.</p>
+<a href="filters/../filters.html#filter-dynamic-metadata">Filter Dynamic Metadata</a> from a previous Filter, and comparing it to
+<a href="filters/../proxy.html#upstream-endpoint">Endpoint's tokens</a>, and sending packets to those Endpoints only if there is a match.</p>
 <h4 id="filter-name-6"><a class="header" href="#filter-name-6">Filter name</a></h4>
 <pre><code class="language-text">quilkin.extensions.filters.token_router.v1alpha1.TokenRouter
 </code></pre>
@@ -1716,8 +1718,8 @@ with at the time of invocation.</p>
 change depending on the underlying hardware, number of filters, configurations and more.</p>
 <p>We highly recommend you run your own load tests on your platform and configuration, matching your production 
 workload and configuration as close as possible. </p>
-<p>Our <a href="https://iperf.fr/">iperf3</a> based performance test in the <a href="../examples/iperf3">examples' folder</a> is a good 
-starting point.</p>
+<p>Our <a href="https://iperf.fr/">iperf3</a> based performance test in the
+<a href="https://github.com/googleforgames/quilkin/tree/main/examples/iperf3">examples' folder</a> is a good starting point.</p>
 <p>Since this is still an alpha project, we have plans on investigating further performance improvements in upcoming 
 releases, both from an optimisation and observability perspective as well.</p>
 <h2 id="can-i-integrate-quilkin-with-c-code"><a class="header" href="#can-i-integrate-quilkin-with-c-code">Can I integrate Quilkin with C++ code?</a></h2>

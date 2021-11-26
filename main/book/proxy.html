@@ -143,8 +143,8 @@ It is represented by an IP address and port. An upstream endpoint can optionally
 <p>Arbitrary key value pairs that are associated with the endpoint.
 These are visible to Filters when processing packets and can be used to provide more context about endpoints (e.g whether or not to route a packet to an endpoint).
 Keys must be of type string otherwise the configuration is rejected.</p>
-<p>Metadata associated with an endpoint contain arbitrary key value pairs which <a href="./extensions/filters/filters.html">Filters</a> can consult when processing packets (e.g they can contain information that determine whether or not to route a particular packet to an endpoint).</p>
-<p>In fact, the tokens associated with an endpoint are simply a special piece of metadata well known to Quilkin and is used by the built-in <a href="./extensions/filters/token_router.html">TokenRouter</a> filter to route packets.
+<p>Metadata associated with an endpoint contain arbitrary key value pairs which <a href="./filters.html">Filters</a> can consult when processing packets (e.g they can contain information that determine whether or not to route a particular packet to an endpoint).</p>
+<p>In fact, the tokens associated with an endpoint are simply a special piece of metadata well known to Quilkin and is used by the built-in <a href="./filters/token_router.html">TokenRouter</a> filter to route packets.
 Such well known values are placed within an object in the endpoint metadata, under the special key <code>quilkin.dev</code>. Currently, only the <code>tokens</code> entry is in use.</p>
 <p>As an example, the following shows the configuration for an endpoint with its metadata:</p>
 <pre><code class="language-yaml">static:
