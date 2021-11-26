@@ -13,7 +13,9 @@ As an example, say we would like to perform the following steps in our processin
 * Compress the packet.
 * Do not forward (drop) the packet if its compressed length is over 512 bytes.
 
-We would create a filter corresponding to each step either by leveraging any [existing filters](#built-in-filters) that do what we want or [writing one ourselves](#writing-filters) and connect them to form the following filter chain:
+We would create a filter corresponding to each step either by leveraging any [existing filters](#built-in-filters)
+that do what we want or [writing one ourselves](./filters/writing_custom_filters.md) and connect them to form the 
+following filter chain:
 
 ```bash
 append | compress | drop
@@ -134,4 +136,4 @@ required: [ 'name', 'config' ]
 [TokenRouter]: ./filters/token_router.md
 [Debug]: ./filters/debug.md
 [LocalRateLimit]: ./filters/local_rate_limit.md
-[`quilkin::metadata::Value`]: https://docs.rs/quilkin/metadata/enum.Value.html
+[`quilkin::metadata::Value`]: ../api/quilkin/metadata/enum.Value.html

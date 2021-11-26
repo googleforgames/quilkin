@@ -108,5 +108,5 @@ static:
 On the game client side the [ConcatenateBytes](./concatenate_bytes.md) filter could also be used to add authentication
 tokens to outgoing packets.
 
-[filter-dynamic-metadata]: ./filters.md#filter-dynamic-metadata
-[endpoint-tokens]: ../../proxy.md#upstream-endpoint
+[filter-dynamic-metadata]: ../filters.md#filter-dynamic-metadata
+[endpoint-tokens]: ../proxy.md#upstream-endpoint

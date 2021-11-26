@@ -10,8 +10,8 @@ change depending on the underlying hardware, number of filters, configurations a
 We highly recommend you run your own load tests on your platform and configuration, matching your production 
 workload and configuration as close as possible. 
 
-Our [iperf3](https://iperf.fr/) based performance test in the [examples' folder](../examples/iperf3) is a good 
-starting point.
+Our [iperf3](https://iperf.fr/) based performance test in the
+[examples' folder](https://github.com/googleforgames/quilkin/tree/main/examples/iperf3) is a good starting point.
 
 Since this is still an alpha project, we have plans on investigating further performance improvements in upcoming 
 releases, both from an optimisation and observability perspective as well.

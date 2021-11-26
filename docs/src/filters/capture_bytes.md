@@ -69,5 +69,4 @@ properties:
   A counter of the total number of packets that have been dropped due to their length being less than the configured
   `size`.
 
-
-[filter-dynamic-metadata]: ./filter.md#filter-dynamic-metadata
+[filter-dynamic-metadata]: ../filters.md#filter-dynamic-metadata
