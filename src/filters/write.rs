@@ -14,9 +14,12 @@
  * limitations under the License.
  */
 
-use std::{any::Any, collections::HashMap};
+use std::collections::HashMap;
 
-use crate::endpoint::{Endpoint, EndpointAddress};
+use crate::{
+    endpoint::{Endpoint, EndpointAddress},
+    metadata::DynamicMetadata,
+};
 
 #[cfg(doc)]
 use crate::filters::Filter;
@@ -33,7 +36,7 @@ pub struct WriteContext<'a> {
     /// Contents of the received packet.
     pub contents: Vec<u8>,
     /// Arbitrary values that can be passed from one filter to another
-    pub metadata: HashMap<String, Box<dyn Any + Send>>,
+    pub metadata: DynamicMetadata,
 }
 
 /// The output of [`Filter::write`].
@@ -51,7 +54,7 @@ pub struct WriteResponse {
     /// Contents of the packet to be sent back to the original sender.
     pub contents: Vec<u8>,
     /// Arbitrary values that can be passed from one filter to another.
-    pub metadata: HashMap<String, Box<dyn Any + Send>>,
+    pub metadata: DynamicMetadata,
 }
 
 impl WriteContext<'_> {

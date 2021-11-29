@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
-use prometheus::{Error as PrometheusError, Histogram, HistogramOpts, Registry};
+use std::sync::Arc;
+
+use prometheus::{exponential_buckets, Error as PrometheusError, Histogram, Registry};
 
 use crate::config::{Filter as FilterConfig, ValidationError};
 use crate::filters::{prelude::*, FilterRegistry};
-use crate::metrics::CollectorExt;
-use std::sync::Arc;
+use crate::metrics::{histogram_opts, CollectorExt};
 
 const FILTER_LABEL: &str = "filter";
 
@@ -54,14 +55,18 @@ impl From<PrometheusError> for Error {
 
 impl FilterChain {
     pub fn new(filters: Vec<(String, FilterInstance)>, registry: &Registry) -> Result<Self, Error> {
+        let subsystem = "filter";
+
         Ok(Self {
             filter_read_duration_seconds: filters
                 .iter()
                 .map(|(name, _)| {
                     Histogram::with_opts(
-                        HistogramOpts::new(
-                            "filter_read_duration_seconds",
+                        histogram_opts(
+                            "read_duration_seconds",
+                            subsystem,
                             "Seconds taken to execute a given filter's `read`.",
+                            Some(exponential_buckets(0.000125, 2.5, 11).unwrap()),
                         )
                         .const_label(FILTER_LABEL, name),
                     )
@@ -72,9 +77,11 @@ impl FilterChain {
                 .iter()
                 .map(|(name, _)| {
                     Histogram::with_opts(
-                        HistogramOpts::new(
-                            "filter_write_duration_seconds",
+                        histogram_opts(
+                            "write_duration_seconds",
+                            subsystem,
                             "Seconds taken to execute a given filter's `write`.",
+                            Some(exponential_buckets(0.000125, 2.5, 11).unwrap()),
                         )
                         .const_label(FILTER_LABEL, name),
                     )
@@ -226,7 +233,7 @@ mod tests {
         assert_eq!(
             "receive",
             response.metadata[&"downstream".to_string()]
-                .downcast_ref::<String>()
+                .as_string()
                 .unwrap()
         );
 
@@ -241,8 +248,8 @@ mod tests {
 
         assert_eq!(
             "receive",
-            response.metadata["upstream"]
-                .downcast_ref::<String>()
+            response.metadata[&"upstream".to_string()]
+                .as_string()
                 .unwrap()
         );
         assert_eq!(
@@ -291,7 +298,7 @@ mod tests {
         assert_eq!(
             "receive:receive",
             response.metadata[&"downstream".to_string()]
-                .downcast_ref::<String>()
+                .as_string()
                 .unwrap()
         );
 
@@ -309,8 +316,8 @@ mod tests {
         );
         assert_eq!(
             "receive:receive",
-            response.metadata["upstream"]
-                .downcast_ref::<String>()
+            response.metadata[&"upstream".to_string()]
+                .as_string()
                 .unwrap()
         );
     }

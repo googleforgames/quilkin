@@ -14,14 +14,12 @@
  * limitations under the License.
  */
 
-use std::{any::Any, collections::HashMap, sync::Arc};
-
-use crate::endpoint::{EndpointAddress, UpstreamEndpoints};
 #[cfg(doc)]
 use crate::filters::Filter;
-
-/// Shared state between [`Filter`]s during processing for a single packet.
-type DynamicMetadata = HashMap<Arc<String>, Box<dyn Any + Send>>;
+use crate::{
+    endpoint::{EndpointAddress, UpstreamEndpoints},
+    metadata::DynamicMetadata,
+};
 
 /// The input arguments to [`Filter::read`].
 #[non_exhaustive]
@@ -43,7 +41,7 @@ impl ReadContext {
             endpoints,
             from,
             contents,
-            metadata: HashMap::new(),
+            metadata: DynamicMetadata::new(),
         }
     }
 
