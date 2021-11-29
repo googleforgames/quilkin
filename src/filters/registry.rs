@@ -82,7 +82,7 @@ mod tests {
 
         match reg.get(
             &String::from("not.found"),
-            CreateFilterArgs::fixed(Registry::default(), None),
+            CreateFilterArgs::fixed(reg.clone(), Registry::default(), None),
         ) {
             Ok(_) => unreachable!("should not be filter"),
             Err(err) => assert_eq!(Error::NotFound("not.found".to_string()), err),
@@ -91,14 +91,14 @@ mod tests {
         assert!(reg
             .get(
                 &String::from("TestFilter"),
-                CreateFilterArgs::fixed(Registry::default(), None)
+                CreateFilterArgs::fixed(reg.clone(), Registry::default(), None)
             )
             .is_ok());
 
         let filter = reg
             .get(
                 &String::from("TestFilter"),
-                CreateFilterArgs::fixed(Registry::default(), None),
+                CreateFilterArgs::fixed(reg.clone(), Registry::default(), None),
             )
             .unwrap()
             .filter;

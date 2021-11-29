@@ -115,6 +115,7 @@ impl TryFrom<ProtoDebug> for Config {
 
 #[cfg(test)]
 mod tests {
+    use crate::filters::FilterRegistry;
     use crate::test_utils::{assert_filter_read_no_change, assert_write_no_change};
     use serde_yaml::Mapping;
     use serde_yaml::Value;
@@ -148,6 +149,7 @@ mod tests {
         map.insert(Value::from("id"), Value::from("name"));
         assert!(factory
             .create_filter(CreateFilterArgs::fixed(
+                FilterRegistry::default(),
                 Registry::default(),
                 Some(&Value::Mapping(map)),
             ))
@@ -162,6 +164,7 @@ mod tests {
         map.insert(Value::from("id"), Value::from("name"));
         assert!(factory
             .create_filter(CreateFilterArgs::fixed(
+                FilterRegistry::default(),
                 Registry::default(),
                 Some(&Value::Mapping(map)),
             ))
@@ -176,6 +179,7 @@ mod tests {
         map.insert(Value::from("id"), Value::Sequence(vec![]));
         assert!(factory
             .create_filter(CreateFilterArgs::fixed(
+                FilterRegistry::default(),
                 Registry::default(),
                 Some(&Value::Mapping(map))
             ))

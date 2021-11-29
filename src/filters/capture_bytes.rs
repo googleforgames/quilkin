@@ -121,7 +121,8 @@ mod tests {
     use super::capture::{Capture, Prefix, Suffix};
 
     use crate::filters::{
-        metadata::CAPTURED_BYTES, CreateFilterArgs, Filter, FilterFactory, ReadContext,
+        metadata::CAPTURED_BYTES, CreateFilterArgs, Filter, FilterFactory, FilterRegistry,
+        ReadContext,
     };
 
     const TOKEN_KEY: &str = "TOKEN";
@@ -147,6 +148,7 @@ mod tests {
 
         let filter = factory
             .create_filter(CreateFilterArgs::fixed(
+                FilterRegistry::default(),
                 Registry::default(),
                 Some(&Value::Mapping(map)),
             ))
@@ -162,6 +164,7 @@ mod tests {
         map.insert(Value::String("size".into()), Value::Number(3.into()));
         let filter = factory
             .create_filter(CreateFilterArgs::fixed(
+                FilterRegistry::default(),
                 Registry::default(),
                 Some(&Value::Mapping(map)),
             ))
@@ -177,6 +180,7 @@ mod tests {
         map.insert(Value::String("size".into()), Value::String("WRONG".into()));
 
         let result = factory.create_filter(CreateFilterArgs::fixed(
+            FilterRegistry::default(),
             Registry::default(),
             Some(&Value::Mapping(map)),
         ));

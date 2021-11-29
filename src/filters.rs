@@ -33,6 +33,7 @@ pub mod debug;
 pub mod firewall;
 pub mod load_balancer;
 pub mod local_rate_limit;
+pub mod matches;
 pub mod metadata;
 pub mod token_router;
 

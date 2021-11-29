@@ -147,8 +147,11 @@ impl ListenerManager {
                 })
                 .transpose()?;
 
-            let create_filter_args =
-                CreateFilterArgs::dynamic(self.metrics_registry.clone(), config);
+            let create_filter_args = CreateFilterArgs::dynamic(
+                self.filter_registry.clone(),
+                self.metrics_registry.clone(),
+                config,
+            );
 
             let name = filter.name;
             let filter = self.filter_registry.get(&name, create_filter_args)?;

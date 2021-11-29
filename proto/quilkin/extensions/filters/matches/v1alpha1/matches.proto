@@ -1,0 +1,38 @@
+/*
+ * Copyright 2021 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package quilkin.extensions.filters.matches.v1alpha1;
+
+import "google/protobuf/wrappers.proto";
+import "google/protobuf/any.proto";
+
+message Matches {
+    message Branch {
+        google.protobuf.Any value = 1;
+        google.protobuf.StringValue filter = 2;
+        optional google.protobuf.Any config = 3;
+    }
+
+    message DirectionalConfig {
+        google.protobuf.StringValue metadata_key = 1;
+        repeated Branch branches = 2;
+    }
+
+    optional DirectionalConfig on_read = 1;
+    optional DirectionalConfig on_write = 2;
+}

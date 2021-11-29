@@ -19,7 +19,7 @@ use std::sync::Arc;
 
 use crate::{
     config::ConfigType,
-    filters::{Error, Filter},
+    filters::{Error, Filter, FilterRegistry},
 };
 
 /// An owned pointer to a dynamic [`FilterFactory`] instance.
@@ -75,6 +75,8 @@ pub trait FilterFactory: Sync + Send {
 pub struct CreateFilterArgs<'a> {
     /// Configuration for the filter.
     pub config: Option<ConfigType<'a>>,
+    /// Used if the filter needs to reference or use other filters.
+    pub filter_registry: FilterRegistry,
     /// metrics_registry is used to register filter metrics collectors.
     pub metrics_registry: Registry,
 }
@@ -83,11 +85,13 @@ impl CreateFilterArgs<'_> {
     /// Creates a new instance of [`CreateFilterArgs`] using a
     /// fixed [`ConfigType`].
     pub fn fixed(
+        filter_registry: FilterRegistry,
         metrics_registry: Registry,
         config: Option<&serde_yaml::Value>,
     ) -> CreateFilterArgs {
         CreateFilterArgs {
             config: config.map(ConfigType::Static),
+            filter_registry,
             metrics_registry,
         }
     }
@@ -95,12 +99,14 @@ impl CreateFilterArgs<'_> {
     /// Creates a new instance of [`CreateFilterArgs`] using a
     /// dynamic [`ConfigType`].
     pub fn dynamic(
+        filter_registry: FilterRegistry,
         metrics_registry: Registry,
         config: Option<prost_types::Any>,
     ) -> CreateFilterArgs<'static> {
         CreateFilterArgs {
             config: config.map(ConfigType::Dynamic),
             metrics_registry,
+            filter_registry,
         }
     }
 

@@ -34,7 +34,7 @@ impl Health {
         let healthy = health.healthy.clone();
         let default_hook = panic::take_hook();
         panic::set_hook(Box::new(move |panic_info| {
-            tracing::error!("Panic has occurred. Moving to Unhealthy");
+            tracing::error!(%panic_info, "Panic has occurred. Moving to Unhealthy");
             healthy.swap(false, Relaxed);
             default_hook(panic_info);
         }));

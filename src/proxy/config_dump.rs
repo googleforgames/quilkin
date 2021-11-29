@@ -111,8 +111,7 @@ mod tests {
     use super::handle_request;
     use crate::cluster::cluster_manager::ClusterManager;
     use crate::endpoint::{Endpoint, Endpoints};
-    use crate::filters::manager::FilterManager;
-    use crate::filters::{CreateFilterArgs, FilterChain};
+    use crate::filters::{manager::FilterManager, CreateFilterArgs, FilterChain, FilterRegistry};
     use prometheus::Registry;
     use std::sync::Arc;
 
@@ -129,6 +128,7 @@ mod tests {
         let debug_factory = crate::filters::debug::factory();
         let debug_filter = debug_factory
             .create_filter(CreateFilterArgs::fixed(
+                FilterRegistry::default(),
                 registry.clone(),
                 Some(debug_config),
             ))
