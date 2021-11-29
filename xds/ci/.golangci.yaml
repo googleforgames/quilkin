@@ -3,3 +3,17 @@ linters:
    - gofmt
    - goimports
    - revive
+   - bodyclose
+   - deadcode
+   - dupl
+   - exportloopref
+   - gocritic
+   - gocyclo
+   - govet
+   - megacheck
+   - misspell
+   - nakedret
+   - staticcheck
+   - structcheck
+   - unconvert
+   - unparam

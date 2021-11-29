@@ -20,9 +20,34 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"quilkin.dev/xds-management-server/pkg/metrics"
+
 	discoveryservice "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	log "github.com/sirupsen/logrus"
 )
+
+var connectedProxiesGauge = promauto.NewGauge(prometheus.GaugeOpts{
+	Namespace: metrics.Namespace,
+	Subsystem: metrics.Subsystem,
+	Name:      "connected_proxies",
+	Help:      "Number of proxies currently connected to the server",
+})
+
+var discoveryRequestsTotal = promauto.NewCounter(prometheus.CounterOpts{
+	Namespace: metrics.Namespace,
+	Subsystem: metrics.Subsystem,
+	Name:      "discovery_requests_total",
+	Help:      "Number of discovery requests received by the server",
+})
+
+var discoveryResponsesTotal = promauto.NewCounter(prometheus.CounterOpts{
+	Namespace: metrics.Namespace,
+	Subsystem: metrics.Subsystem,
+	Name:      "discovery_responses_total",
+	Help:      "Number of discovery responses sent by the server",
+})
 
 // callbacks implements callbacks for the go-control-plane xds server.
 type callbacks struct {
@@ -39,6 +64,7 @@ func (c *callbacks) OnStreamOpen(
 		"streamId": streamID,
 		"type_url": typeURL,
 	}).Debugf("OnStreamOpen")
+	connectedProxiesGauge.Inc()
 	return nil
 }
 
@@ -46,6 +72,7 @@ func (c *callbacks) OnStreamClosed(streamID int64) {
 	c.log.WithFields(log.Fields{
 		"stream_id": streamID,
 	}).Debugf("OnStreamClosed")
+	connectedProxiesGauge.Dec()
 }
 
 // OnStreamRequest is called whenever a new DiscoveryRequest is received from a proxy.
@@ -56,6 +83,7 @@ func (c *callbacks) OnStreamRequest(streamID int64, request *discoveryservice.Di
 		"request_version_info": request.VersionInfo,
 		"request_nonce":        request.ResponseNonce,
 	}).Debugf("OnStreamRequest")
+	discoveryRequestsTotal.Inc()
 
 	if c.nodeIDCh != nil {
 		c.nodeIDCh <- request.Node.Id
@@ -75,6 +103,7 @@ func (c *callbacks) OnStreamResponse(
 		"response_version_info": response.VersionInfo,
 		"response_nonce":        response.Nonce,
 	}).Debugf("OnStreamResponse")
+	discoveryResponsesTotal.Inc()
 }
 
 func (c *callbacks) OnFetchRequest(

@@ -90,6 +90,13 @@ The project has two binaries depending on the external source of configuration:
       The following annotations are currently supported:
       - **quilkin.dev/debug-packets**: If set to the value `true`, then a `Debug` filter will be
         added to the filter chain, causing all packets will be logged.
+      - **quilkin.dev/routing-token-suffix-size**: Sets the size (in number of bytes) of routing tokens appended to
+        packets. Extracted tokens will matched against available endpoints in order to figure out
+        where to send the associated packet.
+        Note that the token is stripped off the packet. This annotation cannot be provided together with
+        `quilkin.dev/routing-token-prefix-size`.
+      - **quilkin.dev/routing-token-prefix-size**: Works exactly the same as `quilkin.dev/routing-token-prefix-size`
+        with the difference that the token is a prefix on the packet rather than a suffix.
    
    As an example, the following runs the server against a cluster (using default kubeconfig configuration) where Quilkin pods run in the `quilkin` namespace and game-server pods run in the `gameservers` namespace:
 
@@ -101,6 +108,14 @@ The project has two binaries depending on the external source of configuration:
      for the management server to detect the pod as a proxy and push updates to it.
 
    > Note that currently, the server can only discover resources within a single cluster.
+
+   ##### Admin server
+
+   In addition the gRPC server, a http server (configurable via `--admin-port`is also started to serve administrative functionality.
+   The following endpoints are provided:
+   - `/ready`: Readiness probe that returns a 5xx if communication with the Kubernetes api is problematic.
+   - `/live`: Liveness probe that always returns a 200 response.
+   - `/metrics`: Exposes Prometheus metrics.
 
 
 [XDS]: https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol

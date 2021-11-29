@@ -18,6 +18,7 @@ package agones
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"strings"
 	"time"
@@ -79,7 +80,7 @@ func runClusterWatch(
 	ticker := time.NewTicker(gameServersPollInterval)
 	defer ticker.Stop()
 
-	var prevEndpoints []cluster.Endpoint
+	prevEndpoints := map[string]cluster.Endpoint{}
 	for {
 		select {
 		case <-ticker.C:
@@ -89,13 +90,16 @@ func runClusterWatch(
 			}
 			prevEndpoints = currEndpoints
 
+			endpoints := make([]cluster.Endpoint, 0, len(currEndpoints))
+			for _, ep := range currEndpoints {
+				endpoints = append(endpoints, ep)
+			}
 			clusterCh <- []cluster.Cluster{{
 				Name:      "default-quilkin-cluster",
-				Endpoints: currEndpoints,
+				Endpoints: endpoints,
 			}}
 		case <-ctx.Done():
 			logger.Debug("Exiting cluster watch loop: context cancelled")
-
 		}
 	}
 }
@@ -103,14 +107,15 @@ func runClusterWatch(
 func getEndpointsFromStore(
 	logger *log.Logger,
 	gsLister v1.GameServerLister,
-) []cluster.Endpoint {
+) map[string]cluster.Endpoint {
+	endpoints := make(map[string]cluster.Endpoint)
+
 	gameServers, err := gsLister.List(labels.Everything())
 	if err != nil {
 		log.WithError(err).Warn("failed to list game servers")
-		return []cluster.Endpoint{}
+		return endpoints
 	}
 
-	var endpoints []cluster.Endpoint
 	for _, gs := range gameServers {
 		gsLogger := logger.WithFields(log.Fields{
 			"gameserver": gs.Name,
@@ -139,11 +144,12 @@ func getEndpointsFromStore(
 			}
 		}
 
-		endpoints = append(endpoints, cluster.Endpoint{
+		gsPort := int(getGameServerPort(gsLogger, gs.Status.Ports))
+		endpoints[fmt.Sprintf("%s:%d", gs.Status.Address, gsPort)] = cluster.Endpoint{
 			IP:       gs.Status.Address,
-			Port:     int(getGameServerPort(gsLogger, gs.Status.Ports)),
+			Port:     gsPort,
 			Metadata: metadata,
-		})
+		}
 	}
 
 	return endpoints

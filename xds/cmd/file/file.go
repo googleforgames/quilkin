@@ -64,7 +64,7 @@ func main() {
 	snapshotCache := snapshotUpdater.GetSnapshotCache()
 	go snapshotUpdater.Run(ctx)
 
-	srv := server.New(logger, flags.Port, snapshotCache, proxyIDCh)
+	srv := server.New(logger, flags.Port, snapshotCache, proxyIDCh, []server.HealthCheck{}, 8008)
 	if err := srv.Run(ctx); err != nil {
 		logger.WithError(err).Fatal("failed to start server")
 	}
@@ -87,5 +87,4 @@ func main() {
 	case <-ctx.Done():
 		logger.Info("Shutdown.")
 	}
-
 }
