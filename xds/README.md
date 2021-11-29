@@ -109,6 +109,14 @@ The project has two binaries depending on the external source of configuration:
 
    > Note that currently, the server can only discover resources within a single cluster.
 
+   ##### Admin server
+
+   In addition the gRPC server, a http server (configurable via `--admin-port`is also started to serve administrative functionality.
+   The following endpoints are provided:
+   - `/ready`: Readiness probe that returns a 5xx if communication with the Kubernetes api is problematic.
+   - `/live`: Liveness probe that always returns a 200 response.
+   - `/metrics`: Exposes Prometheus metrics.
+
 
 [XDS]: https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol
 [Kubernetes]: https://kubernetes.io/

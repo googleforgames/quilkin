@@ -88,6 +88,8 @@ func (s *Server) startAdminServer(ctx context.Context) {
 
 	http.Handle("/metrics", promhttp.Handler())
 
+	http.HandleFunc("/live", func(writer http.ResponseWriter, request *http.Request) {
+	})
 	http.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
 		statusMessage := "OK"
 		statusCode := http.StatusOK
