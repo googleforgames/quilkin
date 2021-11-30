@@ -31,6 +31,18 @@ pub struct Metrics {
     pub write_processing_time_seconds: Histogram,
 }
 
+/// Start the histogram bucket at a quarter of a millisecond, as number below a millisecond are
+/// what we are aiming for, but some granularity below a millisecond is useful for performance
+/// profiling.
+const BUCKET_START: f64 = 0.00025;
+
+const BUCKET_FACTOR: f64 = 2.0;
+
+/// At an exponential factor of 2.0 (BUCKET_FACTOR), 13 iterations gets us to just over 1 second.
+/// Any processing that occurs over a second is far too long, so we end bucketing there as we don't
+/// care about granularity past 1 second.
+const BUCKET_COUNT: usize = 13;
+
 impl Metrics {
     pub fn new(registry: &Registry) -> MetricsResult<Self> {
         let subsystem = "proxy";
@@ -41,9 +53,7 @@ impl Metrics {
                 "packet_processing_duration_seconds",
                 subsystem,
                 "Total processing time for a packet",
-                // Less than a millisecond is good, so starting at a quarter of that.
-                // Any processing that goes over a second is way too long, so ending there.
-                Some(exponential_buckets(0.00025, 2.0, 13).unwrap()),
+                Some(exponential_buckets(BUCKET_START, BUCKET_FACTOR, BUCKET_COUNT).unwrap()),
             ),
             event_labels,
         )?

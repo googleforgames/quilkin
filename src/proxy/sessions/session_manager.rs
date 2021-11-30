@@ -126,8 +126,8 @@ mod tests {
         proxy::{
             server::metrics::Metrics as ProxyMetrics,
             sessions::{
-                metrics::Metrics, session::SessionArgs, session_manager::Sessions, Session,
-                SessionKey, UpstreamPacket,
+                metrics::Metrics, session::SessionArgs, session_manager::Sessions, SessionKey,
+                UpstreamPacket,
             },
         },
         test_utils::TestHelper,
@@ -170,24 +170,20 @@ mod tests {
         {
             let registry = Registry::default();
             let mut sessions = sessions.write().await;
+            let session_args = SessionArgs {
+                metrics: Metrics::new(&registry).unwrap(),
+                proxy_metrics: ProxyMetrics::new(&registry).unwrap(),
+                filter_manager: FilterManager::fixed(Arc::new(
+                    FilterChain::new(vec![], &registry).unwrap(),
+                )),
+                from,
+                dest: endpoint.clone(),
+                sender: send,
+                ttl,
+            };
             sessions.insert(
                 key.clone(),
-                Session::new(
-                    &t.log,
-                    SessionArgs {
-                        metrics: Metrics::new(&registry).unwrap(),
-                        proxy_metrics: ProxyMetrics::new(&registry).unwrap(),
-                        filter_manager: FilterManager::fixed(Arc::new(
-                            FilterChain::new(vec![], &registry).unwrap(),
-                        )),
-                        from,
-                        dest: endpoint.clone(),
-                        sender: send,
-                        ttl,
-                    },
-                )
-                .await
-                .unwrap(),
+                session_args.into_session(&t.log).await.unwrap(),
             );
         }
 
@@ -235,24 +231,20 @@ mod tests {
         {
             let registry = Registry::default();
             let mut sessions = sessions.write().await;
+            let session_args = SessionArgs {
+                metrics: Metrics::new(&registry).unwrap(),
+                proxy_metrics: ProxyMetrics::new(&registry).unwrap(),
+                filter_manager: FilterManager::fixed(Arc::new(
+                    FilterChain::new(vec![], &registry).unwrap(),
+                )),
+                from,
+                dest: endpoint.clone(),
+                sender: send,
+                ttl,
+            };
             sessions.insert(
                 key.clone(),
-                Session::new(
-                    &t.log,
-                    SessionArgs {
-                        metrics: Metrics::new(&registry).unwrap(),
-                        proxy_metrics: ProxyMetrics::new(&registry).unwrap(),
-                        filter_manager: FilterManager::fixed(Arc::new(
-                            FilterChain::new(vec![], &registry).unwrap(),
-                        )),
-                        from,
-                        dest: endpoint.clone(),
-                        sender: send,
-                        ttl,
-                    },
-                )
-                .await
-                .unwrap(),
+                session_args.into_session(&t.log).await.unwrap(),
             );
         }
 

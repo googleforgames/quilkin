@@ -411,20 +411,16 @@ impl Server {
                     .await;
             } else {
                 // Otherwise, create the session and insert into the map.
-                match Session::new(
-                    &args.log,
-                    SessionArgs {
-                        metrics: args.session_metrics.clone(),
-                        proxy_metrics: args.proxy_metrics.clone(),
-                        filter_manager: args.filter_manager.clone(),
-                        from: session_key.source.clone(),
-                        dest: endpoint.clone(),
-                        sender: args.send_packets.clone(),
-                        ttl: args.session_ttl,
-                    },
-                )
-                .await
-                {
+                let session_args = SessionArgs {
+                    metrics: args.session_metrics.clone(),
+                    proxy_metrics: args.proxy_metrics.clone(),
+                    filter_manager: args.filter_manager.clone(),
+                    from: session_key.source.clone(),
+                    dest: endpoint.clone(),
+                    sender: args.send_packets.clone(),
+                    ttl: args.session_ttl,
+                };
+                match session_args.into_session(&args.log).await {
                     Ok(session) => {
                         // Insert the session into the map and release the write lock
                         // immediately since we don't want to block other threads while we send

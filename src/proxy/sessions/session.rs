@@ -128,10 +128,17 @@ pub struct SessionArgs {
     pub ttl: Duration,
 }
 
-impl Session {
-    /// new creates a new Session, and starts the process of receiving udp sockets
+impl SessionArgs {
+    /// Creates a new Session, and starts the process of receiving udp sockets
     /// from its ephemeral port from endpoint(s)
-    pub async fn new(base: &Logger, args: SessionArgs) -> Result<Self> {
+    pub async fn into_session(self, base: &Logger) -> Result<Session> {
+        Session::new(base, self).await
+    }
+}
+
+impl Session {
+    /// internal constructor for a Session from SessionArgs
+    async fn new(base: &Logger, args: SessionArgs) -> Result<Self> {
         let log = base
             .new(o!("source" => "proxy::Session", "from" => args.from.clone(), "dest_address" => args.dest.address.clone()));
         let addr = (std::net::Ipv4Addr::UNSPECIFIED, 0);
