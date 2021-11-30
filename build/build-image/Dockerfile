@@ -23,11 +23,28 @@ ENV RUSTUP_HOME=/usr/local/rustup \
     LC_ALL=C.UTF-8 \
     LANG=C.UTF-8
 
+# Install packages
 RUN set -eux && \
     apt-get update && \
     apt-get install -y wget zip build-essential libssl-dev pkg-config python3-pip && \
-    pip3 install live-server && \
-    wget https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init && \
+    pip3 install live-server
+
+# Install Go
+WORKDIR /usr/local
+ENV GO_VERSION=1.17.2
+RUN wget -q https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz && \
+    tar -xzf go${GO_VERSION}.linux-amd64.tar.gz && rm go${GO_VERSION}.linux-amd64.tar.gz
+ENV PATH /usr/local/go/bin:$PATH
+
+# Install htmltest
+WORKDIR /tmp
+# TODO (markmandel): replace with official release once https://github.com/wjdp/htmltest/pull/181 is merged and released.
+RUN git clone --branch debug/panic --depth=5 https://github.com/markmandel/htmltest.git && \
+    cd htmltest && ./build.sh && cp ./bin/htmltest /usr/local/bin/ && \
+    rm -r /tmp/htmltest
+
+# Install Rust
+RUN wget https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init && \
     chmod +x rustup-init && \
     ./rustup-init -y --no-modify-path --default-toolchain $RUST_TOOLCHAIN && \
     rm rustup-init && \
