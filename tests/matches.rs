@@ -25,8 +25,6 @@ use quilkin::{
     test_utils::TestHelper,
 };
 
-/// This test covers both token_router and capture_bytes filters,
-/// since they work in concert together.
 #[tokio::test]
 async fn matches() {
     let mut t = TestHelper::default();
