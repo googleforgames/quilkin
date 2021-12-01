@@ -53,6 +53,18 @@ impl From<PrometheusError> for Error {
     }
 }
 
+/// Start the histogram bucket at an eighth of a millisecond, as we bucketed the full filter
+/// chain processing starting at a quarter of a millisecond, so we we will want finer granularity
+/// here.
+const BUCKET_START: f64 = 0.000125;
+
+const BUCKET_FACTOR: f64 = 2.5;
+
+/// At an exponential factor of 2.5 (BUCKET_FACTOR), 11 iterations gets us to just over half a
+/// second. Any processing that occurs over half a second is far too long, so we end
+/// the bucketing there as we don't care about granularity past this value.
+const BUCKET_COUNT: usize = 11;
+
 impl FilterChain {
     pub fn new(filters: Vec<(String, FilterInstance)>, registry: &Registry) -> Result<Self, Error> {
         let subsystem = "filter";
@@ -66,7 +78,10 @@ impl FilterChain {
                             "read_duration_seconds",
                             subsystem,
                             "Seconds taken to execute a given filter's `read`.",
-                            Some(exponential_buckets(0.000125, 2.5, 11).unwrap()),
+                            Some(
+                                exponential_buckets(BUCKET_START, BUCKET_FACTOR, BUCKET_COUNT)
+                                    .unwrap(),
+                            ),
                         )
                         .const_label(FILTER_LABEL, name),
                     )

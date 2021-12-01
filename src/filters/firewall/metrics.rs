@@ -19,10 +19,9 @@ use prometheus::{
     IntCounterVec, Registry, Result as MetricsResult,
 };
 
-use crate::metrics::{filter_opts, CollectorExt};
-
-const READ: &str = "read";
-const WRITE: &str = "write";
+use crate::metrics::{
+    filter_opts, CollectorExt, EVENT_LABEL, EVENT_READ_LABEL_VALUE, EVENT_WRITE_LABEL_VALUE,
+};
 
 /// Register and manage metrics for this filter
 pub(super) struct Metrics {
@@ -34,7 +33,7 @@ pub(super) struct Metrics {
 
 impl Metrics {
     pub(super) fn new(registry: &Registry) -> MetricsResult<Self> {
-        let event_labels = &["event"];
+        let event_labels = &[EVENT_LABEL];
 
         let deny_metric = IntCounterVec::new(
             filter_opts(
@@ -57,10 +56,14 @@ impl Metrics {
         .register_if_not_exists(registry)?;
 
         Ok(Metrics {
-            packets_denied_read: deny_metric.get_metric_with_label_values(&[READ])?,
-            packets_denied_write: deny_metric.get_metric_with_label_values(&[WRITE])?,
-            packets_allowed_read: allow_metric.get_metric_with_label_values(&[READ])?,
-            packets_allowed_write: allow_metric.get_metric_with_label_values(&[WRITE])?,
+            packets_denied_read: deny_metric
+                .get_metric_with_label_values(&[EVENT_READ_LABEL_VALUE])?,
+            packets_denied_write: deny_metric
+                .get_metric_with_label_values(&[EVENT_WRITE_LABEL_VALUE])?,
+            packets_allowed_read: allow_metric
+                .get_metric_with_label_values(&[EVENT_READ_LABEL_VALUE])?,
+            packets_allowed_write: allow_metric
+                .get_metric_with_label_values(&[EVENT_WRITE_LABEL_VALUE])?,
         })
     }
 }

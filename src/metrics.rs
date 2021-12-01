@@ -18,6 +18,15 @@ use prometheus::core::Collector;
 pub use prometheus::Result;
 use prometheus::{HistogramOpts, Opts, Registry, DEFAULT_BUCKETS};
 
+/// "event" is used as a label for Metrics that can apply to both Filter
+/// `read` and `write` executions.
+pub const EVENT_LABEL: &str = "event";
+
+/// Label value for [EVENT_LABEL] for `read` events
+pub const EVENT_READ_LABEL_VALUE: &str = "read";
+/// Label value for [EVENT_LABEL] for `write` events
+pub const EVENT_WRITE_LABEL_VALUE: &str = "write";
+
 /// Create a generic metrics options.
 /// Use [filter_opts] instead if the intended target is a filter.
 pub fn opts(name: &str, subsystem: &str, description: &str) -> Opts {
