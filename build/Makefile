@@ -47,7 +47,7 @@ version:
 	@echo $(package_version)
 
 # Run all tests
-test: ensure-build-image test-quilkin test-examples
+test: ensure-build-image test-quilkin test-examples test-docs
 
 # test only the quilkin crate
 test-quilkin: ensure-build-image
@@ -66,6 +66,17 @@ test-examples: ensure-build-image
 		--entrypoint=cargo $(BUILD_IMAGE_TAG) clippy --tests -- -D warnings
 	docker run --rm $(common_rust_args) -w /workspace/examples/quilkin-filter-example \
 		--entrypoint=cargo $(BUILD_IMAGE_TAG) fmt -- --check
+
+# Run tests against documentation
+test-docs: ensure-build-image
+	docker run --rm $(common_rust_args) \
+		--entrypoint=bash $(BUILD_IMAGE_TAG) -c \
+		 	'export RUSTDOCFLAGS="-Dwarnings" && mkdir /tmp/docs && \
+			mkdir -p ./target/doc; \
+			cargo doc --workspace --no-deps && cd docs && mdbook build --dest-dir /tmp/docs/book && \
+			cp -r /workspace/target/doc /tmp/docs/api && \
+			rm /tmp/docs/book/print.html && \
+			htmltest -c /workspace/docs/htmltest.yaml /tmp/docs'
 
 # Build all binaries, images and related artifacts
 build: binary-archive build-image

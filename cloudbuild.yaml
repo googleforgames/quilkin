@@ -31,8 +31,22 @@ steps:
     args:
       - BUILD_IMAGE_TAG=${_BUILD_IMAGE_TAG}
       - BUILD_IMAGE_ARG=--cache-from ${_BUILD_IMAGE_TAG}
-      - test
-    id: test
+      - test-quilkin
+    id: test-quilkin
+  - name: us-docker.pkg.dev/$PROJECT_ID/ci/make-docker
+    dir: ./build
+    args:
+      - BUILD_IMAGE_TAG=${_BUILD_IMAGE_TAG}
+      - BUILD_IMAGE_ARG=--cache-from ${_BUILD_IMAGE_TAG}
+      - test-examples
+    id: test-examples
+  - name: us-docker.pkg.dev/$PROJECT_ID/ci/make-docker
+    dir: ./build
+    args:
+      - BUILD_IMAGE_TAG=${_BUILD_IMAGE_TAG}
+      - BUILD_IMAGE_ARG=--cache-from ${_BUILD_IMAGE_TAG}
+      - test-docs
+    id: test-docs
   - name: us-docker.pkg.dev/$PROJECT_ID/ci/make-docker
     dir: ./build
     args:
