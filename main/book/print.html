@@ -449,6 +449,18 @@ Such well known values are placed within an object in the endpoint metadata, und
 <p>The proxy exposes the following general metrics (See the metrics sub-sections for metrics specific to other Quilkin components, e.g for metrics related to packet flow see <a href="./session.html#metrics">sessions metrics</a>, or metrics exported by individual filters can be found in the documentation for each filter):</p>
 <ul>
 <li>
+<p><code>quilkin_proxy_packet_processing_duration_seconds{event}</code> (Histogram)
+The total duration of time in seconds that it took to process a packet.</p>
+<ul>
+<li>The <code>event</code> label is either:
+<ul>
+<li><code>read</code>: when the proxy receives data from a downstream connection on the listening port.</li>
+<li><code>write</code>: when the proxy sends data to a downstream connection via the listening port.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
 <p><code>quilkin_proxy_packets_dropped_total{reason}</code> (Counter)</p>
 <p>The total number of packets (not associated with any session) that were dropped by proxy.
 Not that packets reflected by this metric were dropped at an earlier stage before they were associated with any session. For session based metrics, see the list of <a href="./session.html#metrics">session metrics</a> instead.</p>

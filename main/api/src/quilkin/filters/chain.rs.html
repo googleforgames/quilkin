@@ -365,6 +365,21 @@
 <span id="365">365</span>
 <span id="366">366</span>
 <span id="367">367</span>
+<span id="368">368</span>
+<span id="369">369</span>
+<span id="370">370</span>
+<span id="371">371</span>
+<span id="372">372</span>
+<span id="373">373</span>
+<span id="374">374</span>
+<span id="375">375</span>
+<span id="376">376</span>
+<span id="377">377</span>
+<span id="378">378</span>
+<span id="379">379</span>
+<span id="380">380</span>
+<span id="381">381</span>
+<span id="382">382</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -420,6 +435,18 @@
     }
 }
 
+<span class="doccomment">/// Start the histogram bucket at an eighth of a millisecond, as we bucketed the full filter</span>
+<span class="doccomment">/// chain processing starting at a quarter of a millisecond, so we we will want finer granularity</span>
+<span class="doccomment">/// here.</span>
+<span class="kw">const</span> <span class="ident">BUCKET_START</span>: <span class="ident">f64</span> <span class="op">=</span> <span class="number">0.000125</span>;
+
+<span class="kw">const</span> <span class="ident">BUCKET_FACTOR</span>: <span class="ident">f64</span> <span class="op">=</span> <span class="number">2.5</span>;
+
+<span class="doccomment">/// At an exponential factor of 2.5 (BUCKET_FACTOR), 11 iterations gets us to just over half a</span>
+<span class="doccomment">/// second. Any processing that occurs over half a second is far too long, so we end</span>
+<span class="doccomment">/// the bucketing there as we don&#39;t care about granularity past this value.</span>
+<span class="kw">const</span> <span class="ident">BUCKET_COUNT</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">11</span>;
+
 <span class="kw">impl</span> <span class="ident">FilterChain</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">filters</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">String</span>, <span class="ident">FilterInstance</span>)<span class="op">&gt;</span>, <span class="ident">registry</span>: <span class="kw-2">&amp;</span><span class="ident">Registry</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">subsystem</span> <span class="op">=</span> <span class="string">&quot;filter&quot;</span>;
@@ -433,7 +460,10 @@
                             <span class="string">&quot;read_duration_seconds&quot;</span>,
                             <span class="ident">subsystem</span>,
                             <span class="string">&quot;Seconds taken to execute a given filter&#39;s `read`.&quot;</span>,
-                            <span class="prelude-val">Some</span>(<span class="ident">exponential_buckets</span>(<span class="number">0.000125</span>, <span class="number">2.5</span>, <span class="number">11</span>).<span class="ident">unwrap</span>()),
+                            <span class="prelude-val">Some</span>(
+                                <span class="ident">exponential_buckets</span>(<span class="ident">BUCKET_START</span>, <span class="ident">BUCKET_FACTOR</span>, <span class="ident">BUCKET_COUNT</span>)
+                                    .<span class="ident">unwrap</span>(),
+                            ),
                         )
                         .<span class="ident">const_label</span>(<span class="ident">FILTER_LABEL</span>, <span class="ident">name</span>),
                     )
