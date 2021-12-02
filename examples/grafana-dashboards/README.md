@@ -2,7 +2,9 @@
 
 This folder provides example [Grafana][grafana] dashboards for Quilkin metrics.
 
-![example general dashboard](./quilkin-general.png)
+<a href="./quilkin-general.png" target="_blank">
+    <img src="./quilkin-general.png" style="max-width: 80%;">
+</a>
 
 ## Importing the dashboards
 
