@@ -87,7 +87,7 @@ impl CreateFilterArgs<'_> {
         config: Option<&serde_yaml::Value>,
     ) -> CreateFilterArgs {
         CreateFilterArgs {
-            config: config.map(|config| ConfigType::Static(config)),
+            config: config.map(ConfigType::Static),
             metrics_registry,
         }
     }
