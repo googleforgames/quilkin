@@ -7,8 +7,6 @@ use crate::{
     metadata::Value,
 };
 
-// type FilterConfig = Option<(String, Vec<(Value, FilterInstance)>)>;
-
 pub const NAME: &str = "quilkin.extensions.filters.matches.v1alpha1.Matches";
 
 /// Creates a new factory for generating match filters.
@@ -36,7 +34,7 @@ impl FilterConfig {
             )
             .with_metrics_registry(metrics_registry.clone());
 
-            filter_registry.get(filter, args)
+            filter_registry.get(dbg!(filter), args)
         };
 
         let branches = config
@@ -340,6 +338,20 @@ impl<'de> serde::Deserialize<'de> for Fallthrough {
                 f.write_str("`pass`, `drop`, or an object containing a `filter` field and optionally `config` field")
             }
 
+            fn visit_borrowed_str<E>(self, string: &'de str) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                self.visit_str(string)
+            }
+
+            fn visit_string<E>(self, string: String) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                self.visit_str(&string)
+            }
+
             fn visit_str<E>(self, string: &str) -> Result<Self::Value, E>
             where
                 E: serde::de::Error,
@@ -360,7 +372,7 @@ impl<'de> serde::Deserialize<'de> for Fallthrough {
                 let mut config = None;
                 let mut filter = None;
                 loop {
-                    match map.next_key()? {
+                    match map.next_key::<String>()?.as_deref() {
                         Some(CONFIG_FIELD) => {
                             if config.replace(map.next_value()?).is_some() {
                                 return Err(serde::de::Error::duplicate_field(CONFIG_FIELD));

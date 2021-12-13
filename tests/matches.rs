@@ -38,9 +38,22 @@ remove: true
     let matches_yaml = "
 on_read:
     metadataKey: quilkin.dev/captured_bytes
+    fallthrough:
+        filter: quilkin.extensions.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
+        config:
+            on_read: APPEND
+            bytes: ZGVm
     branches:
         - value: abc
-          filter: quilkin.extensions.filters.debug.v1alpha1.Debug
+          filter: quilkin.extensions.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
+          config:
+            on_read: APPEND
+            bytes: eHl6 # xyz
+        - value: xyz
+          filter: quilkin.extensions.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
+          config:
+            on_read: APPEND
+            bytes: YWJj # abc
 ";
     let server_port = 12348;
     let server_config = Builder::empty()
@@ -61,25 +74,55 @@ on_read:
         .build();
     t.run_server_with_config(server_config);
 
-    // valid packet
     let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
 
     let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port);
+
+    // abc packet
     let msg = b"helloabc";
     socket.send_to(msg, &local_addr).await.unwrap();
 
     assert_eq!(
-        "hello",
+        "helloxyz",
         timeout(Duration::from_secs(5), recv_chan.recv())
             .await
             .expect("should have received a packet")
             .unwrap()
     );
 
-    // send an invalid packet
+    // send an xyz packet
     let msg = b"helloxyz";
     socket.send_to(msg, &local_addr).await.unwrap();
 
-    let result = timeout(Duration::from_secs(3), recv_chan.recv()).await;
-    assert!(result.is_err(), "should not have received a packet");
+    assert_eq!(
+        "helloabc",
+        timeout(Duration::from_secs(5), recv_chan.recv())
+            .await
+            .expect("should have received a packet")
+            .unwrap()
+    );
+
+    // fallthrough packet
+    let msg = b"hellodef";
+    socket.send_to(msg, &local_addr).await.unwrap();
+
+    assert_eq!(
+        "hellodef",
+        timeout(Duration::from_secs(5), recv_chan.recv())
+            .await
+            .expect("should have received a packet")
+            .unwrap()
+    );
+
+    // second fallthrough packet
+    let msg = b"hellofgh";
+    socket.send_to(msg, &local_addr).await.unwrap();
+
+    assert_eq!(
+        "hellodef",
+        timeout(Duration::from_secs(5), recv_chan.recv())
+            .await
+            .expect("should have received a packet")
+            .unwrap()
+    );
 }
