@@ -151,7 +151,7 @@ mod tests {
             .create_filter(CreateFilterArgs::fixed(
                 FilterRegistry::default(),
                 Registry::default(),
-                Some(&Value::Mapping(map)),
+                Some(Value::Mapping(map)),
             ))
             .is_ok());
     }
@@ -166,7 +166,7 @@ mod tests {
             .create_filter(CreateFilterArgs::fixed(
                 FilterRegistry::default(),
                 Registry::default(),
-                Some(&Value::Mapping(map)),
+                Some(Value::Mapping(map)),
             ))
             .is_ok());
     }
@@ -181,7 +181,7 @@ mod tests {
             .create_filter(CreateFilterArgs::fixed(
                 FilterRegistry::default(),
                 Registry::default(),
-                Some(&Value::Mapping(map))
+                Some(Value::Mapping(map))
             ))
             .is_err());
     }

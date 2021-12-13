@@ -24,7 +24,7 @@ pub struct ValueInvalidArgs {
 }
 
 /// Validation failure for a Config
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub enum ValidationError {
     NotUnique(String),
     EmptyList(String),

@@ -150,7 +150,7 @@ mod tests {
             .create_filter(CreateFilterArgs::fixed(
                 FilterRegistry::default(),
                 Registry::default(),
-                Some(&Value::Mapping(map)),
+                Some(Value::Mapping(map)),
             ))
             .unwrap()
             .filter;
@@ -166,7 +166,7 @@ mod tests {
             .create_filter(CreateFilterArgs::fixed(
                 FilterRegistry::default(),
                 Registry::default(),
-                Some(&Value::Mapping(map)),
+                Some(Value::Mapping(map)),
             ))
             .unwrap()
             .filter;
@@ -182,7 +182,7 @@ mod tests {
         let result = factory.create_filter(CreateFilterArgs::fixed(
             FilterRegistry::default(),
             Registry::default(),
-            Some(&Value::Mapping(map)),
+            Some(Value::Mapping(map)),
         ));
         assert!(result.is_err(), "Should be an error");
     }

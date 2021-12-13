@@ -37,7 +37,7 @@ remove: true
 
     let matches_yaml = "
 on_read:
-    metadata_key: quilkin.dev/captured_bytes
+    metadataKey: quilkin.dev/captured_bytes
     branches:
         - value: abc
           filter: quilkin.extensions.filters.debug.v1alpha1.Debug

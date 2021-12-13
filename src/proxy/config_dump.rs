@@ -123,7 +123,7 @@ mod tests {
             Endpoints::new(vec![Endpoint::new(([127, 0, 0, 1], 8080).into())]).unwrap(),
         )
         .unwrap();
-        let debug_config = &serde_yaml::from_str("id: hello").unwrap();
+        let debug_config = serde_yaml::from_str("id: hello").unwrap();
 
         let debug_factory = crate::filters::debug::factory();
         let debug_filter = debug_factory

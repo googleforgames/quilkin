@@ -19,11 +19,17 @@ syntax = "proto3";
 package quilkin.extensions.filters.matches.v1alpha1;
 
 import "google/protobuf/wrappers.proto";
+import "google/protobuf/struct.proto";
 import "google/protobuf/any.proto";
 
 message Matches {
     message Branch {
-        google.protobuf.Any value = 1;
+        google.protobuf.Value value = 1;
+        google.protobuf.StringValue filter = 2;
+        optional google.protobuf.Any config = 3;
+    }
+
+    message FallthroughFilter {
         google.protobuf.StringValue filter = 2;
         optional google.protobuf.Any config = 3;
     }
@@ -31,6 +37,11 @@ message Matches {
     message DirectionalConfig {
         google.protobuf.StringValue metadata_key = 1;
         repeated Branch branches = 2;
+        oneof fallthrough {
+            google.protobuf.NullValue pass = 3;
+            google.protobuf.NullValue drop = 4;
+            FallthroughFilter filter = 5;
+        }
     }
 
     optional DirectionalConfig on_read = 1;

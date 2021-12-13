@@ -247,7 +247,7 @@ mod tests {
             .create_filter(CreateFilterArgs::fixed(
                 FilterRegistry::default(),
                 Registry::default(),
-                Some(&serde_yaml::Value::Mapping(map)),
+                Some(serde_yaml::Value::Mapping(map)),
             ))
             .unwrap()
             .filter;
@@ -268,7 +268,7 @@ mod tests {
             .create_filter(CreateFilterArgs::fixed(
                 FilterRegistry::default(),
                 Registry::default(),
-                Some(&serde_yaml::Value::Mapping(map)),
+                Some(serde_yaml::Value::Mapping(map)),
             ))
             .unwrap()
             .filter;

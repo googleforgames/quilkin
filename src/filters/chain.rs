@@ -122,7 +122,7 @@ impl FilterChain {
                 CreateFilterArgs::fixed(
                     filter_registry.clone(),
                     metrics_registry.clone(),
-                    filter_config.config.as_ref(),
+                    filter_config.config,
                 )
                 .with_metrics_registry(metrics_registry.clone()),
             ) {

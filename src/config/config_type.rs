@@ -22,15 +22,15 @@ use crate::filters::{ConvertProtoConfigError, Error};
 
 /// The configuration of a [`Filter`][crate::filters::Filter] from either a
 /// static or dynamic source.
-#[derive(Debug)]
-pub enum ConfigType<'a> {
+#[derive(Clone, Debug, PartialEq)]
+pub enum ConfigType {
     /// Static configuration from YAML.
-    Static(&'a serde_yaml::Value),
+    Static(serde_yaml::Value),
     /// Dynamic configuration from Protobuf.
     Dynamic(prost_types::Any),
 }
 
-impl ConfigType<'_> {
+impl ConfigType {
     /// Deserializes takes two type arguments `Static` and `Dynamic` representing
     /// the types of a static and dynamic configuration respectively.
     ///
@@ -57,7 +57,7 @@ impl ConfigType<'_> {
             + TryFrom<Dynamic, Error = ConvertProtoConfigError>,
     {
         match self {
-            ConfigType::Static(config) => serde_yaml::to_string(config)
+            ConfigType::Static(ref config) => serde_yaml::to_string(config)
                 .and_then(|raw_config| serde_yaml::from_str::<Static>(raw_config.as_str()))
                 .map_err(|err| {
                     Error::DeserializeFailed(format!(
@@ -92,6 +92,29 @@ impl ConfigType<'_> {
                 "filter `{filter_name}`: failed to serialize config to json: {err}",
             ))
         })
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for ConfigType {
+    fn deserialize<D>(de: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        serde_yaml::Value::deserialize(de).map(ConfigType::Static)
+    }
+}
+
+impl<'de> serde::Serialize for ConfigType {
+    fn serialize<S>(&self, ser: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self {
+            Self::Static(value) => value.serialize(ser),
+            Self::Dynamic(_) => Err(serde::ser::Error::custom(
+                "Protobuf configs can't be serialized.",
+            )),
+        }
     }
 }
 

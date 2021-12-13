@@ -66,9 +66,9 @@ pub struct ConvertProtoConfigError {
 }
 
 impl ConvertProtoConfigError {
-    pub fn new(reason: impl Into<String>, field: Option<String>) -> Self {
+    pub fn new(reason: impl std::fmt::Display, field: Option<String>) -> Self {
         Self {
-            reason: reason.into(),
+            reason: reason.to_string(),
             field,
         }
     }

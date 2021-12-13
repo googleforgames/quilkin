@@ -295,7 +295,7 @@ mod tests {
             .create_filter(CreateFilterArgs::fixed(
                 FilterRegistry::default(),
                 Registry::default(),
-                Some(&Value::Mapping(map)),
+                Some(Value::Mapping(map)),
             ))
             .expect("should create a filter")
             .filter;
@@ -316,11 +316,8 @@ mod tests {
             Value::String("COMPRESS".into()),
         );
         let config = Value::Mapping(map);
-        let args = CreateFilterArgs::fixed(
-            FilterRegistry::default(),
-            Registry::default(),
-            Some(&config),
-        );
+        let args =
+            CreateFilterArgs::fixed(FilterRegistry::default(), Registry::default(), Some(config));
 
         let filter = factory
             .create_filter(args)
