@@ -123,7 +123,7 @@
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">NAME</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;quilkin.extensions.filters.concatenate_bytes.v1alpha1.ConcatenateBytes&quot;</span>;
 
 <span class="doccomment">/// Returns a factory for creating concatenation filters.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">factory</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">DynFilterFactory</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">factory</span>() -&gt; <span class="ident">DynFilterFactory</span> {
     <span class="ident">Box::from</span>(<span class="ident">ConcatBytesFactory</span>)
 }
 
@@ -138,7 +138,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">ConcatenateBytes</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">config</span>: <span class="ident">Config</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">config</span>: <span class="ident">Config</span>) -&gt; <span class="self">Self</span> {
         <span class="ident">ConcatenateBytes</span> {
             <span class="ident">on_read</span>: <span class="ident">config</span>.<span class="ident">on_read</span>,
             <span class="ident">on_write</span>: <span class="ident">config</span>.<span class="ident">on_write</span>,
@@ -148,29 +148,29 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Filter</span> <span class="kw">for</span> <span class="ident">ConcatenateBytes</span> {
-    <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut</span> <span class="ident">ctx</span>: <span class="ident">ReadContext</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ReadResponse</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut</span> <span class="ident">ctx</span>: <span class="ident">ReadContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ReadResponse</span><span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">on_read</span> {
-            <span class="ident">Strategy::Append</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">Strategy::Append</span> =&gt; {
                 <span class="ident">ctx</span>.<span class="ident">contents</span>.<span class="ident">extend</span>(<span class="self">self</span>.<span class="ident">bytes</span>.<span class="ident">iter</span>());
             }
-            <span class="ident">Strategy::Prepend</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">Strategy::Prepend</span> =&gt; {
                 <span class="ident">ctx</span>.<span class="ident">contents</span>.<span class="ident">splice</span>(..<span class="number">0</span>, <span class="self">self</span>.<span class="ident">bytes</span>.<span class="ident">iter</span>().<span class="ident">cloned</span>());
             }
-            <span class="ident">Strategy::DoNothing</span> <span class="op">=</span><span class="op">&gt;</span> {}
+            <span class="ident">Strategy::DoNothing</span> =&gt; {}
         }
 
         <span class="prelude-val">Some</span>(<span class="ident">ctx</span>.<span class="ident">into</span>())
     }
 
-    <span class="kw">fn</span> <span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut</span> <span class="ident">ctx</span>: <span class="ident">WriteContext</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">WriteResponse</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut</span> <span class="ident">ctx</span>: <span class="ident">WriteContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">WriteResponse</span><span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">on_write</span> {
-            <span class="ident">Strategy::Append</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">Strategy::Append</span> =&gt; {
                 <span class="ident">ctx</span>.<span class="ident">contents</span>.<span class="ident">extend</span>(<span class="self">self</span>.<span class="ident">bytes</span>.<span class="ident">iter</span>());
             }
-            <span class="ident">Strategy::Prepend</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">Strategy::Prepend</span> =&gt; {
                 <span class="ident">ctx</span>.<span class="ident">contents</span>.<span class="ident">splice</span>(..<span class="number">0</span>, <span class="self">self</span>.<span class="ident">bytes</span>.<span class="ident">iter</span>().<span class="ident">cloned</span>());
             }
-            <span class="ident">Strategy::DoNothing</span> <span class="op">=</span><span class="op">&gt;</span> {}
+            <span class="ident">Strategy::DoNothing</span> =&gt; {}
         }
 
         <span class="prelude-val">Some</span>(<span class="ident">ctx</span>.<span class="ident">into</span>())
@@ -181,11 +181,11 @@
 <span class="kw">struct</span> <span class="ident">ConcatBytesFactory</span>;
 
 <span class="kw">impl</span> <span class="ident">FilterFactory</span> <span class="kw">for</span> <span class="ident">ConcatBytesFactory</span> {
-    <span class="kw">fn</span> <span class="ident">name</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
+    <span class="kw">fn</span> <span class="ident">name</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
         <span class="ident">NAME</span>
     }
 
-    <span class="kw">fn</span> <span class="ident">create_filter</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">args</span>: <span class="ident">CreateFilterArgs</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">FilterInstance</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">create_filter</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">args</span>: <span class="ident">CreateFilterArgs</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">FilterInstance</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> (<span class="ident">config_json</span>, <span class="ident">config</span>) <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">require_config</span>(<span class="ident">args</span>.<span class="ident">config</span>)<span class="question-mark">?</span>
             .<span class="ident">deserialize</span>::<span class="op">&lt;</span><span class="ident">Config</span>, <span class="ident">ProtoConfig</span><span class="op">&gt;</span>(<span class="self">self</span>.<span class="ident">name</span>())<span class="question-mark">?</span>;

@@ -165,7 +165,7 @@
         <span class="ident">from</span>: <span class="ident">EndpointAddress</span>,
         <span class="ident">to</span>: <span class="ident">EndpointAddress</span>,
         <span class="ident">contents</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">WriteContext</span> {
+    ) -&gt; <span class="ident">WriteContext</span> {
         <span class="ident">WriteContext</span> {
             <span class="ident">endpoint</span>,
             <span class="ident">from</span>,
@@ -181,7 +181,7 @@
         <span class="ident">from</span>: <span class="ident">EndpointAddress</span>,
         <span class="ident">to</span>: <span class="ident">EndpointAddress</span>,
         <span class="ident">response</span>: <span class="ident">WriteResponse</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">WriteContext</span> {
+    ) -&gt; <span class="ident">WriteContext</span> {
         <span class="ident">WriteContext</span> {
             <span class="ident">endpoint</span>,
             <span class="ident">from</span>,
@@ -193,7 +193,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">WriteContext</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">WriteResponse</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">ctx</span>: <span class="ident">WriteContext</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">ctx</span>: <span class="ident">WriteContext</span>) -&gt; <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">contents</span>: <span class="ident">ctx</span>.<span class="ident">contents</span>,
             <span class="ident">metadata</span>: <span class="ident">ctx</span>.<span class="ident">metadata</span>,

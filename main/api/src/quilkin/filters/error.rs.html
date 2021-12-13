@@ -167,13 +167,13 @@
 }
 
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">Error</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ValidationError</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">error</span>: <span class="ident">Error</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">error</span>: <span class="ident">Error</span>) -&gt; <span class="self">Self</span> {
         <span class="ident"><span class="self">Self</span>::FilterInvalid</span>(<span class="ident">error</span>)
     }
 }
 
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">MetricsError</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Error</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">error</span>: <span class="ident">MetricsError</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">error</span>: <span class="ident">MetricsError</span>) -&gt; <span class="self">Self</span> {
         <span class="ident">Error::InitializeMetricsFailed</span>(<span class="ident">error</span>.<span class="ident">to_string</span>())
     }
 }
@@ -194,7 +194,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">ConvertProtoConfigError</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">reason</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>, <span class="ident">field</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">reason</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>, <span class="ident">field</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">reason</span>: <span class="ident">reason</span>.<span class="ident">into</span>(),
             <span class="ident">field</span>,
@@ -211,7 +211,7 @@
         <span class="ident">invalid_value</span> <span class="op">=</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">invalid_value</span>:<span class="ident">ident</span>,
         <span class="ident">enum_type</span> <span class="op">=</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">enum_type</span>:<span class="ident">ty</span>,
         <span class="ident">allowed_values</span> <span class="op">=</span> [ $( <span class="macro-nonterminal">$</span><span class="macro-nonterminal">allowed_value</span>:<span class="ident">tt</span> ),<span class="op">+</span> ]
-    ) <span class="op">=</span><span class="op">&gt;</span> {
+    ) =&gt; {
         <span class="prelude-val">Err</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">crate::filters::error::ConvertProtoConfigError::new</span>(
             <span class="macro">format!</span>(
               <span class="string">&quot;invalid value `{}` provided: allowed values are {}&quot;</span>,
@@ -242,10 +242,10 @@
         <span class="ident">proto_enum_type</span> <span class="op">=</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">proto_enum_type</span>:<span class="ident">ty</span>,
         <span class="ident">target_enum_type</span> <span class="op">=</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">target_enum_type</span>:<span class="ident">ty</span>,
         <span class="ident">variants</span> <span class="op">=</span> [ $( <span class="macro-nonterminal">$</span><span class="macro-nonterminal">variant</span>:<span class="ident">tt</span> ),<span class="op">+</span> ]
-    ) <span class="op">=</span><span class="op">&gt;</span> {
+    ) =&gt; {
         <span class="kw">match</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">value</span> {
-            $( <span class="ident">v</span> <span class="kw">if</span> <span class="ident">v</span> <span class="op">=</span><span class="op">=</span> <span class="op">&lt;</span><span class="macro-nonterminal">$</span><span class="macro-nonterminal">proto_enum_type</span><span class="op">&gt;</span>::<span class="macro-nonterminal">$</span><span class="macro-nonterminal">variant</span> <span class="kw">as</span> <span class="ident">i32</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="op">&lt;</span><span class="macro-nonterminal">$</span><span class="macro-nonterminal">target_enum_type</span><span class="op">&gt;</span>::<span class="macro-nonterminal">$</span><span class="macro-nonterminal">variant</span>) ),<span class="op">+</span>,
-            <span class="ident">invalid</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro-nonterminal">$</span><span class="macro">crate::enum_no_match_error!</span>(
+            $( <span class="ident">v</span> <span class="kw">if</span> <span class="ident">v</span> <span class="op">==</span> <span class="op">&lt;</span><span class="macro-nonterminal">$</span><span class="macro-nonterminal">proto_enum_type</span><span class="op">&gt;</span>::<span class="macro-nonterminal">$</span><span class="macro-nonterminal">variant</span> <span class="kw">as</span> <span class="ident">i32</span> =&gt; <span class="prelude-val">Ok</span>(<span class="op">&lt;</span><span class="macro-nonterminal">$</span><span class="macro-nonterminal">target_enum_type</span><span class="op">&gt;</span>::<span class="macro-nonterminal">$</span><span class="macro-nonterminal">variant</span>) ),<span class="op">+</span>,
+            <span class="ident">invalid</span> =&gt; <span class="macro-nonterminal">$</span><span class="macro">crate::enum_no_match_error!</span>(
                 <span class="macro-nonterminal">field</span> <span class="op">=</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">field</span>,
                 <span class="ident">invalid_value</span> <span class="op">=</span> <span class="ident">invalid</span>,
                 <span class="ident">enum_type</span> <span class="op">=</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">proto_enum_type</span>,

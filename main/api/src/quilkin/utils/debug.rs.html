@@ -45,7 +45,7 @@
 
 <span class="doccomment">/// Attempt to convert a packet into a string, if it is one, otherwise return some human</span>
 <span class="doccomment">/// readable details about the packet.</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">bytes_to_string</span>(<span class="ident">bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">bytes_to_string</span>(<span class="ident">bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="ident">String</span> {
     <span class="ident">std::str::from_utf8</span>(<span class="ident">bytes</span>)
         .<span class="ident">map</span>(<span class="ident">str::to_string</span>)
         .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;&lt;raw bytes :: len: {}&gt;&quot;</span>, <span class="ident">bytes</span>.<span class="ident">len</span>()))

@@ -299,7 +299,7 @@
         <span class="ident">metrics_registry</span>: <span class="ident">Registry</span>,
         <span class="ident">filter_registry</span>: <span class="ident">FilterRegistry</span>,
         <span class="ident">filter_chain_updates_tx</span>: <span class="ident">mpsc::Sender</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">FilterChain</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">ListenerManagerArgs</span> {
+    ) -&gt; <span class="ident">ListenerManagerArgs</span> {
         <span class="ident">ListenerManagerArgs</span> {
             <span class="ident">filter_chain_updates_tx</span>,
             <span class="ident">filter_registry</span>,
@@ -314,12 +314,12 @@
     }
 
     <span class="doccomment">/// Returns the current filter chain.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_filter_chain</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">FilterChain</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_filter_chain</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">FilterChain</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">filter_chain</span>.<span class="ident">clone</span>()
     }
 
     <span class="doccomment">/// Returns a new instance backed only by the provided filter chain.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">fixed</span>(<span class="ident">filter_chain</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">FilterChain</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">SharedFilterManager</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">fixed</span>(<span class="ident">filter_chain</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">FilterChain</span><span class="op">&gt;</span>) -&gt; <span class="ident">SharedFilterManager</span> {
         <span class="ident">Arc::new</span>(<span class="ident">RwLock::new</span>(<span class="ident">FilterManager</span> { <span class="ident">filter_chain</span> }))
     }
 
@@ -330,7 +330,7 @@
         <span class="ident">metrics_registry</span>: <span class="kw-2">&amp;</span><span class="ident">Registry</span>,
         <span class="ident">filter_chain_updates_rx</span>: <span class="ident">mpsc::Receiver</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">FilterChain</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">shutdown_rx</span>: <span class="ident">watch::Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SharedFilterManager</span>, <span class="ident">FilterChainError</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SharedFilterManager</span>, <span class="ident">FilterChainError</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">log</span> <span class="op">=</span> <span class="ident"><span class="self">Self</span>::create_logger</span>(<span class="ident">base_logger</span>);
 
         <span class="kw">let</span> <span class="ident">filter_manager</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">RwLock::new</span>(<span class="ident">FilterManager</span> {
@@ -361,19 +361,19 @@
         <span class="ident">tokio::spawn</span>(<span class="kw">async</span> <span class="kw">move</span> {
             <span class="kw">loop</span> {
                 <span class="macro">tokio::select!</span> {
-                    <span class="ident">update</span> <span class="op">=</span> <span class="ident">filter_chain_updates_rx</span>.<span class="ident">recv</span>() <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="ident">update</span> <span class="op">=</span> <span class="ident">filter_chain_updates_rx</span>.<span class="ident">recv</span>() =&gt; {
                         <span class="kw">match</span> <span class="ident">update</span> {
-                            <span class="prelude-val">Some</span>(<span class="ident">filter_chain</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                            <span class="prelude-val">Some</span>(<span class="ident">filter_chain</span>) =&gt; {
                                 <span class="macro">debug!</span>(<span class="ident">log</span>, <span class="string">&quot;Received a filter chain update.&quot;</span>);
                                 <span class="ident">filter_manager</span>.<span class="ident">write</span>().<span class="ident">update</span>(<span class="ident">filter_chain</span>);
                             }
-                            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
+                            <span class="prelude-val">None</span> =&gt; {
                                 <span class="macro">warn!</span>(<span class="ident">log</span>, <span class="string">&quot;Exiting filter chain update receive loop because the sender dropped the channel.&quot;</span>);
                                 <span class="kw">return</span>;
                             }
                         }
                     }
-                    <span class="kw">_</span> <span class="op">=</span> <span class="ident">shutdown_rx</span>.<span class="ident">changed</span>() <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="kw">_</span> <span class="op">=</span> <span class="ident">shutdown_rx</span>.<span class="ident">changed</span>() =&gt; {
                         <span class="macro">debug!</span>(<span class="ident">log</span>, <span class="string">&quot;Exiting filter chain update receive loop because a shutdown signal was received.&quot;</span>);
                         <span class="kw">return</span>;
                     },
@@ -382,8 +382,8 @@
         });
     }
 
-    <span class="kw">fn</span> <span class="ident">create_logger</span>(<span class="ident">base_logger</span>: <span class="ident">Logger</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Logger</span> {
-        <span class="ident">base_logger</span>.<span class="ident">new</span>(<span class="macro">o!</span>(<span class="string">&quot;source&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;FilterManager&quot;</span>))
+    <span class="kw">fn</span> <span class="ident">create_logger</span>(<span class="ident">base_logger</span>: <span class="ident">Logger</span>) -&gt; <span class="ident">Logger</span> {
+        <span class="ident">base_logger</span>.<span class="ident">new</span>(<span class="macro">o!</span>(<span class="string">&quot;source&quot;</span> =&gt; <span class="string">&quot;FilterManager&quot;</span>))
     }
 }
 
@@ -433,7 +433,7 @@
         <span class="comment">// A simple test filter that drops all packets flowing upstream.</span>
         <span class="kw">struct</span> <span class="ident">Drop</span>;
         <span class="kw">impl</span> <span class="ident">Filter</span> <span class="kw">for</span> <span class="ident">Drop</span> {
-            <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="ident">ReadContext</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ReadResponse</span><span class="op">&gt;</span> {
+            <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="ident">ReadContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ReadResponse</span><span class="op">&gt;</span> {
                 <span class="prelude-val">None</span>
             }
         }

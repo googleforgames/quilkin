@@ -431,13 +431,13 @@
 }
 
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">ValidationError</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Error</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">err</span>: <span class="ident">ValidationError</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">err</span>: <span class="ident">ValidationError</span>) -&gt; <span class="self">Self</span> {
         <span class="ident">Error::InvalidConfig</span>(<span class="ident">err</span>)
     }
 }
 
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">FilterChainError</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Error</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">err</span>: <span class="ident">FilterChainError</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">err</span>: <span class="ident">FilterChainError</span>) -&gt; <span class="self">Self</span> {
         <span class="ident">Error::CreateFilterChain</span>(<span class="ident">err</span>)
     }
 }
@@ -473,7 +473,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Config</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Builder</span><span class="op">&lt;</span><span class="ident">PendingValidation</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">config</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Config</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">config</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Config</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
         <span class="kw">let</span> <span class="ident">log</span> <span class="op">=</span> <span class="ident">logger</span>();
         <span class="kw">let</span> <span class="ident">metrics</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">Metrics::new</span>(<span class="kw-2">&amp;</span><span class="ident">log</span>, <span class="ident">Registry::default</span>()));
         <span class="kw">let</span> <span class="ident">health</span> <span class="op">=</span> <span class="ident">Health::new</span>(<span class="kw-2">&amp;</span><span class="ident">log</span>);
@@ -494,12 +494,12 @@
         <span class="ident">config</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Config</span><span class="op">&gt;</span>,
         <span class="ident">filter_registry</span>: <span class="kw-2">&amp;</span><span class="ident">FilterRegistry</span>,
         <span class="ident">metrics</span>: <span class="kw-2">&amp;</span><span class="ident">Metrics</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">validated_source</span> <span class="op">=</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">source</span> {
             <span class="ident">Source::Static</span> {
                 <span class="ident">filters</span>,
                 <span class="ident">endpoints</span>: <span class="ident">config_endpoints</span>,
-            } <span class="op">=</span><span class="op">&gt;</span> {
+            } =&gt; {
                 <span class="kw">if</span> <span class="ident">config_endpoints</span>
                     .<span class="ident">iter</span>()
                     .<span class="ident">map</span>(<span class="op">|</span><span class="ident">ep</span><span class="op">|</span> <span class="ident">ep</span>.<span class="ident">address</span>.<span class="ident">clone</span>())
@@ -524,7 +524,7 @@
                     <span class="ident">endpoints</span>,
                 }
             }
-            <span class="ident">Source::Dynamic</span> { <span class="ident">management_servers</span> } <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">Source::Dynamic</span> { <span class="ident">management_servers</span> } =&gt; {
                 <span class="kw">if</span> <span class="ident">management_servers</span>.<span class="ident">is_empty</span>() {
                     <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">ValidationError::EmptyList</span>(
                         <span class="string">&quot;dynamic.management_servers&quot;</span>.<span class="ident">to_string</span>(),
@@ -576,11 +576,11 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Builder</span><span class="op">&lt;</span><span class="ident">PendingValidation</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_log</span>(<span class="self">self</span>, <span class="ident">log</span>: <span class="ident">Logger</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_log</span>(<span class="self">self</span>, <span class="ident">log</span>: <span class="ident">Logger</span>) -&gt; <span class="self">Self</span> {
         <span class="self">Self</span> { <span class="ident">log</span>, ..<span class="self">self</span> }
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_filter_registry</span>(<span class="self">self</span>, <span class="ident">filter_registry</span>: <span class="ident">FilterRegistry</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_filter_registry</span>(<span class="self">self</span>, <span class="ident">filter_registry</span>: <span class="ident">FilterRegistry</span>) -&gt; <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">filter_registry</span>,
             ..<span class="self">self</span>
@@ -588,7 +588,7 @@
     }
 
     <span class="doccomment">/// Disable the admin interface</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">disable_admin</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">disable_admin</span>(<span class="self">self</span>) -&gt; <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">admin</span>: <span class="prelude-val">None</span>,
             ..<span class="self">self</span>
@@ -596,7 +596,7 @@
     }
 
     <span class="comment">// Validates the builder&#39;s config and filter configurations.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">validate</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Builder</span><span class="op">&lt;</span><span class="ident">Validated</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">validate</span>(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Builder</span><span class="op">&lt;</span><span class="ident">Validated</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">validated_config</span> <span class="op">=</span>
             <span class="ident">ValidatedConfig::validate</span>(<span class="self">self</span>.<span class="ident">config</span>.<span class="ident">clone</span>(), <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">filter_registry</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">metrics</span>)<span class="question-mark">?</span>;
 
@@ -612,9 +612,9 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Builder</span><span class="op">&lt;</span><span class="ident">Validated</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Server</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build</span>(<span class="self">self</span>) -&gt; <span class="ident">Server</span> {
         <span class="ident">Server</span> {
-            <span class="ident">log</span>: <span class="self">self</span>.<span class="ident">log</span>.<span class="ident">new</span>(<span class="macro">o!</span>(<span class="string">&quot;source&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;server::Server&quot;</span>)),
+            <span class="ident">log</span>: <span class="self">self</span>.<span class="ident">log</span>.<span class="ident">new</span>(<span class="macro">o!</span>(<span class="string">&quot;source&quot;</span> =&gt; <span class="string">&quot;server::Server&quot;</span>)),
             <span class="ident">config</span>: <span class="ident">Arc::new</span>(<span class="self">self</span>.<span class="ident">validation_status</span>.<span class="number">0</span>),
             <span class="ident">proxy_metrics</span>: <span class="ident">ProxyMetrics::new</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">registry</span>)
                 .<span class="ident">expect</span>(<span class="string">&quot;proxy metrics should be setup properly&quot;</span>),
@@ -629,7 +629,7 @@
 
 <span class="doccomment">/// Create a new `slog::Logger` instance using the default</span>
 <span class="doccomment">/// quilkin configuration.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">logger</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Logger</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">logger</span>() -&gt; <span class="ident">Logger</span> {
     <span class="kw">let</span> <span class="ident">drain</span> <span class="op">=</span> <span class="ident">slog_json::Json::new</span>(<span class="ident">std::io::stdout</span>())
         .<span class="ident">set_pretty</span>(<span class="bool-val">false</span>)
         .<span class="ident">add_default_keys</span>()
@@ -650,11 +650,11 @@
     <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">Builder</span>, <span class="ident">Error</span>};
 
     <span class="attribute">#[<span class="ident">track_caller</span>]</span>
-    <span class="kw">fn</span> <span class="ident">parse_config</span>(<span class="ident">yaml</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Config</span> {
+    <span class="kw">fn</span> <span class="ident">parse_config</span>(<span class="ident">yaml</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="ident">Config</span> {
         <span class="ident">Config::from_reader</span>(<span class="ident">yaml</span>.<span class="ident">as_bytes</span>()).<span class="ident">unwrap</span>()
     }
 
-    <span class="kw">fn</span> <span class="ident">validate_unwrap_ok</span>(<span class="ident">yaml</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Builder</span><span class="op">&lt;</span><span class="ident">Validated</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">validate_unwrap_ok</span>(<span class="ident">yaml</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>) -&gt; <span class="ident">Builder</span><span class="op">&lt;</span><span class="ident">Validated</span><span class="op">&gt;</span> {
         <span class="ident">Builder::try_from</span>(<span class="ident">Arc::new</span>(<span class="ident">parse_config</span>(<span class="ident">yaml</span>)))
             .<span class="ident">unwrap</span>()
             .<span class="ident">validate</span>()
@@ -662,14 +662,14 @@
     }
 
     <span class="attribute">#[<span class="ident">track_caller</span>]</span>
-    <span class="kw">fn</span> <span class="ident">validate_unwrap_err</span>(<span class="ident">yaml</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">ValidationError</span> {
+    <span class="kw">fn</span> <span class="ident">validate_unwrap_err</span>(<span class="ident">yaml</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>) -&gt; <span class="ident">ValidationError</span> {
         <span class="kw">match</span> <span class="ident">Builder::try_from</span>(<span class="ident">Arc::new</span>(<span class="ident">parse_config</span>(<span class="ident">yaml</span>)))
             .<span class="ident">unwrap</span>()
             .<span class="ident">validate</span>()
         {
-            <span class="prelude-val">Err</span>(<span class="ident">Error::InvalidConfig</span>(<span class="ident">err</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">err</span>,
-            <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable!</span>(<span class="macro">format!</span>(<span class="string">&quot;expected ValidationError, got {}&quot;</span>, <span class="ident">err</span>)),
-            <span class="prelude-val">Ok</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable!</span>(<span class="string">&quot;config validation should have failed!&quot;</span>),
+            <span class="prelude-val">Err</span>(<span class="ident">Error::InvalidConfig</span>(<span class="ident">err</span>)) =&gt; <span class="ident">err</span>,
+            <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; <span class="macro">unreachable!</span>(<span class="macro">format!</span>(<span class="string">&quot;expected ValidationError, got {}&quot;</span>, <span class="ident">err</span>)),
+            <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;config validation should have failed!&quot;</span>),
         }
     }
 
@@ -694,10 +694,10 @@ dynamic:
     - address: &#39;not an endpoint address&#39;
   &quot;</span>;
         <span class="kw">match</span> <span class="ident">validate_unwrap_err</span>(<span class="ident">yaml</span>) {
-            <span class="ident">ValidationError::ValueInvalid</span>(<span class="ident">args</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">ValidationError::ValueInvalid</span>(<span class="ident">args</span>) =&gt; {
                 <span class="macro">assert_eq!</span>(<span class="ident">args</span>.<span class="ident">field</span>, <span class="string">&quot;dynamic.management_servers.address&quot;</span>.<span class="ident">to_string</span>());
             }
-            <span class="ident">err</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable!</span>(<span class="string">&quot;expected invalid value error: got {}&quot;</span>, <span class="ident">err</span>),
+            <span class="ident">err</span> =&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;expected invalid value error: got {}&quot;</span>, <span class="ident">err</span>),
         }
 
         <span class="kw">let</span> <span class="ident">yaml</span> <span class="op">=</span> <span class="string">&quot;

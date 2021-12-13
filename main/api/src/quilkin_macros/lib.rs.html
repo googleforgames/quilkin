@@ -101,7 +101,7 @@
 <span class="doccomment">/// }</span>
 <span class="doccomment">/// ```</span>
 <span class="attribute">#[<span class="ident">proc_macro</span>]</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">include_proto</span>(<span class="ident">input</span>: <span class="ident">proc_macro::TokenStream</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">proc_macro::TokenStream</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">include_proto</span>(<span class="ident">input</span>: <span class="ident">proc_macro::TokenStream</span>) -&gt; <span class="ident">proc_macro::TokenStream</span> {
     <span class="macro">parse_macro_input!</span>(<span class="ident">input</span> <span class="kw">as</span> <span class="ident">IncludeProto</span>)
         .<span class="ident">to_token_stream</span>()
         .<span class="ident">into</span>()

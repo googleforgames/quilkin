@@ -63,7 +63,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Metrics</span> {
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">registry</span>: <span class="kw-2">&amp;</span><span class="ident">Registry</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">MetricsResult</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">registry</span>: <span class="kw-2">&amp;</span><span class="ident">Registry</span>) -&gt; <span class="ident">MetricsResult</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
         <span class="prelude-val">Ok</span>(<span class="ident">Metrics</span> {
             <span class="ident">packets_dropped_total</span>: <span class="ident">IntCounter::with_opts</span>(<span class="ident">filter_opts</span>(
                 <span class="string">&quot;packets_dropped&quot;</span>,

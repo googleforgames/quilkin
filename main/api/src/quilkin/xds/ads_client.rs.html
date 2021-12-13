@@ -611,8 +611,8 @@
 }
 
 <span class="kw">impl</span> <span class="ident">AdsClient</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">base_logger</span>: <span class="ident">Logger</span>, <span class="ident">metrics_registry</span>: <span class="kw-2">&amp;</span><span class="ident">Registry</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">MetricsResult</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">log</span> <span class="op">=</span> <span class="ident">base_logger</span>.<span class="ident">new</span>(<span class="macro">o!</span>(<span class="string">&quot;source&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;xds::AdsClient&quot;</span>));
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">base_logger</span>: <span class="ident">Logger</span>, <span class="ident">metrics_registry</span>: <span class="kw-2">&amp;</span><span class="ident">Registry</span>) -&gt; <span class="ident">MetricsResult</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">log</span> <span class="op">=</span> <span class="ident">base_logger</span>.<span class="ident">new</span>(<span class="macro">o!</span>(<span class="string">&quot;source&quot;</span> =&gt; <span class="string">&quot;xds::AdsClient&quot;</span>));
         <span class="kw">let</span> <span class="ident">metrics</span> <span class="op">=</span> <span class="ident">Metrics::new</span>(<span class="ident">metrics_registry</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="self">Self</span> { <span class="ident">log</span>, <span class="ident">metrics</span> })
     }
@@ -626,7 +626,7 @@
         <span class="ident">cluster_updates_tx</span>: <span class="ident">mpsc::Sender</span><span class="op">&lt;</span><span class="ident">ClusterUpdate</span><span class="op">&gt;</span>,
         <span class="ident">listener_manager_args</span>: <span class="ident">ListenerManagerArgs</span>,
         <span class="kw-2">mut</span> <span class="ident">shutdown_rx</span>: <span class="ident">watch::Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">log</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">log</span>;
         <span class="kw">let</span> <span class="ident">metrics</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">metrics</span>;
 
@@ -636,13 +636,13 @@
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">backoff</span> <span class="op">=</span> <span class="ident">ExponentialBackoff::new</span>(<span class="ident">std::time::Duration::from_millis</span>(<span class="number">500</span>));
 
             <span class="kw">match</span> <span class="ident">error</span> {
-                <span class="ident">RpcSessionError::NonRecoverable</span>(<span class="ident">msg</span>, <span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="ident">RpcSessionError::NonRecoverable</span>(<span class="ident">msg</span>, <span class="ident">err</span>) =&gt; {
                     <span class="macro">error!</span>(<span class="ident">log</span>, <span class="string">&quot;{}\n{}&quot;</span>, <span class="ident">msg</span>, <span class="ident">err</span>);
                     <span class="ident">RetryPolicy::Break</span>
                 }
 
-                <span class="ident">RpcSessionError::InitialConnect</span>(<span class="kw-2">ref</span> <span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="macro">error!</span>(<span class="ident">log</span>, <span class="string">&quot;Unable to connect to the XDS server&quot;</span>; <span class="string">&quot;error&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="op">%</span><span class="ident">err</span>);
+                <span class="ident">RpcSessionError::InitialConnect</span>(<span class="kw-2">ref</span> <span class="ident">err</span>) =&gt; {
+                    <span class="macro">error!</span>(<span class="ident">log</span>, <span class="string">&quot;Unable to connect to the XDS server&quot;</span>; <span class="string">&quot;error&quot;</span> =&gt; <span class="op">%</span><span class="ident">err</span>);
 
                     <span class="comment">// Do not retry if this is an invalid URL error that we cannot recover from.</span>
                     <span class="comment">// Need to use {:?} as the Display output only returns &#39;transport error&#39;</span>
@@ -654,8 +654,8 @@
                     }
                 }
 
-                <span class="ident">RpcSessionError::Receive</span>(<span class="kw-2">ref</span> <span class="ident">status</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="macro">error!</span>(<span class="ident">log</span>, <span class="string">&quot;Failed to receive response from XDS server&quot;</span>; <span class="string">&quot;status&quot;</span> <span class="op">=</span><span class="op">&gt;</span> #<span class="question-mark">?</span><span class="ident">status</span>);
+                <span class="ident">RpcSessionError::Receive</span>(<span class="kw-2">ref</span> <span class="ident">status</span>) =&gt; {
+                    <span class="macro">error!</span>(<span class="ident">log</span>, <span class="string">&quot;Failed to receive response from XDS server&quot;</span>; <span class="string">&quot;status&quot;</span> =&gt; #<span class="question-mark">?</span><span class="ident">status</span>);
                     <span class="ident">RetryPolicy::Delay</span>(<span class="ident">backoff</span>.<span class="ident">delay</span>(<span class="ident">attempt</span>, <span class="kw-2">&amp;</span><span class="ident">error</span>))
                 }
             }
@@ -696,8 +696,8 @@
         .<span class="ident">with_config</span>(<span class="ident">retry_config</span>);
 
         <span class="macro">tokio::select!</span> {
-            <span class="ident">result</span> <span class="op">=</span> <span class="ident">handle</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">result</span>.<span class="ident">map</span>(<span class="ident">drop</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">eyre::eyre!</span>(<span class="ident">error</span>)),
-            <span class="kw">_</span> <span class="op">=</span> <span class="ident">shutdown_rx</span>.<span class="ident">changed</span>() <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">result</span> <span class="op">=</span> <span class="ident">handle</span> =&gt; <span class="ident">result</span>.<span class="ident">map</span>(<span class="ident">drop</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">eyre::eyre!</span>(<span class="ident">error</span>)),
+            <span class="kw">_</span> <span class="op">=</span> <span class="ident">shutdown_rx</span>.<span class="ident">changed</span>() =&gt; {
                 <span class="macro">info!</span>(<span class="ident">log</span>, <span class="string">&quot;Stopping client execution - received shutdown signal.&quot;</span>);
                 <span class="prelude-val">Ok</span>(())
             },
@@ -717,15 +717,15 @@
 
 <span class="kw">impl</span> <span class="ident">RpcReceiver</span> {
     <span class="doccomment">/// Spawns the task that runs a receive loop.</span>
-    <span class="kw">fn</span> <span class="ident">run</span>(<span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">JoinHandle</span><span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">RpcSessionError</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">run</span>(<span class="kw-2">mut</span> <span class="self">self</span>) -&gt; <span class="ident">JoinHandle</span><span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">RpcSessionError</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="ident">tokio::spawn</span>(<span class="kw">async</span> <span class="kw">move</span> {
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">response_stream</span> <span class="op">=</span> <span class="kw">match</span> <span class="self">self</span>
                 .<span class="ident">client</span>
                 .<span class="ident">stream_aggregated_resources</span>(<span class="ident">Request::new</span>(<span class="ident">ReceiverStream::new</span>(<span class="self">self</span>.<span class="ident">rpc_rx</span>)))
                 .<span class="kw">await</span>
             {
-                <span class="prelude-val">Ok</span>(<span class="ident">response</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">response</span>.<span class="ident">into_inner</span>(),
-                <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">RpcSessionError::Receive</span>(<span class="ident">err</span>)),
+                <span class="prelude-val">Ok</span>(<span class="ident">response</span>) =&gt; <span class="ident">response</span>.<span class="ident">into_inner</span>(),
+                <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">RpcSessionError::Receive</span>(<span class="ident">err</span>)),
             };
 
             <span class="comment">// We are now connected to the server.</span>
@@ -733,25 +733,25 @@
 
             <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="kw">loop</span> {
                 <span class="macro">tokio::select!</span> {
-                    <span class="ident">response</span> <span class="op">=</span> <span class="ident">response_stream</span>.<span class="ident">message</span>() <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="ident">response</span> <span class="op">=</span> <span class="ident">response_stream</span>.<span class="ident">message</span>() =&gt; {
                         <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">response</span> {
-                            <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                            <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) =&gt; {
                                 <span class="comment">// No more messages on the connection.</span>
                                 <span class="macro">info!</span>(<span class="self">self</span>.<span class="ident">log</span>, <span class="string">&quot;Exiting receive loop - response stream closed.&quot;</span>);
                                 <span class="kw">break</span> <span class="prelude-val">Ok</span>(())
                             },
-                            <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">break</span> <span class="prelude-val">Err</span>(<span class="ident">RpcSessionError::Receive</span>(<span class="ident">err</span>)),
-                            <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">response</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">response</span>
+                            <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; <span class="kw">break</span> <span class="prelude-val">Err</span>(<span class="ident">RpcSessionError::Receive</span>(<span class="ident">err</span>)),
+                            <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">response</span>)) =&gt; <span class="ident">response</span>
                         };
 
                         <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">update_attempt_total</span>.<span class="ident">inc</span>();
                         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">url</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">resource_handlers</span>.<span class="ident">handle_discovery_response</span>(<span class="ident">response</span>).<span class="kw">await</span> {
                             <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">update_failure_total</span>.<span class="ident">inc</span>();
-                            <span class="macro">error!</span>(<span class="self">self</span>.<span class="ident">log</span>, <span class="string">&quot;Unexpected resource&quot;</span>; <span class="string">&quot;type&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">url</span>);
+                            <span class="macro">error!</span>(<span class="self">self</span>.<span class="ident">log</span>, <span class="string">&quot;Unexpected resource&quot;</span>; <span class="string">&quot;type&quot;</span> =&gt; <span class="ident">url</span>);
                         }
                     }
 
-                    <span class="kw">_</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">shutdown_rx</span>.<span class="ident">changed</span>() <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="kw">_</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">shutdown_rx</span>.<span class="ident">changed</span>() =&gt; {
                         <span class="macro">info!</span>(<span class="self">self</span>.<span class="ident">log</span>, <span class="string">&quot;Exiting receive loop - received shutdown signal&quot;</span>);
                         <span class="kw">break</span> <span class="prelude-val">Ok</span>(())
                     }
@@ -784,10 +784,10 @@
     <span class="doccomment">/// responses from the server, forwarding them to the ClusterManager</span>
     <span class="doccomment">/// while the other loop (send loop) waits for DiscoveryRequest ACKS/NACKS</span>
     <span class="doccomment">/// from the ClusterManager, forwarding them to the server.</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">run</span>(<span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">RpcSessionError</span><span class="op">&gt;</span> {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">run</span>(<span class="kw-2">mut</span> <span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">RpcSessionError</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">AggregatedDiscoveryServiceClient::connect</span>(<span class="self">self</span>.<span class="ident">addr</span>).<span class="kw">await</span> {
-            <span class="prelude-val">Ok</span>(<span class="ident">client</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">client</span>,
-            <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">RpcSessionError::InitialConnect</span>(<span class="ident">err</span>)),
+            <span class="prelude-val">Ok</span>(<span class="ident">client</span>) =&gt; <span class="ident">client</span>,
+            <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">RpcSessionError::InitialConnect</span>(<span class="ident">err</span>)),
         };
 
         <span class="kw">let</span> (<span class="ident">rpc_tx</span>, <span class="ident">rpc_rx</span>) <span class="op">=</span> <span class="ident">mpsc::channel</span>::<span class="op">&lt;</span><span class="ident">DiscoveryRequest</span><span class="op">&gt;</span>(<span class="ident">UPDATES_CHANNEL_BUFFER_SIZE</span>);
@@ -819,12 +819,12 @@
             <span class="macro">tokio::select!</span> {
                 <span class="comment">// Monitor the receive loop task, if it fails then there is</span>
                 <span class="comment">// no need to remain in the send loop so we exit.</span>
-                <span class="ident">recv_loop_result</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">recv_loop_join_handle</span> <span class="op">=</span><span class="op">&gt;</span>
+                <span class="ident">recv_loop_result</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">recv_loop_join_handle</span> =&gt;
                     <span class="kw">return</span> <span class="ident">recv_loop_result</span>.<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span>
                         <span class="prelude-val">Err</span>(<span class="ident">RpcSessionError::NonRecoverable</span>(
                             <span class="string">&quot;receive loop encountered an error&quot;</span>, <span class="ident">Box::new</span>(<span class="ident">err</span>)))),
 
-                <span class="ident">req</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">discovery_req_rx</span>.<span class="ident">recv</span>() <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="ident">req</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">discovery_req_rx</span>.<span class="ident">recv</span>() =&gt; {
                     <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">req</span>) <span class="op">=</span> <span class="ident">req</span> {
                     <span class="ident">sender</span>.<span class="ident">send_discovery_request</span>(<span class="ident">req</span>)
                         .<span class="kw">await</span>
@@ -861,7 +861,7 @@
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">send_initial_cds_and_lds_request</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">node_id</span>: <span class="ident">String</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">RpcSessionError</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">RpcSessionError</span><span class="op">&gt;</span> {
         <span class="kw">for</span> <span class="ident">resource_type</span> <span class="kw">in</span> <span class="kw-2">&amp;</span>[<span class="ident">CLUSTER_TYPE</span>, <span class="ident">LISTENER_TYPE</span>] {
             <span class="kw">let</span> <span class="ident">send_result</span> <span class="op">=</span> <span class="self">self</span>
                 .<span class="ident">send_discovery_request</span>(<span class="ident">DiscoveryRequest</span> {
@@ -894,7 +894,7 @@
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">send_discovery_request</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">req</span>: <span class="ident">DiscoveryRequest</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">SendError</span><span class="op">&lt;</span><span class="ident">DiscoveryRequest</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">SendError</span><span class="op">&lt;</span><span class="ident">DiscoveryRequest</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="ident">req</span>.<span class="ident">error_detail</span>.<span class="ident">is_some</span>() {
             <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">update_failure_total</span>.<span class="ident">inc</span>();
         } <span class="kw">else</span> {
@@ -903,7 +903,7 @@
 
         <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">requests_total</span>.<span class="ident">inc</span>();
 
-        <span class="macro">debug!</span>(<span class="self">self</span>.<span class="ident">log</span>, <span class="string">&quot;Sending rpc discovery&quot;</span>; <span class="string">&quot;request&quot;</span> <span class="op">=</span><span class="op">&gt;</span> #<span class="question-mark">?</span><span class="ident">req</span>);
+        <span class="macro">debug!</span>(<span class="self">self</span>.<span class="ident">log</span>, <span class="string">&quot;Sending rpc discovery&quot;</span>; <span class="string">&quot;request&quot;</span> =&gt; #<span class="question-mark">?</span><span class="ident">req</span>);
 
         <span class="self">self</span>.<span class="ident">rpc_tx</span>.<span class="ident">send</span>(<span class="ident">req</span>).<span class="kw">await</span>
     }
@@ -922,16 +922,16 @@
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle_discovery_response</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">response</span>: <span class="ident">DiscoveryResponse</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">String</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">String</span><span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">response</span>.<span class="ident">type_url</span> {
-            <span class="ident">CLUSTER_TYPE</span> <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">cluster_manager</span>.<span class="ident">on_cluster_response</span>(<span class="ident">response</span>).<span class="kw">await</span>,
-            <span class="ident">ENDPOINT_TYPE</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">CLUSTER_TYPE</span> =&gt; <span class="self">self</span>.<span class="ident">cluster_manager</span>.<span class="ident">on_cluster_response</span>(<span class="ident">response</span>).<span class="kw">await</span>,
+            <span class="ident">ENDPOINT_TYPE</span> =&gt; {
                 <span class="self">self</span>.<span class="ident">cluster_manager</span>
                     .<span class="ident">on_cluster_load_assignment_response</span>(<span class="ident">response</span>)
                     .<span class="kw">await</span>
             }
-            <span class="ident">LISTENER_TYPE</span> <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">listener_manager</span>.<span class="ident">on_listener_response</span>(<span class="ident">response</span>).<span class="kw">await</span>,
-            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">response</span>.<span class="ident">type_url</span>),
+            <span class="ident">LISTENER_TYPE</span> =&gt; <span class="self">self</span>.<span class="ident">listener_manager</span>.<span class="ident">on_listener_response</span>(<span class="ident">response</span>).<span class="kw">await</span>,
+            <span class="kw">_</span> =&gt; <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">response</span>.<span class="ident">type_url</span>),
         }
 
         <span class="prelude-val">Ok</span>(())
@@ -978,7 +978,7 @@
             <span class="macro">warn!</span>(
                 <span class="ident">log</span>,
                 <span class="string">&quot;Failed to send discovery request&quot;</span>;
-                <span class="string">&quot;type&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="op">%</span><span class="ident">type_url</span>, <span class="string">&quot;error&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="op">%</span><span class="ident">err</span>
+                <span class="string">&quot;type&quot;</span> =&gt; <span class="op">%</span><span class="ident">type_url</span>, <span class="string">&quot;error&quot;</span> =&gt; <span class="op">%</span><span class="ident">err</span>
             )
         })
         <span class="comment">// ok is safe here since an error would mean that we&#39;ve dropped/closed the receiving</span>

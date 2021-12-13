@@ -715,7 +715,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span>(<span class="ident">EndpointAddress</span>, <span class="ident">EndpointAddress</span>)<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">SessionKey</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>((<span class="ident">source</span>, <span class="ident">destination</span>): (<span class="ident">EndpointAddress</span>, <span class="ident">EndpointAddress</span>)) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>((<span class="ident">source</span>, <span class="ident">destination</span>): (<span class="ident">EndpointAddress</span>, <span class="ident">EndpointAddress</span>)) -&gt; <span class="self">Self</span> {
         <span class="ident">SessionKey</span> {
             <span class="ident">source</span>,
             <span class="ident">destination</span>,
@@ -741,7 +741,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">UpstreamPacket</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">dest</span>: <span class="ident">EndpointAddress</span>, <span class="ident">contents</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">timer</span>: <span class="ident">HistogramTimer</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">UpstreamPacket</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">dest</span>: <span class="ident">EndpointAddress</span>, <span class="ident">contents</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">timer</span>: <span class="ident">HistogramTimer</span>) -&gt; <span class="ident">UpstreamPacket</span> {
         <span class="ident">UpstreamPacket</span> {
             <span class="ident">dest</span>,
             <span class="ident">contents</span>,
@@ -749,11 +749,11 @@
         }
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">dest</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">EndpointAddress</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">dest</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">EndpointAddress</span> {
         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">dest</span>
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">contents</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span>[<span class="ident">u8</span>] {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">contents</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[<span class="ident">u8</span>] {
         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">contents</span>
     }
 
@@ -776,16 +776,16 @@
 <span class="kw">impl</span> <span class="ident">SessionArgs</span> {
     <span class="doccomment">/// Creates a new Session, and starts the process of receiving udp sockets</span>
     <span class="doccomment">/// from its ephemeral port from endpoint(s)</span>
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">into_session</span>(<span class="self">self</span>, <span class="ident">base</span>: <span class="kw-2">&amp;</span><span class="ident">Logger</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Session</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">into_session</span>(<span class="self">self</span>, <span class="ident">base</span>: <span class="kw-2">&amp;</span><span class="ident">Logger</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Session</span><span class="op">&gt;</span> {
         <span class="ident">Session::new</span>(<span class="ident">base</span>, <span class="self">self</span>).<span class="kw">await</span>
     }
 }
 
 <span class="kw">impl</span> <span class="ident">Session</span> {
     <span class="doccomment">/// internal constructor for a Session from SessionArgs</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">base</span>: <span class="kw-2">&amp;</span><span class="ident">Logger</span>, <span class="ident">args</span>: <span class="ident">SessionArgs</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">base</span>: <span class="kw-2">&amp;</span><span class="ident">Logger</span>, <span class="ident">args</span>: <span class="ident">SessionArgs</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">log</span> <span class="op">=</span> <span class="ident">base</span>
-            .<span class="ident">new</span>(<span class="macro">o!</span>(<span class="string">&quot;source&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;proxy::Session&quot;</span>, <span class="string">&quot;from&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">args</span>.<span class="ident">from</span>.<span class="ident">clone</span>(), <span class="string">&quot;dest_address&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">args</span>.<span class="ident">dest</span>.<span class="ident">address</span>.<span class="ident">clone</span>()));
+            .<span class="ident">new</span>(<span class="macro">o!</span>(<span class="string">&quot;source&quot;</span> =&gt; <span class="string">&quot;proxy::Session&quot;</span>, <span class="string">&quot;from&quot;</span> =&gt; <span class="ident">args</span>.<span class="ident">from</span>.<span class="ident">clone</span>(), <span class="string">&quot;dest_address&quot;</span> =&gt; <span class="ident">args</span>.<span class="ident">dest</span>.<span class="ident">address</span>.<span class="ident">clone</span>()));
         <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span> (<span class="ident">std::net::Ipv4Addr::UNSPECIFIED</span>, <span class="number">0</span>);
         <span class="kw">let</span> <span class="ident">socket</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">UdpSocket::bind</span>(<span class="ident">addr</span>).<span class="kw">await</span>.<span class="ident">map_err</span>(<span class="ident">Error::BindUdpSocket</span>)<span class="question-mark">?</span>);
         <span class="kw">let</span> (<span class="ident">shutdown_tx</span>, <span class="ident">shutdown_rx</span>) <span class="op">=</span> <span class="ident">watch::channel</span>::<span class="op">&lt;</span>()<span class="op">&gt;</span>(());
@@ -833,13 +833,13 @@
             <span class="kw">loop</span> {
                 <span class="macro">debug!</span>(<span class="ident">log</span>, <span class="string">&quot;Awaiting incoming packet&quot;</span>);
                 <span class="macro">select!</span> {
-                    <span class="ident">received</span> <span class="op">=</span> <span class="ident">socket</span>.<span class="ident">recv_from</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">buf</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="ident">received</span> <span class="op">=</span> <span class="ident">socket</span>.<span class="ident">recv_from</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">buf</span>) =&gt; {
                         <span class="kw">match</span> <span class="ident">received</span> {
-                            <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                            <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; {
                                 <span class="ident">metrics</span>.<span class="ident">rx_errors_total</span>.<span class="ident">inc</span>();
-                                <span class="macro">error!</span>(<span class="ident">log</span>, <span class="string">&quot;Error receiving packet&quot;</span>; <span class="string">&quot;error&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="op">%</span><span class="ident">err</span>);
+                                <span class="macro">error!</span>(<span class="ident">log</span>, <span class="string">&quot;Error receiving packet&quot;</span>; <span class="string">&quot;error&quot;</span> =&gt; <span class="op">%</span><span class="ident">err</span>);
                             },
-                            <span class="prelude-val">Ok</span>((<span class="ident">size</span>, <span class="ident">recv_addr</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+                            <span class="prelude-val">Ok</span>((<span class="ident">size</span>, <span class="ident">recv_addr</span>)) =&gt; {
                                 <span class="ident">metrics</span>.<span class="ident">rx_bytes_total</span>.<span class="ident">inc_by</span>(<span class="ident">size</span> <span class="kw">as</span> <span class="ident">u64</span>);
                                 <span class="ident">metrics</span>.<span class="ident">rx_packets_total</span>.<span class="ident">inc</span>();
                                 <span class="ident">Session::process_recv_packet</span>(
@@ -859,7 +859,7 @@
                             }
                         };
                     }
-                    <span class="kw">_</span> <span class="op">=</span> <span class="ident">shutdown_rx</span>.<span class="ident">changed</span>() <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="kw">_</span> <span class="op">=</span> <span class="ident">shutdown_rx</span>.<span class="ident">changed</span>() =&gt; {
                         <span class="macro">debug!</span>(<span class="ident">log</span>, <span class="string">&quot;Closing Session&quot;</span>);
                         <span class="kw">return</span>;
                     }
@@ -869,12 +869,12 @@
     }
 
     <span class="doccomment">/// expiration returns the current expiration Instant value</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">expiration</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u64</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">expiration</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">u64</span> {
         <span class="self">self</span>.<span class="ident">expiration</span>.<span class="ident">load</span>(<span class="ident">std::sync::atomic::Ordering::Relaxed</span>)
     }
 
     <span class="doccomment">/// key returns the key to be used for this session in a SessionMap</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">key</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">SessionKey</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">key</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">SessionKey</span> {
         <span class="ident">SessionKey</span> {
             <span class="ident">source</span>: <span class="self">self</span>.<span class="ident">from</span>.<span class="ident">clone</span>(),
             <span class="ident">destination</span>: <span class="self">self</span>.<span class="ident">dest</span>.<span class="ident">address</span>.<span class="ident">clone</span>(),
@@ -899,12 +899,12 @@
             <span class="ident">timer</span>,
         } <span class="op">=</span> <span class="ident">packet_ctx</span>;
 
-        <span class="macro">trace!</span>(<span class="ident">log</span>, <span class="string">&quot;Received packet&quot;</span>; <span class="string">&quot;from&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">from</span>.<span class="ident">clone</span>(),
-            <span class="string">&quot;endpoint_addr&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">endpoint</span>.<span class="ident">address</span>,
-            <span class="string">&quot;contents&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">debug::bytes_to_string</span>(<span class="ident">packet</span>));
+        <span class="macro">trace!</span>(<span class="ident">log</span>, <span class="string">&quot;Received packet&quot;</span>; <span class="string">&quot;from&quot;</span> =&gt; <span class="ident">from</span>.<span class="ident">clone</span>(),
+            <span class="string">&quot;endpoint_addr&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">endpoint</span>.<span class="ident">address</span>,
+            <span class="string">&quot;contents&quot;</span> =&gt; <span class="ident">debug::bytes_to_string</span>(<span class="ident">packet</span>));
 
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="ident">Session::do_update_expiration</span>(<span class="ident">expiration</span>, <span class="ident">ttl</span>) {
-            <span class="macro">warn!</span>(<span class="ident">log</span>, <span class="string">&quot;Error updating session expiration&quot;</span>; <span class="string">&quot;error&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="op">%</span><span class="ident">err</span>)
+            <span class="macro">warn!</span>(<span class="ident">log</span>, <span class="string">&quot;Error updating session expiration&quot;</span>; <span class="string">&quot;error&quot;</span> =&gt; <span class="op">%</span><span class="ident">err</span>)
         }
 
         <span class="kw">let</span> <span class="ident">filter_chain</span> <span class="op">=</span> {
@@ -922,7 +922,7 @@
                 .<span class="kw">await</span>
             {
                 <span class="ident">metrics</span>.<span class="ident">rx_errors_total</span>.<span class="ident">inc</span>();
-                <span class="macro">error!</span>(<span class="ident">log</span>, <span class="string">&quot;Error sending packet to channel&quot;</span>; <span class="string">&quot;error&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="op">%</span><span class="ident">err</span>);
+                <span class="macro">error!</span>(<span class="ident">log</span>, <span class="string">&quot;Error sending packet to channel&quot;</span>; <span class="string">&quot;error&quot;</span> =&gt; <span class="op">%</span><span class="ident">err</span>);
             }
         } <span class="kw">else</span> {
             <span class="ident">metrics</span>.<span class="ident">packets_dropped_total</span>.<span class="ident">inc</span>();
@@ -930,12 +930,12 @@
     }
 
     <span class="doccomment">/// update_expiration set the increments the expiration value by the session timeout</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">update_expiration</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ttl</span>: <span class="ident">Duration</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">update_expiration</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ttl</span>: <span class="ident">Duration</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="ident"><span class="self">Self</span>::do_update_expiration</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">expiration</span>, <span class="ident">ttl</span>)
     }
 
     <span class="doccomment">/// do_update_expiration increments the expiration value by the session timeout (internal)</span>
-    <span class="kw">fn</span> <span class="ident">do_update_expiration</span>(<span class="ident">expiration</span>: <span class="kw-2">&amp;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">AtomicU64</span><span class="op">&gt;</span>, <span class="ident">ttl</span>: <span class="ident">Duration</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">do_update_expiration</span>(<span class="ident">expiration</span>: <span class="kw-2">&amp;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">AtomicU64</span><span class="op">&gt;</span>, <span class="ident">ttl</span>: <span class="ident">Duration</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">new_expiration_time</span> <span class="op">=</span> <span class="ident">SystemTime::now</span>()
             .<span class="ident">checked_add</span>(<span class="ident">ttl</span>)
             .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
@@ -958,10 +958,10 @@
     }
 
     <span class="doccomment">/// Sends a packet to the Session&#39;s dest.</span>
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">send</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">buf</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident"><span class="kw">crate</span>::Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">send</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">buf</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="ident"><span class="kw">crate</span>::Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="macro">trace!</span>(<span class="self">self</span>.<span class="ident">log</span>, <span class="string">&quot;Sending packet&quot;</span>;
-        <span class="string">&quot;dest_address&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">dest</span>.<span class="ident">address</span>,
-        <span class="string">&quot;contents&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">debug::bytes_to_string</span>(<span class="ident">buf</span>));
+        <span class="string">&quot;dest_address&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">dest</span>.<span class="ident">address</span>,
+        <span class="string">&quot;contents&quot;</span> =&gt; <span class="ident">debug::bytes_to_string</span>(<span class="ident">buf</span>));
 
         <span class="self">self</span>.<span class="ident">do_send</span>(<span class="ident">buf</span>)
             .<span class="kw">await</span>
@@ -978,7 +978,7 @@
 
     <span class="doccomment">/// Sends `buf` to the session&#39;s destination address. On success, returns</span>
     <span class="doccomment">/// the number of bytes written.</span>
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">do_send</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">buf</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident"><span class="kw">crate</span>::Result</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">do_send</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">buf</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="ident"><span class="kw">crate</span>::Result</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">socket</span>
             .<span class="ident">send_to</span>(<span class="ident">buf</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">dest</span>.<span class="ident">address</span>.<span class="ident">to_socket_addr</span>()<span class="question-mark">?</span>)
             .<span class="kw">await</span>
@@ -994,10 +994,10 @@
             .<span class="ident">observe</span>(<span class="self">self</span>.<span class="ident">created_at</span>.<span class="ident">elapsed</span>().<span class="ident">as_secs</span>() <span class="kw">as</span> <span class="ident">f64</span>);
 
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">error</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">shutdown_tx</span>.<span class="ident">send</span>(()) {
-            <span class="macro">warn!</span>(<span class="self">self</span>.<span class="ident">log</span>, <span class="string">&quot;Error sending session shutdown signal&quot;</span>; <span class="string">&quot;error&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">error</span>.<span class="ident">to_string</span>());
+            <span class="macro">warn!</span>(<span class="self">self</span>.<span class="ident">log</span>, <span class="string">&quot;Error sending session shutdown signal&quot;</span>; <span class="string">&quot;error&quot;</span> =&gt; <span class="ident">error</span>.<span class="ident">to_string</span>());
         }
 
-        <span class="macro">debug!</span>(<span class="self">self</span>.<span class="ident">log</span>, <span class="string">&quot;Session closed&quot;</span>; <span class="string">&quot;from&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">from</span>, <span class="string">&quot;dest_address&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">dest</span>.<span class="ident">address</span>);
+        <span class="macro">debug!</span>(<span class="self">self</span>.<span class="ident">log</span>, <span class="string">&quot;Session closed&quot;</span>; <span class="string">&quot;from&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">from</span>, <span class="string">&quot;dest_address&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">dest</span>.<span class="ident">address</span>);
     }
 }
 

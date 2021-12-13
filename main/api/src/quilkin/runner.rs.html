@@ -120,7 +120,7 @@
 
 <span class="doccomment">/// Calls [`run`] with the [`Config`] found by [`Config::find`] and the</span>
 <span class="doccomment">/// default [`FilterSet`].</span>
-<span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">run</span>(<span class="ident">filter_factories</span>: <span class="kw">impl</span> <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">DynFilterFactory</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">run</span>(<span class="ident">filter_factories</span>: <span class="kw">impl</span> <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">DynFilterFactory</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="ident">run_with_config</span>(<span class="ident">Config::find</span>(<span class="prelude-val">None</span>).<span class="ident">map</span>(<span class="ident">Arc::new</span>)<span class="question-mark">?</span>, <span class="ident">filter_factories</span>).<span class="kw">await</span>
 }
 
@@ -129,7 +129,7 @@
 <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">run_with_config</span>(
     <span class="ident">config</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Config</span><span class="op">&gt;</span>,
     <span class="ident">filter_factories</span>: <span class="kw">impl</span> <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">DynFilterFactory</span><span class="op">&gt;</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">base_log</span> <span class="op">=</span> <span class="ident">logger</span>(); <span class="comment">// TODO: remove this, when tracing is replaceed in Server</span>
     <span class="kw">let</span> <span class="ident">span</span> <span class="op">=</span> <span class="macro">span!</span>(<span class="ident">Level::INFO</span>, <span class="string">&quot;source::run&quot;</span>);
     <span class="kw">let</span> <span class="ident">_enter</span> <span class="op">=</span> <span class="ident">span</span>.<span class="ident">enter</span>();
@@ -153,10 +153,10 @@
         <span class="kw">let</span> <span class="ident">sig_term</span> <span class="op">=</span> <span class="ident">std::future::pending</span>();
 
         <span class="macro">tokio::select!</span> {
-            <span class="kw">_</span> <span class="op">=</span> <span class="ident">signal::ctrl_c</span>() <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="kw">_</span> <span class="op">=</span> <span class="ident">signal::ctrl_c</span>() =&gt; {
                 <span class="macro">debug!</span>(<span class="string">&quot;Received SIGINT&quot;</span>)
             }
-            <span class="kw">_</span> <span class="op">=</span> <span class="ident">sig_term</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="kw">_</span> <span class="op">=</span> <span class="ident">sig_term</span> =&gt; {
                 <span class="macro">debug!</span>(<span class="string">&quot;Received SIGTERM&quot;</span>)
             }
         }

@@ -420,7 +420,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">ClusterManager</span> {
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">metrics_registry</span>: <span class="kw-2">&amp;</span><span class="ident">Registry</span>, <span class="ident">endpoints</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Endpoints</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">MetricsResult</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">metrics_registry</span>: <span class="kw-2">&amp;</span><span class="ident">Registry</span>, <span class="ident">endpoints</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Endpoints</span><span class="op">&gt;</span>) -&gt; <span class="ident">MetricsResult</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">metrics</span> <span class="op">=</span> <span class="ident">Metrics::new</span>(<span class="ident">metrics_registry</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="self">Self</span> { <span class="ident">metrics</span>, <span class="ident">endpoints</span> })
     }
@@ -431,7 +431,7 @@
 
     <span class="doccomment">/// Returns all endpoints known at the time of invocation.</span>
     <span class="doccomment">/// Returns `None` if there are no endpoints.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_all_endpoints</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">UpstreamEndpoints</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_all_endpoints</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">UpstreamEndpoints</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">endpoints</span>.<span class="ident">clone</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">ep</span><span class="op">|</span> <span class="ident">ep</span>.<span class="ident">into</span>())
     }
 
@@ -439,7 +439,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">fixed</span>(
         <span class="ident">metrics_registry</span>: <span class="kw-2">&amp;</span><span class="ident">Registry</span>,
         <span class="ident">endpoints</span>: <span class="ident">Endpoints</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">MetricsResult</span><span class="op">&lt;</span><span class="ident">SharedClusterManager</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="ident">MetricsResult</span><span class="op">&lt;</span><span class="ident">SharedClusterManager</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">cm</span> <span class="op">=</span> <span class="ident"><span class="self">Self</span>::new</span>(<span class="ident">metrics_registry</span>, <span class="prelude-val">Some</span>(<span class="ident">endpoints</span>))<span class="question-mark">?</span>;
         <span class="comment">// Set the endpoints count metrics.</span>
         <span class="ident">cm</span>.<span class="ident">metrics</span>.<span class="ident">active_endpoints</span>.<span class="ident">set</span>(
@@ -458,8 +458,8 @@
         <span class="ident">metrics_registry</span>: <span class="kw-2">&amp;</span><span class="ident">Registry</span>,
         <span class="ident">cluster_updates_rx</span>: <span class="ident">mpsc::Receiver</span><span class="op">&lt;</span><span class="ident">ClusterUpdate</span><span class="op">&gt;</span>,
         <span class="ident">shutdown_rx</span>: <span class="ident">watch::Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">MetricsResult</span><span class="op">&lt;</span><span class="ident">SharedClusterManager</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">log</span> <span class="op">=</span> <span class="ident">base_logger</span>.<span class="ident">new</span>(<span class="macro">o!</span>(<span class="string">&quot;source&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;cluster::ClusterManager&quot;</span>));
+    ) -&gt; <span class="ident">MetricsResult</span><span class="op">&lt;</span><span class="ident">SharedClusterManager</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">log</span> <span class="op">=</span> <span class="ident">base_logger</span>.<span class="ident">new</span>(<span class="macro">o!</span>(<span class="string">&quot;source&quot;</span> =&gt; <span class="string">&quot;cluster::ClusterManager&quot;</span>));
 
         <span class="kw">let</span> <span class="ident">cluster_manager</span> <span class="op">=</span> <span class="ident"><span class="self">Self</span>::new</span>(<span class="ident">metrics_registry</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">metrics</span> <span class="op">=</span> <span class="ident">cluster_manager</span>.<span class="ident">metrics</span>.<span class="ident">clone</span>();
@@ -478,7 +478,7 @@
         <span class="prelude-val">Ok</span>(<span class="ident">cluster_manager</span>)
     }
 
-    <span class="kw">fn</span> <span class="ident">process_cluster_update</span>(<span class="ident">metrics</span>: <span class="kw-2">&amp;</span><span class="ident">Metrics</span>, <span class="ident">update</span>: <span class="ident">ClusterUpdate</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Endpoints</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">process_cluster_update</span>(<span class="ident">metrics</span>: <span class="kw-2">&amp;</span><span class="ident">Metrics</span>, <span class="ident">update</span>: <span class="ident">ClusterUpdate</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Endpoints</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">num_clusters</span> <span class="op">=</span> <span class="ident">update</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">i64</span>;
         <span class="kw">let</span> <span class="ident">update</span> <span class="op">=</span> <span class="ident"><span class="self">Self</span>::create_endpoints_from_update</span>(<span class="ident">update</span>);
         <span class="kw">let</span> <span class="ident">num_endpoints</span> <span class="op">=</span> <span class="ident">update</span>
@@ -494,7 +494,7 @@
         <span class="ident">metrics</span>.<span class="ident">active_endpoints</span>.<span class="ident">set</span>(<span class="ident">num_endpoints</span>)
     }
 
-    <span class="kw">fn</span> <span class="ident">create_endpoints_from_update</span>(<span class="ident">update</span>: <span class="ident">ClusterUpdate</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Endpoints</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">create_endpoints_from_update</span>(<span class="ident">update</span>: <span class="ident">ClusterUpdate</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Endpoints</span><span class="op">&gt;</span> {
         <span class="comment">// NOTE: We don&#39;t currently have support for consuming multiple clusters</span>
         <span class="comment">// so here gather all endpoints into the same set, ignoring what cluster they</span>
         <span class="comment">// belong to.</span>
@@ -526,19 +526,19 @@
         <span class="ident">tokio::spawn</span>(<span class="kw">async</span> <span class="kw">move</span> {
             <span class="kw">loop</span> {
                 <span class="macro">tokio::select!</span> {
-                    <span class="ident">update</span> <span class="op">=</span> <span class="ident">cluster_updates_rx</span>.<span class="ident">recv</span>() <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="ident">update</span> <span class="op">=</span> <span class="ident">cluster_updates_rx</span>.<span class="ident">recv</span>() =&gt; {
                         <span class="kw">match</span> <span class="ident">update</span> {
-                            <span class="prelude-val">Some</span>(<span class="ident">update</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                            <span class="prelude-val">Some</span>(<span class="ident">update</span>) =&gt; {
                                 <span class="macro">debug!</span>(<span class="ident">log</span>, <span class="string">&quot;Received a cluster update.&quot;</span>);
                                 <span class="ident">cluster_manager</span>.<span class="ident">write</span>().<span class="ident">update</span>(<span class="ident"><span class="self">Self</span>::process_cluster_update</span>(<span class="kw-2">&amp;</span><span class="ident">metrics</span>, <span class="ident">update</span>));
                             }
-                            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
+                            <span class="prelude-val">None</span> =&gt; {
                                 <span class="macro">warn!</span>(<span class="ident">log</span>, <span class="string">&quot;Exiting cluster update receive loop because the sender dropped the channel.&quot;</span>);
                                 <span class="kw">return</span>;
                             }
                         }
                     }
-                    <span class="kw">_</span> <span class="op">=</span> <span class="ident">shutdown_rx</span>.<span class="ident">changed</span>() <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="kw">_</span> <span class="op">=</span> <span class="ident">shutdown_rx</span>.<span class="ident">changed</span>() =&gt; {
                         <span class="macro">debug!</span>(<span class="ident">log</span>, <span class="string">&quot;Exiting cluster update receive loop because a shutdown signal was received.&quot;</span>);
                         <span class="kw">return</span>;
                     },
@@ -568,7 +568,7 @@
         <span class="kw">let</span> <span class="ident">cm</span> <span class="op">=</span> <span class="ident">ClusterManager::dynamic</span>(<span class="ident">logger</span>(), <span class="kw-2">&amp;</span><span class="ident">Registry::default</span>(), <span class="ident">update_rx</span>, <span class="ident">shutdown_rx</span>)
             .<span class="ident">unwrap</span>();
 
-        <span class="kw">fn</span> <span class="ident">mapping</span>(<span class="ident">entries</span>: <span class="kw-2">&amp;</span>[(<span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="kw-2">&amp;</span><span class="ident">str</span>)]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">serde_yaml::Mapping</span> {
+        <span class="kw">fn</span> <span class="ident">mapping</span>(<span class="ident">entries</span>: <span class="kw-2">&amp;</span>[(<span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="kw-2">&amp;</span><span class="ident">str</span>)]) -&gt; <span class="ident">serde_yaml::Mapping</span> {
             <span class="ident">entries</span>
                 .<span class="ident">iter</span>()
                 .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">k</span>, <span class="ident">v</span>)<span class="op">|</span> ((<span class="kw-2">*</span><span class="ident">k</span>).<span class="ident">into</span>(), (<span class="kw-2">*</span><span class="ident">v</span>).<span class="ident">into</span>()))
@@ -726,7 +726,7 @@
             <span class="kw">loop</span> {
                 {
                     <span class="kw">let</span> <span class="ident">metrics</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">cm</span>.<span class="ident">read</span>().<span class="ident">metrics</span>;
-                    <span class="kw">if</span> <span class="ident">metrics</span>.<span class="ident">active_endpoints</span>.<span class="ident">get</span>() <span class="op">=</span><span class="op">=</span> <span class="number">3</span> {
+                    <span class="kw">if</span> <span class="ident">metrics</span>.<span class="ident">active_endpoints</span>.<span class="ident">get</span>() <span class="op">==</span> <span class="number">3</span> {
                         <span class="kw">break</span>;
                     }
                 }

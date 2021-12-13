@@ -715,7 +715,7 @@
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">value</span>: <span class="ident">V</span>, <span class="ident">ttl</span>: <span class="ident">Duration</span>, <span class="ident">clock</span>: <span class="ident">Clock</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">value</span>: <span class="ident">V</span>, <span class="ident">ttl</span>: <span class="ident">Duration</span>, <span class="ident">clock</span>: <span class="ident">Clock</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">Value</span> {
             <span class="ident">value</span>,
             <span class="ident">expires_at</span>: <span class="ident">Arc::new</span>(<span class="ident">AtomicU64::new</span>(<span class="number">0</span>)),
@@ -728,18 +728,18 @@
     <span class="doccomment">/// Get the expiration time for this value. The returned value is the</span>
     <span class="doccomment">/// number of seconds relative to some reference point (e.g UNIX_EPOCH), based</span>
     <span class="doccomment">/// on the clock being used.</span>
-    <span class="kw">fn</span> <span class="ident">expiration_secs</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u64</span> {
+    <span class="kw">fn</span> <span class="ident">expiration_secs</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">u64</span> {
         <span class="self">self</span>.<span class="ident">expires_at</span>.<span class="ident">load</span>(<span class="ident">Ordering::Relaxed</span>)
     }
 
     <span class="doccomment">/// Update the value&#39;s expiration time to (now + TTL).</span>
     <span class="kw">fn</span> <span class="ident">update_expiration</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ttl</span>: <span class="ident">Duration</span>) {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">clock</span>.<span class="ident">compute_expiration_secs</span>(<span class="ident">ttl</span>) {
-            <span class="prelude-val">Ok</span>(<span class="ident">new_expiration_time</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="prelude-val">Ok</span>(<span class="ident">new_expiration_time</span>) =&gt; {
                 <span class="self">self</span>.<span class="ident">expires_at</span>
                     .<span class="ident">store</span>(<span class="ident">new_expiration_time</span>, <span class="ident">Ordering::Relaxed</span>);
             }
-            <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; {
                 <span class="macro">warn!</span>(<span class="string">&quot;failed to increment key expiration: {}&quot;</span>, <span class="ident">err</span>);
             }
         }
@@ -775,12 +775,12 @@
 <span class="kw">where</span>
     <span class="ident">V</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> <span class="op">+</span> <span class="lifetime">&#39;static</span>,
 {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">ttl</span>: <span class="ident">Duration</span>, <span class="ident">poll_interval</span>: <span class="ident">Duration</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">ttl</span>: <span class="ident">Duration</span>, <span class="ident">poll_interval</span>: <span class="ident">Duration</span>) -&gt; <span class="self">Self</span> {
         <span class="ident"><span class="self">Self</span>::initialize</span>(<span class="ident">DashMap::new</span>(), <span class="ident">ttl</span>, <span class="ident">poll_interval</span>)
     }
 
     <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_capacity</span>(<span class="ident">ttl</span>: <span class="ident">Duration</span>, <span class="ident">poll_interval</span>: <span class="ident">Duration</span>, <span class="ident">capacity</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_capacity</span>(<span class="ident">ttl</span>: <span class="ident">Duration</span>, <span class="ident">poll_interval</span>: <span class="ident">Duration</span>, <span class="ident">capacity</span>: <span class="ident">usize</span>) -&gt; <span class="self">Self</span> {
         <span class="ident"><span class="self">Self</span>::initialize</span>(<span class="ident">DashMap::with_capacity</span>(<span class="ident">capacity</span>), <span class="ident">ttl</span>, <span class="ident">poll_interval</span>)
     }
 
@@ -788,7 +788,7 @@
         <span class="ident">inner</span>: <span class="ident">DashMap</span><span class="op">&lt;</span><span class="ident">EndpointAddress</span>, <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">ttl</span>: <span class="ident">Duration</span>,
         <span class="ident">poll_interval</span>: <span class="ident">Duration</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    ) -&gt; <span class="self">Self</span> {
         <span class="kw">let</span> (<span class="ident">shutdown_tx</span>, <span class="ident">shutdown_rx</span>) <span class="op">=</span> <span class="ident">channel</span>();
         <span class="kw">let</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">TtlMap</span>(<span class="ident">Arc::new</span>(<span class="ident">Map</span> {
             <span class="ident">inner</span>,
@@ -808,7 +808,7 @@
     <span class="doccomment">/// Returns the current time as the number of seconds relative to some initial</span>
     <span class="doccomment">/// reference point (e.g UNIX_EPOCH), based on the clock implementation being used.</span>
     <span class="doccomment">/// In tests, this will be driven by [`tokio::time`]</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">now_relative_secs</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u64</span> {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">now_relative_secs</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">u64</span> {
         <span class="self">self</span>.<span class="number">0</span>.<span class="ident">clock</span>.<span class="ident">now_relative_secs</span>().<span class="ident">unwrap_or_default</span>()
     }
 }
@@ -819,7 +819,7 @@
 {
     <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
     <span class="doccomment">/// Returns a reference to value corresponding to key.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">key</span>: <span class="kw-2">&amp;</span><span class="ident">EndpointAddress</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Ref</span><span class="op">&lt;</span><span class="ident">EndpointAddress</span>, <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">key</span>: <span class="kw-2">&amp;</span><span class="ident">EndpointAddress</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Ref</span><span class="op">&lt;</span><span class="ident">EndpointAddress</span>, <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="self">self</span>.<span class="number">0</span>.<span class="ident">inner</span>.<span class="ident">get</span>(<span class="ident">key</span>);
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="kw-2">ref</span> <span class="ident">value</span>) <span class="op">=</span> <span class="ident">value</span> {
             <span class="ident">value</span>.<span class="ident">update_expiration</span>(<span class="self">self</span>.<span class="number">0</span>.<span class="ident">ttl</span>)
@@ -831,7 +831,7 @@
     <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
     <span class="doccomment">/// Returns a mutable reference to value corresponding to key.</span>
     <span class="doccomment">/// The value will be reset to expire at the configured TTL after the time of retrieval.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">key</span>: <span class="kw-2">&amp;</span><span class="ident">EndpointAddress</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">RefMut</span><span class="op">&lt;</span><span class="ident">EndpointAddress</span>, <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">key</span>: <span class="kw-2">&amp;</span><span class="ident">EndpointAddress</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">RefMut</span><span class="op">&lt;</span><span class="ident">EndpointAddress</span>, <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="self">self</span>.<span class="number">0</span>.<span class="ident">inner</span>.<span class="ident">get_mut</span>(<span class="ident">key</span>);
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="kw-2">ref</span> <span class="ident">value</span>) <span class="op">=</span> <span class="ident">value</span> {
             <span class="ident">value</span>.<span class="ident">update_expiration</span>(<span class="self">self</span>.<span class="number">0</span>.<span class="ident">ttl</span>);
@@ -843,13 +843,13 @@
     <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
     <span class="doccomment">/// Returns the number of entries in the map.</span>
     <span class="doccomment">/// The value will be reset to expire at the configured TTL after the time of retrieval.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">len</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">usize</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">len</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">usize</span> {
         <span class="self">self</span>.<span class="number">0</span>.<span class="ident">inner</span>.<span class="ident">len</span>()
     }
 
     <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
     <span class="doccomment">/// Returns true if the map contains a value for the specified key.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">contains_key</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">key</span>: <span class="kw-2">&amp;</span><span class="ident">EndpointAddress</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">contains_key</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">key</span>: <span class="kw-2">&amp;</span><span class="ident">EndpointAddress</span>) -&gt; <span class="ident">bool</span> {
         <span class="self">self</span>.<span class="number">0</span>.<span class="ident">inner</span>.<span class="ident">contains_key</span>(<span class="ident">key</span>)
     }
 
@@ -857,7 +857,7 @@
     <span class="doccomment">/// Inserts a key-value pair into the map.</span>
     <span class="doccomment">/// The value will be set to expire at the configured TTL after the time of insertion.</span>
     <span class="doccomment">/// If a previous value existed for this key, that value is returned.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">key</span>: <span class="ident">EndpointAddress</span>, <span class="ident">value</span>: <span class="ident">V</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">key</span>: <span class="ident">EndpointAddress</span>, <span class="ident">value</span>: <span class="ident">V</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="number">0</span>
             .<span class="ident">inner</span>
             .<span class="ident">insert</span>(<span class="ident">key</span>, <span class="ident">Value::new</span>(<span class="ident">value</span>, <span class="self">self</span>.<span class="number">0</span>.<span class="ident">ttl</span>, <span class="self">self</span>.<span class="number">0</span>.<span class="ident">clock</span>.<span class="ident">clone</span>()))
@@ -867,15 +867,15 @@
     <span class="doccomment">/// Returns an API for in-place updates of the specified key-value pair.</span>
     <span class="doccomment">/// Note: This acquires a write lock on the map&#39;s shard that corresponds</span>
     <span class="doccomment">/// to the entry.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">entry</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">key</span>: <span class="ident">EndpointAddress</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Entry</span><span class="op">&lt;</span><span class="ident">EndpointAddress</span>, <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">entry</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">key</span>: <span class="ident">EndpointAddress</span>) -&gt; <span class="ident">Entry</span><span class="op">&lt;</span><span class="ident">EndpointAddress</span>, <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">ttl</span> <span class="op">=</span> <span class="self">self</span>.<span class="number">0</span>.<span class="ident">ttl</span>;
         <span class="kw">match</span> <span class="self">self</span>.<span class="number">0</span>.<span class="ident">inner</span>.<span class="ident">entry</span>(<span class="ident">key</span>) {
-            <span class="ident">inner</span> @ <span class="ident">DashMapEntry::Occupied</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Entry::Occupied</span>(<span class="ident">OccupiedEntry</span> {
+            <span class="ident">inner</span> @ <span class="ident">DashMapEntry::Occupied</span>(<span class="kw">_</span>) =&gt; <span class="ident">Entry::Occupied</span>(<span class="ident">OccupiedEntry</span> {
                 <span class="ident">inner</span>,
                 <span class="ident">ttl</span>,
                 <span class="ident">clock</span>: <span class="self">self</span>.<span class="number">0</span>.<span class="ident">clock</span>.<span class="ident">clone</span>(),
             }),
-            <span class="ident">inner</span> @ <span class="ident">DashMapEntry::Vacant</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Entry::Vacant</span>(<span class="ident">VacantEntry</span> {
+            <span class="ident">inner</span> @ <span class="ident">DashMapEntry::Vacant</span>(<span class="kw">_</span>) =&gt; <span class="ident">Entry::Vacant</span>(<span class="ident">VacantEntry</span> {
                 <span class="ident">inner</span>,
                 <span class="ident">ttl</span>,
                 <span class="ident">clock</span>: <span class="self">self</span>.<span class="number">0</span>.<span class="ident">clock</span>.<span class="ident">clone</span>(),
@@ -911,40 +911,40 @@
 {
     <span class="doccomment">/// Returns a reference to the entry&#39;s value.</span>
     <span class="doccomment">/// The value will be reset to expire at the configured TTL after the time of retrieval.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">inner</span> {
-            <span class="ident">DashMapEntry::Occupied</span>(<span class="ident">entry</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">DashMapEntry::Occupied</span>(<span class="ident">entry</span>) =&gt; {
                 <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">entry</span>.<span class="ident">get</span>();
                 <span class="ident">value</span>.<span class="ident">update_expiration</span>(<span class="self">self</span>.<span class="ident">ttl</span>);
                 <span class="ident">value</span>
             }
-            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable!</span>(<span class="string">&quot;BUG: entry type should be occupied&quot;</span>),
+            <span class="kw">_</span> =&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;BUG: entry type should be occupied&quot;</span>),
         }
     }
 
     <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
     <span class="doccomment">/// Returns a mutable reference to the entry&#39;s value.</span>
     <span class="doccomment">/// The value will be reset to expire at the configured TTL after the time of retrieval.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">inner</span> {
-            <span class="ident">DashMapEntry::Occupied</span>(<span class="ident">entry</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">DashMapEntry::Occupied</span>(<span class="ident">entry</span>) =&gt; {
                 <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">entry</span>.<span class="ident">get_mut</span>();
                 <span class="ident">value</span>.<span class="ident">update_expiration</span>(<span class="self">self</span>.<span class="ident">ttl</span>);
                 <span class="ident">value</span>
             }
-            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable!</span>(<span class="string">&quot;BUG: entry type should be occupied&quot;</span>),
+            <span class="kw">_</span> =&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;BUG: entry type should be occupied&quot;</span>),
         }
     }
 
     <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
     <span class="doccomment">/// Replace the entry&#39;s value with a new value, returning the old value.</span>
     <span class="doccomment">/// The value will be set to expire at the configured TTL after the time of insertion.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">value</span>: <span class="ident">V</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">value</span>: <span class="ident">V</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">inner</span> {
-            <span class="ident">DashMapEntry::Occupied</span>(<span class="ident">entry</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">DashMapEntry::Occupied</span>(<span class="ident">entry</span>) =&gt; {
                 <span class="ident">entry</span>.<span class="ident">insert</span>(<span class="ident">Value::new</span>(<span class="ident">value</span>, <span class="self">self</span>.<span class="ident">ttl</span>, <span class="self">self</span>.<span class="ident">clock</span>.<span class="ident">clone</span>()))
             }
-            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable!</span>(<span class="string">&quot;BUG: entry type should be occupied&quot;</span>),
+            <span class="kw">_</span> =&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;BUG: entry type should be occupied&quot;</span>),
         }
     }
 }
@@ -955,12 +955,12 @@
 {
     <span class="doccomment">/// Set an entry&#39;s value.</span>
     <span class="doccomment">/// The value will be set to expire at the configured TTL after the time of insertion.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">insert</span>(<span class="self">self</span>, <span class="ident">value</span>: <span class="ident">V</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">RefMut</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">K</span>, <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">insert</span>(<span class="self">self</span>, <span class="ident">value</span>: <span class="ident">V</span>) -&gt; <span class="ident">RefMut</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">K</span>, <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">inner</span> {
-            <span class="ident">DashMapEntry::Vacant</span>(<span class="ident">entry</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">DashMapEntry::Vacant</span>(<span class="ident">entry</span>) =&gt; {
                 <span class="ident">entry</span>.<span class="ident">insert</span>(<span class="ident">Value::new</span>(<span class="ident">value</span>, <span class="self">self</span>.<span class="ident">ttl</span>, <span class="self">self</span>.<span class="ident">clock</span>.<span class="ident">clone</span>()))
             }
-            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable!</span>(<span class="string">&quot;BUG: entry type should be vacant&quot;</span>),
+            <span class="kw">_</span> =&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;BUG: entry type should be vacant&quot;</span>),
         }
     }
 }
@@ -978,10 +978,10 @@
     <span class="ident">tokio::spawn</span>(<span class="kw">async</span> <span class="kw">move</span> {
         <span class="kw">loop</span> {
             <span class="macro">tokio::select!</span> {
-                <span class="kw">_</span> <span class="op">=</span> <span class="ident">interval</span>.<span class="ident">tick</span>() <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">_</span> <span class="op">=</span> <span class="ident">interval</span>.<span class="ident">tick</span>() =&gt; {
                     <span class="ident">prune_entries</span>( <span class="kw-2">&amp;</span><span class="ident">map</span>, <span class="kw-2">&amp;</span><span class="ident">clock</span>).<span class="kw">await</span>;
                 }
-                <span class="kw">_</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">shutdown_rx</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">_</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">shutdown_rx</span> =&gt; {
                     <span class="kw">return</span>;
                 }
             }
@@ -1027,7 +1027,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Clock</span> {
-    <span class="kw">fn</span> <span class="ident">new</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Clock</span> {
+    <span class="kw">fn</span> <span class="ident">new</span>() -&gt; <span class="ident">Clock</span> {
         <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">test</span>))]</span>
         <span class="kw">return</span> <span class="ident">Clock</span> {};
 
@@ -1040,7 +1040,7 @@
     <span class="doccomment">/// Returns the current time in seconds, relative to some base time instant.</span>
     <span class="doccomment">/// For non test cases, relative to UNIX_EPOCH, while during test, a random</span>
     <span class="doccomment">/// point in the past is used.</span>
-    <span class="kw">fn</span> <span class="ident">now_relative_secs</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">u64</span>, <span class="ident">String</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">now_relative_secs</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">u64</span>, <span class="ident">String</span><span class="op">&gt;</span> {
         <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">test</span>))]</span>
         <span class="kw">return</span> <span class="ident">SystemTime::now</span>()
             .<span class="ident">duration_since</span>(<span class="ident">UNIX_EPOCH</span>)
@@ -1054,7 +1054,7 @@
     }
 
     <span class="doccomment">/// Returns the expiration time from now in seconds for the given ttl.</span>
-    <span class="kw">fn</span> <span class="ident">compute_expiration_secs</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ttl</span>: <span class="ident">Duration</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">u64</span>, <span class="ident">String</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">compute_expiration_secs</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ttl</span>: <span class="ident">Duration</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">u64</span>, <span class="ident">String</span><span class="op">&gt;</span> {
         <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">test</span>))]</span>
         <span class="kw">return</span> (<span class="ident">SystemTime::now</span>() <span class="op">+</span> <span class="ident">ttl</span>)
             .<span class="ident">duration_since</span>(<span class="ident">UNIX_EPOCH</span>)
@@ -1075,7 +1075,7 @@
 
     <span class="kw">use</span> <span class="ident">tokio::time</span>;
 
-    <span class="kw">fn</span> <span class="ident">address_pair</span>() <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">EndpointAddress</span>, <span class="ident">EndpointAddress</span>) {
+    <span class="kw">fn</span> <span class="ident">address_pair</span>() -&gt; (<span class="ident">EndpointAddress</span>, <span class="ident">EndpointAddress</span>) {
         (
             (<span class="ident">Ipv4Addr::LOCALHOST</span>, <span class="number">8080</span>).<span class="ident">into</span>(),
             ([<span class="number">127</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">2</span>], <span class="number">8080</span>).<span class="ident">into</span>(),
@@ -1151,11 +1151,11 @@
         <span class="ident">map</span>.<span class="ident">insert</span>(<span class="ident">one</span>.<span class="ident">clone</span>(), <span class="number">1</span>);
 
         <span class="kw">match</span> <span class="ident">map</span>.<span class="ident">entry</span>(<span class="ident">one</span>.<span class="ident">clone</span>()) {
-            <span class="ident">Entry::Occupied</span>(<span class="kw-2">mut</span> <span class="ident">entry</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">Entry::Occupied</span>(<span class="kw-2">mut</span> <span class="ident">entry</span>) =&gt; {
                 <span class="macro">assert_eq!</span>(<span class="ident">entry</span>.<span class="ident">get</span>().<span class="ident">value</span>, <span class="number">1</span>);
                 <span class="ident">entry</span>.<span class="ident">insert</span>(<span class="number">5</span>);
             }
-            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable!</span>(<span class="string">&quot;expected occupied entry&quot;</span>),
+            <span class="kw">_</span> =&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;expected occupied entry&quot;</span>),
         }
 
         <span class="macro">assert_eq!</span>(<span class="ident">map</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">one</span>).<span class="ident">unwrap</span>().<span class="ident">value</span>, <span class="number">5</span>);
@@ -1169,10 +1169,10 @@
         <span class="ident">map</span>.<span class="ident">insert</span>(<span class="ident">one</span>.<span class="ident">clone</span>(), <span class="number">1</span>);
 
         <span class="kw">match</span> <span class="ident">map</span>.<span class="ident">entry</span>(<span class="ident">one</span>.<span class="ident">clone</span>()) {
-            <span class="ident">Entry::Occupied</span>(<span class="kw-2">mut</span> <span class="ident">entry</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">Entry::Occupied</span>(<span class="kw-2">mut</span> <span class="ident">entry</span>) =&gt; {
                 <span class="ident">entry</span>.<span class="ident">get_mut</span>().<span class="ident">value</span> <span class="op">=</span> <span class="number">5</span>;
             }
-            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable!</span>(<span class="string">&quot;expected occupied entry&quot;</span>),
+            <span class="kw">_</span> =&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;expected occupied entry&quot;</span>),
         }
 
         <span class="macro">assert_eq!</span>(<span class="ident">map</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">one</span>).<span class="ident">unwrap</span>().<span class="ident">value</span>, <span class="number">5</span>);
@@ -1185,12 +1185,12 @@
         <span class="kw">let</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">TtlMap</span>::<span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="ident">::new</span>(<span class="ident">Duration::from_secs</span>(<span class="number">10</span>), <span class="ident">Duration::from_millis</span>(<span class="number">10</span>));
 
         <span class="kw">match</span> <span class="ident">map</span>.<span class="ident">entry</span>(<span class="ident">one</span>.<span class="ident">clone</span>()) {
-            <span class="ident">Entry::Vacant</span>(<span class="ident">entry</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">Entry::Vacant</span>(<span class="ident">entry</span>) =&gt; {
                 <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">e</span> <span class="op">=</span> <span class="ident">entry</span>.<span class="ident">insert</span>(<span class="number">1</span>);
                 <span class="macro">assert_eq!</span>(<span class="ident">e</span>.<span class="ident">value</span>, <span class="number">1</span>);
                 <span class="ident">e</span>.<span class="ident">value</span> <span class="op">=</span> <span class="number">5</span>;
             }
-            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable!</span>(<span class="string">&quot;expected occupied entry&quot;</span>),
+            <span class="kw">_</span> =&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;expected occupied entry&quot;</span>),
         }
 
         <span class="macro">assert_eq!</span>(<span class="ident">map</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">one</span>).<span class="ident">unwrap</span>().<span class="ident">value</span>, <span class="number">5</span>);
@@ -1211,8 +1211,8 @@
         <span class="ident">time::advance</span>(<span class="ident">Duration::from_secs</span>(<span class="number">2</span>)).<span class="kw">await</span>;
 
         <span class="kw">let</span> <span class="ident">exp2</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">map</span>.<span class="ident">entry</span>(<span class="ident">one</span>.<span class="ident">clone</span>()) {
-            <span class="ident">Entry::Occupied</span>(<span class="ident">entry</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">entry</span>.<span class="ident">get</span>().<span class="ident">expiration_secs</span>(),
-            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable!</span>(<span class="string">&quot;expected occupied entry&quot;</span>),
+            <span class="ident">Entry::Occupied</span>(<span class="ident">entry</span>) =&gt; <span class="ident">entry</span>.<span class="ident">get</span>().<span class="ident">expiration_secs</span>(),
+            <span class="kw">_</span> =&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;expected occupied entry&quot;</span>),
         };
 
         <span class="macro">assert!</span>(<span class="ident">exp1</span> <span class="op">&lt;</span> <span class="ident">exp2</span>);
@@ -1234,8 +1234,8 @@
         <span class="ident">time::advance</span>(<span class="ident">Duration::from_secs</span>(<span class="number">2</span>)).<span class="kw">await</span>;
 
         <span class="kw">let</span> <span class="ident">exp2</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">map</span>.<span class="ident">entry</span>(<span class="ident">one</span>) {
-            <span class="ident">Entry::Occupied</span>(<span class="kw-2">mut</span> <span class="ident">entry</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">entry</span>.<span class="ident">get_mut</span>().<span class="ident">expiration_secs</span>(),
-            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable!</span>(<span class="string">&quot;expected occupied entry&quot;</span>),
+            <span class="ident">Entry::Occupied</span>(<span class="kw-2">mut</span> <span class="ident">entry</span>) =&gt; <span class="ident">entry</span>.<span class="ident">get_mut</span>().<span class="ident">expiration_secs</span>(),
+            <span class="kw">_</span> =&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;expected occupied entry&quot;</span>),
         };
 
         <span class="macro">assert!</span>(<span class="ident">exp1</span> <span class="op">&lt;</span> <span class="ident">exp2</span>);
@@ -1257,8 +1257,8 @@
         <span class="ident">time::advance</span>(<span class="ident">Duration::from_secs</span>(<span class="number">2</span>)).<span class="kw">await</span>;
 
         <span class="kw">let</span> <span class="ident">old_exp1</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">map</span>.<span class="ident">entry</span>(<span class="ident">one</span>.<span class="ident">clone</span>()) {
-            <span class="ident">Entry::Occupied</span>(<span class="kw-2">mut</span> <span class="ident">entry</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">entry</span>.<span class="ident">insert</span>(<span class="number">9</span>).<span class="ident">expiration_secs</span>(),
-            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable!</span>(<span class="string">&quot;expected occupied entry&quot;</span>),
+            <span class="ident">Entry::Occupied</span>(<span class="kw-2">mut</span> <span class="ident">entry</span>) =&gt; <span class="ident">entry</span>.<span class="ident">insert</span>(<span class="number">9</span>).<span class="ident">expiration_secs</span>(),
+            <span class="kw">_</span> =&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;expected occupied entry&quot;</span>),
         };
 
         <span class="kw">let</span> <span class="ident">exp2</span> <span class="op">=</span> <span class="ident">map</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">one</span>).<span class="ident">unwrap</span>().<span class="ident">expiration_secs</span>();
@@ -1278,8 +1278,8 @@
         <span class="kw">let</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">TtlMap</span>::<span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="ident">::new</span>(<span class="ident">Duration::from_secs</span>(<span class="number">10</span>), <span class="ident">Duration::from_millis</span>(<span class="number">10</span>));
 
         <span class="kw">let</span> <span class="ident">exp1</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">map</span>.<span class="ident">entry</span>(<span class="ident">one</span>.<span class="ident">clone</span>()) {
-            <span class="ident">Entry::Vacant</span>(<span class="ident">entry</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">entry</span>.<span class="ident">insert</span>(<span class="number">9</span>).<span class="ident">expiration_secs</span>(),
-            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable!</span>(<span class="string">&quot;expected vacant entry&quot;</span>),
+            <span class="ident">Entry::Vacant</span>(<span class="ident">entry</span>) =&gt; <span class="ident">entry</span>.<span class="ident">insert</span>(<span class="number">9</span>).<span class="ident">expiration_secs</span>(),
+            <span class="kw">_</span> =&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;expected vacant entry&quot;</span>),
         };
 
         <span class="ident">time::advance</span>(<span class="ident">Duration::from_secs</span>(<span class="number">2</span>)).<span class="kw">await</span>;
@@ -1304,8 +1304,8 @@
         <span class="kw">let</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">TtlMap</span>::<span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="ident">::new</span>(<span class="ident">ttl</span>, <span class="ident">Duration::from_millis</span>(<span class="number">10</span>));
 
         <span class="kw">let</span> <span class="ident">exp</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">map</span>.<span class="ident">entry</span>(<span class="ident">one</span>) {
-            <span class="ident">Entry::Vacant</span>(<span class="ident">entry</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">entry</span>.<span class="ident">insert</span>(<span class="number">9</span>).<span class="ident">expiration_secs</span>(),
-            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable!</span>(<span class="string">&quot;expected vacant entry&quot;</span>),
+            <span class="ident">Entry::Vacant</span>(<span class="ident">entry</span>) =&gt; <span class="ident">entry</span>.<span class="ident">insert</span>(<span class="number">9</span>).<span class="ident">expiration_secs</span>(),
+            <span class="kw">_</span> =&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;expected vacant entry&quot;</span>),
         };
 
         <span class="comment">// Check that it expires at our configured TTL.</span>

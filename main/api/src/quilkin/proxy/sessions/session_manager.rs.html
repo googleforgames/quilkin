@@ -316,7 +316,7 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SessionManager</span>(<span class="ident">Sessions</span>);
 
 <span class="kw">impl</span> <span class="ident">SessionManager</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">log</span>: <span class="ident">Logger</span>, <span class="ident">shutdown_rx</span>: <span class="ident">watch::Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">log</span>: <span class="ident">Logger</span>, <span class="ident">shutdown_rx</span>: <span class="ident">watch::Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
         <span class="kw">let</span> <span class="ident">poll_interval</span> <span class="op">=</span> <span class="ident">Duration::from_secs</span>(<span class="ident">SESSION_EXPIRY_POLL_INTERVAL</span>);
         <span class="kw">let</span> <span class="ident">sessions</span>: <span class="ident">Sessions</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">RwLock::new</span>(<span class="ident">HashMap::new</span>()));
 
@@ -325,11 +325,11 @@
         <span class="self">Self</span>(<span class="ident">sessions</span>)
     }
 
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">get_sessions</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">RwLockReadGuard</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">SessionsMap</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">get_sessions</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">RwLockReadGuard</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">SessionsMap</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="number">0</span>.<span class="ident">read</span>().<span class="kw">await</span>
     }
 
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">get_sessions_mut</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">RwLockWriteGuard</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">SessionsMap</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">get_sessions_mut</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">RwLockWriteGuard</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">SessionsMap</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="number">0</span>.<span class="ident">write</span>().<span class="kw">await</span>
     }
 
@@ -348,11 +348,11 @@
         <span class="ident">tokio::spawn</span>(<span class="kw">async</span> <span class="kw">move</span> {
             <span class="kw">loop</span> {
                 <span class="macro">tokio::select!</span> {
-                    <span class="kw">_</span> <span class="op">=</span> <span class="ident">shutdown_rx</span>.<span class="ident">changed</span>() <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="kw">_</span> <span class="op">=</span> <span class="ident">shutdown_rx</span>.<span class="ident">changed</span>() =&gt; {
                         <span class="macro">debug!</span>(<span class="ident">log</span>, <span class="string">&quot;Exiting Prune Sessions due to shutdown signal.&quot;</span>);
                         <span class="kw">break</span>;
                     }
-                    <span class="kw">_</span> <span class="op">=</span> <span class="ident">interval</span>.<span class="ident">tick</span>() <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="kw">_</span> <span class="op">=</span> <span class="ident">interval</span>.<span class="ident">tick</span>() =&gt; {
                         <span class="macro">debug!</span>(<span class="ident">log</span>, <span class="string">&quot;Attempting to Prune Sessions&quot;</span>);
                         <span class="ident"><span class="self">Self</span>::prune_sessions</span>(<span class="kw-2">&amp;</span><span class="ident">log</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">sessions</span>).<span class="kw">await</span>;
 
@@ -414,7 +414,7 @@
 
     <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::SessionManager</span>;
 
-    <span class="kw">fn</span> <span class="ident">address_pair</span>() <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">EndpointAddress</span>, <span class="ident">EndpointAddress</span>) {
+    <span class="kw">fn</span> <span class="ident">address_pair</span>() -&gt; (<span class="ident">EndpointAddress</span>, <span class="ident">EndpointAddress</span>) {
         (
             (<span class="ident">std::net::Ipv4Addr::LOCALHOST</span>, <span class="number">7000</span>).<span class="ident">into</span>(),
             (<span class="ident">std::net::Ipv4Addr::LOCALHOST</span>, <span class="number">7001</span>).<span class="ident">into</span>(),
@@ -481,7 +481,7 @@
         <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">1</span>..<span class="number">10000</span> {
             <span class="ident">tokio::time::sleep</span>(<span class="ident">Duration::from_millis</span>(<span class="number">1</span>)).<span class="kw">await</span>;
             <span class="kw">let</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">sessions</span>.<span class="ident">read</span>().<span class="kw">await</span>;
-            <span class="kw">if</span> <span class="op">!</span><span class="ident">map</span>.<span class="ident">contains_key</span>(<span class="kw-2">&amp;</span><span class="ident">key</span>) <span class="op">&amp;&amp;</span> <span class="ident">map</span>.<span class="ident">len</span>() <span class="op">=</span><span class="op">=</span> <span class="number">0</span> {
+            <span class="kw">if</span> <span class="op">!</span><span class="ident">map</span>.<span class="ident">contains_key</span>(<span class="kw-2">&amp;</span><span class="ident">key</span>) <span class="op">&amp;&amp;</span> <span class="ident">map</span>.<span class="ident">len</span>() <span class="op">==</span> <span class="number">0</span> {
                 <span class="kw">break</span>;
             }
         }

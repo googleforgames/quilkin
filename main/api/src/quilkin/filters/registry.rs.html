@@ -151,7 +151,7 @@
 <span class="kw">impl</span> <span class="ident">FilterRegistry</span> {
     <span class="doccomment">/// Creates a new registry using the provided [`FilterSet`] as the set of</span>
     <span class="doccomment">/// available filters.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">factories</span>: <span class="ident">FilterSet</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">factories</span>: <span class="ident">FilterSet</span>) -&gt; <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">registry</span>: <span class="ident">Arc::new</span>(
                 <span class="ident">factories</span>
@@ -165,10 +165,10 @@
     <span class="doccomment">/// Creates and returns a new dynamic instance of [`Filter`][crate::filters::Filter] for a given</span>
     <span class="doccomment">/// `key`. Errors if the filter cannot be found, or if there is a</span>
     <span class="doccomment">/// configuration issue.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">key</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">args</span>: <span class="ident">CreateFilterArgs</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">FilterInstance</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">key</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">args</span>: <span class="ident">CreateFilterArgs</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">FilterInstance</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">registry</span>.<span class="ident">get</span>(<span class="ident">key</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">p</span><span class="op">|</span> <span class="ident">p</span>.<span class="ident">create_filter</span>(<span class="ident">args</span>)) {
-            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">Error::NotFound</span>(<span class="ident">key</span>.<span class="ident">to_owned</span>())),
-            <span class="prelude-val">Some</span>(<span class="ident">filter</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">filter</span>,
+            <span class="prelude-val">None</span> =&gt; <span class="prelude-val">Err</span>(<span class="ident">Error::NotFound</span>(<span class="ident">key</span>.<span class="ident">to_owned</span>())),
+            <span class="prelude-val">Some</span>(<span class="ident">filter</span>) =&gt; <span class="ident">filter</span>,
         }
     }
 }
@@ -187,11 +187,11 @@
     <span class="kw">struct</span> <span class="ident">TestFilter</span> {}
 
     <span class="kw">impl</span> <span class="ident">Filter</span> <span class="kw">for</span> <span class="ident">TestFilter</span> {
-        <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="ident">ReadContext</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ReadResponse</span><span class="op">&gt;</span> {
+        <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="ident">ReadContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ReadResponse</span><span class="op">&gt;</span> {
             <span class="prelude-val">None</span>
         }
 
-        <span class="kw">fn</span> <span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="ident">WriteContext</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">WriteResponse</span><span class="op">&gt;</span> {
+        <span class="kw">fn</span> <span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="ident">WriteContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">WriteResponse</span><span class="op">&gt;</span> {
             <span class="prelude-val">None</span>
         }
     }
@@ -204,8 +204,8 @@
             <span class="kw-2">&amp;</span><span class="ident">String::from</span>(<span class="string">&quot;not.found&quot;</span>),
             <span class="ident">CreateFilterArgs::fixed</span>(<span class="ident">Registry::default</span>(), <span class="prelude-val">None</span>),
         ) {
-            <span class="prelude-val">Ok</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable!</span>(<span class="string">&quot;should not be filter&quot;</span>),
-            <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">assert_eq!</span>(<span class="ident">Error::NotFound</span>(<span class="string">&quot;not.found&quot;</span>.<span class="ident">to_string</span>()), <span class="ident">err</span>),
+            <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;should not be filter&quot;</span>),
+            <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; <span class="macro">assert_eq!</span>(<span class="ident">Error::NotFound</span>(<span class="string">&quot;not.found&quot;</span>.<span class="ident">to_string</span>()), <span class="ident">err</span>),
         };
 
         <span class="macro">assert!</span>(<span class="ident">reg</span>

@@ -155,7 +155,7 @@
     <span class="doccomment">/// - [`capture_bytes`][filters::capture_bytes]</span>
     <span class="doccomment">/// - [`token_router`][filters::token_router]</span>
     <span class="doccomment">/// - [`compress`][filters::compress]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
         <span class="ident"><span class="self">Self</span>::default_with</span>(<span class="ident">Option::into_iter</span>(<span class="prelude-val">None</span>))
     }
 
@@ -164,7 +164,7 @@
     <span class="doccomment">/// will override any defaults with a matching name.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// See [`FilterSet::default`] for a list of the current defaults.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">default_with</span>(<span class="ident">filters</span>: <span class="kw">impl</span> <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">DynFilterFactory</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">default_with</span>(<span class="ident">filters</span>: <span class="kw">impl</span> <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">DynFilterFactory</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
         <span class="ident"><span class="self">Self</span>::with</span>(
             <span class="ident">std::array::IntoIter::new</span>([
                 <span class="ident">filters::debug::factory</span>(),
@@ -182,19 +182,19 @@
 
     <span class="doccomment">/// Creates a new [`FilterSet`] with the set of `filter_factories` without</span>
     <span class="doccomment">/// any defaults.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with</span>(<span class="ident">filters</span>: <span class="kw">impl</span> <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">DynFilterFactory</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with</span>(<span class="ident">filters</span>: <span class="kw">impl</span> <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">DynFilterFactory</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
         <span class="ident"><span class="self">Self</span>::from_iter</span>(<span class="ident">filters</span>)
     }
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">I</span>: <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">DynFilterFactory</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">I</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">FilterSet</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">iter</span>: <span class="ident">I</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">iter</span>: <span class="ident">I</span>) -&gt; <span class="self">Self</span> {
         <span class="ident"><span class="self">Self</span>::with</span>(<span class="ident">iter</span>)
     }
 }
 
 <span class="kw">impl</span> <span class="ident">FromIterator</span><span class="op">&lt;</span><span class="ident">DynFilterFactory</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">FilterSet</span> {
-    <span class="kw">fn</span> <span class="ident">from_iter</span><span class="op">&lt;</span><span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">DynFilterFactory</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="ident">iter</span>: <span class="ident">I</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">fn</span> <span class="ident">from_iter</span><span class="op">&lt;</span><span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">DynFilterFactory</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="ident">iter</span>: <span class="ident">I</span>) -&gt; <span class="self">Self</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">set</span> <span class="op">=</span> <span class="self">Self</span>(<span class="ident">Default::default</span>());
 
         <span class="kw">for</span> <span class="ident">factory</span> <span class="kw">in</span> <span class="ident">iter</span> {
@@ -209,7 +209,7 @@
     <span class="kw">type</span> <span class="ident">IntoIter</span> <span class="op">=</span> <span class="ident">IntoIter</span>;
     <span class="kw">type</span> <span class="ident">Item</span> <span class="op">=</span> <span class="ident">DynFilterFactory</span>;
 
-    <span class="kw">fn</span> <span class="ident">into_iter</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident"><span class="self">Self</span>::IntoIter</span> {
+    <span class="kw">fn</span> <span class="ident">into_iter</span>(<span class="self">self</span>) -&gt; <span class="ident"><span class="self">Self</span>::IntoIter</span> {
         <span class="ident">IntoIter</span> {
             <span class="ident">inner</span>: <span class="self">self</span>.<span class="number">0</span>.<span class="ident">into_iter</span>(),
         }
@@ -224,7 +224,7 @@
 <span class="kw">impl</span> <span class="ident">Iterator</span> <span class="kw">for</span> <span class="ident">IntoIter</span> {
     <span class="kw">type</span> <span class="ident">Item</span> <span class="op">=</span> <span class="ident">DynFilterFactory</span>;
 
-    <span class="kw">fn</span> <span class="ident">next</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Item</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">next</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Item</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">next</span>().<span class="ident">map</span>(<span class="op">|</span>(<span class="kw">_</span>, <span class="ident">v</span>)<span class="op">|</span> <span class="ident">v</span>)
     }
 }

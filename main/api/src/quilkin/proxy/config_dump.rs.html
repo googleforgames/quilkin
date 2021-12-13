@@ -228,17 +228,17 @@
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">handle_request</span>(
     <span class="ident">cluster_manager</span>: <span class="ident">SharedClusterManager</span>,
     <span class="ident">filter_manager</span>: <span class="ident">SharedFilterManager</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Response</span><span class="op">&lt;</span><span class="ident">Body</span><span class="op">&gt;</span> {
+) -&gt; <span class="ident">Response</span><span class="op">&lt;</span><span class="ident">Body</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">Response::new</span>(<span class="ident">Body::empty</span>());
     <span class="kw">match</span> <span class="ident">create_config_dump_json</span>(<span class="ident">cluster_manager</span>, <span class="ident">filter_manager</span>) {
-        <span class="prelude-val">Ok</span>(<span class="ident">body</span>) <span class="op">=</span><span class="op">&gt;</span> {
+        <span class="prelude-val">Ok</span>(<span class="ident">body</span>) =&gt; {
             <span class="kw-2">*</span><span class="ident">response</span>.<span class="ident">status_mut</span>() <span class="op">=</span> <span class="ident">StatusCode::OK</span>;
             <span class="ident">response</span>
                 .<span class="ident">headers_mut</span>()
                 .<span class="ident">insert</span>(<span class="string">&quot;Content-Type&quot;</span>, <span class="ident">HeaderValue::from_static</span>(<span class="string">&quot;application/json&quot;</span>));
             <span class="kw-2">*</span><span class="ident">response</span>.<span class="ident">body_mut</span>() <span class="op">=</span> <span class="ident">Body::from</span>(<span class="ident">body</span>);
         }
-        <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
+        <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; {
             <span class="kw-2">*</span><span class="ident">response</span>.<span class="ident">status_mut</span>() <span class="op">=</span> <span class="ident">StatusCode::INTERNAL_SERVER_ERROR</span>;
             <span class="kw-2">*</span><span class="ident">response</span>.<span class="ident">body_mut</span>() <span class="op">=</span> <span class="ident">Body::from</span>(<span class="macro">format!</span>(<span class="string">&quot;failed to create config dump: {}&quot;</span>, <span class="ident">err</span>));
         }
@@ -250,7 +250,7 @@
 <span class="kw">fn</span> <span class="ident">create_config_dump_json</span>(
     <span class="ident">cluster_manager</span>: <span class="ident">SharedClusterManager</span>,
     <span class="ident">filter_manager</span>: <span class="ident">SharedFilterManager</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">serde_json::Error</span><span class="op">&gt;</span> {
+) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">serde_json::Error</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">endpoints</span> <span class="op">=</span> {
         <span class="kw">let</span> <span class="ident">cluster_manager</span> <span class="op">=</span> <span class="ident">cluster_manager</span>.<span class="ident">read</span>();
         <span class="comment">// Clone the list of endpoints immediately so that we don&#39;t hold on</span>

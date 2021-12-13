@@ -191,7 +191,7 @@
     <span class="doccomment">/// be sent (which may be manipulated) as well. If the packet should be</span>
     <span class="doccomment">/// rejected, return [`None`].  By default, the context passes</span>
     <span class="doccomment">/// through unchanged.</span>
-    <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="ident">ReadContext</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ReadResponse</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="ident">ReadContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ReadResponse</span><span class="op">&gt;</span> {
         <span class="prelude-val">Some</span>(<span class="ident">ctx</span>.<span class="ident">into</span>())
     }
 
@@ -202,7 +202,7 @@
     <span class="doccomment">/// This function should return an [`WriteResponse`] containing the packet to</span>
     <span class="doccomment">/// be sent (which may be manipulated). If the packet should be rejected,</span>
     <span class="doccomment">/// return [`None`]. By default, the context passes through unchanged.</span>
-    <span class="kw">fn</span> <span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="ident">WriteContext</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">WriteResponse</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="ident">WriteContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">WriteResponse</span><span class="op">&gt;</span> {
         <span class="prelude-val">Some</span>(<span class="ident">ctx</span>.<span class="ident">into</span>())
     }
 }

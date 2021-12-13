@@ -537,7 +537,7 @@
     <span class="doccomment">/// or the `/etc/quilkin` directory (on unix platforms only). Returns an</span>
     <span class="doccomment">/// error if the found configuration is invalid, or if no configuration</span>
     <span class="doccomment">/// could be found at any location.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">find</span>(<span class="ident">path</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident"><span class="kw">crate</span>::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">find</span>(<span class="ident">path</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span>) -&gt; <span class="ident"><span class="kw">crate</span>::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
         <span class="kw">const</span> <span class="ident">ENV_CONFIG_PATH</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;QUILKIN_CONFIG&quot;</span>;
         <span class="kw">const</span> <span class="ident">CONFIG_FILE</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;quilkin.yaml&quot;</span>;
 
@@ -564,7 +564,7 @@
     }
 
     <span class="doccomment">/// Attempts to deserialize `input` as a YAML object representing `Self`.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_reader</span><span class="op">&lt;</span><span class="ident">R</span>: <span class="ident">std::io::Read</span><span class="op">&gt;</span>(<span class="ident">input</span>: <span class="ident">R</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">serde_yaml::Error</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_reader</span><span class="op">&lt;</span><span class="ident">R</span>: <span class="ident">std::io::Read</span><span class="op">&gt;</span>(<span class="ident">input</span>: <span class="ident">R</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">serde_yaml::Error</span><span class="op">&gt;</span> {
         <span class="ident">serde_yaml::from_reader</span>(<span class="ident">input</span>)
     }
 }
@@ -585,21 +585,21 @@
 }
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">target_os</span> <span class="op">=</span> <span class="string">&quot;linux&quot;</span>))]</span>
-<span class="kw">fn</span> <span class="ident">default_proxy_id</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
+<span class="kw">fn</span> <span class="ident">default_proxy_id</span>() -&gt; <span class="ident">String</span> {
     <span class="ident">Uuid::new_v4</span>().<span class="ident">to_hyphenated</span>().<span class="ident">to_string</span>()
 }
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">target_os</span> <span class="op">=</span> <span class="string">&quot;linux&quot;</span>)]</span>
-<span class="kw">fn</span> <span class="ident">default_proxy_id</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
+<span class="kw">fn</span> <span class="ident">default_proxy_id</span>() -&gt; <span class="ident">String</span> {
     <span class="ident">sys_info::hostname</span>().<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">Uuid::new_v4</span>().<span class="ident">to_hyphenated</span>().<span class="ident">to_string</span>())
 }
 
-<span class="kw">fn</span> <span class="ident">default_proxy_port</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u16</span> {
+<span class="kw">fn</span> <span class="ident">default_proxy_port</span>() -&gt; <span class="ident">u16</span> {
     <span class="number">7000</span>
 }
 
 <span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">Proxy</span> {
-    <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
         <span class="ident">Proxy</span> {
             <span class="ident">id</span>: <span class="ident">default_proxy_id</span>(),
             <span class="ident">port</span>: <span class="ident">default_proxy_port</span>(),
@@ -614,7 +614,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">Admin</span> {
-    <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
         <span class="ident">Admin</span> {
             <span class="ident">address</span>: <span class="string">&quot;[::]:9091&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
         }
@@ -645,15 +645,15 @@
 <span class="kw">impl</span> <span class="ident">Source</span> {
     <span class="doccomment">/// Returns the list of filters if the config is a static config and None otherwise.</span>
     <span class="doccomment">/// This is a convenience function and should only be used for doc tests and tests.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_static_filters</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span>[<span class="ident">Filter</span>]<span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_static_filters</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span>[<span class="ident">Filter</span>]<span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="self">self</span> {
             <span class="ident">Source::Static</span> {
                 <span class="ident">filters</span>,
                 <span class="ident">endpoints</span>: <span class="kw">_</span>,
-            } <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">filters</span>),
+            } =&gt; <span class="prelude-val">Some</span>(<span class="ident">filters</span>),
             <span class="ident">Source::Dynamic</span> {
                 <span class="ident">management_servers</span>: <span class="kw">_</span>,
-            } <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
+            } =&gt; <span class="prelude-val">None</span>,
         }
     }
 }
@@ -674,7 +674,7 @@
 
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::endpoint::Metadata</span>;
 
-    <span class="kw">fn</span> <span class="ident">parse_config</span>(<span class="ident">yaml</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Config</span> {
+    <span class="kw">fn</span> <span class="ident">parse_config</span>(<span class="ident">yaml</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="ident">Config</span> {
         <span class="ident">Config::from_reader</span>(<span class="ident">yaml</span>.<span class="ident">as_bytes</span>()).<span class="ident">unwrap</span>()
     }
 
@@ -683,19 +683,19 @@
             <span class="ident">Source::Static</span> {
                 <span class="ident">filters</span>: <span class="kw">_</span>,
                 <span class="ident">endpoints</span>,
-            } <span class="op">=</span><span class="op">&gt;</span> {
+            } =&gt; {
                 <span class="macro">assert_eq!</span>(<span class="kw-2">&amp;</span><span class="ident">expected_endpoints</span>, <span class="ident">endpoints</span>,);
             }
-            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable!</span>(<span class="string">&quot;expected static config source&quot;</span>),
+            <span class="kw">_</span> =&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;expected static config source&quot;</span>),
         }
     }
 
     <span class="kw">fn</span> <span class="ident">assert_management_servers</span>(<span class="ident">source</span>: <span class="kw-2">&amp;</span><span class="ident">Source</span>, <span class="ident">expected</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ManagementServer</span><span class="op">&gt;</span>) {
         <span class="kw">match</span> <span class="ident">source</span> {
-            <span class="ident">Source::Dynamic</span> { <span class="ident">management_servers</span> } <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">Source::Dynamic</span> { <span class="ident">management_servers</span> } =&gt; {
                 <span class="macro">assert_eq!</span>(<span class="kw-2">&amp;</span><span class="ident">expected</span>, <span class="ident">management_servers</span>,);
             }
-            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable!</span>(<span class="string">&quot;expected dynamic config source&quot;</span>),
+            <span class="kw">_</span> =&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;expected dynamic config source&quot;</span>),
         }
     }
 

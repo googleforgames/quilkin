@@ -205,7 +205,7 @@
 <span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident">ProtoConfig</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Config</span> {
     <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">ConvertProtoConfigError</span>;
 
-    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">p</span>: <span class="ident">ProtoConfig</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident"><span class="self">Self</span>::Error</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">p</span>: <span class="ident">ProtoConfig</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident"><span class="self">Self</span>::Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">policy</span> <span class="op">=</span> <span class="ident">p</span>
             .<span class="ident">policy</span>
             .<span class="ident">map</span>(<span class="op">|</span><span class="ident">policy</span><span class="op">|</span> {
@@ -239,17 +239,17 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Policy</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">as_endpoint_chooser</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">EndpointChooser</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">as_endpoint_chooser</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">EndpointChooser</span><span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">Policy::RoundRobin</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Box::new</span>(<span class="ident">RoundRobinEndpointChooser::new</span>()),
-            <span class="ident">Policy::Random</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Box::new</span>(<span class="ident">RandomEndpointChooser</span>),
-            <span class="ident">Policy::Hash</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Box::new</span>(<span class="ident">HashEndpointChooser</span>),
+            <span class="ident">Policy::RoundRobin</span> =&gt; <span class="ident">Box::new</span>(<span class="ident">RoundRobinEndpointChooser::new</span>()),
+            <span class="ident">Policy::Random</span> =&gt; <span class="ident">Box::new</span>(<span class="ident">RandomEndpointChooser</span>),
+            <span class="ident">Policy::Hash</span> =&gt; <span class="ident">Box::new</span>(<span class="ident">HashEndpointChooser</span>),
         }
     }
 }
 
 <span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">Policy</span> {
-    <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
         <span class="ident">Policy::RoundRobin</span>
     }
 }

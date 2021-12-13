@@ -274,7 +274,7 @@
         <span class="ident">metrics_registry</span>: <span class="kw-2">&amp;</span><span class="ident">Registry</span>,
         <span class="ident">endpoints</span>: <span class="ident">Endpoints</span>,
         <span class="ident">filter_chain</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">FilterChain</span><span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">StaticResourceManagers</span>, <span class="ident">InitializeError</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">StaticResourceManagers</span>, <span class="ident">InitializeError</span><span class="op">&gt;</span> {
         <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
             <span class="ident">cluster_manager</span>: <span class="ident">ClusterManager::fixed</span>(<span class="ident">metrics_registry</span>, <span class="ident">endpoints</span>)
                 .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="ident">InitializeError::Message</span>(<span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">err</span>)))<span class="question-mark">?</span>,
@@ -303,8 +303,8 @@
         <span class="ident">filter_registry</span>: <span class="ident">FilterRegistry</span>,
         <span class="ident">management_servers</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ManagementServer</span><span class="op">&gt;</span>,
         <span class="ident">shutdown_rx</span>: <span class="ident">watch::Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">DynamicResourceManagers</span>, <span class="ident">InitializeError</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">log</span> <span class="op">=</span> <span class="ident">base_logger</span>.<span class="ident">new</span>(<span class="macro">o!</span>(<span class="string">&quot;source&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;server::DynamicResourceManager&quot;</span>));
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">DynamicResourceManagers</span>, <span class="ident">InitializeError</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">log</span> <span class="op">=</span> <span class="ident">base_logger</span>.<span class="ident">new</span>(<span class="macro">o!</span>(<span class="string">&quot;source&quot;</span> =&gt; <span class="string">&quot;server::DynamicResourceManager&quot;</span>));
 
         <span class="kw">let</span> (<span class="ident">cluster_updates_tx</span>, <span class="ident">cluster_updates_rx</span>) <span class="op">=</span> <span class="ident"><span class="self">Self</span>::cluster_updates_channel</span>();
         <span class="kw">let</span> (<span class="ident">filter_chain_updates_tx</span>, <span class="ident">filter_chain_updates_rx</span>) <span class="op">=</span>
@@ -329,7 +329,7 @@
         })<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="ident">cluster_manager</span> <span class="op">=</span> <span class="ident">ClusterManager::dynamic</span>(
-            <span class="ident">base_logger</span>.<span class="ident">new</span>(<span class="macro">o!</span>(<span class="string">&quot;source&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;ClusterManager&quot;</span>)),
+            <span class="ident">base_logger</span>.<span class="ident">new</span>(<span class="macro">o!</span>(<span class="string">&quot;source&quot;</span> =&gt; <span class="string">&quot;ClusterManager&quot;</span>)),
             <span class="kw-2">&amp;</span><span class="ident">metrics_registry</span>,
             <span class="ident">cluster_updates_rx</span>,
             <span class="ident">shutdown_rx</span>.<span class="ident">clone</span>(),
@@ -337,7 +337,7 @@
         .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="ident">InitializeError::Message</span>(<span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">err</span>)))<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="ident">filter_manager</span> <span class="op">=</span> <span class="ident">FilterManager::dynamic</span>(
-            <span class="ident">base_logger</span>.<span class="ident">new</span>(<span class="macro">o!</span>(<span class="string">&quot;source&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;FilterManager&quot;</span>)),
+            <span class="ident">base_logger</span>.<span class="ident">new</span>(<span class="macro">o!</span>(<span class="string">&quot;source&quot;</span> =&gt; <span class="string">&quot;FilterManager&quot;</span>)),
             <span class="kw-2">&amp;</span><span class="ident">metrics_registry</span>,
             <span class="ident">filter_chain_updates_rx</span>,
             <span class="ident">shutdown_rx</span>,
@@ -354,7 +354,7 @@
     <span class="comment">// Spawns a task that runs an ADS client.</span>
     <span class="comment">// Cluster and Filter updates from the client</span>
     <span class="comment">// as well as execution result after termination are sent on the passed-in channels.</span>
-    <span class="kw">fn</span> <span class="ident">spawn_ads_client</span>(<span class="ident">args</span>: <span class="ident">SpawnAdsClient</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">InitializeError</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">spawn_ads_client</span>(<span class="ident">args</span>: <span class="ident">SpawnAdsClient</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">InitializeError</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">SpawnAdsClient</span> {
             <span class="ident">log</span>,
             <span class="ident">metrics_registry</span>,
@@ -388,11 +388,11 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn</span> <span class="ident">cluster_updates_channel</span>() <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">mpsc::Sender</span><span class="op">&lt;</span><span class="ident">ClusterUpdate</span><span class="op">&gt;</span>, <span class="ident">mpsc::Receiver</span><span class="op">&lt;</span><span class="ident">ClusterUpdate</span><span class="op">&gt;</span>) {
+    <span class="kw">fn</span> <span class="ident">cluster_updates_channel</span>() -&gt; (<span class="ident">mpsc::Sender</span><span class="op">&lt;</span><span class="ident">ClusterUpdate</span><span class="op">&gt;</span>, <span class="ident">mpsc::Receiver</span><span class="op">&lt;</span><span class="ident">ClusterUpdate</span><span class="op">&gt;</span>) {
         <span class="ident">mpsc::channel</span>(<span class="ident">UPDATES_CHANNEL_BUFFER_SIZE</span>)
     }
 
-    <span class="kw">fn</span> <span class="ident">filter_chain_updates_channel</span>() <span class="op">-</span><span class="op">&gt;</span> (
+    <span class="kw">fn</span> <span class="ident">filter_chain_updates_channel</span>() -&gt; (
         <span class="ident">mpsc::Sender</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">FilterChain</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">mpsc::Receiver</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">FilterChain</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     ) {

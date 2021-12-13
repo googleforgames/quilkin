@@ -687,7 +687,7 @@ Consequently, we can build a filter chain with a <a href="./filters/capture_byte
 <table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
 <tr><td><code>quilkin.dev/captured_bytes</code></td><td><code>Bytes</code></td><td>The default key under which the <a href="./filters/capture_bytes.html">CaptureBytes</a> filter puts the byte slices it extracts from each packet.</td></tr>
 </tbody></table>
-<h3 id="built-in-filters-a-namebuilt-in-filtersa"><a class="header" href="#built-in-filters-a-namebuilt-in-filtersa">Built-in filters <a name="built-in-filters"></a></a></h3>
+<h3 id="built-in-filters"><a class="header" href="#built-in-filters">Built-in filters <a name="built-in-filters"></a></a></h3>
 <p>Quilkin includes several filters out of the box.</p>
 <table><thead><tr><th>Filter</th><th>Description</th></tr></thead><tbody>
 <tr><td><a href="./filters/debug.html">Debug</a></td><td>Logs every packet.</td></tr>
@@ -698,7 +698,7 @@ Consequently, we can build a filter chain with a <a href="./filters/capture_byte
 <tr><td><a href="./filters/compress.html">Compress</a></td><td>Compress and decompress packets data.</td></tr>
 <tr><td><a href="./filters/firewall.html">Firewall</a></td><td>Allowing/blocking traffic by IP and port.</td></tr>
 </tbody></table>
-<h3 id="filterconfig-a-namefilter-configa"><a class="header" href="#filterconfig-a-namefilter-configa">FilterConfig <a name="filter-config"></a></a></h3>
+<h3 id="filterconfig"><a class="header" href="#filterconfig">FilterConfig <a name="filter-config"></a></a></h3>
 <p>Represents configuration for a filter instance.</p>
 <pre><code class="language-yaml">properties:
   name:
@@ -748,7 +748,7 @@ static:
 </span><span class="boring">quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>
-<h3 id="configuration-options-a-hreffiltersapiquilkinfilterscapture_bytesstructconfightmlrust-doca"><a class="header" href="#configuration-options-a-hreffiltersapiquilkinfilterscapture_bytesstructconfightmlrust-doca">Configuration Options (<a href="filters/../../api/quilkin/filters/capture_bytes/struct.Config.html">Rust Doc</a>)</a></h3>
+<h3 id="configuration-options-rust-doc"><a class="header" href="#configuration-options-rust-doc">Configuration Options (<a href="filters/../../api/quilkin/filters/capture_bytes/struct.Config.html">Rust Doc</a>)</a></h3>
 <pre><code class="language-yaml">properties:
   strategy:
     type: string
@@ -808,7 +808,7 @@ static:
 </span><span class="boring">quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>
-<h3 id="configuration-options-a-hreffiltersapiquilkinfiltersconcatenate_bytesstructconfightmlrust-doca"><a class="header" href="#configuration-options-a-hreffiltersapiquilkinfiltersconcatenate_bytesstructconfightmlrust-doca">Configuration Options (<a href="filters/../../api/quilkin/filters/concatenate_bytes/struct.Config.html">Rust Doc</a>)</a></h3>
+<h3 id="configuration-options-rust-doc-1"><a class="header" href="#configuration-options-rust-doc-1">Configuration Options (<a href="filters/../../api/quilkin/filters/concatenate_bytes/struct.Config.html">Rust Doc</a>)</a></h3>
 <pre><code class="language-yaml">properties:
   on_read:
     type: string
@@ -864,7 +864,7 @@ decompressed when traffic is returned from the dedicated game server before bein
 attention to the order it is placed in your <a href="filters/../filters.html">Filter configuration</a>. Most of the time it will likely be
 the first or last Filter configured to ensure it is compressing the entire set of data being sent.</p>
 </blockquote>
-<h3 id="configuration-options-a-hreffiltersapiquilkinfilterscompressstructconfightmlrust-doca"><a class="header" href="#configuration-options-a-hreffiltersapiquilkinfilterscompressstructconfightmlrust-doca">Configuration Options (<a href="filters/../../api/quilkin/filters/compress/struct.Config.html">Rust Doc</a>)</a></h3>
+<h3 id="configuration-options-rust-doc-2"><a class="header" href="#configuration-options-rust-doc-2">Configuration Options (<a href="filters/../../api/quilkin/filters/compress/struct.Config.html">Rust Doc</a>)</a></h3>
 <pre><code class="language-yaml">properties:
   on_read:
     '$ref': '#/definitions/action'
@@ -947,7 +947,7 @@ static:
 </span><span class="boring">quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>
-<h3 id="configuration-options-a-hreffiltersapiquilkinfiltersdebugstructconfightmlrust-doca"><a class="header" href="#configuration-options-a-hreffiltersapiquilkinfiltersdebugstructconfightmlrust-doca">Configuration Options (<a href="filters/../../api/quilkin/filters/debug/struct.Config.html">Rust Doc</a>)</a></h3>
+<h3 id="configuration-options-rust-doc-3"><a class="header" href="#configuration-options-rust-doc-3">Configuration Options (<a href="filters/../../api/quilkin/filters/debug/struct.Config.html">Rust Doc</a>)</a></h3>
 <pre><code class="language-yaml">properties:
   id:
     type: string
@@ -981,7 +981,7 @@ static:
 </span></code></pre></pre>
 <p>The load balancing policy (the strategy to use to select what endpoint to send traffic to) is configurable.
 In the example above, packets will be distributed by selecting endpoints in turn, in round robin fashion.</p>
-<h3 id="configuration-options-a-hreffiltersapiquilkinfiltersload_balancerstructconfightmlrust-doca"><a class="header" href="#configuration-options-a-hreffiltersapiquilkinfiltersload_balancerstructconfightmlrust-doca">Configuration Options (<a href="filters/../../api/quilkin/filters/load_balancer/struct.Config.html">Rust Doc</a>)</a></h3>
+<h3 id="configuration-options-rust-doc-4"><a class="header" href="#configuration-options-rust-doc-4">Configuration Options (<a href="filters/../../api/quilkin/filters/load_balancer/struct.Config.html">Rust Doc</a>)</a></h3>
 <pre><code class="language-yaml">properties:
   policy:
     type: string
@@ -1032,7 +1032,7 @@ For example, a configuration allowing 1000 packets per second could potentially 
 <blockquote>
 <p>Packets that that exceeds the maximum configured rate are dropped.</p>
 </blockquote>
-<h3 id="configuration-options-a-hreffiltersapiquilkinfilterslocal_rate_limitstructconfightmlrust-doca"><a class="header" href="#configuration-options-a-hreffiltersapiquilkinfilterslocal_rate_limitstructconfightmlrust-doca">Configuration Options (<a href="filters/../../api/quilkin/filters/local_rate_limit/struct.Config.html">Rust Doc</a>)</a></h3>
+<h3 id="configuration-options-rust-doc-5"><a class="header" href="#configuration-options-rust-doc-5">Configuration Options (<a href="filters/../../api/quilkin/filters/local_rate_limit/struct.Config.html">Rust Doc</a>)</a></h3>
 <pre><code class="language-yaml">properties:
   max_packets:
     type: integer
@@ -1092,7 +1092,7 @@ static:
 </span><span class="boring">}
 </span></code></pre></pre>
 <p>View the <a href="filters/./capture_bytes.html">CaptureBytes</a> filter documentation for more details.</p>
-<h3 id="configuration-options-a-hreffiltersapiquilkinfilterstoken_routerstructconfightmlrust-doca"><a class="header" href="#configuration-options-a-hreffiltersapiquilkinfilterstoken_routerstructconfightmlrust-doca">Configuration Options (<a href="filters/../../api/quilkin/filters/token_router/struct.Config.html">Rust Doc</a>)</a></h3>
+<h3 id="configuration-options-rust-doc-6"><a class="header" href="#configuration-options-rust-doc-6">Configuration Options (<a href="filters/../../api/quilkin/filters/token_router/struct.Config.html">Rust Doc</a>)</a></h3>
 <pre><code class="language-yaml">properties:
   metadataKey:
     type: string
@@ -1190,7 +1190,7 @@ static:
 </span><span class="boring">quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>
-<h3 id="configuration-options-a-hreffiltersapiquilkinfiltersfirewallstructconfightmlrust-doca"><a class="header" href="#configuration-options-a-hreffiltersapiquilkinfiltersfirewallstructconfightmlrust-doca">Configuration Options (<a href="filters/../../api/quilkin/filters/firewall/struct.Config.html">Rust Doc</a>)</a></h3>
+<h3 id="configuration-options-rust-doc-7"><a class="header" href="#configuration-options-rust-doc-7">Configuration Options (<a href="filters/../../api/quilkin/filters/firewall/struct.Config.html">Rust Doc</a>)</a></h3>
 <pre><code class="language-yaml">properties:
   on_read:
     '$ref': '#/definitions/rules'
@@ -1497,7 +1497,7 @@ tonic = &quot;0.5.0&quot;
 prost = &quot;0.7&quot;
 prost-types = &quot;0.7&quot;
 </code></pre>
-<h6 id="2-create-a-a-hrefhttpsdevelopersgooglecomprotocol-buffersprotobufa-equivalent-of-the-a-hreffilterswriting_custom_filtershtmlstatic-configurationstatic-configurationa"><a class="header" href="#2-create-a-a-hrefhttpsdevelopersgooglecomprotocol-buffersprotobufa-equivalent-of-the-a-hreffilterswriting_custom_filtershtmlstatic-configurationstatic-configurationa">2. Create a <a href="https://developers.google.com/protocol-buffers">Protobuf</a> equivalent of the <a href="filters/writing_custom_filters.html#static-configuration">static configuration</a>:</a></h6>
+<h6 id="2-create-a-protobuf-equivalent-of-the-static-configuration"><a class="header" href="#2-create-a-protobuf-equivalent-of-the-static-configuration">2. Create a <a href="https://developers.google.com/protocol-buffers">Protobuf</a> equivalent of the <a href="filters/writing_custom_filters.html#static-configuration">static configuration</a>:</a></h6>
 <pre><code class="language-plaintext no_run noplayground ignore">// src/greet.proto
 syntax = &quot;proto3&quot;;
 

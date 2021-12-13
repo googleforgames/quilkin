@@ -91,11 +91,11 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Display</span> <span class="kw">for</span> <span class="ident">ValidationError</span> {
-    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">fmt::Result</span> {
+    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="ident">fmt::Result</span> {
         <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">ValidationError::NotUnique</span>(<span class="ident">field</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;field {} is not unique&quot;</span>, <span class="ident">field</span>),
-            <span class="ident">ValidationError::EmptyList</span>(<span class="ident">field</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;field {} is cannot be an empty&quot;</span>, <span class="ident">field</span>),
-            <span class="ident">ValidationError::ValueInvalid</span>(<span class="ident">args</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write!</span>(
+            <span class="ident">ValidationError::NotUnique</span>(<span class="ident">field</span>) =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;field {} is not unique&quot;</span>, <span class="ident">field</span>),
+            <span class="ident">ValidationError::EmptyList</span>(<span class="ident">field</span>) =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;field {} is cannot be an empty&quot;</span>, <span class="ident">field</span>),
+            <span class="ident">ValidationError::ValueInvalid</span>(<span class="ident">args</span>) =&gt; <span class="macro">write!</span>(
                 <span class="ident">f</span>,
                 <span class="string">&quot;{} has an invalid value{}{}&quot;</span>,
                 <span class="ident">args</span>.<span class="ident">field</span>,
@@ -108,7 +108,7 @@
                     .<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;examples: {}&quot;</span>, <span class="ident">v</span>.<span class="ident">join</span>(<span class="string">&quot;,&quot;</span>)))
                     .<span class="ident">unwrap_or_default</span>()
             ),
-            <span class="ident">ValidationError::FilterInvalid</span>(<span class="ident">reason</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">ValidationError::FilterInvalid</span>(<span class="ident">reason</span>) =&gt; {
                 <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;filter configuration is invalid: {}&quot;</span>, <span class="ident">reason</span>)
             }
         }
