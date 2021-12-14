@@ -295,7 +295,7 @@ impl TryFrom<proto::matches::directional_config::Fallthrough> for Fallthrough {
             ProtoFallthrough::Filter(filter) => Self::Filter {
                 filter: filter
                     .filter
-                    .ok_or_else(|| eyre::eyre!("Unexpected missing `filter` field"))?,
+                    .ok_or_else(|| eyre::eyre!("missing `filter` field in Fallthrough configuration"))?,
                 config: filter.config.map(ConfigType::Dynamic),
             },
         })
