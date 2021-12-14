@@ -34,7 +34,7 @@ impl FilterConfig {
             )
             .with_metrics_registry(metrics_registry.clone());
 
-            filter_registry.get(dbg!(filter), args)
+            filter_registry.get(filter, args)
         };
 
         let branches = config
