@@ -14,7 +14,7 @@ pub fn factory() -> DynFilterFactory {
     Box::from(MatchesFactory::new())
 }
 
-pub struct FilterConfig {
+struct FilterConfig {
     metadata_key: String,
     branches: Vec<(Value, FilterInstance)>,
     fallthrough: FallthroughInstance,
@@ -176,10 +176,13 @@ impl FilterFactory for MatchesFactory {
     }
 }
 
+/// Configuration for the [`factory`].
 #[derive(Debug, serde::Deserialize, serde::Serialize, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
+    /// Configuration for [`Filter::read`].
     pub on_read: Option<DirectionalConfig>,
+    /// Configuration for [`Filter::write`].
     pub on_write: Option<DirectionalConfig>,
 }
 
@@ -227,20 +230,28 @@ impl TryFrom<proto::matches::DirectionalConfig> for DirectionalConfig {
     }
 }
 
-/// Configuration for a specific direction
+/// Configuration for a specific direction.
 #[derive(Debug, serde::Deserialize, serde::Serialize, PartialEq)]
 pub struct DirectionalConfig {
+    /// The key for the metadata to compare against.
     #[serde(rename = "metadataKey")]
     pub metadata_key: String,
+    /// List of filters to compare and potentially run if any match.
     pub branches: Vec<Branch>,
+    /// The behaviour for when none of the `branches` match.
     #[serde(default)]
     pub fallthrough: Fallthrough,
 }
 
+/// A specific match branch. The filter is run when `value` matches the value
+/// defined in `metadata_key`.
 #[derive(Debug, serde::Deserialize, serde::Serialize, PartialEq)]
 pub struct Branch {
+    /// The value to compare against the dynamic metadata.
     pub value: crate::metadata::Value,
+    /// The identifier of the filter to run on successful matches.
     pub filter: String,
+    /// The configuration for the filter, if any.
     pub config: Option<ConfigType>,
 }
 
@@ -261,7 +272,7 @@ impl TryFrom<proto::matches::Branch> for Branch {
     }
 }
 
-///  How the [`Matches`] filter should handle no branch being matched.
+/// The behaviour when the none of branches match.
 #[derive(Debug, PartialEq)]
 pub enum Fallthrough {
     /// The packet will be passed onto the next filter.
@@ -270,7 +281,9 @@ pub enum Fallthrough {
     Drop,
     /// The filter specified in `filter` will be called.
     Filter {
+        /// The identifier for the filter to run.
         filter: String,
+        /// The configuration for the filter to run, if any.
         config: Option<ConfigType>,
     },
 }
@@ -293,9 +306,9 @@ impl TryFrom<proto::matches::directional_config::Fallthrough> for Fallthrough {
             ProtoFallthrough::Pass(_) => Self::Pass,
             ProtoFallthrough::Drop(_) => Self::Drop,
             ProtoFallthrough::Filter(filter) => Self::Filter {
-                filter: filter
-                    .filter
-                    .ok_or_else(|| eyre::eyre!("missing `filter` field in Fallthrough configuration"))?,
+                filter: filter.filter.ok_or_else(|| {
+                    eyre::eyre!("missing `filter` field in Fallthrough configuration")
+                })?,
                 config: filter.config.map(ConfigType::Dynamic),
             },
         })
