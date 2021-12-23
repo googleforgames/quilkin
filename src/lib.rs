@@ -36,7 +36,7 @@ pub type Result<T, E = eyre::Error> = std::result::Result<T, E>;
 #[doc(inline)]
 pub use self::{
     config::Config,
-    proxy::{logger, Builder, PendingValidation, Server, Validated},
+    proxy::{Builder, PendingValidation, Server, Validated},
     runner::{run, run_with_config},
 };
 

@@ -16,21 +16,16 @@
 
 use hyper::{Body, Response, StatusCode};
 use prometheus::{Encoder, Registry, TextEncoder};
-use slog::{o, warn, Logger};
 
 /// Metrics contains metrics configuration for the server.
 #[derive(Clone)]
 pub struct Metrics {
-    log: Logger,
     pub(crate) registry: Registry,
 }
 
 impl Metrics {
-    pub fn new(base: &Logger, registry: Registry) -> Self {
-        Metrics {
-            log: base.new(o!("source" => "proxy::Metrics")),
-            registry,
-        }
+    pub fn new(registry: Registry) -> Self {
+        Metrics { registry }
     }
 
     pub fn collect_metrics(&self) -> Response<Body> {
@@ -39,11 +34,11 @@ impl Metrics {
         let encoder = TextEncoder::new();
         let body = encoder
             .encode(&self.registry.gather(), &mut buffer)
-            .map_err(|err| warn!(self.log, "Failed to encode metrics"; "error" => %err))
+            .map_err(|error| tracing::warn!(%error, "Failed to encode metrics"))
             .and_then(|_| {
-                String::from_utf8(buffer).map(Body::from).map_err(
-                    |err| warn!(self.log, "Failed to convert metrics to utf8"; "error" => %err),
-                )
+                String::from_utf8(buffer)
+                    .map(Body::from)
+                    .map_err(|error| tracing::warn!(%error, "Failed to convert metrics to utf8"))
             });
 
         match body {
@@ -65,12 +60,10 @@ mod tests {
     use prometheus::Registry;
 
     use crate::proxy::Metrics;
-    use crate::test_utils::logger;
 
     #[tokio::test]
     async fn collect_metrics() {
-        let log = logger();
-        let metrics = Metrics::new(&log, Registry::default());
+        let metrics = Metrics::new(Registry::default());
         let response = metrics.collect_metrics();
         assert_eq!(response.status(), StatusCode::OK);
     }

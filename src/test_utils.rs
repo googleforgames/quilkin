@@ -19,8 +19,6 @@ use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::str::from_utf8;
 use std::sync::Arc;
 
-use slog::{o, warn, Drain, Logger};
-use slog_term::{FullFormat, PlainSyncDecorator};
 use tokio::net::UdpSocket;
 use tokio::sync::{mpsc, oneshot, watch};
 
@@ -79,16 +77,8 @@ impl Filter for TestFilter {
     }
 }
 
-// logger returns a standard out, non structured terminal logger, suitable for using in tests,
-// since it's more human readable.
-pub fn logger() -> Logger {
-    let plain = PlainSyncDecorator::new(std::io::stdout());
-    let drain = FullFormat::new(plain).build().fuse();
-    Logger::root(drain, o!())
-}
-
+#[derive(Default)]
 pub struct TestHelper {
-    pub log: Logger,
     /// Channel to subscribe to, and trigger the shutdown of created resources.
     shutdown_ch: Option<(watch::Sender<()>, watch::Receiver<()>)>,
     server_shutdown_tx: Vec<Option<watch::Sender<()>>>,
@@ -104,7 +94,6 @@ pub struct OpenSocketRecvPacket {
 
 impl Drop for TestHelper {
     fn drop(&mut self) {
-        let log = self.log.clone();
         for shutdown_tx in self
             .server_shutdown_tx
             .iter_mut()
@@ -113,10 +102,10 @@ impl Drop for TestHelper {
         {
             shutdown_tx
                 .send(())
-                .map_err(|err| {
-                    warn!(
-                        log,
-                        "Failed to send server shutdown over channel"; "error" => %err
+                .map_err(|error| {
+                    tracing::warn!(
+                        %error,
+                        "Failed to send server shutdown over channel"
                     )
                 })
                 .ok();
@@ -124,16 +113,6 @@ impl Drop for TestHelper {
 
         if let Some((shutdown_tx, _)) = self.shutdown_ch.take() {
             shutdown_tx.send(()).unwrap();
-        }
-    }
-}
-
-impl Default for TestHelper {
-    fn default() -> Self {
-        TestHelper {
-            log: logger(),
-            shutdown_ch: None,
-            server_shutdown_tx: vec![],
         }
     }
 }
@@ -168,7 +147,6 @@ impl TestHelper {
     ) -> (mpsc::Receiver<String>, Arc<UdpSocket>) {
         let (packet_tx, packet_rx) = mpsc::channel::<String>(10);
         let socket = self.create_socket().await;
-        let log = self.log.clone();
         let mut shutdown_rx = self.get_shutdown_subscriber().await;
         let socket_recv = socket.clone();
         tokio::spawn(async move {
@@ -180,8 +158,8 @@ impl TestHelper {
                         let str = from_utf8(&buf[..size]).unwrap().to_string();
                         match packet_tx.send(str).await {
                             Ok(_) => {}
-                            Err(err) => {
-                                warn!(log, "recv_multiple_packets: recv_chan dropped"; "error" => %err);
+                            Err(error) => {
+                                tracing::warn!(target: "recv_multiple_packets", %error, "recv_chan dropped");
                                 return;
                             }
                         };

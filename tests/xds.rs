@@ -134,15 +134,9 @@ use quilkin_proto::extensions::filters::concatenate_bytes::v1alpha1::{
     ConcatenateBytes,
 };
 
-use quilkin::{
-    config::Config,
-    endpoint::EndpointAddress,
-    test_utils::{logger, TestHelper},
-    Builder,
-};
+use quilkin::{config::Config, endpoint::EndpointAddress, test_utils::TestHelper, Builder};
 
 use prost::Message;
-use slog::{info, o, Logger};
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -159,7 +153,6 @@ const LISTENER_TYPE: &str = "type.googleapis.com/envoy.config.listener.v3.Listen
 // forwards DiscoveryResponse(s) to the client. A rx chan is passed in upon creation
 // and can be used by the test to drive the DiscoveryResponses sent by the server to the client.
 struct ControlPlane {
-    log: Logger,
     source_discovery_response_rx:
         tokio::sync::Mutex<Option<mpsc::Receiver<Result<DiscoveryResponse, tonic::Status>>>>,
     shutdown_rx: watch::Receiver<()>,
@@ -183,7 +176,6 @@ impl ADS for ControlPlane {
             .take()
             .unwrap();
 
-        let log = self.log.clone();
         let mut shutdown_rx = self.shutdown_rx.clone();
         let (discovery_response_tx, discovery_response_rx) = mpsc::channel(1);
         tokio::spawn(async move {
@@ -195,7 +187,7 @@ impl ADS for ControlPlane {
                     source_response = source_discovery_response_rx.recv() => {
                         match source_response {
                             None => {
-                                info!(log, "Stopping updates to client: source was dropped");
+                                tracing::info!("Stopping updates to client: source was dropped");
                                 return;
                             },
                             Some(result) => {
@@ -234,21 +226,15 @@ dynamic:
     ";
 
     let config: Arc<Config> = Arc::new(serde_yaml::from_str(config).unwrap());
-    let server = Builder::from(config)
-        .with_log(logger())
-        .validate()
-        .unwrap()
-        .build();
+    let server = Builder::from(config).validate().unwrap().build();
 
     let (_shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(());
     let (discovery_response_tx, discovery_response_rx) = mpsc::channel(1);
 
     let mut control_plane_shutdown_rx = shutdown_rx.clone();
-    let log = t.log.new(o!("source" => "control-plane"));
     tokio::spawn(async move {
         let server = ADSServer::new(ControlPlane {
             source_discovery_response_rx: tokio::sync::Mutex::new(Some(discovery_response_rx)),
-            log,
             shutdown_rx: control_plane_shutdown_rx.clone(),
         });
         let server = Server::builder().add_service(server);

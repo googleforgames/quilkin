@@ -227,17 +227,6 @@ impl<'de> Deserialize<'de> for EndpointAddress {
     }
 }
 
-impl slog::Value for EndpointAddress {
-    fn serialize(
-        &self,
-        _: &slog::Record,
-        key: slog::Key,
-        serializer: &mut dyn slog::Serializer,
-    ) -> slog::Result {
-        serializer.emit_arguments(key, &format_args!("{}", self))
-    }
-}
-
 /// The kind of address, such as Domain Name or IP address. **Note** that
 /// the `FromStr` implementation doesn't actually validate that the name is
 /// resolvable. Use [`EndpointAddress`] for complete address validation.

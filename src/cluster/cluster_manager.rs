@@ -20,7 +20,6 @@ use std::sync::Arc;
 // and we will need to acquire a read lock with every packet that is processed
 // to be able to capture the current endpoint state and pass it to Filters.
 use parking_lot::RwLock;
-use slog::{debug, o, warn, Logger};
 
 use prometheus::{Registry, Result as MetricsResult};
 use tokio::sync::{mpsc, watch};
@@ -81,13 +80,10 @@ impl ClusterManager {
     /// Returns a ClusterManager where the set of clusters is continuously
     /// updated based on responses from the provided updates channel.
     pub fn dynamic(
-        base_logger: Logger,
         metrics_registry: &Registry,
         cluster_updates_rx: mpsc::Receiver<ClusterUpdate>,
         shutdown_rx: watch::Receiver<()>,
     ) -> MetricsResult<SharedClusterManager> {
-        let log = base_logger.new(o!("source" => "cluster::ClusterManager"));
-
         let cluster_manager = Self::new(metrics_registry, None)?;
         let metrics = cluster_manager.metrics.clone();
         let cluster_manager = Arc::new(RwLock::new(cluster_manager));
@@ -95,7 +91,6 @@ impl ClusterManager {
         // Start a task in the background to receive cluster updates
         // and update the cluster manager's cluster set in turn.
         Self::spawn_updater(
-            log.clone(),
             metrics,
             cluster_manager.clone(),
             cluster_updates_rx,
@@ -144,7 +139,6 @@ impl ClusterManager {
     /// Spawns a task to run a loop that receives cluster updates
     /// and updates the ClusterManager's state in turn.
     fn spawn_updater(
-        log: Logger,
         metrics: Metrics,
         cluster_manager: Arc<RwLock<ClusterManager>>,
         mut cluster_updates_rx: mpsc::Receiver<ClusterUpdate>,
@@ -156,17 +150,17 @@ impl ClusterManager {
                     update = cluster_updates_rx.recv() => {
                         match update {
                             Some(update) => {
-                                debug!(log, "Received a cluster update.");
+                                tracing::debug!("Received a cluster update.");
                                 cluster_manager.write().update(Self::process_cluster_update(&metrics, update));
                             }
                             None => {
-                                warn!(log, "Exiting cluster update receive loop because the sender dropped the channel.");
+                                tracing::warn!("Exiting cluster update receive loop because the sender dropped the channel.");
                                 return;
                             }
                         }
                     }
                     _ = shutdown_rx.changed() => {
-                        debug!(log, "Exiting cluster update receive loop because a shutdown signal was received.");
+                        tracing::debug!("Exiting cluster update receive loop because a shutdown signal was received.");
                         return;
                     },
                 }
@@ -185,15 +179,13 @@ mod tests {
         cluster::{Cluster, LocalityEndpoints},
         endpoint::{Endpoint, Endpoints, Metadata},
         metadata::MetadataView,
-        test_utils::logger,
     };
 
     #[tokio::test]
     async fn dynamic_cluster_manager_process_cluster_update() {
         let (update_tx, update_rx) = mpsc::channel(3);
         let (_shutdown_tx, shutdown_rx) = watch::channel(());
-        let cm = ClusterManager::dynamic(logger(), &Registry::default(), update_rx, shutdown_rx)
-            .unwrap();
+        let cm = ClusterManager::dynamic(&Registry::default(), update_rx, shutdown_rx).unwrap();
 
         fn mapping(entries: &[(&str, &str)]) -> serde_yaml::Mapping {
             entries
@@ -301,8 +293,7 @@ mod tests {
     async fn dynamic_cluster_manager_metrics() {
         let (update_tx, update_rx) = mpsc::channel(3);
         let (_shutdown_tx, shutdown_rx) = watch::channel(());
-        let cm = ClusterManager::dynamic(logger(), &Registry::default(), update_rx, shutdown_rx)
-            .unwrap();
+        let cm = ClusterManager::dynamic(&Registry::default(), update_rx, shutdown_rx).unwrap();
 
         // Initialization metrics
         {
