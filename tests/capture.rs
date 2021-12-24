@@ -33,11 +33,10 @@ async fn token_router() {
     let mut t = TestHelper::default();
     let echo = t.run_echo_server().await;
 
-    let capture_yaml = "
-suffix:
-    size: 3
-    remove: true
-";
+    let capture_yaml = r#"
+regex:
+    pattern: .{3}$
+"#;
     let endpoint_metadata = "
 quilkin.dev:
     tokens:
@@ -73,7 +72,7 @@ quilkin.dev:
     socket.send_to(msg, &local_addr).await.unwrap();
 
     assert_eq!(
-        "hello",
+        "helloabc",
         timeout(Duration::from_secs(5), recv_chan.recv())
             .await
             .expect("should have received a packet")

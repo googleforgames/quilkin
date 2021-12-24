@@ -14,82 +14,84 @@
  * limitations under the License.
  */
 
-mod capture;
+mod affix;
 mod config;
 mod metrics;
-mod proto;
+mod regex;
+
+crate::include_proto!("quilkin.extensions.filters.capture.v1alpha1");
 
 use std::sync::Arc;
 
-use tracing::warn;
-
 use crate::{filters::prelude::*, metadata::Value};
 
-use capture::Capture;
-use metrics::Metrics;
-use proto::quilkin::extensions::filters::capture_bytes::v1alpha1::CaptureBytes as ProtoConfig;
+use self::{
+    affix::{Prefix, Suffix},
+    metrics::Metrics,
+    regex::Regex,
+};
 
+use self::quilkin::extensions::filters::capture::v1alpha1 as proto;
 pub use config::{Config, Strategy};
 
-pub const NAME: &str = "quilkin.extensions.filters.capture_bytes.v1alpha1.CaptureBytes";
+pub const NAME: &str = "quilkin.extensions.filters.capture.v1alpha1.Capture";
 
 /// Creates a new factory for generating capture filters.
 pub fn factory() -> DynFilterFactory {
-    Box::from(CaptureBytesFactory::new())
+    Box::from(CaptureFactory::new())
 }
 
-struct CaptureBytes {
-    capture: Box<dyn Capture + Sync + Send>,
+/// Trait to implement different strategies for capturing packet data.
+pub trait CaptureStrategy {
+    /// Capture packet data from the contents, and optionally returns a value if
+    /// anything was captured.
+    fn capture(&self, contents: &mut Vec<u8>, metrics: &Metrics) -> Option<Value>;
+}
+
+struct Capture {
+    capture: Box<dyn CaptureStrategy + Sync + Send>,
     /// metrics reporter for this filter.
     metrics: Metrics,
     metadata_key: Arc<String>,
-    size: usize,
-    remove: bool,
+    is_present_key: Arc<String>,
 }
 
-impl CaptureBytes {
+impl Capture {
     fn new(config: Config, metrics: Metrics) -> Self {
-        CaptureBytes {
-            capture: config.strategy.as_capture(),
+        Self {
+            capture: config.strategy.into_capture(),
             metrics,
+            is_present_key: Arc::new(config.metadata_key.clone() + "/is_present"),
             metadata_key: Arc::new(config.metadata_key),
-            size: config.size,
-            remove: config.remove,
         }
     }
 }
 
-impl Filter for CaptureBytes {
+impl Filter for Capture {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
     fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
-        // if the capture size is bigger than the packet size, then we drop the packet,
-        // and occasionally warn
-        if ctx.contents.len() < self.size {
-            if self.metrics.packets_dropped_total.get() % 1000 == 0 {
-                warn!(count = ?self.metrics.packets_dropped_total.get(), "Packets are being dropped due to their length being less than {} bytes", self.size);
-            }
-            self.metrics.packets_dropped_total.inc();
-            return None;
-        }
-        let token = self
-            .capture
-            .capture(&mut ctx.contents, self.size, self.remove);
-
+        let capture = self.capture.capture(&mut ctx.contents, &self.metrics);
         ctx.metadata
-            .insert(self.metadata_key.clone(), Value::Bytes(token.into()));
+            .insert(self.is_present_key.clone(), Value::Bool(capture.is_some()));
 
-        Some(ctx.into())
+        if let Some(value) = capture {
+            ctx.metadata.insert(self.metadata_key.clone(), value);
+            Some(ctx.into())
+        } else {
+            None
+        }
     }
 }
-struct CaptureBytesFactory {}
 
-impl CaptureBytesFactory {
+struct CaptureFactory;
+
+impl CaptureFactory {
     pub fn new() -> Self {
-        CaptureBytesFactory {}
+        CaptureFactory
     }
 }
 
-impl FilterFactory for CaptureBytesFactory {
+impl FilterFactory for CaptureFactory {
     fn name(&self) -> &'static str {
         NAME
     }
@@ -97,8 +99,8 @@ impl FilterFactory for CaptureBytesFactory {
     fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
         let (config_json, config) = self
             .require_config(args.config)?
-            .deserialize::<Config, ProtoConfig>(self.name())?;
-        let filter = CaptureBytes::new(config, Metrics::new(&args.metrics_registry)?);
+            .deserialize::<Config, proto::Capture>(self.name())?;
+        let filter = Capture::new(config, Metrics::new(&args.metrics_registry)?);
         Ok(FilterInstance::new(
             config_json,
             Box::new(filter) as Box<dyn Filter>,
@@ -111,46 +113,51 @@ mod tests {
     use std::sync::Arc;
 
     use prometheus::Registry;
-    use serde_yaml::{Mapping, Value};
+    use serde_yaml::{Mapping, Value as YamlValue};
 
-    use crate::endpoint::{Endpoint, Endpoints};
-    use crate::test_utils::assert_write_no_change;
+    use crate::{
+        endpoint::{Endpoint, Endpoints},
+        filters::metadata::CAPTURED_BYTES,
+        filters::{prelude::*, FilterRegistry},
+        metadata::Value,
+        test_utils::assert_write_no_change,
+    };
 
-    use super::{CaptureBytes, CaptureBytesFactory, Config, Metrics, Strategy};
-
-    use super::capture::{Capture, Prefix, Suffix};
-
-    use crate::filters::{
-        metadata::CAPTURED_BYTES, CreateFilterArgs, Filter, FilterFactory, FilterRegistry,
-        ReadContext,
+    use super::{
+        Capture, CaptureFactory, CaptureStrategy, Config, Metrics, Prefix, Regex, Strategy, Suffix,
     };
 
     const TOKEN_KEY: &str = "TOKEN";
 
-    fn capture_bytes(config: Config) -> CaptureBytes {
-        CaptureBytes::new(config, Metrics::new(&Registry::default()).unwrap())
+    fn capture_bytes(config: Config) -> Capture {
+        Capture::new(config, Metrics::new(&Registry::default()).unwrap())
     }
 
     #[test]
     fn factory_valid_config_all() {
-        let factory = CaptureBytesFactory::new();
+        let factory = CaptureFactory::new();
         let mut map = Mapping::new();
         map.insert(
-            Value::String("strategy".into()),
-            Value::String("SUFFIX".into()),
+            YamlValue::String("metadataKey".into()),
+            YamlValue::String(TOKEN_KEY.into()),
         );
         map.insert(
-            Value::String("metadataKey".into()),
-            Value::String(TOKEN_KEY.into()),
+            YamlValue::String("suffix".into()),
+            YamlValue::Mapping({
+                let mut map = Mapping::new();
+
+                map.insert("size".into(), YamlValue::Number(3.into()));
+                map.insert("remove".into(), YamlValue::Bool(true));
+
+                map
+            }),
         );
-        map.insert(Value::String("size".into()), Value::Number(3.into()));
-        map.insert(Value::String("remove".into()), Value::Bool(true));
 
         let filter = factory
             .create_filter(CreateFilterArgs::fixed(
                 FilterRegistry::default(),
                 Registry::default(),
-                Some(Value::Mapping(map)),
+                Some(YamlValue::Mapping(map)),
             ))
             .unwrap()
             .filter;
@@ -159,14 +166,22 @@ mod tests {
 
     #[test]
     fn factory_valid_config_defaults() {
-        let factory = CaptureBytesFactory::new();
+        let factory = CaptureFactory::new();
         let mut map = Mapping::new();
-        map.insert(Value::String("size".into()), Value::Number(3.into()));
+        map.insert("suffix".into(), {
+            let mut map = Mapping::new();
+            map.insert(
+                YamlValue::String("size".into()),
+                YamlValue::Number(3.into()),
+            );
+            map.into()
+        });
+
         let filter = factory
             .create_filter(CreateFilterArgs::fixed(
                 FilterRegistry::default(),
                 Registry::default(),
-                Some(Value::Mapping(map)),
+                Some(YamlValue::Mapping(map)),
             ))
             .unwrap()
             .filter;
@@ -175,14 +190,17 @@ mod tests {
 
     #[test]
     fn factory_invalid_config() {
-        let factory = CaptureBytesFactory::new();
+        let factory = CaptureFactory::new();
         let mut map = Mapping::new();
-        map.insert(Value::String("size".into()), Value::String("WRONG".into()));
+        map.insert(
+            YamlValue::String("size".into()),
+            YamlValue::String("WRONG".into()),
+        );
 
         let result = factory.create_filter(CreateFilterArgs::fixed(
             FilterRegistry::default(),
             Registry::default(),
-            Some(Value::Mapping(map)),
+            Some(YamlValue::Mapping(map)),
         ));
         assert!(result.is_err(), "Should be an error");
     }
@@ -190,11 +208,13 @@ mod tests {
     #[test]
     fn read() {
         let config = Config {
-            strategy: Strategy::Suffix,
             metadata_key: TOKEN_KEY.into(),
-            size: 3,
-            remove: true,
+            strategy: Strategy::Suffix(Suffix {
+                size: 3,
+                remove: true,
+            }),
         };
+
         let filter = capture_bytes(config);
         assert_end_strategy(&filter, TOKEN_KEY, true);
     }
@@ -202,10 +222,11 @@ mod tests {
     #[test]
     fn read_overflow_capture_size() {
         let config = Config {
-            strategy: Strategy::Suffix,
             metadata_key: TOKEN_KEY.into(),
-            size: 99,
-            remove: true,
+            strategy: Strategy::Suffix(Suffix {
+                size: 99,
+                remove: true,
+            }),
         };
         let filter = capture_bytes(config);
         let endpoints = vec![Endpoint::new("127.0.0.1:81".parse().unwrap())];
@@ -223,39 +244,64 @@ mod tests {
     #[test]
     fn write() {
         let config = Config {
-            strategy: Strategy::Suffix,
+            strategy: Strategy::Suffix(Suffix {
+                size: 0,
+                remove: false,
+            }),
             metadata_key: TOKEN_KEY.into(),
-            size: 0,
-            remove: false,
         };
         let filter = capture_bytes(config);
         assert_write_no_change(&filter);
     }
 
     #[test]
-    fn end_capture() {
-        let end = Suffix {};
+    fn regex_capture() {
+        let metrics = Metrics::new(&Registry::default()).unwrap();
+        let end = Regex {
+            pattern: regex::bytes::Regex::new(".{3}$").unwrap(),
+        };
         let mut contents = b"helloabc".to_vec();
-        let result = end.capture(&mut contents, 3, false);
-        assert_eq!(b"abc".to_vec(), result);
+        let result = end.capture(&mut contents, &metrics).unwrap();
+        assert_eq!(Value::Bytes(b"abc".to_vec().into()), result);
+        assert_eq!(b"helloabc".to_vec(), contents);
+    }
+
+    #[test]
+    fn end_capture() {
+        let metrics = Metrics::new(&Registry::default()).unwrap();
+        let mut end = Suffix {
+            size: 3,
+            remove: false,
+        };
+        let mut contents = b"helloabc".to_vec();
+        let result = end.capture(&mut contents, &metrics).unwrap();
+        assert_eq!(Value::Bytes(b"abc".to_vec().into()), result);
         assert_eq!(b"helloabc".to_vec(), contents);
 
-        let result = end.capture(&mut contents, 3, true);
-        assert_eq!(b"abc".to_vec(), result);
+        end.remove = true;
+
+        let result = end.capture(&mut contents, &metrics).unwrap();
+        assert_eq!(Value::Bytes(b"abc".to_vec().into()), result);
         assert_eq!(b"hello".to_vec(), contents);
     }
 
     #[test]
     fn beginning_capture() {
-        let beg = Prefix {};
+        let metrics = Metrics::new(&Registry::default()).unwrap();
+        let mut beg = Prefix {
+            size: 3,
+            remove: false,
+        };
         let mut contents = b"abchello".to_vec();
 
-        let result = beg.capture(&mut contents, 3, false);
-        assert_eq!(b"abc".to_vec(), result);
+        let result = beg.capture(&mut contents, &metrics);
+        assert_eq!(Some(Value::Bytes(b"abc".to_vec().into())), result);
         assert_eq!(b"abchello".to_vec(), contents);
 
-        let result = beg.capture(&mut contents, 3, true);
-        assert_eq!(b"abc".to_vec(), result);
+        beg.remove = true;
+
+        let result = beg.capture(&mut contents, &metrics);
+        assert_eq!(Some(Value::Bytes(b"abc".to_vec().into())), result);
         assert_eq!(b"hello".to_vec(), contents);
     }
 

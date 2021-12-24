@@ -37,7 +37,7 @@ impl FilterSet {
     /// - [`local_rate_limit`][filters::local_rate_limit]
     /// - [`concatenate_bytes`][filters::concatenate_bytes]
     /// - [`load_balancer`][filters::load_balancer]
-    /// - [`capture_bytes`][filters::capture_bytes]
+    /// - [`capture`][filters::capture]
     /// - [`token_router`][filters::token_router]
     /// - [`compress`][filters::compress]
     pub fn default() -> Self {
@@ -52,7 +52,7 @@ impl FilterSet {
     pub fn default_with(filters: impl IntoIterator<Item = DynFilterFactory>) -> Self {
         Self::with(
             std::array::IntoIter::new([
-                filters::capture_bytes::factory(),
+                filters::capture::factory(),
                 filters::compress::factory(),
                 filters::concatenate_bytes::factory(),
                 filters::debug::factory(),

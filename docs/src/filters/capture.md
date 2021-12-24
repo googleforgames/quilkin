@@ -8,9 +8,25 @@ This is often used as a way of retrieving authentication tokens from a packet, a
 [ConcatenateBytes](./concatenate_bytes.md) and 
 [TokenRouter](token_router.md) filter to provide common packet routing utilities.
 
+### Capture strategies
+
+There are multiple strategies for capturing bytes from the packet.
+
+#### Suffix
+Captures bytes from the end of the packet.
+
+#### Prefix
+Captures bytes from the start of the packet.
+
+#### Regex
+Captures bytes using a regular expression. Unlike other capture strategies,
+the regular expression can return one or many values if there are
+multiple matches.
+
+
 #### Filter name
 ```text
-quilkin.extensions.filters.capture_bytes.v1alpha1.CaptureBytes
+quilkin.extensions.filters.capture.v1alpha1.Capture
 ```
 
 ### Configuration Examples
@@ -19,12 +35,12 @@ quilkin.extensions.filters.capture_bytes.v1alpha1.CaptureBytes
 version: v1alpha1
 static:
   filters:
-    - name: quilkin.extensions.filters.capture_bytes.v1alpha1.CaptureBytes
+    - name: quilkin.extensions.filters.capture.v1alpha1.Capture
       config:
-          strategy: PREFIX
           metadataKey: myapp.com/myownkey
-          size: 3
-          remove: false
+          prefix:
+            size: 3
+            remove: false
   endpoints:
     - address: 127.0.0.1:7001
 # ";
@@ -33,12 +49,12 @@ static:
 # quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
 ```
 
-### Configuration Options ([Rust Doc](../../api/quilkin/filters/capture_bytes/struct.Config.html))
+### Configuration Options ([Rust Doc](../../api/quilkin/filters/capture/struct.Config.html))
 
 ```yaml
 properties:
   strategy:
-    type: string
+    type: object
     description: |
       The selected strategy for capturing the series of bytes from the incoming packet.
        - SUFFIX: Retrieve bytes from the end of the packet.
@@ -47,7 +63,7 @@ properties:
     enum: ['PREFIX', 'SUFFIX']
   metadataKey:
     type: string
-    default: quilkin.dev/captured_bytes
+    default: quilkin.dev/captured
     description: | 
       The key under which the captured bytes are stored in the Filter invocation values.
   size:
@@ -65,7 +81,7 @@ properties:
 
 ### Metrics
 
-* `quilkin_filter_CaptureBytes_packets_dropped`  
+* `quilkin_filter_Capture_packets_dropped`  
   A counter of the total number of packets that have been dropped due to their length being less than the configured
   `size`.
 

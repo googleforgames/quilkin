@@ -20,8 +20,8 @@ use prometheus::{IntCounter, Registry};
 use crate::metrics::{filter_opts, CollectorExt};
 
 /// Register and manage metrics for this filter
-pub(super) struct Metrics {
-    pub(super) packets_dropped_total: GenericCounter<AtomicU64>,
+pub struct Metrics {
+    pub packets_dropped_total: GenericCounter<AtomicU64>,
 }
 
 impl Metrics {

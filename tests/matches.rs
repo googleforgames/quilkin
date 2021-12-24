@@ -21,7 +21,7 @@ use tokio::time::{timeout, Duration};
 use quilkin::{
     config::{Builder, Filter},
     endpoint::Endpoint,
-    filters::{capture_bytes, matches},
+    filters::{capture, matches},
     test_utils::TestHelper,
 };
 
@@ -31,13 +31,14 @@ async fn matches() {
     let echo = t.run_echo_server().await;
 
     let capture_yaml = "
-size: 3
-remove: true
+suffix:
+    size: 3
+    remove: true
 ";
 
     let matches_yaml = "
 on_read:
-    metadataKey: quilkin.dev/captured_bytes
+    metadataKey: quilkin.dev/capture
     fallthrough:
         filter: quilkin.extensions.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
         config:
@@ -61,7 +62,7 @@ on_read:
         .with_static(
             vec![
                 Filter {
-                    name: capture_bytes::factory().name().into(),
+                    name: capture::factory().name().into(),
                     config: serde_yaml::from_str(capture_yaml).unwrap(),
                 },
                 Filter {
