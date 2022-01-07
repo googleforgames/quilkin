@@ -26,15 +26,19 @@ CARGO_HOME="${CARGO_HOME:-$HOME/.cargo}"
 # This should be reviewed before each release to make sure we're capturing all
 # the dependencies we need.
 
-rm dependencies-src.zip || true
-
-dependencies=("slog-json")
+dependencies=()
 
 zip="$(pwd)/dependencies-src.zip"
 
+rm "$zip" || true
+
 echo "Archiving dependencies to: $zip"
+
+# create an empty zip, so we always have a file, even if we don't have dependencies
+echo UEsFBgAAAAAAAAAAAAAAAAAAAAAAAA== | base64 -d > "$zip"
+
 pushd "$CARGO_HOME/registry/src"
 for d in "${dependencies[@]}"; do
-  find . -type d -name "$d-*" | xargs -I {} zip -rv "$zip" "{}"
+  find . -type d -name "$d-*" | xargs -I {} zip -ruv "$zip" "{}"
 done
 popd
