@@ -95,7 +95,7 @@ The project has two binaries depending on the external source of configuration:
         where to send the associated packet.
         Note that the token is stripped off the packet. This annotation cannot be provided together with
         `quilkin.dev/routing-token-prefix-size`.
-      - **quilkin.dev/routing-token-prefix-size**: Works exactly the same as `quilkin.dev/routing-token-prefix-size`
+      - **quilkin.dev/routing-token-prefix-size**: Works exactly the same as `quilkin.dev/routing-token-suffix-size`
         with the difference that the token is a prefix on the packet rather than a suffix.
    
    As an example, the following runs the server against a cluster (using default kubeconfig configuration) where Quilkin pods run in the `quilkin` namespace and game-server pods run in the `gameservers` namespace:
