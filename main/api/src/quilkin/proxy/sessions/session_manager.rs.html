@@ -261,22 +261,6 @@
 <span id="261">261</span>
 <span id="262">262</span>
 <span id="263">263</span>
-<span id="264">264</span>
-<span id="265">265</span>
-<span id="266">266</span>
-<span id="267">267</span>
-<span id="268">268</span>
-<span id="269">269</span>
-<span id="270">270</span>
-<span id="271">271</span>
-<span id="272">272</span>
-<span id="273">273</span>
-<span id="274">274</span>
-<span id="275">275</span>
-<span id="276">276</span>
-<span id="277">277</span>
-<span id="278">278</span>
-<span id="279">279</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -297,7 +281,6 @@
 <span class="kw">use</span> <span class="ident">std::sync::Arc</span>;
 <span class="kw">use</span> <span class="ident">std::time</span>::{<span class="ident">Duration</span>, <span class="ident">SystemTime</span>, <span class="ident">UNIX_EPOCH</span>};
 
-<span class="kw">use</span> <span class="ident">slog</span>::{<span class="ident">debug</span>, <span class="ident">warn</span>, <span class="ident">Logger</span>};
 <span class="kw">use</span> <span class="ident">tokio::sync</span>::{<span class="ident">watch</span>, <span class="ident">RwLock</span>, <span class="ident">RwLockReadGuard</span>, <span class="ident">RwLockWriteGuard</span>};
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::proxy::sessions</span>::{<span class="ident">Session</span>, <span class="ident">SessionKey</span>};
@@ -316,11 +299,11 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SessionManager</span>(<span class="ident">Sessions</span>);
 
 <span class="kw">impl</span> <span class="ident">SessionManager</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">log</span>: <span class="ident">Logger</span>, <span class="ident">shutdown_rx</span>: <span class="ident">watch::Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">shutdown_rx</span>: <span class="ident">watch::Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
         <span class="kw">let</span> <span class="ident">poll_interval</span> <span class="op">=</span> <span class="ident">Duration::from_secs</span>(<span class="ident">SESSION_EXPIRY_POLL_INTERVAL</span>);
         <span class="kw">let</span> <span class="ident">sessions</span>: <span class="ident">Sessions</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">RwLock::new</span>(<span class="ident">HashMap::new</span>()));
 
-        <span class="ident"><span class="self">Self</span>::run_prune_sessions</span>(<span class="ident">log</span>.<span class="ident">clone</span>(), <span class="ident">sessions</span>.<span class="ident">clone</span>(), <span class="ident">poll_interval</span>, <span class="ident">shutdown_rx</span>);
+        <span class="ident"><span class="self">Self</span>::run_prune_sessions</span>(<span class="ident">sessions</span>.<span class="ident">clone</span>(), <span class="ident">poll_interval</span>, <span class="ident">shutdown_rx</span>);
 
         <span class="self">Self</span>(<span class="ident">sessions</span>)
     }
@@ -338,7 +321,6 @@
     <span class="doccomment">/// Pruning will occur ~ every interval period. So the timeout expiration may sometimes</span>
     <span class="doccomment">/// exceed the expected, but we don&#39;t have to write lock the Sessions map as often to clean up.</span>
     <span class="kw">fn</span> <span class="ident">run_prune_sessions</span>(
-        <span class="ident">log</span>: <span class="ident">Logger</span>,
         <span class="kw-2">mut</span> <span class="ident">sessions</span>: <span class="ident">Sessions</span>,
         <span class="ident">poll_interval</span>: <span class="ident">Duration</span>,
         <span class="kw-2">mut</span> <span class="ident">shutdown_rx</span>: <span class="ident">watch::Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
@@ -349,12 +331,12 @@
             <span class="kw">loop</span> {
                 <span class="macro">tokio::select!</span> {
                     <span class="kw">_</span> <span class="op">=</span> <span class="ident">shutdown_rx</span>.<span class="ident">changed</span>() =&gt; {
-                        <span class="macro">debug!</span>(<span class="ident">log</span>, <span class="string">&quot;Exiting Prune Sessions due to shutdown signal.&quot;</span>);
+                        <span class="macro">tracing::debug!</span>(<span class="string">&quot;Exiting Prune Sessions due to shutdown signal.&quot;</span>);
                         <span class="kw">break</span>;
                     }
                     <span class="kw">_</span> <span class="op">=</span> <span class="ident">interval</span>.<span class="ident">tick</span>() =&gt; {
-                        <span class="macro">debug!</span>(<span class="ident">log</span>, <span class="string">&quot;Attempting to Prune Sessions&quot;</span>);
-                        <span class="ident"><span class="self">Self</span>::prune_sessions</span>(<span class="kw-2">&amp;</span><span class="ident">log</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">sessions</span>).<span class="kw">await</span>;
+                        <span class="macro">tracing::debug!</span>(<span class="string">&quot;Attempting to Prune Sessions&quot;</span>);
+                        <span class="ident"><span class="self">Self</span>::prune_sessions</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">sessions</span>).<span class="kw">await</span>;
 
                     }
                 }
@@ -365,11 +347,11 @@
     <span class="doccomment">/// Removes expired [`Session`]s from `sessions`. This should be run</span>
     <span class="doccomment">/// regularly such as on a time interval. This will only write lock</span>
     <span class="doccomment">/// `sessions` if it first finds expired sessions.</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">prune_sessions</span>(<span class="ident">log</span>: <span class="kw-2">&amp;</span><span class="ident">Logger</span>, <span class="ident">sessions</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Sessions</span>) {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">prune_sessions</span>(<span class="ident">sessions</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Sessions</span>) {
         <span class="kw">let</span> <span class="ident">now</span> <span class="op">=</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">now</span>) <span class="op">=</span> <span class="ident">SystemTime::now</span>().<span class="ident">duration_since</span>(<span class="ident">UNIX_EPOCH</span>) {
             <span class="ident">now</span>.<span class="ident">as_secs</span>()
         } <span class="kw">else</span> {
-            <span class="macro">warn!</span>(<span class="ident">log</span>, <span class="string">&quot;Failed to get current time when pruning sessions&quot;</span>);
+            <span class="macro">tracing::warn!</span>(<span class="string">&quot;Failed to get current time when pruning sessions&quot;</span>);
             <span class="kw">return</span>;
         };
 
@@ -409,7 +391,6 @@
                 <span class="ident">UpstreamPacket</span>,
             },
         },
-        <span class="ident">test_utils::TestHelper</span>,
     };
 
     <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::SessionManager</span>;
@@ -423,7 +404,6 @@
 
     <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">run_prune_sessions</span>() {
-        <span class="kw">let</span> <span class="ident">t</span> <span class="op">=</span> <span class="ident">TestHelper::default</span>();
         <span class="kw">let</span> <span class="ident">sessions</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">RwLock::new</span>(<span class="ident">HashMap::new</span>()));
         <span class="kw">let</span> (<span class="ident">from</span>, <span class="ident">to</span>) <span class="op">=</span> <span class="ident">address_pair</span>();
         <span class="kw">let</span> (<span class="ident">send</span>, <span class="ident">_recv</span>) <span class="op">=</span> <span class="ident">mpsc::channel</span>::<span class="op">&lt;</span><span class="ident">UpstreamPacket</span><span class="op">&gt;</span>(<span class="number">1</span>);
@@ -436,12 +416,7 @@
 
         <span class="comment">//let config = Arc::new(config_with_dummy_endpoint().build());</span>
         <span class="comment">//let server = Builder::from(config).validate().unwrap().build();</span>
-        <span class="ident">SessionManager::run_prune_sessions</span>(
-            <span class="ident">t</span>.<span class="ident">log</span>.<span class="ident">clone</span>(),
-            <span class="ident">sessions</span>.<span class="ident">clone</span>(),
-            <span class="ident">poll_interval</span>,
-            <span class="ident">shutdown_rx</span>,
-        );
+        <span class="ident">SessionManager::run_prune_sessions</span>(<span class="ident">sessions</span>.<span class="ident">clone</span>(), <span class="ident">poll_interval</span>, <span class="ident">shutdown_rx</span>);
 
         <span class="kw">let</span> <span class="ident">key</span> <span class="op">=</span> <span class="ident">SessionKey::from</span>((<span class="ident">from</span>.<span class="ident">clone</span>(), <span class="ident">to</span>.<span class="ident">clone</span>()));
 
@@ -460,10 +435,7 @@
                 <span class="ident">sender</span>: <span class="ident">send</span>,
                 <span class="ident">ttl</span>,
             };
-            <span class="ident">sessions</span>.<span class="ident">insert</span>(
-                <span class="ident">key</span>.<span class="ident">clone</span>(),
-                <span class="ident">session_args</span>.<span class="ident">into_session</span>(<span class="kw-2">&amp;</span><span class="ident">t</span>.<span class="ident">log</span>).<span class="kw">await</span>.<span class="ident">unwrap</span>(),
-            );
+            <span class="ident">sessions</span>.<span class="ident">insert</span>(<span class="ident">key</span>.<span class="ident">clone</span>(), <span class="ident">session_args</span>.<span class="ident">into_session</span>().<span class="kw">await</span>.<span class="ident">unwrap</span>());
         }
 
         <span class="comment">// session map should be the same since, we haven&#39;t passed expiry</span>
@@ -498,7 +470,6 @@
 
     <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">prune_sessions</span>() {
-        <span class="kw">let</span> <span class="ident">t</span> <span class="op">=</span> <span class="ident">TestHelper::default</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">sessions</span>: <span class="ident">Sessions</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">RwLock::new</span>(<span class="ident">HashMap::new</span>()));
         <span class="kw">let</span> (<span class="ident">from</span>, <span class="ident">to</span>) <span class="op">=</span> <span class="ident">address_pair</span>();
         <span class="kw">let</span> (<span class="ident">send</span>, <span class="ident">_recv</span>) <span class="op">=</span> <span class="ident">mpsc::channel</span>::<span class="op">&lt;</span><span class="ident">UpstreamPacket</span><span class="op">&gt;</span>(<span class="number">1</span>);
@@ -521,10 +492,7 @@
                 <span class="ident">sender</span>: <span class="ident">send</span>,
                 <span class="ident">ttl</span>,
             };
-            <span class="ident">sessions</span>.<span class="ident">insert</span>(
-                <span class="ident">key</span>.<span class="ident">clone</span>(),
-                <span class="ident">session_args</span>.<span class="ident">into_session</span>(<span class="kw-2">&amp;</span><span class="ident">t</span>.<span class="ident">log</span>).<span class="kw">await</span>.<span class="ident">unwrap</span>(),
-            );
+            <span class="ident">sessions</span>.<span class="ident">insert</span>(<span class="ident">key</span>.<span class="ident">clone</span>(), <span class="ident">session_args</span>.<span class="ident">into_session</span>().<span class="kw">await</span>.<span class="ident">unwrap</span>());
         }
 
         <span class="comment">// Insert key.</span>
@@ -535,7 +503,7 @@
         }
 
         <span class="comment">// session map should be the same since, we haven&#39;t passed expiry</span>
-        <span class="ident">SessionManager::prune_sessions</span>(<span class="kw-2">&amp;</span><span class="ident">t</span>.<span class="ident">log</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">sessions</span>).<span class="kw">await</span>;
+        <span class="ident">SessionManager::prune_sessions</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">sessions</span>).<span class="kw">await</span>;
         {
             <span class="kw">let</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">sessions</span>.<span class="ident">read</span>().<span class="kw">await</span>;
             <span class="macro">assert!</span>(<span class="ident">map</span>.<span class="ident">contains_key</span>(<span class="kw-2">&amp;</span><span class="ident">key</span>));
@@ -545,7 +513,7 @@
         <span class="comment">// Wait until the key has expired.</span>
         <span class="ident">tokio::time::sleep_until</span>(<span class="ident">tokio::time::Instant::now</span>().<span class="ident">add</span>(<span class="ident">ttl</span>)).<span class="kw">await</span>;
 
-        <span class="ident">SessionManager::prune_sessions</span>(<span class="kw-2">&amp;</span><span class="ident">t</span>.<span class="ident">log</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">sessions</span>).<span class="kw">await</span>;
+        <span class="ident">SessionManager::prune_sessions</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">sessions</span>).<span class="kw">await</span>;
         {
             <span class="kw">let</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">sessions</span>.<span class="ident">read</span>().<span class="kw">await</span>;
             <span class="macro">assert!</span>(

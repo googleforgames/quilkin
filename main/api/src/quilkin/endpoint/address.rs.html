@@ -255,17 +255,6 @@
 <span id="255">255</span>
 <span id="256">256</span>
 <span id="257">257</span>
-<span id="258">258</span>
-<span id="259">259</span>
-<span id="260">260</span>
-<span id="261">261</span>
-<span id="262">262</span>
-<span id="263">263</span>
-<span id="264">264</span>
-<span id="265">265</span>
-<span id="266">266</span>
-<span id="267">267</span>
-<span id="268">268</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -492,17 +481,6 @@
         <span class="comment">// Accept borrowed or owned strings.</span>
         <span class="kw">let</span> <span class="ident">string</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">std::borrow::Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span>, <span class="ident">str</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::deserialize</span>(<span class="ident">de</span>)<span class="question-mark">?</span>;
         <span class="ident">string</span>.<span class="ident">parse</span>::<span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>().<span class="ident">map_err</span>(<span class="ident">serde::de::Error::custom</span>)
-    }
-}
-
-<span class="kw">impl</span> <span class="ident">slog::Value</span> <span class="kw">for</span> <span class="ident">EndpointAddress</span> {
-    <span class="kw">fn</span> <span class="ident">serialize</span>(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="kw">_</span>: <span class="kw-2">&amp;</span><span class="ident">slog::Record</span>,
-        <span class="ident">key</span>: <span class="ident">slog::Key</span>,
-        <span class="ident">serializer</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">slog::Serializer</span>,
-    ) -&gt; <span class="ident">slog::Result</span> {
-        <span class="ident">serializer</span>.<span class="ident">emit_arguments</span>(<span class="ident">key</span>, <span class="kw-2">&amp;</span><span class="macro">format_args!</span>(<span class="string">&quot;{}&quot;</span>, <span class="self">self</span>))
     }
 }
 

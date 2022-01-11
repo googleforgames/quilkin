@@ -83,9 +83,6 @@
 <span id="83">83</span>
 <span id="84">84</span>
 <span id="85">85</span>
-<span id="86">86</span>
-<span id="87">87</span>
-<span id="88">88</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -110,7 +107,6 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">config::Config</span>,
     <span class="ident">filters</span>::{<span class="ident">DynFilterFactory</span>, <span class="ident">FilterRegistry</span>, <span class="ident">FilterSet</span>},
-    <span class="ident">proxy::logger</span>,
     <span class="ident">proxy::Builder</span>,
     <span class="prelude-ty">Result</span>,
 };
@@ -130,12 +126,10 @@
     <span class="ident">config</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Config</span><span class="op">&gt;</span>,
     <span class="ident">filter_factories</span>: <span class="kw">impl</span> <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">DynFilterFactory</span><span class="op">&gt;</span>,
 ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">base_log</span> <span class="op">=</span> <span class="ident">logger</span>(); <span class="comment">// TODO: remove this, when tracing is replaceed in Server</span>
     <span class="kw">let</span> <span class="ident">span</span> <span class="op">=</span> <span class="macro">span!</span>(<span class="ident">Level::INFO</span>, <span class="string">&quot;source::run&quot;</span>);
     <span class="kw">let</span> <span class="ident">_enter</span> <span class="op">=</span> <span class="ident">span</span>.<span class="ident">enter</span>();
 
     <span class="kw">let</span> <span class="ident">server</span> <span class="op">=</span> <span class="ident">Builder::from</span>(<span class="ident">config</span>)
-        .<span class="ident">with_log</span>(<span class="ident">base_log</span>)
         .<span class="ident">with_filter_registry</span>(<span class="ident">FilterRegistry::new</span>(<span class="ident">FilterSet::default_with</span>(
             <span class="ident">filter_factories</span>.<span class="ident">into_iter</span>(),
         )))

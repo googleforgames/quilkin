@@ -851,36 +851,6 @@
 <span id="851">851</span>
 <span id="852">852</span>
 <span id="853">853</span>
-<span id="854">854</span>
-<span id="855">855</span>
-<span id="856">856</span>
-<span id="857">857</span>
-<span id="858">858</span>
-<span id="859">859</span>
-<span id="860">860</span>
-<span id="861">861</span>
-<span id="862">862</span>
-<span id="863">863</span>
-<span id="864">864</span>
-<span id="865">865</span>
-<span id="866">866</span>
-<span id="867">867</span>
-<span id="868">868</span>
-<span id="869">869</span>
-<span id="870">870</span>
-<span id="871">871</span>
-<span id="872">872</span>
-<span id="873">873</span>
-<span id="874">874</span>
-<span id="875">875</span>
-<span id="876">876</span>
-<span id="877">877</span>
-<span id="878">878</span>
-<span id="879">879</span>
-<span id="880">880</span>
-<span id="881">881</span>
-<span id="882">882</span>
-<span id="883">883</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -901,7 +871,6 @@
 <span class="kw">use</span> <span class="ident">std::sync::Arc</span>;
 
 <span class="kw">use</span> <span class="ident">prometheus::HistogramTimer</span>;
-<span class="kw">use</span> <span class="ident">slog</span>::{<span class="ident">debug</span>, <span class="ident">error</span>, <span class="ident">info</span>, <span class="ident">trace</span>, <span class="ident">warn</span>, <span class="ident">Logger</span>};
 <span class="kw">use</span> <span class="ident">tokio::net::UdpSocket</span>;
 <span class="kw">use</span> <span class="ident">tokio::sync</span>::{<span class="ident">mpsc</span>, <span class="ident">watch</span>};
 <span class="kw">use</span> <span class="ident">tokio::task::JoinHandle</span>;
@@ -934,7 +903,6 @@
 <span class="doccomment">/// Server is the UDP server main implementation</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Server</span> {
     <span class="comment">// We use pub(super) to limit instantiation only to the Builder.</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">log</span>: <span class="ident">Logger</span>,
     <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">config</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ValidatedConfig</span><span class="op">&gt;</span>,
     <span class="comment">// Admin may be turned off, primarily for testing.</span>
     <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">admin</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Admin</span><span class="op">&gt;</span>,
@@ -979,7 +947,6 @@
 <span class="doccomment">/// Contains arguments to process a received downstream packet, through the</span>
 <span class="doccomment">/// filter chain and session pipeline.</span>
 <span class="kw">struct</span> <span class="ident">ProcessDownstreamReceiveConfig</span> {
-    <span class="ident">log</span>: <span class="ident">Logger</span>,
     <span class="ident">proxy_metrics</span>: <span class="ident">ProxyMetrics</span>,
     <span class="ident">session_metrics</span>: <span class="ident">SessionMetrics</span>,
     <span class="ident">cluster_manager</span>: <span class="ident">SharedClusterManager</span>,
@@ -993,10 +960,14 @@
     <span class="doccomment">/// start the async processing of incoming UDP packets. Will block until an</span>
     <span class="doccomment">/// event is sent through the stop Receiver.</span>
     <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">run</span>(<span class="self">self</span>, <span class="kw-2">mut</span> <span class="ident">shutdown_rx</span>: <span class="ident">watch::Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">log_config</span>();
+        <span class="macro">tracing::info!</span>(
+            <span class="ident">port</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">proxy</span>.<span class="ident">port</span>,
+            <span class="ident">proxy_id</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="self">self</span>.<span class="ident">config</span>.<span class="ident">proxy</span>.<span class="ident">id</span>,
+            <span class="string">&quot;Starting&quot;</span>
+        );
 
         <span class="kw">let</span> <span class="ident">socket</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">Server::bind</span>(<span class="self">self</span>.<span class="ident">config</span>.<span class="ident">proxy</span>.<span class="ident">port</span>).<span class="kw">await</span><span class="question-mark">?</span>);
-        <span class="kw">let</span> <span class="ident">session_manager</span> <span class="op">=</span> <span class="ident">SessionManager::new</span>(<span class="self">self</span>.<span class="ident">log</span>.<span class="ident">clone</span>(), <span class="ident">shutdown_rx</span>.<span class="ident">clone</span>());
+        <span class="kw">let</span> <span class="ident">session_manager</span> <span class="op">=</span> <span class="ident">SessionManager::new</span>(<span class="ident">shutdown_rx</span>.<span class="ident">clone</span>());
         <span class="kw">let</span> (<span class="ident">send_packets</span>, <span class="ident">receive_packets</span>) <span class="op">=</span> <span class="ident">mpsc::channel</span>::<span class="op">&lt;</span><span class="ident">UpstreamPacket</span><span class="op">&gt;</span>(<span class="number">1024</span>);
 
         <span class="kw">let</span> <span class="ident">session_ttl</span> <span class="op">=</span> <span class="ident">Duration::from_secs</span>(<span class="ident">SESSION_TIMEOUT_SECONDS</span>);
@@ -1023,7 +994,7 @@
             <span class="ident">shutdown_rx</span>: <span class="ident">shutdown_rx</span>.<span class="ident">clone</span>(),
         });
 
-        <span class="macro">slog::info!</span>(<span class="self">self</span>.<span class="ident">log</span>, <span class="string">&quot;Quilkin is ready.&quot;</span>);
+        <span class="macro">tracing::info!</span>(<span class="string">&quot;Quilkin is ready.&quot;</span>);
 
         <span class="macro">tokio::select!</span> {
             <span class="ident">join_result</span> <span class="op">=</span> <span class="ident">recv_loop</span> =&gt; {
@@ -1058,7 +1029,6 @@
             }
             <span class="ident">ValidatedSource::Dynamic</span> { <span class="ident">management_servers</span> } =&gt; {
                 <span class="kw">let</span> <span class="ident">manager</span> <span class="op">=</span> <span class="ident">DynamicResourceManagers::new</span>(
-                    <span class="self">self</span>.<span class="ident">log</span>.<span class="ident">clone</span>(),
                     <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">proxy</span>.<span class="ident">id</span>.<span class="ident">clone</span>(),
                     <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">registry</span>.<span class="ident">clone</span>(),
                     <span class="self">self</span>.<span class="ident">filter_registry</span>.<span class="ident">clone</span>(),
@@ -1073,14 +1043,13 @@
                 <span class="kw">let</span> <span class="ident">execution_result_rx</span> <span class="op">=</span> <span class="ident">manager</span>.<span class="ident">execution_result_rx</span>;
                 <span class="comment">// Spawn a task to check for an error if the XDS client</span>
                 <span class="comment">// terminates and forward the error upstream.</span>
-                <span class="kw">let</span> <span class="ident">log</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">log</span>.<span class="ident">clone</span>();
                 <span class="ident">tokio::spawn</span>(<span class="kw">async</span> <span class="kw">move</span> {
-                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="ident">execution_result_rx</span>.<span class="kw">await</span> {
+                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">error</span>) <span class="op">=</span> <span class="ident">execution_result_rx</span>.<span class="kw">await</span> {
                         <span class="comment">// TODO: For now only log the error but we would like to</span>
                         <span class="comment">//   initiate a shut down instead once this happens.</span>
-                        <span class="macro">error!</span>(
-                            <span class="ident">log</span>,
-                            <span class="string">&quot;ClusterManager XDS client terminated with an error: {}&quot;</span>, <span class="ident">err</span>
+                        <span class="macro">tracing::error!</span>(
+                            <span class="op">%</span><span class="ident">error</span>,
+                            <span class="string">&quot;ClusterManager XDS client terminated with an error&quot;</span>
                         );
                     }
                 });
@@ -1097,7 +1066,6 @@
     <span class="doccomment">/// pipeline.</span>
     <span class="kw">fn</span> <span class="ident">run_recv_from</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">args</span>: <span class="ident">RunRecvFromArgs</span>) -&gt; <span class="ident">JoinHandle</span><span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">session_manager</span> <span class="op">=</span> <span class="ident">args</span>.<span class="ident">session_manager</span>;
-        <span class="kw">let</span> <span class="ident">log</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">log</span>.<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">proxy_metrics</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">proxy_metrics</span>.<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">session_metrics</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">session_metrics</span>.<span class="ident">clone</span>();
 
@@ -1117,7 +1085,6 @@
                 <span class="ident">packet_rx</span>,
                 <span class="ident">shutdown_rx</span>: <span class="ident">args</span>.<span class="ident">shutdown_rx</span>.<span class="ident">clone</span>(),
                 <span class="ident">receive_config</span>: <span class="ident">ProcessDownstreamReceiveConfig</span> {
-                    <span class="ident">log</span>: <span class="ident">log</span>.<span class="ident">clone</span>(),
                     <span class="ident">proxy_metrics</span>: <span class="ident">proxy_metrics</span>.<span class="ident">clone</span>(),
                     <span class="ident">session_metrics</span>: <span class="ident">session_metrics</span>.<span class="ident">clone</span>(),
                     <span class="ident">cluster_manager</span>: <span class="ident">args</span>.<span class="ident">cluster_manager</span>.<span class="ident">clone</span>(),
@@ -1131,7 +1098,7 @@
 
         <span class="comment">// Start the worker tasks that pick up received packets from their queue</span>
         <span class="comment">// and processes them.</span>
-        <span class="ident"><span class="self">Self</span>::spawn_downstream_receive_workers</span>(<span class="ident">log</span>.<span class="ident">clone</span>(), <span class="ident">worker_configs</span>);
+        <span class="ident"><span class="self">Self</span>::spawn_downstream_receive_workers</span>(<span class="ident">worker_configs</span>);
 
         <span class="comment">// Start the background task to receive downstream packets from the socket</span>
         <span class="comment">// and place them onto the worker tasks&#39; queue for processing.</span>
@@ -1165,13 +1132,13 @@
                             <span class="kw">let</span> <span class="ident">error</span> <span class="op">=</span> <span class="macro">eyre::eyre!</span>(
                                 <span class="string">&quot;Failed to send received packet over channel to worker&quot;</span>
                             );
-                            <span class="macro">error!</span>(<span class="ident">log</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">error</span>);
+                            <span class="macro">tracing::error!</span>(<span class="op">%</span><span class="ident">error</span>);
                             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">error</span>);
                         }
                     }
                     <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; {
                         <span class="kw">let</span> <span class="ident">error</span> <span class="op">=</span> <span class="macro">eyre::eyre!</span>(<span class="ident">error</span>).<span class="ident">wrap_err</span>(<span class="string">&quot;Error processing receive socket&quot;</span>);
-                        <span class="macro">error!</span>(<span class="ident">log</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">error</span>);
+                        <span class="macro">tracing::error!</span>(<span class="op">%</span><span class="ident">error</span>);
                         <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">error</span>);
                     }
                 }
@@ -1182,10 +1149,7 @@
     <span class="comment">// For each worker config provided, spawn a background task that sits in a</span>
     <span class="comment">// loop, receiving packets from a queue and processing them through</span>
     <span class="comment">// the filter chain.</span>
-    <span class="kw">fn</span> <span class="ident">spawn_downstream_receive_workers</span>(
-        <span class="ident">log</span>: <span class="ident">Logger</span>,
-        <span class="ident">worker_configs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">DownstreamReceiveWorkerConfig</span><span class="op">&gt;</span>,
-    ) {
+    <span class="kw">fn</span> <span class="ident">spawn_downstream_receive_workers</span>(<span class="ident">worker_configs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">DownstreamReceiveWorkerConfig</span><span class="op">&gt;</span>) {
         <span class="kw">for</span> <span class="ident">DownstreamReceiveWorkerConfig</span> {
             <span class="ident">worker_id</span>,
             <span class="kw-2">mut</span> <span class="ident">packet_rx</span>,
@@ -1193,8 +1157,6 @@
             <span class="ident">receive_config</span>,
         } <span class="kw">in</span> <span class="ident">worker_configs</span>
         {
-            <span class="kw">let</span> <span class="ident">log</span> <span class="op">=</span> <span class="ident">log</span>.<span class="ident">clone</span>();
-
             <span class="ident">tokio::spawn</span>(<span class="kw">async</span> <span class="kw">move</span> {
                 <span class="kw">loop</span> {
                     <span class="macro">tokio::select!</span> {
@@ -1202,13 +1164,13 @@
                         <span class="kw">match</span> <span class="ident">packet</span> {
                           <span class="prelude-val">Some</span>(<span class="ident">packet</span>) =&gt; <span class="ident"><span class="self">Self</span>::process_downstream_received_packet</span>(<span class="ident">packet</span>, <span class="kw-2">&amp;</span><span class="ident">receive_config</span>).<span class="kw">await</span>,
                           <span class="prelude-val">None</span> =&gt; {
-                            <span class="macro">debug!</span>(<span class="ident">log</span>, <span class="string">&quot;Worker-{} exiting: work sender channel was closed.&quot;</span>, <span class="ident">worker_id</span>);
+                            <span class="macro">tracing::debug!</span>(<span class="ident">id</span> <span class="op">=</span> <span class="ident">worker_id</span>, <span class="string">&quot;work sender channel was closed.&quot;</span>);
                             <span class="kw">return</span>;
                           }
                         }
                       }
                       <span class="kw">_</span> <span class="op">=</span> <span class="ident">shutdown_rx</span>.<span class="ident">changed</span>() =&gt; {
-                        <span class="macro">debug!</span>(<span class="ident">log</span>, <span class="string">&quot;Worker-{} exiting: received shutdown signal.&quot;</span>, <span class="ident">worker_id</span>);
+                        <span class="macro">tracing::debug!</span>(<span class="ident">id</span> <span class="op">=</span> <span class="ident">worker_id</span>, <span class="string">&quot;received shutdown signal.&quot;</span>);
                         <span class="kw">return</span>;
                       }
                     }
@@ -1222,11 +1184,10 @@
         <span class="ident">packet</span>: <span class="ident">DownstreamPacket</span>,
         <span class="ident">args</span>: <span class="kw-2">&amp;</span><span class="ident">ProcessDownstreamReceiveConfig</span>,
     ) {
-        <span class="macro">trace!</span>(
-            <span class="ident">args</span>.<span class="ident">log</span>,
-            <span class="string">&quot;Packet Received&quot;</span>;
-            <span class="string">&quot;from&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">packet</span>.<span class="ident">from</span>,
-            <span class="string">&quot;contents&quot;</span> =&gt; <span class="ident">debug::bytes_to_string</span>(<span class="kw-2">&amp;</span><span class="ident">packet</span>.<span class="ident">contents</span>),
+        <span class="macro">tracing::trace!</span>(
+            <span class="ident">from</span> <span class="op">=</span> <span class="op">%</span><span class="ident">packet</span>.<span class="ident">from</span>,
+            <span class="ident">contents</span> <span class="op">=</span> <span class="op">%</span><span class="ident">debug::bytes_to_string</span>(<span class="kw-2">&amp;</span><span class="ident">packet</span>.<span class="ident">contents</span>),
+            <span class="string">&quot;Packet Received&quot;</span>
         );
 
         <span class="kw">let</span> <span class="ident">endpoints</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">args</span>.<span class="ident">cluster_manager</span>.<span class="ident">read</span>().<span class="ident">get_all_endpoints</span>() {
@@ -1272,7 +1233,7 @@
         <span class="kw">let</span> <span class="ident">guard</span> <span class="op">=</span> <span class="ident">args</span>.<span class="ident">session_manager</span>.<span class="ident">get_sessions</span>().<span class="kw">await</span>;
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">session</span>) <span class="op">=</span> <span class="ident">guard</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">session_key</span>) {
             <span class="comment">// If it exists then send the packet, we&#39;re done.</span>
-            <span class="ident"><span class="self">Self</span>::session_send_packet_helper</span>(<span class="kw-2">&amp;</span><span class="ident">args</span>.<span class="ident">log</span>, <span class="ident">session</span>, <span class="ident">packet</span>, <span class="ident">args</span>.<span class="ident">session_ttl</span>).<span class="kw">await</span>
+            <span class="ident"><span class="self">Self</span>::session_send_packet_helper</span>(<span class="ident">session</span>, <span class="ident">packet</span>, <span class="ident">args</span>.<span class="ident">session_ttl</span>).<span class="kw">await</span>
         } <span class="kw">else</span> {
             <span class="comment">// If it does not exist, grab a write lock so that we can create it.</span>
             <span class="comment">//</span>
@@ -1290,8 +1251,7 @@
             <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">session</span>) <span class="op">=</span> <span class="ident">guard</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">session_key</span>) {
                 <span class="comment">// If the session now exists then we have less work to do,</span>
                 <span class="comment">// simply send the packet.</span>
-                <span class="ident"><span class="self">Self</span>::session_send_packet_helper</span>(<span class="kw-2">&amp;</span><span class="ident">args</span>.<span class="ident">log</span>, <span class="ident">session</span>, <span class="ident">packet</span>, <span class="ident">args</span>.<span class="ident">session_ttl</span>)
-                    .<span class="kw">await</span>;
+                <span class="ident"><span class="self">Self</span>::session_send_packet_helper</span>(<span class="ident">session</span>, <span class="ident">packet</span>, <span class="ident">args</span>.<span class="ident">session_ttl</span>).<span class="kw">await</span>;
             } <span class="kw">else</span> {
                 <span class="comment">// Otherwise, create the session and insert into the map.</span>
                 <span class="kw">let</span> <span class="ident">session_args</span> <span class="op">=</span> <span class="ident">SessionArgs</span> {
@@ -1303,7 +1263,7 @@
                     <span class="ident">sender</span>: <span class="ident">args</span>.<span class="ident">send_packets</span>.<span class="ident">clone</span>(),
                     <span class="ident">ttl</span>: <span class="ident">args</span>.<span class="ident">session_ttl</span>,
                 };
-                <span class="kw">match</span> <span class="ident">session_args</span>.<span class="ident">into_session</span>(<span class="kw-2">&amp;</span><span class="ident">args</span>.<span class="ident">log</span>).<span class="kw">await</span> {
+                <span class="kw">match</span> <span class="ident">session_args</span>.<span class="ident">into_session</span>().<span class="kw">await</span> {
                     <span class="prelude-val">Ok</span>(<span class="ident">session</span>) =&gt; {
                         <span class="comment">// Insert the session into the map and release the write lock</span>
                         <span class="comment">// immediately since we don&#39;t want to block other threads while we send</span>
@@ -1316,23 +1276,17 @@
                         <span class="comment">// Grab a read lock to send the packet.</span>
                         <span class="kw">let</span> <span class="ident">guard</span> <span class="op">=</span> <span class="ident">args</span>.<span class="ident">session_manager</span>.<span class="ident">get_sessions</span>().<span class="kw">await</span>;
                         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">session</span>) <span class="op">=</span> <span class="ident">guard</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">session_key</span>) {
-                            <span class="ident"><span class="self">Self</span>::session_send_packet_helper</span>(
-                                <span class="kw-2">&amp;</span><span class="ident">args</span>.<span class="ident">log</span>,
-                                <span class="ident">session</span>,
-                                <span class="ident">packet</span>,
-                                <span class="ident">args</span>.<span class="ident">session_ttl</span>,
-                            )
-                            .<span class="kw">await</span>;
+                            <span class="ident"><span class="self">Self</span>::session_send_packet_helper</span>(<span class="ident">session</span>, <span class="ident">packet</span>, <span class="ident">args</span>.<span class="ident">session_ttl</span>)
+                                .<span class="kw">await</span>;
                         } <span class="kw">else</span> {
-                            <span class="macro">warn!</span>(
-                                <span class="ident">args</span>.<span class="ident">log</span>,
-                                <span class="string">&quot;Could not find session&quot;</span>;
-                                <span class="string">&quot;key&quot;</span> =&gt; <span class="macro">format!</span>(<span class="string">&quot;({}:{})&quot;</span>, <span class="ident">session_key</span>.<span class="ident">source</span>.<span class="ident">to_string</span>(), <span class="ident">session_key</span>.<span class="ident">destination</span>.<span class="ident">to_string</span>())
+                            <span class="macro">tracing::warn!</span>(
+                                <span class="ident">key</span> <span class="op">=</span> <span class="op">%</span><span class="macro">format!</span>(<span class="string">&quot;({}:{})&quot;</span>, <span class="ident">session_key</span>.<span class="ident">source</span>, <span class="ident">session_key</span>.<span class="ident">destination</span>),
+                                <span class="string">&quot;Could not find session&quot;</span>
                             )
                         }
                     }
-                    <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; {
-                        <span class="macro">error!</span>(<span class="ident">args</span>.<span class="ident">log</span>, <span class="string">&quot;Failed to ensure session exists&quot;</span>; <span class="string">&quot;error&quot;</span> =&gt; <span class="op">%</span><span class="ident">err</span>);
+                    <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; {
+                        <span class="macro">tracing::error!</span>(<span class="op">%</span><span class="ident">error</span>, <span class="string">&quot;Failed to ensure session exists&quot;</span>);
                     }
                 }
             }
@@ -1340,19 +1294,14 @@
     }
 
     <span class="comment">// A helper function to push a session&#39;s packet on its socket.</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">session_send_packet_helper</span>(
-        <span class="ident">log</span>: <span class="kw-2">&amp;</span><span class="ident">Logger</span>,
-        <span class="ident">session</span>: <span class="kw-2">&amp;</span><span class="ident">Session</span>,
-        <span class="ident">packet</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
-        <span class="ident">ttl</span>: <span class="ident">Duration</span>,
-    ) {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">session_send_packet_helper</span>(<span class="ident">session</span>: <span class="kw-2">&amp;</span><span class="ident">Session</span>, <span class="ident">packet</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">ttl</span>: <span class="ident">Duration</span>) {
         <span class="kw">match</span> <span class="ident">session</span>.<span class="ident">send</span>(<span class="ident">packet</span>).<span class="kw">await</span> {
             <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; {
-                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="ident">session</span>.<span class="ident">update_expiration</span>(<span class="ident">ttl</span>) {
-                    <span class="macro">warn!</span>(<span class="ident">log</span>, <span class="string">&quot;Error updating session expiration&quot;</span>; <span class="string">&quot;error&quot;</span> =&gt; <span class="op">%</span><span class="ident">err</span>)
+                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">error</span>) <span class="op">=</span> <span class="ident">session</span>.<span class="ident">update_expiration</span>(<span class="ident">ttl</span>) {
+                    <span class="macro">tracing::warn!</span>(<span class="op">%</span><span class="ident">error</span>, <span class="string">&quot;Error updating session expiration&quot;</span>)
                 }
             }
-            <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; <span class="macro">error!</span>(<span class="ident">log</span>, <span class="string">&quot;Error sending packet from session&quot;</span>; <span class="string">&quot;error&quot;</span> =&gt; <span class="op">%</span><span class="ident">err</span>),
+            <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; <span class="macro">tracing::error!</span>(<span class="op">%</span><span class="ident">error</span>, <span class="string">&quot;Error sending packet from session&quot;</span>),
         };
     }
 
@@ -1363,37 +1312,30 @@
         <span class="ident">socket</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">UdpSocket</span><span class="op">&gt;</span>,
         <span class="kw-2">mut</span> <span class="ident">receive_packets</span>: <span class="ident">mpsc::Receiver</span><span class="op">&lt;</span><span class="ident">UpstreamPacket</span><span class="op">&gt;</span>,
     ) {
-        <span class="kw">let</span> <span class="ident">log</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">log</span>.<span class="ident">clone</span>();
         <span class="ident">tokio::spawn</span>(<span class="kw">async</span> <span class="kw">move</span> {
             <span class="kw">while</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">packet</span>) <span class="op">=</span> <span class="ident">receive_packets</span>.<span class="ident">recv</span>().<span class="kw">await</span> {
-                <span class="macro">debug!</span>(
-                    <span class="ident">log</span>,
-                    <span class="string">&quot;Sending packet back to origin&quot;</span>;
-                    <span class="string">&quot;origin&quot;</span> =&gt; <span class="ident">packet</span>.<span class="ident">dest</span>(),
-                    <span class="string">&quot;contents&quot;</span> =&gt; <span class="ident">debug::bytes_to_string</span>(<span class="ident">packet</span>.<span class="ident">contents</span>()),
+                <span class="macro">tracing::debug!</span>(
+                    <span class="ident">origin</span> <span class="op">=</span> <span class="op">%</span><span class="ident">packet</span>.<span class="ident">dest</span>(),
+                    <span class="ident">contents</span> <span class="op">=</span> <span class="op">%</span><span class="ident">debug::bytes_to_string</span>(<span class="ident">packet</span>.<span class="ident">contents</span>()),
+                    <span class="string">&quot;Sending packet back to origin&quot;</span>
                 );
 
                 <span class="kw">let</span> <span class="ident">address</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">packet</span>.<span class="ident">dest</span>().<span class="ident">to_socket_addr</span>() {
                     <span class="prelude-val">Ok</span>(<span class="ident">address</span>) =&gt; <span class="ident">address</span>,
                     <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; {
-                        <span class="macro">error!</span>(<span class="ident">log</span>, <span class="string">&quot;Error resolving address&quot;</span>; <span class="string">&quot;dest&quot;</span> =&gt; <span class="op">%</span><span class="ident">packet</span>.<span class="ident">dest</span>(), <span class="string">&quot;error&quot;</span> =&gt; <span class="op">%</span><span class="ident">error</span>);
+                        <span class="macro">tracing::error!</span>(<span class="ident">dest</span> <span class="op">=</span> <span class="op">%</span><span class="ident">packet</span>.<span class="ident">dest</span>(), <span class="op">%</span><span class="ident">error</span>, <span class="string">&quot;Error resolving address&quot;</span>);
                         <span class="kw">continue</span>;
                     }
                 };
 
-                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="ident">socket</span>.<span class="ident">send_to</span>(<span class="ident">packet</span>.<span class="ident">contents</span>(), <span class="ident">address</span>).<span class="kw">await</span> {
-                    <span class="macro">error!</span>(<span class="ident">log</span>, <span class="string">&quot;Error sending packet&quot;</span>; <span class="string">&quot;dest&quot;</span> =&gt; <span class="op">%</span><span class="ident">packet</span>.<span class="ident">dest</span>(), <span class="string">&quot;error&quot;</span> =&gt; <span class="op">%</span><span class="ident">err</span>);
+                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">error</span>) <span class="op">=</span> <span class="ident">socket</span>.<span class="ident">send_to</span>(<span class="ident">packet</span>.<span class="ident">contents</span>(), <span class="ident">address</span>).<span class="kw">await</span> {
+                    <span class="macro">tracing::error!</span>(<span class="ident">dest</span> <span class="op">=</span> <span class="op">%</span><span class="ident">packet</span>.<span class="ident">dest</span>(), <span class="op">%</span><span class="ident">error</span>, <span class="string">&quot;Error sending packet&quot;</span>);
                 }
                 <span class="ident">packet</span>.<span class="ident">stop_and_record</span>();
             }
-            <span class="macro">debug!</span>(<span class="ident">log</span>, <span class="string">&quot;Receiver closed&quot;</span>);
+            <span class="macro">tracing::debug!</span>(<span class="string">&quot;Receiver closed&quot;</span>);
             <span class="prelude-val">Ok</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="ident">eyre::Error</span><span class="op">&gt;</span>(())
         });
-    }
-
-    <span class="doccomment">/// log_config outputs a log of what is configured</span>
-    <span class="kw">fn</span> <span class="ident">log_config</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) {
-        <span class="macro">info!</span>(<span class="self">self</span>.<span class="ident">log</span>, <span class="string">&quot;Starting&quot;</span>; <span class="string">&quot;port&quot;</span> =&gt; <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">proxy</span>.<span class="ident">port</span>, <span class="string">&quot;proxy_id&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">config</span>.<span class="ident">proxy</span>.<span class="ident">id</span>);
     }
 
     <span class="doccomment">/// bind binds the local configured port</span>
@@ -1412,7 +1354,6 @@
     <span class="kw">use</span> <span class="ident">std::time</span>::{<span class="ident">SystemTime</span>, <span class="ident">UNIX_EPOCH</span>};
 
     <span class="kw">use</span> <span class="ident">prometheus</span>::{<span class="ident">Histogram</span>, <span class="ident">HistogramOpts</span>, <span class="ident">Registry</span>};
-    <span class="kw">use</span> <span class="ident">slog::info</span>;
     <span class="kw">use</span> <span class="ident">tokio::sync::mpsc</span>;
     <span class="kw">use</span> <span class="ident">tokio::time</span>;
     <span class="kw">use</span> <span class="ident">tokio::time::timeout</span>;
@@ -1551,7 +1492,7 @@
         ) -&gt; <span class="prelude-ty">Result</span> {
             <span class="kw">let</span> <span class="ident">t</span> <span class="op">=</span> <span class="ident">TestHelper::default</span>();
 
-            <span class="macro">info!</span>(<span class="ident">t</span>.<span class="ident">log</span>, <span class="string">&quot;Test&quot;</span>; <span class="string">&quot;name&quot;</span> =&gt; <span class="ident">name</span>);
+            <span class="macro">tracing::info!</span>(<span class="op">%</span><span class="ident">name</span>, <span class="string">&quot;Test&quot;</span>);
             <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="string">&quot;hello&quot;</span>.<span class="ident">to_string</span>();
             <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="ident">t</span>.<span class="ident">open_socket_and_recv_single_packet</span>().<span class="kw">await</span>;
 
@@ -1560,7 +1501,7 @@
             <span class="comment">// need to switch to 127.0.0.1, as the request comes locally</span>
             <span class="ident">receive_addr</span>.<span class="ident">set_ip</span>(<span class="string">&quot;127.0.0.1&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>());
 
-            <span class="kw">let</span> <span class="ident">session_manager</span> <span class="op">=</span> <span class="ident">SessionManager::new</span>(<span class="ident">t</span>.<span class="ident">log</span>.<span class="ident">clone</span>(), <span class="ident">shutdown_rx</span>.<span class="ident">clone</span>());
+            <span class="kw">let</span> <span class="ident">session_manager</span> <span class="op">=</span> <span class="ident">SessionManager::new</span>(<span class="ident">shutdown_rx</span>.<span class="ident">clone</span>());
             <span class="kw">let</span> (<span class="ident">send_packets</span>, <span class="kw-2">mut</span> <span class="ident">recv_packets</span>) <span class="op">=</span> <span class="ident">mpsc::channel</span>::<span class="op">&lt;</span><span class="ident">UpstreamPacket</span><span class="op">&gt;</span>(<span class="number">1</span>);
 
             <span class="kw">let</span> <span class="ident">time_increment</span> <span class="op">=</span> <span class="number">10</span>;
@@ -1578,7 +1519,7 @@
             )
             .<span class="ident">unwrap</span>();
             <span class="kw">let</span> <span class="ident">filter_manager</span> <span class="op">=</span> <span class="ident">FilterManager::fixed</span>(<span class="ident">chain</span>.<span class="ident">clone</span>());
-            <span class="kw">let</span> <span class="ident">metrics</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">Metrics::new</span>(<span class="kw-2">&amp;</span><span class="ident">t</span>.<span class="ident">log</span>, <span class="ident">registry</span>.<span class="ident">clone</span>()));
+            <span class="kw">let</span> <span class="ident">metrics</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">Metrics::new</span>(<span class="ident">registry</span>.<span class="ident">clone</span>()));
             <span class="kw">let</span> <span class="ident">proxy_metrics</span> <span class="op">=</span> <span class="ident">ProxyMetrics::new</span>(<span class="kw-2">&amp;</span><span class="ident">metrics</span>.<span class="ident">registry</span>).<span class="ident">unwrap</span>();
 
             <span class="kw">for</span> <span class="ident">worker_id</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">num_workers</span> {
@@ -1593,7 +1534,6 @@
                     <span class="ident">packet_rx</span>,
                     <span class="ident">shutdown_rx</span>: <span class="ident">shutdown_rx</span>.<span class="ident">clone</span>(),
                     <span class="ident">receive_config</span>: <span class="ident">ProcessDownstreamReceiveConfig</span> {
-                        <span class="ident">log</span>: <span class="ident">t</span>.<span class="ident">log</span>.<span class="ident">clone</span>(),
                         <span class="ident">proxy_metrics</span>: <span class="ident">proxy_metrics</span>.<span class="ident">clone</span>(),
                         <span class="ident">session_metrics</span>,
                         <span class="ident">cluster_manager</span>: <span class="ident">cluster_manager</span>.<span class="ident">clone</span>(),
@@ -1605,7 +1545,7 @@
                 })
             }
 
-            <span class="ident">Server::spawn_downstream_receive_workers</span>(<span class="ident">t</span>.<span class="ident">log</span>.<span class="ident">clone</span>(), <span class="ident">worker_configs</span>);
+            <span class="ident">Server::spawn_downstream_receive_workers</span>(<span class="ident">worker_configs</span>);
 
             <span class="kw">for</span> <span class="ident">packet_tx</span> <span class="kw">in</span> <span class="ident">packet_txs</span> {
                 <span class="ident">packet_tx</span>
@@ -1692,7 +1632,7 @@
         <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="string">&quot;hello&quot;</span>;
         <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="ident">t</span>.<span class="ident">open_socket_and_recv_single_packet</span>().<span class="kw">await</span>;
         <span class="kw">let</span> <span class="ident">socket</span> <span class="op">=</span> <span class="ident">t</span>.<span class="ident">create_socket</span>().<span class="kw">await</span>;
-        <span class="kw">let</span> <span class="ident">session_manager</span> <span class="op">=</span> <span class="ident">SessionManager::new</span>(<span class="ident">t</span>.<span class="ident">log</span>.<span class="ident">clone</span>(), <span class="ident">shutdown_rx</span>.<span class="ident">clone</span>());
+        <span class="kw">let</span> <span class="ident">session_manager</span> <span class="op">=</span> <span class="ident">SessionManager::new</span>(<span class="ident">shutdown_rx</span>.<span class="ident">clone</span>());
         <span class="kw">let</span> (<span class="ident">send_packets</span>, <span class="kw-2">mut</span> <span class="ident">recv_packets</span>) <span class="op">=</span> <span class="ident">mpsc::channel</span>::<span class="op">&lt;</span><span class="ident">UpstreamPacket</span><span class="op">&gt;</span>(<span class="number">1</span>);
 
         <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">config_with_dummy_endpoint</span>().<span class="ident">build</span>());

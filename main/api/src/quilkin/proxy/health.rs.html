@@ -75,12 +75,6 @@
 <span id="75">75</span>
 <span id="76">76</span>
 <span id="77">77</span>
-<span id="78">78</span>
-<span id="79">79</span>
-<span id="80">80</span>
-<span id="81">81</span>
-<span id="82">82</span>
-<span id="83">83</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -100,28 +94,24 @@
 <span class="kw">use</span> <span class="ident">std::sync::atomic::AtomicBool</span>;
 
 <span class="kw">use</span> <span class="ident">hyper</span>::{<span class="ident">Body</span>, <span class="ident">Response</span>, <span class="ident">StatusCode</span>};
-<span class="kw">use</span> <span class="ident">slog</span>::{<span class="ident">error</span>, <span class="ident">o</span>, <span class="ident">Logger</span>};
 <span class="kw">use</span> <span class="ident">std::panic</span>;
 <span class="kw">use</span> <span class="ident">std::sync::atomic::Ordering::Relaxed</span>;
 <span class="kw">use</span> <span class="ident">std::sync::Arc</span>;
 
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Health</span> {
-    <span class="ident">log</span>: <span class="ident">Logger</span>,
     <span class="ident">healthy</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">AtomicBool</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">Health</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">base</span>: <span class="kw-2">&amp;</span><span class="ident">Logger</span>) -&gt; <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>() -&gt; <span class="self">Self</span> {
         <span class="kw">let</span> <span class="ident">health</span> <span class="op">=</span> <span class="self">Self</span> {
-            <span class="ident">log</span>: <span class="ident">base</span>.<span class="ident">new</span>(<span class="macro">o!</span>(<span class="string">&quot;source&quot;</span> =&gt; <span class="string">&quot;proxy::Health&quot;</span>)),
             <span class="ident">healthy</span>: <span class="ident">Arc::new</span>(<span class="ident">AtomicBool::new</span>(<span class="bool-val">true</span>)),
         };
 
-        <span class="kw">let</span> <span class="ident">log</span> <span class="op">=</span> <span class="ident">health</span>.<span class="ident">log</span>.<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">healthy</span> <span class="op">=</span> <span class="ident">health</span>.<span class="ident">healthy</span>.<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">default_hook</span> <span class="op">=</span> <span class="ident">panic::take_hook</span>();
         <span class="ident">panic::set_hook</span>(<span class="ident">Box::new</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">panic_info</span><span class="op">|</span> {
-            <span class="macro">error!</span>(<span class="ident">log</span>, <span class="string">&quot;Panic has occurred. Moving to Unhealthy&quot;</span>);
+            <span class="macro">tracing::error!</span>(<span class="string">&quot;Panic has occurred. Moving to Unhealthy&quot;</span>);
             <span class="ident">healthy</span>.<span class="ident">swap</span>(<span class="bool-val">false</span>, <span class="ident">Relaxed</span>);
             <span class="ident">default_hook</span>(<span class="ident">panic_info</span>);
         }));
@@ -144,14 +134,12 @@
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span> {
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::proxy::health::Health</span>;
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::test_utils::logger</span>;
     <span class="kw">use</span> <span class="ident">hyper::StatusCode</span>;
     <span class="kw">use</span> <span class="ident">std::panic</span>;
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">panic_hook</span>() {
-        <span class="kw">let</span> <span class="ident">log</span> <span class="op">=</span> <span class="ident">logger</span>();
-        <span class="kw">let</span> <span class="ident">health</span> <span class="op">=</span> <span class="ident">Health::new</span>(<span class="kw-2">&amp;</span><span class="ident">log</span>);
+        <span class="kw">let</span> <span class="ident">health</span> <span class="op">=</span> <span class="ident">Health::new</span>();
 
         <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">health</span>.<span class="ident">check_healthy</span>();
         <span class="macro">assert_eq!</span>(<span class="ident">response</span>.<span class="ident">status</span>(), <span class="ident">StatusCode::OK</span>);

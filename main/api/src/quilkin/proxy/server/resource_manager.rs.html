@@ -210,21 +210,6 @@
 <span id="210">210</span>
 <span id="211">211</span>
 <span id="212">212</span>
-<span id="213">213</span>
-<span id="214">214</span>
-<span id="215">215</span>
-<span id="216">216</span>
-<span id="217">217</span>
-<span id="218">218</span>
-<span id="219">219</span>
-<span id="220">220</span>
-<span id="221">221</span>
-<span id="222">222</span>
-<span id="223">223</span>
-<span id="224">224</span>
-<span id="225">225</span>
-<span id="226">226</span>
-<span id="227">227</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -252,7 +237,6 @@
     <span class="ident">xds::ads_client</span>::{<span class="ident">AdsClient</span>, <span class="ident">ClusterUpdate</span>, <span class="ident">UPDATES_CHANNEL_BUFFER_SIZE</span>},
 };
 <span class="kw">use</span> <span class="ident">prometheus::Registry</span>;
-<span class="kw">use</span> <span class="ident">slog</span>::{<span class="ident">o</span>, <span class="ident">warn</span>, <span class="ident">Logger</span>};
 <span class="kw">use</span> <span class="ident">std::sync::Arc</span>;
 <span class="kw">use</span> <span class="ident">tokio::sync</span>::{<span class="ident">mpsc</span>, <span class="ident">oneshot</span>, <span class="ident">watch</span>};
 
@@ -285,7 +269,6 @@
 
 <span class="doccomment">/// Contains arguments to the `spawn_ads_client` function.</span>
 <span class="kw">struct</span> <span class="ident">SpawnAdsClient</span> {
-    <span class="ident">log</span>: <span class="ident">Logger</span>,
     <span class="ident">metrics_registry</span>: <span class="ident">Registry</span>,
     <span class="ident">node_id</span>: <span class="ident">String</span>,
     <span class="ident">management_servers</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ManagementServer</span><span class="op">&gt;</span>,
@@ -297,15 +280,12 @@
 
 <span class="kw">impl</span> <span class="ident">DynamicResourceManagers</span> {
     <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">new</span>(
-        <span class="ident">base_logger</span>: <span class="ident">Logger</span>,
         <span class="ident">xds_node_id</span>: <span class="ident">String</span>,
         <span class="ident">metrics_registry</span>: <span class="ident">Registry</span>,
         <span class="ident">filter_registry</span>: <span class="ident">FilterRegistry</span>,
         <span class="ident">management_servers</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ManagementServer</span><span class="op">&gt;</span>,
         <span class="ident">shutdown_rx</span>: <span class="ident">watch::Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">DynamicResourceManagers</span>, <span class="ident">InitializeError</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">log</span> <span class="op">=</span> <span class="ident">base_logger</span>.<span class="ident">new</span>(<span class="macro">o!</span>(<span class="string">&quot;source&quot;</span> =&gt; <span class="string">&quot;server::DynamicResourceManager&quot;</span>));
-
         <span class="kw">let</span> (<span class="ident">cluster_updates_tx</span>, <span class="ident">cluster_updates_rx</span>) <span class="op">=</span> <span class="ident"><span class="self">Self</span>::cluster_updates_channel</span>();
         <span class="kw">let</span> (<span class="ident">filter_chain_updates_tx</span>, <span class="ident">filter_chain_updates_rx</span>) <span class="op">=</span>
             <span class="ident"><span class="self">Self</span>::filter_chain_updates_channel</span>();
@@ -318,7 +298,6 @@
 
         <span class="kw">let</span> (<span class="ident">execution_result_tx</span>, <span class="ident">execution_result_rx</span>) <span class="op">=</span> <span class="ident">oneshot::channel</span>::<span class="op">&lt;</span><span class="ident"><span class="kw">crate</span>::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span>();
         <span class="ident"><span class="self">Self</span>::spawn_ads_client</span>(<span class="ident">SpawnAdsClient</span> {
-            <span class="ident">log</span>: <span class="ident">log</span>.<span class="ident">clone</span>(),
             <span class="ident">metrics_registry</span>: <span class="ident">metrics_registry</span>.<span class="ident">clone</span>(),
             <span class="ident">node_id</span>: <span class="ident">xds_node_id</span>,
             <span class="ident">management_servers</span>,
@@ -328,21 +307,13 @@
             <span class="ident">shutdown_rx</span>: <span class="ident">shutdown_rx</span>.<span class="ident">clone</span>(),
         })<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">cluster_manager</span> <span class="op">=</span> <span class="ident">ClusterManager::dynamic</span>(
-            <span class="ident">base_logger</span>.<span class="ident">new</span>(<span class="macro">o!</span>(<span class="string">&quot;source&quot;</span> =&gt; <span class="string">&quot;ClusterManager&quot;</span>)),
-            <span class="kw-2">&amp;</span><span class="ident">metrics_registry</span>,
-            <span class="ident">cluster_updates_rx</span>,
-            <span class="ident">shutdown_rx</span>.<span class="ident">clone</span>(),
-        )
-        .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="ident">InitializeError::Message</span>(<span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">err</span>)))<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">cluster_manager</span> <span class="op">=</span>
+            <span class="ident">ClusterManager::dynamic</span>(<span class="kw-2">&amp;</span><span class="ident">metrics_registry</span>, <span class="ident">cluster_updates_rx</span>, <span class="ident">shutdown_rx</span>.<span class="ident">clone</span>())
+                .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="ident">InitializeError::Message</span>(<span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">err</span>)))<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">filter_manager</span> <span class="op">=</span> <span class="ident">FilterManager::dynamic</span>(
-            <span class="ident">base_logger</span>.<span class="ident">new</span>(<span class="macro">o!</span>(<span class="string">&quot;source&quot;</span> =&gt; <span class="string">&quot;FilterManager&quot;</span>)),
-            <span class="kw-2">&amp;</span><span class="ident">metrics_registry</span>,
-            <span class="ident">filter_chain_updates_rx</span>,
-            <span class="ident">shutdown_rx</span>,
-        )
-        .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="ident">InitializeError::Message</span>(<span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">err</span>)))<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">filter_manager</span> <span class="op">=</span>
+            <span class="ident">FilterManager::dynamic</span>(<span class="kw-2">&amp;</span><span class="ident">metrics_registry</span>, <span class="ident">filter_chain_updates_rx</span>, <span class="ident">shutdown_rx</span>)
+                .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="ident">InitializeError::Message</span>(<span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">err</span>)))<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
             <span class="ident">cluster_manager</span>,
@@ -356,7 +327,6 @@
     <span class="comment">// as well as execution result after termination are sent on the passed-in channels.</span>
     <span class="kw">fn</span> <span class="ident">spawn_ads_client</span>(<span class="ident">args</span>: <span class="ident">SpawnAdsClient</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">InitializeError</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">SpawnAdsClient</span> {
-            <span class="ident">log</span>,
             <span class="ident">metrics_registry</span>,
             <span class="ident">node_id</span>,
             <span class="ident">management_servers</span>,
@@ -366,7 +336,7 @@
             <span class="ident">shutdown_rx</span>,
         } <span class="op">=</span> <span class="ident">args</span>;
 
-        <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">AdsClient::new</span>(<span class="ident">log</span>.<span class="ident">clone</span>(), <span class="kw-2">&amp;</span><span class="ident">metrics_registry</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
+        <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">AdsClient::new</span>(<span class="kw-2">&amp;</span><span class="ident">metrics_registry</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
             <span class="ident">InitializeError::Message</span>(<span class="macro">format!</span>(<span class="string">&quot;failed to initialize xDS client: {:?}&quot;</span>, <span class="ident">err</span>))
         })<span class="question-mark">?</span>;
         <span class="ident">tokio::spawn</span>(<span class="kw">async</span> <span class="kw">move</span> {
@@ -381,7 +351,9 @@
                 .<span class="kw">await</span>;
             <span class="ident">execution_result_tx</span>
                 .<span class="ident">send</span>(<span class="ident">result</span>)
-                .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">_err</span><span class="op">|</span> <span class="macro">warn!</span>(<span class="ident">log</span>, <span class="string">&quot;Failed to send ADS client execution result on channel&quot;</span>))
+                .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">_err</span><span class="op">|</span> {
+                    <span class="macro">tracing::warn!</span>(<span class="string">&quot;Failed to send ADS client execution result on channel&quot;</span>)
+                })
                 .<span class="ident">ok</span>();
         });
 
@@ -405,7 +377,6 @@
     <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::DynamicResourceManagers</span>;
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::config::ManagementServer</span>;
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters</span>::{<span class="ident">manager::ListenerManagerArgs</span>, <span class="ident">FilterRegistry</span>};
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::test_utils::logger</span>;
 
     <span class="kw">use</span> <span class="ident">std::time::Duration</span>;
 
@@ -426,7 +397,6 @@
         <span class="kw">let</span> (<span class="ident">_shutdown_tx</span>, <span class="ident">shutdown_rx</span>) <span class="op">=</span> <span class="ident">watch::channel</span>(());
 
         <span class="ident">DynamicResourceManagers::spawn_ads_client</span>(<span class="ident">SpawnAdsClient</span> {
-            <span class="ident">log</span>: <span class="ident">logger</span>(),
             <span class="ident">metrics_registry</span>: <span class="ident">Registry::default</span>(),
             <span class="ident">node_id</span>: <span class="string">&quot;id&quot;</span>.<span class="ident">into</span>(),
             <span class="ident">management_servers</span>: <span class="macro">vec!</span>[<span class="ident">ManagementServer</span> {
