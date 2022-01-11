@@ -119,6 +119,9 @@ impl FilterFactory for GreetFilterFactory {
 # }
 ```
 
+> As a convention within Quilkin, Filter names are singular. e.g. `Greet` rather than `Greets`.
+> They also tend to be a verb, rather than an adjective, i.e. `Compress` rather than `Compressor`.
+
 #### 3. Start the proxy
 
 We can run the proxy in the exact manner as the default Quilkin binary using the [run][runner::run] function, passing in our custom [FilterFactory].

@@ -49,16 +49,28 @@ var (
 	})
 )
 
+const (
+	// defaultUpdateInterval is how often to check for snapshot updates.
+	defaultUpdateInterval = 100 * time.Millisecond
+	// defaultSnapshotCleanupInterval is how often to check for expired snapshots.
+	defaultSnapshotCleanupInterval = 30 * time.Second
+	// defaultSnapshotGracePeriod is how long before considering a snapshot without open watches expired.
+	defaultSnapshotGracePeriod = 2 * time.Minute
+)
+
 // Updater periodically generates xds config snapshots from resources
 // and updates a snapshot cache with the latest snapshot for each connected
 // node.
 type Updater struct {
-	logger         *log.Logger
-	clusterCh      <-chan []cluster.Cluster
-	filterChainCh  <-chan filterchain.ProxyFilterChain
-	updateInterval time.Duration
-	clock          clock.Clock
-	snapshotCache  cache.SnapshotCache
+	logger                  *log.Logger
+	clusterCh               <-chan []cluster.Cluster
+	filterChainCh           <-chan filterchain.ProxyFilterChain
+	updateInterval          time.Duration
+	snapshotCleanupInterval time.Duration
+	snapshotGracePeriod     time.Duration
+	clock                   clock.Clock
+	snapshotCache           cache.SnapshotCache
+	snapshotCleanupView     snapshotCleanupView
 }
 
 // NewUpdater returns a new Updater.
@@ -66,20 +78,29 @@ func NewUpdater(
 	logger *log.Logger,
 	clusterCh <-chan []cluster.Cluster,
 	filterChainCh <-chan filterchain.ProxyFilterChain,
-	updateInterval time.Duration,
-	clock clock.Clock,
+	configSetter ...func(updater *Updater),
 ) *Updater {
 	logger = logger.WithFields(log.Fields{
 		"component": "SnapshotUpdater",
 	}).Logger
-	return &Updater{
-		logger:         logger,
-		clusterCh:      clusterCh,
-		filterChainCh:  filterChainCh,
-		snapshotCache:  cache.NewSnapshotCache(false, cache.IDHash{}, logger),
-		updateInterval: updateInterval,
-		clock:          clock,
+	snapshotCache := cache.NewSnapshotCache(false, cache.IDHash{}, logger)
+	u := &Updater{
+		logger:                  logger,
+		clusterCh:               clusterCh,
+		filterChainCh:           filterChainCh,
+		snapshotCache:           snapshotCache,
+		updateInterval:          defaultUpdateInterval,
+		snapshotCleanupInterval: defaultSnapshotCleanupInterval,
+		snapshotGracePeriod:     defaultSnapshotGracePeriod,
+		clock:                   clock.RealClock{},
+		snapshotCleanupView:     snapshotCache,
 	}
+
+	for _, f := range configSetter {
+		f(u)
+	}
+
+	return u
 }
 
 // GetSnapshotCache returns the backing snapshot cache.
@@ -87,16 +108,15 @@ func (u *Updater) GetSnapshotCache() cache.SnapshotCache {
 	return u.snapshotCache
 }
 
-// Run starts a goroutine that listens for resource updates,
-// uses the updates to generate an xds config snapshot and updates the snapshot from the provided channel and generates xds config snapshots.
-// cache with the latest snapshot for each connected node.
-
 // Run runs a loop that periodically checks if there are any
 // cluster/filter-chain updates and if so creates a snapshot for
 // affected proxies in the snapshot cache.
 func (u *Updater) Run(ctx context.Context) {
 	updateTicker := u.clock.NewTicker(u.updateInterval)
 	defer updateTicker.Stop()
+
+	cleanupTicker := u.clock.NewTicker(u.snapshotCleanupInterval)
+	defer cleanupTicker.Stop()
 
 	currentSnapshotVersion := int64(0)
 
@@ -109,8 +129,6 @@ func (u *Updater) Run(ctx context.Context) {
 	var pendingClusterUpdate bool
 	var clusterUpdate []cluster.Cluster
 
-	// TODO: Implement cleanup of stale nodes in the snapshot Cache
-	//   (If we have no open watchers for a node we can forget it?).
 	for {
 		select {
 		case <-ctx.Done():
@@ -150,7 +168,7 @@ func (u *Updater) Run(ctx context.Context) {
 					continue
 				}
 
-				log.WithField("proxy_id", proxyID).Debug("Setting snapshot update")
+				proxyLog.Debug("Setting snapshot update")
 
 				if err := u.snapshotCache.SetSnapshot(proxyID, snapshot); err != nil {
 					snapshotErrorsTotal.Inc()
@@ -164,6 +182,66 @@ func (u *Updater) Run(ctx context.Context) {
 			if numUpdates > 0 {
 				currentSnapshotVersion = version
 			}
+		case <-cleanupTicker.C():
+			u.cleanup()
 		}
 	}
+}
+
+// snapshotCleanupView implements the relevant functions of cache.SnapshotCache that
+// the cleanup function needs to do its work. This allows us to test the cleanup
+// function.
+type snapshotCleanupView interface {
+	// GetStatusInfo retrieves status information for a node ID.
+	GetStatusInfo(string) cache.StatusInfo
+
+	// GetStatusKeys retrieves node IDs for all statuses.
+	GetStatusKeys() []string
+
+	// ClearSnapshot removes all status and snapshot information associated with a node.
+	ClearSnapshot(node string)
+}
+
+// cleanup deletes snapshots from the cache for any node that is no longer
+// connected to the server.
+func (u *Updater) cleanup() {
+	// If a node has had no open watches in a while (specified by the
+	// configurable snapshot grace period) then let's delete its snapshot.
+	nodeIDs := u.snapshotCleanupView.GetStatusKeys()
+	numRemoved := 0
+	for _, nodeID := range nodeIDs {
+		statusInfo := u.snapshotCleanupView.GetStatusInfo(nodeID)
+		if statusInfo == nil {
+			continue
+		}
+
+		// If there is at least 1 open watch then nothing to do.
+		if statusInfo.GetNumWatches() > 0 || statusInfo.GetNumDeltaWatches() > 0 {
+			continue
+		}
+
+		// No open watches exist for this node. Check how long it has been since
+		// the last watch. If it exceeds the TTL, then delete its snapshot.
+		now := u.clock.Now()
+		lastWatchTime := statusInfo.GetLastWatchRequestTime()
+		lastDeltaWatchTime := statusInfo.GetLastDeltaWatchRequestTime()
+
+		shouldRemove := false
+		if lastWatchTime.Unix() > 0 && now.Sub(lastWatchTime) >= u.snapshotGracePeriod {
+			shouldRemove = true
+		}
+		if lastDeltaWatchTime.Unix() > 0 && now.Sub(lastDeltaWatchTime) >= u.snapshotGracePeriod {
+			shouldRemove = true
+		}
+
+		if shouldRemove {
+			numRemoved++
+			u.logger.WithFields(log.Fields{
+				"proxy_id": nodeID,
+			}).Debugf("Removing expired snapshot")
+			u.snapshotCleanupView.ClearSnapshot(nodeID)
+		}
+	}
+
+	u.logger.Debugf("Snapshot cleanup: Removed %d/%d snapshots", numRemoved, len(nodeIDs))
 }

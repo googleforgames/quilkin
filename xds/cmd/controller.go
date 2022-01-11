@@ -206,9 +206,7 @@ func main() {
 	snapshotUpdater := snapshot.NewUpdater(
 		logger,
 		clusterCh,
-		filterChainCh,
-		100*time.Millisecond,
-		clock.RealClock{})
+		filterChainCh)
 	snapshotCache := snapshotUpdater.GetSnapshotCache()
 	go snapshotUpdater.Run(ctx)
 
