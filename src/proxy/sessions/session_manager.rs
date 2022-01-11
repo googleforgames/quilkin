@@ -18,7 +18,6 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use slog::{debug, warn, Logger};
 use tokio::sync::{watch, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 use crate::proxy::sessions::{Session, SessionKey};
@@ -37,11 +36,11 @@ const SESSION_EXPIRY_POLL_INTERVAL: u64 = 60;
 pub struct SessionManager(Sessions);
 
 impl SessionManager {
-    pub fn new(log: Logger, shutdown_rx: watch::Receiver<()>) -> Self {
+    pub fn new(shutdown_rx: watch::Receiver<()>) -> Self {
         let poll_interval = Duration::from_secs(SESSION_EXPIRY_POLL_INTERVAL);
         let sessions: Sessions = Arc::new(RwLock::new(HashMap::new()));
 
-        Self::run_prune_sessions(log.clone(), sessions.clone(), poll_interval, shutdown_rx);
+        Self::run_prune_sessions(sessions.clone(), poll_interval, shutdown_rx);
 
         Self(sessions)
     }
@@ -59,7 +58,6 @@ impl SessionManager {
     /// Pruning will occur ~ every interval period. So the timeout expiration may sometimes
     /// exceed the expected, but we don't have to write lock the Sessions map as often to clean up.
     fn run_prune_sessions(
-        log: Logger,
         mut sessions: Sessions,
         poll_interval: Duration,
         mut shutdown_rx: watch::Receiver<()>,
@@ -70,12 +68,12 @@ impl SessionManager {
             loop {
                 tokio::select! {
                     _ = shutdown_rx.changed() => {
-                        debug!(log, "Exiting Prune Sessions due to shutdown signal.");
+                        tracing::debug!("Exiting Prune Sessions due to shutdown signal.");
                         break;
                     }
                     _ = interval.tick() => {
-                        debug!(log, "Attempting to Prune Sessions");
-                        Self::prune_sessions(&log, &mut sessions).await;
+                        tracing::debug!("Attempting to Prune Sessions");
+                        Self::prune_sessions(&mut sessions).await;
 
                     }
                 }
@@ -86,11 +84,11 @@ impl SessionManager {
     /// Removes expired [`Session`]s from `sessions`. This should be run
     /// regularly such as on a time interval. This will only write lock
     /// `sessions` if it first finds expired sessions.
-    async fn prune_sessions(log: &Logger, sessions: &mut Sessions) {
+    async fn prune_sessions(sessions: &mut Sessions) {
         let now = if let Ok(now) = SystemTime::now().duration_since(UNIX_EPOCH) {
             now.as_secs()
         } else {
-            warn!(log, "Failed to get current time when pruning sessions");
+            tracing::warn!("Failed to get current time when pruning sessions");
             return;
         };
 
@@ -130,7 +128,6 @@ mod tests {
                 UpstreamPacket,
             },
         },
-        test_utils::TestHelper,
     };
 
     use super::SessionManager;
@@ -144,7 +141,6 @@ mod tests {
 
     #[tokio::test]
     async fn run_prune_sessions() {
-        let t = TestHelper::default();
         let sessions = Arc::new(RwLock::new(HashMap::new()));
         let (from, to) = address_pair();
         let (send, _recv) = mpsc::channel::<UpstreamPacket>(1);
@@ -157,12 +153,7 @@ mod tests {
 
         //let config = Arc::new(config_with_dummy_endpoint().build());
         //let server = Builder::from(config).validate().unwrap().build();
-        SessionManager::run_prune_sessions(
-            t.log.clone(),
-            sessions.clone(),
-            poll_interval,
-            shutdown_rx,
-        );
+        SessionManager::run_prune_sessions(sessions.clone(), poll_interval, shutdown_rx);
 
         let key = SessionKey::from((from.clone(), to.clone()));
 
@@ -181,10 +172,7 @@ mod tests {
                 sender: send,
                 ttl,
             };
-            sessions.insert(
-                key.clone(),
-                session_args.into_session(&t.log).await.unwrap(),
-            );
+            sessions.insert(key.clone(), session_args.into_session().await.unwrap());
         }
 
         // session map should be the same since, we haven't passed expiry
@@ -219,7 +207,6 @@ mod tests {
 
     #[tokio::test]
     async fn prune_sessions() {
-        let t = TestHelper::default();
         let mut sessions: Sessions = Arc::new(RwLock::new(HashMap::new()));
         let (from, to) = address_pair();
         let (send, _recv) = mpsc::channel::<UpstreamPacket>(1);
@@ -242,10 +229,7 @@ mod tests {
                 sender: send,
                 ttl,
             };
-            sessions.insert(
-                key.clone(),
-                session_args.into_session(&t.log).await.unwrap(),
-            );
+            sessions.insert(key.clone(), session_args.into_session().await.unwrap());
         }
 
         // Insert key.
@@ -256,7 +240,7 @@ mod tests {
         }
 
         // session map should be the same since, we haven't passed expiry
-        SessionManager::prune_sessions(&t.log, &mut sessions).await;
+        SessionManager::prune_sessions(&mut sessions).await;
         {
             let map = sessions.read().await;
             assert!(map.contains_key(&key));
@@ -266,7 +250,7 @@ mod tests {
         // Wait until the key has expired.
         tokio::time::sleep_until(tokio::time::Instant::now().add(ttl)).await;
 
-        SessionManager::prune_sessions(&t.log, &mut sessions).await;
+        SessionManager::prune_sessions(&mut sessions).await;
         {
             let map = sessions.read().await;
             assert!(

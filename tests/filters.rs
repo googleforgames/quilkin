@@ -20,7 +20,6 @@ use std::{
 };
 
 use serde_yaml::{Mapping, Value};
-use slog::info;
 
 use quilkin::{
     config::{Builder as ConfigBuilder, Filter},
@@ -86,7 +85,7 @@ async fn test_filter() {
 
     // game_client
     let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), client_port);
-    info!(t.log, "Sending hello"; "address" => local_addr);
+    tracing::info!(address = %local_addr, "Sending hello");
     socket.send_to(b"hello", &local_addr).await.unwrap();
 
     let result = recv_chan.recv().await.unwrap();
@@ -157,7 +156,7 @@ async fn debug_filter() {
 
     // game client
     let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), client_port);
-    info!(t.log, "Sending hello"; "address" => local_addr);
+    tracing::info!(address = %local_addr, "Sending hello");
     socket.send_to(b"hello", &local_addr).await.unwrap();
 
     // since the debug filter doesn't change the data, it should be exactly the same

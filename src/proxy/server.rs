@@ -18,7 +18,6 @@ use std::net::{Ipv4Addr, SocketAddrV4};
 use std::sync::Arc;
 
 use prometheus::HistogramTimer;
-use slog::{debug, error, info, trace, warn, Logger};
 use tokio::net::UdpSocket;
 use tokio::sync::{mpsc, watch};
 use tokio::task::JoinHandle;
@@ -51,7 +50,6 @@ mod resource_manager;
 /// Server is the UDP server main implementation
 pub struct Server {
     // We use pub(super) to limit instantiation only to the Builder.
-    pub(super) log: Logger,
     pub(super) config: Arc<ValidatedConfig>,
     // Admin may be turned off, primarily for testing.
     pub(super) admin: Option<Admin>,
@@ -96,7 +94,6 @@ struct DownstreamReceiveWorkerConfig {
 /// Contains arguments to process a received downstream packet, through the
 /// filter chain and session pipeline.
 struct ProcessDownstreamReceiveConfig {
-    log: Logger,
     proxy_metrics: ProxyMetrics,
     session_metrics: SessionMetrics,
     cluster_manager: SharedClusterManager,
@@ -110,10 +107,14 @@ impl Server {
     /// start the async processing of incoming UDP packets. Will block until an
     /// event is sent through the stop Receiver.
     pub async fn run(self, mut shutdown_rx: watch::Receiver<()>) -> Result<()> {
-        self.log_config();
+        tracing::info!(
+            port = self.config.proxy.port,
+            proxy_id = &*self.config.proxy.id,
+            "Starting"
+        );
 
         let socket = Arc::new(Server::bind(self.config.proxy.port).await?);
-        let session_manager = SessionManager::new(self.log.clone(), shutdown_rx.clone());
+        let session_manager = SessionManager::new(shutdown_rx.clone());
         let (send_packets, receive_packets) = mpsc::channel::<UpstreamPacket>(1024);
 
         let session_ttl = Duration::from_secs(SESSION_TIMEOUT_SECONDS);
@@ -140,7 +141,7 @@ impl Server {
             shutdown_rx: shutdown_rx.clone(),
         });
 
-        slog::info!(self.log, "Quilkin is ready.");
+        tracing::info!("Quilkin is ready.");
 
         tokio::select! {
             join_result = recv_loop => {
@@ -175,7 +176,6 @@ impl Server {
             }
             ValidatedSource::Dynamic { management_servers } => {
                 let manager = DynamicResourceManagers::new(
-                    self.log.clone(),
                     self.config.proxy.id.clone(),
                     self.metrics.registry.clone(),
                     self.filter_registry.clone(),
@@ -190,14 +190,13 @@ impl Server {
                 let execution_result_rx = manager.execution_result_rx;
                 // Spawn a task to check for an error if the XDS client
                 // terminates and forward the error upstream.
-                let log = self.log.clone();
                 tokio::spawn(async move {
-                    if let Err(err) = execution_result_rx.await {
+                    if let Err(error) = execution_result_rx.await {
                         // TODO: For now only log the error but we would like to
                         //   initiate a shut down instead once this happens.
-                        error!(
-                            log,
-                            "ClusterManager XDS client terminated with an error: {}", err
+                        tracing::error!(
+                            %error,
+                            "ClusterManager XDS client terminated with an error"
                         );
                     }
                 });
@@ -214,7 +213,6 @@ impl Server {
     /// pipeline.
     fn run_recv_from(&self, args: RunRecvFromArgs) -> JoinHandle<Result<()>> {
         let session_manager = args.session_manager;
-        let log = self.log.clone();
         let proxy_metrics = self.proxy_metrics.clone();
         let session_metrics = self.session_metrics.clone();
 
@@ -234,7 +232,6 @@ impl Server {
                 packet_rx,
                 shutdown_rx: args.shutdown_rx.clone(),
                 receive_config: ProcessDownstreamReceiveConfig {
-                    log: log.clone(),
                     proxy_metrics: proxy_metrics.clone(),
                     session_metrics: session_metrics.clone(),
                     cluster_manager: args.cluster_manager.clone(),
@@ -248,7 +245,7 @@ impl Server {
 
         // Start the worker tasks that pick up received packets from their queue
         // and processes them.
-        Self::spawn_downstream_receive_workers(log.clone(), worker_configs);
+        Self::spawn_downstream_receive_workers(worker_configs);
 
         // Start the background task to receive downstream packets from the socket
         // and place them onto the worker tasks' queue for processing.
@@ -282,13 +279,13 @@ impl Server {
                             let error = eyre::eyre!(
                                 "Failed to send received packet over channel to worker"
                             );
-                            error!(log, "{}", error);
+                            tracing::error!(%error);
                             return Err(error);
                         }
                     }
                     Err(error) => {
                         let error = eyre::eyre!(error).wrap_err("Error processing receive socket");
-                        error!(log, "{}", error);
+                        tracing::error!(%error);
                         return Err(error);
                     }
                 }
@@ -299,10 +296,7 @@ impl Server {
     // For each worker config provided, spawn a background task that sits in a
     // loop, receiving packets from a queue and processing them through
     // the filter chain.
-    fn spawn_downstream_receive_workers(
-        log: Logger,
-        worker_configs: Vec<DownstreamReceiveWorkerConfig>,
-    ) {
+    fn spawn_downstream_receive_workers(worker_configs: Vec<DownstreamReceiveWorkerConfig>) {
         for DownstreamReceiveWorkerConfig {
             worker_id,
             mut packet_rx,
@@ -310,8 +304,6 @@ impl Server {
             receive_config,
         } in worker_configs
         {
-            let log = log.clone();
-
             tokio::spawn(async move {
                 loop {
                     tokio::select! {
@@ -319,13 +311,13 @@ impl Server {
                         match packet {
                           Some(packet) => Self::process_downstream_received_packet(packet, &receive_config).await,
                           None => {
-                            debug!(log, "Worker-{} exiting: work sender channel was closed.", worker_id);
+                            tracing::debug!(id = worker_id, "work sender channel was closed.");
                             return;
                           }
                         }
                       }
                       _ = shutdown_rx.changed() => {
-                        debug!(log, "Worker-{} exiting: received shutdown signal.", worker_id);
+                        tracing::debug!(id = worker_id, "received shutdown signal.");
                         return;
                       }
                     }
@@ -339,11 +331,10 @@ impl Server {
         packet: DownstreamPacket,
         args: &ProcessDownstreamReceiveConfig,
     ) {
-        trace!(
-            args.log,
-            "Packet Received";
-            "from" => &packet.from,
-            "contents" => debug::bytes_to_string(&packet.contents),
+        tracing::trace!(
+            from = %packet.from,
+            contents = %debug::bytes_to_string(&packet.contents),
+            "Packet Received"
         );
 
         let endpoints = match args.cluster_manager.read().get_all_endpoints() {
@@ -389,7 +380,7 @@ impl Server {
         let guard = args.session_manager.get_sessions().await;
         if let Some(session) = guard.get(&session_key) {
             // If it exists then send the packet, we're done.
-            Self::session_send_packet_helper(&args.log, session, packet, args.session_ttl).await
+            Self::session_send_packet_helper(session, packet, args.session_ttl).await
         } else {
             // If it does not exist, grab a write lock so that we can create it.
             //
@@ -407,8 +398,7 @@ impl Server {
             if let Some(session) = guard.get(&session_key) {
                 // If the session now exists then we have less work to do,
                 // simply send the packet.
-                Self::session_send_packet_helper(&args.log, session, packet, args.session_ttl)
-                    .await;
+                Self::session_send_packet_helper(session, packet, args.session_ttl).await;
             } else {
                 // Otherwise, create the session and insert into the map.
                 let session_args = SessionArgs {
@@ -420,7 +410,7 @@ impl Server {
                     sender: args.send_packets.clone(),
                     ttl: args.session_ttl,
                 };
-                match session_args.into_session(&args.log).await {
+                match session_args.into_session().await {
                     Ok(session) => {
                         // Insert the session into the map and release the write lock
                         // immediately since we don't want to block other threads while we send
@@ -433,23 +423,17 @@ impl Server {
                         // Grab a read lock to send the packet.
                         let guard = args.session_manager.get_sessions().await;
                         if let Some(session) = guard.get(&session_key) {
-                            Self::session_send_packet_helper(
-                                &args.log,
-                                session,
-                                packet,
-                                args.session_ttl,
-                            )
-                            .await;
+                            Self::session_send_packet_helper(session, packet, args.session_ttl)
+                                .await;
                         } else {
-                            warn!(
-                                args.log,
-                                "Could not find session";
-                                "key" => format!("({}:{})", session_key.source.to_string(), session_key.destination.to_string())
+                            tracing::warn!(
+                                key = %format!("({}:{})", session_key.source, session_key.destination),
+                                "Could not find session"
                             )
                         }
                     }
-                    Err(err) => {
-                        error!(args.log, "Failed to ensure session exists"; "error" => %err);
+                    Err(error) => {
+                        tracing::error!(%error, "Failed to ensure session exists");
                     }
                 }
             }
@@ -457,19 +441,14 @@ impl Server {
     }
 
     // A helper function to push a session's packet on its socket.
-    async fn session_send_packet_helper(
-        log: &Logger,
-        session: &Session,
-        packet: &[u8],
-        ttl: Duration,
-    ) {
+    async fn session_send_packet_helper(session: &Session, packet: &[u8], ttl: Duration) {
         match session.send(packet).await {
             Ok(_) => {
-                if let Err(err) = session.update_expiration(ttl) {
-                    warn!(log, "Error updating session expiration"; "error" => %err)
+                if let Err(error) = session.update_expiration(ttl) {
+                    tracing::warn!(%error, "Error updating session expiration")
                 }
             }
-            Err(err) => error!(log, "Error sending packet from session"; "error" => %err),
+            Err(error) => tracing::error!(%error, "Error sending packet from session"),
         };
     }
 
@@ -480,37 +459,30 @@ impl Server {
         socket: Arc<UdpSocket>,
         mut receive_packets: mpsc::Receiver<UpstreamPacket>,
     ) {
-        let log = self.log.clone();
         tokio::spawn(async move {
             while let Some(packet) = receive_packets.recv().await {
-                debug!(
-                    log,
-                    "Sending packet back to origin";
-                    "origin" => packet.dest(),
-                    "contents" => debug::bytes_to_string(packet.contents()),
+                tracing::debug!(
+                    origin = %packet.dest(),
+                    contents = %debug::bytes_to_string(packet.contents()),
+                    "Sending packet back to origin"
                 );
 
                 let address = match packet.dest().to_socket_addr() {
                     Ok(address) => address,
                     Err(error) => {
-                        error!(log, "Error resolving address"; "dest" => %packet.dest(), "error" => %error);
+                        tracing::error!(dest = %packet.dest(), %error, "Error resolving address");
                         continue;
                     }
                 };
 
-                if let Err(err) = socket.send_to(packet.contents(), address).await {
-                    error!(log, "Error sending packet"; "dest" => %packet.dest(), "error" => %err);
+                if let Err(error) = socket.send_to(packet.contents(), address).await {
+                    tracing::error!(dest = %packet.dest(), %error, "Error sending packet");
                 }
                 packet.stop_and_record();
             }
-            debug!(log, "Receiver closed");
+            tracing::debug!("Receiver closed");
             Ok::<_, eyre::Error>(())
         });
-    }
-
-    /// log_config outputs a log of what is configured
-    fn log_config(&self) {
-        info!(self.log, "Starting"; "port" => self.config.proxy.port, "proxy_id" => &self.config.proxy.id);
     }
 
     /// bind binds the local configured port
@@ -529,7 +501,6 @@ mod tests {
     use std::time::{SystemTime, UNIX_EPOCH};
 
     use prometheus::{Histogram, HistogramOpts, Registry};
-    use slog::info;
     use tokio::sync::mpsc;
     use tokio::time;
     use tokio::time::timeout;
@@ -668,7 +639,7 @@ mod tests {
         ) -> Result {
             let t = TestHelper::default();
 
-            info!(t.log, "Test"; "name" => name);
+            tracing::info!(%name, "Test");
             let msg = "hello".to_string();
             let endpoint = t.open_socket_and_recv_single_packet().await;
 
@@ -677,7 +648,7 @@ mod tests {
             // need to switch to 127.0.0.1, as the request comes locally
             receive_addr.set_ip("127.0.0.1".parse().unwrap());
 
-            let session_manager = SessionManager::new(t.log.clone(), shutdown_rx.clone());
+            let session_manager = SessionManager::new(shutdown_rx.clone());
             let (send_packets, mut recv_packets) = mpsc::channel::<UpstreamPacket>(1);
 
             let time_increment = 10;
@@ -695,7 +666,7 @@ mod tests {
             )
             .unwrap();
             let filter_manager = FilterManager::fixed(chain.clone());
-            let metrics = Arc::new(Metrics::new(&t.log, registry.clone()));
+            let metrics = Arc::new(Metrics::new(registry.clone()));
             let proxy_metrics = ProxyMetrics::new(&metrics.registry).unwrap();
 
             for worker_id in 0..num_workers {
@@ -710,7 +681,6 @@ mod tests {
                     packet_rx,
                     shutdown_rx: shutdown_rx.clone(),
                     receive_config: ProcessDownstreamReceiveConfig {
-                        log: t.log.clone(),
                         proxy_metrics: proxy_metrics.clone(),
                         session_metrics,
                         cluster_manager: cluster_manager.clone(),
@@ -722,7 +692,7 @@ mod tests {
                 })
             }
 
-            Server::spawn_downstream_receive_workers(t.log.clone(), worker_configs);
+            Server::spawn_downstream_receive_workers(worker_configs);
 
             for packet_tx in packet_txs {
                 packet_tx
@@ -809,7 +779,7 @@ mod tests {
         let msg = "hello";
         let endpoint = t.open_socket_and_recv_single_packet().await;
         let socket = t.create_socket().await;
-        let session_manager = SessionManager::new(t.log.clone(), shutdown_rx.clone());
+        let session_manager = SessionManager::new(shutdown_rx.clone());
         let (send_packets, mut recv_packets) = mpsc::channel::<UpstreamPacket>(1);
 
         let config = Arc::new(config_with_dummy_endpoint().build());

@@ -23,7 +23,6 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use slog::{debug, error, o, trace, warn, Logger};
 use tokio::{
     net::UdpSocket,
     select,
@@ -45,7 +44,6 @@ type Result<T> = std::result::Result<T, Error>;
 
 /// Session encapsulates a UDP stream session
 pub struct Session {
-    log: Logger,
     metrics: Metrics,
     proxy_metrics: ProxyMetrics,
     filter_manager: SharedFilterManager,
@@ -131,16 +129,14 @@ pub struct SessionArgs {
 impl SessionArgs {
     /// Creates a new Session, and starts the process of receiving udp sockets
     /// from its ephemeral port from endpoint(s)
-    pub async fn into_session(self, base: &Logger) -> Result<Session> {
-        Session::new(base, self).await
+    pub async fn into_session(self) -> Result<Session> {
+        Session::new(self).await
     }
 }
 
 impl Session {
     /// internal constructor for a Session from SessionArgs
-    async fn new(base: &Logger, args: SessionArgs) -> Result<Self> {
-        let log = base
-            .new(o!("source" => "proxy::Session", "from" => args.from.clone(), "dest_address" => args.dest.address.clone()));
+    async fn new(args: SessionArgs) -> Result<Self> {
         let addr = (std::net::Ipv4Addr::UNSPECIFIED, 0);
         let socket = Arc::new(UdpSocket::bind(addr).await.map_err(Error::BindUdpSocket)?);
         let (shutdown_tx, shutdown_rx) = watch::channel::<()>(());
@@ -151,7 +147,6 @@ impl Session {
         let s = Session {
             metrics: args.metrics,
             proxy_metrics: args.proxy_metrics,
-            log,
             filter_manager: args.filter_manager,
             socket: socket.clone(),
             from: args.from,
@@ -160,7 +155,8 @@ impl Session {
             expiration,
             shutdown_tx,
         };
-        debug!(s.log, "Session created");
+
+        tracing::debug!(from = %s.from, dest = ?s.dest, "Session created");
 
         s.metrics.sessions_total.inc();
         s.metrics.active_sessions.inc();
@@ -176,7 +172,6 @@ impl Session {
         mut sender: mpsc::Sender<UpstreamPacket>,
         mut shutdown_rx: watch::Receiver<()>,
     ) {
-        let log = self.log.clone();
         let from = self.from.clone();
         let expiration = self.expiration.clone();
         let filter_manager = self.filter_manager.clone();
@@ -186,19 +181,19 @@ impl Session {
         tokio::spawn(async move {
             let mut buf: Vec<u8> = vec![0; 65535];
             loop {
-                debug!(log, "Awaiting incoming packet");
+                tracing::debug!(from = %from, dest = ?endpoint, "Awaiting incoming packet");
+
                 select! {
                     received = socket.recv_from(&mut buf) => {
                         match received {
-                            Err(err) => {
+                            Err(error) => {
                                 metrics.rx_errors_total.inc();
-                                error!(log, "Error receiving packet"; "error" => %err);
+                                tracing::error!(%error, %from, dest = ?endpoint, "Error receiving packet");
                             },
                             Ok((size, recv_addr)) => {
                                 metrics.rx_bytes_total.inc_by(size as u64);
                                 metrics.rx_packets_total.inc();
                                 Session::process_recv_packet(
-                                    &log,
                                     &metrics,
                                     &mut sender,
                                     &expiration,
@@ -215,7 +210,7 @@ impl Session {
                         };
                     }
                     _ = shutdown_rx.changed() => {
-                        debug!(log, "Closing Session");
+                        tracing::debug!(%from, dest = ?endpoint, "Closing Session");
                         return;
                     }
                 };
@@ -238,7 +233,6 @@ impl Session {
 
     /// process_recv_packet processes a packet that is received by this session.
     async fn process_recv_packet(
-        log: &Logger,
         metrics: &Metrics,
         sender: &mut mpsc::Sender<UpstreamPacket>,
         expiration: &Arc<AtomicU64>,
@@ -254,31 +248,30 @@ impl Session {
             timer,
         } = packet_ctx;
 
-        trace!(log, "Received packet"; "from" => from.clone(),
-            "endpoint_addr" => &endpoint.address,
-            "contents" => debug::bytes_to_string(packet));
+        tracing::trace!(%from, dest = %endpoint.address, contents = %debug::bytes_to_string(packet), "Received packet");
 
-        if let Err(err) = Session::do_update_expiration(expiration, ttl) {
-            warn!(log, "Error updating session expiration"; "error" => %err)
+        if let Err(error) = Session::do_update_expiration(expiration, ttl) {
+            tracing::warn!(%error, "Error updating session expiration")
         }
 
         let filter_chain = {
             let filter_manager_guard = filter_manager.read();
             filter_manager_guard.get_filter_chain()
         };
-        if let Some(response) = filter_chain.write(WriteContext::new(
-            endpoint,
-            from,
-            to.clone(),
-            packet.to_vec(),
-        )) {
-            if let Err(err) = sender
-                .send(UpstreamPacket::new(to, response.contents, timer))
-                .await
-            {
-                metrics.rx_errors_total.inc();
-                error!(log, "Error sending packet to channel"; "error" => %err);
-            }
+
+        let write_result: futures::future::OptionFuture<_> = filter_chain
+            .write(WriteContext::new(
+                endpoint,
+                from,
+                to.clone(),
+                packet.to_vec(),
+            ))
+            .map(|response| sender.send(UpstreamPacket::new(to, response.contents, timer)))
+            .into();
+
+        if let Some(Err(error)) = write_result.await {
+            metrics.rx_errors_total.inc();
+            tracing::error!(%error, "Error sending packet to channel");
         } else {
             metrics.packets_dropped_total.inc();
         }
@@ -314,9 +307,10 @@ impl Session {
 
     /// Sends a packet to the Session's dest.
     pub async fn send(&self, buf: &[u8]) -> crate::Result<Option<usize>> {
-        trace!(self.log, "Sending packet";
-        "dest_address" => &self.dest.address,
-        "contents" => debug::bytes_to_string(buf));
+        tracing::trace!(
+        dest_address = %self.dest.address,
+        contents = %debug::bytes_to_string(buf),
+        "Sending packet");
 
         self.do_send(buf)
             .await
@@ -349,10 +343,10 @@ impl Drop for Session {
             .observe(self.created_at.elapsed().as_secs() as f64);
 
         if let Err(error) = self.shutdown_tx.send(()) {
-            warn!(self.log, "Error sending session shutdown signal"; "error" => error.to_string());
+            tracing::warn!(%error, "Error sending session shutdown signal");
         }
 
-        debug!(self.log, "Session closed"; "from" => &self.from, "dest_address" => &self.dest.address);
+        tracing::debug!(from = %self.from, dest_address = %self.dest.address, "Session closed");
     }
 }
 
@@ -390,20 +384,17 @@ mod tests {
         let (send_packet, mut recv_packet) = mpsc::channel::<UpstreamPacket>(5);
         let registry = Registry::default();
 
-        let sess = Session::new(
-            &t.log,
-            SessionArgs {
-                metrics: Metrics::new(&registry).unwrap(),
-                proxy_metrics: ProxyMetrics::new(&registry).unwrap(),
-                filter_manager: FilterManager::fixed(Arc::new(
-                    FilterChain::new(vec![], &registry).unwrap(),
-                )),
-                from: addr.clone(),
-                dest: endpoint,
-                sender: send_packet,
-                ttl: Duration::from_secs(20),
-            },
-        )
+        let sess = Session::new(SessionArgs {
+            metrics: Metrics::new(&registry).unwrap(),
+            proxy_metrics: ProxyMetrics::new(&registry).unwrap(),
+            filter_manager: FilterManager::fixed(Arc::new(
+                FilterChain::new(vec![], &registry).unwrap(),
+            )),
+            from: addr.clone(),
+            dest: endpoint,
+            sender: send_packet,
+            ttl: Duration::from_secs(20),
+        })
         .await
         .unwrap();
 
@@ -445,20 +436,17 @@ mod tests {
         let endpoint = Endpoint::new(addr.clone());
         let registry = Registry::default();
 
-        let session = Session::new(
-            &t.log,
-            SessionArgs {
-                metrics: Metrics::new(&registry).unwrap(),
-                proxy_metrics: ProxyMetrics::new(&registry).unwrap(),
-                filter_manager: FilterManager::fixed(Arc::new(
-                    FilterChain::new(vec![], &registry).unwrap(),
-                )),
-                from: addr,
-                dest: endpoint.clone(),
-                sender,
-                ttl: Duration::from_millis(1000),
-            },
-        )
+        let session = Session::new(SessionArgs {
+            metrics: Metrics::new(&registry).unwrap(),
+            proxy_metrics: ProxyMetrics::new(&registry).unwrap(),
+            filter_manager: FilterManager::fixed(Arc::new(
+                FilterChain::new(vec![], &registry).unwrap(),
+            )),
+            from: addr,
+            dest: endpoint.clone(),
+            sender,
+            ttl: Duration::from_millis(1000),
+        })
         .await
         .unwrap();
         session.send(msg.as_bytes()).await.unwrap();
@@ -467,7 +455,6 @@ mod tests {
 
     #[tokio::test]
     async fn process_recv_packet() {
-        let t = TestHelper::default();
         let registry = Registry::default();
         let histogram = Histogram::with_opts(HistogramOpts::new("test", "test")).unwrap();
 
@@ -486,7 +473,6 @@ mod tests {
         // first test with no filtering
         let msg = "hello";
         Session::process_recv_packet(
-            &t.log,
             &Metrics::new(&Registry::default()).unwrap(),
             &mut sender,
             &expiration,
@@ -521,7 +507,6 @@ mod tests {
         let registry = Registry::default();
         let chain = new_test_chain(&registry);
         Session::process_recv_packet(
-            &t.log,
             &Metrics::new(&registry).unwrap(),
             &mut sender,
             &expiration,
@@ -558,20 +543,17 @@ mod tests {
         let (send_packet, _) = mpsc::channel::<UpstreamPacket>(5);
         let registry = Registry::default();
 
-        let session = Session::new(
-            &t.log,
-            SessionArgs {
-                metrics: Metrics::new(&registry).unwrap(),
-                proxy_metrics: ProxyMetrics::new(&registry).unwrap(),
-                filter_manager: FilterManager::fixed(Arc::new(
-                    FilterChain::new(vec![], &registry).unwrap(),
-                )),
-                from: addr,
-                dest: endpoint,
-                sender: send_packet,
-                ttl: Duration::from_secs(10),
-            },
-        )
+        let session = Session::new(SessionArgs {
+            metrics: Metrics::new(&registry).unwrap(),
+            proxy_metrics: ProxyMetrics::new(&registry).unwrap(),
+            filter_manager: FilterManager::fixed(Arc::new(
+                FilterChain::new(vec![], &registry).unwrap(),
+            )),
+            from: addr,
+            dest: endpoint,
+            sender: send_packet,
+            ttl: Duration::from_secs(10),
+        })
         .await
         .unwrap();
 
@@ -587,20 +569,17 @@ mod tests {
         let endpoint = t.open_socket_and_recv_single_packet().await;
         let addr: EndpointAddress = endpoint.socket.local_addr().unwrap().into();
         let registry = Registry::default();
-        let session = Session::new(
-            &t.log,
-            SessionArgs {
-                metrics: Metrics::new(&registry).unwrap(),
-                proxy_metrics: ProxyMetrics::new(&registry).unwrap(),
-                filter_manager: FilterManager::fixed(Arc::new(
-                    FilterChain::new(vec![], &registry).unwrap(),
-                )),
-                from: addr.clone(),
-                dest: Endpoint::new(addr),
-                sender,
-                ttl: Duration::from_secs(10),
-            },
-        )
+        let session = Session::new(SessionArgs {
+            metrics: Metrics::new(&registry).unwrap(),
+            proxy_metrics: ProxyMetrics::new(&registry).unwrap(),
+            filter_manager: FilterManager::fixed(Arc::new(
+                FilterChain::new(vec![], &registry).unwrap(),
+            )),
+            from: addr.clone(),
+            dest: Endpoint::new(addr),
+            sender,
+            ttl: Duration::from_secs(10),
+        })
         .await
         .unwrap();
         session.send(b"hello").await.unwrap();
@@ -617,20 +596,17 @@ mod tests {
         let endpoint = t.open_socket_and_recv_single_packet().await;
         let addr: EndpointAddress = endpoint.socket.local_addr().unwrap().into();
         let registry = Registry::default();
-        let session = Session::new(
-            &t.log,
-            SessionArgs {
-                metrics: Metrics::new(&registry).unwrap(),
-                proxy_metrics: ProxyMetrics::new(&registry).unwrap(),
-                filter_manager: FilterManager::fixed(Arc::new(
-                    FilterChain::new(vec![], &registry).unwrap(),
-                )),
-                from: addr.clone(),
-                dest: Endpoint::new(addr),
-                sender: send_packet,
-                ttl: Duration::from_secs(10),
-            },
-        )
+        let session = Session::new(SessionArgs {
+            metrics: Metrics::new(&registry).unwrap(),
+            proxy_metrics: ProxyMetrics::new(&registry).unwrap(),
+            filter_manager: FilterManager::fixed(Arc::new(
+                FilterChain::new(vec![], &registry).unwrap(),
+            )),
+            from: addr.clone(),
+            dest: Endpoint::new(addr),
+            sender: send_packet,
+            ttl: Duration::from_secs(10),
+        })
         .await
         .unwrap();
 

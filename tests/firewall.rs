@@ -18,7 +18,6 @@ use quilkin::config::{Builder, Filter};
 use quilkin::endpoint::Endpoint;
 use quilkin::filters::firewall;
 use quilkin::test_utils::TestHelper;
-use slog::info;
 use std::net::SocketAddr;
 use tokio::sync::oneshot::Receiver;
 use tokio::time::{timeout, Duration};
@@ -99,7 +98,7 @@ async fn test(t: &mut TestHelper, server_port: u16, yaml: &str) -> Receiver<Stri
     let yaml = yaml
         .replace("%1", client_addr.port().to_string().as_str())
         .replace("%2", echo.port().to_string().as_str());
-    info!(t.log, "Config"; "config" => yaml.as_str());
+    tracing::info!(config = yaml.as_str(), "Config");
 
     let server_config = Builder::empty()
         .with_port(server_port)
@@ -114,7 +113,7 @@ async fn test(t: &mut TestHelper, server_port: u16, yaml: &str) -> Receiver<Stri
     t.run_server_with_config(server_config);
 
     let local_addr: SocketAddr = (std::net::Ipv4Addr::LOCALHOST, server_port).into();
-    info!(t.log, "Sending hello"; "from" => client_addr, "address" => local_addr);
+    tracing::info!(from = %client_addr, address = %local_addr, "Sending hello");
     recv.socket.send_to(b"hello", &local_addr).await.unwrap();
 
     recv.packet_rx

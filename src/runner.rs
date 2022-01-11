@@ -22,7 +22,6 @@ use tracing::{debug, info, span, Level};
 use crate::{
     config::Config,
     filters::{DynFilterFactory, FilterRegistry, FilterSet},
-    proxy::logger,
     proxy::Builder,
     Result,
 };
@@ -42,12 +41,10 @@ pub async fn run_with_config(
     config: Arc<Config>,
     filter_factories: impl IntoIterator<Item = DynFilterFactory>,
 ) -> Result<()> {
-    let base_log = logger(); // TODO: remove this, when tracing is replaceed in Server
     let span = span!(Level::INFO, "source::run");
     let _enter = span.enter();
 
     let server = Builder::from(config)
-        .with_log(base_log)
         .with_filter_registry(FilterRegistry::new(FilterSet::default_with(
             filter_factories.into_iter(),
         )))

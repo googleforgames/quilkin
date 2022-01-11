@@ -20,7 +20,6 @@ use std::sync::Arc;
 
 use parking_lot::RwLock;
 use prometheus::Registry;
-use slog::{debug, o, warn, Logger};
 use tokio::sync::mpsc;
 use tokio::sync::watch;
 
@@ -72,13 +71,10 @@ impl FilterManager {
     /// Returns a new instance backed by a stream of filter chain updates.
     /// Updates from the provided stream will be reflected in the current filter chain.
     pub fn dynamic(
-        base_logger: Logger,
         metrics_registry: &Registry,
         filter_chain_updates_rx: mpsc::Receiver<Arc<FilterChain>>,
         shutdown_rx: watch::Receiver<()>,
     ) -> Result<SharedFilterManager, FilterChainError> {
-        let log = Self::create_logger(base_logger);
-
         let filter_manager = Arc::new(RwLock::new(FilterManager {
             // Start out with an empty filter chain.
             filter_chain: Arc::new(FilterChain::new(vec![], metrics_registry)?),
@@ -86,12 +82,7 @@ impl FilterManager {
 
         // Start a task in the background to receive LDS updates
         // and update the FilterManager's filter chain in turn.
-        Self::spawn_updater(
-            log,
-            filter_manager.clone(),
-            filter_chain_updates_rx,
-            shutdown_rx,
-        );
+        Self::spawn_updater(filter_manager.clone(), filter_chain_updates_rx, shutdown_rx);
 
         Ok(filter_manager)
     }
@@ -99,7 +90,6 @@ impl FilterManager {
     /// Spawns a task in the background that listens for filter chain updates and
     /// updates the filter manager's current filter in turn.
     fn spawn_updater(
-        log: Logger,
         filter_manager: SharedFilterManager,
         mut filter_chain_updates_rx: mpsc::Receiver<Arc<FilterChain>>,
         mut shutdown_rx: watch::Receiver<()>,
@@ -110,26 +100,22 @@ impl FilterManager {
                     update = filter_chain_updates_rx.recv() => {
                         match update {
                             Some(filter_chain) => {
-                                debug!(log, "Received a filter chain update.");
+                                tracing::debug!("Received a filter chain update.");
                                 filter_manager.write().update(filter_chain);
                             }
                             None => {
-                                warn!(log, "Exiting filter chain update receive loop because the sender dropped the channel.");
+                                tracing::warn!("Exiting filter chain update receive loop because the sender dropped the channel.");
                                 return;
                             }
                         }
                     }
                     _ = shutdown_rx.changed() => {
-                        debug!(log, "Exiting filter chain update receive loop because a shutdown signal was received.");
+                        tracing::debug!("Exiting filter chain update receive loop because a shutdown signal was received.");
                         return;
                     },
                 }
             }
         });
-    }
-
-    fn create_logger(base_logger: Logger) -> Logger {
-        base_logger.new(o!("source" => "FilterManager"))
     }
 }
 
@@ -137,7 +123,6 @@ impl FilterManager {
 mod tests {
     use super::FilterManager;
     use crate::filters::{Filter, FilterChain, FilterInstance, ReadContext, ReadResponse};
-    use crate::test_utils::logger;
 
     use std::sync::Arc;
     use std::time::Duration;
@@ -155,12 +140,7 @@ mod tests {
         let (filter_chain_updates_tx, filter_chain_updates_rx) = mpsc::channel(10);
         let (_shutdown_tx, shutdown_rx) = watch::channel(());
 
-        FilterManager::spawn_updater(
-            logger(),
-            filter_manager.clone(),
-            filter_chain_updates_rx,
-            shutdown_rx,
-        );
+        FilterManager::spawn_updater(filter_manager.clone(), filter_chain_updates_rx, shutdown_rx);
 
         let filter_chain = {
             let manager_guard = filter_manager.read();
@@ -233,12 +213,7 @@ mod tests {
         let (filter_chain_updates_tx, filter_chain_updates_rx) = mpsc::channel(10);
         let (shutdown_tx, shutdown_rx) = watch::channel(());
 
-        FilterManager::spawn_updater(
-            logger(),
-            filter_manager.clone(),
-            filter_chain_updates_rx,
-            shutdown_rx,
-        );
+        FilterManager::spawn_updater(filter_manager.clone(), filter_chain_updates_rx, shutdown_rx);
 
         // Send a shutdown signal.
         shutdown_tx.send(()).unwrap();

@@ -16,7 +16,6 @@
 
 use std::net::SocketAddr;
 
-use slog::info;
 use tokio::time::{timeout, Duration};
 
 use quilkin::{
@@ -76,7 +75,7 @@ on_write: DECOMPRESS
 
     // game_client
     let local_addr: SocketAddr = format!("127.0.0.1:{}", client_port).parse().unwrap();
-    info!(t.log, "Sending hello"; "address" => local_addr);
+    tracing::info!(address = %local_addr, "Sending hello");
     tx.send_to(b"hello", &local_addr).await.unwrap();
 
     let expected = timeout(Duration::from_secs(5), rx.recv())

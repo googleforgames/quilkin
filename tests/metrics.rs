@@ -19,8 +19,6 @@ use std::{
     sync::Arc,
 };
 
-use slog::info;
-
 use quilkin::{
     config::{Admin, Builder as ConfigBuilder},
     endpoint::Endpoint,
@@ -64,7 +62,7 @@ async fn metrics_server() {
 
     // game_client
     let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), client_port);
-    info!(t.log, "Sending hello"; "address" => local_addr);
+    tracing::info!(address = %local_addr, "Sending hello");
     socket.send_to(b"hello", &local_addr).await.unwrap();
 
     let _ = recv_chan.recv().await.unwrap();

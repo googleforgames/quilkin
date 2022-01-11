@@ -15,7 +15,7 @@
  */
 
 pub(crate) use admin::Admin;
-pub use builder::{logger, Builder, PendingValidation, Validated};
+pub use builder::{Builder, PendingValidation, Validated};
 pub(crate) use health::Health;
 pub(crate) use metrics::Metrics;
 pub use server::Server;
