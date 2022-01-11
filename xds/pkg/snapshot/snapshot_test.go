@@ -19,9 +19,12 @@ package snapshot
 import (
 	"context"
 	"os"
+	"sort"
+	"sync"
 	"testing"
 	"time"
 
+	envoyconfigcorev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoylistener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/v3"
@@ -36,8 +39,14 @@ import (
 	debugfilterv1alpha "quilkin.dev/xds-management-server/pkg/filters/debug/v1alpha1"
 )
 
-// defaultUpdateInterval is how often to check for updates in tests.
-const defaultUpdateInterval = 1 * time.Millisecond
+const (
+	// testDefaultUpdateInterval is how often to check for updates in tests.
+	testDefaultUpdateInterval = 1 * time.Millisecond
+	// testDefaultSnapshotCleanupInterval is how often to check for expired snapshots in tests.
+	testDefaultSnapshotCleanupInterval = 60 * time.Minute
+	// testDefaultSnapshotGracePeriod is how long before considering a snapshot expired.
+	testDefaultSnapshotGracePeriod = 60 * time.Minute
+)
 
 func getDefaultFilterChain(t *testing.T, snapshot cache.Snapshot) types.Resource {
 	listeners := snapshot.GetResources(resource.ListenerType)
@@ -72,11 +81,26 @@ func waitForSnapshotUpdate(t *testing.T, snapshotCache cache.SnapshotCache, prox
 
 func makeTestUpdater(
 	ctx context.Context,
+	configSetter ...func(updater *Updater),
 ) (
 	*Updater,
 	chan<- []cluster.Cluster,
 	chan<- filterchain.ProxyFilterChain,
 	*clock.FakeClock,
+) {
+	fakeClock := clock.NewFakeClock(time.Now())
+	u, c, f := makeTestUpdaterWithClock(ctx, fakeClock, configSetter...)
+	return u, c, f, fakeClock
+}
+
+func makeTestUpdaterWithClock(
+	ctx context.Context,
+	fakeClock *clock.FakeClock,
+	configSetter ...func(updater *Updater),
+) (
+	*Updater,
+	chan<- []cluster.Cluster,
+	chan<- filterchain.ProxyFilterChain,
 ) {
 	logger := &log.Logger{}
 	logger.SetOutput(os.Stdout)
@@ -85,17 +109,23 @@ func makeTestUpdater(
 	clusterCh := make(chan []cluster.Cluster)
 	filterChainCh := make(chan filterchain.ProxyFilterChain)
 
-	fakeClock := clock.NewFakeClock(time.Now())
+	configSetter = append([]func(*Updater){
+		func(updater *Updater) {
+			updater.clock = fakeClock
+			updater.updateInterval = testDefaultUpdateInterval
+			updater.snapshotCleanupInterval = testDefaultSnapshotCleanupInterval
+			updater.snapshotGracePeriod = testDefaultSnapshotGracePeriod
+		},
+	}, configSetter...)
 	u := NewUpdater(
 		logger,
 		clusterCh,
 		filterChainCh,
-		defaultUpdateInterval,
-		fakeClock)
+		configSetter...)
 
 	go u.Run(ctx)
 
-	return u, clusterCh, filterChainCh, fakeClock
+	return u, clusterCh, filterChainCh
 }
 
 func TestSnapshotUpdaterClusterUpdate(t *testing.T) {
@@ -221,4 +251,147 @@ func TestSnapshotUpdaterContinuousProxyFilterChainUpdates(t *testing.T) {
 
 	proxy2Snapshot := getProxySnapshot(t, u.snapshotCache, "proxy-2", "2")
 	require.Contains(t, getDefaultFilterChain(t, proxy2Snapshot).String(), "hello")
+}
+
+// testSnapshotCleanupView implements snapshotCleanupView for tests.
+type testSnapshotCleanupView map[string]cache.StatusInfo
+
+func (c testSnapshotCleanupView) GetStatusInfo(nodeID string) cache.StatusInfo {
+	return c[nodeID]
+}
+
+func (c testSnapshotCleanupView) GetStatusKeys() []string {
+	keys := make([]string, 0, len(c))
+	for nodeID := range c {
+		keys = append(keys, nodeID)
+	}
+	return keys
+}
+
+func (c testSnapshotCleanupView) ClearSnapshot(nodeID string) {
+	delete(c, nodeID)
+}
+
+type testStatusInfo struct {
+	*sync.Mutex
+	t                         *testing.T
+	numWatches                int
+	numDeltaWatches           int
+	lastWatchRequestTime      time.Time
+	lastDeltaWatchRequestTime time.Time
+}
+
+func (s *testStatusInfo) GetNode() *envoyconfigcorev3.Node {
+	require.FailNow(s.t, "GetNode is not implemented")
+	return nil
+}
+
+func (s *testStatusInfo) GetNumWatches() int {
+	s.Lock()
+	defer s.Unlock()
+
+	return s.numWatches
+}
+
+func (s *testStatusInfo) GetNumDeltaWatches() int {
+	s.Lock()
+	defer s.Unlock()
+
+	return s.numDeltaWatches
+}
+
+func (s *testStatusInfo) GetLastWatchRequestTime() time.Time {
+	s.Lock()
+	defer s.Unlock()
+
+	return s.lastWatchRequestTime
+}
+
+func (s *testStatusInfo) GetLastDeltaWatchRequestTime() time.Time {
+	s.Lock()
+	defer s.Unlock()
+
+	return s.lastDeltaWatchRequestTime
+}
+
+func (s *testStatusInfo) SetLastDeltaWatchRequestTime(time.Time) {
+	require.FailNow(s.t, "SetLastDeltaWatchRequestTime is not implemented")
+}
+
+func (s *testStatusInfo) SetDeltaResponseWatch(int64, cache.DeltaResponseWatch) {
+	require.FailNow(s.t, "SetDeltaResponseWatch is not implemented")
+}
+
+func TestSnapshotCleanup(t *testing.T) {
+	// Test that proxy snapshot are cleaned up upon disconnection after grace period.
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	fakeClock := clock.NewFakeClock(time.Now())
+	state := testSnapshotCleanupView{
+		// watch expired.
+		"node-1": &testStatusInfo{
+			Mutex:                &sync.Mutex{},
+			t:                    t,
+			numWatches:           0,
+			lastWatchRequestTime: fakeClock.Now(),
+		},
+		// delta watch expired.
+		"node-2": &testStatusInfo{
+			Mutex:                     &sync.Mutex{},
+			t:                         t,
+			numDeltaWatches:           0,
+			lastDeltaWatchRequestTime: fakeClock.Now(),
+		},
+		// has old open watch.
+		"node-3": &testStatusInfo{
+			Mutex:                &sync.Mutex{},
+			t:                    t,
+			numWatches:           1,
+			lastWatchRequestTime: fakeClock.Now(),
+		},
+		// has old open delta watch.
+		"node-4": &testStatusInfo{
+			Mutex:                &sync.Mutex{},
+			t:                    t,
+			numWatches:           1,
+			lastWatchRequestTime: fakeClock.Now(),
+		},
+		// watch not yet expired.
+		"node-5": &testStatusInfo{
+			Mutex:                &sync.Mutex{},
+			t:                    t,
+			numWatches:           0,
+			lastWatchRequestTime: fakeClock.Now().Add(3 * time.Second),
+		},
+		// delta watch not yet expired.
+		"node-6": &testStatusInfo{
+			Mutex:                     &sync.Mutex{},
+			t:                         t,
+			numDeltaWatches:           0,
+			lastDeltaWatchRequestTime: fakeClock.Now().Add(3 * time.Second),
+		},
+	}
+
+	cleanupInterval := 1 * time.Second
+	_, _, _ = makeTestUpdaterWithClock(ctx, fakeClock, func(updater *Updater) {
+		updater.snapshotCleanupView = state
+		updater.snapshotCleanupInterval = cleanupInterval
+		updater.snapshotGracePeriod = 2 * time.Second
+	})
+
+	require.Eventually(t, func() bool {
+		remainingNodeIDs := state.GetStatusKeys()
+		if len(remainingNodeIDs) != 4 {
+			fakeClock.Step(cleanupInterval)
+			return false
+		}
+
+		sort.Strings(remainingNodeIDs)
+
+		require.EqualValues(t, []string{
+			"node-3", "node-4", "node-5", "node-6",
+		}, remainingNodeIDs)
+		return true
+	}, 1*time.Second, 10*time.Millisecond)
 }
