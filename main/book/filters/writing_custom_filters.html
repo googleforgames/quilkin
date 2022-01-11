@@ -233,6 +233,10 @@ impl FilterFactory for GreetFilterFactory {
 }
 <span class="boring">}
 </span></code></pre>
+<blockquote>
+<p>As a convention within Quilkin, Filter names are singular. e.g. <code>Greet</code> rather than <code>Greets</code>.
+They also tend to be a verb, rather than an adjective, i.e. <code>Compress</code> rather than <code>Compressor</code>.</p>
+</blockquote>
 <h4 id="3-start-the-proxy"><a class="header" href="#3-start-the-proxy">3. Start the proxy</a></h4>
 <p>We can run the proxy in the exact manner as the default Quilkin binary using the <a href="../../api/quilkin/runner/fn.run.html">run</a> function, passing in our custom <a href="../../api/quilkin/filters/trait.FilterFactory.html">FilterFactory</a>.
 Let's add a main function that does that. Quilkin relies on the <a href="https://docs.rs/tokio/1.5.0/tokio/">Tokio</a> async runtime, so we need to import that 
