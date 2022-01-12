@@ -15,8 +15,10 @@
  */
 
 use std::collections::HashMap;
+use std::time::Duration;
 
 use prometheus::{Registry, Result as MetricsResult};
+use rand::Rng;
 use tokio::{
     sync::{
         mpsc::{self, error::SendError},
@@ -72,6 +74,10 @@ pub(crate) struct AdsClient {
     metrics: Metrics,
 }
 
+const BACKOFF_INITIAL_DELAY_MILLISECONDS: u64 = 500;
+const BACKOFF_MAX_DELAY_SECONDS: u64 = 30;
+const BACKOFF_MAX_JITTER_MILLISECONDS: u64 = 2000;
+
 impl AdsClient {
     pub fn new(metrics_registry: &Registry) -> MetricsResult<Self> {
         let metrics = Metrics::new(metrics_registry)?;
@@ -91,9 +97,26 @@ impl AdsClient {
         let metrics = self.metrics;
 
         let mut server_iter = management_servers.iter().cycle();
+        let mut backoff =
+            ExponentialBackoff::new(Duration::from_millis(BACKOFF_INITIAL_DELAY_MILLISECONDS));
+        let max_delay = Duration::from_secs(BACKOFF_MAX_DELAY_SECONDS);
 
         let retry_config = RetryFutureConfig::new(u32::MAX).custom_backoff(|attempt, error: &_| {
-            let mut backoff = ExponentialBackoff::new(std::time::Duration::from_millis(500));
+            // reset after success
+            if attempt <= 1 {
+                backoff = ExponentialBackoff::new(Duration::from_millis(
+                    BACKOFF_INITIAL_DELAY_MILLISECONDS,
+                ));
+            }
+
+            // max delay + jitter of up to 2 seconds
+            let mut delay = backoff.delay(attempt, &error);
+            if delay > max_delay {
+                delay = max_delay;
+            }
+            delay += Duration::from_millis(
+                rand::thread_rng().gen_range(0..BACKOFF_MAX_JITTER_MILLISECONDS),
+            );
 
             match error {
                 RpcSessionError::NonRecoverable(message, error) => {
@@ -110,13 +133,13 @@ impl AdsClient {
                     if err_description.to_lowercase().contains("invalid url") {
                         RetryPolicy::Break
                     } else {
-                        RetryPolicy::Delay(backoff.delay(attempt, &error))
+                        RetryPolicy::Delay(delay)
                     }
                 }
 
                 RpcSessionError::Receive(ref status) => {
                     tracing::error!(status = ?status, "Failed to receive response from XDS server");
-                    RetryPolicy::Delay(backoff.delay(attempt, &error))
+                    RetryPolicy::Delay(delay)
                 }
             }
         });
