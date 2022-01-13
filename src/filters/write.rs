@@ -30,9 +30,9 @@ pub struct WriteContext<'a> {
     /// The upstream endpoint that we're expecting packets from.
     pub endpoint: &'a Endpoint,
     /// The source of the received packet.
-    pub from: EndpointAddress,
+    pub source: EndpointAddress,
     /// The destination of the received packet.
-    pub to: EndpointAddress,
+    pub dest: EndpointAddress,
     /// Contents of the received packet.
     pub contents: Vec<u8>,
     /// Arbitrary values that can be passed from one filter to another
@@ -61,14 +61,14 @@ impl WriteContext<'_> {
     /// Creates a new [`WriteContext`]
     pub fn new(
         endpoint: &Endpoint,
-        from: EndpointAddress,
-        to: EndpointAddress,
+        source: EndpointAddress,
+        dest: EndpointAddress,
         contents: Vec<u8>,
     ) -> WriteContext {
         WriteContext {
             endpoint,
-            from,
-            to,
+            source,
+            dest,
             contents,
             metadata: HashMap::new(),
         }
@@ -77,14 +77,14 @@ impl WriteContext<'_> {
     /// Creates a new [`WriteContext`] from a given [`WriteResponse`].
     pub fn with_response(
         endpoint: &Endpoint,
-        from: EndpointAddress,
-        to: EndpointAddress,
+        source: EndpointAddress,
+        dest: EndpointAddress,
         response: WriteResponse,
     ) -> WriteContext {
         WriteContext {
             endpoint,
-            from,
-            to,
+            source,
+            dest,
             contents: response.contents,
             metadata: response.metadata,
         }

@@ -73,7 +73,7 @@ struct RunRecvFromArgs {
 /// Packet received from local port
 #[derive(Debug)]
 struct DownstreamPacket {
-    from: EndpointAddress,
+    source: EndpointAddress,
     contents: Vec<u8>,
     timer: HistogramTimer,
 }
@@ -267,7 +267,7 @@ impl Server {
 
                         if packet_tx
                             .send(DownstreamPacket {
-                                from: recv_addr.into(),
+                                source: recv_addr.into(),
                                 contents: (&buf[..size]).to_vec(),
                                 timer,
                             })
@@ -332,7 +332,7 @@ impl Server {
         args: &ProcessDownstreamReceiveConfig,
     ) {
         tracing::trace!(
-            from = %packet.from,
+            source = %packet.source,
             contents = %debug::bytes_to_string(&packet.contents),
             "Packet Received"
         );
@@ -351,14 +351,19 @@ impl Server {
         };
         let result = filter_chain.read(ReadContext::new(
             endpoints,
-            packet.from.clone(),
+            packet.source.clone(),
             packet.contents,
         ));
 
         if let Some(response) = result {
             for endpoint in response.endpoints.iter() {
-                Self::session_send_packet(&response.contents, packet.from.clone(), endpoint, args)
-                    .await;
+                Self::session_send_packet(
+                    &response.contents,
+                    packet.source.clone(),
+                    endpoint,
+                    args,
+                )
+                .await;
             }
         }
         packet.timer.stop_and_record();
@@ -373,7 +378,7 @@ impl Server {
     ) {
         let session_key = SessionKey {
             source: recv_addr,
-            destination: endpoint.address.clone(),
+            dest: endpoint.address.clone(),
         };
 
         // Grab a read lock and find the session.
@@ -405,7 +410,7 @@ impl Server {
                     metrics: args.session_metrics.clone(),
                     proxy_metrics: args.proxy_metrics.clone(),
                     filter_manager: args.filter_manager.clone(),
-                    from: session_key.source.clone(),
+                    source: session_key.source.clone(),
                     dest: endpoint.clone(),
                     sender: args.send_packets.clone(),
                     ttl: args.session_ttl,
@@ -427,7 +432,7 @@ impl Server {
                                 .await;
                         } else {
                             tracing::warn!(
-                                key = %format!("({}:{})", session_key.source, session_key.destination),
+                                key = %format!("({}:{})", session_key.source, session_key.dest),
                                 "Could not find session"
                             )
                         }
@@ -697,7 +702,7 @@ mod tests {
             for packet_tx in packet_txs {
                 packet_tx
                     .send(DownstreamPacket {
-                        from: receive_addr.into(),
+                        source: receive_addr.into(),
                         contents: msg.as_bytes().to_vec(),
                         timer: proxy_metrics.read_processing_time_seconds.start_timer(),
                     })

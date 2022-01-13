@@ -82,19 +82,19 @@ impl Filter for Firewall {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
     fn read(&self, ctx: ReadContext) -> Option<ReadResponse> {
         for rule in &self.on_read {
-            if rule.contains(ctx.from.to_socket_addr().ok()?) {
+            if rule.contains(ctx.source.to_socket_addr().ok()?) {
                 return match rule.action {
                     Action::Allow => {
                         debug!(
                             action = "Allow",
                             event = "read",
-                            from = ?ctx.from.to_string()
+                            source = ?ctx.source.to_string()
                         );
                         self.metrics.packets_allowed_read.inc();
                         Some(ctx.into())
                     }
                     Action::Deny => {
-                        debug!(action = "Deny", event = "read", from = ?ctx.from);
+                        debug!(action = "Deny", event = "read", source = ?ctx.source);
                         self.metrics.packets_denied_read.inc();
                         None
                     }
@@ -104,7 +104,7 @@ impl Filter for Firewall {
         debug!(
             action = "default: Deny",
             event = "read",
-            from = ?ctx.from.to_string()
+            source = ?ctx.source.to_string()
         );
         self.metrics.packets_denied_read.inc();
         None
@@ -113,19 +113,19 @@ impl Filter for Firewall {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
     fn write(&self, ctx: WriteContext) -> Option<WriteResponse> {
         for rule in &self.on_write {
-            if rule.contains(ctx.from.to_socket_addr().ok()?) {
+            if rule.contains(ctx.source.to_socket_addr().ok()?) {
                 return match rule.action {
                     Action::Allow => {
                         debug!(
                             action = "Allow",
                             event = "write",
-                            from = ?ctx.from.to_string()
+                            source = ?ctx.source.to_string()
                         );
                         self.metrics.packets_allowed_write.inc();
                         Some(ctx.into())
                     }
                     Action::Deny => {
-                        debug!(action = "Deny", event = "write", from = ?ctx.from);
+                        debug!(action = "Deny", event = "write", source = ?ctx.source);
                         self.metrics.packets_denied_write.inc();
                         None
                     }
@@ -136,7 +136,7 @@ impl Filter for Firewall {
         debug!(
             action = "default: Deny",
             event = "write",
-            from = ?ctx.from.to_string()
+            source = ?ctx.source.to_string()
         );
         self.metrics.packets_denied_write.inc();
         None

@@ -155,7 +155,7 @@ impl LocalRateLimit {
 
 impl Filter for LocalRateLimit {
     fn read(&self, ctx: ReadContext) -> Option<ReadResponse> {
-        self.acquire_token(&ctx.from)
+        self.acquire_token(&ctx.source)
             .map(|()| ctx.into())
             .or_else(|| {
                 self.metrics.packets_dropped_total.inc();

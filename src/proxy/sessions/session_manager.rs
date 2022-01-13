@@ -167,7 +167,7 @@ mod tests {
                 filter_manager: FilterManager::fixed(Arc::new(
                     FilterChain::new(vec![], &registry).unwrap(),
                 )),
-                from,
+                source: from,
                 dest: endpoint.clone(),
                 sender: send,
                 ttl,
@@ -224,7 +224,7 @@ mod tests {
                 filter_manager: FilterManager::fixed(Arc::new(
                     FilterChain::new(vec![], &registry).unwrap(),
                 )),
-                from,
+                source: from,
                 dest: endpoint.clone(),
                 sender: send,
                 ttl,

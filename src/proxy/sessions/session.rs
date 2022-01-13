@@ -52,8 +52,8 @@ pub struct Session {
     socket: Arc<UdpSocket>,
     /// dest is where to send data to
     dest: Endpoint,
-    /// from is the original sender
-    from: EndpointAddress,
+    /// address of original sender
+    source: EndpointAddress,
     /// The time at which the session is considered expired and can be removed.
     expiration: Arc<AtomicU64>,
     /// a channel to broadcast on if we are shutting down this Session
@@ -64,15 +64,12 @@ pub struct Session {
 #[derive(Clone, Eq, Hash, PartialEq, Debug, PartialOrd, Ord)]
 pub struct SessionKey {
     pub source: EndpointAddress,
-    pub destination: EndpointAddress,
+    pub dest: EndpointAddress,
 }
 
 impl From<(EndpointAddress, EndpointAddress)> for SessionKey {
-    fn from((source, destination): (EndpointAddress, EndpointAddress)) -> Self {
-        SessionKey {
-            source,
-            destination,
-        }
+    fn from((source, dest): (EndpointAddress, EndpointAddress)) -> Self {
+        SessionKey { source, dest }
     }
 }
 
@@ -81,8 +78,8 @@ struct ReceivedPacketContext<'a> {
     packet: &'a [u8],
     filter_manager: SharedFilterManager,
     endpoint: &'a Endpoint,
-    from: EndpointAddress,
-    to: EndpointAddress,
+    source: EndpointAddress,
+    dest: EndpointAddress,
     timer: HistogramTimer,
 }
 
@@ -120,7 +117,7 @@ pub struct SessionArgs {
     pub metrics: Metrics,
     pub proxy_metrics: ProxyMetrics,
     pub filter_manager: SharedFilterManager,
-    pub from: EndpointAddress,
+    pub source: EndpointAddress,
     pub dest: Endpoint,
     pub sender: mpsc::Sender<UpstreamPacket>,
     pub ttl: Duration,
@@ -149,14 +146,14 @@ impl Session {
             proxy_metrics: args.proxy_metrics,
             filter_manager: args.filter_manager,
             socket: socket.clone(),
-            from: args.from,
+            source: args.source,
             dest: args.dest,
             created_at: Instant::now(),
             expiration,
             shutdown_tx,
         };
 
-        tracing::debug!(from = %s.from, dest = ?s.dest, "Session created");
+        tracing::debug!(source = %s.source, dest = ?s.dest, "Session created");
 
         s.metrics.sessions_total.inc();
         s.metrics.active_sessions.inc();
@@ -172,7 +169,7 @@ impl Session {
         mut sender: mpsc::Sender<UpstreamPacket>,
         mut shutdown_rx: watch::Receiver<()>,
     ) {
-        let from = self.from.clone();
+        let source = self.source.clone();
         let expiration = self.expiration.clone();
         let filter_manager = self.filter_manager.clone();
         let endpoint = self.dest.clone();
@@ -181,14 +178,14 @@ impl Session {
         tokio::spawn(async move {
             let mut buf: Vec<u8> = vec![0; 65535];
             loop {
-                tracing::debug!(from = %from, dest = ?endpoint, "Awaiting incoming packet");
+                tracing::debug!(source = %source, dest = ?endpoint, "Awaiting incoming packet");
 
                 select! {
                     received = socket.recv_from(&mut buf) => {
                         match received {
                             Err(error) => {
                                 metrics.rx_errors_total.inc();
-                                tracing::error!(%error, %from, dest = ?endpoint, "Error receiving packet");
+                                tracing::error!(%error, %source, dest = ?endpoint, "Error receiving packet");
                             },
                             Ok((size, recv_addr)) => {
                                 metrics.rx_bytes_total.inc_by(size as u64);
@@ -202,15 +199,15 @@ impl Session {
                                         filter_manager: filter_manager.clone(),
                                         packet: &buf[..size],
                                         endpoint: &endpoint,
-                                        from: recv_addr.into(),
-                                        to: from.clone(),
+                                        source: recv_addr.into(),
+                                        dest: source.clone(),
                                         timer: proxy_metrics.write_processing_time_seconds.start_timer(),
                                     }).await
                             }
                         };
                     }
                     _ = shutdown_rx.changed() => {
-                        tracing::debug!(%from, dest = ?endpoint, "Closing Session");
+                        tracing::debug!(%source, dest = ?endpoint, "Closing Session");
                         return;
                     }
                 };
@@ -226,8 +223,8 @@ impl Session {
     /// key returns the key to be used for this session in a SessionMap
     pub fn key(&self) -> SessionKey {
         SessionKey {
-            source: self.from.clone(),
-            destination: self.dest.address.clone(),
+            source: self.source.clone(),
+            dest: self.dest.address.clone(),
         }
     }
 
@@ -243,8 +240,8 @@ impl Session {
             packet,
             filter_manager,
             endpoint,
-            from,
-            to,
+            source: from,
+            dest: to,
             timer,
         } = packet_ctx;
 
@@ -346,7 +343,7 @@ impl Drop for Session {
             tracing::warn!(%error, "Error sending session shutdown signal");
         }
 
-        tracing::debug!(from = %self.from, dest_address = %self.dest.address, "Session closed");
+        tracing::debug!(source = %self.source, dest_address = %self.dest.address, "Session closed");
     }
 }
 
@@ -390,7 +387,7 @@ mod tests {
             filter_manager: FilterManager::fixed(Arc::new(
                 FilterChain::new(vec![], &registry).unwrap(),
             )),
-            from: addr.clone(),
+            source: addr.clone(),
             dest: endpoint,
             sender: send_packet,
             ttl: Duration::from_secs(20),
@@ -442,7 +439,7 @@ mod tests {
             filter_manager: FilterManager::fixed(Arc::new(
                 FilterChain::new(vec![], &registry).unwrap(),
             )),
-            from: addr,
+            source: addr,
             dest: endpoint.clone(),
             sender,
             ttl: Duration::from_millis(1000),
@@ -481,8 +478,8 @@ mod tests {
                 packet: msg.as_bytes(),
                 filter_manager: FilterManager::fixed(chain),
                 endpoint: &endpoint,
-                from: endpoint.address.clone(),
-                to: dest.clone(),
+                source: endpoint.address.clone(),
+                dest: dest.clone(),
                 timer: histogram.start_timer(),
             },
         )
@@ -515,8 +512,8 @@ mod tests {
                 filter_manager: FilterManager::fixed(chain),
                 packet: msg.as_bytes(),
                 endpoint: &endpoint,
-                from: endpoint.address.clone(),
-                to: dest.clone(),
+                source: endpoint.address.clone(),
+                dest: dest.clone(),
                 timer: histogram.start_timer(),
             },
         )
@@ -549,7 +546,7 @@ mod tests {
             filter_manager: FilterManager::fixed(Arc::new(
                 FilterChain::new(vec![], &registry).unwrap(),
             )),
-            from: addr,
+            source: addr,
             dest: endpoint,
             sender: send_packet,
             ttl: Duration::from_secs(10),
@@ -575,7 +572,7 @@ mod tests {
             filter_manager: FilterManager::fixed(Arc::new(
                 FilterChain::new(vec![], &registry).unwrap(),
             )),
-            from: addr.clone(),
+            source: addr.clone(),
             dest: Endpoint::new(addr),
             sender,
             ttl: Duration::from_secs(10),
@@ -602,7 +599,7 @@ mod tests {
             filter_manager: FilterManager::fixed(Arc::new(
                 FilterChain::new(vec![], &registry).unwrap(),
             )),
-            from: addr.clone(),
+            source: addr.clone(),
             dest: Endpoint::new(addr),
             sender: send_packet,
             ttl: Duration::from_secs(10),

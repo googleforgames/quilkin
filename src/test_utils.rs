@@ -60,7 +60,7 @@ impl Filter for TestFilter {
             .or_insert_with(|| Value::String("receive".into()));
 
         ctx.contents
-            .append(&mut format!(":odr:{}", ctx.from).into_bytes());
+            .append(&mut format!(":odr:{}", ctx.source).into_bytes());
         Some(ctx.into())
     }
 
@@ -72,7 +72,7 @@ impl Filter for TestFilter {
             .or_insert_with(|| Value::String("receive".to_string()));
 
         ctx.contents
-            .append(&mut format!(":our:{}:{}", ctx.from, ctx.to).into_bytes());
+            .append(&mut format!(":our:{}:{}", ctx.source, ctx.dest).into_bytes());
         Some(ctx.into())
     }
 }
@@ -251,12 +251,12 @@ where
     F: Filter,
 {
     let endpoints = vec!["127.0.0.1:80".parse::<Endpoint>().unwrap()];
-    let from = "127.0.0.1:90".parse().unwrap();
+    let source = "127.0.0.1:90".parse().unwrap();
     let contents = "hello".to_string().into_bytes();
 
     match filter.read(ReadContext::new(
         Endpoints::new(endpoints.clone()).unwrap().into(),
-        from,
+        source,
         contents.clone(),
     )) {
         None => unreachable!("should return a result"),

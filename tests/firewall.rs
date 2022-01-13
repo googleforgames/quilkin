@@ -113,7 +113,7 @@ async fn test(t: &mut TestHelper, server_port: u16, yaml: &str) -> Receiver<Stri
     t.run_server_with_config(server_config);
 
     let local_addr: SocketAddr = (std::net::Ipv4Addr::LOCALHOST, server_port).into();
-    tracing::info!(from = %client_addr, address = %local_addr, "Sending hello");
+    tracing::info!(source = %client_addr, address = %local_addr, "Sending hello");
     recv.socket.send_to(b"hello", &local_addr).await.unwrap();
 
     recv.packet_rx
