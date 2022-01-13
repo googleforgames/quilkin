@@ -73,7 +73,7 @@ impl EndpointChooser for HashEndpointChooser {
     fn choose_endpoints(&self, ctx: &mut ReadContext) {
         let num_endpoints = ctx.endpoints.size();
         let mut hasher = DefaultHasher::new();
-        ctx.from.hash(&mut hasher);
+        ctx.source.hash(&mut hasher);
         ctx.endpoints.keep(hasher.finish() as usize % num_endpoints)
             .expect("BUG: unwrap should have been safe because index into endpoints list should be in range");
     }

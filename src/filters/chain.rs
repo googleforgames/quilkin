@@ -150,7 +150,7 @@ impl Filter for FilterChain {
             .zip(self.filter_read_duration_seconds.iter())
             .try_fold(ctx, |ctx, ((_, instance), histogram)| {
                 Some(ReadContext::with_response(
-                    ctx.from.clone(),
+                    ctx.source.clone(),
                     histogram.observe_closure_duration(|| instance.filter.read(ctx))?,
                 ))
             })
@@ -165,8 +165,8 @@ impl Filter for FilterChain {
             .try_fold(ctx, |ctx, ((_, instance), histogram)| {
                 Some(WriteContext::with_response(
                     ctx.endpoint,
-                    ctx.from.clone(),
-                    ctx.to.clone(),
+                    ctx.source.clone(),
+                    ctx.dest.clone(),
                     histogram.observe_closure_duration(|| instance.filter.write(ctx))?,
                 ))
             })

@@ -27,7 +27,7 @@ pub struct ReadContext {
     /// The upstream endpoints that the packet will be forwarded to.
     pub endpoints: UpstreamEndpoints,
     /// The source of the received packet.
-    pub from: EndpointAddress,
+    pub source: EndpointAddress,
     /// Contents of the received packet.
     pub contents: Vec<u8>,
     /// Arbitrary values that can be passed from one filter to another.
@@ -36,20 +36,20 @@ pub struct ReadContext {
 
 impl ReadContext {
     /// Creates a new [`ReadContext`].
-    pub fn new(endpoints: UpstreamEndpoints, from: EndpointAddress, contents: Vec<u8>) -> Self {
+    pub fn new(endpoints: UpstreamEndpoints, source: EndpointAddress, contents: Vec<u8>) -> Self {
         Self {
             endpoints,
-            from,
+            source,
             contents,
             metadata: DynamicMetadata::new(),
         }
     }
 
     /// Creates a new [`ReadContext`] from a given [`ReadResponse`].
-    pub fn with_response(from: EndpointAddress, response: ReadResponse) -> Self {
+    pub fn with_response(source: EndpointAddress, response: ReadResponse) -> Self {
         Self {
             endpoints: response.endpoints,
-            from,
+            source,
             contents: response.contents,
             metadata: response.metadata,
         }
