@@ -41,6 +41,12 @@ var (
 		Name:      "snapshot_generation_errors_total",
 		Help:      "Total number of errors encountered while generating snapshots",
 	})
+	snapshotsCacheSize = promauto.NewGauge(prometheus.GaugeOpts{
+		Namespace: metrics.Namespace,
+		Subsystem: metrics.Subsystem,
+		Name:      "snapshot_cache_size",
+		Help:      "Current number of snapshots in the snapshot cache",
+	})
 	snapshotGeneratedTotal = promauto.NewCounter(prometheus.CounterOpts{
 		Namespace: metrics.Namespace,
 		Subsystem: metrics.Subsystem,
@@ -205,6 +211,11 @@ type snapshotCleanupView interface {
 // cleanup deletes snapshots from the cache for any node that is no longer
 // connected to the server.
 func (u *Updater) cleanup() {
+	defer func() {
+		// When we're done, update metrics to reflect the latest size cache size.
+		snapshotsCacheSize.Set(float64(len(u.snapshotCleanupView.GetStatusKeys())))
+	}()
+
 	// If a node has had no open watches in a while (specified by the
 	// configurable snapshot grace period) then let's delete its snapshot.
 	nodeIDs := u.snapshotCleanupView.GetStatusKeys()
