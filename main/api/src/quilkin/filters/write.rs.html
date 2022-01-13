@@ -131,9 +131,9 @@
     <span class="doccomment">/// The upstream endpoint that we&#39;re expecting packets from.</span>
     <span class="kw">pub</span> <span class="ident">endpoint</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Endpoint</span>,
     <span class="doccomment">/// The source of the received packet.</span>
-    <span class="kw">pub</span> <span class="ident">from</span>: <span class="ident">EndpointAddress</span>,
+    <span class="kw">pub</span> <span class="ident">source</span>: <span class="ident">EndpointAddress</span>,
     <span class="doccomment">/// The destination of the received packet.</span>
-    <span class="kw">pub</span> <span class="ident">to</span>: <span class="ident">EndpointAddress</span>,
+    <span class="kw">pub</span> <span class="ident">dest</span>: <span class="ident">EndpointAddress</span>,
     <span class="doccomment">/// Contents of the received packet.</span>
     <span class="kw">pub</span> <span class="ident">contents</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Arbitrary values that can be passed from one filter to another</span>
@@ -162,14 +162,14 @@
     <span class="doccomment">/// Creates a new [`WriteContext`]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">endpoint</span>: <span class="kw-2">&amp;</span><span class="ident">Endpoint</span>,
-        <span class="ident">from</span>: <span class="ident">EndpointAddress</span>,
-        <span class="ident">to</span>: <span class="ident">EndpointAddress</span>,
+        <span class="ident">source</span>: <span class="ident">EndpointAddress</span>,
+        <span class="ident">dest</span>: <span class="ident">EndpointAddress</span>,
         <span class="ident">contents</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
     ) -&gt; <span class="ident">WriteContext</span> {
         <span class="ident">WriteContext</span> {
             <span class="ident">endpoint</span>,
-            <span class="ident">from</span>,
-            <span class="ident">to</span>,
+            <span class="ident">source</span>,
+            <span class="ident">dest</span>,
             <span class="ident">contents</span>,
             <span class="ident">metadata</span>: <span class="ident">HashMap::new</span>(),
         }
@@ -178,14 +178,14 @@
     <span class="doccomment">/// Creates a new [`WriteContext`] from a given [`WriteResponse`].</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_response</span>(
         <span class="ident">endpoint</span>: <span class="kw-2">&amp;</span><span class="ident">Endpoint</span>,
-        <span class="ident">from</span>: <span class="ident">EndpointAddress</span>,
-        <span class="ident">to</span>: <span class="ident">EndpointAddress</span>,
+        <span class="ident">source</span>: <span class="ident">EndpointAddress</span>,
+        <span class="ident">dest</span>: <span class="ident">EndpointAddress</span>,
         <span class="ident">response</span>: <span class="ident">WriteResponse</span>,
     ) -&gt; <span class="ident">WriteContext</span> {
         <span class="ident">WriteContext</span> {
             <span class="ident">endpoint</span>,
-            <span class="ident">from</span>,
-            <span class="ident">to</span>,
+            <span class="ident">source</span>,
+            <span class="ident">dest</span>,
             <span class="ident">contents</span>: <span class="ident">response</span>.<span class="ident">contents</span>,
             <span class="ident">metadata</span>: <span class="ident">response</span>.<span class="ident">metadata</span>,
         }

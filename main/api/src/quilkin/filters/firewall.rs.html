@@ -319,19 +319,19 @@
     <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;instrument&quot;</span>, <span class="ident">tracing::instrument</span>(<span class="ident">skip</span>(<span class="self">self</span>, <span class="ident">ctx</span>)))]</span>
     <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="ident">ReadContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ReadResponse</span><span class="op">&gt;</span> {
         <span class="kw">for</span> <span class="ident">rule</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">on_read</span> {
-            <span class="kw">if</span> <span class="ident">rule</span>.<span class="ident">contains</span>(<span class="ident">ctx</span>.<span class="ident">from</span>.<span class="ident">to_socket_addr</span>().<span class="ident">ok</span>()<span class="question-mark">?</span>) {
+            <span class="kw">if</span> <span class="ident">rule</span>.<span class="ident">contains</span>(<span class="ident">ctx</span>.<span class="ident">source</span>.<span class="ident">to_socket_addr</span>().<span class="ident">ok</span>()<span class="question-mark">?</span>) {
                 <span class="kw">return</span> <span class="kw">match</span> <span class="ident">rule</span>.<span class="ident">action</span> {
                     <span class="ident">Action::Allow</span> =&gt; {
                         <span class="macro">debug!</span>(
                             <span class="ident">action</span> <span class="op">=</span> <span class="string">&quot;Allow&quot;</span>,
                             <span class="ident">event</span> <span class="op">=</span> <span class="string">&quot;read&quot;</span>,
-                            <span class="ident">from</span> <span class="op">=</span> <span class="question-mark">?</span><span class="ident">ctx</span>.<span class="ident">from</span>.<span class="ident">to_string</span>()
+                            <span class="ident">source</span> <span class="op">=</span> <span class="question-mark">?</span><span class="ident">ctx</span>.<span class="ident">source</span>.<span class="ident">to_string</span>()
                         );
                         <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">packets_allowed_read</span>.<span class="ident">inc</span>();
                         <span class="prelude-val">Some</span>(<span class="ident">ctx</span>.<span class="ident">into</span>())
                     }
                     <span class="ident">Action::Deny</span> =&gt; {
-                        <span class="macro">debug!</span>(<span class="ident">action</span> <span class="op">=</span> <span class="string">&quot;Deny&quot;</span>, <span class="ident">event</span> <span class="op">=</span> <span class="string">&quot;read&quot;</span>, <span class="ident">from</span> <span class="op">=</span> <span class="question-mark">?</span><span class="ident">ctx</span>.<span class="ident">from</span>);
+                        <span class="macro">debug!</span>(<span class="ident">action</span> <span class="op">=</span> <span class="string">&quot;Deny&quot;</span>, <span class="ident">event</span> <span class="op">=</span> <span class="string">&quot;read&quot;</span>, <span class="ident">source</span> <span class="op">=</span> <span class="question-mark">?</span><span class="ident">ctx</span>.<span class="ident">source</span>);
                         <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">packets_denied_read</span>.<span class="ident">inc</span>();
                         <span class="prelude-val">None</span>
                     }
@@ -341,7 +341,7 @@
         <span class="macro">debug!</span>(
             <span class="ident">action</span> <span class="op">=</span> <span class="string">&quot;default: Deny&quot;</span>,
             <span class="ident">event</span> <span class="op">=</span> <span class="string">&quot;read&quot;</span>,
-            <span class="ident">from</span> <span class="op">=</span> <span class="question-mark">?</span><span class="ident">ctx</span>.<span class="ident">from</span>.<span class="ident">to_string</span>()
+            <span class="ident">source</span> <span class="op">=</span> <span class="question-mark">?</span><span class="ident">ctx</span>.<span class="ident">source</span>.<span class="ident">to_string</span>()
         );
         <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">packets_denied_read</span>.<span class="ident">inc</span>();
         <span class="prelude-val">None</span>
@@ -350,19 +350,19 @@
     <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;instrument&quot;</span>, <span class="ident">tracing::instrument</span>(<span class="ident">skip</span>(<span class="self">self</span>, <span class="ident">ctx</span>)))]</span>
     <span class="kw">fn</span> <span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="ident">WriteContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">WriteResponse</span><span class="op">&gt;</span> {
         <span class="kw">for</span> <span class="ident">rule</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">on_write</span> {
-            <span class="kw">if</span> <span class="ident">rule</span>.<span class="ident">contains</span>(<span class="ident">ctx</span>.<span class="ident">from</span>.<span class="ident">to_socket_addr</span>().<span class="ident">ok</span>()<span class="question-mark">?</span>) {
+            <span class="kw">if</span> <span class="ident">rule</span>.<span class="ident">contains</span>(<span class="ident">ctx</span>.<span class="ident">source</span>.<span class="ident">to_socket_addr</span>().<span class="ident">ok</span>()<span class="question-mark">?</span>) {
                 <span class="kw">return</span> <span class="kw">match</span> <span class="ident">rule</span>.<span class="ident">action</span> {
                     <span class="ident">Action::Allow</span> =&gt; {
                         <span class="macro">debug!</span>(
                             <span class="ident">action</span> <span class="op">=</span> <span class="string">&quot;Allow&quot;</span>,
                             <span class="ident">event</span> <span class="op">=</span> <span class="string">&quot;write&quot;</span>,
-                            <span class="ident">from</span> <span class="op">=</span> <span class="question-mark">?</span><span class="ident">ctx</span>.<span class="ident">from</span>.<span class="ident">to_string</span>()
+                            <span class="ident">source</span> <span class="op">=</span> <span class="question-mark">?</span><span class="ident">ctx</span>.<span class="ident">source</span>.<span class="ident">to_string</span>()
                         );
                         <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">packets_allowed_write</span>.<span class="ident">inc</span>();
                         <span class="prelude-val">Some</span>(<span class="ident">ctx</span>.<span class="ident">into</span>())
                     }
                     <span class="ident">Action::Deny</span> =&gt; {
-                        <span class="macro">debug!</span>(<span class="ident">action</span> <span class="op">=</span> <span class="string">&quot;Deny&quot;</span>, <span class="ident">event</span> <span class="op">=</span> <span class="string">&quot;write&quot;</span>, <span class="ident">from</span> <span class="op">=</span> <span class="question-mark">?</span><span class="ident">ctx</span>.<span class="ident">from</span>);
+                        <span class="macro">debug!</span>(<span class="ident">action</span> <span class="op">=</span> <span class="string">&quot;Deny&quot;</span>, <span class="ident">event</span> <span class="op">=</span> <span class="string">&quot;write&quot;</span>, <span class="ident">source</span> <span class="op">=</span> <span class="question-mark">?</span><span class="ident">ctx</span>.<span class="ident">source</span>);
                         <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">packets_denied_write</span>.<span class="ident">inc</span>();
                         <span class="prelude-val">None</span>
                     }
@@ -373,7 +373,7 @@
         <span class="macro">debug!</span>(
             <span class="ident">action</span> <span class="op">=</span> <span class="string">&quot;default: Deny&quot;</span>,
             <span class="ident">event</span> <span class="op">=</span> <span class="string">&quot;write&quot;</span>,
-            <span class="ident">from</span> <span class="op">=</span> <span class="question-mark">?</span><span class="ident">ctx</span>.<span class="ident">from</span>.<span class="ident">to_string</span>()
+            <span class="ident">source</span> <span class="op">=</span> <span class="question-mark">?</span><span class="ident">ctx</span>.<span class="ident">source</span>.<span class="ident">to_string</span>()
         );
         <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">packets_denied_write</span>.<span class="ident">inc</span>();
         <span class="prelude-val">None</span>

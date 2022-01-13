@@ -153,7 +153,7 @@
     <span class="kw">fn</span> <span class="ident">choose_endpoints</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">ReadContext</span>) {
         <span class="kw">let</span> <span class="ident">num_endpoints</span> <span class="op">=</span> <span class="ident">ctx</span>.<span class="ident">endpoints</span>.<span class="ident">size</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">hasher</span> <span class="op">=</span> <span class="ident">DefaultHasher::new</span>();
-        <span class="ident">ctx</span>.<span class="ident">from</span>.<span class="ident">hash</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">hasher</span>);
+        <span class="ident">ctx</span>.<span class="ident">source</span>.<span class="ident">hash</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">hasher</span>);
         <span class="ident">ctx</span>.<span class="ident">endpoints</span>.<span class="ident">keep</span>(<span class="ident">hasher</span>.<span class="ident">finish</span>() <span class="kw">as</span> <span class="ident">usize</span> <span class="op">%</span> <span class="ident">num_endpoints</span>)
             .<span class="ident">expect</span>(<span class="string">&quot;BUG: unwrap should have been safe because index into endpoints list should be in range&quot;</span>);
     }

@@ -114,7 +114,7 @@
     <span class="doccomment">/// The upstream endpoints that the packet will be forwarded to.</span>
     <span class="kw">pub</span> <span class="ident">endpoints</span>: <span class="ident">UpstreamEndpoints</span>,
     <span class="doccomment">/// The source of the received packet.</span>
-    <span class="kw">pub</span> <span class="ident">from</span>: <span class="ident">EndpointAddress</span>,
+    <span class="kw">pub</span> <span class="ident">source</span>: <span class="ident">EndpointAddress</span>,
     <span class="doccomment">/// Contents of the received packet.</span>
     <span class="kw">pub</span> <span class="ident">contents</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Arbitrary values that can be passed from one filter to another.</span>
@@ -123,20 +123,20 @@
 
 <span class="kw">impl</span> <span class="ident">ReadContext</span> {
     <span class="doccomment">/// Creates a new [`ReadContext`].</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">endpoints</span>: <span class="ident">UpstreamEndpoints</span>, <span class="ident">from</span>: <span class="ident">EndpointAddress</span>, <span class="ident">contents</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">endpoints</span>: <span class="ident">UpstreamEndpoints</span>, <span class="ident">source</span>: <span class="ident">EndpointAddress</span>, <span class="ident">contents</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">endpoints</span>,
-            <span class="ident">from</span>,
+            <span class="ident">source</span>,
             <span class="ident">contents</span>,
             <span class="ident">metadata</span>: <span class="ident">DynamicMetadata::new</span>(),
         }
     }
 
     <span class="doccomment">/// Creates a new [`ReadContext`] from a given [`ReadResponse`].</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_response</span>(<span class="ident">from</span>: <span class="ident">EndpointAddress</span>, <span class="ident">response</span>: <span class="ident">ReadResponse</span>) -&gt; <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_response</span>(<span class="ident">source</span>: <span class="ident">EndpointAddress</span>, <span class="ident">response</span>: <span class="ident">ReadResponse</span>) -&gt; <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">endpoints</span>: <span class="ident">response</span>.<span class="ident">endpoints</span>,
-            <span class="ident">from</span>,
+            <span class="ident">source</span>,
             <span class="ident">contents</span>: <span class="ident">response</span>.<span class="ident">contents</span>,
             <span class="ident">metadata</span>: <span class="ident">response</span>.<span class="ident">metadata</span>,
         }
