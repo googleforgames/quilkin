@@ -1,4 +1,4 @@
-#### XDS Management Server
+# XDS Management Server
 
 This project contains an [XDS] management server implementation that configures
 Quilkin proxies.
@@ -7,11 +7,21 @@ upstream endpoints and filter configuration from some external source, and then 
 that information to generate cluster and filter updates that is pushed to any connected
 Quilkin proxy.
 
+## Opinionated Agones Implementation
+
 The project has a binary **cmd/controller.go** with a server implementation that runs in [Kubernetes].
    
 1. Cluster information is retrieved from [Agones] - the server watches for `Allocated`
-   [Agones GameServers] and exposes their IP address and Port as upstream endpoints to
+   [Agones GameServers] and exposes their IP address and Port as [upstream endpoints][upstream-endpoint] to
    any connected Quilkin proxies.
+   The set of tokens for the associated endpoint can be set by adding a comma separated standard base64 encoded strings.
+   This must be added under an annotation `quilkin.dev/tokens` in the [GameServer][Agones GameServers]'s spec.
+   For example:
+   ```yaml
+   annotations:
+     Sets two tokens for the corresponding endpoint with values 1x7ijy6 and 8gj3v2i respectively.
+     quilkin.dev/tokens: MXg3aWp5Ng==,OGdqM3YyaQ==
+   ```
 
    > Since an Agones GameServer can have multiple ports exposed, if multiple ports are in
    > use, the server looks for the port named `default` and picks that as the endpoint's
@@ -41,7 +51,7 @@ go run controller.go -- port=18000 --proxy-namespace=quilkin --game-server-names
 
 > Note that currently, the server can only discover resources within a single cluster.
 
-##### Admin server
+## Admin server
 
 In addition the gRPC server, a http server (configurable via `--admin-port`is also started to serve administrative functionality.
 The following endpoints are provided:
@@ -49,7 +59,7 @@ The following endpoints are provided:
 - `/live`: Liveness probe that always returns a 200 response.
 - `/metrics`: Exposes Prometheus metrics.
 
-##### Metrics
+## Metrics
 
 The following metrics are exposed by the management server.
 
@@ -87,7 +97,7 @@ The following metrics are exposed by the management server.
    of connected proxies since snapshots for disconnected proxies are only periodically cleared
    from the cache.
 
-##### File Server
+## Example: File Server Implementation
 
 > The file server binary is primarily an example and mostly suitable for demo purposes.
 > As a result, some configuration options and features might be missing.
@@ -160,3 +170,4 @@ filterchain:
 [Kubernetes]: https://kubernetes.io/
 [Agones]: https://agones.dev/
 [Agones GameServers]: https://agones.dev/site/docs/getting-started/create-gameserver/
+[upstream-endpoint]: https://googleforgames.github.io/quilkin/main/book/proxy.html#upstream-endpoint

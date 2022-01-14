@@ -19,9 +19,9 @@ package cluster
 import (
 	"context"
 
-	"github.com/prometheus/client_golang/prometheus"
 	"quilkin.dev/xds-management-server/pkg/metrics"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
