@@ -1767,7 +1767,7 @@ something specialised on gaming UDP communication, so having a leaner, more focu
 faster.</li>
 <li>We found the Rust and Cargo ecosystem easier to work with than Bazel and C++, and figured our users would as well.</li>
 </ul>
-<div style="break-before: page; page-break-before: always;"></div><h3 id="dynamic-configuration-using-xds-management-servers"><a class="header" href="#dynamic-configuration-using-xds-management-servers">Dynamic Configuration using xDS Management Servers</a></h3>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="dynamic-configuration-using-xds-management-servers"><a class="header" href="#dynamic-configuration-using-xds-management-servers">Dynamic Configuration using xDS Management Servers</a></h1>
 <p>In addition to static configuration provided upon startup, a Quiklin proxy's configuration can also be updated at runtime. The proxy can be configured on startup to talk to a set of management servers which provide it with updates throughout its lifecycle.</p>
 <p>Communication between the proxy and management server uses the <a href="https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol#xds-rest-and-grpc-protocol">xDS gRPC protocol</a>, similar to an <a href="https://www.envoyproxy.io/docs/envoy/latest/">envoy proxy</a>. xDS is one of the standard configuration mechanisms for software proxies and as a result, Quilkin can be setup to discover configuration resources from any API compatible server. Also, given that the protocol is <a href="https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol#the-xds-transport-protocol">well specified</a>, it is similarly straight-forward to implement a custom server to suit any deployment's needs.</p>
 <blockquote>
@@ -1775,7 +1775,10 @@ faster.</li>
 </blockquote>
 <p>As described within the <a href="https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/operations/dynamic_configuration">xDS-api</a> documentation, the xDS API comprises a set of resource discovery APIs, each serving a specific set of configuration resource types, while the protocol itself comes in several <a href="https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol#variants-of-the-xds-transport-protocol">variants</a>.
 Quilkin implements the <strong>Aggregated Discovery Service (ADS)</strong> <em>State of the World (SotW)</em> variant with gRPC.</p>
-<h4 id="supported-apis"><a class="header" href="#supported-apis">Supported APIs</a></h4>
+<h2 id="sample-control-plane-implementation"><a class="header" href="#sample-control-plane-implementation">Sample Control Plane Implementation</a></h2>
+<p>A sample control plane can be found <a href="https://github.com/googleforgames/quilkin/tree/main/xds">here</a>, with both a demo project that uses a configuration file 
+as its data source, as well as an opinionated integration with <a href="https://agones.dev">Agones</a> game server orchestration framework.</p>
+<h2 id="supported-apis"><a class="header" href="#supported-apis">Supported APIs</a></h2>
 <p>Since the range of resources configurable by the xDS API extends that of Quilkin's domain (i.e being UDP based, Quilkin does not have a need for HTTP/TCP resources), only a subset of the API is supported. The following lists these relevant parts and any limitation to the provided support as a result:</p>
 <ul>
 <li>
@@ -1806,7 +1809,7 @@ Quilkin implements the <strong>Aggregated Discovery Service (ADS)</strong> <em>S
 </ul>
 </li>
 </ul>
-<h4 id="metrics-11"><a class="header" href="#metrics-11">Metrics</a></h4>
+<h2 id="metrics-11"><a class="header" href="#metrics-11">Metrics</a></h2>
 <p>Quilkin exposes the following metrics around the management servers and its resources:</p>
 <ul>
 <li>
