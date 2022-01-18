@@ -1,4 +1,4 @@
-### Dynamic Configuration using xDS Management Servers
+# Dynamic Configuration using xDS Management Servers
 
 In addition to static configuration provided upon startup, a Quiklin proxy's configuration can also be updated at runtime. The proxy can be configured on startup to talk to a set of management servers which provide it with updates throughout its lifecycle.
 
@@ -9,7 +9,12 @@ Communication between the proxy and management server uses the [xDS gRPC protoco
 As described within the [xDS-api] documentation, the xDS API comprises a set of resource discovery APIs, each serving a specific set of configuration resource types, while the protocol itself comes in several [variants][xds-variants].
 Quilkin implements the **Aggregated Discovery Service (ADS)** _State of the World (SotW)_ variant with gRPC.
 
-#### Supported APIs
+## Sample Control Plane Implementation
+
+A sample control plane can be found [here][control-plane], with both a demo project that uses a configuration file 
+as its data source, as well as an opinionated integration with [Agones] game server orchestration framework.
+
+## Supported APIs
 
 Since the range of resources configurable by the xDS API extends that of Quilkin's domain (i.e being UDP based, Quilkin does not have a need for HTTP/TCP resources), only a subset of the API is supported. The following lists these relevant parts and any limitation to the provided support as a result:
 
@@ -31,8 +36,7 @@ Since the range of resources configurable by the xDS API extends that of Quilkin
   * Only the list of [filters][xds-filters] specified in the [filter chain][xds-filter-chain] is used by the proxy - i.e other fields like `filter_chain_match` are ignored. This list also specifies the order that the corresponding filter chain will be constructed.
   * gRPC proto configuration for Quilkin's built-in filters [can be found here][filter-protos]. They are equivalent to the filter's static configuration.
 
-
-#### Metrics
+## Metrics
 
 Quilkin exposes the following metrics around the management servers and its resources:
 
@@ -80,3 +84,5 @@ Quilkin exposes the following metrics around the management servers and its reso
 [filters-doc]: ./filters.md
 [xds-endpoint-metadata]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/base.proto#envoy-v3-api-msg-config-core-v3-metadata
 [endpoint-metadata]: ./proxy.md#endpoint-metadata
+[control-plane]: https://github.com/googleforgames/quilkin/tree/main/xds
+[Agones]: https://agones.dev
