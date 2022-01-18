@@ -81,6 +81,7 @@ func runClusterWatch(
 	defer ticker.Stop()
 
 	prevEndpoints := map[string]cluster.Endpoint{}
+	cluster.EndpointsTotal.Set(0)
 	for {
 		select {
 		case <-ticker.C:
@@ -94,6 +95,9 @@ func runClusterWatch(
 			for _, ep := range currEndpoints {
 				endpoints = append(endpoints, ep)
 			}
+
+			cluster.EndpointsTotal.Set(float64(len(endpoints)))
+
 			clusterCh <- []cluster.Cluster{{
 				Name:      "default-quilkin-cluster",
 				Endpoints: endpoints,

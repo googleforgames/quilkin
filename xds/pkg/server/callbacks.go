@@ -35,19 +35,19 @@ var connectedProxiesGauge = promauto.NewGauge(prometheus.GaugeOpts{
 	Help:      "Number of proxies currently connected to the server",
 })
 
-var discoveryRequestsTotal = promauto.NewCounter(prometheus.CounterOpts{
+var discoveryRequestsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 	Namespace: metrics.Namespace,
 	Subsystem: metrics.Subsystem,
 	Name:      "discovery_requests_total",
 	Help:      "Number of discovery requests received by the server",
-})
+}, []string{"resource_type"})
 
-var discoveryResponsesTotal = promauto.NewCounter(prometheus.CounterOpts{
+var discoveryResponsesTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 	Namespace: metrics.Namespace,
 	Subsystem: metrics.Subsystem,
 	Name:      "discovery_responses_total",
 	Help:      "Number of discovery responses sent by the server",
-})
+}, []string{"resource_type"})
 
 // callbacks implements callbacks for the go-control-plane xds server.
 type callbacks struct {
@@ -83,7 +83,14 @@ func (c *callbacks) OnStreamRequest(streamID int64, request *discoveryservice.Di
 		"request_version_info": request.VersionInfo,
 		"request_nonce":        request.ResponseNonce,
 	}).Debugf("OnStreamRequest")
-	discoveryRequestsTotal.Inc()
+
+	counter, err := discoveryRequestsTotal.GetMetricWithLabelValues(request.TypeUrl)
+	if err != nil {
+		c.log.WithField("resource_type", request.TypeUrl).
+			Debug("failed to curry discovery_requests_total metric labels")
+	} else {
+		counter.Inc()
+	}
 
 	if c.nodeIDCh != nil {
 		c.nodeIDCh <- request.Node.Id
@@ -103,7 +110,14 @@ func (c *callbacks) OnStreamResponse(
 		"response_version_info": response.VersionInfo,
 		"response_nonce":        response.Nonce,
 	}).Debugf("OnStreamResponse")
-	discoveryResponsesTotal.Inc()
+
+	counter, err := discoveryResponsesTotal.GetMetricWithLabelValues(request.TypeUrl)
+	if err != nil {
+		c.log.WithField("resource_type", request.TypeUrl).
+			Debug("failed to curry discovery_responses_total metric labels")
+	} else {
+		counter.Inc()
+	}
 }
 
 func (c *callbacks) OnFetchRequest(

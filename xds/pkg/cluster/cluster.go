@@ -18,6 +18,20 @@ package cluster
 
 import (
 	"context"
+
+	"quilkin.dev/xds-management-server/pkg/metrics"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+)
+
+var (
+	EndpointsTotal = promauto.NewGauge(prometheus.GaugeOpts{
+		Namespace: metrics.Namespace,
+		Subsystem: metrics.Subsystem,
+		Name:      "endpoints_total",
+		Help:      "Current number of active endpoints",
+	})
 )
 
 // Endpoint represents an upstream endpoint (e.g a game-server)
