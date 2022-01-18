@@ -72,7 +72,7 @@ definitions:
 > Snappy is a compression/decompression library. It does not aim for maximum compression, or compatibility with any 
 > other compression library; instead, it aims for very high speeds and reasonable compression.
 
-Currently, this filter only provides the [Snappy](http://google.github.io/snappy/) compression format via the
+Currently, this filter only provides the [Snappy](https://github.com/google/snappy/) compression format via the
 [rust-snappy](https://github.com/BurntSushi/rust-snappy) crate, but more will be
 provided in the future.
 
