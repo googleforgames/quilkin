@@ -56,10 +56,12 @@ impl FilterSet {
                 filters::compress::factory(),
                 filters::concatenate_bytes::factory(),
                 filters::debug::factory(),
+                filters::drop::factory(),
                 filters::firewall::factory(),
                 filters::load_balancer::factory(),
                 filters::local_rate_limit::factory(),
                 filters::matches::factory(),
+                filters::pass::factory(),
                 filters::token_router::factory(),
             ])
             .chain(filters),

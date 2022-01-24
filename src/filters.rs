@@ -30,11 +30,13 @@ pub mod capture;
 pub mod compress;
 pub mod concatenate_bytes;
 pub mod debug;
+pub mod drop;
 pub mod firewall;
 pub mod load_balancer;
 pub mod local_rate_limit;
 pub mod matches;
 pub mod metadata;
+pub mod pass;
 pub mod token_router;
 
 /// Prelude containing all types and traits required to implement [`Filter`] and
