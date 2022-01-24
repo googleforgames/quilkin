@@ -183,21 +183,20 @@ impl TryFrom<ProtoConfig> for Config {
         fn convert_port(range: &ProtoPortRange) -> Result<PortRange, ConvertProtoConfigError> {
             let min = u16::try_from(range.min).map_err(|err| {
                 ConvertProtoConfigError::new(
-                    format!("min too large: {}", err),
+                    format!("min too large: {err}"),
                     Some("port.min".into()),
                 )
             })?;
 
             let max = u16::try_from(range.max).map_err(|err| {
                 ConvertProtoConfigError::new(
-                    format!("max too large: {}", err),
+                    format!("max too large: {err}"),
                     Some("port.max".into()),
                 )
             })?;
 
-            PortRange::new(min, max).map_err(|err| {
-                ConvertProtoConfigError::new(format!("{}", err), Some("ports".into()))
-            })
+            PortRange::new(min, max)
+                .map_err(|err| ConvertProtoConfigError::new(format!("{err}"), Some("ports".into())))
         }
 
         fn convert_rule(rule: &ProtoRule) -> Result<Rule, ConvertProtoConfigError> {
@@ -211,7 +210,7 @@ impl TryFrom<ProtoConfig> for Config {
 
             let source = IpNetwork::try_from(rule.source.as_str()).map_err(|err| {
                 ConvertProtoConfigError::new(
-                    format!("invalid source: {:?}", err),
+                    format!("invalid source: {err:?}"),
                     Some("source".into()),
                 )
             })?;

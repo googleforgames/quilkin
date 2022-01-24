@@ -25,7 +25,7 @@ async fn main() -> quilkin::Result<()> {
     tracing_subscriber::fmt().json().with_target(false).init();
     stable_eyre::install()?;
     let version: std::borrow::Cow<'static, str> = if cfg!(debug_assertions) {
-        format!("{}+debug", VERSION).into()
+        format!("{VERSION}+debug").into()
     } else {
         VERSION.into()
     };

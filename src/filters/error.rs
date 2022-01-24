@@ -55,7 +55,7 @@ impl From<MetricsError> for Error {
 #[derive(Debug, PartialEq, thiserror::Error)]
 #[error(
     "{}failed to convert protobuf config: {}",
-    self.field.as_ref().map(|f| format!("Field `{}` ", f)).unwrap_or_default(),
+    self.field.as_ref().map(|f| format!("Field `{f}`")).unwrap_or_default(),
     reason
 )]
 pub struct ConvertProtoConfigError {
@@ -92,7 +92,7 @@ macro_rules! enum_no_match_error {
                 $( (stringify!($allowed_value), <$enum_type>::$allowed_value as i32) ),+
               ]
               .into_iter()
-              .map(|(a, b)| format!("{} => {}", a, b as i32))
+              .map(|(a, b)| format!("{a} => {}", b as i32))
               .collect::<Vec<_>>()
               .join(", ")
             ),

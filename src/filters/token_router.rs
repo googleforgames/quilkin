@@ -81,8 +81,7 @@ impl FilterFactory for TokenRouterFactory {
                 serde_json::to_value(&config)
                     .map_err(|err| {
                         Error::DeserializeFailed(format!(
-                            "failed to JSON deserialize default config: {}",
-                            err
+                            "failed to JSON deserialize default config: {err}",
                         ))
                     })
                     .map(|config_json| (config_json, config))

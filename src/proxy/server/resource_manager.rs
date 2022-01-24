@@ -49,7 +49,7 @@ impl StaticResourceManagers {
     ) -> Result<StaticResourceManagers, InitializeError> {
         Ok(Self {
             cluster_manager: ClusterManager::fixed(metrics_registry, endpoints)
-                .map_err(|err| InitializeError::Message(format!("{:?}", err)))?,
+                .map_err(|err| InitializeError::Message(format!("{err:?}")))?,
             filter_manager: FilterManager::fixed(filter_chain),
         })
     }
@@ -97,11 +97,11 @@ impl DynamicResourceManagers {
 
         let cluster_manager =
             ClusterManager::dynamic(&metrics_registry, cluster_updates_rx, shutdown_rx.clone())
-                .map_err(|err| InitializeError::Message(format!("{:?}", err)))?;
+                .map_err(|err| InitializeError::Message(format!("{err:?}")))?;
 
         let filter_manager =
             FilterManager::dynamic(&metrics_registry, filter_chain_updates_rx, shutdown_rx)
-                .map_err(|err| InitializeError::Message(format!("{:?}", err)))?;
+                .map_err(|err| InitializeError::Message(format!("{err:?}")))?;
 
         Ok(Self {
             cluster_manager,
@@ -125,7 +125,7 @@ impl DynamicResourceManagers {
         } = args;
 
         let client = AdsClient::new(&metrics_registry).map_err(|err| {
-            InitializeError::Message(format!("failed to initialize xDS client: {:?}", err))
+            InitializeError::Message(format!("failed to initialize xDS client: {err:?}"))
         })?;
         tokio::spawn(async move {
             let result = client

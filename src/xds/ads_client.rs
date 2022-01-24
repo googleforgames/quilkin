@@ -129,7 +129,7 @@ impl AdsClient {
 
                     // Do not retry if this is an invalid URL error that we cannot recover from.
                     // Need to use {:?} as the Display output only returns 'transport error'
-                    let err_description = format!("{:?}", error);
+                    let err_description = format!("{error:?}");
                     if err_description.to_lowercase().contains("invalid url") {
                         RetryPolicy::Break
                     } else {

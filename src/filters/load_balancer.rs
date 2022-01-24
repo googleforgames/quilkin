@@ -66,7 +66,7 @@ impl FilterFactory for LoadBalancerFilterFactory {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
+    use std::{collections::HashSet, net::Ipv4Addr};
 
     use crate::{
         endpoint::{Endpoint, EndpointAddress, Endpoints},
@@ -190,12 +190,12 @@ policy: RANDOM
     #[test]
     fn hash_load_balancer_policy() {
         let addresses: Vec<EndpointAddress> = vec![
-            "127.0.0.1:8080".parse().unwrap(),
-            "127.0.0.2:8080".parse().unwrap(),
-            "127.0.0.3:8080".parse().unwrap(),
+            ([127, 0, 0, 1], 8080).into(),
+            ([127, 0, 0, 2], 8080).into(),
+            ([127, 0, 0, 3], 8080).into(),
         ];
-        let source_ips = vec!["127.1.1.1", "127.2.2.2", "127.3.3.3"];
-        let source_ports = vec!["11111", "22222", "33333", "44444", "55555"];
+        let source_ips = vec![[127u8, 1, 1, 1], [127, 2, 2, 2], [127, 3, 3, 3]];
+        let source_ports = vec![11111u16, 22222, 33333, 44444, 55555];
 
         let yaml = "
 policy: HASH
@@ -210,7 +210,7 @@ policy: HASH
                     get_response_addresses(
                         filter.as_ref(),
                         &addresses,
-                        "127.0.0.1:8080".parse().unwrap(),
+                        (Ipv4Addr::LOCALHOST, 8080).into(),
                     )
                 })
                 .collect::<Vec<_>>();
@@ -231,13 +231,13 @@ policy: HASH
         // Run a few selection rounds through the address
         // this time vary the port for a single IP
         let mut result_sequences = vec![];
-        for port in &source_ports {
+        for port in source_ports.iter().copied() {
             let sequence = (0..addresses.len())
                 .map(|_| {
                     get_response_addresses(
                         filter.as_ref(),
                         &addresses,
-                        format!("127.0.0.1:{}", port).parse().unwrap(),
+                        (Ipv4Addr::LOCALHOST, port).into(),
                     )
                 })
                 .collect::<Vec<_>>();
@@ -259,15 +259,9 @@ policy: HASH
         // This time vary the source IP and port
         let mut result_sequences = vec![];
         for ip in source_ips {
-            for port in &source_ports {
+            for port in source_ports.iter().copied() {
                 let sequence = (0..addresses.len())
-                    .map(|_| {
-                        get_response_addresses(
-                            filter.as_ref(),
-                            &addresses,
-                            format!("{}:{}", ip, port).parse().unwrap(),
-                        )
-                    })
+                    .map(|_| get_response_addresses(filter.as_ref(), &addresses, (ip, port).into()))
                     .collect::<Vec<_>>();
                 result_sequences.push(sequence);
             }
@@ -291,7 +285,5 @@ policy: HASH
                 .any(|seq| seq != &result_sequences[0]),
             "the same sequence of addresses were chosen for hash load balancer"
         );
-
-        //
     }
 }

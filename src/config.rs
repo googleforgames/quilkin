@@ -470,7 +470,7 @@ dynamic:
         for config in configs {
             let result = Config::from_reader(config.as_bytes());
             let error = result.unwrap_err();
-            assert!(format!("{:?}", error).contains("unknown field"));
+            assert!(format!("{error:?}").contains("unknown field"));
         }
     }
 }

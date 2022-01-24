@@ -371,7 +371,6 @@ mod tests {
     use prost_types::Struct as ProstStruct;
     use prost_types::Value as ProstValue;
     use std::collections::{HashMap, HashSet};
-    use std::net::SocketAddr;
     use tokio::sync::mpsc;
 
     type ClusterState = HashMap<String, ProxyCluster>;
@@ -433,17 +432,15 @@ mod tests {
 
         let _ = recv_cluster_and_endpoint_reqs(&mut discovery_req_rx).await;
 
-        let mut version = 4;
-        let mut nonce = 9;
+        let mut version = 4u8;
+        let mut nonce = 9u8;
         for _ in 0..3 {
             let v = &version.to_string();
             let n = &nonce.to_string();
 
-            let new_address = format!("127.0.0.{}", nonce);
-            let new_port = 2020 + nonce;
-            let expected_socket_addr = format!("{}:{}", new_address, new_port)
-                .parse::<SocketAddr>()
-                .unwrap();
+            let new_address = std::net::Ipv4Addr::from([127, 0, 0, nonce]);
+            let new_port = 2020 + nonce as u16;
+            let expected_socket_addr = (new_address, new_port);
             cm.on_cluster_load_assignment_response(endpoint_discovery_response_with_update(
                 v,
                 n,
@@ -455,10 +452,12 @@ mod tests {
                                 address: Some(Address {
                                     address: Some(address::Address::SocketAddress(SocketAddress {
                                         protocol: 1,
-                                        address: new_address.clone(),
+                                        address: new_address.to_string(),
                                         resolver_name: "".into(),
                                         ipv4_compat: true,
-                                        port_specifier: Some(PortSpecifier::PortValue(new_port)),
+                                        port_specifier: Some(PortSpecifier::PortValue(
+                                            new_port as u32,
+                                        )),
                                     })),
                                 }),
                                 health_check_config: None,
@@ -794,7 +793,7 @@ mod tests {
         assert_eq!(dyn_metadata.len(), 1);
 
         let value = dyn_metadata
-            .get(&format!("key-{}", cluster_name).into())
+            .get(&format!("key-{cluster_name}").into())
             .unwrap();
         assert_eq!(
             value,

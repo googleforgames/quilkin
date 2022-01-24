@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-use std::net::SocketAddr;
+use std::net::{Ipv4Addr, SocketAddr};
 
 use tokio::time::{timeout, Duration};
 
@@ -62,9 +62,7 @@ on_write: DECOMPRESS
                 name: compress::factory().name().into(),
                 config: serde_yaml::from_str(yaml).unwrap(),
             }],
-            vec![Endpoint::new(
-                format!("127.0.0.1:{}", server_port).parse().unwrap(),
-            )],
+            vec![Endpoint::new((Ipv4Addr::LOCALHOST, server_port).into())],
         )
         .build();
     // Run client proxy.
@@ -74,7 +72,7 @@ on_write: DECOMPRESS
     let (mut rx, tx) = t.open_socket_and_recv_multiple_packets().await;
 
     // game_client
-    let local_addr: SocketAddr = format!("127.0.0.1:{}", client_port).parse().unwrap();
+    let local_addr = SocketAddr::from((Ipv4Addr::LOCALHOST, client_port));
     tracing::info!(address = %local_addr, "Sending hello");
     tx.send_to(b"hello", &local_addr).await.unwrap();
 
