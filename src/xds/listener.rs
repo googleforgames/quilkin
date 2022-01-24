@@ -411,7 +411,7 @@ mod tests {
         for (i, (filter, expected_payload)) in test_cases.into_iter().enumerate() {
             // Send a response with a filter chain.
             let lds_listener = create_lds_listener(
-                format!("test-listener-{}", i),
+                format!("test-listener-{i}"),
                 vec![create_lds_filter_chain(filter)],
             );
             let mut buf = vec![];
@@ -421,7 +421,7 @@ mod tests {
                 value: buf,
             };
 
-            let (version_info, nonce) = (format!("version-{}", i), format!("nonce-{}", i));
+            let (version_info, nonce) = (format!("version-{i}"), format!("nonce-{i}"));
             // Send the proto message as a DiscoveryResponse to the manager.
             manager
                 .on_listener_response(DiscoveryResponse {

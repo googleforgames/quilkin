@@ -282,7 +282,7 @@ dynamic:
         // Open a socket we can use to talk to the proxy and receive response back on.
         let (mut response_rx, socket) = t.open_socket_and_recv_multiple_packets().await;
 
-        let expected_response = format!("a{}{}", b1, b2);
+        let expected_response = format!("a{b1}{b2}");
         let mut interval = time::interval(Duration::from_millis(10));
         loop {
             // Send a packet, it should be suffixed with the new filter configs.

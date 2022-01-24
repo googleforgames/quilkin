@@ -49,7 +49,7 @@ pub fn histogram_opts(
 
 /// Create a generic metrics options for a filter.
 pub fn filter_opts(name: &str, filter_name: &str, description: &str) -> Opts {
-    opts(name, &format!("filter_{}", filter_name), description)
+    opts(name, &format!("filter_{filter_name}"), description)
 }
 
 /// Registers the current metric collector with the provided registry.

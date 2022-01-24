@@ -281,7 +281,7 @@ period: 0
             })
             .err()
             .unwrap();
-        assert!(format!("{:?}", err).contains("value must be at least 1 second"));
+        assert!(format!("{err:?}").contains("value must be at least 1 second"));
     }
 
     #[test]

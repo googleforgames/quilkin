@@ -15,7 +15,7 @@
  */
 
 ///! Complex integration tests that incorporate multiple elements
-use std::{net::SocketAddr, str::from_utf8};
+use std::{net::Ipv4Addr, str::from_utf8};
 
 use tokio::time::{timeout, Duration};
 
@@ -81,7 +81,7 @@ on_write: DECOMPRESS
     // let's send the packet
     let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
 
-    let local_addr: SocketAddr = format!("127.0.0.1:{}", server_port).parse().unwrap();
+    let local_addr = (Ipv4Addr::LOCALHOST, server_port);
     socket.send_to(b"hello", &local_addr).await.unwrap();
 
     assert_eq!(

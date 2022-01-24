@@ -61,9 +61,7 @@ impl ConfigType<'_> {
                 .and_then(|raw_config| serde_yaml::from_str::<Static>(raw_config.as_str()))
                 .map_err(|err| {
                     Error::DeserializeFailed(format!(
-                        "filter `{}`: failed to YAML deserialize config: {}",
-                        filter_name,
-                        err.to_string()
+                        "filter `{filter_name}`: failed to YAML deserialize config: {err}",
                     ))
                 })
                 .and_then(|config| {
@@ -73,9 +71,7 @@ impl ConfigType<'_> {
             ConfigType::Dynamic(config) => prost::Message::decode(Bytes::from(config.value))
                 .map_err(|err| {
                     Error::DeserializeFailed(format!(
-                        "filter `{}`: config decode error: {}",
-                        filter_name,
-                        err.to_string()
+                        "filter `{filter_name}`: config decode error: {err}",
                     ))
                 })
                 .and_then(|config| Static::try_from(config).map_err(Error::ConvertProtoConfig))
@@ -93,9 +89,7 @@ impl ConfigType<'_> {
     {
         serde_json::to_value(config).map_err(|err| {
             Error::DeserializeFailed(format!(
-                "filter `{}`: failed to serialize config to json: {}",
-                filter_name,
-                err.to_string()
+                "filter `{filter_name}`: failed to serialize config to json: {err}",
             ))
         })
     }

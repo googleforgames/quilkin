@@ -301,7 +301,7 @@ pub fn config_with_dummy_endpoint() -> ConfigBuilder {
 /// Creates a dummy endpoint with `id` as a suffix.
 pub fn ep(id: u8) -> Endpoint {
     Endpoint {
-        address: format!("127.0.0.{}:8080", id).parse().unwrap(),
+        address: ([127, 0, 0, id], 8080).into(),
         ..<_>::default()
     }
 }

@@ -61,7 +61,7 @@ pub(crate) fn handle_request(
         }
         Err(err) => {
             *response.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
-            *response.body_mut() = Body::from(format!("failed to create config dump: {}", err));
+            *response.body_mut() = Body::from(format!("failed to create config dump: {err}"));
         }
     }
 

@@ -339,8 +339,8 @@ impl<'a> Iterator for UpstreamEndpointsIter<'a> {
 mod tests {
     use super::*;
 
-    fn ep(id: usize) -> Endpoint {
-        Endpoint::new(format!("127.0.0.{}:8080", id).parse().unwrap())
+    fn ep(id: u8) -> Endpoint {
+        Endpoint::new(([127, 0, 0, id], 8080u16).into())
     }
 
     #[test]
@@ -392,7 +392,7 @@ mod tests {
 
         let mut up: UpstreamEndpoints = Endpoints::new(initial_endpoints.clone()).unwrap().into();
 
-        let items = up.retain(|ep| ep.address.to_string().as_str() != "127.0.0.2:8080");
+        let items = up.retain(|ep| ep.address != ([127, 0, 0, 2], 8080).into());
         assert!(matches!(items, RetainedItems::Some(3)));
         assert_eq!(up.size(), 3);
         assert_eq!(
@@ -400,7 +400,7 @@ mod tests {
             up.iter().cloned().collect::<Vec<_>>()
         );
 
-        let items = up.retain(|ep| ep.address.to_string().as_str() != "127.0.0.3:8080");
+        let items = up.retain(|ep| ep.address != ([127, 0, 0, 3], 8080).into());
         assert!(matches!(items, RetainedItems::Some(2)));
         assert_eq!(up.size(), 2);
         assert_eq!(vec![ep(1), ep(4)], up.iter().cloned().collect::<Vec<_>>());
