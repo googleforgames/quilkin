@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src&#x2F;xds&#x2F;cluster.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>cluster.rs - source</title><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled ><script id="default-settings" ></script><script src="../../../storage.js"></script><script src="../../../crates.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"><style type="text/css">#crate-search{background-image:url("../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../../quilkin/index.html'><div class='logo-container rust-logo'><img src='../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../../wheel.svg"></a></div></form></nav><section id="main" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">   1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src&#x2F;xds&#x2F;cluster.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>cluster.rs - source</title><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled ><script id="default-settings" ></script><script src="../../../storage.js"></script><script src="../../../crates.js"></script><script defer src="../../../main.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script>
+    <noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"><style type="text/css">#crate-search{background-image:url("../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../../quilkin/index.html'><div class='logo-container rust-logo'><img src='../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../../wheel.svg"></a></div></form></nav><section id="main" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">   1</span>
 <span id="2">   2</span>
 <span id="3">   3</span>
 <span id="4">   4</span>
@@ -1012,7 +1013,6 @@
 <span id="1012">1012</span>
 <span id="1013">1013</span>
 <span id="1014">1014</span>
-<span id="1015">1015</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -1094,7 +1094,7 @@
 
     <span class="doccomment">/// Processes a CDS response and updates its cluster view if needed.</span>
     <span class="doccomment">/// This method is called upon receiving a `CDS` `DiscoveryResponse` from the XDS server.</span>
-    <span class="kw">pub</span>(<span class="kw">in</span> <span class="ident"><span class="kw">crate</span>::xds</span>) <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">on_cluster_response</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">response</span>: <span class="ident">DiscoveryResponse</span>) {
+    <span class="kw">pub</span>(<span class="kw">in</span> <span class="ident"><span class="kw">crate</span>::xds</span>) <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">on_cluster_response</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">response</span>: <span class="ident">DiscoveryResponse</span>) {
         <span class="macro">tracing::debug!</span>(
             <span class="string">&quot;{}: received response containing {} resource(s)&quot;</span>,
             <span class="ident">CLUSTER_TYPE</span>,
@@ -1112,7 +1112,7 @@
     }
 
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_cluster_response</span>(
-        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
+        <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
         <span class="ident">resources</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">prost_types::Any</span><span class="op">&gt;</span>,
     ) -&gt; <span class="ident"><span class="kw">crate</span>::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">temp_cluster_set</span> <span class="op">=</span> <span class="ident">HashMap::new</span>();
@@ -1148,7 +1148,7 @@
         }
 
         <span class="comment">// Update to the new cluster set.</span>
-        <span class="ident">std::mem::swap</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">temp_cluster_set</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">clusters</span>);
+        <span class="ident">std::mem::swap</span>(<span class="kw-2">&amp;mut</span> <span class="ident">temp_cluster_set</span>, <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">clusters</span>);
 
         <span class="comment">// Send the new cluster set downstream.</span>
         <span class="self">self</span>.<span class="ident">send_cluster_update</span>().<span class="kw">await</span>;
@@ -1176,7 +1176,7 @@
     <span class="doccomment">/// Processes an EDS response and updates its endpoint view if needed.</span>
     <span class="doccomment">/// This method is called upon receiving an `EDS` `DiscoveryResponse` from the XDS server.</span>
     <span class="kw">pub</span>(<span class="kw">in</span> <span class="ident"><span class="kw">crate</span>::xds</span>) <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">on_cluster_load_assignment_response</span>(
-        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
+        <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
         <span class="ident">response</span>: <span class="ident">DiscoveryResponse</span>,
     ) {
         <span class="macro">tracing::debug!</span>(
@@ -1203,7 +1203,7 @@
     }
 
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_cluster_load_assignment_response</span>(
-        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
+        <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
         <span class="ident">resources</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">prost_types::Any</span><span class="op">&gt;</span>,
     ) -&gt; <span class="ident"><span class="kw">crate</span>::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">for</span> <span class="ident">resource</span> <span class="kw">in</span> <span class="ident">resources</span> {
@@ -1236,7 +1236,7 @@
     }
 
     <span class="comment">// Send the current cluster state downstream.</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">send_cluster_update</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">send_cluster_update</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) {
         <span class="self">self</span>.<span class="ident">cluster_updates_tx</span>
             .<span class="ident">send</span>(<span class="self">self</span>.<span class="ident">clusters</span>.<span class="ident">clone</span>())
             .<span class="kw">await</span>
@@ -1314,7 +1314,7 @@
 
     <span class="comment">// Send a CDS ACK/NACK request to the server.</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">send_cluster_discovery_req</span>(
-        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
+        <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
         <span class="ident">version_info</span>: <span class="ident">String</span>,
         <span class="ident">response_nonce</span>: <span class="ident">String</span>,
         <span class="ident">error_message</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
@@ -1331,7 +1331,7 @@
 
     <span class="comment">// Send an EDS ACK/NACK request to the server.</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">send_cluster_load_assignment_discovery_req</span>(
-        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
+        <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
         <span class="ident">version_info</span>: <span class="ident">String</span>,
         <span class="ident">response_nonce</span>: <span class="ident">String</span>,
         <span class="ident">error_message</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
@@ -1348,7 +1348,7 @@
 
     <span class="comment">// Send a DiscoveryRequest ACK/NACK back to the server for the given version and nonce.</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">send_discovery_req</span>(
-        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
+        <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
         <span class="ident">type_url</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>,
         <span class="ident">version_info</span>: <span class="ident">String</span>,
         <span class="ident">response_nonce</span>: <span class="ident">String</span>,
@@ -1361,7 +1361,7 @@
             <span class="ident">response_nonce</span>,
             <span class="ident">error_message</span>,
             <span class="ident">resource_names</span>,
-            <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">discovery_req_tx</span>,
+            <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">discovery_req_tx</span>,
         )
         .<span class="kw">await</span>
     }
@@ -1386,7 +1386,6 @@
     <span class="kw">use</span> <span class="ident">prost_types::Struct</span> <span class="kw">as</span> <span class="ident">ProstStruct</span>;
     <span class="kw">use</span> <span class="ident">prost_types::Value</span> <span class="kw">as</span> <span class="ident">ProstValue</span>;
     <span class="kw">use</span> <span class="ident">std::collections</span>::{<span class="ident">HashMap</span>, <span class="ident">HashSet</span>};
-    <span class="kw">use</span> <span class="ident">std::net::SocketAddr</span>;
     <span class="kw">use</span> <span class="ident">tokio::sync::mpsc</span>;
 
     <span class="kw">type</span> <span class="ident">ClusterState</span> <span class="op">=</span> <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">ProxyCluster</span><span class="op">&gt;</span>;
@@ -1406,7 +1405,7 @@
 
         <span class="comment">// Check that we send both endpoint and cluster watch requests.</span>
         <span class="kw">let</span> (<span class="ident">cluster_req</span>, <span class="ident">endpoint_req</span>) <span class="op">=</span>
-            <span class="ident">recv_cluster_and_endpoint_reqs</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">discovery_req_rx</span>).<span class="kw">await</span>;
+            <span class="ident">recv_cluster_and_endpoint_reqs</span>(<span class="kw-2">&amp;mut</span> <span class="ident">discovery_req_rx</span>).<span class="kw">await</span>;
         <span class="ident">assert_ack_req</span>(<span class="kw-2">&amp;</span><span class="ident">cluster_req</span>);
         <span class="ident">assert_ack_req</span>(<span class="kw-2">&amp;</span><span class="ident">endpoint_req</span>);
 
@@ -1423,7 +1422,7 @@
 
         <span class="comment">// Check that the new cluster is included in the endpoint watch request.</span>
         <span class="kw">let</span> (<span class="ident">cluster_req</span>, <span class="ident">endpoint_req</span>) <span class="op">=</span>
-            <span class="ident">recv_cluster_and_endpoint_reqs</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">discovery_req_rx</span>).<span class="kw">await</span>;
+            <span class="ident">recv_cluster_and_endpoint_reqs</span>(<span class="kw-2">&amp;mut</span> <span class="ident">discovery_req_rx</span>).<span class="kw">await</span>;
         <span class="ident">assert_ack_req</span>(<span class="kw-2">&amp;</span><span class="ident">cluster_req</span>);
         <span class="ident">assert_ack_req</span>(<span class="kw-2">&amp;</span><span class="ident">endpoint_req</span>);
 
@@ -1446,19 +1445,17 @@
         <span class="ident">cm</span>.<span class="ident">on_cluster_response</span>(<span class="ident">cluster_discovery_response</span>(<span class="string">&quot;3&quot;</span>, <span class="string">&quot;6&quot;</span>, <span class="ident">names</span>.<span class="ident">clone</span>()))
             .<span class="kw">await</span>;
 
-        <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">recv_cluster_and_endpoint_reqs</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">discovery_req_rx</span>).<span class="kw">await</span>;
+        <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">recv_cluster_and_endpoint_reqs</span>(<span class="kw-2">&amp;mut</span> <span class="ident">discovery_req_rx</span>).<span class="kw">await</span>;
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">version</span> <span class="op">=</span> <span class="number">4</span>;
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">nonce</span> <span class="op">=</span> <span class="number">9</span>;
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">version</span> <span class="op">=</span> <span class="number">4u8</span>;
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">nonce</span> <span class="op">=</span> <span class="number">9u8</span>;
         <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="number">3</span> {
             <span class="kw">let</span> <span class="ident">v</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">version</span>.<span class="ident">to_string</span>();
             <span class="kw">let</span> <span class="ident">n</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">nonce</span>.<span class="ident">to_string</span>();
 
-            <span class="kw">let</span> <span class="ident">new_address</span> <span class="op">=</span> <span class="macro">format!</span>(<span class="string">&quot;127.0.0.{}&quot;</span>, <span class="ident">nonce</span>);
-            <span class="kw">let</span> <span class="ident">new_port</span> <span class="op">=</span> <span class="number">2020</span> <span class="op">+</span> <span class="ident">nonce</span>;
-            <span class="kw">let</span> <span class="ident">expected_socket_addr</span> <span class="op">=</span> <span class="macro">format!</span>(<span class="string">&quot;{}:{}&quot;</span>, <span class="ident">new_address</span>, <span class="ident">new_port</span>)
-                .<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">SocketAddr</span><span class="op">&gt;</span>()
-                .<span class="ident">unwrap</span>();
+            <span class="kw">let</span> <span class="ident">new_address</span> <span class="op">=</span> <span class="ident">std::net::Ipv4Addr::from</span>([<span class="number">127</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="ident">nonce</span>]);
+            <span class="kw">let</span> <span class="ident">new_port</span> <span class="op">=</span> <span class="number">2020</span> <span class="op">+</span> <span class="ident">nonce</span> <span class="kw">as</span> <span class="ident">u16</span>;
+            <span class="kw">let</span> <span class="ident">expected_socket_addr</span> <span class="op">=</span> (<span class="ident">new_address</span>, <span class="ident">new_port</span>);
             <span class="ident">cm</span>.<span class="ident">on_cluster_load_assignment_response</span>(<span class="ident">endpoint_discovery_response_with_update</span>(
                 <span class="ident">v</span>,
                 <span class="ident">n</span>,
@@ -1470,10 +1467,12 @@
                                 <span class="ident">address</span>: <span class="prelude-val">Some</span>(<span class="ident">Address</span> {
                                     <span class="ident">address</span>: <span class="prelude-val">Some</span>(<span class="ident">address::Address::SocketAddress</span>(<span class="ident">SocketAddress</span> {
                                         <span class="ident">protocol</span>: <span class="number">1</span>,
-                                        <span class="ident">address</span>: <span class="ident">new_address</span>.<span class="ident">clone</span>(),
+                                        <span class="ident">address</span>: <span class="ident">new_address</span>.<span class="ident">to_string</span>(),
                                         <span class="ident">resolver_name</span>: <span class="string">&quot;&quot;</span>.<span class="ident">into</span>(),
                                         <span class="ident">ipv4_compat</span>: <span class="bool-val">true</span>,
-                                        <span class="ident">port_specifier</span>: <span class="prelude-val">Some</span>(<span class="ident">PortSpecifier::PortValue</span>(<span class="ident">new_port</span>)),
+                                        <span class="ident">port_specifier</span>: <span class="prelude-val">Some</span>(<span class="ident">PortSpecifier::PortValue</span>(
+                                            <span class="ident">new_port</span> <span class="kw">as</span> <span class="ident">u32</span>,
+                                        )),
                                     })),
                                 }),
                                 <span class="ident">health_check_config</span>: <span class="prelude-val">None</span>,
@@ -1530,7 +1529,7 @@
         <span class="ident">cm</span>.<span class="ident">on_cluster_response</span>(<span class="ident">cluster_discovery_response</span>(<span class="string">&quot;3&quot;</span>, <span class="string">&quot;6&quot;</span>, <span class="ident">names</span>.<span class="ident">clone</span>()))
             .<span class="kw">await</span>;
 
-        <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">recv_cluster_and_endpoint_reqs</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">discovery_req_rx</span>).<span class="kw">await</span>;
+        <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">recv_cluster_and_endpoint_reqs</span>(<span class="kw-2">&amp;mut</span> <span class="ident">discovery_req_rx</span>).<span class="kw">await</span>;
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">version</span> <span class="op">=</span> <span class="number">4</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">nonce</span> <span class="op">=</span> <span class="number">9</span>;
@@ -1566,7 +1565,7 @@
         <span class="ident">cm</span>.<span class="ident">on_cluster_response</span>(<span class="ident">cluster_discovery_response</span>(<span class="string">&quot;1&quot;</span>, <span class="string">&quot;2&quot;</span>, <span class="ident">initial_names</span>.<span class="ident">clone</span>()))
             .<span class="kw">await</span>;
 
-        <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">recv_cluster_and_endpoint_reqs</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">discovery_req_rx</span>).<span class="kw">await</span>;
+        <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">recv_cluster_and_endpoint_reqs</span>(<span class="kw-2">&amp;mut</span> <span class="ident">discovery_req_rx</span>).<span class="kw">await</span>;
 
         <span class="kw">let</span> <span class="ident">bad_cluster_update</span> <span class="op">=</span> <span class="ident">cluster_discovery_response_with_update</span>(
             <span class="string">&quot;1&quot;</span>,
@@ -1600,7 +1599,7 @@
         ))
         .<span class="kw">await</span>;
 
-        <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">recv_cluster_and_endpoint_reqs</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">discovery_req_rx</span>).<span class="kw">await</span>;
+        <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">recv_cluster_and_endpoint_reqs</span>(<span class="kw-2">&amp;mut</span> <span class="ident">discovery_req_rx</span>).<span class="kw">await</span>;
 
         <span class="kw">let</span> <span class="ident">bad_endpoint_update</span> <span class="op">=</span> <span class="ident">endpoint_discovery_response_with_update</span>(
             <span class="string">&quot;9&quot;</span>,
@@ -1809,7 +1808,7 @@
         <span class="macro">assert_eq!</span>(<span class="ident">dyn_metadata</span>.<span class="ident">len</span>(), <span class="number">1</span>);
 
         <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">dyn_metadata</span>
-            .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;key-{}&quot;</span>, <span class="ident">cluster_name</span>).<span class="ident">into</span>())
+            .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;key-{cluster_name}&quot;</span>).<span class="ident">into</span>())
             .<span class="ident">unwrap</span>();
         <span class="macro">assert_eq!</span>(
             <span class="ident">value</span>,
@@ -1924,7 +1923,7 @@
             .<span class="ident">map</span>(<span class="op">|</span><span class="ident">name</span><span class="op">|</span> {
                 <span class="kw">let</span> <span class="ident">cluster</span> <span class="op">=</span> <span class="ident">update_fn</span>(<span class="ident">create_cluster_resource</span>(<span class="kw-2">&amp;</span><span class="ident">name</span>));
                 <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">value</span> <span class="op">=</span> <span class="macro">vec!</span>[];
-                <span class="ident">cluster</span>.<span class="ident">encode</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">value</span>).<span class="ident">unwrap</span>();
+                <span class="ident">cluster</span>.<span class="ident">encode</span>(<span class="kw-2">&amp;mut</span> <span class="ident">value</span>).<span class="ident">unwrap</span>();
                 <span class="ident">prost_types::Any</span> {
                     <span class="ident">type_url</span>: <span class="ident">CLUSTER_TYPE</span>.<span class="ident">into</span>(),
                     <span class="ident">value</span>,
@@ -1964,7 +1963,7 @@
             .<span class="ident">map</span>(<span class="op">|</span><span class="ident">name</span><span class="op">|</span> {
                 <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="ident">update_fn</span>(<span class="ident">create_endpoint_resource</span>(<span class="kw-2">&amp;</span><span class="ident">name</span>));
                 <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">value</span> <span class="op">=</span> <span class="macro">vec!</span>[];
-                <span class="ident">endpoint</span>.<span class="ident">encode</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">value</span>).<span class="ident">unwrap</span>();
+                <span class="ident">endpoint</span>.<span class="ident">encode</span>(<span class="kw-2">&amp;mut</span> <span class="ident">value</span>).<span class="ident">unwrap</span>();
                 <span class="ident">prost_types::Any</span> {
                     <span class="ident">type_url</span>: <span class="ident">ENDPOINT_TYPE</span>.<span class="ident">into</span>(),
                     <span class="ident">value</span>,
@@ -1983,7 +1982,7 @@
     }
 
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">recv_cluster_and_endpoint_reqs</span>(
-        <span class="ident">discovery_req_rx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">mpsc::Receiver</span><span class="op">&lt;</span><span class="ident">DiscoveryRequest</span><span class="op">&gt;</span>,
+        <span class="ident">discovery_req_rx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">mpsc::Receiver</span><span class="op">&lt;</span><span class="ident">DiscoveryRequest</span><span class="op">&gt;</span>,
     ) -&gt; (<span class="ident">DiscoveryRequest</span>, <span class="ident">DiscoveryRequest</span>) {
         <span class="kw">let</span> <span class="ident">a</span> <span class="op">=</span> <span class="ident">discovery_req_rx</span>.<span class="ident">recv</span>().<span class="kw">await</span>.<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="ident">b</span> <span class="op">=</span> <span class="ident">discovery_req_rx</span>.<span class="ident">recv</span>().<span class="kw">await</span>.<span class="ident">unwrap</span>();
@@ -2030,5 +2029,4 @@
 }
 </code></pre></div>
 </section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="quilkin" data-search-index-js="../../../search-index.js" data-search-js="../../../search.js"></div>
-    <script src="../../../main.js"></script><script src="../../../source-script.js"></script><script src="../../../source-files.js"></script>
 </body></html>
