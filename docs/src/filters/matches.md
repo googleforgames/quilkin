@@ -40,6 +40,4 @@ static:
 # quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
 ```
 
-View the [Matches](./matches.md) filter documentation for more details.
-
-### [Configuration Options](../../api/quilkin/filters/matches/struct.Config.html)
+View the [Matches](../../api/quilkin/filters/matches/struct.Config.html) filter documentation for more details.
