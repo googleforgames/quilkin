@@ -148,6 +148,7 @@ impl FilterChain {
 }
 
 impl Filter for FilterChain {
+    #[tracing::instrument(skip(self, ctx))]
     fn read(&self, ctx: ReadContext) -> Option<ReadResponse> {
         self.filters
             .iter()
@@ -161,6 +162,7 @@ impl Filter for FilterChain {
             .map(ReadResponse::from)
     }
 
+    #[tracing::instrument(skip(self, ctx))]
     fn write(&self, ctx: WriteContext) -> Option<WriteResponse> {
         self.filters
             .iter()

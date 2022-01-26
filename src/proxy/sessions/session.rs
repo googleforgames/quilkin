@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-use prometheus::HistogramTimer;
 use std::{
     sync::{
         atomic::{AtomicU64, Ordering},
@@ -23,12 +22,14 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
+use prometheus::HistogramTimer;
 use tokio::{
     net::UdpSocket,
     select,
     sync::{mpsc, watch},
     time::{Duration, Instant},
 };
+use tracing::Instrument;
 
 use crate::{
     endpoint::{Endpoint, EndpointAddress},
@@ -153,11 +154,15 @@ impl Session {
             shutdown_tx,
         };
 
-        tracing::debug!(source = %s.source, dest = ?s.dest, "Session created");
+        let span = tracing::trace_span!("Session", source = %s.source, dest = %s.dest.address);
+        tracing::debug!(parent: &span, "Session created");
 
         s.metrics.sessions_total.inc();
         s.metrics.active_sessions.inc();
-        s.run(args.ttl, socket, args.sender, shutdown_rx);
+        tokio::spawn(
+            s.run(args.ttl, socket, args.sender, shutdown_rx)
+                .instrument(span),
+        );
         Ok(s)
     }
 
@@ -168,24 +173,23 @@ impl Session {
         socket: Arc<UdpSocket>,
         mut sender: mpsc::Sender<UpstreamPacket>,
         mut shutdown_rx: watch::Receiver<()>,
-    ) {
+    ) -> impl std::future::Future<Output = ()> {
         let source = self.source.clone();
         let expiration = self.expiration.clone();
         let filter_manager = self.filter_manager.clone();
         let endpoint = self.dest.clone();
         let metrics = self.metrics.clone();
         let proxy_metrics = self.proxy_metrics.clone();
-        tokio::spawn(async move {
+
+        async move {
             let mut buf: Vec<u8> = vec![0; 65535];
             loop {
-                tracing::debug!(source = %source, dest = ?endpoint, "Awaiting incoming packet");
-
                 select! {
-                    received = socket.recv_from(&mut buf) => {
+                    received = socket.recv_from(&mut buf).instrument(tracing::debug_span!("Awaiting incoming packet")) => {
                         match received {
                             Err(error) => {
                                 metrics.rx_errors_total.inc();
-                                tracing::error!(%error, %source, dest = ?endpoint, "Error receiving packet");
+                                tracing::error!(%error, %source, dest = %endpoint.address, "Error receiving packet");
                             },
                             Ok((size, recv_addr)) => {
                                 metrics.rx_bytes_total.inc_by(size as u64);
@@ -212,7 +216,7 @@ impl Session {
                     }
                 };
             }
-        });
+        }
     }
 
     /// expiration returns the current expiration Instant value
@@ -229,6 +233,7 @@ impl Session {
     }
 
     /// process_recv_packet processes a packet that is received by this session.
+    #[tracing::instrument(skip_all)]
     async fn process_recv_packet(
         metrics: &Metrics,
         sender: &mut mpsc::Sender<UpstreamPacket>,
@@ -245,7 +250,7 @@ impl Session {
             timer,
         } = packet_ctx;
 
-        tracing::trace!(%from, dest = %endpoint.address, contents = %debug::bytes_to_string(packet), "Received packet");
+        tracing::trace!(contents = %debug::bytes_to_string(packet), "Received packet");
 
         if let Err(error) = Session::do_update_expiration(expiration, ttl) {
             tracing::warn!(%error, "Error updating session expiration")
@@ -263,7 +268,11 @@ impl Session {
                 to.clone(),
                 packet.to_vec(),
             ))
-            .map(|response| sender.send(UpstreamPacket::new(to, response.contents, timer)))
+            .map(|response| {
+                sender
+                    .send(UpstreamPacket::new(to, response.contents, timer))
+                    .instrument(tracing::trace_span!("Sending packet"))
+            })
             .into();
 
         if let Some(Err(error)) = write_result.await {
@@ -280,6 +289,7 @@ impl Session {
     }
 
     /// do_update_expiration increments the expiration value by the session timeout (internal)
+    #[tracing::instrument(level = "trace")]
     fn do_update_expiration(expiration: &Arc<AtomicU64>, ttl: Duration) -> Result<()> {
         let new_expiration_time = SystemTime::now()
             .checked_add(ttl)
@@ -303,12 +313,8 @@ impl Session {
     }
 
     /// Sends a packet to the Session's dest.
+    #[tracing::instrument(skip_all, level = "trace")]
     pub async fn send(&self, buf: &[u8]) -> crate::Result<Option<usize>> {
-        tracing::trace!(
-        dest_address = %self.dest.address,
-        contents = %debug::bytes_to_string(buf),
-        "Sending packet");
-
         self.do_send(buf)
             .await
             .map(|size| {
@@ -343,7 +349,7 @@ impl Drop for Session {
             tracing::warn!(%error, "Error sending session shutdown signal");
         }
 
-        tracing::debug!(source = %self.source, dest_address = %self.dest.address, "Session closed");
+        tracing::debug!("Session closed");
     }
 }
 

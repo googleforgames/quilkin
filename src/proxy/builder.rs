@@ -109,6 +109,7 @@ impl From<Arc<Config>> for Builder<PendingValidation> {
 }
 
 impl ValidatedConfig {
+    #[tracing::instrument(skip_all)]
     fn validate(
         config: Arc<Config>,
         filter_registry: &FilterRegistry,

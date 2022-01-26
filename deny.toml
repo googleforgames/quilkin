@@ -20,6 +20,8 @@
 ignore = [
     "RUSTSEC-2020-0071",
     "RUSTSEC-2020-0159",
+    # Inferno (dev-dependency)'s DashMap, not in main binary.
+    "RUSTSEC-2022-0002",
 ]
 
 # This section is considered when running `cargo deny check licenses`
@@ -32,5 +34,5 @@ default = "allow"
 exceptions = [
     # Each entry is the crate and version constraint, and its specific allow
     # list
-    { allow = ["MPL-2.0"], name = "slog-json", version = "*" },
+    { allow = ["CDDL-1.0"], name = "inferno", version = "*" },
 ]

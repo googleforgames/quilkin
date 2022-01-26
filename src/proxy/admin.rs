@@ -50,6 +50,7 @@ impl Admin {
         }
     }
 
+    #[tracing::instrument(skip_all, level = "trace")]
     pub(crate) fn run(
         &self,
         cluster_manager: SharedClusterManager,

@@ -24,11 +24,28 @@ const PACKETS: &[&[u8]] = &[
     &[0xffu8; 1500],
 ];
 
+const FLAMEGRAPH_STACKLINES: &str = concat!(env!("CARGO_TARGET_TMPDIR"), "/flamegraph.folded");
+const FLAMEGRAPH_SVG: &str = concat!(env!("CARGO_TARGET_TMPDIR"), "/flamegraph.svg");
+
+fn setup_global_subscriber() -> impl Drop {
+    use tracing_flame::FlameLayer;
+    use tracing_subscriber::{prelude::*, registry::Registry};
+
+    let (flame_layer, _guard) = FlameLayer::with_file(FLAMEGRAPH_STACKLINES).unwrap();
+    let subscriber = Registry::default().with(flame_layer);
+
+    tracing::subscriber::set_global_default(subscriber).expect("Could not set global default");
+    _guard
+}
+
 /// Run and instance of quilkin that sends and received data
 /// from the given address.
 fn run_quilkin(port: u16, endpoint: SocketAddr) {
     std::thread::spawn(move || {
-        let runtime = tokio::runtime::Runtime::new().unwrap();
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
         let config = quilkin::config::Builder::empty()
             .with_port(port)
             .with_admin(Admin {
@@ -74,6 +91,7 @@ static FEEDBACK_LOOP: Lazy<()> = Lazy::new(|| {
 });
 
 fn throughput_benchmark(c: &mut Criterion) {
+    let flame_guard = setup_global_subscriber();
     Lazy::force(&FEEDBACK_LOOP);
     Lazy::force(&THROUGHPUT_SERVER_INIT);
     // Sleep to give the servers some time to warm-up.
@@ -108,6 +126,15 @@ fn throughput_benchmark(c: &mut Criterion) {
         );
     }
     group.finish();
+
+    drop(flame_guard);
+
+    inferno::flamegraph::from_files(
+        &mut inferno::flamegraph::Options::default(),
+        &[FLAMEGRAPH_STACKLINES.into()],
+        std::fs::File::create(FLAMEGRAPH_SVG).unwrap(),
+    )
+    .unwrap();
 }
 
 const WRITE_LOOP_ADDR: &str = "127.0.0.1:8003";
