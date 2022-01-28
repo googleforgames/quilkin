@@ -45,7 +45,7 @@ base64 = "0.13.0"
 base64-serde = "0.6.1"
 bytes = "1.1.0"
 clap = { version = "3", features = ["cargo"] }
-dashmap = "5"
+dashmap = "4.0.2"
 either = "1.6.1"
 hyper = "0.14.15"
 num_cpus = "1.13.0"
