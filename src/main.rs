@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-use clap::{App, AppSettings, Arg, SubCommand};
+use clap::{App, AppSettings, Arg};
 use std::sync::Arc;
 use tracing::info;
 
@@ -30,8 +30,8 @@ async fn main() -> quilkin::Result<()> {
         VERSION.into()
     };
 
-    let config_arg = Arg::with_name("config")
-        .short("c")
+    let config_arg = Arg::new("config")
+        .short('c')
         .long("config")
         .value_name("CONFIG")
         .help("The YAML configuration file")
@@ -40,10 +40,9 @@ async fn main() -> quilkin::Result<()> {
     let cli = App::new(clap::crate_name!())
         .version(&*version)
         .about(clap::crate_description!())
-        .setting(AppSettings::VersionlessSubcommands)
         .setting(AppSettings::SubcommandRequiredElseHelp)
         .subcommand(
-            SubCommand::with_name("run")
+            App::new("run")
                 .about("Start Quilkin process.")
                 .arg(config_arg.clone()),
         )
@@ -51,12 +50,13 @@ async fn main() -> quilkin::Result<()> {
 
     info!(version = &*version, "Starting Quilkin");
     match cli.subcommand() {
-        ("run", Some(matches)) => {
+        Some(("run", matches)) => {
             let config = quilkin::config::Config::find(matches.value_of("config")).map(Arc::new)?;
 
             quilkin::run_with_config(config, vec![]).await
         }
 
-        (_, _) => unreachable!(),
+        Some((cmd, _)) => panic!("Unimplemented subcommand: {}", cmd),
+        None => unreachable!(),
     }
 }
