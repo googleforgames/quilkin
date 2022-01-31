@@ -29,11 +29,7 @@ static:
 ### Configuration Options ([Rust Doc](../../api/quilkin/filters/debug/struct.Config.html))
 
 ```yaml
-properties:
-  id:
-    type: string
-    description: |
-      An identifier that will be included with each log message.
+{{#include ../../../target/quilkin.extensions.filters.debug.v1alpha1.yaml}}
 ```
 
 

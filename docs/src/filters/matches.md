@@ -40,4 +40,10 @@ static:
 # quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
 ```
 
+### Configuration Options ([Rust Doc](../../api/quilkin/filters/matches/struct.Config.html))
+
+```yaml
+{{#include ../../../target/quilkin.extensions.filters.matches.v1alpha1.yaml}}
+```
+
 View the [Matches](../../api/quilkin/filters/matches/struct.Config.html) filter documentation for more details.

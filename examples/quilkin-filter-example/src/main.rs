@@ -24,7 +24,7 @@ use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 
 // ANCHOR: serde_config
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, schemars::JsonSchema)]
 struct Config {
     greeting: String,
 }
@@ -71,6 +71,11 @@ impl FilterFactory for GreetFilterFactory {
     fn name(&self) -> &'static str {
         NAME
     }
+
+    fn config_schema(&self) -> schemars::schema::RootSchema {
+        schemars::schema_for!(Config)
+    }
+
     fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
         let (config_json, config) = self
             .require_config(args.config)?
@@ -84,8 +89,11 @@ impl FilterFactory for GreetFilterFactory {
 // ANCHOR: run
 #[tokio::main]
 async fn main() {
-    quilkin::run(vec![self::factory()].into_iter())
-        .await
-        .unwrap();
+    quilkin::run(
+        quilkin::Config::builder().build(),
+        vec![self::factory()].into_iter(),
+    )
+    .await
+    .unwrap();
 }
 // ANCHOR_END: run

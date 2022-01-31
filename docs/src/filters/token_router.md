@@ -43,12 +43,7 @@ View the [CaptureBytes](./capture.md) filter documentation for more details.
 ### Configuration Options ([Rust Doc](../../api/quilkin/filters/token_router/struct.Config.html))
 
 ```yaml
-properties:
-  metadataKey:
-    type: string
-    default: quilkin.dev/captured
-    description: | 
-      The key under which the token is stored in the Filter dynamic metadata.
+{{#include ../../../target/quilkin.extensions.filters.token_router.v1alpha1.yaml}}
 ```
 
 ### Metrics

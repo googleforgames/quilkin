@@ -111,6 +111,11 @@ impl FilterFactory for GreetFilterFactory {
     fn name(&self) -> &'static str {
         NAME
     }
+
+    fn config_schema(&self) -> schemars::schema::RootSchema {
+        schemars::schema_for!(serde_json::Value)
+    }
+
     fn create_filter(&self, _: CreateFilterArgs) -> Result<FilterInstance, Error> {
         let filter: Box<dyn Filter> = Box::new(Greet);
         Ok(FilterInstance::new(serde_json::Value::Null, filter))
@@ -235,6 +240,11 @@ impl FilterFactory for GreetFilterFactory {
     fn name(&self) -> &'static str {
         NAME
     }
+
+    fn config_schema(&self) -> schemars::schema::RootSchema {
+        schemars::schema_for!(serde_json::Value)
+    }
+
     fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
         let config = match args.config.unwrap() {
           ConfigType::Static(config) => {

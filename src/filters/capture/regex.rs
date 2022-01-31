@@ -3,10 +3,11 @@ use crate::metadata::Value;
 use super::Metrics;
 
 /// Capture from the start of the packet.
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, schemars::JsonSchema)]
 pub struct Regex {
     /// The regular expression to use for capture.
     #[serde(with = "serde_regex")]
+    #[schemars(with = "String")]
     pub pattern: regex::bytes::Regex,
 }
 

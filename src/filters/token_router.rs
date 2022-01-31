@@ -72,6 +72,10 @@ impl FilterFactory for TokenRouterFactory {
         NAME
     }
 
+    fn config_schema(&self) -> schemars::schema::RootSchema {
+        schemars::schema_for!(Config)
+    }
+
     fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
         let (config_json, config) = args
             .config
@@ -142,7 +146,7 @@ impl Filter for TokenRouter {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, schemars::JsonSchema)]
 #[serde(default)]
 pub struct Config {
     /// the key to use when retrieving the token from the Filter's dynamic metadata

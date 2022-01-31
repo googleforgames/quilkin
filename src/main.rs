@@ -14,15 +14,55 @@
  * limitations under the License.
  */
 
-use clap::{Arg, Command};
-use std::sync::Arc;
+use std::path::PathBuf;
+
 use tracing::info;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
+#[derive(clap::Parser)]
+struct Cli {
+    #[clap(
+        short,
+        long,
+        env = "QUILKIN_CONFIG",
+        default_value = "quilkin.yaml",
+        help = "The YAML configuration file."
+    )]
+    config: PathBuf,
+    #[clap(
+        short,
+        long,
+        env,
+        help = "Whether Quilkin will report any results to stdout/stderr."
+    )]
+    quiet: bool,
+    #[clap(subcommand)]
+    command: Commands,
+}
+
+#[derive(clap::Subcommand)]
+enum Commands {
+    Run,
+    GenerateConfigSchema {
+        #[clap(
+            short,
+            long,
+            default_value = ".",
+            help = "The directory to write configuration files."
+        )]
+        output_directory: PathBuf,
+        #[clap(
+            min_values = 1,
+            default_value = "all",
+            help = "A list of one or more filter IDs to generate or 'all' to generate all available filter schemas."
+        )]
+        filter_ids: Vec<String>,
+    },
+}
+
 #[tokio::main]
 async fn main() -> quilkin::Result<()> {
-    tracing_subscriber::fmt().json().with_target(false).init();
     stable_eyre::install()?;
     let version: std::borrow::Cow<'static, str> = if cfg!(debug_assertions) {
         format!("{VERSION}+debug").into()
@@ -30,34 +70,66 @@ async fn main() -> quilkin::Result<()> {
         VERSION.into()
     };
 
-    let config_arg = Arg::new("config")
-        .short('c')
-        .long("config")
-        .value_name("CONFIG")
-        .help("The YAML configuration file")
-        .takes_value(true);
+    let cli = <Cli as clap::Parser>::parse();
 
-    let cli = Command::new(clap::crate_name!())
-        .version(&*version)
-        .about(clap::crate_description!())
-        .subcommand_required(true)
-        .arg_required_else_help(true)
-        .subcommand(
-            Command::new("run")
-                .about("Start Quilkin process.")
-                .arg(config_arg.clone()),
-        )
-        .get_matches();
+    if !cli.quiet {
+        tracing_subscriber::fmt().json().with_target(false).init();
+    }
 
     info!(version = &*version, "Starting Quilkin");
-    match cli.subcommand() {
-        Some(("run", matches)) => {
-            let config = quilkin::config::Config::find(matches.value_of("config")).map(Arc::new)?;
+    match cli.command {
+        Commands::Run => {
+            let config = std::fs::File::open(cli.config)
+                .or_else(|error| {
+                    if cfg!(unix) {
+                        std::fs::File::open("/etc/quilkin/quilkin.yaml")
+                    } else {
+                        Err(error)
+                    }
+                })
+                .map_err(eyre::Error::from)
+                .and_then(|file| quilkin::Config::from_reader(file).map_err(From::from))?;
 
-            quilkin::run_with_config(config, vec![]).await
+            quilkin::run(config, vec![]).await
         }
 
-        Some((cmd, _)) => panic!("Unimplemented subcommand: {}", cmd),
-        None => unreachable!(),
+        Commands::GenerateConfigSchema {
+            output_directory,
+            filter_ids,
+        } => {
+            let set = quilkin::filters::FilterSet::default();
+            type SchemaIterator<'r> =
+                Box<dyn Iterator<Item = (&'static str, schemars::schema::RootSchema)> + 'r>;
+
+            let schemas = (filter_ids.len() == 1 && filter_ids[0].to_lowercase() == "all")
+                .then(|| {
+                    Box::new(
+                        set.iter()
+                            .map(|factory| (factory.name(), factory.config_schema())),
+                    ) as SchemaIterator
+                })
+                .unwrap_or_else(|| {
+                    Box::new(filter_ids.iter().filter_map(|id| {
+                        let item = set.get(id);
+
+                        if item.is_none() {
+                            tracing::error!("{id} not found in filter set.");
+                        }
+
+                        item.map(|item| (item.name(), item.config_schema()))
+                    })) as SchemaIterator
+                });
+
+            for (id, schema) in schemas {
+                let mut path = output_directory.join(id);
+                path.set_extension("yaml");
+
+                tracing::info!("Writing {id} schema to {}", path.display());
+
+                std::fs::write(path, serde_yaml::to_string(&schema)?)?;
+            }
+
+            Ok(())
+        }
     }
 }

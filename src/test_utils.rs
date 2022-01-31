@@ -34,6 +34,10 @@ impl FilterFactory for TestFilterFactory {
         "TestFilter"
     }
 
+    fn config_schema(&self) -> schemars::schema::RootSchema {
+        schemars::schema_for_value!(serde_json::Value::Null)
+    }
+
     fn create_filter(&self, _: CreateFilterArgs) -> Result<FilterInstance, Error> {
         Ok(Self::create_empty_filter())
     }

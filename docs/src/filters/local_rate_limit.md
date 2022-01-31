@@ -42,21 +42,7 @@ To configure a rate limiter, we specify the maximum rate at which the proxy is a
 ### Configuration Options ([Rust Doc](../../api/quilkin/filters/local_rate_limit/struct.Config.html))
 
 ```yaml
-properties:
-  max_packets:
-    type: integer
-    description: |
-      The maximum number of packets allowed to be forwarded over the given duration.
-    minimum: 0
-
-  period:
-    type: string
-    description: |
-      The duration in seconds overwhich `max_packets` applies.
-    default: 1 # 1 second
-    minimum: 1
-
-required: [ 'max_packets' ]
+{{#include ../../../target/quilkin.extensions.filters.local_rate_limit.v1alpha1.yaml}}
 ```
 
 
