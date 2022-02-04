@@ -195,9 +195,9 @@
 }
 
 <span class="kw">impl</span> <span class="ident">ConvertProtoConfigError</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">reason</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>, <span class="ident">field</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">reason</span>: <span class="kw">impl</span> <span class="ident">std::fmt::Display</span>, <span class="ident">field</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
         <span class="self">Self</span> {
-            <span class="ident">reason</span>: <span class="ident">reason</span>.<span class="ident">into</span>(),
+            <span class="ident">reason</span>: <span class="ident">reason</span>.<span class="ident">to_string</span>(),
             <span class="ident">field</span>,
         }
     }

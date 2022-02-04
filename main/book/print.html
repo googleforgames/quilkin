@@ -1456,7 +1456,7 @@ impl FilterFactory for GreetFilterFactory {
     fn create_filter(&amp;self, args: CreateFilterArgs) -&gt; Result&lt;FilterInstance, Error&gt; {
         let config = match args.config.unwrap() {
           ConfigType::Static(config) =&gt; {
-              serde_yaml::from_str::&lt;Config&gt;(serde_yaml::to_string(config).unwrap().as_str())
+              serde_yaml::from_str::&lt;Config&gt;(serde_yaml::to_string(&amp;config).unwrap().as_str())
                 .unwrap()
           }
           ConfigType::Dynamic(_) =&gt; unimplemented!(&quot;dynamic config is not yet supported for this filter&quot;),
@@ -1484,7 +1484,7 @@ static:
 has a <a href="filters/../../api/quilkin/config/enum.ConfigType.html#variant.Dynamic">Dynamic</a> variant.</p>
 <pre><code class="language-rust ignore">let config = match args.config.unwrap() {
     ConfigType::Static(config) =&gt; {
-        serde_yaml::from_str::&lt;Config&gt;(serde_yaml::to_string(config).unwrap().as_str())
+        serde_yaml::from_str::&lt;Config&gt;(serde_yaml::to_string(&amp;config).unwrap().as_str())
          .unwrap()
     }
     ConfigType::Dynamic(_) =&gt; unimplemented!(&quot;dynamic config is not yet supported for this filter&quot;),

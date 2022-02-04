@@ -375,6 +375,13 @@
 <span id="374">374</span>
 <span id="375">375</span>
 <span id="376">376</span>
+<span id="377">377</span>
+<span id="378">378</span>
+<span id="379">379</span>
+<span id="380">380</span>
+<span id="381">381</span>
+<span id="382">382</span>
+<span id="383">383</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -567,7 +574,8 @@
         <span class="ident">default_metadata_key</span>, <span class="ident">Config</span>, <span class="ident">Metrics</span>, <span class="ident">ProtoConfig</span>, <span class="ident">TokenRouter</span>, <span class="ident">TokenRouterFactory</span>,
     };
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters</span>::{
-        <span class="ident">metadata::CAPTURED_BYTES</span>, <span class="ident">CreateFilterArgs</span>, <span class="ident">Filter</span>, <span class="ident">FilterFactory</span>, <span class="ident">ReadContext</span>,
+        <span class="ident">metadata::CAPTURED_BYTES</span>, <span class="ident">CreateFilterArgs</span>, <span class="ident">Filter</span>, <span class="ident">FilterFactory</span>, <span class="ident">FilterRegistry</span>,
+        <span class="ident">ReadContext</span>,
     };
 
     <span class="kw">const</span> <span class="ident">TOKEN_KEY</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;TOKEN&quot;</span>;
@@ -621,8 +629,9 @@
 
         <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">factory</span>
             .<span class="ident">create_filter</span>(<span class="ident">CreateFilterArgs::fixed</span>(
+                <span class="ident">FilterRegistry::default</span>(),
                 <span class="ident">Registry::default</span>(),
-                <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="ident">serde_yaml::Value::Mapping</span>(<span class="ident">map</span>)),
+                <span class="prelude-val">Some</span>(<span class="ident">serde_yaml::Value::Mapping</span>(<span class="ident">map</span>)),
             ))
             .<span class="ident">unwrap</span>()
             .<span class="ident">filter</span>;
@@ -641,8 +650,9 @@
 
         <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">factory</span>
             .<span class="ident">create_filter</span>(<span class="ident">CreateFilterArgs::fixed</span>(
+                <span class="ident">FilterRegistry::default</span>(),
                 <span class="ident">Registry::default</span>(),
-                <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="ident">serde_yaml::Value::Mapping</span>(<span class="ident">map</span>)),
+                <span class="prelude-val">Some</span>(<span class="ident">serde_yaml::Value::Mapping</span>(<span class="ident">map</span>)),
             ))
             .<span class="ident">unwrap</span>()
             .<span class="ident">filter</span>;
@@ -659,7 +669,11 @@
         <span class="kw">let</span> <span class="ident">factory</span> <span class="op">=</span> <span class="ident">TokenRouterFactory::new</span>();
 
         <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">factory</span>
-            .<span class="ident">create_filter</span>(<span class="ident">CreateFilterArgs::fixed</span>(<span class="ident">Registry::default</span>(), <span class="prelude-val">None</span>))
+            .<span class="ident">create_filter</span>(<span class="ident">CreateFilterArgs::fixed</span>(
+                <span class="ident">FilterRegistry::default</span>(),
+                <span class="ident">Registry::default</span>(),
+                <span class="prelude-val">None</span>,
+            ))
             .<span class="ident">unwrap</span>()
             .<span class="ident">filter</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ctx</span> <span class="op">=</span> <span class="ident">new_ctx</span>();

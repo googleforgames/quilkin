@@ -288,6 +288,7 @@
 <span id="287">287</span>
 <span id="288">288</span>
 <span id="289">289</span>
+<span id="290">290</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC All Rights Reserved.
  *
@@ -362,7 +363,7 @@
         <span class="ident">endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">EndpointAddress</span>, <span class="ident">Endpoints</span>},
         <span class="ident">filters</span>::{
             <span class="ident">load_balancer::LoadBalancerFilterFactory</span>, <span class="ident">CreateFilterArgs</span>, <span class="ident">Filter</span>, <span class="ident">FilterFactory</span>,
-            <span class="ident">ReadContext</span>,
+            <span class="ident">FilterRegistry</span>, <span class="ident">ReadContext</span>,
         },
     };
     <span class="kw">use</span> <span class="ident">prometheus::Registry</span>;
@@ -371,8 +372,9 @@
         <span class="kw">let</span> <span class="ident">factory</span> <span class="op">=</span> <span class="ident">LoadBalancerFilterFactory</span>;
         <span class="ident">factory</span>
             .<span class="ident">create_filter</span>(<span class="ident">CreateFilterArgs::fixed</span>(
+                <span class="ident">FilterRegistry::default</span>(),
                 <span class="ident">Registry::default</span>(),
-                <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="ident">serde_yaml::from_str</span>(<span class="ident">config</span>).<span class="ident">unwrap</span>()),
+                <span class="prelude-val">Some</span>(<span class="ident">serde_yaml::from_str</span>(<span class="ident">config</span>).<span class="ident">unwrap</span>()),
             ))
             .<span class="ident">unwrap</span>()
             .<span class="ident">filter</span>

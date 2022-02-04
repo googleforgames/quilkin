@@ -114,6 +114,7 @@
 <span id="113">113</span>
 <span id="114">114</span>
 <span id="115">115</span>
+<span id="116">116</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -168,14 +169,15 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">default_with</span>(<span class="ident">filters</span>: <span class="kw">impl</span> <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">DynFilterFactory</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
         <span class="ident"><span class="self">Self</span>::with</span>(
             <span class="ident">std::array::IntoIter::new</span>([
-                <span class="ident">filters::debug::factory</span>(),
-                <span class="ident">filters::local_rate_limit::factory</span>(),
-                <span class="ident">filters::concatenate_bytes::factory</span>(),
-                <span class="ident">filters::load_balancer::factory</span>(),
                 <span class="ident">filters::capture_bytes::factory</span>(),
-                <span class="ident">filters::token_router::factory</span>(),
                 <span class="ident">filters::compress::factory</span>(),
+                <span class="ident">filters::concatenate_bytes::factory</span>(),
+                <span class="ident">filters::debug::factory</span>(),
                 <span class="ident">filters::firewall::factory</span>(),
+                <span class="ident">filters::load_balancer::factory</span>(),
+                <span class="ident">filters::local_rate_limit::factory</span>(),
+                <span class="ident">filters::matches::factory</span>(),
+                <span class="ident">filters::token_router::factory</span>(),
             ])
             .<span class="ident">chain</span>(<span class="ident">filters</span>),
         )
