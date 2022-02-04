@@ -238,7 +238,7 @@ impl FilterFactory for GreetFilterFactory {
     fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
         let config = match args.config.unwrap() {
           ConfigType::Static(config) => {
-              serde_yaml::from_str::<Config>(serde_yaml::to_string(config).unwrap().as_str())
+              serde_yaml::from_str::<Config>(serde_yaml::to_string(&config).unwrap().as_str())
                 .unwrap()
           }
           ConfigType::Dynamic(_) => unimplemented!("dynamic config is not yet supported for this filter"),
@@ -263,7 +263,7 @@ has a [Dynamic][ConfigType::dynamic] variant.
 ```rust,ignore
 let config = match args.config.unwrap() {
     ConfigType::Static(config) => {
-        serde_yaml::from_str::<Config>(serde_yaml::to_string(config).unwrap().as_str())
+        serde_yaml::from_str::<Config>(serde_yaml::to_string(&config).unwrap().as_str())
          .unwrap()
     }
     ConfigType::Dynamic(_) => unimplemented!("dynamic config is not yet supported for this filter"),

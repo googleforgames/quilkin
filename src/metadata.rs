@@ -23,7 +23,8 @@ pub type DynamicMetadata = HashMap<Arc<String>, Value>;
 
 pub const KEY: &str = "quilkin.dev";
 
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialOrd, serde::Serialize, serde::Deserialize, Eq, Ord)]
+#[serde(untagged)]
 pub enum Value {
     Bool(bool),
     Number(u64),
@@ -57,6 +58,87 @@ impl Value {
         match self {
             Self::String(value) => Some(value),
             _ => None,
+        }
+    }
+}
+
+/// Convenience macro for generating From<T> implementations.
+macro_rules! from_value {
+    (($name:ident) { $($typ:ty => $ex:expr),+ $(,)? }) => {
+        $(
+            impl From<$typ> for Value {
+                fn from($name: $typ) -> Self {
+                    $ex
+                }
+            }
+        )+
+    }
+}
+
+from_value! {
+    (value) {
+        bool => Self::Bool(value),
+        u64 => Self::Number(value),
+        Vec<Self> => Self::List(value),
+        String => Self::String(value),
+        &str => Self::String(value.into()),
+        bytes::Bytes => Self::Bytes(value),
+    }
+}
+
+impl<const N: usize> From<[u8; N]> for Value {
+    fn from(value: [u8; N]) -> Self {
+        Self::Bytes(bytes::Bytes::copy_from_slice(&value))
+    }
+}
+
+impl<const N: usize> From<&[u8; N]> for Value {
+    fn from(value: &[u8; N]) -> Self {
+        Self::Bytes(bytes::Bytes::copy_from_slice(value))
+    }
+}
+
+impl PartialEq for Value {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Bool(a), Self::Bool(b)) => a == b,
+            (Self::Bool(_), _) => false,
+            (Self::Number(a), Self::Number(b)) => a == b,
+            (Self::Number(_), _) => false,
+            (Self::List(a), Self::List(b)) => a == b,
+            (Self::List(_), _) => false,
+            (Self::String(a), Self::String(b)) => a == b,
+            (Self::Bytes(a), Self::Bytes(b)) => a == b,
+            (Self::String(a), Self::Bytes(b)) | (Self::Bytes(b), Self::String(a)) => a == b,
+            (Self::String(_), _) => false,
+            (Self::Bytes(_), _) => false,
+        }
+    }
+}
+
+impl TryFrom<prost_types::Value> for Value {
+    type Error = eyre::Report;
+
+    fn try_from(value: prost_types::Value) -> Result<Self, Self::Error> {
+        use prost_types::value::Kind;
+
+        let value = match value.kind {
+            Some(value) => value,
+            None => return Err(eyre::eyre!("unexpected missing value")),
+        };
+
+        match value {
+            Kind::NullValue(_) => Err(eyre::eyre!("unexpected missing value")),
+            Kind::NumberValue(number) => Ok(Self::Number(number as u64)),
+            Kind::StringValue(string) => Ok(Self::String(string)),
+            Kind::BoolValue(value) => Ok(Self::Bool(value)),
+            Kind::ListValue(list) => Ok(Self::List(
+                list.values
+                    .into_iter()
+                    .map(prost_types::Value::try_into)
+                    .collect::<crate::Result<_>>()?,
+            )),
+            Kind::StructValue(_) => Err(eyre::eyre!("unexpected struct value")),
         }
     }
 }

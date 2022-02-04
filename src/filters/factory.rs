@@ -19,7 +19,7 @@ use std::sync::Arc;
 
 use crate::{
     config::ConfigType,
-    filters::{Error, Filter},
+    filters::{Error, Filter, FilterRegistry},
 };
 
 /// An owned pointer to a dynamic [`FilterFactory`] instance.
@@ -63,45 +63,61 @@ pub trait FilterFactory: Sync + Send {
 
     /// Returns the [`ConfigType`] from the provided Option, otherwise it returns
     /// Error::MissingConfig if the Option is None.
-    fn require_config<'a, 'b>(
-        &'a self,
-        config: Option<ConfigType<'b>>,
-    ) -> Result<ConfigType<'b>, Error> {
+    fn require_config(&self, config: Option<ConfigType>) -> Result<ConfigType, Error> {
         config.ok_or_else(|| Error::MissingConfig(self.name()))
     }
 }
 
 /// Arguments needed to create a new filter.
-pub struct CreateFilterArgs<'a> {
+pub struct CreateFilterArgs {
     /// Configuration for the filter.
-    pub config: Option<ConfigType<'a>>,
+    pub config: Option<ConfigType>,
+    /// Used if the filter needs to reference or use other filters.
+    pub filter_registry: FilterRegistry,
     /// metrics_registry is used to register filter metrics collectors.
     pub metrics_registry: Registry,
 }
 
-impl CreateFilterArgs<'_> {
-    /// Creates a new instance of [`CreateFilterArgs`] using a
-    /// fixed [`ConfigType`].
-    pub fn fixed(
+impl CreateFilterArgs {
+    /// Create a new instance of [`CreateFilterArgs`].
+    pub fn new(
+        filter_registry: FilterRegistry,
         metrics_registry: Registry,
-        config: Option<&serde_yaml::Value>,
+        config: Option<ConfigType>,
     ) -> CreateFilterArgs {
-        CreateFilterArgs {
-            config: config.map(ConfigType::Static),
+        Self {
+            config,
+            filter_registry,
             metrics_registry,
         }
     }
 
     /// Creates a new instance of [`CreateFilterArgs`] using a
+    /// fixed [`ConfigType`].
+    pub fn fixed(
+        filter_registry: FilterRegistry,
+        metrics_registry: Registry,
+        config: Option<serde_yaml::Value>,
+    ) -> CreateFilterArgs {
+        Self::new(
+            filter_registry,
+            metrics_registry,
+            config.map(ConfigType::Static),
+        )
+    }
+
+    /// Creates a new instance of [`CreateFilterArgs`] using a
     /// dynamic [`ConfigType`].
     pub fn dynamic(
+        filter_registry: FilterRegistry,
         metrics_registry: Registry,
         config: Option<prost_types::Any>,
-    ) -> CreateFilterArgs<'static> {
-        CreateFilterArgs {
-            config: config.map(ConfigType::Dynamic),
+    ) -> CreateFilterArgs {
+        CreateFilterArgs::new(
+            filter_registry,
             metrics_registry,
-        }
+            config.map(ConfigType::Dynamic),
+        )
     }
 
     /// Consumes `self` and returns a new instance of [`Self`] using

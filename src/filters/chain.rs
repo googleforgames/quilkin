@@ -119,8 +119,12 @@ impl FilterChain {
         for filter_config in filter_configs {
             match filter_registry.get(
                 &filter_config.name,
-                CreateFilterArgs::fixed(metrics_registry.clone(), filter_config.config.as_ref())
-                    .with_metrics_registry(metrics_registry.clone()),
+                CreateFilterArgs::fixed(
+                    filter_registry.clone(),
+                    metrics_registry.clone(),
+                    filter_config.config,
+                )
+                .with_metrics_registry(metrics_registry.clone()),
             ) {
                 Ok(filter) => filters.push((filter_config.name, filter)),
                 Err(err) => {

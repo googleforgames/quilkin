@@ -276,8 +276,9 @@ period: 0
 ";
         let err = factory
             .create_filter(CreateFilterArgs {
-                config: Some(ConfigType::Static(&serde_yaml::from_str(config).unwrap())),
+                config: Some(ConfigType::Static(serde_yaml::from_str(config).unwrap())),
                 metrics_registry: Default::default(),
+                filter_registry: crate::filters::FilterRegistry::default(),
             })
             .err()
             .unwrap();

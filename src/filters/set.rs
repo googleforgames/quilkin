@@ -52,14 +52,15 @@ impl FilterSet {
     pub fn default_with(filters: impl IntoIterator<Item = DynFilterFactory>) -> Self {
         Self::with(
             std::array::IntoIter::new([
-                filters::debug::factory(),
-                filters::local_rate_limit::factory(),
-                filters::concatenate_bytes::factory(),
-                filters::load_balancer::factory(),
                 filters::capture_bytes::factory(),
-                filters::token_router::factory(),
                 filters::compress::factory(),
+                filters::concatenate_bytes::factory(),
+                filters::debug::factory(),
                 filters::firewall::factory(),
+                filters::load_balancer::factory(),
+                filters::local_rate_limit::factory(),
+                filters::matches::factory(),
+                filters::token_router::factory(),
             ])
             .chain(filters),
         )
