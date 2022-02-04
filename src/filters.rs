@@ -34,7 +34,7 @@ pub mod drop;
 pub mod firewall;
 pub mod load_balancer;
 pub mod local_rate_limit;
-pub mod matches;
+pub mod r#match;
 pub mod metadata;
 pub mod pass;
 pub mod token_router;

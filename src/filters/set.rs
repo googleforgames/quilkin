@@ -60,7 +60,7 @@ impl FilterSet {
                 filters::firewall::factory(),
                 filters::load_balancer::factory(),
                 filters::local_rate_limit::factory(),
-                filters::matches::factory(),
+                filters::r#match::factory(),
                 filters::pass::factory(),
                 filters::token_router::factory(),
             ])

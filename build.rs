@@ -35,7 +35,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "proto/quilkin/extensions/filters/firewall/v1alpha1/firewall.proto",
         "proto/quilkin/extensions/filters/load_balancer/v1alpha1/load_balancer.proto",
         "proto/quilkin/extensions/filters/local_rate_limit/v1alpha1/local_rate_limit.proto",
-        "proto/quilkin/extensions/filters/matches/v1alpha1/matches.proto",
+        "proto/quilkin/extensions/filters/match/v1alpha1/match.proto",
         "proto/quilkin/extensions/filters/pass/v1alpha1/pass.proto",
         "proto/quilkin/extensions/filters/token_router/v1alpha1/token_router.proto",
         "proto/udpa/xds/core/v3/resource_name.proto",

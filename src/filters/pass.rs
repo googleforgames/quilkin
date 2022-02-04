@@ -65,6 +65,10 @@ impl FilterFactory for PassFactory {
         NAME
     }
 
+    fn config_schema(&self) -> schemars::schema::RootSchema {
+        schemars::schema_for!(Config)
+    }
+
     fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
         let config: Option<(_, Config)> = args
             .config
@@ -83,7 +87,7 @@ impl FilterFactory for PassFactory {
 }
 
 /// `pass` filter's configuration.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, schemars::JsonSchema)]
 pub struct Config;
 
 impl TryFrom<proto::Pass> for Config {
