@@ -16,23 +16,30 @@
 
 syntax = "proto3";
 
-package quilkin.extensions.filters.capture_bytes.v1alpha1;
+package quilkin.extensions.filters.capture.v1alpha1;
 
 import "google/protobuf/wrappers.proto";
 
-message CaptureBytes {
-  enum Strategy {
-    Prefix = 0;
-    Suffix = 1;
+message Capture {
+  message Suffix {
+      uint32 size = 1;
+      google.protobuf.BoolValue remove = 2;
   }
 
-  message StrategyValue {
-    Strategy value = 1;
+  message Prefix {
+      uint32 size = 1;
+      google.protobuf.BoolValue remove = 2;
   }
 
-  StrategyValue strategy = 1;
-  uint32 size = 2;
-  google.protobuf.StringValue metadata_key = 3;
-  google.protobuf.BoolValue remove = 4;
+  message Regex {
+      google.protobuf.StringValue regex = 1;
+  }
+
+  google.protobuf.StringValue metadata_key = 1;
+  oneof strategy {
+      Prefix prefix = 2;
+      Suffix suffix = 3;
+      Regex regex = 4;
+  }
 }
 

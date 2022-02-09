@@ -96,7 +96,7 @@ The following metadata are currently used by Quilkin core and built-in filters.
 
 | Name | Type | Description |
 |------|------|-------------|
-| `quilkin.dev/captured_bytes` | `Bytes` | The default key under which the [CaptureBytes] filter puts the byte slices it extracts from each packet. |
+| `quilkin.dev/captured` | `Bytes` | The default key under which the [Capture] filter puts the byte slices it extracts from each packet. |
 
 ### Built-in filters <a name="built-in-filters"></a>
 Quilkin includes several filters out of the box.
@@ -132,7 +132,7 @@ properties:
 required: [ 'name', 'config' ]
 ```
 
-[CaptureBytes]: ./filters/capture_bytes.md
+[Capture]: ./filters/capture.md
 [TokenRouter]: ./filters/token_router.md
 [Debug]: ./filters/debug.md
 [LocalRateLimit]: ./filters/local_rate_limit.md

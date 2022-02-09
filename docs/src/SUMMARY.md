@@ -10,7 +10,7 @@
 - [Proxy](./proxy.md)
     - [Proxy Configuration](./proxy-configuration.md)
 - [Filters](./filters.md)
-    - [Capture Bytes](./filters/capture_bytes.md)
+    - [Capture](./filters/capture.md)
     - [Concatenate Bytes](./filters/concatenate_bytes.md)
     - [Compress](./filters/compress.md)
     - [Debug](./filters/debug.md)

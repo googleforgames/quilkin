@@ -50,7 +50,7 @@ mod external_doc_tests {
     #![doc = include_str!("../docs/src/filters/local_rate_limit.md")]
     #![doc = include_str!("../docs/src/filters/debug.md")]
     #![doc = include_str!("../docs/src/filters/concatenate_bytes.md")]
-    #![doc = include_str!("../docs/src/filters/capture_bytes.md")]
+    #![doc = include_str!("../docs/src/filters/capture.md")]
     #![doc = include_str!("../docs/src/filters/token_router.md")]
     #![doc = include_str!("../docs/src/filters/compress.md")]
     #![doc = include_str!("../docs/src/filters/firewall.md")]

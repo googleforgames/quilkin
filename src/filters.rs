@@ -26,7 +26,7 @@ mod write;
 pub(crate) mod chain;
 pub(crate) mod manager;
 
-pub mod capture_bytes;
+pub mod capture;
 pub mod compress;
 pub mod concatenate_bytes;
 pub mod debug;

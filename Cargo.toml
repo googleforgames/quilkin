@@ -56,6 +56,7 @@ prost-types = "=0.9.0"
 rand = "0.8.4"
 serde = { version = "1.0.130", features = ["derive", "rc"] }
 serde_json = "1.0.68"
+serde_regex = "1.1.0"
 serde_yaml = "0.8.21"
 snap = "1.0.5"
 tokio = { version = "1.16.1", features = ["rt-multi-thread", "signal", "test-util", "parking_lot"] }
@@ -70,6 +71,7 @@ eyre = "0.6.5"
 stable-eyre = "0.2.2"
 ipnetwork = "0.18.0"
 futures = "0.3.17"
+regex = "1.5.4"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 sys-info = "0.9.0"
