@@ -50,6 +50,17 @@ impl Builder {
         Builder { source, ..self }
     }
 
+    pub fn with_dynamic(self, filters: impl IntoIterator<Item = String>) -> Self {
+        let source = Source::Dynamic {
+            management_servers: filters
+                .into_iter()
+                .map(|address| super::ManagementServer { address })
+                .collect(),
+        };
+
+        Self { source, ..self }
+    }
+
     pub fn with_admin(self, admin: Admin) -> Self {
         Self { admin, ..self }
     }
