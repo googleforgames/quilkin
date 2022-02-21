@@ -24,7 +24,7 @@ use tokio::sync::{mpsc, oneshot, watch};
 
 use crate::config::{Builder as ConfigBuilder, Config};
 use crate::endpoint::{Endpoint, EndpointAddress, Endpoints};
-use crate::filters::{prelude::*, FilterChain, FilterRegistry, FilterSet};
+use crate::filters::{prelude::*, FilterChain, FilterRegistry};
 use crate::metadata::Value;
 use crate::proxy::{Builder, PendingValidation};
 
@@ -318,10 +318,8 @@ pub fn new_test_chain(registry: &prometheus::Registry) -> Arc<FilterChain> {
     )
 }
 
-pub fn new_registry() -> FilterRegistry {
-    FilterRegistry::new(FilterSet::default_with([DynFilterFactory::from(
-        Box::from(TestFilterFactory {}),
-    )]))
+pub fn load_test_filters() {
+    FilterRegistry::register([DynFilterFactory::from(Box::from(TestFilterFactory {}))]);
 }
 
 #[cfg(test)]

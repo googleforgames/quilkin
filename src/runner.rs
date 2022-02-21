@@ -21,7 +21,7 @@ use tracing::{debug, info, span, Level};
 
 use crate::{
     config::Config,
-    filters::{DynFilterFactory, FilterRegistry, FilterSet},
+    filters::{DynFilterFactory, FilterRegistry},
     proxy::Builder,
     Result,
 };
@@ -38,12 +38,8 @@ pub async fn run(
     let span = span!(Level::INFO, "source::run");
     let _enter = span.enter();
 
-    let server = Builder::from(Arc::new(config))
-        .with_filter_registry(FilterRegistry::new(FilterSet::default_with(
-            filter_factories.into_iter(),
-        )))
-        .validate()?
-        .build();
+    FilterRegistry::register(filter_factories);
+    let server = Builder::from(Arc::new(config)).validate()?.build();
 
     #[cfg(target_os = "linux")]
     let mut sig_term_fut = signal::unix::signal(signal::unix::SignalKind::terminate())?;
