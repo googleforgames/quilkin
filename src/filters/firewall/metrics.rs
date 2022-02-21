@@ -16,7 +16,7 @@
 
 use prometheus::{
     core::{AtomicU64, GenericCounter},
-    IntCounterVec, Registry, Result as MetricsResult,
+    IntCounterVec, Result as MetricsResult,
 };
 
 use crate::metrics::{
@@ -32,7 +32,7 @@ pub(super) struct Metrics {
 }
 
 impl Metrics {
-    pub(super) fn new(registry: &Registry) -> MetricsResult<Self> {
+    pub(super) fn new() -> MetricsResult<Self> {
         let event_labels = &[EVENT_LABEL];
 
         let deny_metric = IntCounterVec::new(
@@ -43,7 +43,7 @@ impl Metrics {
             ),
             event_labels,
         )?
-        .register_if_not_exists(registry)?;
+        .register_if_not_exists()?;
 
         let allow_metric = IntCounterVec::new(
             filter_opts(
@@ -53,7 +53,7 @@ impl Metrics {
             ),
             event_labels,
         )?
-        .register_if_not_exists(registry)?;
+        .register_if_not_exists()?;
 
         Ok(Metrics {
             packets_denied_read: deny_metric

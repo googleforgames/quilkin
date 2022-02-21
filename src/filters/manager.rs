@@ -19,7 +19,6 @@ use crate::filters::{chain::Error as FilterChainError, FilterChain};
 use std::sync::Arc;
 
 use parking_lot::RwLock;
-use prometheus::Registry;
 use tokio::sync::mpsc;
 use tokio::sync::watch;
 
@@ -35,17 +34,12 @@ pub struct FilterManager {
 #[derive(Clone)]
 pub(crate) struct ListenerManagerArgs {
     pub filter_chain_updates_tx: mpsc::Sender<Arc<FilterChain>>,
-    pub metrics_registry: Registry,
 }
 
 impl ListenerManagerArgs {
-    pub fn new(
-        metrics_registry: Registry,
-        filter_chain_updates_tx: mpsc::Sender<Arc<FilterChain>>,
-    ) -> ListenerManagerArgs {
+    pub fn new(filter_chain_updates_tx: mpsc::Sender<Arc<FilterChain>>) -> ListenerManagerArgs {
         ListenerManagerArgs {
             filter_chain_updates_tx,
-            metrics_registry,
         }
     }
 }
@@ -68,14 +62,11 @@ impl FilterManager {
     /// Returns a new instance backed by a stream of filter chain updates.
     /// Updates from the provided stream will be reflected in the current filter chain.
     pub fn dynamic(
-        metrics_registry: &Registry,
         filter_chain_updates_rx: mpsc::Receiver<Arc<FilterChain>>,
         shutdown_rx: watch::Receiver<()>,
     ) -> Result<SharedFilterManager, FilterChainError> {
-        let filter_manager = Arc::new(RwLock::new(FilterManager {
-            // Start out with an empty filter chain.
-            filter_chain: Arc::new(FilterChain::new(vec![], metrics_registry)?),
-        }));
+        // Start out with an empty filter chain.
+        let filter_manager = FilterManager::fixed(Arc::new(FilterChain::new(vec![])?));
 
         // Start a task in the background to receive LDS updates
         // and update the FilterManager's filter chain in turn.
@@ -131,9 +122,7 @@ mod tests {
 
     #[tokio::test]
     async fn dynamic_filter_manager_update_filter_chain() {
-        let registry = prometheus::Registry::default();
-        let filter_manager =
-            FilterManager::fixed(Arc::new(FilterChain::new(vec![], &registry).unwrap()));
+        let filter_manager = FilterManager::fixed(Arc::new(FilterChain::new(vec![]).unwrap()));
         let (filter_chain_updates_tx, filter_chain_updates_rx) = mpsc::channel(10);
         let (_shutdown_tx, shutdown_rx) = watch::channel(());
 
@@ -161,13 +150,10 @@ mod tests {
             }
         }
         let filter_chain = Arc::new(
-            FilterChain::new(
-                vec![(
-                    "Drop".into(),
-                    FilterInstance::new(serde_json::Value::Null, Box::new(Drop) as Box<dyn Filter>),
-                )],
-                &registry,
-            )
+            FilterChain::new(vec![(
+                "Drop".into(),
+                FilterInstance::new(serde_json::Value::Null, Box::new(Drop) as Box<dyn Filter>),
+            )])
             .unwrap(),
         );
         assert!(filter_chain_updates_tx.send(filter_chain).await.is_ok());
@@ -204,9 +190,7 @@ mod tests {
     async fn dynamic_filter_manager_shutdown_task_on_shutdown_signal() {
         // Test that we shut down the background task if we receive a shutdown signal.
 
-        let registry = prometheus::Registry::default();
-        let filter_manager =
-            FilterManager::fixed(Arc::new(FilterChain::new(vec![], &registry).unwrap()));
+        let filter_manager = FilterManager::fixed(Arc::new(FilterChain::new(vec![]).unwrap()));
         let (filter_chain_updates_tx, filter_chain_updates_rx) = mpsc::channel(10);
         let (shutdown_tx, shutdown_rx) = watch::channel(());
 
@@ -220,7 +204,7 @@ mod tests {
 
         // Send a filter chain update on the channel. This should fail
         // since the listening task should have shut down.
-        let filter_chain = Arc::new(FilterChain::new(vec![], &registry).unwrap());
+        let filter_chain = Arc::new(FilterChain::new(vec![]).unwrap());
         assert!(filter_chain_updates_tx.send(filter_chain).await.is_err());
     }
 }

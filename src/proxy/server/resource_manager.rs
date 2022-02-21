@@ -24,7 +24,6 @@ use crate::{
     },
     xds::ads_client::{AdsClient, ClusterUpdate, UPDATES_CHANNEL_BUFFER_SIZE},
 };
-use prometheus::Registry;
 use std::sync::Arc;
 use tokio::sync::{mpsc, oneshot, watch};
 
@@ -43,12 +42,11 @@ pub(super) struct DynamicResourceManagers {
 
 impl StaticResourceManagers {
     pub(super) fn new(
-        metrics_registry: &Registry,
         endpoints: Endpoints,
         filter_chain: Arc<FilterChain>,
     ) -> Result<StaticResourceManagers, InitializeError> {
         Ok(Self {
-            cluster_manager: ClusterManager::fixed(metrics_registry, endpoints)
+            cluster_manager: ClusterManager::fixed(endpoints)
                 .map_err(|err| InitializeError::Message(format!("{err:?}")))?,
             filter_manager: FilterManager::fixed(filter_chain),
         })
@@ -57,7 +55,6 @@ impl StaticResourceManagers {
 
 /// Contains arguments to the `spawn_ads_client` function.
 struct SpawnAdsClient {
-    metrics_registry: Registry,
     node_id: String,
     management_servers: Vec<ManagementServer>,
     cluster_updates_tx: mpsc::Sender<ClusterUpdate>,
@@ -69,7 +66,6 @@ struct SpawnAdsClient {
 impl DynamicResourceManagers {
     pub(super) async fn new(
         xds_node_id: String,
-        metrics_registry: Registry,
         management_servers: Vec<ManagementServer>,
         shutdown_rx: watch::Receiver<()>,
     ) -> Result<DynamicResourceManagers, InitializeError> {
@@ -77,12 +73,10 @@ impl DynamicResourceManagers {
         let (filter_chain_updates_tx, filter_chain_updates_rx) =
             Self::filter_chain_updates_channel();
 
-        let listener_manager_args =
-            ListenerManagerArgs::new(metrics_registry.clone(), filter_chain_updates_tx);
+        let listener_manager_args = ListenerManagerArgs::new(filter_chain_updates_tx);
 
         let (execution_result_tx, execution_result_rx) = oneshot::channel::<crate::Result<()>>();
         Self::spawn_ads_client(SpawnAdsClient {
-            metrics_registry: metrics_registry.clone(),
             node_id: xds_node_id,
             management_servers,
             cluster_updates_tx,
@@ -91,13 +85,11 @@ impl DynamicResourceManagers {
             shutdown_rx: shutdown_rx.clone(),
         })?;
 
-        let cluster_manager =
-            ClusterManager::dynamic(&metrics_registry, cluster_updates_rx, shutdown_rx.clone())
-                .map_err(|err| InitializeError::Message(format!("{err:?}")))?;
+        let cluster_manager = ClusterManager::dynamic(cluster_updates_rx, shutdown_rx.clone())
+            .map_err(|err| InitializeError::Message(format!("{err:?}")))?;
 
-        let filter_manager =
-            FilterManager::dynamic(&metrics_registry, filter_chain_updates_rx, shutdown_rx)
-                .map_err(|err| InitializeError::Message(format!("{err:?}")))?;
+        let filter_manager = FilterManager::dynamic(filter_chain_updates_rx, shutdown_rx)
+            .map_err(|err| InitializeError::Message(format!("{err:?}")))?;
 
         Ok(Self {
             cluster_manager,
@@ -111,7 +103,6 @@ impl DynamicResourceManagers {
     // as well as execution result after termination are sent on the passed-in channels.
     fn spawn_ads_client(args: SpawnAdsClient) -> Result<(), InitializeError> {
         let SpawnAdsClient {
-            metrics_registry,
             node_id,
             management_servers,
             cluster_updates_tx,
@@ -120,7 +111,7 @@ impl DynamicResourceManagers {
             shutdown_rx,
         } = args;
 
-        let client = AdsClient::new(&metrics_registry).map_err(|err| {
+        let client = AdsClient::new().map_err(|err| {
             InitializeError::Message(format!("failed to initialize xDS client: {err:?}"))
         })?;
         tokio::spawn(async move {
@@ -165,7 +156,6 @@ mod tests {
     use std::time::Duration;
 
     use crate::proxy::server::resource_manager::SpawnAdsClient;
-    use prometheus::Registry;
     use tokio::sync::mpsc;
     use tokio::sync::oneshot;
     use tokio::sync::watch;
@@ -181,16 +171,12 @@ mod tests {
         let (_shutdown_tx, shutdown_rx) = watch::channel(());
 
         DynamicResourceManagers::spawn_ads_client(SpawnAdsClient {
-            metrics_registry: Registry::default(),
             node_id: "id".into(),
             management_servers: vec![ManagementServer {
                 address: "invalid-address".into(),
             }],
             cluster_updates_tx,
-            listener_manager_args: ListenerManagerArgs::new(
-                Registry::default(),
-                filter_chain_updates_tx,
-            ),
+            listener_manager_args: ListenerManagerArgs::new(filter_chain_updates_tx),
             execution_result_tx,
             shutdown_rx,
         })

@@ -27,7 +27,6 @@ use std::sync::Arc;
 
 use crate::xds::ads_client::send_discovery_req;
 use bytes::Bytes;
-use prometheus::Registry;
 use prost::Message;
 use tokio::sync::mpsc;
 
@@ -35,8 +34,6 @@ use tokio::sync::mpsc;
 /// instantiates a corresponding proxy filter chain and exposes it
 /// to the caller whenever the filter chain changes.
 pub(crate) struct ListenerManager {
-    metrics_registry: Registry,
-
     // Send discovery requests ACKs/NACKs to the server.
     discovery_req_tx: mpsc::Sender<DiscoveryRequest>,
 
@@ -50,7 +47,6 @@ impl ListenerManager {
         discovery_req_tx: mpsc::Sender<DiscoveryRequest>,
     ) -> Self {
         ListenerManager {
-            metrics_registry: args.metrics_registry,
             discovery_req_tx,
             filter_chain_updates_tx: args.filter_chain_updates_tx,
         }
@@ -102,7 +98,7 @@ impl ListenerManager {
         mut resources: Vec<prost_types::Any>,
     ) -> crate::Result<ProxyFilterChain> {
         let resource = match resources.len() {
-            0 => return Ok(ProxyFilterChain::new(vec![], &self.metrics_registry)?),
+            0 => return Ok(ProxyFilterChain::new(vec![])?),
             1 => resources.swap_remove(0),
             n => {
                 return Err(eyre::eyre!(
@@ -116,7 +112,7 @@ impl ListenerManager {
             .map_err(|err| eyre::eyre!("listener decode error: {}", err.to_string()))?;
 
         let lds_filter_chain = match listener.filter_chains.len() {
-            0 => return Ok(ProxyFilterChain::new(vec![], &self.metrics_registry)?),
+            0 => return Ok(ProxyFilterChain::new(vec![])?),
             1 => listener.filter_chains.swap_remove(0),
             n => {
                 return Err(eyre::eyre!(
@@ -143,15 +139,14 @@ impl ListenerManager {
                 })
                 .transpose()?;
 
-            let create_filter_args =
-                CreateFilterArgs::dynamic(self.metrics_registry.clone(), config);
+            let create_filter_args = CreateFilterArgs::dynamic(config);
 
             let name = filter.name;
             let filter = FilterRegistry::get(&name, create_filter_args)?;
             filters.push((name, filter));
         }
 
-        Ok(ProxyFilterChain::new(filters, &self.metrics_registry)?)
+        Ok(ProxyFilterChain::new(filters)?)
     }
 
     // Send a DiscoveryRequest ACK/NACK back to the server for the given version and nonce.
@@ -189,7 +184,6 @@ mod tests {
     use crate::endpoint::{Endpoint, Endpoints, UpstreamEndpoints};
     use crate::filters::{ConvertProtoConfigError, DynFilterFactory, FilterRegistry};
     use crate::xds::LISTENER_TYPE;
-    use prometheus::Registry;
     use prost::Message;
     use serde::{Deserialize, Serialize};
     use std::convert::TryFrom;
@@ -272,7 +266,7 @@ mod tests {
         let (filter_chain_updates_tx, mut filter_chain_updates_rx) = mpsc::channel(10);
         let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel(10);
         let mut manager = ListenerManager::new(
-            ListenerManagerArgs::new(Registry::default(), filter_chain_updates_tx),
+            ListenerManagerArgs::new(filter_chain_updates_tx),
             discovery_req_tx,
         );
 
@@ -372,7 +366,7 @@ mod tests {
         let (filter_chain_updates_tx, mut filter_chain_updates_rx) = mpsc::channel(10);
         let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel(10);
         let mut manager = ListenerManager::new(
-            ListenerManagerArgs::new(Registry::default(), filter_chain_updates_tx),
+            ListenerManagerArgs::new(filter_chain_updates_tx),
             discovery_req_tx,
         );
 
@@ -476,7 +470,7 @@ mod tests {
         let (filter_chain_updates_tx, _filter_chain_updates_rx) = mpsc::channel(10);
         let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel(10);
         let mut manager = ListenerManager::new(
-            ListenerManagerArgs::new(Registry::default(), filter_chain_updates_tx),
+            ListenerManagerArgs::new(filter_chain_updates_tx),
             discovery_req_tx,
         );
 
@@ -579,7 +573,7 @@ mod tests {
         let (filter_chain_updates_tx, _filter_chain_updates_rx) = mpsc::channel(10);
         let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel(10);
         let mut manager = ListenerManager::new(
-            ListenerManagerArgs::new(Registry::default(), filter_chain_updates_tx),
+            ListenerManagerArgs::new(filter_chain_updates_tx),
             discovery_req_tx,
         );
         let lds_listener = create_lds_listener(

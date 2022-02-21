@@ -24,29 +24,26 @@ use tokio::sync::watch;
 
 use crate::cluster::cluster_manager::SharedClusterManager;
 use crate::filters::manager::SharedFilterManager;
-use crate::proxy::{config_dump, Health, Metrics};
+use crate::proxy::{config_dump, Health};
 
 pub struct Admin {
     /// The address that the Admin server starts on
     addr: SocketAddr,
-    metrics: Arc<Metrics>,
     health: Arc<Health>,
 }
 
 #[derive(Clone)]
 struct HandleRequestArgs {
-    metrics: Arc<Metrics>,
     health: Arc<Health>,
     cluster_manager: SharedClusterManager,
     filter_manager: SharedFilterManager,
 }
 
 impl Admin {
-    pub fn new(addr: SocketAddr, metrics: Arc<Metrics>, heath: Health) -> Self {
+    pub fn new(addr: SocketAddr, health: Health) -> Self {
         Admin {
             addr,
-            metrics,
-            health: Arc::new(heath),
+            health: Arc::new(health),
         }
     }
 
@@ -59,7 +56,6 @@ impl Admin {
         tracing::info!(address = %self.addr, "Starting admin endpoint");
 
         let args = HandleRequestArgs {
-            metrics: self.metrics.clone(),
             health: self.health.clone(),
             cluster_manager,
             filter_manager,
@@ -91,7 +87,7 @@ impl Admin {
 
 fn handle_request(request: Request<Body>, args: HandleRequestArgs) -> Response<Body> {
     match (request.method(), request.uri().path()) {
-        (&Method::GET, "/metrics") => args.metrics.collect_metrics(),
+        (&Method::GET, "/metrics") => collect_metrics(),
         (&Method::GET, "/live") => args.health.check_healthy(),
         (&Method::GET, "/config") => {
             config_dump::handle_request(args.cluster_manager, args.filter_manager)
@@ -101,5 +97,39 @@ fn handle_request(request: Request<Body>, args: HandleRequestArgs) -> Response<B
             *response.status_mut() = StatusCode::NOT_FOUND;
             response
         }
+    }
+}
+
+fn collect_metrics() -> Response<Body> {
+    let mut response = Response::new(Body::empty());
+    let mut buffer = vec![];
+    let encoder = prometheus::TextEncoder::new();
+    let body =
+        prometheus::Encoder::encode(&encoder, &crate::metrics::registry().gather(), &mut buffer)
+            .map_err(|error| tracing::warn!(%error, "Failed to encode metrics"))
+            .and_then(|_| {
+                String::from_utf8(buffer)
+                    .map(Body::from)
+                    .map_err(|error| tracing::warn!(%error, "Failed to convert metrics to utf8"))
+            });
+
+    match body {
+        Ok(body) => {
+            *response.body_mut() = body;
+        }
+        Err(_) => {
+            *response.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
+        }
+    };
+
+    response
+}
+
+#[cfg(test)]
+mod tests {
+    #[tokio::test]
+    async fn collect_metrics() {
+        let response = super::collect_metrics();
+        assert_eq!(response.status(), hyper::StatusCode::OK);
     }
 }

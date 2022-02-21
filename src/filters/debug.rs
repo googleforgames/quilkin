@@ -125,7 +125,6 @@ mod tests {
     use tracing_test::traced_test;
 
     use super::*;
-    use prometheus::Registry;
 
     #[traced_test]
     #[test]
@@ -151,10 +150,7 @@ mod tests {
 
         map.insert(Value::from("id"), Value::from("name"));
         assert!(factory
-            .create_filter(CreateFilterArgs::fixed(
-                Registry::default(),
-                Some(Value::Mapping(map)),
-            ))
+            .create_filter(CreateFilterArgs::fixed(Some(Value::Mapping(map)),))
             .is_ok());
     }
 
@@ -165,10 +161,7 @@ mod tests {
 
         map.insert(Value::from("id"), Value::from("name"));
         assert!(factory
-            .create_filter(CreateFilterArgs::fixed(
-                Registry::default(),
-                Some(Value::Mapping(map)),
-            ))
+            .create_filter(CreateFilterArgs::fixed(Some(Value::Mapping(map)),))
             .is_ok());
     }
 
@@ -179,10 +172,7 @@ mod tests {
 
         map.insert(Value::from("id"), Value::Sequence(vec![]));
         assert!(factory
-            .create_filter(CreateFilterArgs::fixed(
-                Registry::default(),
-                Some(Value::Mapping(map))
-            ))
+            .create_filter(CreateFilterArgs::fixed(Some(Value::Mapping(map))))
             .is_err());
     }
 }

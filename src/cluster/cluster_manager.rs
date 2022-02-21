@@ -21,7 +21,7 @@ use std::sync::Arc;
 // to be able to capture the current endpoint state and pass it to Filters.
 use parking_lot::RwLock;
 
-use prometheus::{Registry, Result as MetricsResult};
+use prometheus::Result as MetricsResult;
 use tokio::sync::{mpsc, watch};
 
 use crate::endpoint::{Endpoints, UpstreamEndpoints};
@@ -46,8 +46,8 @@ pub enum InitializeError {
 }
 
 impl ClusterManager {
-    fn new(metrics_registry: &Registry, endpoints: Option<Endpoints>) -> MetricsResult<Self> {
-        let metrics = Metrics::new(metrics_registry)?;
+    fn new(endpoints: Option<Endpoints>) -> MetricsResult<Self> {
+        let metrics = Metrics::new()?;
         Ok(Self { metrics, endpoints })
     }
 
@@ -62,11 +62,8 @@ impl ClusterManager {
     }
 
     /// Returns a ClusterManager backed by the fixed set of clusters provided in the config.
-    pub fn fixed(
-        metrics_registry: &Registry,
-        endpoints: Endpoints,
-    ) -> MetricsResult<SharedClusterManager> {
-        let cm = Self::new(metrics_registry, Some(endpoints))?;
+    pub fn fixed(endpoints: Endpoints) -> MetricsResult<SharedClusterManager> {
+        let cm = Self::new(Some(endpoints))?;
         // Set the endpoints count metrics.
         cm.metrics.active_endpoints.set(
             cm.endpoints
@@ -80,11 +77,10 @@ impl ClusterManager {
     /// Returns a ClusterManager where the set of clusters is continuously
     /// updated based on responses from the provided updates channel.
     pub fn dynamic(
-        metrics_registry: &Registry,
         cluster_updates_rx: mpsc::Receiver<ClusterUpdate>,
         shutdown_rx: watch::Receiver<()>,
     ) -> MetricsResult<SharedClusterManager> {
-        let cluster_manager = Self::new(metrics_registry, None)?;
+        let cluster_manager = Self::new(None)?;
         let metrics = cluster_manager.metrics.clone();
         let cluster_manager = Arc::new(RwLock::new(cluster_manager));
 
@@ -170,7 +166,6 @@ impl ClusterManager {
 
 #[cfg(test)]
 mod tests {
-    use prometheus::Registry;
     use tokio::sync::{mpsc, watch};
 
     use super::ClusterManager;
@@ -184,7 +179,7 @@ mod tests {
     async fn dynamic_cluster_manager_process_cluster_update() {
         let (update_tx, update_rx) = mpsc::channel(3);
         let (_shutdown_tx, shutdown_rx) = watch::channel(());
-        let cm = ClusterManager::dynamic(&Registry::default(), update_rx, shutdown_rx).unwrap();
+        let cm = ClusterManager::dynamic(update_rx, shutdown_rx).unwrap();
 
         fn mapping(entries: &[(&str, &str)]) -> serde_yaml::Mapping {
             entries
@@ -275,7 +270,6 @@ mod tests {
     #[test]
     fn static_cluster_manager_metrics() {
         let cm = ClusterManager::fixed(
-            &Registry::default(),
             Endpoints::new(vec![
                 Endpoint::new("127.0.0.1:80".parse().unwrap()),
                 Endpoint::new("127.0.0.1:81".parse().unwrap()),
@@ -292,7 +286,7 @@ mod tests {
     async fn dynamic_cluster_manager_metrics() {
         let (update_tx, update_rx) = mpsc::channel(3);
         let (_shutdown_tx, shutdown_rx) = watch::channel(());
-        let cm = ClusterManager::dynamic(&Registry::default(), update_rx, shutdown_rx).unwrap();
+        let cm = ClusterManager::dynamic(update_rx, shutdown_rx).unwrap();
 
         // Initialization metrics
         {

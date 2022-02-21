@@ -42,8 +42,6 @@ use crate::{
     Result,
 };
 
-use super::metrics::Metrics;
-
 pub(super) mod metrics;
 mod resource_manager;
 
@@ -53,7 +51,6 @@ pub struct Server {
     pub(super) config: Arc<ValidatedConfig>,
     // Admin may be turned off, primarily for testing.
     pub(super) admin: Option<Admin>,
-    pub(super) metrics: Arc<Metrics>,
     pub(super) proxy_metrics: ProxyMetrics,
     pub(super) session_metrics: SessionMetrics,
 }
@@ -163,20 +160,15 @@ impl Server {
                 filter_chain,
                 endpoints,
             } => {
-                let manager = StaticResourceManagers::new(
-                    &self.metrics.registry,
-                    endpoints.clone(),
-                    filter_chain.clone(),
-                )
-                .map_err(|err| {
-                    eyre::eyre!(err).wrap_err("Failed to initialise static resource manager.")
-                })?;
+                let manager = StaticResourceManagers::new(endpoints.clone(), filter_chain.clone())
+                    .map_err(|err| {
+                        eyre::eyre!(err).wrap_err("Failed to initialise static resource manager.")
+                    })?;
                 Ok((manager.cluster_manager, manager.filter_manager))
             }
             ValidatedSource::Dynamic { management_servers } => {
                 let manager = DynamicResourceManagers::new(
                     self.config.proxy.id.clone(),
-                    self.metrics.registry.clone(),
                     management_servers.to_vec(),
                     shutdown_rx,
                 )
@@ -503,7 +495,7 @@ mod tests {
     use std::sync::Arc;
     use std::time::{SystemTime, UNIX_EPOCH};
 
-    use prometheus::{Histogram, HistogramOpts, Registry};
+    use prometheus::{Histogram, HistogramOpts};
     use tokio::sync::mpsc;
     use tokio::time;
     use tokio::time::timeout;
@@ -635,7 +627,6 @@ mod tests {
             name: String,
             chain: Arc<FilterChain>,
             expected: Expected,
-            registry: &prometheus::Registry,
             shutdown_rx: watch::Receiver<()>,
         ) -> Result {
             let t = TestHelper::default();
@@ -662,20 +653,18 @@ mod tests {
             let mut worker_configs = Vec::with_capacity(num_workers);
 
             let cluster_manager = ClusterManager::fixed(
-                registry,
                 Endpoints::new(vec![Endpoint::new(endpoint_address)]).unwrap(),
             )
             .unwrap();
             let filter_manager = FilterManager::fixed(chain.clone());
-            let metrics = Arc::new(Metrics::new(registry.clone()));
-            let proxy_metrics = ProxyMetrics::new(&metrics.registry).unwrap();
+            let proxy_metrics = ProxyMetrics::new().unwrap();
 
             for worker_id in 0..num_workers {
                 let (packet_tx, packet_rx) = mpsc::channel(num_workers);
                 packet_txs.push(packet_tx);
 
                 let proxy_metrics = proxy_metrics.clone();
-                let session_metrics = SessionMetrics::new(&metrics.registry).unwrap();
+                let session_metrics = SessionMetrics::new().unwrap();
 
                 worker_configs.push(DownstreamReceiveWorkerConfig {
                     worker_id,
@@ -742,24 +731,21 @@ mod tests {
         }
 
         let (_shutdown_tx, shutdown_rx) = watch::channel(());
-        let registry = Registry::default();
-        let chain = Arc::new(FilterChain::new(vec![], &registry).unwrap());
+        let chain = Arc::new(FilterChain::new(vec![]).unwrap());
         let result = test(
             "no filter".to_string(),
             chain,
             Expected { session_len: 1 },
-            &registry,
             shutdown_rx.clone(),
         )
         .await;
         assert_eq!("hello", result.msg);
 
-        let chain = new_test_chain(&registry);
+        let chain = new_test_chain();
         let result = test(
             "test filter".to_string(),
             chain,
             Expected { session_len: 1 },
-            &registry,
             shutdown_rx.clone(),
         )
         .await;
@@ -785,20 +771,16 @@ mod tests {
 
         let config = Arc::new(config_with_dummy_endpoint().build());
         let server = Builder::from(config).validate().unwrap().build();
-        let registry = Registry::default();
 
         server.run_recv_from(RunRecvFromArgs {
             cluster_manager: ClusterManager::fixed(
-                &registry,
                 Endpoints::new(vec![Endpoint::new(
                     endpoint.socket.local_addr().unwrap().into(),
                 )])
                 .unwrap(),
             )
             .unwrap(),
-            filter_manager: FilterManager::fixed(Arc::new(
-                FilterChain::new(vec![], &registry).unwrap(),
-            )),
+            filter_manager: FilterManager::fixed(Arc::new(FilterChain::new(vec![]).unwrap())),
             socket: socket.clone(),
             session_manager: session_manager.clone(),
             session_ttl: Duration::from_secs(10),

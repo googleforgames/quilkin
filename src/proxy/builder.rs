@@ -16,15 +16,17 @@
 
 use std::{collections::HashSet, convert::TryInto, marker::PhantomData, sync::Arc};
 
-use prometheus::Registry;
 use tonic::transport::Endpoint as TonicEndpoint;
 
-use crate::config::{Config, ManagementServer, Proxy, Source, ValidationError, ValueInvalidArgs};
-use crate::endpoint::Endpoints;
-use crate::filters::{chain::Error as FilterChainError, FilterChain};
-use crate::proxy::server::metrics::Metrics as ProxyMetrics;
-use crate::proxy::sessions::metrics::Metrics as SessionMetrics;
-use crate::proxy::{Admin as ProxyAdmin, Health, Metrics, Server};
+use crate::{
+    config::{Config, ManagementServer, Proxy, Source, ValidationError, ValueInvalidArgs},
+    endpoint::Endpoints,
+    filters::{chain::Error as FilterChainError, FilterChain},
+    proxy::{
+        server::metrics::Metrics as ProxyMetrics, sessions::metrics::Metrics as SessionMetrics,
+        Admin as ProxyAdmin, Health, Server,
+    },
+};
 
 pub(super) enum ValidatedSource {
     Static {
@@ -88,26 +90,23 @@ impl ValidationStatus for PendingValidation {
 pub struct Builder<V> {
     config: Arc<Config>,
     admin: Option<ProxyAdmin>,
-    metrics: Arc<Metrics>,
     validation_status: V,
 }
 
 impl From<Arc<Config>> for Builder<PendingValidation> {
     fn from(config: Arc<Config>) -> Self {
-        let metrics = Arc::new(Metrics::new(Registry::default()));
         let health = Health::new();
-        let admin = ProxyAdmin::new(config.admin.address, metrics.clone(), health);
+        let admin = ProxyAdmin::new(config.admin.address, health);
         Builder {
             config,
             admin: Some(admin),
-            metrics,
             validation_status: PendingValidation,
         }
     }
 }
 
 impl ValidatedConfig {
-    fn validate(config: Arc<Config>, metrics: &Metrics) -> Result<Self, Error> {
+    fn validate(config: Arc<Config>) -> Result<Self, Error> {
         let validated_source = match &config.source {
             Source::Static {
                 filters,
@@ -129,10 +128,7 @@ impl ValidatedConfig {
                     .ok_or_else(|| ValidationError::EmptyList("static.endpoints".into()))?;
 
                 ValidatedSource::Static {
-                    filter_chain: Arc::new(FilterChain::try_create(
-                        filters.clone(),
-                        &metrics.registry,
-                    )?),
+                    filter_chain: Arc::new(FilterChain::try_create(filters.clone())?),
                     endpoints,
                 }
             }
@@ -198,12 +194,11 @@ impl Builder<PendingValidation> {
 
     // Validates the builder's config and filter configurations.
     pub fn validate(self) -> Result<Builder<Validated>, Error> {
-        let validated_config = ValidatedConfig::validate(self.config.clone(), &self.metrics)?;
+        let validated_config = ValidatedConfig::validate(self.config.clone())?;
 
         Ok(Builder {
             config: self.config,
             admin: self.admin,
-            metrics: self.metrics,
             validation_status: Validated(validated_config),
         })
     }
@@ -213,12 +208,10 @@ impl Builder<Validated> {
     pub fn build(self) -> Server {
         Server {
             config: Arc::new(self.validation_status.0),
-            proxy_metrics: ProxyMetrics::new(&self.metrics.registry)
-                .expect("proxy metrics should be setup properly"),
-            session_metrics: SessionMetrics::new(&self.metrics.registry)
+            proxy_metrics: ProxyMetrics::new().expect("proxy metrics should be setup properly"),
+            session_metrics: SessionMetrics::new()
                 .expect("session metrics should be setup properly"),
             admin: self.admin,
-            metrics: self.metrics,
         }
     }
 }

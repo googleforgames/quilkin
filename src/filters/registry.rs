@@ -63,7 +63,6 @@ mod tests {
     use crate::filters::{
         Filter, FilterRegistry, ReadContext, ReadResponse, WriteContext, WriteResponse,
     };
-    use prometheus::Registry;
 
     struct TestFilter {}
 
@@ -81,26 +80,19 @@ mod tests {
     fn insert_and_get() {
         load_test_filters();
 
-        match FilterRegistry::get(
-            &String::from("not.found"),
-            CreateFilterArgs::fixed(Registry::default(), None),
-        ) {
+        match FilterRegistry::get(&String::from("not.found"), CreateFilterArgs::fixed(None)) {
             Ok(_) => unreachable!("should not be filter"),
             Err(err) => assert_eq!(Error::NotFound("not.found".to_string()), err),
         };
 
-        assert!(FilterRegistry::get(
-            &String::from("TestFilter"),
-            CreateFilterArgs::fixed(Registry::default(), None)
-        )
-        .is_ok());
+        assert!(
+            FilterRegistry::get(&String::from("TestFilter"), CreateFilterArgs::fixed(None)).is_ok()
+        );
 
-        let filter = FilterRegistry::get(
-            &String::from("TestFilter"),
-            CreateFilterArgs::fixed(Registry::default(), None),
-        )
-        .unwrap()
-        .filter;
+        let filter =
+            FilterRegistry::get(&String::from("TestFilter"), CreateFilterArgs::fixed(None))
+                .unwrap()
+                .filter;
 
         let addr: EndpointAddress = (Ipv4Addr::LOCALHOST, 8080).into();
         let endpoint = Endpoint::new(addr.clone());

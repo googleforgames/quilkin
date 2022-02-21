@@ -13,8 +13,10 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-use prometheus::core::{AtomicU64, GenericCounter};
-use prometheus::{IntCounterVec, Registry, Result as MetricsResult};
+use prometheus::{
+    core::{AtomicU64, GenericCounter},
+    IntCounterVec, Result as MetricsResult,
+};
 
 use crate::metrics::{filter_opts, CollectorExt};
 
@@ -26,7 +28,7 @@ pub(super) struct Metrics {
 }
 
 impl Metrics {
-    pub(super) fn new(registry: &Registry) -> MetricsResult<Self> {
+    pub(super) fn new() -> MetricsResult<Self> {
         let label_names = vec!["reason"];
         let metric = IntCounterVec::new(
             filter_opts(
@@ -36,7 +38,7 @@ impl Metrics {
             ),
             &label_names,
         )?
-        .register_if_not_exists(registry)?;
+        .register_if_not_exists()?;
 
         Ok(Metrics {
             packets_dropped_no_token_found: metric

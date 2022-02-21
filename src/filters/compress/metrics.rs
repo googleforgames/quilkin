@@ -13,9 +13,10 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-use prometheus::core::{AtomicU64, GenericCounter};
-use prometheus::{IntCounter, Registry};
-use prometheus::{IntCounterVec, Result as MetricsResult};
+use prometheus::{
+    core::{AtomicU64, GenericCounter},
+    IntCounter, IntCounterVec, Result as MetricsResult,
+};
 
 use crate::metrics::{filter_opts, CollectorExt};
 
@@ -28,7 +29,7 @@ pub(super) struct Metrics {
 }
 
 impl Metrics {
-    pub(super) fn new(registry: &Registry) -> MetricsResult<Self> {
+    pub(super) fn new() -> MetricsResult<Self> {
         let operation_labels = vec!["action"];
         let dropped_metric = IntCounterVec::new(
             filter_opts(
@@ -38,21 +39,21 @@ impl Metrics {
             ),
             &operation_labels,
         )?
-        .register_if_not_exists(registry)?;
+        .register_if_not_exists()?;
 
         let decompressed_bytes_total = IntCounter::with_opts(filter_opts(
             "decompressed_bytes_total",
             "Compress",
             "Total number of decompressed bytes either received or sent.",
         ))?
-        .register_if_not_exists(registry)?;
+        .register_if_not_exists()?;
 
         let compressed_bytes_total = IntCounter::with_opts(filter_opts(
             "compressed_bytes_total",
             "Compress",
             "Total number of compressed bytes either received or sent.",
         ))?
-        .register_if_not_exists(registry)?;
+        .register_if_not_exists()?;
 
         Ok(Metrics {
             packets_dropped_compress: dropped_metric

@@ -16,7 +16,7 @@
 
 use std::sync::Arc;
 
-use prometheus::{exponential_buckets, Error as PrometheusError, Histogram, Registry};
+use prometheus::{exponential_buckets, Error as PrometheusError, Histogram};
 
 use crate::config::{Filter as FilterConfig, ValidationError};
 use crate::filters::{prelude::*, FilterRegistry};
@@ -78,7 +78,7 @@ const BUCKET_FACTOR: f64 = 2.5;
 const BUCKET_COUNT: usize = 11;
 
 impl FilterChain {
-    pub fn new(filters: Vec<(String, FilterInstance)>, registry: &Registry) -> Result<Self, Error> {
+    pub fn new(filters: Vec<(String, FilterInstance)>) -> Result<Self, Error> {
         let subsystem = "filter";
 
         Ok(Self {
@@ -97,7 +97,7 @@ impl FilterChain {
                         )
                         .const_label(FILTER_LABEL, name),
                     )
-                    .and_then(|histogram| histogram.register_if_not_exists(registry))
+                    .and_then(|histogram| histogram.register_if_not_exists())
                 })
                 .collect::<Result<_, prometheus::Error>>()?,
             filter_write_duration_seconds: filters
@@ -112,7 +112,7 @@ impl FilterChain {
                         )
                         .const_label(FILTER_LABEL, name),
                     )
-                    .and_then(|histogram| histogram.register_if_not_exists(registry))
+                    .and_then(|histogram| histogram.register_if_not_exists())
                 })
                 .collect::<Result<_, prometheus::Error>>()?,
             filters,
@@ -121,17 +121,13 @@ impl FilterChain {
 
     /// Validates the filter configurations in the provided config and constructs
     /// a FilterChain if all configurations are valid.
-    pub fn try_create(
-        filter_configs: Vec<FilterConfig>,
-        metrics_registry: &Registry,
-    ) -> Result<Self, Error> {
+    pub fn try_create(filter_configs: Vec<FilterConfig>) -> Result<Self, Error> {
         let mut filters = Vec::new();
 
         for filter_config in filter_configs {
             match FilterRegistry::get(
                 &filter_config.name,
-                CreateFilterArgs::fixed(metrics_registry.clone(), filter_config.config)
-                    .with_metrics_registry(metrics_registry.clone()),
+                CreateFilterArgs::fixed(filter_config.config),
             ) {
                 Ok(filter) => filters.push((filter_config.name, filter)),
                 Err(err) => {
@@ -143,7 +139,7 @@ impl FilterChain {
             }
         }
 
-        FilterChain::new(filters, metrics_registry)
+        FilterChain::new(filters)
     }
 
     /// Returns an iterator over the current filters' configs.
@@ -208,7 +204,7 @@ mod tests {
             config: Default::default(),
         }];
 
-        let chain = FilterChain::try_create(filter_configs, &Registry::default()).unwrap();
+        let chain = FilterChain::try_create(filter_configs).unwrap();
         assert_eq!(1, chain.filters.len());
 
         // uh oh, something went wrong
@@ -216,7 +212,7 @@ mod tests {
             name: "this is so wrong".into(),
             config: Default::default(),
         }];
-        let result = FilterChain::try_create(filter_configs, &Registry::default());
+        let result = FilterChain::try_create(filter_configs);
         assert!(result.is_err());
     }
 
@@ -233,8 +229,7 @@ mod tests {
 
     #[test]
     fn chain_single_test_filter() {
-        let registry = prometheus::Registry::default();
-        let chain = new_test_chain(&registry);
+        let chain = new_test_chain();
         let endpoints_fixture = endpoints();
 
         let response = chain
@@ -284,20 +279,16 @@ mod tests {
 
     #[test]
     fn chain_double_test_filter() {
-        let registry = prometheus::Registry::default();
-        let chain = FilterChain::new(
-            vec![
-                (
-                    "TestFilter".into(),
-                    TestFilterFactory::create_empty_filter(),
-                ),
-                (
-                    "TestFilter".into(),
-                    TestFilterFactory::create_empty_filter(),
-                ),
-            ],
-            &registry,
-        )
+        let chain = FilterChain::new(vec![
+            (
+                "TestFilter".into(),
+                TestFilterFactory::create_empty_filter(),
+            ),
+            (
+                "TestFilter".into(),
+                TestFilterFactory::create_empty_filter(),
+            ),
+        ])
         .unwrap();
 
         let endpoints_fixture = endpoints();
@@ -351,26 +342,22 @@ mod tests {
         struct TestFilter2 {}
         impl Filter for TestFilter2 {}
 
-        let registry = prometheus::Registry::default();
-        let filter_chain = FilterChain::new(
-            vec![
-                (
-                    "TestFilter".into(),
-                    TestFilterFactory::create_empty_filter(),
-                ),
-                (
-                    "TestFilter2".into(),
-                    FilterInstance {
-                        config: Arc::new(serde_json::json!({
-                            "k1": "v1",
-                            "k2": 2
-                        })),
-                        filter: Box::new(TestFilter2 {}),
-                    },
-                ),
-            ],
-            &registry,
-        )
+        let filter_chain = FilterChain::new(vec![
+            (
+                "TestFilter".into(),
+                TestFilterFactory::create_empty_filter(),
+            ),
+            (
+                "TestFilter2".into(),
+                FilterInstance {
+                    config: Arc::new(serde_json::json!({
+                        "k1": "v1",
+                        "k2": 2
+                    })),
+                    filter: Box::new(TestFilter2 {}),
+                },
+            ),
+        ])
         .unwrap();
 
         let configs = filter_chain.get_configs().collect::<Vec<_>>();

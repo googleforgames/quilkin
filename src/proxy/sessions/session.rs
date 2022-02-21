@@ -361,7 +361,7 @@ mod tests {
 
     use super::{Metrics, ProxyMetrics, Session, UpstreamPacket};
 
-    use prometheus::{Histogram, HistogramOpts, Registry};
+    use prometheus::{Histogram, HistogramOpts};
     use tokio::time::timeout;
 
     use crate::filters::FilterChain;
@@ -379,14 +379,11 @@ mod tests {
         let addr: EndpointAddress = socket.local_addr().unwrap().into();
         let endpoint = Endpoint::new(addr.clone());
         let (send_packet, mut recv_packet) = mpsc::channel::<UpstreamPacket>(5);
-        let registry = Registry::default();
 
         let sess = Session::new(SessionArgs {
-            metrics: Metrics::new(&registry).unwrap(),
-            proxy_metrics: ProxyMetrics::new(&registry).unwrap(),
-            filter_manager: FilterManager::fixed(Arc::new(
-                FilterChain::new(vec![], &registry).unwrap(),
-            )),
+            metrics: Metrics::new().unwrap(),
+            proxy_metrics: ProxyMetrics::new().unwrap(),
+            filter_manager: FilterManager::fixed(Arc::new(FilterChain::new(vec![]).unwrap())),
             source: addr.clone(),
             dest: endpoint,
             sender: send_packet,
@@ -431,14 +428,11 @@ mod tests {
         let ep = t.open_socket_and_recv_single_packet().await;
         let addr: EndpointAddress = ep.socket.local_addr().unwrap().into();
         let endpoint = Endpoint::new(addr.clone());
-        let registry = Registry::default();
 
         let session = Session::new(SessionArgs {
-            metrics: Metrics::new(&registry).unwrap(),
-            proxy_metrics: ProxyMetrics::new(&registry).unwrap(),
-            filter_manager: FilterManager::fixed(Arc::new(
-                FilterChain::new(vec![], &registry).unwrap(),
-            )),
+            metrics: Metrics::new().unwrap(),
+            proxy_metrics: ProxyMetrics::new().unwrap(),
+            filter_manager: FilterManager::fixed(Arc::new(FilterChain::new(vec![]).unwrap())),
             source: addr,
             dest: endpoint.clone(),
             sender,
@@ -452,10 +446,9 @@ mod tests {
 
     #[tokio::test]
     async fn process_recv_packet() {
-        let registry = Registry::default();
         let histogram = Histogram::with_opts(HistogramOpts::new("test", "test")).unwrap();
 
-        let chain = Arc::new(FilterChain::new(vec![], &registry).unwrap());
+        let chain = Arc::new(FilterChain::new(vec![]).unwrap());
         let endpoint = Endpoint::new("127.0.1.1:80".parse().unwrap());
         let dest: EndpointAddress = (Ipv4Addr::LOCALHOST, 88).into();
         let (mut sender, mut receiver) = mpsc::channel::<UpstreamPacket>(10);
@@ -470,7 +463,7 @@ mod tests {
         // first test with no filtering
         let msg = "hello";
         Session::process_recv_packet(
-            &Metrics::new(&Registry::default()).unwrap(),
+            &Metrics::new().unwrap(),
             &mut sender,
             &expiration,
             Duration::from_secs(10),
@@ -501,10 +494,9 @@ mod tests {
         ));
         let initial_expiration = expiration.load(Ordering::Relaxed);
         // add filter
-        let registry = Registry::default();
-        let chain = new_test_chain(&registry);
+        let chain = new_test_chain();
         Session::process_recv_packet(
-            &Metrics::new(&registry).unwrap(),
+            &Metrics::new().unwrap(),
             &mut sender,
             &expiration,
             Duration::from_secs(10),
@@ -538,14 +530,11 @@ mod tests {
         let addr: EndpointAddress = ep.socket.local_addr().unwrap().into();
         let endpoint = Endpoint::new(addr.clone());
         let (send_packet, _) = mpsc::channel::<UpstreamPacket>(5);
-        let registry = Registry::default();
 
         let session = Session::new(SessionArgs {
-            metrics: Metrics::new(&registry).unwrap(),
-            proxy_metrics: ProxyMetrics::new(&registry).unwrap(),
-            filter_manager: FilterManager::fixed(Arc::new(
-                FilterChain::new(vec![], &registry).unwrap(),
-            )),
+            metrics: Metrics::new().unwrap(),
+            proxy_metrics: ProxyMetrics::new().unwrap(),
+            filter_manager: FilterManager::fixed(Arc::new(FilterChain::new(vec![]).unwrap())),
             source: addr,
             dest: endpoint,
             sender: send_packet,
@@ -565,13 +554,10 @@ mod tests {
         let (sender, _) = mpsc::channel::<UpstreamPacket>(1);
         let endpoint = t.open_socket_and_recv_single_packet().await;
         let addr: EndpointAddress = endpoint.socket.local_addr().unwrap().into();
-        let registry = Registry::default();
         let session = Session::new(SessionArgs {
-            metrics: Metrics::new(&registry).unwrap(),
-            proxy_metrics: ProxyMetrics::new(&registry).unwrap(),
-            filter_manager: FilterManager::fixed(Arc::new(
-                FilterChain::new(vec![], &registry).unwrap(),
-            )),
+            metrics: Metrics::new().unwrap(),
+            proxy_metrics: ProxyMetrics::new().unwrap(),
+            filter_manager: FilterManager::fixed(Arc::new(FilterChain::new(vec![]).unwrap())),
             source: addr.clone(),
             dest: Endpoint::new(addr),
             sender,
@@ -592,13 +578,10 @@ mod tests {
         let (send_packet, _) = mpsc::channel::<UpstreamPacket>(5);
         let endpoint = t.open_socket_and_recv_single_packet().await;
         let addr: EndpointAddress = endpoint.socket.local_addr().unwrap().into();
-        let registry = Registry::default();
         let session = Session::new(SessionArgs {
-            metrics: Metrics::new(&registry).unwrap(),
-            proxy_metrics: ProxyMetrics::new(&registry).unwrap(),
-            filter_manager: FilterManager::fixed(Arc::new(
-                FilterChain::new(vec![], &registry).unwrap(),
-            )),
+            metrics: Metrics::new().unwrap(),
+            proxy_metrics: ProxyMetrics::new().unwrap(),
+            filter_manager: FilterManager::fixed(Arc::new(FilterChain::new(vec![]).unwrap())),
             source: addr.clone(),
             dest: Endpoint::new(addr),
             sender: send_packet,

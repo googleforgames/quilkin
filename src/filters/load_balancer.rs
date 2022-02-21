@@ -79,15 +79,13 @@ mod tests {
             ReadContext,
         },
     };
-    use prometheus::Registry;
 
     fn create_filter(config: &str) -> Box<dyn Filter> {
         let factory = LoadBalancerFilterFactory;
         factory
-            .create_filter(CreateFilterArgs::fixed(
-                Registry::default(),
-                Some(serde_yaml::from_str(config).unwrap()),
-            ))
+            .create_filter(CreateFilterArgs::fixed(Some(
+                serde_yaml::from_str(config).unwrap(),
+            )))
             .unwrap()
             .filter
     }
