@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-use clap::{App, AppSettings, Arg};
+use clap::{Arg, Command};
 use std::sync::Arc;
 use tracing::info;
 
@@ -37,12 +37,13 @@ async fn main() -> quilkin::Result<()> {
         .help("The YAML configuration file")
         .takes_value(true);
 
-    let cli = App::new(clap::crate_name!())
+    let cli = Command::new(clap::crate_name!())
         .version(&*version)
         .about(clap::crate_description!())
-        .setting(AppSettings::SubcommandRequiredElseHelp)
+        .subcommand_required(true)
+        .arg_required_else_help(true)
         .subcommand(
-            App::new("run")
+            Command::new("run")
                 .about("Start Quilkin process.")
                 .arg(config_arg.clone()),
         )
