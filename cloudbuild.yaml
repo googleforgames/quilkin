@@ -74,7 +74,7 @@ options:
     - "CARGO_HOME=/workspace/.cargo"
   machineType: E2_HIGHCPU_32
   dynamic_substitutions: true
-timeout: 1800s
+timeout: 7200s
 substitutions:
   _BUILD_IMAGE_TAG: us-docker.pkg.dev/${PROJECT_ID}/ci/build-image
 logsBucket: "gs://quilkin-build-logs"
