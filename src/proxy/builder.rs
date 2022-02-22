@@ -19,9 +19,9 @@ use std::{collections::HashSet, convert::TryInto, marker::PhantomData, sync::Arc
 use tonic::transport::Endpoint as TonicEndpoint;
 
 use crate::{
-    config::{Config, ManagementServer, Proxy, Source, ValidationError, ValueInvalidArgs},
+    config::{self, Config, ManagementServer, Proxy, Source, ValidationError, ValueInvalidArgs},
     endpoint::Endpoints,
-    filters::{chain::Error as FilterChainError, FilterChain},
+    filters::chain::Error as FilterChainError,
     proxy::{
         server::metrics::Metrics as ProxyMetrics, sessions::metrics::Metrics as SessionMetrics,
         Admin as ProxyAdmin, Health, Server,
@@ -30,7 +30,7 @@ use crate::{
 
 pub(super) enum ValidatedSource {
     Static {
-        filter_chain: Arc<FilterChain>,
+        filter_chain: Vec<config::Filter>,
         endpoints: Endpoints,
     },
     Dynamic {
@@ -128,7 +128,7 @@ impl ValidatedConfig {
                     .ok_or_else(|| ValidationError::EmptyList("static.endpoints".into()))?;
 
                 ValidatedSource::Static {
-                    filter_chain: Arc::new(FilterChain::try_create(filters.clone())?),
+                    filter_chain: filters.to_owned(),
                     endpoints,
                 }
             }

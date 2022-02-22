@@ -39,7 +39,6 @@ use tryhard::{
 use crate::{
     cluster::Cluster,
     config::ManagementServer,
-    filters::manager::ListenerManagerArgs,
     xds::{
         cluster::ClusterManager,
         envoy::{
@@ -89,9 +88,9 @@ impl AdsClient {
     pub async fn run(
         self,
         node_id: String,
+        filter_chain: crate::filters::SharedFilterChain,
         management_servers: Vec<ManagementServer>,
         cluster_updates_tx: mpsc::Sender<ClusterUpdate>,
-        listener_manager_args: ListenerManagerArgs,
         mut shutdown_rx: watch::Receiver<()>,
     ) -> Result<()> {
         let metrics = self.metrics;
@@ -150,8 +149,7 @@ impl AdsClient {
                 mpsc::channel::<DiscoveryRequest>(UPDATES_CHANNEL_BUFFER_SIZE);
             let cluster_manager =
                 ClusterManager::new(cluster_updates_tx.clone(), discovery_req_tx.clone());
-            let listener_manager =
-                ListenerManager::new(listener_manager_args.clone(), discovery_req_tx);
+            let listener_manager = ListenerManager::new(filter_chain.clone(), discovery_req_tx);
 
             let resource_handlers = ResourceHandlers {
                 cluster_manager,
@@ -464,7 +462,6 @@ pub(super) async fn send_discovery_req(
 mod tests {
     use super::AdsClient;
     use crate::config::ManagementServer;
-    use crate::xds::ads_client::ListenerManagerArgs;
     use crate::xds::envoy::service::discovery::v3::DiscoveryRequest;
     use crate::xds::google::rpc::Status as GrpcStatus;
     use crate::xds::CLUSTER_TYPE;
@@ -474,20 +471,19 @@ mod tests {
     use tokio::sync::{mpsc, watch};
 
     #[tokio::test]
+    /// If we get an invalid URL, we should return immediately rather
+    /// than backoff or retry.
     async fn invalid_url() {
-        // If we get an invalid URL, we should return immediately rather
-        // than backoff or retry.
-
+        let filter_chain = crate::filters::SharedFilterChain::empty();
         let (_shutdown_tx, shutdown_rx) = watch::channel::<()>(());
         let (cluster_updates_tx, _) = mpsc::channel(10);
-        let (filter_chain_updates_tx, _) = mpsc::channel(10);
         let run = AdsClient::new().unwrap().run(
             "test-id".into(),
+            filter_chain,
             vec![ManagementServer {
                 address: "localhost:18000".into(),
             }],
             cluster_updates_tx,
-            ListenerManagerArgs::new(filter_chain_updates_tx),
             shutdown_rx,
         );
 
