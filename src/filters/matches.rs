@@ -163,6 +163,10 @@ impl FilterFactory for MatchesFactory {
         NAME
     }
 
+    fn config_schema(&self) -> schemars::schema::RootSchema {
+        schemars::schema_for!(Config)
+    }
+
     fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
         let (config_json, config) = self
             .require_config(args.config)?
@@ -177,7 +181,7 @@ impl FilterFactory for MatchesFactory {
 }
 
 /// Configuration for the [`factory`].
-#[derive(Debug, serde::Deserialize, serde::Serialize, PartialEq)]
+#[derive(Debug, serde::Deserialize, serde::Serialize, PartialEq, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
     /// Configuration for [`Filter::read`].
@@ -231,7 +235,7 @@ impl TryFrom<proto::matches::DirectionalConfig> for DirectionalConfig {
 }
 
 /// Configuration for a specific direction.
-#[derive(Debug, serde::Deserialize, serde::Serialize, PartialEq)]
+#[derive(Debug, serde::Deserialize, serde::Serialize, PartialEq, schemars::JsonSchema)]
 pub struct DirectionalConfig {
     /// The key for the metadata to compare against.
     #[serde(rename = "metadataKey")]
@@ -245,7 +249,7 @@ pub struct DirectionalConfig {
 
 /// A specific match branch. The filter is run when `value` matches the value
 /// defined in `metadata_key`.
-#[derive(Debug, serde::Deserialize, serde::Serialize, PartialEq)]
+#[derive(Debug, serde::Deserialize, serde::Serialize, PartialEq, schemars::JsonSchema)]
 pub struct Branch {
     /// The value to compare against the dynamic metadata.
     pub value: crate::metadata::Value,
@@ -273,7 +277,7 @@ impl TryFrom<proto::matches::Branch> for Branch {
 }
 
 /// The behaviour when the none of branches match.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, schemars::JsonSchema)]
 pub enum Fallthrough {
     /// The packet will be passed onto the next filter.
     Pass,

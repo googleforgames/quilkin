@@ -206,7 +206,7 @@ mod tests {
     // A simple filter that will be used in the following tests.
     // It appends a string to each payload.
     const APPEND_TYPE_URL: &str = "filter.append";
-    #[derive(Clone, PartialEq, Serialize, Deserialize)]
+    #[derive(Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
     pub struct Append {
         pub value: Option<prost::alloc::string::String>,
     }
@@ -245,6 +245,10 @@ mod tests {
     impl FilterFactory for AppendFactory {
         fn name(&self) -> &'static str {
             APPEND_TYPE_URL
+        }
+
+        fn config_schema(&self) -> schemars::schema::RootSchema {
+            schemars::schema_for!(Append)
         }
 
         fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {

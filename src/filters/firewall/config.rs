@@ -17,6 +17,7 @@
 use std::{convert::TryFrom, fmt, fmt::Formatter, net::SocketAddr, ops::Range};
 
 use ipnetwork::IpNetwork;
+use schemars::JsonSchema;
 use serde::de::{self, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
@@ -29,7 +30,7 @@ use super::quilkin::extensions::filters::firewall::v1alpha1::{
 
 /// Represents how a Firewall filter is configured for read and write
 /// operations.
-#[derive(Clone, Deserialize, Debug, PartialEq, Serialize)]
+#[derive(Clone, Deserialize, Debug, PartialEq, Serialize, JsonSchema)]
 #[non_exhaustive]
 pub struct Config {
     pub on_read: Vec<Rule>,
@@ -37,7 +38,7 @@ pub struct Config {
 }
 
 /// Whether or not a matching [Rule] should Allow or Deny access
-#[derive(Clone, Deserialize, Debug, PartialEq, Serialize)]
+#[derive(Clone, Deserialize, Debug, PartialEq, Serialize, JsonSchema)]
 pub enum Action {
     /// Matching rules will allow packets through.
     #[serde(rename = "ALLOW")]
@@ -48,10 +49,11 @@ pub enum Action {
 }
 
 /// Combination of CIDR range, port range and action to take.
-#[derive(Clone, Deserialize, Debug, PartialEq, Serialize)]
+#[derive(Clone, Deserialize, Debug, PartialEq, Serialize, JsonSchema)]
 pub struct Rule {
     pub action: Action,
     /// ipv4 or ipv6 CIDR address.
+    #[schemars(with = "String")]
     pub source: IpNetwork,
     pub ports: Vec<PortRange>,
 }
@@ -98,7 +100,7 @@ pub enum PortRangeError {
 }
 
 /// Range of matching ports that are configured against a [Rule].
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, JsonSchema)]
 pub struct PortRange(Range<u16>);
 
 impl PortRange {

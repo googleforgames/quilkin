@@ -1,4 +1,5 @@
-# Copyright 2021 Google LLC
+#!/usr/bin/env bash
+# Copyright 2022 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,20 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG PROFILE
+set -euo pipefail
 
-FROM gcr.io/distroless/cc:nonroot as base
-WORKDIR /
-COPY ./license.html .
-COPY ./dependencies-src.zip .
-COPY --chown=nonroot:nonroot ./image/quilkin.yaml /etc/quilkin/quilkin.yaml
+cargo run -q --manifest-path ../Cargo.toml -- -q generate-config-schema -o ../target
 
-FROM base as release
-COPY ./target/x86_64-unknown-linux-gnu/release/quilkin .
-
-FROM base as debug
-COPY ./target/x86_64-unknown-linux-gnu/debug/quilkin .
-
-FROM $PROFILE
-USER nonroot:nonroot
-ENTRYPOINT ["/quilkin", "--config", "/etc/quilkin/quilkin.yaml", "run"]
+echo $(jq -M -c .[1] <&0)

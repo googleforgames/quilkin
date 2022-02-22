@@ -58,6 +58,9 @@ pub trait FilterFactory: Sync + Send {
     ///     `quilkin.extensions.filters.debug_filter.v1alpha1.Debug`
     fn name(&self) -> &'static str;
 
+    /// Returns the schema for the configuration of the [`Filter`].
+    fn config_schema(&self) -> schemars::schema::RootSchema;
+
     /// Returns a filter based on the provided arguments.
     fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error>;
 

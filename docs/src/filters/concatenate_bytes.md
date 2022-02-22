@@ -30,23 +30,7 @@ static:
 ### Configuration Options ([Rust Doc](../../api/quilkin/filters/concatenate_bytes/struct.Config.html))
 
 ```yaml
-properties:
-  on_read:
-    type: string
-    description: |
-      Either append or prepend the `bytes` data to each packet filtered on read of the listening port.
-    default: DO_NOTHING
-    enum: ['DO_NOTHING', 'APPEND', 'PREPEND']
-  on_write:
-    type: string
-    description: |
-      Either append or prepend the `bytes` data to each packet filtered on write of the listening port.
-    default: DO_NOTHING
-    enum: ['DO_NOTHING', 'APPEND', 'PREPEND']    
-  bytes:
-    type: string
-    description: |
-      Base64 encoded string of the byte array to add to each packet as it is filtered.
+{{#include ../../../target/quilkin.extensions.filters.concatenate_bytes.v1alpha1.yaml}}
 ```
 
 ### Metrics

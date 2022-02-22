@@ -16,6 +16,7 @@
 
 use std::convert::TryFrom;
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use super::compressor::{Compressor, Snappy};
@@ -25,7 +26,7 @@ use super::quilkin::extensions::filters::compress::v1alpha1::{
 use crate::{filters::ConvertProtoConfigError, map_proto_enum};
 
 /// The library to use when compressing.
-#[derive(Clone, Copy, Deserialize, Debug, PartialEq, Serialize)]
+#[derive(Clone, Copy, Deserialize, Debug, PartialEq, Serialize, JsonSchema)]
 #[non_exhaustive]
 pub enum Mode {
     // we only support one mode for now, but adding in the config option to
@@ -49,7 +50,7 @@ impl Default for Mode {
 }
 
 /// Whether to do nothing, compress or decompress the packet.
-#[derive(Clone, Copy, Deserialize, Debug, PartialEq, Serialize)]
+#[derive(Clone, Copy, Deserialize, Debug, PartialEq, Serialize, JsonSchema)]
 pub enum Action {
     #[serde(rename = "DO_NOTHING")]
     DoNothing,
@@ -65,7 +66,7 @@ impl Default for Action {
     }
 }
 
-#[derive(Clone, Copy, Deserialize, Debug, PartialEq, Serialize)]
+#[derive(Clone, Copy, Deserialize, Debug, PartialEq, Serialize, JsonSchema)]
 #[non_exhaustive]
 pub struct Config {
     #[serde(default)]

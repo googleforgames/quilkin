@@ -18,7 +18,7 @@ fn is_valid_size(contents: &[u8], size: u32, metrics: &Metrics) -> bool {
 }
 
 /// Capture from the start of the packet.
-#[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq, schemars::JsonSchema)]
 pub struct Prefix {
     /// Whether captured bytes are removed from the original packet.
     #[serde(default)]
@@ -40,7 +40,7 @@ impl super::CaptureStrategy for Prefix {
 }
 
 /// Capture from the end of the packet.
-#[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq, schemars::JsonSchema)]
 pub struct Suffix {
     /// Whether captured bytes are removed from the original packet.
     pub size: u32,

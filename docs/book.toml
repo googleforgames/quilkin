@@ -4,4 +4,10 @@ multilingual = false
 src = "src"
 title = "Quilkin Book"
 
+[preprocessor.links]
+after = ["quilkin"]
+
+[preprocessor.quilkin]
+command = "./preprocessor.sh"
+
 [output.html]

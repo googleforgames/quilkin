@@ -18,6 +18,7 @@ crate::include_proto!("quilkin.extensions.filters.load_balancer.v1alpha1");
 
 use std::convert::TryFrom;
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use self::quilkin::extensions::filters::load_balancer::v1alpha1::load_balancer::Policy as ProtoPolicy;
@@ -29,7 +30,7 @@ use crate::{filters::ConvertProtoConfigError, map_proto_enum};
 pub use self::quilkin::extensions::filters::load_balancer::v1alpha1::LoadBalancer as ProtoConfig;
 
 /// The configuration for [`load_balancer`][super].
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, JsonSchema)]
 #[non_exhaustive]
 pub struct Config {
     #[serde(default)]
@@ -59,7 +60,7 @@ impl TryFrom<ProtoConfig> for Config {
 
 /// Policy represents how a [`load_balancer`][super] distributes
 /// packets across endpoints.
-#[derive(Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Eq, PartialEq, JsonSchema)]
 pub enum Policy {
     /// Send packets to endpoints in turns.
     #[serde(rename = "ROUND_ROBIN")]

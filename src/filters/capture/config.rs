@@ -22,7 +22,7 @@ use super::{proto, Prefix, Regex, Suffix};
 use crate::filters::{metadata::CAPTURED_BYTES, ConvertProtoConfigError};
 
 /// Strategy to apply for acquiring a set of bytes in the UDP packet
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, schemars::JsonSchema)]
 #[serde(tag = "kind")]
 pub enum Strategy {
     /// Looks for the set of bytes at the beginning of the packet
@@ -46,7 +46,7 @@ impl Strategy {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, schemars::JsonSchema)]
 pub struct Config {
     /// The key to use when storing the captured value in the filter context.
     /// If a match was found it is available
