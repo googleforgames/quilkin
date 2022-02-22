@@ -75,7 +75,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><div><strong aria-hidden="true">2.</strong> Quickstart</div></li><li><ol class="section"><li class="chapter-item expanded "><a href="quickstart-netcat.html"><strong aria-hidden="true">2.1.</strong> Netcat</a></li><li class="chapter-item expanded "><a href="quickstart-agones-xonotic.html"><strong aria-hidden="true">2.2.</strong> Agones + Xonotic</a></li></ol></li><li class="chapter-item expanded "><a href="using.html"><strong aria-hidden="true">3.</strong> Usage</a></li><li class="chapter-item expanded "><a href="examples.html"><strong aria-hidden="true">4.</strong> Examples</a></li><li class="chapter-item expanded "><a href="session.html"><strong aria-hidden="true">5.</strong> Session</a></li><li class="chapter-item expanded "><a href="proxy.html"><strong aria-hidden="true">6.</strong> Proxy</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="proxy-configuration.html"><strong aria-hidden="true">6.1.</strong> Proxy Configuration</a></li></ol></li><li class="chapter-item expanded "><a href="filters.html" class="active"><strong aria-hidden="true">7.</strong> Filters</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="filters/capture.html"><strong aria-hidden="true">7.1.</strong> Capture</a></li><li class="chapter-item expanded "><a href="filters/concatenate_bytes.html"><strong aria-hidden="true">7.2.</strong> Concatenate Bytes</a></li><li class="chapter-item expanded "><a href="filters/compress.html"><strong aria-hidden="true">7.3.</strong> Compress</a></li><li class="chapter-item expanded "><a href="filters/debug.html"><strong aria-hidden="true">7.4.</strong> Debug</a></li><li class="chapter-item expanded "><a href="filters/load_balancer.html"><strong aria-hidden="true">7.5.</strong> Load Balancer</a></li><li class="chapter-item expanded "><a href="filters/local_rate_limit.html"><strong aria-hidden="true">7.6.</strong> Local Rate Limit</a></li><li class="chapter-item expanded "><a href="filters/token_router.html"><strong aria-hidden="true">7.7.</strong> Token Router</a></li><li class="chapter-item expanded "><a href="filters/firewall.html"><strong aria-hidden="true">7.8.</strong> Firewall</a></li><li class="chapter-item expanded "><a href="filters/writing_custom_filters.html"><strong aria-hidden="true">7.9.</strong> Writing Custom Filters</a></li></ol></li><li class="chapter-item expanded "><a href="integrations.html"><strong aria-hidden="true">8.</strong> Integrations</a></li><li class="chapter-item expanded "><a href="admin.html"><strong aria-hidden="true">9.</strong> Administration</a></li><li class="chapter-item expanded "><a href="faq.html"><strong aria-hidden="true">10.</strong> FAQ</a></li><li class="chapter-item expanded "><a href="xds.html"><strong aria-hidden="true">11.</strong> xDS</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><div><strong aria-hidden="true">2.</strong> Quickstart</div></li><li><ol class="section"><li class="chapter-item expanded "><a href="quickstart-netcat.html"><strong aria-hidden="true">2.1.</strong> Netcat</a></li><li class="chapter-item expanded "><a href="quickstart-agones-xonotic.html"><strong aria-hidden="true">2.2.</strong> Agones + Xonotic</a></li></ol></li><li class="chapter-item expanded "><a href="using.html"><strong aria-hidden="true">3.</strong> Usage</a></li><li class="chapter-item expanded "><a href="examples.html"><strong aria-hidden="true">4.</strong> Examples</a></li><li class="chapter-item expanded "><a href="session.html"><strong aria-hidden="true">5.</strong> Session</a></li><li class="chapter-item expanded "><a href="proxy.html"><strong aria-hidden="true">6.</strong> Proxy</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="proxy-configuration.html"><strong aria-hidden="true">6.1.</strong> Proxy Configuration</a></li></ol></li><li class="chapter-item expanded "><a href="filters.html" class="active"><strong aria-hidden="true">7.</strong> Filters</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="filters/capture.html"><strong aria-hidden="true">7.1.</strong> Capture</a></li><li class="chapter-item expanded "><a href="filters/compress.html"><strong aria-hidden="true">7.2.</strong> Compress</a></li><li class="chapter-item expanded "><a href="filters/concatenate_bytes.html"><strong aria-hidden="true">7.3.</strong> Concatenate Bytes</a></li><li class="chapter-item expanded "><a href="filters/debug.html"><strong aria-hidden="true">7.4.</strong> Debug</a></li><li class="chapter-item expanded "><a href="filters/firewall.html"><strong aria-hidden="true">7.5.</strong> Firewall</a></li><li class="chapter-item expanded "><a href="filters/load_balancer.html"><strong aria-hidden="true">7.6.</strong> Load Balancer</a></li><li class="chapter-item expanded "><a href="filters/local_rate_limit.html"><strong aria-hidden="true">7.7.</strong> Local Rate Limit</a></li><li class="chapter-item expanded "><a href="filters/matches.html"><strong aria-hidden="true">7.8.</strong> Matches</a></li><li class="chapter-item expanded "><a href="filters/token_router.html"><strong aria-hidden="true">7.9.</strong> Token Router</a></li><li class="chapter-item expanded "><a href="filters/writing_custom_filters.html"><strong aria-hidden="true">7.10.</strong> Writing Custom Filters</a></li></ol></li><li class="chapter-item expanded "><a href="integrations.html"><strong aria-hidden="true">8.</strong> Integrations</a></li><li class="chapter-item expanded "><a href="admin.html"><strong aria-hidden="true">9.</strong> Administration</a></li><li class="chapter-item expanded "><a href="faq.html"><strong aria-hidden="true">10.</strong> FAQ</a></li><li class="chapter-item expanded "><a href="xds.html"><strong aria-hidden="true">11.</strong> xDS</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -168,25 +168,15 @@ A packet received downstream will be fed into <code>append</code> and the result
 <ul>
 <li>
 <p><code>quilkin_filter_read_duration_seconds</code> The duration it took for a <code>filter</code>'s
-<code>read</code> implementation to execute.</p>
-<ul>
-<li>Labels
-<ul>
-<li><code>filter</code> The name of the filter being executed.</li>
-</ul>
-</li>
-</ul>
+<code>read</code> implementation to execute.
+book.toml htmltest.yaml logos preprocessor.sh src Labels
+book.toml htmltest.yaml logos preprocessor.sh src <code>filter</code> The name of the filter being executed.</p>
 </li>
 <li>
 <p><code>quilkin_filter_write_duration_seconds</code> The duration it took for a <code>filter</code>'s
-<code>write</code> implementation to execute.</p>
-<ul>
-<li>Labels
-<ul>
-<li><code>filter</code> The name of the filter being executed.</li>
-</ul>
-</li>
-</ul>
+<code>write</code> implementation to execute.
+book.toml htmltest.yaml logos preprocessor.sh src Labels
+book.toml htmltest.yaml logos preprocessor.sh src <code>filter</code> The name of the filter being executed.</p>
 </li>
 </ul>
 <h3 id="configuration-examples"><a class="header" href="#configuration-examples">Configuration Examples</a></h3>
@@ -197,16 +187,16 @@ A packet received downstream will be fed into <code>append</code> and the result
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
 static:
-  filters:
-    - name: quilkin.extensions.filters.debug.v1alpha1.Debug
-      config:
-        id: debug-1
-    - name: quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit
-      config:
-        max_packets: 10
-        period: 1
-  endpoints:
-    - address: 127.0.0.1:7001
+ filters:
+ - name: quilkin.extensions.filters.debug.v1alpha1.Debug
+ config:
+ id: debug-1
+ - name: quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit
+ config:
+ max_packets: 10
+ period: 1
+ endpoints:
+ - address: 127.0.0.1:7001
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 2);
@@ -246,18 +236,18 @@ Consequently, we can build a filter chain with a [CaptureBytes] filter preceedin
 <h3 id="filterconfig"><a class="header" href="#filterconfig">FilterConfig <a name="filter-config"></a></a></h3>
 <p>Represents configuration for a filter instance.</p>
 <pre><code class="language-yaml">properties:
-  name:
-    type: string
-    description: |
-      Identifies the type of filter to be created.
-      This value is unique for every filter type - please consult the documentation for the particular filter for this value.
+ name:
+ type: string
+ description: |
+ Identifies the type of filter to be created.
+ This value is unique for every filter type - please consult the documentation for the particular filter for this value.
 
-  config:
-    type: object
-    description: |
-      The configuration value to be passed onto the created filter.
-      This is passed as an object value since it is specific to the filter's type and is validated by the filter
-      implementation. Please consult the documentation for the particular filter for its schema.
+ config:
+ type: object
+ description: |
+ The configuration value to be passed onto the created filter.
+ This is passed as an object value since it is specific to the filter's type and is validated by the filter
+ implementation. Please consult the documentation for the particular filter for its schema.
 
 required: [ 'name', 'config' ]
 </code></pre>

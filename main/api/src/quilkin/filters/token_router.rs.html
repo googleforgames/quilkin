@@ -382,6 +382,10 @@
 <span id="381">381</span>
 <span id="382">382</span>
 <span id="383">383</span>
+<span id="384">384</span>
+<span id="385">385</span>
+<span id="386">386</span>
+<span id="387">387</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -456,6 +460,10 @@
         <span class="ident">NAME</span>
     }
 
+    <span class="kw">fn</span> <span class="ident">config_schema</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">schemars::schema::RootSchema</span> {
+        <span class="macro">schemars::schema_for!</span>(<span class="ident">Config</span>)
+    }
+
     <span class="kw">fn</span> <span class="ident">create_filter</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">args</span>: <span class="ident">CreateFilterArgs</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">FilterInstance</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> (<span class="ident">config_json</span>, <span class="ident">config</span>) <span class="op">=</span> <span class="ident">args</span>
             .<span class="ident">config</span>
@@ -526,7 +534,7 @@
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">schemars::JsonSchema</span>)]</span>
 <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Config</span> {
     <span class="doccomment">/// the key to use when retrieving the token from the Filter&#39;s dynamic metadata</span>

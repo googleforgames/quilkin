@@ -146,6 +146,8 @@
 <span id="145">145</span>
 <span id="146">146</span>
 <span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -170,11 +172,13 @@
 
 <span class="doccomment">/// The configuration of a [`Filter`][crate::filters::Filter] from either a</span>
 <span class="doccomment">/// static or dynamic source.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">schemars::JsonSchema</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ConfigType</span> {
     <span class="doccomment">/// Static configuration from YAML.</span>
+    <span class="attribute">#[<span class="ident">schemars</span>(<span class="ident">with</span> <span class="op">=</span> <span class="string">&quot;serde_json::Value&quot;</span>)]</span>
     <span class="ident">Static</span>(<span class="ident">serde_yaml::Value</span>),
     <span class="doccomment">/// Dynamic configuration from Protobuf.</span>
+    <span class="attribute">#[<span class="ident">schemars</span>(<span class="ident">skip</span>)]</span>
     <span class="ident">Dynamic</span>(<span class="ident">prost_types::Any</span>),
 }
 

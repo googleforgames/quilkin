@@ -75,7 +75,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><div><strong aria-hidden="true">2.</strong> Quickstart</div></li><li><ol class="section"><li class="chapter-item expanded "><a href="quickstart-netcat.html"><strong aria-hidden="true">2.1.</strong> Netcat</a></li><li class="chapter-item expanded "><a href="quickstart-agones-xonotic.html"><strong aria-hidden="true">2.2.</strong> Agones + Xonotic</a></li></ol></li><li class="chapter-item expanded "><a href="using.html"><strong aria-hidden="true">3.</strong> Usage</a></li><li class="chapter-item expanded "><a href="examples.html"><strong aria-hidden="true">4.</strong> Examples</a></li><li class="chapter-item expanded "><a href="session.html"><strong aria-hidden="true">5.</strong> Session</a></li><li class="chapter-item expanded "><a href="proxy.html"><strong aria-hidden="true">6.</strong> Proxy</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="proxy-configuration.html"><strong aria-hidden="true">6.1.</strong> Proxy Configuration</a></li></ol></li><li class="chapter-item expanded "><a href="filters.html"><strong aria-hidden="true">7.</strong> Filters</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="filters/capture.html"><strong aria-hidden="true">7.1.</strong> Capture</a></li><li class="chapter-item expanded "><a href="filters/concatenate_bytes.html"><strong aria-hidden="true">7.2.</strong> Concatenate Bytes</a></li><li class="chapter-item expanded "><a href="filters/compress.html"><strong aria-hidden="true">7.3.</strong> Compress</a></li><li class="chapter-item expanded "><a href="filters/debug.html"><strong aria-hidden="true">7.4.</strong> Debug</a></li><li class="chapter-item expanded "><a href="filters/load_balancer.html"><strong aria-hidden="true">7.5.</strong> Load Balancer</a></li><li class="chapter-item expanded "><a href="filters/local_rate_limit.html"><strong aria-hidden="true">7.6.</strong> Local Rate Limit</a></li><li class="chapter-item expanded "><a href="filters/token_router.html"><strong aria-hidden="true">7.7.</strong> Token Router</a></li><li class="chapter-item expanded "><a href="filters/firewall.html"><strong aria-hidden="true">7.8.</strong> Firewall</a></li><li class="chapter-item expanded "><a href="filters/writing_custom_filters.html"><strong aria-hidden="true">7.9.</strong> Writing Custom Filters</a></li></ol></li><li class="chapter-item expanded "><a href="integrations.html" class="active"><strong aria-hidden="true">8.</strong> Integrations</a></li><li class="chapter-item expanded "><a href="admin.html"><strong aria-hidden="true">9.</strong> Administration</a></li><li class="chapter-item expanded "><a href="faq.html"><strong aria-hidden="true">10.</strong> FAQ</a></li><li class="chapter-item expanded "><a href="xds.html"><strong aria-hidden="true">11.</strong> xDS</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><div><strong aria-hidden="true">2.</strong> Quickstart</div></li><li><ol class="section"><li class="chapter-item expanded "><a href="quickstart-netcat.html"><strong aria-hidden="true">2.1.</strong> Netcat</a></li><li class="chapter-item expanded "><a href="quickstart-agones-xonotic.html"><strong aria-hidden="true">2.2.</strong> Agones + Xonotic</a></li></ol></li><li class="chapter-item expanded "><a href="using.html"><strong aria-hidden="true">3.</strong> Usage</a></li><li class="chapter-item expanded "><a href="examples.html"><strong aria-hidden="true">4.</strong> Examples</a></li><li class="chapter-item expanded "><a href="session.html"><strong aria-hidden="true">5.</strong> Session</a></li><li class="chapter-item expanded "><a href="proxy.html"><strong aria-hidden="true">6.</strong> Proxy</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="proxy-configuration.html"><strong aria-hidden="true">6.1.</strong> Proxy Configuration</a></li></ol></li><li class="chapter-item expanded "><a href="filters.html"><strong aria-hidden="true">7.</strong> Filters</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="filters/capture.html"><strong aria-hidden="true">7.1.</strong> Capture</a></li><li class="chapter-item expanded "><a href="filters/compress.html"><strong aria-hidden="true">7.2.</strong> Compress</a></li><li class="chapter-item expanded "><a href="filters/concatenate_bytes.html"><strong aria-hidden="true">7.3.</strong> Concatenate Bytes</a></li><li class="chapter-item expanded "><a href="filters/debug.html"><strong aria-hidden="true">7.4.</strong> Debug</a></li><li class="chapter-item expanded "><a href="filters/firewall.html"><strong aria-hidden="true">7.5.</strong> Firewall</a></li><li class="chapter-item expanded "><a href="filters/load_balancer.html"><strong aria-hidden="true">7.6.</strong> Load Balancer</a></li><li class="chapter-item expanded "><a href="filters/local_rate_limit.html"><strong aria-hidden="true">7.7.</strong> Local Rate Limit</a></li><li class="chapter-item expanded "><a href="filters/matches.html"><strong aria-hidden="true">7.8.</strong> Matches</a></li><li class="chapter-item expanded "><a href="filters/token_router.html"><strong aria-hidden="true">7.9.</strong> Token Router</a></li><li class="chapter-item expanded "><a href="filters/writing_custom_filters.html"><strong aria-hidden="true">7.10.</strong> Writing Custom Filters</a></li></ol></li><li class="chapter-item expanded "><a href="integrations.html" class="active"><strong aria-hidden="true">8.</strong> Integrations</a></li><li class="chapter-item expanded "><a href="admin.html"><strong aria-hidden="true">9.</strong> Administration</a></li><li class="chapter-item expanded "><a href="faq.html"><strong aria-hidden="true">10.</strong> FAQ</a></li><li class="chapter-item expanded "><a href="xds.html"><strong aria-hidden="true">11.</strong> xDS</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -140,28 +140,28 @@ each providing different capabilities and complexity tradeoffs.</p>
 <p>Below captures several of the most useful and prevalent architectural patterns to give you inspiration
 on how you can use Quilkin in your multiplayer game networking architecture.</p>
 <h2 id="server-proxy-as-a-sidecar"><a class="header" href="#server-proxy-as-a-sidecar">Server Proxy as a Sidecar</a></h2>
-<pre><code class="language-text">                  +
-                  |
-               Internet
-                  |
-                  |
-                  |
-+---------+       |          +----------------+ +----------------+
-|  Game   |       |          | Quilkin        | | Dedicated      |
-|  Client &lt;------------------&gt; (Server Proxy) | | Game Server    |
-+---------+       |          |                &lt;-&gt;                |
-                  |          +----------------+ +----------------+
-                  |
-                  |
-                  |          +----------------+ +----------------+
-                  |          | Quilkin        | | Dedicated      |
-                  |          | (Server Proxy) | | Game Server    |
-                  |          |                &lt;-&gt;                |
-                  |          +----------------+ +----------------+
-                  |
-                  |
-                  |
-                  +
+<pre><code class="language-text"> +
+ |
+ Internet
+ |
+ |
+ |
++---------+ | +----------------+ +----------------+
+| Game | | | Quilkin | | Dedicated |
+| Client &lt;------------------&gt; (Server Proxy) | | Game Server |
++---------+ | | &lt;-&gt; |
+ | +----------------+ +----------------+
+ |
+ |
+ | +----------------+ +----------------+
+ | | Quilkin | | Dedicated |
+ | | (Server Proxy) | | Game Server |
+ | | &lt;-&gt; |
+ | +----------------+ +----------------+
+ |
+ |
+ |
+ +
 </code></pre>
 <p>This is the simplest integration and configuration option with Quilkin, but does provide the smallest number
 of possible feature implementations and ability to provide redundancy.</p>
@@ -169,10 +169,7 @@ of possible feature implementations and ability to provide redundancy.</p>
 and metric information that comes with Quilkin.</p>
 <ul>
 <li>In this example, the Server proxy is running alongside the dedicated game server - on the same public IP/machine/container.
-<ul>
-<li>This is often referred to as a sidecar pattern.</li>
-</ul>
-</li>
+book.toml htmltest.yaml logos preprocessor.sh src This is often referred to as a sidecar pattern.</li>
 <li>Communication between the Server Proxy and the Dedicated Game Server occurs over the localhost network, with a
 separate port for each Game Client connection.</li>
 <li>Clients connect to the Server Proxy's public port/IP combination, and the Server Proxy routes all traffic directly
@@ -181,28 +178,28 @@ to the dedicated game server.</li>
 as long as the Game Client conforms to the standard protocols utilised by those filters as appropriate.</li>
 </ul>
 <h2 id="client-proxy-to-sidecar-server-proxy"><a class="header" href="#client-proxy-to-sidecar-server-proxy">Client Proxy to Sidecar Server Proxy</a></h2>
-<pre><code class="language-text">                                    +
-                                    |
-                                 Internet
-                                    |
-                                    |
-                                    |
-+---------+    +----------------+   |        +----------------+ +----------------+
-|  Game   |    | Quilkin        |   |        | Quilkin        | | Dedicated      |
-|  Client &lt;----&gt; (Client Proxy) &lt;------------&gt; (Server Proxy) | | Game Server    |
-+---------+    +----------------+   |        |                &lt;-&gt;                |
-                                    |        +----------------+ +----------------+
-                                    |
-                                    |
-                                    |        +----------------+ +----------------+
-                                    |        | Quilkin        | | Dedicated      |
-                                    |        | (Server Proxy) | | Game Server    |
-                                    |        |                &lt;-&gt;                |
-                                    |        +----------------+ +----------------+
-                                    |
-                                    |
-                                    |
-                                    +
+<pre><code class="language-text"> +
+ |
+ Internet
+ |
+ |
+ |
++---------+ +----------------+ | +----------------+ +----------------+
+| Game | | Quilkin | | | Quilkin | | Dedicated |
+| Client &lt;----&gt; (Client Proxy) &lt;------------&gt; (Server Proxy) | | Game Server |
++---------+ +----------------+ | | &lt;-&gt; |
+ | +----------------+ +----------------+
+ |
+ |
+ | +----------------+ +----------------+
+ | | Quilkin | | Dedicated |
+ | | (Server Proxy) | | Game Server |
+ | | &lt;-&gt; |
+ | +----------------+ +----------------+
+ |
+ |
+ |
+ +
 </code></pre>
 <p>This example is the same as the above, but puts a Client Proxy between the Game Client, and the Server Proxy to take
 advantage of Client Proxy functionality.</p>
@@ -215,28 +212,28 @@ having to change the Game Client.</li>
 match-made with a Game Server.</li>
 </ul>
 <h2 id="client-proxy-to-separate-server-proxies-pools"><a class="header" href="#client-proxy-to-separate-server-proxies-pools">Client Proxy to Separate Server Proxies Pools</a></h2>
-<pre><code class="language-text">                                       +                          +
-                                       |                          |
-                                    Internet                   Private
-                                       |                       Network
-                                       |     +----------------+   |          +----------------+
-                                       |     | Quilkin        |   |          | Dedicated      |
-                                       |  +--&gt; (Server Proxy) &lt;-------+------&gt; Game Server    |
-+---------+      +----------------+    |  |  |                |   |   |      |                |
-|  Game   |      | Quilkin        &lt;-------+  +----------------+   |   |      +----------------+
-|  Client &lt;------&gt; (Client Proxy) |    |  |                       |   |
-+---------+      +----------------+    |  |  +----------------+   |   |      +----------------+
-                                       |  |  | Quilkin        |   |   |      | Dedicated      |
-                                       |  +--&gt; (Server Proxy) &lt;-------+      | Game Server    |
-                                       |     |                |   |          |                |
-                                       |     +----------------+   |          +----------------+
-                                       |                          |
-                                       |     +----------------+   |          +----------------+
-                                       |     | Quilkin        |   |          | Dedicated      |
-                                       |     | (Server Proxy) |   |          | Game Server    |
-                                       |     |                |   |          |                |
-                                       |     +----------------+   |          +----------------+
-                                       +                          +
+<pre><code class="language-text"> + +
+ | |
+ Internet Private
+ | Network
+ | +----------------+ | +----------------+
+ | | Quilkin | | | Dedicated |
+ | +--&gt; (Server Proxy) &lt;-------+------&gt; Game Server |
++---------+ +----------------+ | | | | | | | |
+| Game | | Quilkin &lt;-------+ +----------------+ | | +----------------+
+| Client &lt;------&gt; (Client Proxy) | | | | |
++---------+ +----------------+ | | +----------------+ | | +----------------+
+ | | | Quilkin | | | | Dedicated |
+ | +--&gt; (Server Proxy) &lt;-------+ | Game Server |
+ | | | | | |
+ | +----------------+ | +----------------+
+ | |
+ | +----------------+ | +----------------+
+ | | Quilkin | | | Dedicated |
+ | | (Server Proxy) | | | Game Server |
+ | | | | | |
+ | +----------------+ | +----------------+
+ + +
 
 </code></pre>
 <p>This is the most complex configuration, but enables the most reuse of Quilkin's functionality,
@@ -254,7 +251,7 @@ to the dedicated game servers, which are on private IP addresses.</li>
 or another service, with an authentication token to pass to the Server proxies, such that the UDP packets can be
 routed correctly to the dedicated game server they should connect to.</li>
 <li>Dedicated game servers receive traffic as per normal from the Server Proxies, and send data back to the proxies
-directly.</li>
+directly. </li>
 <li>If the dedicated game server always expects traffic from only a single ip/port combination for client connection, 
 then traffic will always need to be sent through a single Server Proxy. Otherwise, UDP packets can be load
 balanced via the Client Proxy to multiple Server Proxies for even greater redundancy.</li>

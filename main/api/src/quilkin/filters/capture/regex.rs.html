@@ -32,15 +32,17 @@
 <span id="31">31</span>
 <span id="32">32</span>
 <span id="33">33</span>
+<span id="34">34</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::metadata::Value</span>;
 
 <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::Metrics</span>;
 
 <span class="doccomment">/// Capture from the start of the packet.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">serde::Serialize</span>, <span class="ident">serde::Deserialize</span>, <span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">serde::Serialize</span>, <span class="ident">serde::Deserialize</span>, <span class="ident">Debug</span>, <span class="ident">schemars::JsonSchema</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Regex</span> {
     <span class="doccomment">/// The regular expression to use for capture.</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">with</span> <span class="op">=</span> <span class="string">&quot;serde_regex&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">schemars</span>(<span class="ident">with</span> <span class="op">=</span> <span class="string">&quot;String&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">pattern</span>: <span class="ident">regex::bytes::Regex</span>,
 }
 

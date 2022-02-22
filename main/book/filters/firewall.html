@@ -75,7 +75,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><div><strong aria-hidden="true">2.</strong> Quickstart</div></li><li><ol class="section"><li class="chapter-item expanded "><a href="../quickstart-netcat.html"><strong aria-hidden="true">2.1.</strong> Netcat</a></li><li class="chapter-item expanded "><a href="../quickstart-agones-xonotic.html"><strong aria-hidden="true">2.2.</strong> Agones + Xonotic</a></li></ol></li><li class="chapter-item expanded "><a href="../using.html"><strong aria-hidden="true">3.</strong> Usage</a></li><li class="chapter-item expanded "><a href="../examples.html"><strong aria-hidden="true">4.</strong> Examples</a></li><li class="chapter-item expanded "><a href="../session.html"><strong aria-hidden="true">5.</strong> Session</a></li><li class="chapter-item expanded "><a href="../proxy.html"><strong aria-hidden="true">6.</strong> Proxy</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../proxy-configuration.html"><strong aria-hidden="true">6.1.</strong> Proxy Configuration</a></li></ol></li><li class="chapter-item expanded "><a href="../filters.html"><strong aria-hidden="true">7.</strong> Filters</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../filters/capture.html"><strong aria-hidden="true">7.1.</strong> Capture</a></li><li class="chapter-item expanded "><a href="../filters/concatenate_bytes.html"><strong aria-hidden="true">7.2.</strong> Concatenate Bytes</a></li><li class="chapter-item expanded "><a href="../filters/compress.html"><strong aria-hidden="true">7.3.</strong> Compress</a></li><li class="chapter-item expanded "><a href="../filters/debug.html"><strong aria-hidden="true">7.4.</strong> Debug</a></li><li class="chapter-item expanded "><a href="../filters/load_balancer.html"><strong aria-hidden="true">7.5.</strong> Load Balancer</a></li><li class="chapter-item expanded "><a href="../filters/local_rate_limit.html"><strong aria-hidden="true">7.6.</strong> Local Rate Limit</a></li><li class="chapter-item expanded "><a href="../filters/token_router.html"><strong aria-hidden="true">7.7.</strong> Token Router</a></li><li class="chapter-item expanded "><a href="../filters/firewall.html" class="active"><strong aria-hidden="true">7.8.</strong> Firewall</a></li><li class="chapter-item expanded "><a href="../filters/writing_custom_filters.html"><strong aria-hidden="true">7.9.</strong> Writing Custom Filters</a></li></ol></li><li class="chapter-item expanded "><a href="../integrations.html"><strong aria-hidden="true">8.</strong> Integrations</a></li><li class="chapter-item expanded "><a href="../admin.html"><strong aria-hidden="true">9.</strong> Administration</a></li><li class="chapter-item expanded "><a href="../faq.html"><strong aria-hidden="true">10.</strong> FAQ</a></li><li class="chapter-item expanded "><a href="../xds.html"><strong aria-hidden="true">11.</strong> xDS</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><div><strong aria-hidden="true">2.</strong> Quickstart</div></li><li><ol class="section"><li class="chapter-item expanded "><a href="../quickstart-netcat.html"><strong aria-hidden="true">2.1.</strong> Netcat</a></li><li class="chapter-item expanded "><a href="../quickstart-agones-xonotic.html"><strong aria-hidden="true">2.2.</strong> Agones + Xonotic</a></li></ol></li><li class="chapter-item expanded "><a href="../using.html"><strong aria-hidden="true">3.</strong> Usage</a></li><li class="chapter-item expanded "><a href="../examples.html"><strong aria-hidden="true">4.</strong> Examples</a></li><li class="chapter-item expanded "><a href="../session.html"><strong aria-hidden="true">5.</strong> Session</a></li><li class="chapter-item expanded "><a href="../proxy.html"><strong aria-hidden="true">6.</strong> Proxy</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../proxy-configuration.html"><strong aria-hidden="true">6.1.</strong> Proxy Configuration</a></li></ol></li><li class="chapter-item expanded "><a href="../filters.html"><strong aria-hidden="true">7.</strong> Filters</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../filters/capture.html"><strong aria-hidden="true">7.1.</strong> Capture</a></li><li class="chapter-item expanded "><a href="../filters/compress.html"><strong aria-hidden="true">7.2.</strong> Compress</a></li><li class="chapter-item expanded "><a href="../filters/concatenate_bytes.html"><strong aria-hidden="true">7.3.</strong> Concatenate Bytes</a></li><li class="chapter-item expanded "><a href="../filters/debug.html"><strong aria-hidden="true">7.4.</strong> Debug</a></li><li class="chapter-item expanded "><a href="../filters/firewall.html" class="active"><strong aria-hidden="true">7.5.</strong> Firewall</a></li><li class="chapter-item expanded "><a href="../filters/load_balancer.html"><strong aria-hidden="true">7.6.</strong> Load Balancer</a></li><li class="chapter-item expanded "><a href="../filters/local_rate_limit.html"><strong aria-hidden="true">7.7.</strong> Local Rate Limit</a></li><li class="chapter-item expanded "><a href="../filters/matches.html"><strong aria-hidden="true">7.8.</strong> Matches</a></li><li class="chapter-item expanded "><a href="../filters/token_router.html"><strong aria-hidden="true">7.9.</strong> Token Router</a></li><li class="chapter-item expanded "><a href="../filters/writing_custom_filters.html"><strong aria-hidden="true">7.10.</strong> Writing Custom Filters</a></li></ol></li><li class="chapter-item expanded "><a href="../integrations.html"><strong aria-hidden="true">8.</strong> Integrations</a></li><li class="chapter-item expanded "><a href="../admin.html"><strong aria-hidden="true">9.</strong> Administration</a></li><li class="chapter-item expanded "><a href="../faq.html"><strong aria-hidden="true">10.</strong> FAQ</a></li><li class="chapter-item expanded "><a href="../xds.html"><strong aria-hidden="true">11.</strong> xDS</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -147,22 +147,22 @@ the rules set on the Firewall filter.</p>
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
 static:
-  filters:
-    - name: quilkin.extensions.filters.firewall.v1alpha1.Firewall
-      config:
-        on_read:
-          - action: ALLOW
-            source: 192.168.51.0/24
-            ports:
-               - 10
-               - 1000-7000
-        on_write: 
-          - action: DENY
-            source: 192.168.51.0/24
-            ports:
-               - 7000
-  endpoints:
-    - address: 127.0.0.1:7001
+ filters:
+ - name: quilkin.extensions.filters.firewall.v1alpha1.Firewall
+ config:
+ on_read:
+ - action: ALLOW
+ source: 192.168.51.0/24
+ ports:
+ - 10
+ - 1000-7000
+ on_write: 
+ - action: DENY
+ source: 192.168.51.0/24
+ ports:
+ - 7000
+ endpoints:
+ - address: 127.0.0.1:7001
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 1);
@@ -170,41 +170,65 @@ static:
 </span><span class="boring">}
 </span></code></pre></pre>
 <h3 id="configuration-options-rust-doc"><a class="header" href="#configuration-options-rust-doc">Configuration Options (<a href="../../api/quilkin/filters/firewall/struct.Config.html">Rust Doc</a>)</a></h3>
-<pre><code class="language-yaml">properties:
+<pre><code class="language-yaml">---
+$schema: &quot;http://json-schema.org/draft-07/schema#&quot;
+title: Config
+description: Represents how a Firewall filter is configured for read and write operations.
+type: object
+required:
+  - on_read
+  - on_write
+properties:
   on_read:
-    '$ref': '#/definitions/rules'
-    description: Rules to match against when reading packets to the local listening port.
+    type: array
+    items:
+      $ref: &quot;#/definitions/Rule&quot;
   on_write:
     type: array
-    '$ref': '#/definitions/rules'
-    description: Rules to match against when writing packets to the local listening port.
-
-definitions:
-  rules:
-    type: array
-    description: Rules to match against when writing packets to the local listening port.
     items:
-      type: object
-      properties:
-        action:
-          type: string
-          description: |
-            Whether or not a matching Rule should Allow or Deny access
-            - DENY: If the rule matches, block the traffic.
-            - ALLOW: If the rule matches, allow the traffic through.
-          enum: ['ALLOW', 'DENY']
-        source:
-          type: string
-          description: A CIDR network range, either in a v4 or v6 format.
-        ports:
-          type: array
-          description: Array of singular ports or port ranges to match against.
-          items:
-            type: string
-            description: |
-              Either in the format of &quot;10&quot; for a singular port or &quot;10-100&quot; for a port range where 
-              min is inclusive, and max is exclusive.
-      required: ['action', 'source', 'ports']
+      $ref: &quot;#/definitions/Rule&quot;
+definitions:
+  Action:
+    description: &quot;Whether or not a matching [Rule] should Allow or Deny access&quot;
+    type: string
+    enum:
+      - ALLOW
+      - DENY
+  PortRange:
+    description: &quot;Range of matching ports that are configured against a [Rule].&quot;
+    allOf:
+      - $ref: &quot;#/definitions/Range_of_uint16&quot;
+  Range_of_uint16:
+    type: object
+    required:
+      - end
+      - start
+    properties:
+      end:
+        type: integer
+        format: uint16
+        minimum: 0.0
+      start:
+        type: integer
+        format: uint16
+        minimum: 0.0
+  Rule:
+    description: &quot;Combination of CIDR range, port range and action to take.&quot;
+    type: object
+    required:
+      - action
+      - ports
+      - source
+    properties:
+      action:
+        $ref: &quot;#/definitions/Action&quot;
+      ports:
+        type: array
+        items:
+          $ref: &quot;#/definitions/PortRange&quot;
+      source:
+        description: ipv4 or ipv6 CIDR address.
+        type: string
 </code></pre>
 <h4 id="rule-evaluation"><a class="header" href="#rule-evaluation">Rule Evaluation</a></h4>
 <p>The Firewall filter supports DENY and ALLOW actions for access control. When multiple DENY and ALLOW actions are used 
@@ -227,10 +251,10 @@ rule deciding if the request is allowed or denied:</p>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../filters/token_router.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../filters/debug.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
-                            <a rel="next" href="../filters/writing_custom_filters.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="../filters/load_balancer.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         <div style="clear: both"></div>
@@ -239,10 +263,10 @@ rule deciding if the request is allowed or denied:</p>
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../filters/token_router.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../filters/debug.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
-                    <a rel="next" href="../filters/writing_custom_filters.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next" href="../filters/load_balancer.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>

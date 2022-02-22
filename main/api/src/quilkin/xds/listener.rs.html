@@ -703,6 +703,10 @@
 <span id="702">702</span>
 <span id="703">703</span>
 <span id="704">704</span>
+<span id="705">705</span>
+<span id="706">706</span>
+<span id="707">707</span>
+<span id="708">708</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -911,7 +915,7 @@
     <span class="comment">// A simple filter that will be used in the following tests.</span>
     <span class="comment">// It appends a string to each payload.</span>
     <span class="kw">const</span> <span class="ident">APPEND_TYPE_URL</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;filter.append&quot;</span>;
-    <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
+    <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>, <span class="ident">schemars::JsonSchema</span>)]</span>
     <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Append</span> {
         <span class="kw">pub</span> <span class="ident">value</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">prost::alloc::string::String</span><span class="op">&gt;</span>,
     }
@@ -950,6 +954,10 @@
     <span class="kw">impl</span> <span class="ident">FilterFactory</span> <span class="kw">for</span> <span class="ident">AppendFactory</span> {
         <span class="kw">fn</span> <span class="ident">name</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
             <span class="ident">APPEND_TYPE_URL</span>
+        }
+
+        <span class="kw">fn</span> <span class="ident">config_schema</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">schemars::schema::RootSchema</span> {
+            <span class="macro">schemars::schema_for!</span>(<span class="ident">Append</span>)
         }
 
         <span class="kw">fn</span> <span class="ident">create_filter</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">args</span>: <span class="ident">CreateFilterArgs</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">FilterInstance</span>, <span class="ident">Error</span><span class="op">&gt;</span> {

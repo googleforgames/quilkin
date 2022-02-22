@@ -75,7 +75,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><div><strong aria-hidden="true">2.</strong> Quickstart</div></li><li><ol class="section"><li class="chapter-item expanded "><a href="quickstart-netcat.html"><strong aria-hidden="true">2.1.</strong> Netcat</a></li><li class="chapter-item expanded "><a href="quickstart-agones-xonotic.html"><strong aria-hidden="true">2.2.</strong> Agones + Xonotic</a></li></ol></li><li class="chapter-item expanded "><a href="using.html"><strong aria-hidden="true">3.</strong> Usage</a></li><li class="chapter-item expanded "><a href="examples.html"><strong aria-hidden="true">4.</strong> Examples</a></li><li class="chapter-item expanded "><a href="session.html"><strong aria-hidden="true">5.</strong> Session</a></li><li class="chapter-item expanded "><a href="proxy.html"><strong aria-hidden="true">6.</strong> Proxy</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="proxy-configuration.html" class="active"><strong aria-hidden="true">6.1.</strong> Proxy Configuration</a></li></ol></li><li class="chapter-item expanded "><a href="filters.html"><strong aria-hidden="true">7.</strong> Filters</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="filters/capture.html"><strong aria-hidden="true">7.1.</strong> Capture</a></li><li class="chapter-item expanded "><a href="filters/concatenate_bytes.html"><strong aria-hidden="true">7.2.</strong> Concatenate Bytes</a></li><li class="chapter-item expanded "><a href="filters/compress.html"><strong aria-hidden="true">7.3.</strong> Compress</a></li><li class="chapter-item expanded "><a href="filters/debug.html"><strong aria-hidden="true">7.4.</strong> Debug</a></li><li class="chapter-item expanded "><a href="filters/load_balancer.html"><strong aria-hidden="true">7.5.</strong> Load Balancer</a></li><li class="chapter-item expanded "><a href="filters/local_rate_limit.html"><strong aria-hidden="true">7.6.</strong> Local Rate Limit</a></li><li class="chapter-item expanded "><a href="filters/token_router.html"><strong aria-hidden="true">7.7.</strong> Token Router</a></li><li class="chapter-item expanded "><a href="filters/firewall.html"><strong aria-hidden="true">7.8.</strong> Firewall</a></li><li class="chapter-item expanded "><a href="filters/writing_custom_filters.html"><strong aria-hidden="true">7.9.</strong> Writing Custom Filters</a></li></ol></li><li class="chapter-item expanded "><a href="integrations.html"><strong aria-hidden="true">8.</strong> Integrations</a></li><li class="chapter-item expanded "><a href="admin.html"><strong aria-hidden="true">9.</strong> Administration</a></li><li class="chapter-item expanded "><a href="faq.html"><strong aria-hidden="true">10.</strong> FAQ</a></li><li class="chapter-item expanded "><a href="xds.html"><strong aria-hidden="true">11.</strong> xDS</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><div><strong aria-hidden="true">2.</strong> Quickstart</div></li><li><ol class="section"><li class="chapter-item expanded "><a href="quickstart-netcat.html"><strong aria-hidden="true">2.1.</strong> Netcat</a></li><li class="chapter-item expanded "><a href="quickstart-agones-xonotic.html"><strong aria-hidden="true">2.2.</strong> Agones + Xonotic</a></li></ol></li><li class="chapter-item expanded "><a href="using.html"><strong aria-hidden="true">3.</strong> Usage</a></li><li class="chapter-item expanded "><a href="examples.html"><strong aria-hidden="true">4.</strong> Examples</a></li><li class="chapter-item expanded "><a href="session.html"><strong aria-hidden="true">5.</strong> Session</a></li><li class="chapter-item expanded "><a href="proxy.html"><strong aria-hidden="true">6.</strong> Proxy</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="proxy-configuration.html" class="active"><strong aria-hidden="true">6.1.</strong> Proxy Configuration</a></li></ol></li><li class="chapter-item expanded "><a href="filters.html"><strong aria-hidden="true">7.</strong> Filters</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="filters/capture.html"><strong aria-hidden="true">7.1.</strong> Capture</a></li><li class="chapter-item expanded "><a href="filters/compress.html"><strong aria-hidden="true">7.2.</strong> Compress</a></li><li class="chapter-item expanded "><a href="filters/concatenate_bytes.html"><strong aria-hidden="true">7.3.</strong> Concatenate Bytes</a></li><li class="chapter-item expanded "><a href="filters/debug.html"><strong aria-hidden="true">7.4.</strong> Debug</a></li><li class="chapter-item expanded "><a href="filters/firewall.html"><strong aria-hidden="true">7.5.</strong> Firewall</a></li><li class="chapter-item expanded "><a href="filters/load_balancer.html"><strong aria-hidden="true">7.6.</strong> Load Balancer</a></li><li class="chapter-item expanded "><a href="filters/local_rate_limit.html"><strong aria-hidden="true">7.7.</strong> Local Rate Limit</a></li><li class="chapter-item expanded "><a href="filters/matches.html"><strong aria-hidden="true">7.8.</strong> Matches</a></li><li class="chapter-item expanded "><a href="filters/token_router.html"><strong aria-hidden="true">7.9.</strong> Token Router</a></li><li class="chapter-item expanded "><a href="filters/writing_custom_filters.html"><strong aria-hidden="true">7.10.</strong> Writing Custom Filters</a></li></ol></li><li class="chapter-item expanded "><a href="integrations.html"><strong aria-hidden="true">8.</strong> Integrations</a></li><li class="chapter-item expanded "><a href="admin.html"><strong aria-hidden="true">9.</strong> Administration</a></li><li class="chapter-item expanded "><a href="faq.html"><strong aria-hidden="true">10.</strong> FAQ</a></li><li class="chapter-item expanded "><a href="xds.html"><strong aria-hidden="true">11.</strong> xDS</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -142,105 +142,105 @@ then if not present, in <code>/etc/quilkin/quilkin.yaml</code> on UNIX systems. 
 <code>-c/--config</code> command-line argument, or the <code>QUILKIN_FILENAME</code> environment variable.</p>
 <pre><code class="language-yaml">type: object
 properties:
-  version:
-    type: string
-    description: |
-      The configuration file version to use.
-    enum:
-      - v1alpha1
-  proxy:
-    type: object
-    description: |
-      Configuration of core proxy behavior.
-    properties:
-      id:
-        type: string
-        description: |
-          An identifier for the proxy instance.
-        default: On linux, the machine hostname is used as default. On all other platforms a UUID is generated for the proxy.
-      port:
-        type: integer
-        description: |
-          The listening port for the proxy.
-        default: 7000
-  admin:
-    type: object
-    description: |
-      Configuration of proxy admin HTTP interface.
-    properties:
-      address:
-      type: string
-      description: |
-        Socket Address and port to bind the administration interface to.
-      default: [::]:9091
-  static:
-    type: object
-    description: |
-      Static configuration of endpoints and filters.
-      NOTE: Exactly one of `static` or `dynamic` can be specified.
-    properties:
-      filter:
-        '$ref': '#/definitions/filterchain'
-      endpoints:
-        '$ref': '#/definitions/endpoints'
-    required:
-      - endpoints
-  dynamic:
-    type: object
-    description: |
-      Dynamic configuration of endpoints and filters.
-      NOTE: Exactly one of `static` or `dynamic` can be specified.
-    properties:
-      management_servers:
-        type: array
-        description: |
-          A list of XDS management servers to fetch configuration from.
-          Multiple servers can be provided for redundancy for the proxy to
-          fall back to upon error.
-        items:
-          type: object
-            description: |
-              Configuration for a management server.
-            properties:
-              address:
-                type: string
-                description: |
-                  Address of the management server. This must have the `http(s)` scheme prefix.
-                  Example: `http://example.com`
-    required:
-      - management_servers
+ version:
+ type: string
+ description: |
+ The configuration file version to use.
+ enum:
+ - v1alpha1
+ proxy:
+ type: object
+ description: |
+ Configuration of core proxy behavior.
+ properties:
+ id:
+ type: string
+ description: |
+ An identifier for the proxy instance.
+ default: On linux, the machine hostname is used as default. On all other platforms a UUID is generated for the proxy.
+ port:
+ type: integer
+ description: |
+ The listening port for the proxy.
+ default: 7000
+ admin:
+ type: object
+ description: |
+ Configuration of proxy admin HTTP interface.
+ properties:
+ address:
+ type: string
+ description: |
+ Socket Address and port to bind the administration interface to.
+ default: [::]:9091
+ static:
+ type: object
+ description: |
+ Static configuration of endpoints and filters.
+ NOTE: Exactly one of `static` or `dynamic` can be specified.
+ properties:
+ filter:
+ '$ref': '#/definitions/filterchain'
+ endpoints:
+ '$ref': '#/definitions/endpoints'
+ required:
+ - endpoints
+ dynamic:
+ type: object
+ description: |
+ Dynamic configuration of endpoints and filters.
+ NOTE: Exactly one of `static` or `dynamic` can be specified.
+ properties:
+ management_servers:
+ type: array
+ description: |
+ A list of XDS management servers to fetch configuration from.
+ Multiple servers can be provided for redundancy for the proxy to
+ fall back to upon error.
+ items:
+ type: object
+ description: |
+ Configuration for a management server.
+ properties:
+ address:
+ type: string
+ description: |
+ Address of the management server. This must have the `http(s)` scheme prefix.
+ Example: `http://example.com`
+ required:
+ - management_servers
 
 required:
-  - version
+ - version
 
 definitions:
-  filterchain:
-    type: array
-    description: |
-      A filter chain.
-    items:
-      '$ref': {} # Refer to the Filter documentation for a filter configuration schema.
-  endpoints:
-    type: array
-    description: |
-      A list of upstream endpoints to forward packets to.
-    items:
-      type: object
-        description: |
-          An upstream endpoint
-        properties:
-          address:
-            type: string
-            description: |
-              Socket address of the endpoint. This must be of the ´IP:Port` form e.g `192.168.1.1:7001`
-            metadata:
-              type: object
-              description: |
-                Arbitrary key value pairs that is associated with the endpoint.
-                These are visible to Filters when processing packets and can be used to provide more context about endpoints (e.g whether or not to route a packet to an endpoint).
-                Keys must be of type string otherwise the configuration is rejected.
-      required:
-        - address
+ filterchain:
+ type: array
+ description: |
+ A filter chain.
+ items:
+ '$ref': {} # Refer to the Filter documentation for a filter configuration schema.
+ endpoints:
+ type: array
+ description: |
+ A list of upstream endpoints to forward packets to.
+ items:
+ type: object
+ description: |
+ An upstream endpoint
+ properties:
+ address:
+ type: string
+ description: |
+ Socket address of the endpoint. This must be of the ´IP:Port` form e.g `192.168.1.1:7001`
+ metadata:
+ type: object
+ description: |
+ Arbitrary key value pairs that is associated with the endpoint.
+ These are visible to Filters when processing packets and can be used to provide more context about endpoints (e.g whether or not to route a packet to an endpoint).
+ Keys must be of type string otherwise the configuration is rejected.
+ required:
+ - address
 </code></pre>
 
                     </main>

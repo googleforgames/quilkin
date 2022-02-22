@@ -75,7 +75,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><div><strong aria-hidden="true">2.</strong> Quickstart</div></li><li><ol class="section"><li class="chapter-item expanded "><a href="quickstart-netcat.html"><strong aria-hidden="true">2.1.</strong> Netcat</a></li><li class="chapter-item expanded "><a href="quickstart-agones-xonotic.html"><strong aria-hidden="true">2.2.</strong> Agones + Xonotic</a></li></ol></li><li class="chapter-item expanded "><a href="using.html"><strong aria-hidden="true">3.</strong> Usage</a></li><li class="chapter-item expanded "><a href="examples.html"><strong aria-hidden="true">4.</strong> Examples</a></li><li class="chapter-item expanded "><a href="session.html"><strong aria-hidden="true">5.</strong> Session</a></li><li class="chapter-item expanded "><a href="proxy.html"><strong aria-hidden="true">6.</strong> Proxy</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="proxy-configuration.html"><strong aria-hidden="true">6.1.</strong> Proxy Configuration</a></li></ol></li><li class="chapter-item expanded "><a href="filters.html"><strong aria-hidden="true">7.</strong> Filters</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="filters/capture.html"><strong aria-hidden="true">7.1.</strong> Capture</a></li><li class="chapter-item expanded "><a href="filters/concatenate_bytes.html"><strong aria-hidden="true">7.2.</strong> Concatenate Bytes</a></li><li class="chapter-item expanded "><a href="filters/compress.html"><strong aria-hidden="true">7.3.</strong> Compress</a></li><li class="chapter-item expanded "><a href="filters/debug.html"><strong aria-hidden="true">7.4.</strong> Debug</a></li><li class="chapter-item expanded "><a href="filters/load_balancer.html"><strong aria-hidden="true">7.5.</strong> Load Balancer</a></li><li class="chapter-item expanded "><a href="filters/local_rate_limit.html"><strong aria-hidden="true">7.6.</strong> Local Rate Limit</a></li><li class="chapter-item expanded "><a href="filters/token_router.html"><strong aria-hidden="true">7.7.</strong> Token Router</a></li><li class="chapter-item expanded "><a href="filters/firewall.html"><strong aria-hidden="true">7.8.</strong> Firewall</a></li><li class="chapter-item expanded "><a href="filters/writing_custom_filters.html"><strong aria-hidden="true">7.9.</strong> Writing Custom Filters</a></li></ol></li><li class="chapter-item expanded "><a href="integrations.html"><strong aria-hidden="true">8.</strong> Integrations</a></li><li class="chapter-item expanded "><a href="admin.html"><strong aria-hidden="true">9.</strong> Administration</a></li><li class="chapter-item expanded "><a href="faq.html"><strong aria-hidden="true">10.</strong> FAQ</a></li><li class="chapter-item expanded "><a href="xds.html" class="active"><strong aria-hidden="true">11.</strong> xDS</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><div><strong aria-hidden="true">2.</strong> Quickstart</div></li><li><ol class="section"><li class="chapter-item expanded "><a href="quickstart-netcat.html"><strong aria-hidden="true">2.1.</strong> Netcat</a></li><li class="chapter-item expanded "><a href="quickstart-agones-xonotic.html"><strong aria-hidden="true">2.2.</strong> Agones + Xonotic</a></li></ol></li><li class="chapter-item expanded "><a href="using.html"><strong aria-hidden="true">3.</strong> Usage</a></li><li class="chapter-item expanded "><a href="examples.html"><strong aria-hidden="true">4.</strong> Examples</a></li><li class="chapter-item expanded "><a href="session.html"><strong aria-hidden="true">5.</strong> Session</a></li><li class="chapter-item expanded "><a href="proxy.html"><strong aria-hidden="true">6.</strong> Proxy</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="proxy-configuration.html"><strong aria-hidden="true">6.1.</strong> Proxy Configuration</a></li></ol></li><li class="chapter-item expanded "><a href="filters.html"><strong aria-hidden="true">7.</strong> Filters</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="filters/capture.html"><strong aria-hidden="true">7.1.</strong> Capture</a></li><li class="chapter-item expanded "><a href="filters/compress.html"><strong aria-hidden="true">7.2.</strong> Compress</a></li><li class="chapter-item expanded "><a href="filters/concatenate_bytes.html"><strong aria-hidden="true">7.3.</strong> Concatenate Bytes</a></li><li class="chapter-item expanded "><a href="filters/debug.html"><strong aria-hidden="true">7.4.</strong> Debug</a></li><li class="chapter-item expanded "><a href="filters/firewall.html"><strong aria-hidden="true">7.5.</strong> Firewall</a></li><li class="chapter-item expanded "><a href="filters/load_balancer.html"><strong aria-hidden="true">7.6.</strong> Load Balancer</a></li><li class="chapter-item expanded "><a href="filters/local_rate_limit.html"><strong aria-hidden="true">7.7.</strong> Local Rate Limit</a></li><li class="chapter-item expanded "><a href="filters/matches.html"><strong aria-hidden="true">7.8.</strong> Matches</a></li><li class="chapter-item expanded "><a href="filters/token_router.html"><strong aria-hidden="true">7.9.</strong> Token Router</a></li><li class="chapter-item expanded "><a href="filters/writing_custom_filters.html"><strong aria-hidden="true">7.10.</strong> Writing Custom Filters</a></li></ol></li><li class="chapter-item expanded "><a href="integrations.html"><strong aria-hidden="true">8.</strong> Integrations</a></li><li class="chapter-item expanded "><a href="admin.html"><strong aria-hidden="true">9.</strong> Administration</a></li><li class="chapter-item expanded "><a href="faq.html"><strong aria-hidden="true">10.</strong> FAQ</a></li><li class="chapter-item expanded "><a href="xds.html" class="active"><strong aria-hidden="true">11.</strong> xDS</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -149,57 +149,49 @@ as its data source, as well as an opinionated integration with <a href="https://
 <p>Since the range of resources configurable by the xDS API extends that of Quilkin's domain (i.e being UDP based, Quilkin does not have a need for HTTP/TCP resources), only a subset of the API is supported. The following lists these relevant parts and any limitation to the provided support as a result:</p>
 <ul>
 <li>
-<p><strong>Cluster Discovery Service <a href="https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/operations/dynamic_configuration#cds">(CDS)</a></strong>: Provides information about known clusters and their membership information.</p>
-<ul>
-<li>The proxy uses these resources to discover clusters and their endpoints.</li>
-<li>While cluster topology information like <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/base.proto#config-core-v3-locality">locality</a> can be provided in the configuration, the proxy currently does not use this information (support may be included in the future however).</li>
-<li>Any <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#enum-config-cluster-v3-cluster-lbpolicy">load balancing information</a> included in this resource is ignored. For load balancing, use <a href="./filters.html">Quilkin filters</a> instead.</li>
-<li>Only <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#enum-config-cluster-v3-cluster-discoverytype">cluster discovery type</a> <code>STATIC</code> and <code>EDS</code> is supported. Configuration including other discovery types e.g <code>LOGICAL_DNS</code> is rejected.</li>
-</ul>
+<p><strong>Cluster Discovery Service <a href="https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/operations/dynamic_configuration#cds">(CDS)</a></strong>: Provides information about known clusters and their membership information.
+book.toml htmltest.yaml logos preprocessor.sh src The proxy uses these resources to discover clusters and their endpoints.
+book.toml htmltest.yaml logos preprocessor.sh src While cluster topology information like <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/base.proto#config-core-v3-locality">locality</a> can be provided in the configuration, the proxy currently does not use this information (support may be included in the future however).
+book.toml htmltest.yaml logos preprocessor.sh src Any <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#enum-config-cluster-v3-cluster-lbpolicy">load balancing information</a> included in this resource is ignored. For load balancing, use <a href="./filters.html">Quilkin filters</a> instead.
+book.toml htmltest.yaml logos preprocessor.sh src Only <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#enum-config-cluster-v3-cluster-discoverytype">cluster discovery type</a> <code>STATIC</code> and <code>EDS</code> is supported. Configuration including other discovery types e.g <code>LOGICAL_DNS</code> is rejected.</p>
 </li>
 <li>
-<p><strong>Endpoint Discovery Service <a href="https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/operations/dynamic_configuration#eds">(EDS)</a></strong>: Provides information about endpoints.</p>
-<ul>
-<li>The proxy uses these resources to discover information about endpoints like their IP addresses.</li>
-<li>Endpoints may provide <a href="./proxy.html#endpoint-metadata">Endpoint Metadata</a> via the <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/base.proto#envoy-v3-api-msg-config-core-v3-metadata">metadata</a> field. These metadata will be visible to filters as part of the corresponding endpoints information when processing packets.</li>
-<li>Only <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-address">socket addresses</a> are supported on an endpoint's address configuration - i.e an IP address and port number combination. Configuration including any other type of addressing e.g named pipes will be rejected.</li>
-<li>Any <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint.proto#config-endpoint-v3-clusterloadassignment-policy">load balancing information</a> included in this resource is ignored. For load balancing, use <a href="./filters.html">Quilkin filters</a> instead.</li>
-</ul>
+<p><strong>Endpoint Discovery Service <a href="https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/operations/dynamic_configuration#eds">(EDS)</a></strong>: Provides information about endpoints.
+book.toml htmltest.yaml logos preprocessor.sh src The proxy uses these resources to discover information about endpoints like their IP addresses.
+book.toml htmltest.yaml logos preprocessor.sh src Endpoints may provide <a href="./proxy.html#endpoint-metadata">Endpoint Metadata</a> via the <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/base.proto#envoy-v3-api-msg-config-core-v3-metadata">metadata</a> field. These metadata will be visible to filters as part of the corresponding endpoints information when processing packets.
+book.toml htmltest.yaml logos preprocessor.sh src Only <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-address">socket addresses</a> are supported on an endpoint's address configuration - i.e an IP address and port number combination. Configuration including any other type of addressing e.g named pipes will be rejected.
+book.toml htmltest.yaml logos preprocessor.sh src Any <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint.proto#config-endpoint-v3-clusterloadassignment-policy">load balancing information</a> included in this resource is ignored. For load balancing, use <a href="./filters.html">Quilkin filters</a> instead.</p>
 </li>
 <li>
-<p><strong>Listener Discovery Service <a href="https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/operations/dynamic_configuration#lds">(LDS)</a></strong>: Provides information about <a href="./filters.html">Filters and Filter Chains</a>.</p>
-<ul>
-<li>Only the <code>name</code> and <code>filter_chains</code> fields in the <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto#config-listener-v3-listener">Listener resource</a> are used by the proxy. The rest are ignored.</li>
-<li>Since Quilkin only uses one filter chain per proxy, at most one filter chain can be provided in the resource. Otherwise the configuration is rejected.</li>
-<li>Only the list of <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener_components.proto#envoy-v3-api-msg-config-listener-v3-filter">filters</a> specified in the <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener_components.proto#config-listener-v3-filterchain">filter chain</a> is used by the proxy - i.e other fields like <code>filter_chain_match</code> are ignored. This list also specifies the order that the corresponding filter chain will be constructed.</li>
-<li>gRPC proto configuration for Quilkin's built-in filters <a href="https://github.com/googleforgames/quilkin/tree/main/proto/quilkin/extensions/filters">can be found here</a>. They are equivalent to the filter's static configuration.</li>
-</ul>
+<p><strong>Listener Discovery Service <a href="https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/operations/dynamic_configuration#lds">(LDS)</a></strong>: Provides information about <a href="./filters.html">Filters and Filter Chains</a>.
+book.toml htmltest.yaml logos preprocessor.sh src Only the <code>name</code> and <code>filter_chains</code> fields in the <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto#config-listener-v3-listener">Listener resource</a> are used by the proxy. The rest are ignored.
+book.toml htmltest.yaml logos preprocessor.sh src Since Quilkin only uses one filter chain per proxy, at most one filter chain can be provided in the resource. Otherwise the configuration is rejected.
+book.toml htmltest.yaml logos preprocessor.sh src Only the list of <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener_components.proto#envoy-v3-api-msg-config-listener-v3-filter">filters</a> specified in the <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener_components.proto#config-listener-v3-filterchain">filter chain</a> is used by the proxy - i.e other fields like <code>filter_chain_match</code> are ignored. This list also specifies the order that the corresponding filter chain will be constructed.
+book.toml htmltest.yaml logos preprocessor.sh src gRPC proto configuration for Quilkin's built-in filters <a href="https://github.com/googleforgames/quilkin/tree/main/proto/quilkin/extensions/filters">can be found here</a>. They are equivalent to the filter's static configuration.</p>
 </li>
 </ul>
 <h2 id="metrics"><a class="header" href="#metrics">Metrics</a></h2>
 <p>Quilkin exposes the following metrics around the management servers and its resources:</p>
 <ul>
-<li>
-<p><code>quilkin_xds_connected_state</code> (Gauge)</p>
-<p>A boolean that indicates whether or not the proxy is currently connected to a management server. A value <code>1</code> means that the proxy is connected while <code>0</code> means that it is not connected to any server at that point in time.</p>
-</li>
-<li>
-<p><code>quilkin_xds_update_attempt_total</code> (Counter)</p>
-<p>The total number of attempts made by a management server to configure the proxy. This is equivalent to the total number of configuration updates received by the proxy from a management server.</p>
-</li>
-<li>
-<p><code>quilkin_xds_update_success_total</code> (Counter)</p>
-<p>The total number of successful attempts made by a management server to configure the proxy. This is equivalent to the total number of configuration updates received by the proxy from a management server and was successfully applied by the proxy.</p>
-</li>
-<li>
-<p><code>quilkin_xds_update_failure_total</code> (Counter)</p>
-<p>The total number of unsuccessful attempts made by a management server to configure the proxy. This is equivalent to the total number of configuration updates received by the proxy from a management server and was rejected by the proxy (e.g due to a bad/inconsistent configuration).</p>
-</li>
-<li>
-<p><code>quilkin_xds_requests_total</code> (Counter)</p>
-<p>The total number of <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/discovery.proto#envoy-api-msg-discoveryrequest">DiscoveryRequest</a>s made by the proxy to management servers. This tracks messages flowing in the direction from the proxy to the management server.</p>
-</li>
+<li><code>quilkin_xds_connected_state</code> (Gauge)</li>
 </ul>
+<p>A boolean that indicates whether or not the proxy is currently connected to a management server. A value <code>1</code> means that the proxy is connected while <code>0</code> means that it is not connected to any server at that point in time.</p>
+<ul>
+<li><code>quilkin_xds_update_attempt_total</code> (Counter)</li>
+</ul>
+<p>The total number of attempts made by a management server to configure the proxy. This is equivalent to the total number of configuration updates received by the proxy from a management server.</p>
+<ul>
+<li><code>quilkin_xds_update_success_total</code> (Counter)</li>
+</ul>
+<p>The total number of successful attempts made by a management server to configure the proxy. This is equivalent to the total number of configuration updates received by the proxy from a management server and was successfully applied by the proxy.</p>
+<ul>
+<li><code>quilkin_xds_update_failure_total</code> (Counter)</li>
+</ul>
+<p>The total number of unsuccessful attempts made by a management server to configure the proxy. This is equivalent to the total number of configuration updates received by the proxy from a management server and was rejected by the proxy (e.g due to a bad/inconsistent configuration).</p>
+<ul>
+<li><code>quilkin_xds_requests_total</code> (Counter)</li>
+</ul>
+<p>The total number of <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/discovery.proto#envoy-api-msg-discoveryrequest">DiscoveryRequest</a>s made by the proxy to management servers. This tracks messages flowing in the direction from the proxy to the management server.</p>
 
                     </main>
 

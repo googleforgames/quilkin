@@ -451,6 +451,10 @@
 <span id="450">450</span>
 <span id="451">451</span>
 <span id="452">452</span>
+<span id="453">453</span>
+<span id="454">454</span>
+<span id="455">455</span>
+<span id="456">456</span>
 </pre><pre class="rust"><code><span class="macro">crate::include_proto!</span>(<span class="string">&quot;quilkin.extensions.filters.matches.v1alpha1&quot;</span>);
 
 <span class="kw">use</span> <span class="ident"><span class="self">self</span>::quilkin::extensions::filters::matches::v1alpha1</span> <span class="kw">as</span> <span class="ident">proto</span>;
@@ -616,6 +620,10 @@
         <span class="ident">NAME</span>
     }
 
+    <span class="kw">fn</span> <span class="ident">config_schema</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">schemars::schema::RootSchema</span> {
+        <span class="macro">schemars::schema_for!</span>(<span class="ident">Config</span>)
+    }
+
     <span class="kw">fn</span> <span class="ident">create_filter</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">args</span>: <span class="ident">CreateFilterArgs</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">FilterInstance</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> (<span class="ident">config_json</span>, <span class="ident">config</span>) <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">require_config</span>(<span class="ident">args</span>.<span class="ident">config</span>)<span class="question-mark">?</span>
@@ -630,7 +638,7 @@
 }
 
 <span class="doccomment">/// Configuration for the [`factory`].</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">serde::Deserialize</span>, <span class="ident">serde::Serialize</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">serde::Deserialize</span>, <span class="ident">serde::Serialize</span>, <span class="ident">PartialEq</span>, <span class="ident">schemars::JsonSchema</span>)]</span>
 <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Config</span> {
     <span class="doccomment">/// Configuration for [`Filter::read`].</span>
@@ -684,7 +692,7 @@
 }
 
 <span class="doccomment">/// Configuration for a specific direction.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">serde::Deserialize</span>, <span class="ident">serde::Serialize</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">serde::Deserialize</span>, <span class="ident">serde::Serialize</span>, <span class="ident">PartialEq</span>, <span class="ident">schemars::JsonSchema</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">DirectionalConfig</span> {
     <span class="doccomment">/// The key for the metadata to compare against.</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;metadataKey&quot;</span>)]</span>
@@ -698,7 +706,7 @@
 
 <span class="doccomment">/// A specific match branch. The filter is run when `value` matches the value</span>
 <span class="doccomment">/// defined in `metadata_key`.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">serde::Deserialize</span>, <span class="ident">serde::Serialize</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">serde::Deserialize</span>, <span class="ident">serde::Serialize</span>, <span class="ident">PartialEq</span>, <span class="ident">schemars::JsonSchema</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Branch</span> {
     <span class="doccomment">/// The value to compare against the dynamic metadata.</span>
     <span class="kw">pub</span> <span class="ident">value</span>: <span class="ident"><span class="kw">crate</span>::metadata::Value</span>,
@@ -726,7 +734,7 @@
 }
 
 <span class="doccomment">/// The behaviour when the none of branches match.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">schemars::JsonSchema</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Fallthrough</span> {
     <span class="doccomment">/// The packet will be passed onto the next filter.</span>
     <span class="ident">Pass</span>,

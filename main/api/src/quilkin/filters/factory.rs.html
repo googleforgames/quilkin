@@ -130,6 +130,9 @@
 <span id="129">129</span>
 <span id="130">130</span>
 <span id="131">131</span>
+<span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -189,6 +192,9 @@
     <span class="doccomment">/// For example the `v1alpha1` version of the debug filter has the name:</span>
     <span class="doccomment">///     `quilkin.extensions.filters.debug_filter.v1alpha1.Debug`</span>
     <span class="kw">fn</span> <span class="ident">name</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>;
+
+    <span class="doccomment">/// Returns the schema for the configuration of the [`Filter`].</span>
+    <span class="kw">fn</span> <span class="ident">config_schema</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">schemars::schema::RootSchema</span>;
 
     <span class="doccomment">/// Returns a filter based on the provided arguments.</span>
     <span class="kw">fn</span> <span class="ident">create_filter</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">args</span>: <span class="ident">CreateFilterArgs</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">FilterInstance</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
