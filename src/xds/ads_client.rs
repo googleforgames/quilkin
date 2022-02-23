@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-use std::collections::HashMap;
 use std::time::Duration;
 
 use prometheus::Result as MetricsResult;
@@ -37,7 +36,7 @@ use tryhard::{
 };
 
 use crate::{
-    cluster::Cluster,
+    cluster::SharedCluster,
     config::ManagementServer,
     xds::{
         cluster::ClusterManager,
@@ -55,9 +54,6 @@ use crate::{
     },
     Result,
 };
-
-/// Represents a full snapshot the all clusters.
-pub type ClusterUpdate = HashMap<String, Cluster>;
 
 /// Use a bounded channel of size 1 on the channels between
 ///   - the xds listeners and their associated resource manager.
@@ -88,9 +84,9 @@ impl AdsClient {
     pub async fn run(
         self,
         node_id: String,
-        filter_chain: crate::filters::SharedFilterChain,
+        cluster: SharedCluster,
         management_servers: Vec<ManagementServer>,
-        cluster_updates_tx: mpsc::Sender<ClusterUpdate>,
+        filter_chain: crate::filters::SharedFilterChain,
         mut shutdown_rx: watch::Receiver<()>,
     ) -> Result<()> {
         let metrics = self.metrics;
@@ -147,8 +143,7 @@ impl AdsClient {
         let handle = tryhard::retry_fn(|| {
             let (discovery_req_tx, discovery_req_rx) =
                 mpsc::channel::<DiscoveryRequest>(UPDATES_CHANNEL_BUFFER_SIZE);
-            let cluster_manager =
-                ClusterManager::new(cluster_updates_tx.clone(), discovery_req_tx.clone());
+            let cluster_manager = ClusterManager::new(cluster.clone(), discovery_req_tx.clone());
             let listener_manager = ListenerManager::new(filter_chain.clone(), discovery_req_tx);
 
             let resource_handlers = ResourceHandlers {
@@ -475,15 +470,15 @@ mod tests {
     /// than backoff or retry.
     async fn invalid_url() {
         let filter_chain = crate::filters::SharedFilterChain::empty();
+        let cluster = crate::cluster::SharedCluster::empty().unwrap();
         let (_shutdown_tx, shutdown_rx) = watch::channel::<()>(());
-        let (cluster_updates_tx, _) = mpsc::channel(10);
         let run = AdsClient::new().unwrap().run(
             "test-id".into(),
-            filter_chain,
+            cluster,
             vec![ManagementServer {
                 address: "localhost:18000".into(),
             }],
-            cluster_updates_tx,
+            filter_chain,
             shutdown_rx,
         );
 

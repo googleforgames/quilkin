@@ -14,14 +14,12 @@
  *  limitations under the License.
  */
 
-use crate::cluster::cluster_manager::SharedClusterManager;
-use crate::filters::SharedFilterChain;
-
-use crate::endpoint::Endpoint;
 use hyper::http::HeaderValue;
 use hyper::{Body, Response, StatusCode};
 use serde::Serialize;
 use std::sync::Arc;
+
+use crate::{cluster::SharedCluster, endpoint::Endpoint, filters::SharedFilterChain};
 
 #[derive(Debug, Serialize)]
 struct ClusterDump {
@@ -47,11 +45,11 @@ struct FilterChainDump {
 }
 
 pub(crate) fn handle_request(
-    cluster_manager: SharedClusterManager,
+    cluster: SharedCluster,
     filter_chain: SharedFilterChain,
 ) -> Response<Body> {
     let mut response = Response::new(Body::empty());
-    match create_config_dump_json(cluster_manager, filter_chain) {
+    match create_config_dump_json(cluster, filter_chain) {
         Ok(body) => {
             *response.status_mut() = StatusCode::OK;
             response
@@ -69,28 +67,21 @@ pub(crate) fn handle_request(
 }
 
 fn create_config_dump_json(
-    cluster_manager: SharedClusterManager,
+    cluster: SharedCluster,
     filter_chain: SharedFilterChain,
 ) -> Result<String, serde_json::Error> {
-    let endpoints = {
-        let cluster_manager = cluster_manager.read();
-        // Clone the list of endpoints immediately so that we don't hold on
-        // to the cluster manager's lock while serializing.
-        cluster_manager
-            .get_all_endpoints()
-            .map(|upstream_endpoints| upstream_endpoints.iter().cloned().collect::<Vec<_>>())
-            .unwrap_or_default()
-    };
-    let filters = {
-        filter_chain
-            .load()
-            .get_configs()
-            .map(|(name, config)| FilterConfigDump {
-                name: name.into(),
-                config,
-            })
-            .collect::<Vec<_>>()
-    };
+    let endpoints = cluster
+        .endpoints()
+        .map(|upstream_endpoints| upstream_endpoints.iter().cloned().collect::<Vec<_>>())
+        .unwrap_or_default();
+    let filters = filter_chain
+        .load()
+        .get_configs()
+        .map(|(name, config)| FilterConfigDump {
+            name: name.into(),
+            config,
+        })
+        .collect::<Vec<_>>();
 
     let dump = ConfigDump {
         clusters: vec![ClusterDump {
@@ -106,23 +97,20 @@ fn create_config_dump_json(
 #[cfg(test)]
 mod tests {
     use super::handle_request;
-    use crate::cluster::cluster_manager::ClusterManager;
-    use crate::endpoint::{Endpoint, Endpoints};
-    use crate::filters::SharedFilterChain;
+    use crate::{cluster::SharedCluster, endpoint::Endpoint, filters::SharedFilterChain};
 
     #[tokio::test]
     async fn test_handle_request() {
-        let cluster_manager = ClusterManager::fixed(
-            Endpoints::new(vec![Endpoint::new(([127, 0, 0, 1], 8080).into())]).unwrap(),
-        )
-        .unwrap();
+        let cluster =
+            SharedCluster::new_static_cluster(vec![Endpoint::new(([127, 0, 0, 1], 8080).into())])
+                .unwrap();
         let filter_chain = SharedFilterChain::new(&[crate::config::Filter {
             name: crate::filters::debug::NAME.into(),
             config: Some(serde_yaml::from_str("id: hello").unwrap()),
         }])
         .unwrap();
 
-        let mut response = handle_request(cluster_manager, filter_chain);
+        let mut response = handle_request(cluster, filter_chain);
         assert_eq!(response.status(), hyper::StatusCode::OK);
         assert_eq!(
             response.headers().get("Content-Type").unwrap(),

@@ -322,9 +322,9 @@ mod tests {
         // Test the new filter chain's functionality. It should append to payloads.
         let response = filter_chain
             .read(ReadContext::new(
-                UpstreamEndpoints::from(
-                    Endpoints::new(vec![Endpoint::new("127.0.0.1:8080".parse().unwrap())]).unwrap(),
-                ),
+                UpstreamEndpoints::from(Endpoints::new(vec![Endpoint::new(
+                    "127.0.0.1:8080".parse().unwrap(),
+                )])),
                 "127.0.0.1:8081".parse().unwrap(),
                 "hello-".into(),
             ))
@@ -416,10 +416,9 @@ mod tests {
             // Test the new filter chain's functionality.
             let response = filter_chain
                 .read(ReadContext::new(
-                    UpstreamEndpoints::from(
-                        Endpoints::new(vec![Endpoint::new("127.0.0.1:8080".parse().unwrap())])
-                            .unwrap(),
-                    ),
+                    UpstreamEndpoints::from(Endpoints::new(vec![Endpoint::new(
+                        "127.0.0.1:8080".parse().unwrap(),
+                    )])),
                     "127.0.0.1:8081".parse().unwrap(),
                     "hello-".into(),
                 ))

@@ -99,7 +99,7 @@ mod tests {
 
         assert!(filter
             .read(ReadContext::new(
-                Endpoints::new(vec![endpoint.clone()]).unwrap().into(),
+                Endpoints::new(vec![endpoint.clone()]).into(),
                 addr.clone(),
                 vec![]
             ))

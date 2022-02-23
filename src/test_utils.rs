@@ -255,7 +255,7 @@ where
     let contents = "hello".to_string().into_bytes();
 
     match filter.read(ReadContext::new(
-        Endpoints::new(endpoints.clone()).unwrap().into(),
+        Endpoints::new(endpoints.clone()).into(),
         source,
         contents.clone(),
     )) {

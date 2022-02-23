@@ -171,9 +171,9 @@ mod tests {
 
         let local_ip = [192, 168, 75, 20];
         let ctx = ReadContext::new(
-            UpstreamEndpoints::from(
-                Endpoints::new(vec![Endpoint::new((Ipv4Addr::LOCALHOST, 8080).into())]).unwrap(),
-            ),
+            UpstreamEndpoints::from(Endpoints::new(vec![Endpoint::new(
+                (Ipv4Addr::LOCALHOST, 8080).into(),
+            )])),
             (local_ip, 80).into(),
             vec![],
         );
@@ -182,9 +182,9 @@ mod tests {
         assert_eq!(0, firewall.metrics.packets_denied_read.get());
 
         let ctx = ReadContext::new(
-            UpstreamEndpoints::from(
-                Endpoints::new(vec![Endpoint::new((Ipv4Addr::LOCALHOST, 8080).into())]).unwrap(),
-            ),
+            UpstreamEndpoints::from(Endpoints::new(vec![Endpoint::new(
+                (Ipv4Addr::LOCALHOST, 8080).into(),
+            )])),
             (local_ip, 2000).into(),
             vec![],
         );

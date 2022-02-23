@@ -222,7 +222,7 @@ mod tests {
         let filter = capture_bytes(config);
         let endpoints = vec![Endpoint::new("127.0.0.1:81".parse().unwrap())];
         let response = filter.read(ReadContext::new(
-            Endpoints::new(endpoints).unwrap().into(),
+            Endpoints::new(endpoints).into(),
             "127.0.0.1:80".parse().unwrap(),
             "abc".to_string().into_bytes(),
         ));
@@ -303,7 +303,7 @@ mod tests {
         let endpoints = vec![Endpoint::new("127.0.0.1:81".parse().unwrap())];
         let response = filter
             .read(ReadContext::new(
-                Endpoints::new(endpoints).unwrap().into(),
+                Endpoints::new(endpoints).into(),
                 "127.0.0.1:80".parse().unwrap(),
                 "helloabc".to_string().into_bytes(),
             ))

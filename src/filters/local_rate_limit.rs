@@ -258,8 +258,7 @@ mod tests {
 
     /// Send a packet to the filter and assert whether or not it was processed.
     fn read(r: &LocalRateLimit, address: &EndpointAddress, should_succeed: bool) {
-        let endpoints =
-            Endpoints::new(vec![Endpoint::new((Ipv4Addr::LOCALHOST, 8089).into())]).unwrap();
+        let endpoints = Endpoints::new(vec![Endpoint::new((Ipv4Addr::LOCALHOST, 8089).into())]);
 
         let result = r.read(ReadContext::new(endpoints.into(), address.clone(), vec![9]));
 
