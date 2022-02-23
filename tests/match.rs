@@ -21,12 +21,12 @@ use tokio::time::{timeout, Duration};
 use quilkin::{
     config::{Builder, Filter},
     endpoint::Endpoint,
-    filters::{capture, matches},
+    filters::{capture, r#match},
     test_utils::TestHelper,
 };
 
 #[tokio::test]
-async fn matches() {
+async fn r#match() {
     let mut t = TestHelper::default();
     let echo = t.run_echo_server().await;
 
@@ -40,18 +40,18 @@ suffix:
 on_read:
     metadataKey: quilkin.dev/capture
     fallthrough:
-        filter: quilkin.extensions.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
+        id: quilkin.extensions.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
         config:
             on_read: APPEND
             bytes: ZGVm
     branches:
         - value: abc
-          filter: quilkin.extensions.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
+          id: quilkin.extensions.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
           config:
             on_read: APPEND
             bytes: eHl6 # xyz
         - value: xyz
-          filter: quilkin.extensions.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
+          id: quilkin.extensions.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
           config:
             on_read: APPEND
             bytes: YWJj # abc
@@ -62,11 +62,11 @@ on_read:
         .with_static(
             vec![
                 Filter {
-                    name: capture::factory().name().into(),
+                    name: capture::NAME.into(),
                     config: serde_yaml::from_str(capture_yaml).unwrap(),
                 },
                 Filter {
-                    name: matches::factory().name().into(),
+                    name: r#match::NAME.into(),
                     config: serde_yaml::from_str(matches_yaml).unwrap(),
                 },
             ],

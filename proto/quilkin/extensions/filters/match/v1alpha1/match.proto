@@ -22,28 +22,23 @@ import "google/protobuf/wrappers.proto";
 import "google/protobuf/struct.proto";
 import "google/protobuf/any.proto";
 
-message Matches {
+message Match {
     message Branch {
         google.protobuf.Value value = 1;
-        google.protobuf.StringValue filter = 2;
-        optional google.protobuf.Any config = 3;
+        Filter filter = 2;
     }
 
-    message FallthroughFilter {
-        google.protobuf.StringValue filter = 2;
-        optional google.protobuf.Any config = 3;
-    }
-
-    message DirectionalConfig {
+    message Config {
         google.protobuf.StringValue metadata_key = 1;
         repeated Branch branches = 2;
-        oneof fallthrough {
-            google.protobuf.NullValue pass = 3;
-            google.protobuf.NullValue drop = 4;
-            FallthroughFilter filter = 5;
-        }
+        Filter fallthrough = 4;
     }
 
-    optional DirectionalConfig on_read = 1;
-    optional DirectionalConfig on_write = 2;
+    message Filter {
+        google.protobuf.StringValue id = 1;
+        optional google.protobuf.Any config = 2;
+    }
+
+    optional Config on_read = 1;
+    optional Config on_write = 2;
 }
