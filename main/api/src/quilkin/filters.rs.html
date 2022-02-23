@@ -104,6 +104,8 @@
 <span id="103">103</span>
 <span id="104">104</span>
 <span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -136,11 +138,13 @@
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">compress</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">concatenate_bytes</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">debug</span>;
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">drop</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">firewall</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">load_balancer</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">local_rate_limit</span>;
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">matches</span>;
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">r#match</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">metadata</span>;
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">pass</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">token_router</span>;
 
 <span class="doccomment">/// Prelude containing all types and traits required to implement [`Filter`] and</span>

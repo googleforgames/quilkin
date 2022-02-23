@@ -1,0 +1,1 @@
+initSidebarItems({"constant":[["NAME",""]],"fn":[["factory","Creates a new factory for generating match filters."]],"struct":[["Config","Configuration for the [`factory`][crate::filters::match::factory]."]]});

@@ -32,65 +32,37 @@
 <span id="31">31</span>
 <span id="32">32</span>
 <span id="33">33</span>
-<span id="34">34</span>
-<span id="35">35</span>
-<span id="36">36</span>
-<span id="37">37</span>
-<span id="38">38</span>
-<span id="39">39</span>
-<span id="40">40</span>
-<span id="41">41</span>
-<span id="42">42</span>
-<span id="43">43</span>
-<span id="44">44</span>
-<span id="45">45</span>
-<span id="46">46</span>
-<span id="47">47</span>
 </pre><pre class="rust"><code><span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">::prost::Message</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Matches</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Match</span> {
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">optional</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;1&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">on_read</span>: <span class="ident">::core::option::Option</span><span class="op">&lt;</span><span class="ident">matches::DirectionalConfig</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">on_read</span>: <span class="ident">::core::option::Option</span><span class="op">&lt;</span><span class="ident">r#match</span><span class="ident">::Config</span><span class="op">&gt;</span>,
     <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">optional</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;2&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">on_write</span>: <span class="ident">::core::option::Option</span><span class="op">&lt;</span><span class="ident">matches::DirectionalConfig</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">on_write</span>: <span class="ident">::core::option::Option</span><span class="op">&lt;</span><span class="ident">r#match</span><span class="ident">::Config</span><span class="op">&gt;</span>,
 }
-<span class="doccomment">/// Nested message and enum types in `Matches`.</span>
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">matches</span> {
+<span class="doccomment">/// Nested message and enum types in `Match`.</span>
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">r#match</span> {
     <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">::prost::Message</span>)]</span>
     <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Branch</span> {
         <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">optional</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;1&quot;</span>)]</span>
         <span class="kw">pub</span> <span class="ident">value</span>: <span class="ident">::core::option::Option</span><span class="op">&lt;</span><span class="ident">::prost_types::Value</span><span class="op">&gt;</span>,
         <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">optional</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;2&quot;</span>)]</span>
-        <span class="kw">pub</span> <span class="ident">filter</span>: <span class="ident">::core::option::Option</span><span class="op">&lt;</span><span class="ident">::prost::alloc::string::String</span><span class="op">&gt;</span>,
-        <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">optional</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;3&quot;</span>)]</span>
-        <span class="kw">pub</span> <span class="ident">config</span>: <span class="ident">::core::option::Option</span><span class="op">&lt;</span><span class="ident">::prost_types::Any</span><span class="op">&gt;</span>,
+        <span class="kw">pub</span> <span class="ident">filter</span>: <span class="ident">::core::option::Option</span><span class="op">&lt;</span><span class="ident">Filter</span><span class="op">&gt;</span>,
     }
     <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">::prost::Message</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">FallthroughFilter</span> {
-        <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">optional</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;2&quot;</span>)]</span>
-        <span class="kw">pub</span> <span class="ident">filter</span>: <span class="ident">::core::option::Option</span><span class="op">&lt;</span><span class="ident">::prost::alloc::string::String</span><span class="op">&gt;</span>,
-        <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">optional</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;3&quot;</span>)]</span>
-        <span class="kw">pub</span> <span class="ident">config</span>: <span class="ident">::core::option::Option</span><span class="op">&lt;</span><span class="ident">::prost_types::Any</span><span class="op">&gt;</span>,
-    }
-    <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">::prost::Message</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">DirectionalConfig</span> {
+    <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Config</span> {
         <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">optional</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;1&quot;</span>)]</span>
         <span class="kw">pub</span> <span class="ident">metadata_key</span>: <span class="ident">::core::option::Option</span><span class="op">&lt;</span><span class="ident">::prost::alloc::string::String</span><span class="op">&gt;</span>,
         <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">repeated</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;2&quot;</span>)]</span>
         <span class="kw">pub</span> <span class="ident">branches</span>: <span class="ident">::prost::alloc::vec::Vec</span><span class="op">&lt;</span><span class="ident">Branch</span><span class="op">&gt;</span>,
-        <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">oneof</span><span class="op">=</span><span class="string">&quot;directional_config::Fallthrough&quot;</span>, <span class="ident">tags</span><span class="op">=</span><span class="string">&quot;3, 4, 5&quot;</span>)]</span>
-        <span class="kw">pub</span> <span class="ident">fallthrough</span>: <span class="ident">::core::option::Option</span><span class="op">&lt;</span><span class="ident">directional_config::Fallthrough</span><span class="op">&gt;</span>,
+        <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">optional</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;4&quot;</span>)]</span>
+        <span class="kw">pub</span> <span class="ident">fallthrough</span>: <span class="ident">::core::option::Option</span><span class="op">&lt;</span><span class="ident">Filter</span><span class="op">&gt;</span>,
     }
-    <span class="doccomment">/// Nested message and enum types in `DirectionalConfig`.</span>
-    <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">directional_config</span> {
-        <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">::prost::Oneof</span>)]</span>
-        <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Fallthrough</span> {
-            <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">enumeration</span><span class="op">=</span><span class="string">&quot;::prost_types::NullValue&quot;</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;3&quot;</span>)]</span>
-            <span class="ident">Pass</span>(<span class="ident">i32</span>),
-            <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">enumeration</span><span class="op">=</span><span class="string">&quot;::prost_types::NullValue&quot;</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;4&quot;</span>)]</span>
-            <span class="ident">Drop</span>(<span class="ident">i32</span>),
-            <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;5&quot;</span>)]</span>
-            <span class="ident">Filter</span>(<span class="ident"><span class="kw">super</span>::FallthroughFilter</span>),
-        }
+    <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">::prost::Message</span>)]</span>
+    <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Filter</span> {
+        <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">optional</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;1&quot;</span>)]</span>
+        <span class="kw">pub</span> <span class="ident">id</span>: <span class="ident">::core::option::Option</span><span class="op">&lt;</span><span class="ident">::prost::alloc::string::String</span><span class="op">&gt;</span>,
+        <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">optional</span>, <span class="ident">tag</span><span class="op">=</span><span class="string">&quot;2&quot;</span>)]</span>
+        <span class="kw">pub</span> <span class="ident">config</span>: <span class="ident">::core::option::Option</span><span class="op">&lt;</span><span class="ident">::prost_types::Any</span><span class="op">&gt;</span>,
     }
 }
 </code></pre></div>
