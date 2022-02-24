@@ -163,7 +163,7 @@ mod tests {
             }],
             "filterchain": {
                 "filters": [{
-                    "name": "quilkin.extensions.filters.debug.v1alpha1.Debug",
+                    "name": "quilkin.filters.debug.v1alpha1.Debug",
                     "config":{
                         "id": "hello"
                     }

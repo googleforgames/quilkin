@@ -5,7 +5,7 @@ combination with conditional flow filters like [`Matches`](./match.md)
 
 #### Filter name
 ```text
-quilkin.extensions.filters.pass.v1alpha1.Pass
+quilkin.filters.pass.v1alpha1.Pass
 ```
 
 ### Configuration Examples

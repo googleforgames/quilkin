@@ -20,13 +20,13 @@ use crate::filters::prelude::*;
 use serde::{Deserialize, Serialize};
 use tracing::info;
 
-crate::include_proto!("quilkin.extensions.filters.debug.v1alpha1");
-use self::quilkin::extensions::filters::debug::v1alpha1::Debug as ProtoDebug;
+crate::include_proto!("quilkin.filters.debug.v1alpha1");
+use self::quilkin::filters::debug::v1alpha1::Debug as ProtoDebug;
 
 /// Debug logs all incoming and outgoing packets
 struct Debug {}
 
-pub const NAME: &str = "quilkin.extensions.filters.debug.v1alpha1.Debug";
+pub const NAME: &str = "quilkin.filters.debug.v1alpha1.Debug";
 
 /// Creates a new factory for generating debug filters.
 pub fn factory() -> DynFilterFactory {

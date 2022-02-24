@@ -5,7 +5,7 @@ combination with conditional flow filters like [`Matches`](./match.md)
 
 #### Filter name
 ```text
-quilkin.extensions.filters.drop.v1alpha1.Drop
+quilkin.filters.drop.v1alpha1.Drop
 ```
 
 ### Configuration Examples

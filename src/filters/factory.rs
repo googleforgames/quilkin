@@ -49,13 +49,13 @@ impl FilterInstance {
 pub trait FilterFactory: Sync + Send {
     /// name returns the configuration name for the Filter
     /// The returned string identifies the filter item's path with the following format:
-    ///     `quilkin.extensions.filters.<module>.<version>.<item-name>`
+    ///     `quilkin.filters.<module>.<version>.<item-name>`
     /// where:
     ///     <module>: The rust module name containing the filter item
     ///     <version>: The filter's version.
     ///     <item-name>: The name of the rust item (e.g enum, struct) implementing the filter.
     /// For example the `v1alpha1` version of the debug filter has the name:
-    ///     `quilkin.extensions.filters.debug_filter.v1alpha1.Debug`
+    ///     `quilkin.filters.debug_filter.v1alpha1.Debug`
     fn name(&self) -> &'static str;
 
     /// Returns the schema for the configuration of the [`Filter`].

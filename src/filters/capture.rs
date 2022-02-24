@@ -19,7 +19,7 @@ mod config;
 mod metrics;
 mod regex;
 
-crate::include_proto!("quilkin.extensions.filters.capture.v1alpha1");
+crate::include_proto!("quilkin.filters.capture.v1alpha1");
 
 use std::sync::Arc;
 
@@ -31,10 +31,10 @@ use self::{
     regex::Regex,
 };
 
-use self::quilkin::extensions::filters::capture::v1alpha1 as proto;
+use self::quilkin::filters::capture::v1alpha1 as proto;
 pub use config::{Config, Strategy};
 
-pub const NAME: &str = "quilkin.extensions.filters.capture.v1alpha1.Capture";
+pub const NAME: &str = "quilkin.filters.capture.v1alpha1.Capture";
 
 /// Creates a new factory for generating capture filters.
 pub fn factory() -> DynFilterFactory {

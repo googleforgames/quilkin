@@ -20,7 +20,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use super::compressor::{Compressor, Snappy};
-use super::quilkin::extensions::filters::compress::v1alpha1::{
+use super::quilkin::filters::compress::v1alpha1::{
     compress::Action as ProtoAction, compress::Mode as ProtoMode, Compress as ProtoConfig,
 };
 use crate::{filters::ConvertProtoConfigError, map_proto_enum};

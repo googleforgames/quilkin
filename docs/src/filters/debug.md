@@ -6,7 +6,7 @@ This filter is useful in debugging deployments where the packets strictly contai
 
 #### Filter name
 ```text
-quilkin.extensions.filters.debug_filter.v1alpha1.Debug
+quilkin.filters.debug_filter.v1alpha1.Debug
 ```
 
 ### Configuration Examples
@@ -15,7 +15,7 @@ quilkin.extensions.filters.debug_filter.v1alpha1.Debug
 version: v1alpha1
 static:
   filters:
-    - name: quilkin.extensions.filters.debug.v1alpha1.Debug
+    - name: quilkin.filters.debug.v1alpha1.Debug
       config:
         id: debug-1
   endpoints:
@@ -29,7 +29,7 @@ static:
 ### Configuration Options ([Rust Doc](../../api/quilkin/filters/debug/struct.Config.html))
 
 ```yaml
-{{#include ../../../target/quilkin.extensions.filters.debug.v1alpha1.yaml}}
+{{#include ../../../target/quilkin.filters.debug.v1alpha1.yaml}}
 ```
 
 

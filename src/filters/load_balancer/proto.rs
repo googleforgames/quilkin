@@ -21,7 +21,7 @@ pub(super) mod quilkin {
             pub mod load_balancer {
                 pub mod v1alpha1 {
                     #![doc(hidden)]
-                    tonic::include_proto!("quilkin.extensions.filters.load_balancer.v1alpha1");
+                    tonic::include_proto!("quilkin.filters.load_balancer.v1alpha1");
                 }
             }
         }
