@@ -80,7 +80,7 @@ Quilkin exposes the following metrics around the management servers and its reso
 [xds-filter-chain]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener_components.proto#config-listener-v3-filterchain
 [DiscoveryRequest]: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/discovery.proto#envoy-api-msg-discoveryrequest
 [xds-variants]: https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol#variants-of-the-xds-transport-protocol
-[filter-protos]: https://github.com/googleforgames/quilkin/tree/main/proto/quilkin/extensions/filters
+[filter-protos]: https://github.com/googleforgames/quilkin/tree/main/proto/quilkin/filters
 [filters-doc]: ./filters.md
 [xds-endpoint-metadata]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/base.proto#envoy-v3-api-msg-config-core-v3-metadata
 [endpoint-metadata]: ./proxy.md#endpoint-metadata
