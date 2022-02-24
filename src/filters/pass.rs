@@ -19,14 +19,14 @@ use std::convert::TryFrom;
 use crate::filters::prelude::*;
 use serde::{Deserialize, Serialize};
 
-crate::include_proto!("quilkin.extensions.filters.pass.v1alpha1");
-use self::quilkin::extensions::filters::pass::v1alpha1 as proto;
+crate::include_proto!("quilkin.filters.pass.v1alpha1");
+use self::quilkin::filters::pass::v1alpha1 as proto;
 
 /// Allows a packet to pass through, mostly useful in combination with
 /// other filters.
 struct Pass;
 
-pub const NAME: &str = "quilkin.extensions.filters.pass.v1alpha1.Pass";
+pub const NAME: &str = "quilkin.filters.pass.v1alpha1.Pass";
 
 /// Creates a new factory for generating debug filters.
 pub fn factory() -> DynFilterFactory {

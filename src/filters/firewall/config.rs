@@ -23,7 +23,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::{filters::ConvertProtoConfigError, map_proto_enum};
 
-use super::quilkin::extensions::filters::firewall::v1alpha1::{
+use super::quilkin::filters::firewall::v1alpha1::{
     firewall::{Action as ProtoAction, PortRange as ProtoPortRange, Rule as ProtoRule},
     Firewall as ProtoConfig,
 };

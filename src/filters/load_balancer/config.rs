@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-crate::include_proto!("quilkin.extensions.filters.load_balancer.v1alpha1");
+crate::include_proto!("quilkin.filters.load_balancer.v1alpha1");
 
 use std::convert::TryFrom;
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use self::quilkin::extensions::filters::load_balancer::v1alpha1::load_balancer::Policy as ProtoPolicy;
+use self::quilkin::filters::load_balancer::v1alpha1::load_balancer::Policy as ProtoPolicy;
 use super::endpoint_chooser::{
     EndpointChooser, HashEndpointChooser, RandomEndpointChooser, RoundRobinEndpointChooser,
 };
 use crate::{filters::ConvertProtoConfigError, map_proto_enum};
 
-pub use self::quilkin::extensions::filters::load_balancer::v1alpha1::LoadBalancer as ProtoConfig;
+pub use self::quilkin::filters::load_balancer::v1alpha1::LoadBalancer as ProtoConfig;
 
 /// The configuration for [`load_balancer`][super].
 #[derive(Serialize, Deserialize, Debug, PartialEq, JsonSchema)]
@@ -94,7 +94,7 @@ mod tests {
     use std::convert::TryFrom;
 
     use super::{
-        quilkin::extensions::filters::load_balancer::v1alpha1::load_balancer::{
+        quilkin::filters::load_balancer::v1alpha1::load_balancer::{
             Policy as ProtoPolicy, PolicyValue,
         },
         Config, Policy, ProtoConfig,

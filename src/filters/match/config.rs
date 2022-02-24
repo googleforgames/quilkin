@@ -1,6 +1,6 @@
-crate::include_proto!("quilkin.extensions.filters.matches.v1alpha1");
+crate::include_proto!("quilkin.filters.matches.v1alpha1");
 
-pub(crate) use self::quilkin::extensions::filters::matches::v1alpha1 as proto;
+pub(crate) use self::quilkin::filters::matches::v1alpha1 as proto;
 
 use serde::{Deserialize, Serialize};
 
@@ -242,7 +242,7 @@ on_read:
     metadataKey: quilkin.dev/captured_bytes
     branches:
         - value: abc
-          id: quilkin.extensions.filters.debug.v1alpha1.Debug
+          id: quilkin.filters.debug.v1alpha1.Debug
         ";
 
         let config = serde_yaml::from_str::<Config>(matches_yaml).unwrap();
@@ -254,7 +254,7 @@ on_read:
                     metadata_key: "quilkin.dev/captured_bytes".into(),
                     branches: vec![Branch {
                         value: String::from("abc").into(),
-                        filter: "quilkin.extensions.filters.debug.v1alpha1.Debug".into(),
+                        filter: "quilkin.filters.debug.v1alpha1.Debug".into(),
                     }],
                     fallthrough: <_>::default(),
                 }),

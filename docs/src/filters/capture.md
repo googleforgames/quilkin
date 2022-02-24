@@ -26,7 +26,7 @@ multiple matches.
 
 #### Filter name
 ```text
-quilkin.extensions.filters.capture.v1alpha1.Capture
+quilkin.filters.capture.v1alpha1.Capture
 ```
 
 ### Configuration Examples
@@ -35,7 +35,7 @@ quilkin.extensions.filters.capture.v1alpha1.Capture
 version: v1alpha1
 static:
   filters:
-    - name: quilkin.extensions.filters.capture.v1alpha1.Capture
+    - name: quilkin.filters.capture.v1alpha1.Capture
       config:
           metadataKey: myapp.com/myownkey
           prefix:
@@ -52,7 +52,7 @@ static:
 ### Configuration Options ([Rust Doc](../../api/quilkin/filters/capture/struct.Config.html))
 
 ```yaml
-{{#include ../../../target/quilkin.extensions.filters.capture.v1alpha1.yaml}}
+{{#include ../../../target/quilkin.filters.capture.v1alpha1.yaml}}
 ```
 
 ### Metrics

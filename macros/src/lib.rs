@@ -28,7 +28,7 @@ use include::IncludeProto;
 ///
 /// ### Input
 /// ```
-/// quilkin::include_proto!("quilkin.extensions.filters.debug.v1alpha1");
+/// quilkin::include_proto!("quilkin.filters.debug.v1alpha1");
 /// ```
 ///
 /// ### Output
@@ -39,7 +39,7 @@ use include::IncludeProto;
 ///             pub(crate) mod debug {
 ///                 pub(crate) mod v1alpha1 {
 ///                     #![doc(hidden)]
-///                     tonic::include_proto!("quilkin.extensions.filters.debug.v1alpha1");
+///                     tonic::include_proto!("quilkin.filters.debug.v1alpha1");
 ///                 }
 ///             }
 ///         }

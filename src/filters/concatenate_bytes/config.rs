@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-crate::include_proto!("quilkin.extensions.filters.concatenate_bytes.v1alpha1");
+crate::include_proto!("quilkin.filters.concatenate_bytes.v1alpha1");
 
 use std::convert::TryFrom;
 
@@ -24,9 +24,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::{filters::prelude::*, map_proto_enum};
 
-use self::quilkin::extensions::filters::concatenate_bytes::v1alpha1::concatenate_bytes::Strategy as ProtoStrategy;
+use self::quilkin::filters::concatenate_bytes::v1alpha1::concatenate_bytes::Strategy as ProtoStrategy;
 
-pub use self::quilkin::extensions::filters::concatenate_bytes::v1alpha1::ConcatenateBytes as ProtoConfig;
+pub use self::quilkin::filters::concatenate_bytes::v1alpha1::ConcatenateBytes as ProtoConfig;
 
 base64_serde_type!(Base64Standard, base64::STANDARD);
 

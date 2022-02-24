@@ -55,10 +55,10 @@ There are a few things we note here:
 version: v1alpha1
 static:
   filters:
-    - name: quilkin.extensions.filters.debug.v1alpha1.Debug
+    - name: quilkin.filters.debug.v1alpha1.Debug
       config:
         id: debug-1
-    - name: quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit
+    - name: quilkin.filters.local_rate_limit.v1alpha1.LocalRateLimit
       config:
         max_packets: 10
         period: 1

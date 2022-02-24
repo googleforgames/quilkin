@@ -5,7 +5,7 @@ the rules set on the Firewall filter.
 
 #### Filter name
 ```text
-quilkin.extensions.filters.firewall.v1alpha1.Firewall
+quilkin.filters.firewall.v1alpha1.Firewall
 ```
 
 ### Configuration Examples
@@ -14,7 +14,7 @@ quilkin.extensions.filters.firewall.v1alpha1.Firewall
 version: v1alpha1
 static:
   filters:
-    - name: quilkin.extensions.filters.firewall.v1alpha1.Firewall
+    - name: quilkin.filters.firewall.v1alpha1.Firewall
       config:
         on_read:
           - action: ALLOW
@@ -38,7 +38,7 @@ static:
 ### Configuration Options ([Rust Doc](../../api/quilkin/filters/firewall/struct.Config.html))
 
 ```yaml
-{{#include ../../../target/quilkin.extensions.filters.firewall.v1alpha1.yaml}}
+{{#include ../../../target/quilkin.filters.firewall.v1alpha1.yaml}}
 ```
 
 #### Rule Evaluation

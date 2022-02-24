@@ -16,7 +16,7 @@
 
 mod metrics;
 
-crate::include_proto!("quilkin.extensions.filters.token_router.v1alpha1");
+crate::include_proto!("quilkin.filters.token_router.v1alpha1");
 
 use std::convert::TryFrom;
 use std::sync::Arc;
@@ -33,9 +33,9 @@ use crate::{
 
 use metrics::Metrics;
 
-use self::quilkin::extensions::filters::token_router::v1alpha1::TokenRouter as ProtoConfig;
+use self::quilkin::filters::token_router::v1alpha1::TokenRouter as ProtoConfig;
 
-pub const NAME: &str = "quilkin.extensions.filters.token_router.v1alpha1.TokenRouter";
+pub const NAME: &str = "quilkin.filters.token_router.v1alpha1.TokenRouter";
 
 /// Returns a factory for creating token routing filters.
 pub fn factory() -> DynFilterFactory {

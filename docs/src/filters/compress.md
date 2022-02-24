@@ -5,7 +5,7 @@ and subsequent decompression of UDP data when sent between systems, such as a ga
 
 #### Filter name
 ```text
-quilkin.extensions.filters.compress.v1alpha1.Compress
+quilkin.filters.compress.v1alpha1.Compress
 ```
 
 ### Configuration Examples
@@ -14,7 +14,7 @@ quilkin.extensions.filters.compress.v1alpha1.Compress
 version: v1alpha1
 static:
   filters:
-    - name: quilkin.extensions.filters.compress.v1alpha1.Compress
+    - name: quilkin.filters.compress.v1alpha1.Compress
       config:
           on_read: COMPRESS
           on_write: DECOMPRESS
@@ -38,7 +38,7 @@ decompressed when traffic is returned from the dedicated game server before bein
 ### Configuration Options ([Rust Doc](../../api/quilkin/filters/compress/struct.Config.html))
 
 ```yaml
-{{#include ../../../target/quilkin.extensions.filters.compress.v1alpha1.yaml}}
+{{#include ../../../target/quilkin.filters.compress.v1alpha1.yaml}}
 ```
 
 #### Compression Modes

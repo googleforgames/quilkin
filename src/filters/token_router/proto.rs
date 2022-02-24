@@ -21,7 +21,7 @@ pub(super) mod quilkin {
             pub mod token_router {
                 pub mod v1alpha1 {
                     #![doc(hidden)]
-                    tonic::include_proto!("quilkin.extensions.filters.token_router.v1alpha1");
+                    tonic::include_proto!("quilkin.filters.token_router.v1alpha1");
                 }
             }
         }

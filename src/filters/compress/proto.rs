@@ -21,7 +21,7 @@ pub(super) mod quilkin {
             pub mod compress {
                 pub mod v1alpha1 {
                     #![doc(hidden)]
-                    tonic::include_proto!("quilkin.extensions.filters.compress.v1alpha1");
+                    tonic::include_proto!("quilkin.filters.compress.v1alpha1");
                 }
             }
         }

@@ -18,18 +18,18 @@ mod compressor;
 mod config;
 mod metrics;
 
-crate::include_proto!("quilkin.extensions.filters.compress.v1alpha1");
+crate::include_proto!("quilkin.filters.compress.v1alpha1");
 
 use crate::{config::LOG_SAMPLING_RATE, filters::prelude::*};
 use tracing::warn;
 
-use self::quilkin::extensions::filters::compress::v1alpha1::Compress as ProtoConfig;
+use self::quilkin::filters::compress::v1alpha1::Compress as ProtoConfig;
 use compressor::Compressor;
 use metrics::Metrics;
 
 pub use config::{Action, Config, Mode};
 
-pub const NAME: &str = "quilkin.extensions.filters.compress.v1alpha1.Compress";
+pub const NAME: &str = "quilkin.filters.compress.v1alpha1.Compress";
 
 /// Returns a factory for creating compression filters.
 pub fn factory() -> DynFilterFactory {
@@ -188,7 +188,7 @@ mod tests {
         CreateFilterArgs, Filter, FilterFactory, FilterRegistry, ReadContext, WriteContext,
     };
 
-    use super::quilkin::extensions::filters::compress::v1alpha1::{
+    use super::quilkin::filters::compress::v1alpha1::{
         compress::{Action as ProtoAction, ActionValue, Mode as ProtoMode, ModeValue},
         Compress as ProtoConfig,
     };

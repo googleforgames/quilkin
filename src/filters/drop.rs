@@ -19,13 +19,13 @@ use std::convert::TryFrom;
 use crate::filters::prelude::*;
 use serde::{Deserialize, Serialize};
 
-crate::include_proto!("quilkin.extensions.filters.drop.v1alpha1");
-use self::quilkin::extensions::filters::drop::v1alpha1 as proto;
+crate::include_proto!("quilkin.filters.drop.v1alpha1");
+use self::quilkin::filters::drop::v1alpha1 as proto;
 
 /// Always drops a packet, mostly useful in combination with other filters.
 struct Drop;
 
-pub const NAME: &str = "quilkin.extensions.filters.drop.v1alpha1.Drop";
+pub const NAME: &str = "quilkin.filters.drop.v1alpha1.Drop";
 
 /// Creates a new factory for generating debug filters.
 pub fn factory() -> DynFilterFactory {
