@@ -3,7 +3,7 @@
 <p>Accepts a single argument for the gRPC package name, which then recreates
 the package structure as modules.</p>
 <h4 id="input" class="section-header"><a href="#input">Input</a></h4>
-<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="macro">quilkin::include_proto!</span>(<span class="string">&quot;quilkin.extensions.filters.debug.v1alpha1&quot;</span>);</code></pre></div>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="macro">quilkin::include_proto!</span>(<span class="string">&quot;quilkin.filters.debug.v1alpha1&quot;</span>);</code></pre></div>
 <h4 id="output" class="section-header"><a href="#output">Output</a></h4>
 <div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">mod</span> <span class="ident">quilkin</span> {
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod</span> <span class="ident">extensions</span> {
@@ -11,7 +11,7 @@ the package structure as modules.</p>
             <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod</span> <span class="ident">debug</span> {
                 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod</span> <span class="ident">v1alpha1</span> {
                     <span class="attribute">#![<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
-                    <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;quilkin.extensions.filters.debug.v1alpha1&quot;</span>);
+                    <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;quilkin.filters.debug.v1alpha1&quot;</span>);
                 }
             }
         }

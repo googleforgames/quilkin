@@ -138,7 +138,7 @@
 <p>The <code>Compress</code> filter's job is to provide a variety of compression implementations for compression
 and subsequent decompression of UDP data when sent between systems, such as a game client and game server.</p>
 <h4 id="filter-name"><a class="header" href="#filter-name">Filter name</a></h4>
-<pre><code class="language-text">quilkin.extensions.filters.compress.v1alpha1.Compress
+<pre><code class="language-text">quilkin.filters.compress.v1alpha1.Compress
 </code></pre>
 <h3 id="configuration-examples"><a class="header" href="#configuration-examples">Configuration Examples</a></h3>
 <pre><pre class="playground"><code class="language-rust">
@@ -148,7 +148,7 @@ and subsequent decompression of UDP data when sent between systems, such as a ga
 </span>version: v1alpha1
 static:
  filters:
- - name: quilkin.extensions.filters.compress.v1alpha1.Compress
+ - name: quilkin.filters.compress.v1alpha1.Compress
  config:
  on_read: COMPRESS
  on_write: DECOMPRESS

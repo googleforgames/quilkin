@@ -137,7 +137,7 @@
                         <h1 id="loadbalancer"><a class="header" href="#loadbalancer">LoadBalancer</a></h1>
 <p>The <code>LoadBalancer</code> filter distributes packets received downstream among all upstream endpoints.</p>
 <h4 id="filter-name"><a class="header" href="#filter-name">Filter name</a></h4>
-<pre><code class="language-text">quilkin.extensions.filters.load_balancer.v1alpha1.LoadBalancer
+<pre><code class="language-text">quilkin.filters.load_balancer.v1alpha1.LoadBalancer
 </code></pre>
 <h3 id="configuration-examples"><a class="header" href="#configuration-examples">Configuration Examples</a></h3>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">#[tokio::main]
@@ -146,7 +146,7 @@
 </span>version: v1alpha1
 static:
  filters:
- - name: quilkin.extensions.filters.load_balancer.v1alpha1.LoadBalancer
+ - name: quilkin.filters.load_balancer.v1alpha1.LoadBalancer
  config:
  policy: ROUND_ROBIN
  endpoints:

@@ -632,10 +632,10 @@ book.toml htmltest.yaml logos preprocessor.sh src <code>filter</code> The name o
 </span>version: v1alpha1
 static:
  filters:
- - name: quilkin.extensions.filters.debug.v1alpha1.Debug
+ - name: quilkin.filters.debug.v1alpha1.Debug
  config:
  id: debug-1
- - name: quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit
+ - name: quilkin.filters.local_rate_limit.v1alpha1.LocalRateLimit
  config:
  max_packets: 10
  period: 1
@@ -713,7 +713,7 @@ down the chain.</p>
 the regular expression can return one or many values if there are
 multiple matches.</p>
 <h4 id="filter-name"><a class="header" href="#filter-name">Filter name</a></h4>
-<pre><code class="language-text">quilkin.extensions.filters.capture.v1alpha1.Capture
+<pre><code class="language-text">quilkin.filters.capture.v1alpha1.Capture
 </code></pre>
 <h3 id="configuration-examples-1"><a class="header" href="#configuration-examples-1">Configuration Examples</a></h3>
 <pre><pre class="playground"><code class="language-rust">
@@ -723,7 +723,7 @@ multiple matches.</p>
 </span>version: v1alpha1
 static:
  filters:
- - name: quilkin.extensions.filters.capture.v1alpha1.Capture
+ - name: quilkin.filters.capture.v1alpha1.Capture
  config:
  metadataKey: myapp.com/myownkey
  prefix:
@@ -819,7 +819,7 @@ A counter of the total number of packets that have been dropped due to their len
 <p>The <code>Compress</code> filter's job is to provide a variety of compression implementations for compression
 and subsequent decompression of UDP data when sent between systems, such as a game client and game server.</p>
 <h4 id="filter-name-1"><a class="header" href="#filter-name-1">Filter name</a></h4>
-<pre><code class="language-text">quilkin.extensions.filters.compress.v1alpha1.Compress
+<pre><code class="language-text">quilkin.filters.compress.v1alpha1.Compress
 </code></pre>
 <h3 id="configuration-examples-2"><a class="header" href="#configuration-examples-2">Configuration Examples</a></h3>
 <pre><pre class="playground"><code class="language-rust">
@@ -829,7 +829,7 @@ and subsequent decompression of UDP data when sent between systems, such as a ga
 </span>version: v1alpha1
 static:
  filters:
- - name: quilkin.extensions.filters.compress.v1alpha1.Compress
+ - name: quilkin.filters.compress.v1alpha1.Compress
  config:
  on_read: COMPRESS
  on_write: DECOMPRESS
@@ -907,7 +907,7 @@ Total number of compressed bytes either received or sent.</li>
 <p>The <code>ConcatenateBytes</code> filter's job is to add a byte packet to either the beginning or end of each UDP packet that passes
 through. This is commonly used to provide an auth token to each packet, so they can be routed appropriately. </p>
 <h4 id="filter-name-2"><a class="header" href="#filter-name-2">Filter name</a></h4>
-<pre><code class="language-text">quilkin.extensions.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
+<pre><code class="language-text">quilkin.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
 </code></pre>
 <h3 id="configuration-examples-3"><a class="header" href="#configuration-examples-3">Configuration Examples</a></h3>
 <pre><pre class="playground"><code class="language-rust">
@@ -917,7 +917,7 @@ through. This is commonly used to provide an auth token to each packet, so they 
 </span>version: v1alpha1
 static:
  filters:
- - name: quilkin.extensions.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
+ - name: quilkin.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
  config:
  on_read: APPEND
  on_write: DO_NOTHING
@@ -969,7 +969,7 @@ definitions:
 <p>The Debug filter logs all incoming and outgoing packets to standard output.</p>
 <p>This filter is useful in debugging deployments where the packets strictly contain valid <code>UTF-8</code> encoded strings. A generic error message is instead logged if conversion from bytes to <code>UTF-8</code> fails.</p>
 <h4 id="filter-name-3"><a class="header" href="#filter-name-3">Filter name</a></h4>
-<pre><code class="language-text">quilkin.extensions.filters.debug_filter.v1alpha1.Debug
+<pre><code class="language-text">quilkin.filters.debug_filter.v1alpha1.Debug
 </code></pre>
 <h3 id="configuration-examples-4"><a class="header" href="#configuration-examples-4">Configuration Examples</a></h3>
 <pre><pre class="playground"><code class="language-rust">
@@ -979,7 +979,7 @@ definitions:
 </span>version: v1alpha1
 static:
  filters:
- - name: quilkin.extensions.filters.debug.v1alpha1.Debug
+ - name: quilkin.filters.debug.v1alpha1.Debug
  config:
  id: debug-1
  endpoints:
@@ -1009,7 +1009,7 @@ properties:
 <p>The <code>Drop</code> filter always drops any packet passed through it. This is useful in
 combination with conditional flow filters like <a href="filters/./match.html"><code>Matches</code></a></p>
 <h4 id="filter-name-4"><a class="header" href="#filter-name-4">Filter name</a></h4>
-<pre><code class="language-text">quilkin.extensions.filters.drop.v1alpha1.Drop
+<pre><code class="language-text">quilkin.filters.drop.v1alpha1.Drop
 </code></pre>
 <h3 id="configuration-examples-5"><a class="header" href="#configuration-examples-5">Configuration Examples</a></h3>
 <pre><pre class="playground"><code class="language-rust">
@@ -1022,20 +1022,20 @@ static:
     - address: 127.0.0.1:26000
     - address: 127.0.0.1:26001
   filters:
-    - name: quilkin.extensions.filters.capture_bytes.v1alpha1.CaptureBytes
+    - name: quilkin.filters.capture_bytes.v1alpha1.CaptureBytes
       config:
           strategy: PREFIX
           metadataKey: myapp.com/token
           size: 3
           remove: false
-    - name: quilkin.extensions.filters.match.v1alpha1.Match
+    - name: quilkin.filters.match.v1alpha1.Match
       config:
           on_read:
             metadataKey: myapp.com/token
             branches:
                 - value: abc
-                  filter: quilkin.extensions.filters.pass.v1alpha1.Pass
-            fallthrough: quilkin.extensions.filters.drop.v1alpha1.Drop
+                  filter: quilkin.filters.pass.v1alpha1.Pass
+            fallthrough: quilkin.filters.drop.v1alpha1.Drop
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 1);
@@ -1050,7 +1050,7 @@ static:
 <p>The <code>Firewall</code> filter's job is to allow or block traffic depending on if the incoming traffic's IP and port matches
 the rules set on the Firewall filter.</p>
 <h4 id="filter-name-5"><a class="header" href="#filter-name-5">Filter name</a></h4>
-<pre><code class="language-text">quilkin.extensions.filters.firewall.v1alpha1.Firewall
+<pre><code class="language-text">quilkin.filters.firewall.v1alpha1.Firewall
 </code></pre>
 <h3 id="configuration-examples-6"><a class="header" href="#configuration-examples-6">Configuration Examples</a></h3>
 <pre><pre class="playground"><code class="language-rust">
@@ -1060,7 +1060,7 @@ the rules set on the Firewall filter.</p>
 </span>version: v1alpha1
 static:
  filters:
- - name: quilkin.extensions.filters.firewall.v1alpha1.Firewall
+ - name: quilkin.filters.firewall.v1alpha1.Firewall
  config:
  on_read:
  - action: ALLOW
@@ -1161,7 +1161,7 @@ rule deciding if the request is allowed or denied:</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="loadbalancer"><a class="header" href="#loadbalancer">LoadBalancer</a></h1>
 <p>The <code>LoadBalancer</code> filter distributes packets received downstream among all upstream endpoints.</p>
 <h4 id="filter-name-6"><a class="header" href="#filter-name-6">Filter name</a></h4>
-<pre><code class="language-text">quilkin.extensions.filters.load_balancer.v1alpha1.LoadBalancer
+<pre><code class="language-text">quilkin.filters.load_balancer.v1alpha1.LoadBalancer
 </code></pre>
 <h3 id="configuration-examples-7"><a class="header" href="#configuration-examples-7">Configuration Examples</a></h3>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">#[tokio::main]
@@ -1170,7 +1170,7 @@ rule deciding if the request is allowed or denied:</p>
 </span>version: v1alpha1
 static:
  filters:
- - name: quilkin.extensions.filters.load_balancer.v1alpha1.LoadBalancer
+ - name: quilkin.filters.load_balancer.v1alpha1.LoadBalancer
  config:
  policy: ROUND_ROBIN
  endpoints:
@@ -1209,7 +1209,7 @@ definitions:
 <p>The LocalRateLimit filter controls the frequency at which packets received downstream are forwarded upstream by the proxy. 
 Rate limiting is done independently per source (IP, Port) combination.</p>
 <h4 id="filter-name-7"><a class="header" href="#filter-name-7">Filter name</a></h4>
-<pre><code class="language-text">quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit
+<pre><code class="language-text">quilkin.filters.local_rate_limit.v1alpha1.LocalRateLimit
 </code></pre>
 <h3 id="configuration-examples-8"><a class="header" href="#configuration-examples-8">Configuration Examples</a></h3>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">// Wrap this example within an async main function since the
@@ -1220,7 +1220,7 @@ Rate limiting is done independently per source (IP, Port) combination.</p>
 </span>version: v1alpha1
 static:
  filters:
- - name: quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit
+ - name: quilkin.filters.local_rate_limit.v1alpha1.LocalRateLimit
  config:
  max_packets: 1000
  period: 1
@@ -1273,7 +1273,7 @@ A counter over the total number of packets that have exceeded the configured max
 on dynamic metadata. This filter behaves similarly to the <code>match</code> expression
 in Rust or <code>switch</code> statements in other languages.</p>
 <h4 id="filter-name-8"><a class="header" href="#filter-name-8">Filter name</a></h4>
-<pre><code class="language-text">quilkin.extensions.filters.match.v1alpha1.Match
+<pre><code class="language-text">quilkin.filters.match.v1alpha1.Match
 </code></pre>
 <h3 id="configuration-examples-9"><a class="header" href="#configuration-examples-9">Configuration Examples</a></h3>
 <!-- ANCHOR: example -->
@@ -1287,20 +1287,20 @@ static:
  - address: 127.0.0.1:26000
  - address: 127.0.0.1:26001
  filters:
- - name: quilkin.extensions.filters.capture_bytes.v1alpha1.CaptureBytes
+ - name: quilkin.filters.capture_bytes.v1alpha1.CaptureBytes
  config:
  strategy: PREFIX
  metadataKey: myapp.com/token
  size: 3
  remove: false
- - name: quilkin.extensions.filters.match.v1alpha1.Match
+ - name: quilkin.filters.match.v1alpha1.Match
  config:
  on_read:
  metadataKey: myapp.com/token
  branches:
  - value: abc
- filter: quilkin.extensions.filters.pass.v1alpha1.Pass
- fallthrough: quilkin.extensions.filters.drop.v1alpha1.Drop
+ filter: quilkin.filters.pass.v1alpha1.Pass
+ fallthrough: quilkin.filters.drop.v1alpha1.Drop
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 1);
@@ -1309,14 +1309,14 @@ static:
 </span></code></pre></pre>
 <!-- ANCHOR_END: example -->
 <h3 id="configuration-options-rust-doc-7"><a class="header" href="#configuration-options-rust-doc-7">Configuration Options (<a href="filters/../../api/quilkin/filters/match/struct.Config.html">Rust Doc</a>)</a></h3>
-<pre><code class="language-yaml">{{#include ../../../target/quilkin.extensions.filters.match.v1alpha1.yaml}}
+<pre><code class="language-yaml">{{#include ../../../target/quilkin.filters.match.v1alpha1.yaml}}
 </code></pre>
 <p>View the <a href="filters/../../api/quilkin/filters/match/struct.Config.html">Matches</a> filter documentation for more details.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="pass"><a class="header" href="#pass">Pass</a></h1>
 <p>The <code>Pass</code> filter that always passes any packet through it. This is useful in
 combination with conditional flow filters like <a href="filters/./match.html"><code>Matches</code></a></p>
 <h4 id="filter-name-9"><a class="header" href="#filter-name-9">Filter name</a></h4>
-<pre><code class="language-text">quilkin.extensions.filters.pass.v1alpha1.Pass
+<pre><code class="language-text">quilkin.filters.pass.v1alpha1.Pass
 </code></pre>
 <h3 id="configuration-examples-10"><a class="header" href="#configuration-examples-10">Configuration Examples</a></h3>
 <pre><pre class="playground"><code class="language-rust">
@@ -1329,20 +1329,20 @@ static:
     - address: 127.0.0.1:26000
     - address: 127.0.0.1:26001
   filters:
-    - name: quilkin.extensions.filters.capture_bytes.v1alpha1.CaptureBytes
+    - name: quilkin.filters.capture_bytes.v1alpha1.CaptureBytes
       config:
           strategy: PREFIX
           metadataKey: myapp.com/token
           size: 3
           remove: false
-    - name: quilkin.extensions.filters.match.v1alpha1.Match
+    - name: quilkin.filters.match.v1alpha1.Match
       config:
           on_read:
             metadataKey: myapp.com/token
             branches:
                 - value: abc
-                  filter: quilkin.extensions.filters.pass.v1alpha1.Pass
-            fallthrough: quilkin.extensions.filters.drop.v1alpha1.Drop
+                  filter: quilkin.filters.pass.v1alpha1.Pass
+            fallthrough: quilkin.filters.drop.v1alpha1.Drop
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 1);
@@ -1359,7 +1359,7 @@ static:
 <a href="filters/../filters.html#filter-dynamic-metadata">Filter Dynamic Metadata</a> from a previous Filter, and comparing it to
 <a href="filters/../proxy.html#upstream-endpoint">Endpoint's tokens</a>, and sending packets to those Endpoints only if there is a match.</p>
 <h4 id="filter-name-10"><a class="header" href="#filter-name-10">Filter name</a></h4>
-<pre><code class="language-text">quilkin.extensions.filters.token_router.v1alpha1.TokenRouter
+<pre><code class="language-text">quilkin.filters.token_router.v1alpha1.TokenRouter
 </code></pre>
 <h3 id="configuration-examples-11"><a class="header" href="#configuration-examples-11">Configuration Examples</a></h3>
 <pre><pre class="playground"><code class="language-rust">
@@ -1369,7 +1369,7 @@ static:
 </span>version: v1alpha1
 static:
  filters:
- - name: quilkin.extensions.filters.token_router.v1alpha1.TokenRouter
+ - name: quilkin.filters.token_router.v1alpha1.TokenRouter
  config:
  metadataKey: myapp.com/myownkey
  endpoints: 
@@ -1429,12 +1429,12 @@ appropriately cryptographically random and sent to each proxy securely.</p>
 </span>version: v1alpha1
 static:
  filters:
- - name: quilkin.extensions.filters.capture.v1alpha1.Capture # Capture and remove the authentication token
+ - name: quilkin.filters.capture.v1alpha1.Capture # Capture and remove the authentication token
  config:
  suffix:
  size: 3
  remove: true
- - name: quilkin.extensions.filters.token_router.v1alpha1.TokenRouter
+ - name: quilkin.filters.token_router.v1alpha1.TokenRouter
  endpoints: 
  - address: 127.0.0.1:26000
  metadata:
@@ -1472,7 +1472,7 @@ This document provides an overview of the API and how we can go about writing ou
 <ul>
 <li>An implementation provides a <code>name</code> and <code>create_filter</code> method.</li>
 <li><code>create_filter</code> takes in <a href="filters/../filters.html#filter-config">configuration</a> for the filter to create and returns a <a href="filters/../../api/quilkin/filters/prelude/struct.FilterInstance.html">FilterInstance</a> type containing a new instance of its filter type. 
-<code>name</code> returns the Filter name - a unique identifier of filters of the created type (e.g quilkin.extensions.filters.debug.v1alpha1.Debug).</li>
+<code>name</code> returns the Filter name - a unique identifier of filters of the created type (e.g quilkin.filters.debug.v1alpha1.Debug).</li>
 </ul>
 <h3 id="filterregistry"><a class="header" href="#filterregistry">FilterRegistry</a></h3>
 <p>A <a href="filters/../../api/quilkin/filters/struct.FilterRegistry.html">struct</a> representing the set of all filter types known to the proxy.

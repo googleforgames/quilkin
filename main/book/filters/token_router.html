@@ -140,7 +140,7 @@
 <a href="../filters.html#filter-dynamic-metadata">Filter Dynamic Metadata</a> from a previous Filter, and comparing it to
 <a href="../proxy.html#upstream-endpoint">Endpoint's tokens</a>, and sending packets to those Endpoints only if there is a match.</p>
 <h4 id="filter-name"><a class="header" href="#filter-name">Filter name</a></h4>
-<pre><code class="language-text">quilkin.extensions.filters.token_router.v1alpha1.TokenRouter
+<pre><code class="language-text">quilkin.filters.token_router.v1alpha1.TokenRouter
 </code></pre>
 <h3 id="configuration-examples"><a class="header" href="#configuration-examples">Configuration Examples</a></h3>
 <pre><pre class="playground"><code class="language-rust">
@@ -150,7 +150,7 @@
 </span>version: v1alpha1
 static:
  filters:
- - name: quilkin.extensions.filters.token_router.v1alpha1.TokenRouter
+ - name: quilkin.filters.token_router.v1alpha1.TokenRouter
  config:
  metadataKey: myapp.com/myownkey
  endpoints: 
@@ -210,12 +210,12 @@ appropriately cryptographically random and sent to each proxy securely.</p>
 </span>version: v1alpha1
 static:
  filters:
- - name: quilkin.extensions.filters.capture.v1alpha1.Capture # Capture and remove the authentication token
+ - name: quilkin.filters.capture.v1alpha1.Capture # Capture and remove the authentication token
  config:
  suffix:
  size: 3
  remove: true
- - name: quilkin.extensions.filters.token_router.v1alpha1.TokenRouter
+ - name: quilkin.filters.token_router.v1alpha1.TokenRouter
  endpoints: 
  - address: 127.0.0.1:26000
  metadata:

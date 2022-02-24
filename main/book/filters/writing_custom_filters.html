@@ -151,7 +151,7 @@ This document provides an overview of the API and how we can go about writing ou
 <ul>
 <li>An implementation provides a <code>name</code> and <code>create_filter</code> method.</li>
 <li><code>create_filter</code> takes in <a href="../filters.html#filter-config">configuration</a> for the filter to create and returns a <a href="../../api/quilkin/filters/prelude/struct.FilterInstance.html">FilterInstance</a> type containing a new instance of its filter type. 
-<code>name</code> returns the Filter name - a unique identifier of filters of the created type (e.g quilkin.extensions.filters.debug.v1alpha1.Debug).</li>
+<code>name</code> returns the Filter name - a unique identifier of filters of the created type (e.g quilkin.filters.debug.v1alpha1.Debug).</li>
 </ul>
 <h3 id="filterregistry"><a class="header" href="#filterregistry">FilterRegistry</a></h3>
 <p>A <a href="../../api/quilkin/filters/struct.FilterRegistry.html">struct</a> representing the set of all filter types known to the proxy.

@@ -120,7 +120,7 @@
  * limitations under the License.
  */</span>
 
-<span class="macro">crate::include_proto!</span>(<span class="string">&quot;quilkin.extensions.filters.concatenate_bytes.v1alpha1&quot;</span>);
+<span class="macro">crate::include_proto!</span>(<span class="string">&quot;quilkin.filters.concatenate_bytes.v1alpha1&quot;</span>);
 
 <span class="kw">use</span> <span class="ident">std::convert::TryFrom</span>;
 
@@ -130,9 +130,9 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">filters::prelude</span>::<span class="kw-2">*</span>, <span class="ident">map_proto_enum</span>};
 
-<span class="kw">use</span> <span class="ident"><span class="self">self</span>::quilkin::extensions::filters::concatenate_bytes::v1alpha1::concatenate_bytes::Strategy</span> <span class="kw">as</span> <span class="ident">ProtoStrategy</span>;
+<span class="kw">use</span> <span class="ident"><span class="self">self</span>::quilkin::filters::concatenate_bytes::v1alpha1::concatenate_bytes::Strategy</span> <span class="kw">as</span> <span class="ident">ProtoStrategy</span>;
 
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident"><span class="self">self</span>::quilkin::extensions::filters::concatenate_bytes::v1alpha1::ConcatenateBytes</span> <span class="kw">as</span> <span class="ident">ProtoConfig</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident"><span class="self">self</span>::quilkin::filters::concatenate_bytes::v1alpha1::ConcatenateBytes</span> <span class="kw">as</span> <span class="ident">ProtoConfig</span>;
 
 <span class="macro">base64_serde_type!</span>(<span class="ident">Base64Standard</span>, <span class="ident">base64::STANDARD</span>);
 

@@ -138,7 +138,7 @@
 <p>The <code>Firewall</code> filter's job is to allow or block traffic depending on if the incoming traffic's IP and port matches
 the rules set on the Firewall filter.</p>
 <h4 id="filter-name"><a class="header" href="#filter-name">Filter name</a></h4>
-<pre><code class="language-text">quilkin.extensions.filters.firewall.v1alpha1.Firewall
+<pre><code class="language-text">quilkin.filters.firewall.v1alpha1.Firewall
 </code></pre>
 <h3 id="configuration-examples"><a class="header" href="#configuration-examples">Configuration Examples</a></h3>
 <pre><pre class="playground"><code class="language-rust">
@@ -148,7 +148,7 @@ the rules set on the Firewall filter.</p>
 </span>version: v1alpha1
 static:
  filters:
- - name: quilkin.extensions.filters.firewall.v1alpha1.Firewall
+ - name: quilkin.filters.firewall.v1alpha1.Firewall
  config:
  on_read:
  - action: ALLOW

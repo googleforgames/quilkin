@@ -465,10 +465,10 @@
 
 <span class="kw">use</span> <span class="ident">metrics::Metrics</span>;
 
-<span class="macro">crate::include_proto!</span>(<span class="string">&quot;quilkin.extensions.filters.local_rate_limit.v1alpha1&quot;</span>);
-<span class="kw">use</span> <span class="ident"><span class="self">self</span>::quilkin::extensions::filters::local_rate_limit::v1alpha1::LocalRateLimit</span> <span class="kw">as</span> <span class="ident">ProtoConfig</span>;
+<span class="macro">crate::include_proto!</span>(<span class="string">&quot;quilkin.filters.local_rate_limit.v1alpha1&quot;</span>);
+<span class="kw">use</span> <span class="ident"><span class="self">self</span>::quilkin::filters::local_rate_limit::v1alpha1::LocalRateLimit</span> <span class="kw">as</span> <span class="ident">ProtoConfig</span>;
 
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">NAME</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit&quot;</span>;
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">NAME</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;quilkin.filters.local_rate_limit.v1alpha1.LocalRateLimit&quot;</span>;
 
 <span class="doccomment">/// Creates a new factory for generating rate limiting filters.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">factory</span>() -&gt; <span class="ident">DynFilterFactory</span> {

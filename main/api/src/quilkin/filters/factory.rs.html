@@ -184,13 +184,13 @@
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">FilterFactory</span>: <span class="ident">Sync</span> <span class="op">+</span> <span class="ident">Send</span> {
     <span class="doccomment">/// name returns the configuration name for the Filter</span>
     <span class="doccomment">/// The returned string identifies the filter item&#39;s path with the following format:</span>
-    <span class="doccomment">///     `quilkin.extensions.filters.&lt;module&gt;.&lt;version&gt;.&lt;item-name&gt;`</span>
+    <span class="doccomment">///     `quilkin.filters.&lt;module&gt;.&lt;version&gt;.&lt;item-name&gt;`</span>
     <span class="doccomment">/// where:</span>
     <span class="doccomment">///     &lt;module&gt;: The rust module name containing the filter item</span>
     <span class="doccomment">///     &lt;version&gt;: The filter&#39;s version.</span>
     <span class="doccomment">///     &lt;item-name&gt;: The name of the rust item (e.g enum, struct) implementing the filter.</span>
     <span class="doccomment">/// For example the `v1alpha1` version of the debug filter has the name:</span>
-    <span class="doccomment">///     `quilkin.extensions.filters.debug_filter.v1alpha1.Debug`</span>
+    <span class="doccomment">///     `quilkin.filters.debug_filter.v1alpha1.Debug`</span>
     <span class="kw">fn</span> <span class="ident">name</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>;
 
     <span class="doccomment">/// Returns the schema for the configuration of the [`Filter`].</span>

@@ -264,9 +264,9 @@
 <span id="263">263</span>
 <span id="264">264</span>
 <span id="265">265</span>
-</pre><pre class="rust"><code><span class="macro">crate::include_proto!</span>(<span class="string">&quot;quilkin.extensions.filters.matches.v1alpha1&quot;</span>);
+</pre><pre class="rust"><code><span class="macro">crate::include_proto!</span>(<span class="string">&quot;quilkin.filters.matches.v1alpha1&quot;</span>);
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">use</span> <span class="ident"><span class="self">self</span>::quilkin::extensions::filters::matches::v1alpha1</span> <span class="kw">as</span> <span class="ident">proto</span>;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">use</span> <span class="ident"><span class="self">self</span>::quilkin::filters::matches::v1alpha1</span> <span class="kw">as</span> <span class="ident">proto</span>;
 
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
 
@@ -508,7 +508,7 @@ on_read:
     metadataKey: quilkin.dev/captured_bytes
     branches:
         - value: abc
-          id: quilkin.extensions.filters.debug.v1alpha1.Debug
+          id: quilkin.filters.debug.v1alpha1.Debug
         &quot;</span>;
 
         <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">serde_yaml::from_str</span>::<span class="op">&lt;</span><span class="ident">Config</span><span class="op">&gt;</span>(<span class="ident">matches_yaml</span>).<span class="ident">unwrap</span>();
@@ -520,7 +520,7 @@ on_read:
                     <span class="ident">metadata_key</span>: <span class="string">&quot;quilkin.dev/captured_bytes&quot;</span>.<span class="ident">into</span>(),
                     <span class="ident">branches</span>: <span class="macro">vec!</span>[<span class="ident">Branch</span> {
                         <span class="ident">value</span>: <span class="ident">String::from</span>(<span class="string">&quot;abc&quot;</span>).<span class="ident">into</span>(),
-                        <span class="ident">filter</span>: <span class="string">&quot;quilkin.extensions.filters.debug.v1alpha1.Debug&quot;</span>.<span class="ident">into</span>(),
+                        <span class="ident">filter</span>: <span class="string">&quot;quilkin.filters.debug.v1alpha1.Debug&quot;</span>.<span class="ident">into</span>(),
                     }],
                     <span class="ident">fallthrough</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
                 }),

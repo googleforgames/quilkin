@@ -119,14 +119,14 @@
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters::prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
 
-<span class="macro">crate::include_proto!</span>(<span class="string">&quot;quilkin.extensions.filters.pass.v1alpha1&quot;</span>);
-<span class="kw">use</span> <span class="ident"><span class="self">self</span>::quilkin::extensions::filters::pass::v1alpha1</span> <span class="kw">as</span> <span class="ident">proto</span>;
+<span class="macro">crate::include_proto!</span>(<span class="string">&quot;quilkin.filters.pass.v1alpha1&quot;</span>);
+<span class="kw">use</span> <span class="ident"><span class="self">self</span>::quilkin::filters::pass::v1alpha1</span> <span class="kw">as</span> <span class="ident">proto</span>;
 
 <span class="doccomment">/// Allows a packet to pass through, mostly useful in combination with</span>
 <span class="doccomment">/// other filters.</span>
 <span class="kw">struct</span> <span class="ident">Pass</span>;
 
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">NAME</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;quilkin.extensions.filters.pass.v1alpha1.Pass&quot;</span>;
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">NAME</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;quilkin.filters.pass.v1alpha1.Pass&quot;</span>;
 
 <span class="doccomment">/// Creates a new factory for generating debug filters.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">factory</span>() -&gt; <span class="ident">DynFilterFactory</span> {

@@ -138,7 +138,7 @@
 <p>The <code>ConcatenateBytes</code> filter's job is to add a byte packet to either the beginning or end of each UDP packet that passes
 through. This is commonly used to provide an auth token to each packet, so they can be routed appropriately. </p>
 <h4 id="filter-name"><a class="header" href="#filter-name">Filter name</a></h4>
-<pre><code class="language-text">quilkin.extensions.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
+<pre><code class="language-text">quilkin.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
 </code></pre>
 <h3 id="configuration-examples"><a class="header" href="#configuration-examples">Configuration Examples</a></h3>
 <pre><pre class="playground"><code class="language-rust">
@@ -148,7 +148,7 @@ through. This is commonly used to provide an auth token to each packet, so they 
 </span>version: v1alpha1
 static:
  filters:
- - name: quilkin.extensions.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
+ - name: quilkin.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
  config:
  on_read: APPEND
  on_write: DO_NOTHING

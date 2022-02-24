@@ -182,20 +182,20 @@
  * limitations under the License.
  */</span>
 
-<span class="macro">crate::include_proto!</span>(<span class="string">&quot;quilkin.extensions.filters.load_balancer.v1alpha1&quot;</span>);
+<span class="macro">crate::include_proto!</span>(<span class="string">&quot;quilkin.filters.load_balancer.v1alpha1&quot;</span>);
 
 <span class="kw">use</span> <span class="ident">std::convert::TryFrom</span>;
 
 <span class="kw">use</span> <span class="ident">schemars::JsonSchema</span>;
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
 
-<span class="kw">use</span> <span class="ident"><span class="self">self</span>::quilkin::extensions::filters::load_balancer::v1alpha1::load_balancer::Policy</span> <span class="kw">as</span> <span class="ident">ProtoPolicy</span>;
+<span class="kw">use</span> <span class="ident"><span class="self">self</span>::quilkin::filters::load_balancer::v1alpha1::load_balancer::Policy</span> <span class="kw">as</span> <span class="ident">ProtoPolicy</span>;
 <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::endpoint_chooser</span>::{
     <span class="ident">EndpointChooser</span>, <span class="ident">HashEndpointChooser</span>, <span class="ident">RandomEndpointChooser</span>, <span class="ident">RoundRobinEndpointChooser</span>,
 };
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">filters::ConvertProtoConfigError</span>, <span class="ident">map_proto_enum</span>};
 
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident"><span class="self">self</span>::quilkin::extensions::filters::load_balancer::v1alpha1::LoadBalancer</span> <span class="kw">as</span> <span class="ident">ProtoConfig</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident"><span class="self">self</span>::quilkin::filters::load_balancer::v1alpha1::LoadBalancer</span> <span class="kw">as</span> <span class="ident">ProtoConfig</span>;
 
 <span class="doccomment">/// The configuration for [`load_balancer`][super].</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">JsonSchema</span>)]</span>
@@ -262,7 +262,7 @@
     <span class="kw">use</span> <span class="ident">std::convert::TryFrom</span>;
 
     <span class="kw">use</span> <span class="kw">super</span>::{
-        <span class="ident">quilkin::extensions::filters::load_balancer::v1alpha1::load_balancer</span>::{
+        <span class="ident">quilkin::filters::load_balancer::v1alpha1::load_balancer</span>::{
             <span class="ident">Policy</span> <span class="kw">as</span> <span class="ident">ProtoPolicy</span>, <span class="ident">PolicyValue</span>,
         },
         <span class="ident">Config</span>, <span class="ident">Policy</span>, <span class="ident">ProtoConfig</span>,

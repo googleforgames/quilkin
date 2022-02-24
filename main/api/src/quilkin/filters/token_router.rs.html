@@ -404,7 +404,7 @@
 
 <span class="kw">mod</span> <span class="ident">metrics</span>;
 
-<span class="macro">crate::include_proto!</span>(<span class="string">&quot;quilkin.extensions.filters.token_router.v1alpha1&quot;</span>);
+<span class="macro">crate::include_proto!</span>(<span class="string">&quot;quilkin.filters.token_router.v1alpha1&quot;</span>);
 
 <span class="kw">use</span> <span class="ident">std::convert::TryFrom</span>;
 <span class="kw">use</span> <span class="ident">std::sync::Arc</span>;
@@ -421,9 +421,9 @@
 
 <span class="kw">use</span> <span class="ident">metrics::Metrics</span>;
 
-<span class="kw">use</span> <span class="ident"><span class="self">self</span>::quilkin::extensions::filters::token_router::v1alpha1::TokenRouter</span> <span class="kw">as</span> <span class="ident">ProtoConfig</span>;
+<span class="kw">use</span> <span class="ident"><span class="self">self</span>::quilkin::filters::token_router::v1alpha1::TokenRouter</span> <span class="kw">as</span> <span class="ident">ProtoConfig</span>;
 
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">NAME</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;quilkin.extensions.filters.token_router.v1alpha1.TokenRouter&quot;</span>;
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">NAME</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;quilkin.filters.token_router.v1alpha1.TokenRouter&quot;</span>;
 
 <span class="doccomment">/// Returns a factory for creating token routing filters.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">factory</span>() -&gt; <span class="ident">DynFilterFactory</span> {
