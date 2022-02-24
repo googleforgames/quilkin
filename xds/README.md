@@ -159,9 +159,9 @@ clusters:
          tokens:
          - "MXg3aWp5Ng=="
 filterchain:
-- name: quilkin.extensions.filters.debug.v1alpha1.Debug
+- name: quilkin.filters.debug.v1alpha1.Debug
   typed_config:
-    '@type': quilkin.extensions.filters.debug.v1alpha1.Debug
+    '@type': quilkin.filters.debug.v1alpha1.Debug
     id: hello
 ```
 

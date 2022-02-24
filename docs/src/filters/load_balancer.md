@@ -4,7 +4,7 @@ The `LoadBalancer` filter distributes packets received downstream among all upst
 
 #### Filter name
 ```text
-quilkin.extensions.filters.load_balancer.v1alpha1.LoadBalancer
+quilkin.filters.load_balancer.v1alpha1.LoadBalancer
 ```
 
 ### Configuration Examples
@@ -15,7 +15,7 @@ quilkin.extensions.filters.load_balancer.v1alpha1.LoadBalancer
 version: v1alpha1
 static:
   filters:
-    - name: quilkin.extensions.filters.load_balancer.v1alpha1.LoadBalancer
+    - name: quilkin.filters.load_balancer.v1alpha1.LoadBalancer
       config:
         policy: ROUND_ROBIN
   endpoints:
@@ -33,16 +33,7 @@ In the example above, packets will be distributed by selecting endpoints in turn
 ### Configuration Options ([Rust Doc](../../api/quilkin/filters/load_balancer/struct.Config.html))
 
 ```yaml
-properties:
-  policy:
-    type: string
-    description: |
-      The load balancing policy with which to distribute packets among endpoints.
-    enum:
-      - ROUND_ROBIN # Send packets by selecting endpoints in turn.
-      - RANDOM      # Send packets by randomly selecting endpoints.
-      - HASH        # Send packets by hashing the source IP and port.
-    default: ROUND_ROBIN
+{{#include ../../../target/quilkin.filters.load_balancer.v1alpha1.yaml}}
 ```
 
 ### Metrics

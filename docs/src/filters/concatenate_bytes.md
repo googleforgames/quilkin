@@ -5,7 +5,7 @@ through. This is commonly used to provide an auth token to each packet, so they 
 
 #### Filter name
 ```text
-quilkin.extensions.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
+quilkin.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
 ```
 
 ### Configuration Examples
@@ -14,7 +14,7 @@ quilkin.extensions.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
 version: v1alpha1
 static:
   filters:
-    - name: quilkin.extensions.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
+    - name: quilkin.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
       config:
           on_read: APPEND
           on_write: DO_NOTHING
@@ -30,23 +30,7 @@ static:
 ### Configuration Options ([Rust Doc](../../api/quilkin/filters/concatenate_bytes/struct.Config.html))
 
 ```yaml
-properties:
-  on_read:
-    type: string
-    description: |
-      Either append or prepend the `bytes` data to each packet filtered on read of the listening port.
-    default: DO_NOTHING
-    enum: ['DO_NOTHING', 'APPEND', 'PREPEND']
-  on_write:
-    type: string
-    description: |
-      Either append or prepend the `bytes` data to each packet filtered on write of the listening port.
-    default: DO_NOTHING
-    enum: ['DO_NOTHING', 'APPEND', 'PREPEND']    
-  bytes:
-    type: string
-    description: |
-      Base64 encoded string of the byte array to add to each packet as it is filtered.
+{{#include ../../../target/quilkin.filters.concatenate_bytes.v1alpha1.yaml}}
 ```
 
 ### Metrics

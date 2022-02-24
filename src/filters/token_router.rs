@@ -16,7 +16,7 @@
 
 mod metrics;
 
-crate::include_proto!("quilkin.extensions.filters.token_router.v1alpha1");
+crate::include_proto!("quilkin.filters.token_router.v1alpha1");
 
 use std::convert::TryFrom;
 use std::sync::Arc;
@@ -33,9 +33,9 @@ use crate::{
 
 use metrics::Metrics;
 
-use self::quilkin::extensions::filters::token_router::v1alpha1::TokenRouter as ProtoConfig;
+use self::quilkin::filters::token_router::v1alpha1::TokenRouter as ProtoConfig;
 
-pub const NAME: &str = "quilkin.extensions.filters.token_router.v1alpha1.TokenRouter";
+pub const NAME: &str = "quilkin.filters.token_router.v1alpha1.TokenRouter";
 
 /// Returns a factory for creating token routing filters.
 pub fn factory() -> DynFilterFactory {
@@ -70,6 +70,10 @@ impl TokenRouterFactory {
 impl FilterFactory for TokenRouterFactory {
     fn name(&self) -> &'static str {
         NAME
+    }
+
+    fn config_schema(&self) -> schemars::schema::RootSchema {
+        schemars::schema_for!(Config)
     }
 
     fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
@@ -142,7 +146,7 @@ impl Filter for TokenRouter {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, schemars::JsonSchema)]
 #[serde(default)]
 pub struct Config {
     /// the key to use when retrieving the token from the Filter's dynamic metadata

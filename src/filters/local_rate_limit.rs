@@ -31,10 +31,10 @@ use crate::{
 
 use metrics::Metrics;
 
-crate::include_proto!("quilkin.extensions.filters.local_rate_limit.v1alpha1");
-use self::quilkin::extensions::filters::local_rate_limit::v1alpha1::LocalRateLimit as ProtoConfig;
+crate::include_proto!("quilkin.filters.local_rate_limit.v1alpha1");
+use self::quilkin::filters::local_rate_limit::v1alpha1::LocalRateLimit as ProtoConfig;
 
-pub const NAME: &str = "quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit";
+pub const NAME: &str = "quilkin.filters.local_rate_limit.v1alpha1.LocalRateLimit";
 
 /// Creates a new factory for generating rate limiting filters.
 pub fn factory() -> DynFilterFactory {
@@ -178,6 +178,10 @@ impl FilterFactory for LocalRateLimitFactory {
         NAME
     }
 
+    fn config_schema(&self) -> schemars::schema::RootSchema {
+        schemars::schema_for!(Config)
+    }
+
     fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
         let (config_json, config) = self
             .require_config(args.config)?
@@ -199,7 +203,7 @@ impl FilterFactory for LocalRateLimitFactory {
 }
 
 /// Config represents a [self]'s configuration.
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, schemars::JsonSchema)]
 pub struct Config {
     /// The maximum number of packets allowed to be forwarded by the rate
     /// limiter in a given duration.

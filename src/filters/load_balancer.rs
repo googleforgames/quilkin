@@ -24,7 +24,7 @@ use endpoint_chooser::EndpointChooser;
 
 pub use config::{Config, Policy};
 
-pub const NAME: &str = "quilkin.extensions.filters.load_balancer.v1alpha1.LoadBalancer";
+pub const NAME: &str = "quilkin.filters.load_balancer.v1alpha1.LoadBalancer";
 
 /// Returns a factory for creating load balancing filters.
 pub fn factory() -> DynFilterFactory {
@@ -48,6 +48,10 @@ struct LoadBalancerFilterFactory;
 impl FilterFactory for LoadBalancerFilterFactory {
     fn name(&self) -> &'static str {
         NAME
+    }
+
+    fn config_schema(&self) -> schemars::schema::RootSchema {
+        schemars::schema_for!(Config)
     }
 
     fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {

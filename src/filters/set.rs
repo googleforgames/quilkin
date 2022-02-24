@@ -56,10 +56,12 @@ impl FilterSet {
                 filters::compress::factory(),
                 filters::concatenate_bytes::factory(),
                 filters::debug::factory(),
+                filters::drop::factory(),
                 filters::firewall::factory(),
                 filters::load_balancer::factory(),
                 filters::local_rate_limit::factory(),
-                filters::matches::factory(),
+                filters::r#match::factory(),
+                filters::pass::factory(),
                 filters::token_router::factory(),
             ])
             .chain(filters),
@@ -70,6 +72,19 @@ impl FilterSet {
     /// any defaults.
     pub fn with(filters: impl IntoIterator<Item = DynFilterFactory>) -> Self {
         Self::from_iter(filters)
+    }
+
+    /// Returns a [`DynFilterFactory`] if one matches `id`, otherwise returns
+    /// `None`.
+    pub fn get(&self, id: &str) -> Option<&DynFilterFactory> {
+        self.0.get(id)
+    }
+
+    /// Returns a by reference iterator over the set of filters.
+    pub fn iter(&self) -> Iter {
+        Iter {
+            inner: self.0.iter(),
+        }
     }
 }
 
@@ -109,6 +124,19 @@ pub struct IntoIter {
 
 impl Iterator for IntoIter {
     type Item = DynFilterFactory;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next().map(|(_, v)| v)
+    }
+}
+
+/// Iterator over a set of [`DynFilterFactory`]s.
+pub struct Iter<'r> {
+    inner: std::collections::hash_map::Iter<'r, &'static str, DynFilterFactory>,
+}
+
+impl<'r> Iterator for Iter<'r> {
+    type Item = &'r DynFilterFactory;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.inner.next().map(|(_, v)| v)

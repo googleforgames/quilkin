@@ -5,7 +5,7 @@ Rate limiting is done independently per source (IP, Port) combination.
 
 #### Filter name
 ```text
-quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit
+quilkin.filters.local_rate_limit.v1alpha1.LocalRateLimit
 ```
 
 ### Configuration Examples
@@ -18,7 +18,7 @@ quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit
 version: v1alpha1
 static:
   filters:
-    - name: quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit
+    - name: quilkin.filters.local_rate_limit.v1alpha1.LocalRateLimit
       config:
         max_packets: 1000
         period: 1
@@ -42,21 +42,7 @@ To configure a rate limiter, we specify the maximum rate at which the proxy is a
 ### Configuration Options ([Rust Doc](../../api/quilkin/filters/local_rate_limit/struct.Config.html))
 
 ```yaml
-properties:
-  max_packets:
-    type: integer
-    description: |
-      The maximum number of packets allowed to be forwarded over the given duration.
-    minimum: 0
-
-  period:
-    type: string
-    description: |
-      The duration in seconds overwhich `max_packets` applies.
-    default: 1 # 1 second
-    minimum: 1
-
-required: [ 'max_packets' ]
+{{#include ../../../target/quilkin.filters.local_rate_limit.v1alpha1.yaml}}
 ```
 
 

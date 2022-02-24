@@ -21,16 +21,16 @@ use tracing::debug;
 use crate::filters::firewall::metrics::Metrics;
 use crate::filters::prelude::*;
 
-use self::quilkin::extensions::filters::firewall::v1alpha1::Firewall as ProtoConfig;
+use self::quilkin::filters::firewall::v1alpha1::Firewall as ProtoConfig;
 
-crate::include_proto!("quilkin.extensions.filters.firewall.v1alpha1");
+crate::include_proto!("quilkin.filters.firewall.v1alpha1");
 
 mod config;
 mod metrics;
 
 pub use config::{Action, Config, PortRange, PortRangeError, Rule};
 
-pub const NAME: &str = "quilkin.extensions.filters.firewall.v1alpha1.Firewall";
+pub const NAME: &str = "quilkin.filters.firewall.v1alpha1.Firewall";
 
 pub fn factory() -> DynFilterFactory {
     Box::from(FirewallFactory::new())
@@ -47,6 +47,10 @@ impl FirewallFactory {
 impl FilterFactory for FirewallFactory {
     fn name(&self) -> &'static str {
         NAME
+    }
+
+    fn config_schema(&self) -> schemars::schema::RootSchema {
+        schemars::schema_for!(Config)
     }
 
     fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {

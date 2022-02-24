@@ -8,7 +8,7 @@ This Filter provides this functionality by comparing a byte array token found in
 
 #### Filter name
 ```text
-quilkin.extensions.filters.token_router.v1alpha1.TokenRouter
+quilkin.filters.token_router.v1alpha1.TokenRouter
 ```
 
 ### Configuration Examples
@@ -17,7 +17,7 @@ quilkin.extensions.filters.token_router.v1alpha1.TokenRouter
 version: v1alpha1
 static:
   filters:
-    - name: quilkin.extensions.filters.token_router.v1alpha1.TokenRouter
+    - name: quilkin.filters.token_router.v1alpha1.TokenRouter
       config:
           metadataKey: myapp.com/myownkey
   endpoints: 
@@ -43,12 +43,7 @@ View the [CaptureBytes](./capture.md) filter documentation for more details.
 ### Configuration Options ([Rust Doc](../../api/quilkin/filters/token_router/struct.Config.html))
 
 ```yaml
-properties:
-  metadataKey:
-    type: string
-    default: quilkin.dev/captured
-    description: | 
-      The key under which the token is stored in the Filter dynamic metadata.
+{{#include ../../../target/quilkin.filters.token_router.v1alpha1.yaml}}
 ```
 
 ### Metrics
@@ -82,12 +77,12 @@ For example, a configuration would look like:
 version: v1alpha1
 static:
   filters:
-    - name: quilkin.extensions.filters.capture.v1alpha1.Capture # Capture and remove the authentication token
+    - name: quilkin.filters.capture.v1alpha1.Capture # Capture and remove the authentication token
       config:
         suffix:
             size: 3
             remove: true
-    - name: quilkin.extensions.filters.token_router.v1alpha1.TokenRouter
+    - name: quilkin.filters.token_router.v1alpha1.TokenRouter
   endpoints: 
     - address: 127.0.0.1:26000
       metadata:

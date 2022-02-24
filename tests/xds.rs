@@ -108,7 +108,7 @@ mod quilkin_proto {
             pub mod concatenate_bytes {
                 pub mod v1alpha1 {
                     #![doc(hidden)]
-                    tonic::include_proto!("quilkin.extensions.filters.concatenate_bytes.v1alpha1");
+                    tonic::include_proto!("quilkin.filters.concatenate_bytes.v1alpha1");
                 }
             }
         }
@@ -318,7 +318,7 @@ fn concat_listener_discovery_response(
     nonce: &str,
     bytes: Vec<Vec<u8>>,
 ) -> DiscoveryResponse {
-    let filter_name = "quilkin.extensions.filters.concatenate_bytes.v1alpha1.ConcatenateBytes";
+    let filter_name = "quilkin.filters.concatenate_bytes.v1alpha1.ConcatenateBytes";
     let filters = bytes
         .into_iter()
         .map(|value| LdsFilter {

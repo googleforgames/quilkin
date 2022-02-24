@@ -29,22 +29,16 @@ use crate::{
 #[cfg(doc)]
 use crate::filters::FilterFactory;
 
-/// Calls [`run`] with the [`Config`] found by [`Config::find`] and the
-/// default [`FilterSet`].
-pub async fn run(filter_factories: impl IntoIterator<Item = DynFilterFactory>) -> Result<()> {
-    run_with_config(Config::find(None).map(Arc::new)?, filter_factories).await
-}
-
 /// Start and run a proxy. Any passed in [`FilterFactory`]s are included
 /// alongside the default filter factories.
-pub async fn run_with_config(
-    config: Arc<Config>,
+pub async fn run(
+    config: Config,
     filter_factories: impl IntoIterator<Item = DynFilterFactory>,
 ) -> Result<()> {
     let span = span!(Level::INFO, "source::run");
     let _enter = span.enter();
 
-    let server = Builder::from(config)
+    let server = Builder::from(Arc::new(config))
         .with_filter_registry(FilterRegistry::new(FilterSet::default_with(
             filter_factories.into_iter(),
         )))

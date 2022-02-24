@@ -21,7 +21,7 @@ use crate::filters::prelude::*;
 use config::ProtoConfig;
 pub use config::{Config, Strategy};
 
-pub const NAME: &str = "quilkin.extensions.filters.concatenate_bytes.v1alpha1.ConcatenateBytes";
+pub const NAME: &str = "quilkin.filters.concatenate_bytes.v1alpha1.ConcatenateBytes";
 
 /// Returns a factory for creating concatenation filters.
 pub fn factory() -> DynFilterFactory {
@@ -84,6 +84,10 @@ struct ConcatBytesFactory;
 impl FilterFactory for ConcatBytesFactory {
     fn name(&self) -> &'static str {
         NAME
+    }
+
+    fn config_schema(&self) -> schemars::schema::RootSchema {
+        schemars::schema_for!(Config)
     }
 
     fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {

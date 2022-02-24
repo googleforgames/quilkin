@@ -14,22 +14,23 @@
  * limitations under the License.
  */
 
-crate::include_proto!("quilkin.extensions.filters.concatenate_bytes.v1alpha1");
+crate::include_proto!("quilkin.filters.concatenate_bytes.v1alpha1");
 
 use std::convert::TryFrom;
 
 use base64_serde::base64_serde_type;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{filters::prelude::*, map_proto_enum};
 
-use self::quilkin::extensions::filters::concatenate_bytes::v1alpha1::concatenate_bytes::Strategy as ProtoStrategy;
+use self::quilkin::filters::concatenate_bytes::v1alpha1::concatenate_bytes::Strategy as ProtoStrategy;
 
-pub use self::quilkin::extensions::filters::concatenate_bytes::v1alpha1::ConcatenateBytes as ProtoConfig;
+pub use self::quilkin::filters::concatenate_bytes::v1alpha1::ConcatenateBytes as ProtoConfig;
 
 base64_serde_type!(Base64Standard, base64::STANDARD);
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, JsonSchema)]
 pub enum Strategy {
     #[serde(rename = "APPEND")]
     Append,
@@ -46,7 +47,7 @@ impl Default for Strategy {
 }
 
 /// Config represents a `ConcatenateBytes` filter configuration.
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, JsonSchema)]
 #[non_exhaustive]
 pub struct Config {
     /// Whether or not to `append` or `prepend` or `do nothing` on Filter `Read`
@@ -56,7 +57,10 @@ pub struct Config {
     #[serde(default)]
     pub on_write: Strategy,
 
-    #[serde(with = "Base64Standard")]
+    #[serde(
+        deserialize_with = "Base64Standard::deserialize",
+        serialize_with = "Base64Standard::serialize"
+    )]
     pub bytes: Vec<u8>,
 }
 
