@@ -126,8 +126,7 @@ impl ClusterManager {
                 let cluster_endpoints = cluster
                     .localities
                     .into_iter()
-                    .map(|(_, endpoints)| endpoints.endpoints.into_iter())
-                    .flatten();
+                    .flat_map(|(_, endpoints)| endpoints.endpoints.into_iter());
                 endpoints.extend(cluster_endpoints);
 
                 endpoints

@@ -235,9 +235,9 @@ mod tests {
     }
 
     fn new_registry() -> FilterRegistry {
-        FilterRegistry::new(FilterSet::with(std::array::IntoIter::new([
-            DynFilterFactory::from(Box::from(AppendFactory)),
-        ])))
+        FilterRegistry::new(FilterSet::with([DynFilterFactory::from(Box::from(
+            AppendFactory,
+        ))]))
     }
 
     struct AppendFactory;
