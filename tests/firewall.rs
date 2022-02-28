@@ -14,17 +14,12 @@
  * limitations under the License.
  */
 
-use quilkin::config::{Builder, Filter};
-use quilkin::endpoint::Endpoint;
-use quilkin::filters::firewall;
-use quilkin::test_utils::TestHelper;
-use std::net::SocketAddr;
-use tokio::sync::oneshot::Receiver;
 use tokio::time::{timeout, Duration};
+
+use quilkin::{config::Filter, endpoint::EndpointAddress, filters::firewall};
 
 #[tokio::test]
 async fn firewall_allow() {
-    let mut t = TestHelper::default();
     let yaml = "
 on_read:
   - action: ALLOW
@@ -37,20 +32,12 @@ on_write:
     ports:
        - %2
 ";
-    let recv = test(&mut t, 12354, yaml).await;
-
-    assert_eq!(
-        "hello",
-        timeout(Duration::from_secs(5), recv)
-            .await
-            .expect("should have received a packet")
-            .unwrap()
-    );
+    let result = test(yaml).await.unwrap();
+    assert_eq!(b"hello", result.as_slice());
 }
 
 #[tokio::test]
 async fn firewall_read_deny() {
-    let mut t = TestHelper::default();
     let yaml = "
 on_read:
   - action: DENY
@@ -63,15 +50,13 @@ on_write:
     ports:
        - %2
 ";
-    let recv = test(&mut t, 12355, yaml).await;
 
-    let result = timeout(Duration::from_secs(3), recv).await;
+    let result = timeout(Duration::from_secs(1), test(yaml)).await;
     assert!(result.is_err(), "should not have received a packet");
 }
 
 #[tokio::test]
 async fn firewall_write_deny() {
-    let mut t = TestHelper::default();
     let yaml = "
 on_read:
   - action: ALLOW
@@ -84,37 +69,73 @@ on_write:
     ports:
        - %2
 ";
-    let recv = test(&mut t, 12356, yaml).await;
-
-    let result = timeout(Duration::from_secs(3), recv).await;
+    let result = timeout(Duration::from_secs(1), test(yaml)).await;
     assert!(result.is_err(), "should not have received a packet");
 }
 
-async fn test(t: &mut TestHelper, server_port: u16, yaml: &str) -> Receiver<String> {
-    let echo = t.run_echo_server().await;
+async fn test(yaml: &str) -> quilkin::Result<Vec<u8>> {
+    const PACKET: &[u8] = b"hello";
+    const UNSPECIFIED: (std::net::Ipv4Addr, u16) = (std::net::Ipv4Addr::LOCALHOST, 0);
+    let client = tokio::net::UdpSocket::bind(UNSPECIFIED).await.unwrap();
+    let server = tokio::net::UdpSocket::bind(UNSPECIFIED).await.unwrap();
 
-    let recv = t.open_socket_and_recv_single_packet().await;
-    let client_addr = recv.socket.local_addr().unwrap();
+    let server_addr = EndpointAddress::from(server.local_addr().unwrap());
+    let client_addr = EndpointAddress::from(client.local_addr().unwrap());
+
     let yaml = yaml
         .replace("%1", client_addr.port().to_string().as_str())
-        .replace("%2", echo.port().to_string().as_str());
-    tracing::info!(config = yaml.as_str(), "Config");
+        .replace("%2", server_addr.port().to_string().as_str());
+    let quilkin = quilkin::Socket::bind(
+        UNSPECIFIED,
+        &[Filter {
+            name: firewall::factory().name().into(),
+            config: serde_yaml::from_str(yaml.as_str()).unwrap(),
+        }],
+    )
+    .await
+    .unwrap();
+    let quilkin_addr = EndpointAddress::from(quilkin.local_addr().unwrap());
+    client
+        .send_to(PACKET, quilkin_addr.clone().to_socket_addr().unwrap())
+        .await
+        .unwrap();
+    let (response, addr) = quilkin
+        .receive_downstream(vec![
+            EndpointAddress::from(server.local_addr().unwrap()).into()
+        ])
+        .await
+        .unwrap();
+    assert_eq!(PACKET, &response.contents);
+    quilkin
+        .send_upstream(&response.contents, server_addr, addr)
+        .await
+        .unwrap();
 
-    let server_config = Builder::empty()
-        .with_port(server_port)
-        .with_static(
-            vec![Filter {
-                name: firewall::factory().name().into(),
-                config: serde_yaml::from_str(yaml.as_str()).unwrap(),
-            }],
-            vec![Endpoint::new(echo)],
+    let (contents, addr) = {
+        let mut buf = vec![0; u16::MAX as usize];
+        let (length, addr) = server.recv_from(&mut buf).await.unwrap();
+        (Vec::from(&buf[..length]), addr)
+    };
+
+    assert_eq!(PACKET, contents);
+    server.send_to(&contents, addr).await.unwrap();
+    let (contents, upstream, downstream) =
+        quilkin.receive_upstream().await.unwrap().next().unwrap();
+    assert_eq!(PACKET, &contents);
+    quilkin
+        .send_downstream(
+            contents,
+            upstream.to_socket_addr().unwrap(),
+            downstream.to_socket_addr().unwrap(),
         )
-        .build();
-    t.run_server_with_config(server_config);
+        .await
+        .unwrap();
 
-    let local_addr: SocketAddr = (std::net::Ipv4Addr::LOCALHOST, server_port).into();
-    tracing::info!(source = %client_addr, address = %local_addr, "Sending hello");
-    recv.socket.send_to(b"hello", &local_addr).await.unwrap();
+    let contents = {
+        let mut buf = vec![0; u16::MAX as usize];
+        let (length, _) = client.recv_from(&mut buf).await.unwrap();
+        Vec::from(&buf[..length])
+    };
 
-    recv.packet_rx
+    Ok(contents)
 }

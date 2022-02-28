@@ -22,6 +22,10 @@ use base64_serde::base64_serde_type;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::xds::envoy::config::listener::v3::{
+    filter::ConfigType as LdsConfigType, Filter as XdsFilter,
+};
+
 mod builder;
 mod config_type;
 mod error;
@@ -125,6 +129,20 @@ pub struct ManagementServer {
     pub address: String,
 }
 
+impl From<String> for ManagementServer {
+    fn from(address: String) -> Self {
+        Self { address }
+    }
+}
+
+impl From<&str> for ManagementServer {
+    fn from(address: &str) -> Self {
+        Self {
+            address: address.into(),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum Source {
     #[serde(rename = "static")]
@@ -161,7 +179,26 @@ impl Source {
 #[serde(deny_unknown_fields)]
 pub struct Filter {
     pub name: String,
-    pub config: Option<serde_yaml::Value>,
+    pub config: Option<ConfigType>,
+}
+
+impl TryFrom<XdsFilter> for Filter {
+    type Error = eyre::Error;
+
+    fn try_from(filter: XdsFilter) -> crate::Result<Self> {
+        let config = filter
+            .config_type
+            .map(|config| match config {
+                LdsConfigType::TypedConfig(config) => Ok(config),
+                invalid => Err(eyre::eyre!("unsupported filter.config_type: {:?}", invalid)),
+            })
+            .transpose()?;
+
+        Ok(Self {
+            name: filter.name,
+            config: config.map(crate::config::ConfigType::Dynamic),
+        })
+    }
 }
 
 #[cfg(test)]
@@ -263,7 +300,10 @@ static:
         let filter = config.source.get_static_filters().unwrap().get(0).unwrap();
         assert_eq!("quilkin.core.v1.rate-limiter", filter.name);
         let config = filter.config.as_ref().unwrap();
-        let filter_config = config.as_mapping().unwrap();
+        let filter_config = match config {
+            ConfigType::Static(serde_yaml::Value::Mapping(mapping)) => mapping,
+            _ => unreachable!(),
+        };
 
         let key = Value::from("map");
         assert_eq!(

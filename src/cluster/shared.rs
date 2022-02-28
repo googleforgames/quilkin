@@ -20,8 +20,8 @@ use arc_swap::ArcSwap;
 use prometheus::Result as MetricsResult;
 
 use crate::{
-    cluster::{metrics::Metrics, Cluster, ClusterMap},
-    endpoint::{Endpoint, Endpoints, UpstreamEndpoints},
+    cluster::{metrics::Metrics, ClusterMap},
+    endpoint::{Endpoints, UpstreamEndpoints},
 };
 
 /// Knows about all clusters and endpoints.
@@ -45,15 +45,6 @@ impl SharedCluster {
             metrics,
             clusters: Arc::new(ArcSwap::new(Arc::new(clusters))),
         })
-    }
-
-    /// Creates a new shared static cluster of `endpoints`.
-    pub fn new_static_cluster(endpoints: Vec<Endpoint>) -> MetricsResult<Self> {
-        const STATIC_CLUSTER_NAME: &str = "<static>";
-        let cluster = Cluster::new_static_cluster(endpoints);
-        let map = ClusterMap::from([(STATIC_CLUSTER_NAME.into(), cluster)]);
-
-        Self::new(map)
     }
 
     /// Returns an empty [`SharedCluster`].
@@ -187,10 +178,10 @@ mod tests {
 
     #[test]
     fn static_cluster_manager_metrics() {
-        let shared_cluster = SharedCluster::new_static_cluster(vec![
+        let shared_cluster = SharedCluster::new(ClusterMap::new_static(vec![
             Endpoint::new("127.0.0.1:80".parse().unwrap()),
             Endpoint::new("127.0.0.1:81".parse().unwrap()),
-        ])
+        ]))
         .unwrap();
         let metrics = &shared_cluster.metrics;
         assert_eq!(2, metrics.active_endpoints.get());

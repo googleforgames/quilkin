@@ -37,6 +37,12 @@ pub struct Config {
     pub policy: Policy,
 }
 
+impl Config {
+    pub fn new(policy: Policy) -> Self {
+        Self { policy }
+    }
+}
+
 impl TryFrom<ProtoConfig> for Config {
     type Error = ConvertProtoConfigError;
 

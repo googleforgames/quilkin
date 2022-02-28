@@ -75,6 +75,12 @@ impl std::str::FromStr for Endpoint {
     }
 }
 
+impl From<EndpointAddress> for Endpoint {
+    fn from(addr: EndpointAddress) -> Self {
+        Self::new(addr)
+    }
+}
+
 /// Represents the set of all known upstream endpoints.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Endpoints(Arc<Vec<Endpoint>>);

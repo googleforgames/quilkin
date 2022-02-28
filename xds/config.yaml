@@ -1,0 +1,13 @@
+clusters:
+- name: cluster-a
+  endpoints:
+  - ip: 127.0.0.1
+    port: 8000
+    metadata:
+      'quilkin.dev':
+         tokens:
+         - "MXg3aWp5Ng=="
+filters:
+- name: quilkin.extensions.filters.debug.v1alpha1.Debug
+  config:
+    id: hello

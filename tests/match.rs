@@ -14,22 +14,15 @@
  *  limitations under the License.
  */
 
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-
 use tokio::time::{timeout, Duration};
 
 use quilkin::{
-    config::{Builder, Filter},
-    endpoint::Endpoint,
+    config::Filter,
     filters::{capture, r#match},
-    test_utils::TestHelper,
 };
 
 #[tokio::test]
 async fn r#match() {
-    let mut t = TestHelper::default();
-    let echo = t.run_echo_server().await;
-
     let capture_yaml = "
 suffix:
     size: 3
@@ -56,74 +49,92 @@ on_read:
             on_read: APPEND
             bytes: YWJj # abc
 ";
-    let server_port = 12348;
-    let server_config = Builder::empty()
-        .with_port(server_port)
-        .with_static(
-            vec![
-                Filter {
-                    name: capture::NAME.into(),
-                    config: serde_yaml::from_str(capture_yaml).unwrap(),
-                },
-                Filter {
-                    name: r#match::NAME.into(),
-                    config: serde_yaml::from_str(matches_yaml).unwrap(),
-                },
-            ],
-            vec![Endpoint::new(echo)],
-        )
-        .build();
-    t.run_server_with_config(server_config);
+    const UNSPECIFIED: (std::net::Ipv4Addr, u16) = (std::net::Ipv4Addr::LOCALHOST, 0);
+    let client = std::sync::Arc::new(tokio::net::UdpSocket::bind(UNSPECIFIED).await.unwrap());
+    let server = tokio::net::UdpSocket::bind(UNSPECIFIED).await.unwrap();
 
-    let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
+    let server_addr = quilkin::endpoint::EndpointAddress::from(server.local_addr().unwrap());
+    let quilkin = quilkin::Socket::bind(
+        UNSPECIFIED,
+        &[
+            Filter {
+                name: capture::NAME.into(),
+                config: serde_yaml::from_str(capture_yaml).unwrap(),
+            },
+            Filter {
+                name: r#match::NAME.into(),
+                config: serde_yaml::from_str(matches_yaml).unwrap(),
+            },
+        ],
+    )
+    .await
+    .unwrap();
 
-    let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port);
+    quilkin.set_static_upstream(vec![server_addr.into()]);
+    tokio::spawn(quilkin.clone().process_worker());
+    let quilkin_addr = quilkin.local_addr().unwrap();
+    let client_send = |msg| {
+        let client = client.clone();
+        let quilkin_addr = quilkin_addr.clone();
+        async move {
+            client
+                .send_to(msg, quilkin_addr.to_socket_addr().unwrap())
+                .await
+                .unwrap();
+        }
+    };
+
+    let response = || async {
+        let mut buf = vec![0; u16::MAX as usize];
+        let (length, _) = server.recv_from(&mut buf).await.unwrap();
+        buf[..length].to_owned()
+    };
 
     // abc packet
     let msg = b"helloabc";
-    socket.send_to(msg, &local_addr).await.unwrap();
+    (client_send)(msg).await;
 
     assert_eq!(
-        "helloxyz",
-        timeout(Duration::from_secs(5), recv_chan.recv())
+        b"helloxyz",
+        timeout(Duration::from_secs(5), (response)())
             .await
-            .expect("should have received a packet")
             .unwrap()
+            .as_slice()
     );
 
     // send an xyz packet
     let msg = b"helloxyz";
-    socket.send_to(msg, &local_addr).await.unwrap();
+    (client_send)(msg).await;
 
     assert_eq!(
-        "helloabc",
-        timeout(Duration::from_secs(5), recv_chan.recv())
+        b"helloabc",
+        timeout(Duration::from_secs(5), (response)())
             .await
             .expect("should have received a packet")
-            .unwrap()
+            .as_slice()
     );
 
     // fallthrough packet
     let msg = b"hellodef";
-    socket.send_to(msg, &local_addr).await.unwrap();
+    (client_send)(msg).await;
 
     assert_eq!(
-        "hellodef",
-        timeout(Duration::from_secs(5), recv_chan.recv())
+        b"hellodef",
+        timeout(Duration::from_secs(5), (response)())
             .await
             .expect("should have received a packet")
-            .unwrap()
+            .as_slice()
     );
 
     // second fallthrough packet
     let msg = b"hellofgh";
-    socket.send_to(msg, &local_addr).await.unwrap();
+    (client_send)(msg).await;
 
     assert_eq!(
-        "hellodef",
-        timeout(Duration::from_secs(5), recv_chan.recv())
+        b"hellodef",
+        timeout(Duration::from_secs(5), (response)())
             .await
             .expect("should have received a packet")
-            .unwrap()
+            .as_slice()
     );
 }

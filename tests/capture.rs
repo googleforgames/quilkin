@@ -73,7 +73,7 @@ quilkin.dev:
 
     assert_eq!(
         "helloabc",
-        timeout(Duration::from_secs(5), recv_chan.recv())
+        timeout(Duration::from_millis(500), recv_chan.recv())
             .await
             .expect("should have received a packet")
             .unwrap()
@@ -83,6 +83,6 @@ quilkin.dev:
     let msg = b"helloxyz";
     socket.send_to(msg, &local_addr).await.unwrap();
 
-    let result = timeout(Duration::from_secs(3), recv_chan.recv()).await;
+    let result = timeout(Duration::from_millis(500), recv_chan.recv()).await;
     assert!(result.is_err(), "should not have received a packet");
 }

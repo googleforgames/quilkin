@@ -18,12 +18,9 @@ use std::time::Duration;
 
 use prometheus::Result as MetricsResult;
 use rand::Rng;
-use tokio::{
-    sync::{
-        mpsc::{self, error::SendError},
-        watch,
-    },
-    task::JoinHandle,
+use tokio::sync::{
+    mpsc::{self, error::SendError},
+    watch,
 };
 use tokio_stream::wrappers::ReceiverStream;
 use tonic::{
@@ -36,7 +33,6 @@ use tryhard::{
 };
 
 use crate::{
-    cluster::SharedCluster,
     config::ManagementServer,
     xds::{
         cluster::ClusterManager,
@@ -84,9 +80,8 @@ impl AdsClient {
     pub async fn run(
         self,
         node_id: String,
-        cluster: SharedCluster,
         management_servers: Vec<ManagementServer>,
-        filter_chain: crate::filters::SharedFilterChain,
+        socket: crate::Socket,
         mut shutdown_rx: watch::Receiver<()>,
     ) -> Result<()> {
         let metrics = self.metrics;
@@ -141,16 +136,7 @@ impl AdsClient {
 
         let session_shutdown_rx = shutdown_rx.clone();
         let handle = tryhard::retry_fn(|| {
-            let (discovery_req_tx, discovery_req_rx) =
-                mpsc::channel::<DiscoveryRequest>(UPDATES_CHANNEL_BUFFER_SIZE);
-            let cluster_manager = ClusterManager::new(cluster.clone(), discovery_req_tx.clone());
-            let listener_manager = ListenerManager::new(filter_chain.clone(), discovery_req_tx);
-
-            let resource_handlers = ResourceHandlers {
-                cluster_manager,
-                listener_manager,
-            };
-
+            let (discovery_req_rx, resource_handlers) = ResourceHandlers::new(socket.clone());
             RpcSession {
                 discovery_req_rx,
                 metrics: metrics.clone(),
@@ -188,52 +174,51 @@ pub struct RpcReceiver {
 
 impl RpcReceiver {
     /// Spawns the task that runs a receive loop.
-    fn run(mut self) -> JoinHandle<Result<(), RpcSessionError>> {
-        tokio::spawn(async move {
-            let mut response_stream = match self
-                .client
-                .stream_aggregated_resources(Request::new(ReceiverStream::new(self.rpc_rx)))
-                .await
-            {
-                Ok(response) => response.into_inner(),
-                Err(err) => return Err(RpcSessionError::Receive(err)),
-            };
+    #[tracing::instrument(skip_all)]
+    async fn run(mut self) -> Result<(), RpcSessionError> {
+        let mut response_stream = match self
+            .client
+            .stream_aggregated_resources(Request::new(ReceiverStream::new(self.rpc_rx)))
+            .await
+        {
+            Ok(response) => response.into_inner(),
+            Err(err) => return Err(RpcSessionError::Receive(err)),
+        };
 
-            // We are now connected to the server.
-            self.metrics.connected_state.set(1);
+        // We are now connected to the server.
+        self.metrics.connected_state.set(1);
 
-            let result = loop {
-                tokio::select! {
-                    response = response_stream.message() => {
-                        let response = match response {
-                            Ok(None) => {
-                                // No more messages on the connection.
-                                tracing::info!("Exiting receive loop - response stream closed.");
-                                break Ok(())
-                            },
-                            Err(err) => break Err(RpcSessionError::Receive(err)),
-                            Ok(Some(response)) => response
-                        };
+        let result = loop {
+            tokio::select! {
+                response = response_stream.message() => {
+                    let response = match response {
+                        Ok(None) => {
+                            // No more messages on the connection.
+                            tracing::info!("Exiting receive loop - response stream closed.");
+                            break Ok(())
+                        },
+                        Err(err) => break Err(RpcSessionError::Receive(err)),
+                        Ok(Some(response)) => response
+                    };
 
-                        self.metrics.update_attempt_total.inc();
-                        if let Err(url) = self.resource_handlers.handle_discovery_response(response).await {
-                            self.metrics.update_failure_total.inc();
-                            tracing::error!(r#type = %url, "Unexpected resource");
-                        }
-                    }
-
-                    _ = self.shutdown_rx.changed() => {
-                        tracing::info!("Exiting receive loop - received shutdown signal");
-                        break Ok(())
+                    self.metrics.update_attempt_total.inc();
+                    if let Err(url) = self.resource_handlers.handle_discovery_response(response).await {
+                        self.metrics.update_failure_total.inc();
+                        tracing::error!(r#type = %url, "Unexpected resource");
                     }
                 }
-            };
 
-            // We are no longer connected.
-            self.metrics.connected_state.set(0);
+                _ = self.shutdown_rx.changed() => {
+                    tracing::info!("Exiting receive loop - received shutdown signal");
+                    break Ok(())
+                }
+            }
+        };
 
-            result
-        })
+        // We are no longer connected.
+        self.metrics.connected_state.set(0);
+
+        result
     }
 }
 
@@ -254,6 +239,7 @@ impl RpcSession {
     /// responses from the server, forwarding them to the ClusterManager
     /// while the other loop (send loop) waits for DiscoveryRequest ACKS/NACKS
     /// from the ClusterManager, forwarding them to the server.
+    #[tracing::instrument(skip_all)]
     async fn run(mut self) -> Result<(), RpcSessionError> {
         let client = match AggregatedDiscoveryServiceClient::connect(self.addr).await {
             Ok(client) => client,
@@ -263,14 +249,16 @@ impl RpcSession {
         let (rpc_tx, rpc_rx) = mpsc::channel::<DiscoveryRequest>(UPDATES_CHANNEL_BUFFER_SIZE);
 
         // Spawn a task that runs the receive loop.
-        let mut recv_loop_join_handle = RpcReceiver {
-            client,
-            metrics: self.metrics.clone(),
-            resource_handlers: self.resource_handlers,
-            rpc_rx,
-            shutdown_rx: self.shutdown_rx,
-        }
-        .run();
+        let mut recv_loop_join_handle = tokio::spawn(
+            RpcReceiver {
+                client,
+                metrics: self.metrics.clone(),
+                resource_handlers: self.resource_handlers,
+                rpc_rx,
+                shutdown_rx: self.shutdown_rx,
+            }
+            .run(),
+        );
 
         let sender = RpcSender {
             metrics: self.metrics.clone(),
@@ -383,6 +371,18 @@ struct ResourceHandlers {
 }
 
 impl ResourceHandlers {
+    pub fn new(socket: crate::Socket) -> (mpsc::Receiver<DiscoveryRequest>, Self) {
+        let (discovery_req_tx, discovery_req_rx) =
+            mpsc::channel::<DiscoveryRequest>(UPDATES_CHANNEL_BUFFER_SIZE);
+        (
+            discovery_req_rx,
+            Self {
+                cluster_manager: ClusterManager::new(socket.clone(), discovery_req_tx.clone()),
+                listener_manager: ListenerManager::new(socket, discovery_req_tx),
+            },
+        )
+    }
+
     /// Checks if the discovery response matches any well known types, if none
     /// match then it will return an `Err` containing the URL of the type
     /// not recognised.
@@ -461,7 +461,7 @@ mod tests {
     use crate::xds::google::rpc::Status as GrpcStatus;
     use crate::xds::CLUSTER_TYPE;
 
-    use std::time::Duration;
+    use std::{net::Ipv4Addr, time::Duration};
 
     use tokio::sync::{mpsc, watch};
 
@@ -469,16 +469,16 @@ mod tests {
     /// If we get an invalid URL, we should return immediately rather
     /// than backoff or retry.
     async fn invalid_url() {
-        let filter_chain = crate::filters::SharedFilterChain::empty();
-        let cluster = crate::cluster::SharedCluster::empty().unwrap();
+        let socket = crate::Socket::bind_empty((Ipv4Addr::UNSPECIFIED, 0))
+            .await
+            .unwrap();
         let (_shutdown_tx, shutdown_rx) = watch::channel::<()>(());
         let run = AdsClient::new().unwrap().run(
             "test-id".into(),
-            cluster,
             vec![ManagementServer {
                 address: "localhost:18000".into(),
             }],
-            filter_chain,
+            socket.clone(),
             shutdown_rx,
         );
 

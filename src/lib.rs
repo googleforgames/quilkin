@@ -20,6 +20,7 @@ pub(crate) mod metrics;
 pub(crate) mod prost;
 mod proxy;
 mod runner;
+mod socket;
 pub(crate) mod ttl_map;
 pub(crate) mod utils;
 pub(crate) mod xds;
@@ -38,6 +39,7 @@ pub use self::{
     config::Config,
     proxy::{Builder, PendingValidation, Server, Validated},
     runner::run,
+    socket::Socket,
 };
 
 pub use quilkin_macros::include_proto;

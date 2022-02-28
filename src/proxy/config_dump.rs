@@ -97,13 +97,18 @@ fn create_config_dump_json(
 #[cfg(test)]
 mod tests {
     use super::handle_request;
-    use crate::{cluster::SharedCluster, endpoint::Endpoint, filters::SharedFilterChain};
+    use crate::{
+        cluster::{ClusterMap, SharedCluster},
+        endpoint::Endpoint,
+        filters::SharedFilterChain,
+    };
 
     #[tokio::test]
     async fn test_handle_request() {
-        let cluster =
-            SharedCluster::new_static_cluster(vec![Endpoint::new(([127, 0, 0, 1], 8080).into())])
-                .unwrap();
+        let cluster = SharedCluster::new(ClusterMap::new_static(vec![Endpoint::new(
+            ([127, 0, 0, 1], 8080).into(),
+        )]))
+        .unwrap();
         let filter_chain = SharedFilterChain::new(&[crate::config::Filter {
             name: crate::filters::debug::NAME.into(),
             config: Some(serde_yaml::from_str("id: hello").unwrap()),

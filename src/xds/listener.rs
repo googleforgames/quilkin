@@ -14,12 +14,7 @@
  * limitations under the License.
  */
 
-use crate::filters::{
-    CreateFilterArgs, FilterChain as ProxyFilterChain, FilterRegistry, SharedFilterChain,
-};
-use crate::xds::envoy::config::listener::v3::{
-    filter::ConfigType as LdsConfigType, FilterChain, Listener,
-};
+use crate::xds::envoy::config::listener::v3::Listener;
 use crate::xds::envoy::service::discovery::v3::{DiscoveryRequest, DiscoveryResponse};
 use crate::xds::LISTENER_TYPE;
 
@@ -36,17 +31,17 @@ pub(crate) struct ListenerManager {
     discovery_req_tx: mpsc::Sender<DiscoveryRequest>,
 
     // Sends listener state updates to the caller.
-    filter_chain: SharedFilterChain,
+    socket: crate::Socket,
 }
 
 impl ListenerManager {
     pub(in crate::xds) fn new(
-        filter_chain: SharedFilterChain,
+        socket: crate::Socket,
         discovery_req_tx: mpsc::Sender<DiscoveryRequest>,
     ) -> Self {
-        ListenerManager {
+        Self {
             discovery_req_tx,
-            filter_chain,
+            socket,
         }
     }
 
@@ -57,18 +52,13 @@ impl ListenerManager {
             response.resources.len()
         );
 
-        let result = self
+        let error_message = self
             .process_listener_response(response.resources)
             .await
-            .map_err(|err| err.to_string());
-
-        let error_message = match result {
-            Ok(filter_chain) => {
-                self.filter_chain.store_chain(filter_chain);
-                None
-            }
-            Err(message) => Some(message),
-        };
+            .and_then(|chain| self.socket.update_filters(&chain))
+            .err()
+            .as_ref()
+            .map(ToString::to_string);
 
         self.send_discovery_req(
             LISTENER_TYPE,
@@ -83,9 +73,9 @@ impl ListenerManager {
     async fn process_listener_response(
         &mut self,
         mut resources: Vec<prost_types::Any>,
-    ) -> crate::Result<ProxyFilterChain> {
+    ) -> crate::Result<Vec<crate::config::Filter>> {
         let resource = match resources.len() {
-            0 => return Ok(ProxyFilterChain::new(vec![])?),
+            0 => return Ok(Vec::new()),
             1 => resources.swap_remove(0),
             n => {
                 return Err(eyre::eyre!(
@@ -99,7 +89,7 @@ impl ListenerManager {
             .map_err(|err| eyre::eyre!("listener decode error: {}", err.to_string()))?;
 
         let lds_filter_chain = match listener.filter_chains.len() {
-            0 => return Ok(ProxyFilterChain::new(vec![])?),
+            0 => return Ok(Vec::new()),
             1 => listener.filter_chains.swap_remove(0),
             n => {
                 return Err(eyre::eyre!(
@@ -109,31 +99,11 @@ impl ListenerManager {
             }
         };
 
-        self.process_filter_chain(lds_filter_chain)
-    }
-
-    fn process_filter_chain(
-        &self,
-        lds_filter_chain: FilterChain,
-    ) -> crate::Result<ProxyFilterChain> {
-        let mut filters = vec![];
-        for filter in lds_filter_chain.filters {
-            let config = filter
-                .config_type
-                .map(|config| match config {
-                    LdsConfigType::TypedConfig(config) => Ok(config),
-                    invalid => Err(eyre::eyre!("unsupported filter.config_type: {:?}", invalid)),
-                })
-                .transpose()?;
-
-            let create_filter_args = CreateFilterArgs::dynamic(config);
-
-            let name = filter.name;
-            let filter = FilterRegistry::get(&name, create_filter_args)?;
-            filters.push((name, filter));
-        }
-
-        Ok(ProxyFilterChain::new(filters)?)
+        lds_filter_chain
+            .filters
+            .into_iter()
+            .map(crate::config::Filter::try_from)
+            .collect()
     }
 
     // Send a DiscoveryRequest ACK/NACK back to the server for the given version and nonce.
@@ -169,9 +139,7 @@ mod tests {
     use std::time::Duration;
 
     use crate::endpoint::{Endpoint, Endpoints, UpstreamEndpoints};
-    use crate::filters::{
-        ConvertProtoConfigError, DynFilterFactory, FilterRegistry, SharedFilterChain,
-    };
+    use crate::filters::{ConvertProtoConfigError, DynFilterFactory, FilterRegistry};
     use crate::xds::LISTENER_TYPE;
     use prost::Message;
     use serde::{Deserialize, Serialize};
@@ -252,9 +220,11 @@ mod tests {
 
         // Prepare a filter registry with the filter factories we need for the test.
         load_append_filter();
-        let filter_chain = SharedFilterChain::empty();
+        let socket = crate::Socket::bind_empty((std::net::Ipv4Addr::UNSPECIFIED, 0))
+            .await
+            .unwrap();
         let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel(10);
-        let mut manager = ListenerManager::new(filter_chain.clone(), discovery_req_tx);
+        let mut manager = ListenerManager::new(socket.clone(), discovery_req_tx);
 
         // Create two LDS filters forming the filter chain.
         let filters = vec!["world", "!"]
@@ -320,7 +290,8 @@ mod tests {
         );
 
         // Test the new filter chain's functionality. It should append to payloads.
-        let response = filter_chain
+        let response = socket
+            .filters()
             .read(ReadContext::new(
                 UpstreamEndpoints::from(Endpoints::new(vec![Endpoint::new(
                     "127.0.0.1:8080".parse().unwrap(),
@@ -343,9 +314,11 @@ mod tests {
 
         // Prepare a filter registry with the filter factories we need for the test.
         load_append_filter();
-        let filter_chain = SharedFilterChain::empty();
+        let socket = crate::Socket::bind_empty((std::net::Ipv4Addr::UNSPECIFIED, 0))
+            .await
+            .unwrap();
         let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel(10);
-        let mut manager = ListenerManager::new(filter_chain.clone(), discovery_req_tx);
+        let mut manager = ListenerManager::new(socket.clone(), discovery_req_tx);
 
         let test_cases = vec![
             (
@@ -414,7 +387,8 @@ mod tests {
             );
 
             // Test the new filter chain's functionality.
-            let response = filter_chain
+            let response = socket
+                .filters()
                 .read(ReadContext::new(
                     UpstreamEndpoints::from(Endpoints::new(vec![Endpoint::new(
                         "127.0.0.1:8080".parse().unwrap(),
@@ -436,9 +410,11 @@ mod tests {
         // Test that the manager returns NACK DiscoveryRequests for updates it failed to process.
 
         load_append_filter();
-        let filter_chain = SharedFilterChain::empty();
+        let socket = crate::Socket::bind_empty((std::net::Ipv4Addr::UNSPECIFIED, 0))
+            .await
+            .unwrap();
         let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel(10);
-        let mut manager = ListenerManager::new(filter_chain.clone(), discovery_req_tx);
+        let mut manager = ListenerManager::new(socket, discovery_req_tx);
 
         let test_cases = vec![
             (
@@ -537,7 +513,10 @@ mod tests {
     /// multiple listeners.
     async fn listener_manager_reject_multiple_listeners() {
         let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel(10);
-        let mut manager = ListenerManager::new(SharedFilterChain::empty(), discovery_req_tx);
+        let socket = crate::Socket::bind_empty((std::net::Ipv4Addr::UNSPECIFIED, 0))
+            .await
+            .unwrap();
+        let mut manager = ListenerManager::new(socket, discovery_req_tx);
         let lds_listener = create_lds_listener(
             "test-listener".into(),
             vec![create_lds_filter_chain(vec![LdsFilter {

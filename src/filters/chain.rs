@@ -162,7 +162,7 @@ impl TryFrom<&[FilterConfig]> for FilterChain {
         for filter_config in filter_configs {
             match FilterRegistry::get(
                 &filter_config.name,
-                CreateFilterArgs::fixed(filter_config.config.clone()),
+                CreateFilterArgs::new(filter_config.config.clone()),
             ) {
                 Ok(filter) => filters.push((filter_config.name.clone(), filter)),
                 Err(err) => {

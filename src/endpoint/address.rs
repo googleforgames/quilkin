@@ -56,6 +56,15 @@ impl EndpointAddress {
         self.port.unwrap_or(0)
     }
 
+    pub(crate) async fn lookup_host<A: tokio::net::ToSocketAddrs>(addr: A) -> crate::Result<Self> {
+        Ok(Self::from(
+            tokio::net::lookup_host(addr)
+                .await?
+                .next()
+                .ok_or_else(|| eyre::eyre!("No valid socket found."))?,
+        ))
+    }
+
     /// Returns the socket address for the endpoint, resolving any DNS entries
     /// if present.
     pub fn to_socket_addr(&self) -> crate::Result<SocketAddr> {

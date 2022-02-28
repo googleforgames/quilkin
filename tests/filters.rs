@@ -117,7 +117,7 @@ async fn debug_filter() {
         .with_static(
             vec![Filter {
                 name: factory.name().into(),
-                config: Some(serde_yaml::Value::Mapping(map)),
+                config: Some(serde_yaml::Value::Mapping(map).into()),
             }],
             vec![Endpoint::new(echo)],
         )
@@ -133,7 +133,7 @@ async fn debug_filter() {
         .with_static(
             vec![Filter {
                 name: factory.name().into(),
-                config: Some(serde_yaml::Value::Mapping(map)),
+                config: Some(serde_yaml::Value::Mapping(map).into()),
             }],
             vec![Endpoint::new(
                 SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port).into(),

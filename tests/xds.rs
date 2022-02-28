@@ -251,13 +251,15 @@ dynamic:
         server.run(shutdown_rx).await.unwrap();
     });
 
-    let timeout = time::sleep(Duration::from_secs(10));
+    let timeout = time::sleep(Duration::from_secs(100));
     tokio::pin!(timeout);
 
+    // Open a socket we can use to talk to the proxy and receive response back on.
+    let (mut response_rx, socket) = t.open_socket_and_recv_multiple_packets().await;
     // Each time, we create a new upstream endpoint and send a cluster update for it.
     let concat_bytes = vec![("b", "c,"), ("d", "e")];
     for (i, (b1, b2)) in concat_bytes.into_iter().enumerate() {
-        let upstream_address = t.run_echo_server().await;
+        let upstream_address = dbg!(t.run_echo_server().await);
 
         // Send a cluster update.
         let cluster_update = cluster_discovery_response(
@@ -279,11 +281,7 @@ dynamic:
         );
         discovery_response_tx.send(Ok(filter_update)).await.unwrap();
 
-        // Open a socket we can use to talk to the proxy and receive response back on.
-        let (mut response_rx, socket) = t.open_socket_and_recv_multiple_packets().await;
-
         let expected_response = format!("a{b1}{b2}");
-        let mut interval = time::interval(Duration::from_millis(10));
         loop {
             // Send a packet, it should be suffixed with the new filter configs.
             // Then wait to receive a response. Try until the update is applied
@@ -297,22 +295,16 @@ dynamic:
                 _ = &mut timeout => {
                     unreachable!("timed-out waiting for xDS update to be applied")
                 },
-                _ = interval.tick() => {
-                    // If we time out, it could mean that we haven't applied any cluster update yet so we
-                    // are dropping packets. In which case we can simply retry later.
-                    // If its for any other reason, our assertion will fail later or we will time out.
-                    if let Ok(response) = time::timeout(Duration::from_millis(500), response_rx.recv()).await {
-                        let response = response.unwrap();
-                        if expected_response == response {
-                            break;
-                        }
+                response = response_rx.recv() => {
+                    let response = response.unwrap();
+                    if expected_response == response {
+                        break;
                     }
                 }
             }
         }
     }
 }
-
 fn concat_listener_discovery_response(
     version_info: &str,
     nonce: &str,

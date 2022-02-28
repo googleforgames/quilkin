@@ -14,28 +14,20 @@
  * limitations under the License.
  */
 
-use std::{
-    collections::{HashMap, HashSet},
-    convert::{TryFrom, TryInto},
-};
+use std::collections::{HashMap, HashSet};
 
 use bytes::Bytes;
 use prost::Message;
 use tokio::sync::mpsc;
 
 use crate::{
-    cluster::{
-        Cluster as ProxyCluster, ClusterLocalities, ClusterMap, Locality, LocalityEndpoints,
-        SharedCluster,
-    },
-    endpoint::{Endpoint, EndpointAddress},
-    metadata::MetadataView,
+    cluster::{Cluster as ProxyCluster, ClusterMap},
     xds::{
         ads_client::send_discovery_req,
         envoy::{
             config::{
                 cluster::v3::{cluster, Cluster},
-                endpoint::v3::{lb_endpoint, ClusterLoadAssignment},
+                endpoint::v3::ClusterLoadAssignment,
             },
             service::discovery::v3::{DiscoveryRequest, DiscoveryResponse},
         },
@@ -51,7 +43,7 @@ pub(crate) struct ClusterManager {
     // Send discovery requests ACKs/NACKs to the server.
     discovery_req_tx: mpsc::Sender<DiscoveryRequest>,
 
-    shared_cluster: SharedCluster,
+    socket: crate::Socket,
 
     // Tracks each cluster's endpoints and localities.
     clusters: HashMap<String, ProxyCluster>,
@@ -68,12 +60,12 @@ impl ClusterManager {
     /// ACKs/NACKs are sent on the provided channel to be forwarded to the XDS
     /// server.
     pub(in crate::xds) fn new(
-        shared_cluster: SharedCluster,
+        socket: crate::Socket,
         discovery_req_tx: mpsc::Sender<DiscoveryRequest>,
     ) -> Self {
         ClusterManager {
             discovery_req_tx,
-            shared_cluster,
+            socket,
             clusters: HashMap::new(),
             last_seen_cluster_load_assignment_version: None,
         }
@@ -128,10 +120,10 @@ impl ClusterManager {
 
             let localities = cluster
                 .load_assignment
-                .map(ClusterManager::process_cluster_load_assignment)
-                .unwrap_or_else(|| Ok(HashMap::new()))?;
+                .map(ProxyCluster::try_from)
+                .unwrap_or_else(|| Ok(ProxyCluster::default()))?;
 
-            temp_cluster_set.insert(cluster.name, ProxyCluster { localities });
+            temp_cluster_set.insert(cluster.name, localities);
         }
 
         // Update to the new cluster set.
@@ -202,8 +194,7 @@ impl ClusterManager {
             match self.clusters.get_mut(&assignment.cluster_name) {
                 Some(cluster) => {
                     // Update the cluster's localities.
-                    cluster.localities =
-                        ClusterManager::process_cluster_load_assignment(assignment)?;
+                    *cluster = ProxyCluster::try_from(assignment)?;
                 }
                 None => {
                     // Got an endpoint that we don't have a cluster for. This likely means that
@@ -223,70 +214,8 @@ impl ClusterManager {
 
     /// Updates the Quilkin socket cluster with the updated clusters.
     fn update_cluster(&self) {
-        self.shared_cluster
-            .store(ClusterMap::from(self.clusters.clone()));
-    }
-
-    /// Parses a ClusterLoadAssignment response into the endpoint
-    /// components that we're interested in.
-    fn process_cluster_load_assignment(
-        mut assignment: ClusterLoadAssignment,
-    ) -> crate::Result<ClusterLocalities> {
-        let mut existing_endpoints = HashMap::new();
-
-        for lb_locality in assignment.endpoints {
-            let locality = lb_locality.locality.map(|locality| Locality {
-                region: locality.region,
-                zone: locality.zone,
-                sub_zone: locality.sub_zone,
-            });
-
-            // Extract components of the endpoint that we care about.
-            let mut endpoints = vec![];
-            for (host_identifier, metadata) in
-                lb_locality
-                    .lb_endpoints
-                    .into_iter()
-                    .filter_map(|lb_endpoint| {
-                        let metadata = lb_endpoint.metadata;
-                        lb_endpoint
-                            .host_identifier
-                            .map(|host_identifier| (host_identifier, metadata))
-                    })
-            {
-                let endpoint = match host_identifier {
-                    lb_endpoint::HostIdentifier::Endpoint(endpoint) => Ok(endpoint),
-                    lb_endpoint::HostIdentifier::EndpointName(name_reference) => {
-                        match assignment.named_endpoints.remove(&name_reference) {
-                            Some(endpoint) => Ok(endpoint),
-                            None => Err(eyre::eyre!(
-                                "no endpoint found name reference {}",
-                                name_reference
-                            )),
-                        }
-                    }
-                }?;
-
-                // Extract the endpoint's address.
-                let address: EndpointAddress = endpoint
-                    .address
-                    .and_then(|address| address.address)
-                    .ok_or_else(|| eyre::eyre!("No address provided."))?
-                    .try_into()?;
-
-                endpoints.push(Endpoint::with_metadata(
-                    address,
-                    metadata
-                        .map(MetadataView::try_from)
-                        .transpose()?
-                        .unwrap_or_default(),
-                ));
-            }
-
-            existing_endpoints.insert(locality, LocalityEndpoints { endpoints });
-        }
-
-        Ok(existing_endpoints)
+        self.socket
+            .set_cluster(ClusterMap::from(self.clusters.clone()));
     }
 
     // Send a CDS ACK/NACK request to the server.
@@ -348,7 +277,6 @@ impl ClusterManager {
 mod tests {
     use super::{ClusterManager, ProxyCluster};
     use crate::{
-        cluster::SharedCluster,
         endpoint::{Endpoint as ProxyEndpoint, EndpointAddress},
         xds::{
             envoy::{
@@ -379,9 +307,11 @@ mod tests {
         // Test that whenever we receive a new cluster, we add it to
         // the endpoint watch list.
 
-        let shared_cluster = SharedCluster::empty().unwrap();
+        let socket = crate::Socket::bind_empty((std::net::Ipv4Addr::UNSPECIFIED, 0))
+            .await
+            .unwrap();
         let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel::<DiscoveryRequest>(100);
-        let mut cm = ClusterManager::new(shared_cluster, discovery_req_tx);
+        let mut cm = ClusterManager::new(socket, discovery_req_tx);
 
         let initial_names = vec!["a".into()];
         cm.on_cluster_response(cluster_discovery_response("1", "2", initial_names.clone()))
@@ -421,9 +351,11 @@ mod tests {
     async fn endpoint_updates() {
         // Test that whenever we receive endpoint changes, we update our cluster state.
 
-        let shared_cluster = SharedCluster::empty().unwrap();
+        let socket = crate::Socket::bind_empty((std::net::Ipv4Addr::UNSPECIFIED, 0))
+            .await
+            .unwrap();
         let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel::<DiscoveryRequest>(100);
-        let mut cm = ClusterManager::new(shared_cluster, discovery_req_tx);
+        let mut cm = ClusterManager::new(socket, discovery_req_tx);
 
         let names = vec!["a".into(), "b".into()];
         cm.on_cluster_response(cluster_discovery_response("3", "6", names.clone()))
@@ -505,9 +437,11 @@ mod tests {
     async fn watch_endpoints_for_clusters() {
         // Test that whenever we receive endpoint changes, we send back a new discovery request.
 
-        let shared_cluster = SharedCluster::empty().unwrap();
+        let socket = crate::Socket::bind_empty((std::net::Ipv4Addr::UNSPECIFIED, 0))
+            .await
+            .unwrap();
         let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel::<DiscoveryRequest>(100);
-        let mut cm = ClusterManager::new(shared_cluster, discovery_req_tx);
+        let mut cm = ClusterManager::new(socket, discovery_req_tx);
 
         let names = vec!["a".into(), "b".into()];
         cm.on_cluster_response(cluster_discovery_response("3", "6", names.clone()))
@@ -541,9 +475,11 @@ mod tests {
     async fn nack_cluster_update() {
         // Test that if we receive a bad cluster update, we NACK.
 
-        let shared_cluster = SharedCluster::empty().unwrap();
+        let socket = crate::Socket::bind_empty((std::net::Ipv4Addr::UNSPECIFIED, 0))
+            .await
+            .unwrap();
         let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel::<DiscoveryRequest>(100);
-        let mut cm = ClusterManager::new(shared_cluster, discovery_req_tx);
+        let mut cm = ClusterManager::new(socket, discovery_req_tx);
 
         let initial_names = vec!["a".into()];
         cm.on_cluster_response(cluster_discovery_response("1", "2", initial_names.clone()))
@@ -571,10 +507,11 @@ mod tests {
     #[tokio::test]
     async fn nack_endpoint_update() {
         // Test that if we receive a bad endpoint update, we NACK.
-
-        let shared_cluster = SharedCluster::empty().unwrap();
+        let socket = crate::Socket::bind_empty((std::net::Ipv4Addr::UNSPECIFIED, 0))
+            .await
+            .unwrap();
         let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel::<DiscoveryRequest>(100);
-        let mut cm = ClusterManager::new(shared_cluster, discovery_req_tx);
+        let mut cm = ClusterManager::new(socket, discovery_req_tx);
 
         cm.on_cluster_response(cluster_discovery_response(
             "1",
@@ -621,10 +558,11 @@ mod tests {
     #[tokio::test]
     async fn cluster_updates() {
         // Test that whenever we receive a cluster update, we send it downstream.
-
-        let shared_cluster = SharedCluster::empty().unwrap();
+        let socket = crate::Socket::bind_empty((std::net::Ipv4Addr::UNSPECIFIED, 0))
+            .await
+            .unwrap();
         let (discovery_req_tx, _) = mpsc::channel::<DiscoveryRequest>(100);
-        let mut cm = ClusterManager::new(shared_cluster.clone(), discovery_req_tx);
+        let mut cm = ClusterManager::new(socket.clone(), discovery_req_tx);
 
         cm.on_cluster_response(cluster_discovery_response(
             "1",
@@ -633,7 +571,7 @@ mod tests {
         ))
         .await;
 
-        let cluster_state = shared_cluster.load();
+        let cluster_state = socket.cluster().load();
         assert_eq!(cluster_state.len(), 2);
 
         let cluster_a = cluster_state.get("a").unwrap();
@@ -671,7 +609,7 @@ mod tests {
         ))
         .await;
 
-        let cluster_state = shared_cluster.load();
+        let cluster_state = socket.cluster().load();
         assert_eq!(cluster_state.len(), 2);
 
         let cluster_a = cluster_state.get("a").unwrap();
@@ -684,10 +622,11 @@ mod tests {
     #[tokio::test]
     async fn cluster_updates_for_endpoints() {
         // Test that whenever we receive an endpoint update, we send a new cluster set downstream.
-
-        let shared_cluster = SharedCluster::empty().unwrap();
+        let socket = crate::Socket::bind_empty((std::net::Ipv4Addr::UNSPECIFIED, 0))
+            .await
+            .unwrap();
         let (discovery_req_tx, _) = mpsc::channel::<DiscoveryRequest>(100);
-        let mut cm = ClusterManager::new(shared_cluster.clone(), discovery_req_tx);
+        let mut cm = ClusterManager::new(socket.clone(), discovery_req_tx);
 
         cm.on_cluster_response(cluster_discovery_response(
             "1",
@@ -697,7 +636,7 @@ mod tests {
         .await;
 
         // Read the cluster update.
-        let cluster_state = shared_cluster.load();
+        let cluster_state = socket.cluster().load();
         assert_eq!(cluster_state.len(), 2);
 
         // Update one of the endpoints and check that a new cluster set is sent downstream.
@@ -727,7 +666,7 @@ mod tests {
         ))
         .await;
 
-        let cluster_state = shared_cluster.load();
+        let cluster_state = socket.cluster().load();
         assert_eq!(cluster_state.len(), 2);
 
         let cluster_a = cluster_state.get("a").unwrap();
@@ -741,9 +680,11 @@ mod tests {
     async fn endpoint_metadata() {
         // Test that we include associated endpoint metadata in cluster update.
 
-        let shared_cluster = SharedCluster::empty().unwrap();
+        let socket = crate::Socket::bind_empty((std::net::Ipv4Addr::UNSPECIFIED, 0))
+            .await
+            .unwrap();
         let (discovery_req_tx, _) = mpsc::channel::<DiscoveryRequest>(100);
-        let mut cm = ClusterManager::new(shared_cluster.clone(), discovery_req_tx);
+        let mut cm = ClusterManager::new(socket.clone(), discovery_req_tx);
 
         cm.on_cluster_response(cluster_discovery_response_with_update(
             "1",
@@ -777,7 +718,7 @@ mod tests {
         .await;
 
         // Read the cluster update.
-        let endpoints = shared_cluster.endpoints().unwrap();
+        let endpoints = socket.cluster().endpoints().unwrap();
         assert_eq!(endpoints.size(), 1);
         let endpoint = endpoints.iter().next().unwrap();
         let dyn_metadata = &endpoint.metadata.unknown;

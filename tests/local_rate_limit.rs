@@ -14,56 +14,59 @@
  * limitations under the License.
  */
 
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-
 use tokio::time::{timeout, Duration};
 
-use quilkin::{
-    config::{Builder as ConfigBuilder, Filter},
-    endpoint::Endpoint,
-    filters::local_rate_limit,
-    test_utils::TestHelper,
-};
+use quilkin::{config::Filter, endpoint::EndpointAddress, filters::local_rate_limit};
 
 #[tokio::test]
 async fn local_rate_limit_filter() {
-    let mut t = TestHelper::default();
+    const PACKET: &[u8] = b"hello";
+    const UNSPECIFIED: (std::net::Ipv4Addr, u16) = (std::net::Ipv4Addr::LOCALHOST, 0);
+    let client = tokio::net::UdpSocket::bind(UNSPECIFIED).await.unwrap();
+    let server = tokio::net::UdpSocket::bind(UNSPECIFIED).await.unwrap();
 
+    let server_addr = EndpointAddress::from(server.local_addr().unwrap());
     let yaml = "
 max_packets: 2
 period: 1
 ";
-    let echo = t.run_echo_server().await;
 
-    let server_port = 12346;
-    let server_config = ConfigBuilder::empty()
-        .with_port(server_port)
-        .with_static(
-            vec![Filter {
-                name: local_rate_limit::factory().name().into(),
-                config: serde_yaml::from_str(yaml).unwrap(),
-            }],
-            vec![Endpoint::new(echo)],
-        )
-        .build();
-    t.run_server_with_config(server_config);
-
-    let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
-
-    let server_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port);
+    let quilkin = quilkin::Socket::bind(
+        UNSPECIFIED,
+        &[Filter {
+            name: local_rate_limit::NAME.into(),
+            config: Some(serde_yaml::from_str(yaml).unwrap()),
+        }],
+    )
+    .await
+    .unwrap();
+    quilkin.set_static_upstream(vec![server_addr.clone().into()]);
+    tokio::spawn(quilkin.clone().process_worker());
 
     for _ in 0..3 {
-        socket.send_to(b"hello", &server_addr).await.unwrap();
+        client
+            .send_to(
+                PACKET,
+                quilkin.local_addr().unwrap().to_socket_addr().unwrap(),
+            )
+            .await
+            .unwrap();
+    }
+
+    async fn recv(socket: &tokio::net::UdpSocket) -> Vec<u8> {
+        let mut buf = vec![0; u16::MAX as usize];
+        let (length, _) = socket.recv_from(&mut buf).await.unwrap();
+        buf[..length].into()
     }
 
     for _ in 0..2 {
-        assert_eq!(recv_chan.recv().await.unwrap(), "hello");
+        assert_eq!(PACKET, recv(&server).await);
     }
 
     // Allow enough time to have received any response.
     tokio::time::sleep(Duration::from_millis(100)).await;
     // Check that we do not get any response.
-    assert!(timeout(Duration::from_secs(1), recv_chan.recv())
+    assert!(timeout(Duration::from_millis(500), recv(&server))
         .await
         .is_err());
 }

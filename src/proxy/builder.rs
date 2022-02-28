@@ -22,13 +22,10 @@ use crate::{
     config::{self, Config, ManagementServer, Proxy, Source, ValidationError, ValueInvalidArgs},
     endpoint::Endpoints,
     filters::chain::Error as FilterChainError,
-    proxy::{
-        server::metrics::Metrics as ProxyMetrics, sessions::metrics::Metrics as SessionMetrics,
-        Admin as ProxyAdmin, Health, Server,
-    },
+    proxy::{Admin as ProxyAdmin, Health, Server},
 };
 
-pub(super) enum ValidatedSource {
+pub enum ValidatedSource {
     Static {
         filter_chain: Vec<config::Filter>,
         endpoints: Endpoints,
@@ -38,7 +35,7 @@ pub(super) enum ValidatedSource {
     },
 }
 
-pub(super) struct ValidatedConfig {
+pub struct ValidatedConfig {
     pub proxy: Proxy,
     pub source: ValidatedSource,
     // Limit struct creation to the builder.
@@ -208,9 +205,6 @@ impl Builder<Validated> {
     pub fn build(self) -> Server {
         Server {
             config: Arc::new(self.validation_status.0),
-            proxy_metrics: ProxyMetrics::new().expect("proxy metrics should be setup properly"),
-            session_metrics: SessionMetrics::new()
-                .expect("session metrics should be setup properly"),
             admin: self.admin,
         }
     }

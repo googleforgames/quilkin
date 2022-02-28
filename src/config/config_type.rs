@@ -120,6 +120,18 @@ impl<'de> serde::Serialize for ConfigType {
     }
 }
 
+impl From<serde_yaml::Value> for ConfigType {
+    fn from(value: serde_yaml::Value) -> Self {
+        Self::Static(value)
+    }
+}
+
+impl From<prost_types::Any> for ConfigType {
+    fn from(value: prost_types::Any) -> Self {
+        Self::Dynamic(value)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::ConfigType;
