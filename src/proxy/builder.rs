@@ -269,7 +269,7 @@ mod tests {
             .validate()
         {
             Err(Error::InvalidConfig(err)) => err,
-            Err(err) => unreachable!(format!("expected ValidationError, got {err}")),
+            Err(err) => unreachable!("{}", format!("expected ValidationError, got {err}")),
             Ok(_) => unreachable!("config validation should have failed!"),
         }
     }

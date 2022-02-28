@@ -231,7 +231,7 @@ mod tests {
             local_addr,
             vec![],
         );
-        assert!(!firewall.write(ctx).is_some());
+        assert!(firewall.write(ctx).is_none());
         assert_eq!(1, firewall.metrics.packets_allowed_write.get());
         assert_eq!(1, firewall.metrics.packets_denied_write.get());
 

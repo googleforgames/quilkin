@@ -51,7 +51,7 @@ impl FilterSet {
     /// See [`FilterSet::default`] for a list of the current defaults.
     pub fn default_with(filters: impl IntoIterator<Item = DynFilterFactory>) -> Self {
         Self::with(
-            std::array::IntoIter::new([
+            [
                 filters::capture::factory(),
                 filters::compress::factory(),
                 filters::concatenate_bytes::factory(),
@@ -63,7 +63,8 @@ impl FilterSet {
                 filters::r#match::factory(),
                 filters::pass::factory(),
                 filters::token_router::factory(),
-            ])
+            ]
+            .into_iter()
             .chain(filters),
         )
     }
