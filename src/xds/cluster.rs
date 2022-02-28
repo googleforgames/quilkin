@@ -798,7 +798,8 @@ mod tests {
         assert_eq!(
             value,
             &serde_yaml::Value::from(
-                std::array::IntoIter::new([("one".into(), "two".into())])
+                [("one".into(), "two".into())]
+                    .into_iter()
                     .collect::<serde_yaml::Mapping>()
             )
         );
