@@ -36,6 +36,18 @@ pub struct FilterChain {
     filter_write_duration_seconds: Vec<Histogram>,
 }
 
+impl std::fmt::Debug for FilterChain {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut filters = f.debug_struct("Filters");
+
+        for (id, instance) in &self.filters {
+            filters.field(id, &*instance.config);
+        }
+
+        filters.finish()
+    }
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("{}", .0)]
