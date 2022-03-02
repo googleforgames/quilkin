@@ -62,10 +62,7 @@ static FEEDBACK_LOOP: Lazy<()> = Lazy::new(|| {
         loop {
             let mut packet = [0; MESSAGE_SIZE];
             let (_, addr) = socket.recv_from(&mut packet).unwrap();
-            let length = packet
-                .iter()
-                .position(|&x| x == 0)
-                .unwrap_or_else(|| packet.len());
+            let length = packet.iter().position(|&x| x == 0).unwrap_or(packet.len());
             let packet = &packet[..length];
             assert_eq!(packet, &DEFAULT_MESSAGE[..length]);
             socket.send_to(packet, addr).unwrap();

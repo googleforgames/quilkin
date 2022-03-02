@@ -98,12 +98,7 @@ pub struct OpenSocketRecvPacket {
 
 impl Drop for TestHelper {
     fn drop(&mut self) {
-        for shutdown_tx in self
-            .server_shutdown_tx
-            .iter_mut()
-            .map(|tx| tx.take())
-            .flatten()
-        {
+        for shutdown_tx in self.server_shutdown_tx.iter_mut().flat_map(|tx| tx.take()) {
             shutdown_tx
                 .send(())
                 .map_err(|error| {
@@ -324,9 +319,9 @@ pub fn new_test_chain(registry: &prometheus::Registry) -> Arc<FilterChain> {
 }
 
 pub fn new_registry() -> FilterRegistry {
-    FilterRegistry::new(FilterSet::default_with(std::array::IntoIter::new([
-        DynFilterFactory::from(Box::from(TestFilterFactory {})),
-    ])))
+    FilterRegistry::new(FilterSet::default_with([DynFilterFactory::from(
+        Box::from(TestFilterFactory {}),
+    )]))
 }
 
 #[cfg(test)]

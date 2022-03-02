@@ -1,8 +1,115 @@
 # Changelog
 
-## [v0.2.0-dev](https://github.com/googleforgames/quilkin/tree/v0.2.0-dev) (2021-09-22)
+## [v0.3.0](https://github.com/googleforgames/quilkin/tree/v0.3.0) (2022-02-28)
 
-[Full Changelog](https://github.com/googleforgames/quilkin/compare/v0.1.0...v0.2.0-dev)
+[Full Changelog](https://github.com/googleforgames/quilkin/compare/v0.2.0...v0.3.0)
+
+**Breaking changes:**
+
+- Remove `extensions` from filter identifiers [\#484](https://github.com/googleforgames/quilkin/pull/484) ([XAMPPRocky](https://github.com/XAMPPRocky))
+- Add auto-generation of JSON schema. [\#478](https://github.com/googleforgames/quilkin/pull/478) ([XAMPPRocky](https://github.com/XAMPPRocky))
+- Add regex capture and rename capture\_bytes to capture [\#458](https://github.com/googleforgames/quilkin/pull/458) ([XAMPPRocky](https://github.com/XAMPPRocky))
+- Add matches filter [\#447](https://github.com/googleforgames/quilkin/pull/447) ([XAMPPRocky](https://github.com/XAMPPRocky))
+- Add `metadata::Value` [\#436](https://github.com/googleforgames/quilkin/pull/436) ([XAMPPRocky](https://github.com/XAMPPRocky))
+- Add a ttl map and support ratelimiting per IP address [\#406](https://github.com/googleforgames/quilkin/pull/406) ([iffyio](https://github.com/iffyio))
+
+**Implemented enhancements:**
+
+- Upgrade to Tokio 1.16.0 [\#475](https://github.com/googleforgames/quilkin/issues/475)
+- Changing dynamic metadata from `Any`. [\#433](https://github.com/googleforgames/quilkin/issues/433)
+- Provide stack traces for runtime errors. [\#418](https://github.com/googleforgames/quilkin/issues/418)
+- Accept Docker service hostnames in addition to IP addresses in configuration. [\#415](https://github.com/googleforgames/quilkin/issues/415)
+- Limit LocalRateLimit per IP [\#405](https://github.com/googleforgames/quilkin/issues/405)
+- Add support for version based packet processing [\#401](https://github.com/googleforgames/quilkin/issues/401)
+- Add abstraction for filter state lookup [\#375](https://github.com/googleforgames/quilkin/issues/375)
+- CI: link checking on documentation [\#367](https://github.com/googleforgames/quilkin/issues/367)
+- Allowlist filter [\#343](https://github.com/googleforgames/quilkin/issues/343)
+- Metric: Total Packet Processing time [\#292](https://github.com/googleforgames/quilkin/issues/292)
+- Add an ID field to filters [\#174](https://github.com/googleforgames/quilkin/issues/174)
+- Blocklist Filter [\#158](https://github.com/googleforgames/quilkin/issues/158)
+- Implement a control plane [\#131](https://github.com/googleforgames/quilkin/issues/131)
+- Filter Idea: Rate limiting [\#5](https://github.com/googleforgames/quilkin/issues/5)
+- Benchmark comparing read and write throughput [\#479](https://github.com/googleforgames/quilkin/pull/479) ([markmandel](https://github.com/markmandel))
+- Update Rust to 1.58.1 [\#473](https://github.com/googleforgames/quilkin/pull/473) ([XAMPPRocky](https://github.com/XAMPPRocky))
+- Add Pass & Drop filters, Refactor `Match` config [\#472](https://github.com/googleforgames/quilkin/pull/472) ([XAMPPRocky](https://github.com/XAMPPRocky))
+- CI: Documentation test gen, links, images, etc. [\#449](https://github.com/googleforgames/quilkin/pull/449) ([markmandel](https://github.com/markmandel))
+- Metric: Total Packet processing time [\#441](https://github.com/googleforgames/quilkin/pull/441) ([markmandel](https://github.com/markmandel))
+- xds-server updates [\#437](https://github.com/googleforgames/quilkin/pull/437) ([iffyio](https://github.com/iffyio))
+- Add "Rust Doc" link to each Filter [\#434](https://github.com/googleforgames/quilkin/pull/434) ([markmandel](https://github.com/markmandel))
+- Documentation for Firewall filter [\#432](https://github.com/googleforgames/quilkin/pull/432) ([markmandel](https://github.com/markmandel))
+- Code: Firewall filter [\#416](https://github.com/googleforgames/quilkin/pull/416) ([markmandel](https://github.com/markmandel))
+- Support clear bot history on new build [\#390](https://github.com/googleforgames/quilkin/pull/390) ([devharis](https://github.com/devharis))
+- replace slog with tracing in Filter [\#385](https://github.com/googleforgames/quilkin/pull/385) ([rezvaneh](https://github.com/rezvaneh))
+- XDS Management Server [\#360](https://github.com/googleforgames/quilkin/pull/360) ([iffyio](https://github.com/iffyio))
+
+**Fixed bugs:**
+
+- XDS backoff is broken [\#461](https://github.com/googleforgames/quilkin/issues/461)
+- 404 on FAQ link in main branch docs. [\#443](https://github.com/googleforgames/quilkin/issues/443)
+- Fix exponential backoff on xds client retry [\#465](https://github.com/googleforgames/quilkin/pull/465) ([markmandel](https://github.com/markmandel))
+- archive\_dependencies.sh: Handle no dependencies [\#463](https://github.com/googleforgames/quilkin/pull/463) ([markmandel](https://github.com/markmandel))
+- xds: delete snapshot for disconnected proxies [\#462](https://github.com/googleforgames/quilkin/pull/462) ([iffyio](https://github.com/iffyio))
+- Docs: Fix broken links [\#445](https://github.com/googleforgames/quilkin/pull/445) ([markmandel](https://github.com/markmandel))
+- Fix bug archiving dependencies [\#442](https://github.com/googleforgames/quilkin/pull/442) ([markmandel](https://github.com/markmandel))
+- Save iperf3 metrics.json in /quilkin [\#438](https://github.com/googleforgames/quilkin/pull/438) ([markmandel](https://github.com/markmandel))
+- Fixes for filter documentation [\#431](https://github.com/googleforgames/quilkin/pull/431) ([markmandel](https://github.com/markmandel))
+- Fix duplicate metric registration for filters [\#397](https://github.com/googleforgames/quilkin/pull/397) ([iffyio](https://github.com/iffyio))
+
+**Security fixes:**
+
+- Upgrade Tokio for RUSTSEC-2021-0124 [\#439](https://github.com/googleforgames/quilkin/pull/439) ([markmandel](https://github.com/markmandel))
+
+**Closed issues:**
+
+- Rename `Matches` to `Match`. [\#454](https://github.com/googleforgames/quilkin/issues/454)
+- Refactor to source/destination rather than to/from [\#448](https://github.com/googleforgames/quilkin/issues/448)
+- lack of example of Client Proxy to Separate Server Proxies Pools [\#403](https://github.com/googleforgames/quilkin/issues/403)
+- Release 0.2.0 [\#398](https://github.com/googleforgames/quilkin/issues/398)
+- Move from `slog` to `tracing` [\#317](https://github.com/googleforgames/quilkin/issues/317)
+- Filter Naming Scheme [\#291](https://github.com/googleforgames/quilkin/issues/291)
+- \[bot\] Hide Old Comment On Push [\#266](https://github.com/googleforgames/quilkin/issues/266)
+- Performance Testing [\#14](https://github.com/googleforgames/quilkin/issues/14)
+
+**Merged pull requests:**
+
+- Update CODEOWNERS [\#498](https://github.com/googleforgames/quilkin/pull/498) ([XAMPPRocky](https://github.com/XAMPPRocky))
+- Update dependencies [\#497](https://github.com/googleforgames/quilkin/pull/497) ([XAMPPRocky](https://github.com/XAMPPRocky))
+- Update to Rust 1.59 [\#496](https://github.com/googleforgames/quilkin/pull/496) ([XAMPPRocky](https://github.com/XAMPPRocky))
+- Update xds.md [\#495](https://github.com/googleforgames/quilkin/pull/495) ([XAMPPRocky](https://github.com/XAMPPRocky))
+- Increase Cloud Build timeout to 2h [\#492](https://github.com/googleforgames/quilkin/pull/492) ([markmandel](https://github.com/markmandel))
+- Update clap to 3.1 [\#488](https://github.com/googleforgames/quilkin/pull/488) ([XAMPPRocky](https://github.com/XAMPPRocky))
+- Update CODEOWNERS [\#477](https://github.com/googleforgames/quilkin/pull/477) ([iffyio](https://github.com/iffyio))
+- Update dependencies [\#476](https://github.com/googleforgames/quilkin/pull/476) ([XAMPPRocky](https://github.com/XAMPPRocky))
+- Fix 404 in docs [\#471](https://github.com/googleforgames/quilkin/pull/471) ([markmandel](https://github.com/markmandel))
+- Add link to xds sample from xDS guide [\#470](https://github.com/googleforgames/quilkin/pull/470) ([markmandel](https://github.com/markmandel))
+- management-server: update metrics and doc [\#469](https://github.com/googleforgames/quilkin/pull/469) ([iffyio](https://github.com/iffyio))
+- Consistent implementation of source/dest [\#468](https://github.com/googleforgames/quilkin/pull/468) ([markmandel](https://github.com/markmandel))
+- Remove src/filters/extensions [\#467](https://github.com/googleforgames/quilkin/pull/467) ([markmandel](https://github.com/markmandel))
+- Remove `slog-json` from archive\_dependencies.sh [\#466](https://github.com/googleforgames/quilkin/pull/466) ([markmandel](https://github.com/markmandel))
+- Document Filter naming conventions [\#464](https://github.com/googleforgames/quilkin/pull/464) ([markmandel](https://github.com/markmandel))
+- Completely remove `slog` and replace with `tracing` [\#457](https://github.com/googleforgames/quilkin/pull/457) ([XAMPPRocky](https://github.com/XAMPPRocky))
+- Update to Rust 1.57 [\#455](https://github.com/googleforgames/quilkin/pull/455) ([XAMPPRocky](https://github.com/XAMPPRocky))
+- Example Grafana Graph for Packet Processing Times [\#452](https://github.com/googleforgames/quilkin/pull/452) ([markmandel](https://github.com/markmandel))
+- Fix licence field in macros Cargo.toml [\#451](https://github.com/googleforgames/quilkin/pull/451) ([markmandel](https://github.com/markmandel))
+- xds-server: Create informers before starting informer factory [\#446](https://github.com/googleforgames/quilkin/pull/446) ([cheahjs](https://github.com/cheahjs))
+- Align Filter Chain metrics with conventions [\#440](https://github.com/googleforgames/quilkin/pull/440) ([markmandel](https://github.com/markmandel))
+- Move xds-management-server to the top-level [\#435](https://github.com/googleforgames/quilkin/pull/435) ([XAMPPRocky](https://github.com/XAMPPRocky))
+- Refactor AdsClient and switch backoff with tryhard [\#430](https://github.com/googleforgames/quilkin/pull/430) ([XAMPPRocky](https://github.com/XAMPPRocky))
+- Remove reqwest from dev-dependencies [\#429](https://github.com/googleforgames/quilkin/pull/429) ([XAMPPRocky](https://github.com/XAMPPRocky))
+- Update to Rust 1.56 and 2021 edition [\#428](https://github.com/googleforgames/quilkin/pull/428) ([XAMPPRocky](https://github.com/XAMPPRocky))
+- Add RUSTSEC-2020-0159 to ignore list [\#425](https://github.com/googleforgames/quilkin/pull/425) ([XAMPPRocky](https://github.com/XAMPPRocky))
+- Update dependencies [\#424](https://github.com/googleforgames/quilkin/pull/424) ([XAMPPRocky](https://github.com/XAMPPRocky))
+- Add eyre for error reporting [\#423](https://github.com/googleforgames/quilkin/pull/423) ([XAMPPRocky](https://github.com/XAMPPRocky))
+- Move iPerf benchmark to use Docker [\#421](https://github.com/googleforgames/quilkin/pull/421) ([XAMPPRocky](https://github.com/XAMPPRocky))
+- Replace `SocketAddr` with `EndpointAddress` [\#419](https://github.com/googleforgames/quilkin/pull/419) ([XAMPPRocky](https://github.com/XAMPPRocky))
+- Update prometheus to 0.13 [\#414](https://github.com/googleforgames/quilkin/pull/414) ([XAMPPRocky](https://github.com/XAMPPRocky))
+- Update to Rust 1.55.0 [\#413](https://github.com/googleforgames/quilkin/pull/413) ([XAMPPRocky](https://github.com/XAMPPRocky))
+- Preparation for 0.3.0 [\#402](https://github.com/googleforgames/quilkin/pull/402) ([markmandel](https://github.com/markmandel))
+- GitHub: Issue and PR templates [\#400](https://github.com/googleforgames/quilkin/pull/400) ([markmandel](https://github.com/markmandel))
+
+## [v0.2.0](https://github.com/googleforgames/quilkin/tree/v0.2.0) (2021-09-22)
+
+[Full Changelog](https://github.com/googleforgames/quilkin/compare/v0.1.0...v0.2.0)
 
 **Breaking changes:**
 
@@ -29,7 +136,6 @@
 
 **Fixed bugs:**
 
-- Fix duplicate metric registration for filters [\#397](https://github.com/googleforgames/quilkin/pull/397) ([iffyio](https://github.com/iffyio))
 - Include endpoint token and metadata from cluster update [\#359](https://github.com/googleforgames/quilkin/pull/359) ([iffyio](https://github.com/iffyio))
 - Fix for change: --filename to --config [\#355](https://github.com/googleforgames/quilkin/pull/355) ([markmandel](https://github.com/markmandel))
 
@@ -51,6 +157,7 @@
 
 **Merged pull requests:**
 
+- Release 0.2.0 [\#399](https://github.com/googleforgames/quilkin/pull/399) ([markmandel](https://github.com/markmandel))
 - Docs: Updated Custom Filters [\#395](https://github.com/googleforgames/quilkin/pull/395) ([markmandel](https://github.com/markmandel))
 - Exit on SIGTERM [\#393](https://github.com/googleforgames/quilkin/pull/393) ([iffyio](https://github.com/iffyio))
 - Update custom filter example and add CI [\#389](https://github.com/googleforgames/quilkin/pull/389) ([markmandel](https://github.com/markmandel))
