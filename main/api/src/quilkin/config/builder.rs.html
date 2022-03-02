@@ -68,6 +68,17 @@
 <span id="66">66</span>
 <span id="67">67</span>
 <span id="68">68</span>
+<span id="69">69</span>
+<span id="70">70</span>
+<span id="71">71</span>
+<span id="72">72</span>
+<span id="73">73</span>
+<span id="74">74</span>
+<span id="75">75</span>
+<span id="76">76</span>
+<span id="77">77</span>
+<span id="78">78</span>
+<span id="79">79</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -118,6 +129,17 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_static</span>(<span class="self">self</span>, <span class="ident">filters</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Filter</span><span class="op">&gt;</span>, <span class="ident">endpoints</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Endpoint</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
         <span class="kw">let</span> <span class="ident">source</span> <span class="op">=</span> <span class="ident">Source::Static</span> { <span class="ident">filters</span>, <span class="ident">endpoints</span> };
         <span class="ident">Builder</span> { <span class="ident">source</span>, ..<span class="self">self</span> }
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_dynamic</span>(<span class="self">self</span>, <span class="ident">filters</span>: <span class="kw">impl</span> <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">String</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
+        <span class="kw">let</span> <span class="ident">source</span> <span class="op">=</span> <span class="ident">Source::Dynamic</span> {
+            <span class="ident">management_servers</span>: <span class="ident">filters</span>
+                .<span class="ident">into_iter</span>()
+                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">address</span><span class="op">|</span> <span class="ident"><span class="kw">super</span>::ManagementServer</span> { <span class="ident">address</span> })
+                .<span class="ident">collect</span>(),
+        };
+
+        <span class="self">Self</span> { <span class="ident">source</span>, ..<span class="self">self</span> }
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_admin</span>(<span class="self">self</span>, <span class="ident">admin</span>: <span class="ident">Admin</span>) -&gt; <span class="self">Self</span> {
