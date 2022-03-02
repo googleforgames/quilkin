@@ -1,0 +1,1 @@
+initSidebarItems({"constant":[["NAME",""]],"fn":[["factory","Creates a new factory for generating debug filters."]],"struct":[["Config","`pass` filter’s configuration."]]});

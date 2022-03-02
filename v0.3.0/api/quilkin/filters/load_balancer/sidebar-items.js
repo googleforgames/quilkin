@@ -1,0 +1,1 @@
+initSidebarItems({"constant":[["NAME",""]],"enum":[["Policy","Policy represents how a [`load_balancer`][super] distributes packets across endpoints."]],"fn":[["factory","Returns a factory for creating load balancing filters."]],"struct":[["Config","The configuration for [`load_balancer`][super]."]]});

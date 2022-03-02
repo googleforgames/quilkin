@@ -1,0 +1,1 @@
+initSidebarItems({"constant":[["NAME",""],["SESSION_TIMEOUT_SECONDS","SESSION_TIMEOUT_SECONDS is the default session timeout."]],"fn":[["factory","Creates a new factory for generating rate limiting filters."]],"struct":[["Config","Config represents a [self]’s configuration."]]});

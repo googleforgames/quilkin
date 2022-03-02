@@ -1,0 +1,1 @@
+initSidebarItems({"constant":[["NAME",""]],"enum":[["Strategy",""]],"fn":[["factory","Returns a factory for creating concatenation filters."]],"struct":[["Config","Config represents a `ConcatenateBytes` filter configuration."]]});
