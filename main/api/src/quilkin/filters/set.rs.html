@@ -145,6 +145,18 @@
 <span id="143">143</span>
 <span id="144">144</span>
 <span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -161,7 +173,7 @@
  * limitations under the License.
  */</span>
 
-<span class="kw">use</span> <span class="ident">std::iter::FromIterator</span>;
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">iter::FromIterator</span>, <span class="ident">sync::Arc</span>};
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters</span>::{<span class="self">self</span>, <span class="ident">DynFilterFactory</span>};
 
@@ -169,10 +181,10 @@
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters</span>::{<span class="ident">FilterFactory</span>, <span class="ident">FilterRegistry</span>};
 
 <span class="doccomment">/// A map of [`FilterFactory::name`]s to [`DynFilterFactory`] values.</span>
-<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">FilterMap</span> <span class="op">=</span> <span class="ident">std::collections::HashMap</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>, <span class="ident">DynFilterFactory</span><span class="op">&gt;</span>;
+<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">FilterMap</span> <span class="op">=</span> <span class="ident">std::collections::HashMap</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>, <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">DynFilterFactory</span><span class="op">&gt;</span><span class="op">&gt;</span>;
 
 <span class="doccomment">/// A set of filters to be registered with a [`FilterRegistry`].</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Default</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Default</span>, <span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">FilterSet</span>(<span class="ident">FilterMap</span>);
 
 <span class="kw">impl</span> <span class="ident">FilterSet</span> {
@@ -224,8 +236,14 @@
 
     <span class="doccomment">/// Returns a [`DynFilterFactory`] if one matches `id`, otherwise returns</span>
     <span class="doccomment">/// `None`.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">id</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">DynFilterFactory</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">get</span>(<span class="ident">id</span>)
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">key</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">DynFilterFactory</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">get</span>(<span class="ident">key</span>)
+    }
+
+    <span class="doccomment">/// Inserts factory for the specified [`FilterFactory`], returning any</span>
+    <span class="doccomment">/// previous filter stored at that location if present.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">insert</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">value</span>: <span class="ident">DynFilterFactory</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">DynFilterFactory</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">insert</span>(<span class="ident">value</span>.<span class="ident">name</span>(), <span class="ident">Arc::new</span>(<span class="ident">value</span>))
     }
 
     <span class="doccomment">/// Returns a by reference iterator over the set of filters.</span>
@@ -242,12 +260,18 @@
     }
 }
 
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">FilterSet</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">FilterMap</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">set</span>: <span class="ident">FilterSet</span>) -&gt; <span class="self">Self</span> {
+        <span class="ident">set</span>.<span class="number">0</span>
+    }
+}
+
 <span class="kw">impl</span> <span class="ident">FromIterator</span><span class="op">&lt;</span><span class="ident">DynFilterFactory</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">FilterSet</span> {
     <span class="kw">fn</span> <span class="ident">from_iter</span><span class="op">&lt;</span><span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">DynFilterFactory</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="ident">iter</span>: <span class="ident">I</span>) -&gt; <span class="self">Self</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">set</span> <span class="op">=</span> <span class="self">Self</span>(<span class="ident">Default::default</span>());
 
         <span class="kw">for</span> <span class="ident">factory</span> <span class="kw">in</span> <span class="ident">iter</span> {
-            <span class="ident">set</span>.<span class="number">0</span>.<span class="ident">insert</span>(<span class="ident">factory</span>.<span class="ident">name</span>(), <span class="ident">factory</span>);
+            <span class="ident">set</span>.<span class="number">0</span>.<span class="ident">insert</span>(<span class="ident">factory</span>.<span class="ident">name</span>(), <span class="ident">Arc::new</span>(<span class="ident">factory</span>));
         }
 
         <span class="ident">set</span>
@@ -256,7 +280,7 @@
 
 <span class="kw">impl</span> <span class="ident">IntoIterator</span> <span class="kw">for</span> <span class="ident">FilterSet</span> {
     <span class="kw">type</span> <span class="ident">IntoIter</span> <span class="op">=</span> <span class="ident">IntoIter</span>;
-    <span class="kw">type</span> <span class="ident">Item</span> <span class="op">=</span> <span class="ident">DynFilterFactory</span>;
+    <span class="kw">type</span> <span class="ident">Item</span> <span class="op">=</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">DynFilterFactory</span><span class="op">&gt;</span>;
 
     <span class="kw">fn</span> <span class="ident">into_iter</span>(<span class="self">self</span>) -&gt; <span class="ident"><span class="self">Self</span>::IntoIter</span> {
         <span class="ident">IntoIter</span> {
@@ -267,11 +291,11 @@
 
 <span class="doccomment">/// Iterator over a set of [`DynFilterFactory`]s.</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">IntoIter</span> {
-    <span class="ident">inner</span>: <span class="ident">std::collections::hash_map::IntoIter</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>, <span class="ident">DynFilterFactory</span><span class="op">&gt;</span>,
+    <span class="ident">inner</span>: <span class="ident">std::collections::hash_map::IntoIter</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>, <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">DynFilterFactory</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">Iterator</span> <span class="kw">for</span> <span class="ident">IntoIter</span> {
-    <span class="kw">type</span> <span class="ident">Item</span> <span class="op">=</span> <span class="ident">DynFilterFactory</span>;
+    <span class="kw">type</span> <span class="ident">Item</span> <span class="op">=</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">DynFilterFactory</span><span class="op">&gt;</span>;
 
     <span class="kw">fn</span> <span class="ident">next</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Item</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">next</span>().<span class="ident">map</span>(<span class="op">|</span>(<span class="kw">_</span>, <span class="ident">v</span>)<span class="op">|</span> <span class="ident">v</span>)
@@ -280,11 +304,11 @@
 
 <span class="doccomment">/// Iterator over a set of [`DynFilterFactory`]s.</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Iter</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span><span class="op">&gt;</span> {
-    <span class="ident">inner</span>: <span class="ident">std::collections::hash_map::Iter</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>, <span class="ident">DynFilterFactory</span><span class="op">&gt;</span>,
+    <span class="ident">inner</span>: <span class="ident">std::collections::hash_map::Iter</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>, <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">DynFilterFactory</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span><span class="op">&gt;</span> <span class="ident">Iterator</span> <span class="kw">for</span> <span class="ident">Iter</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;r</span> <span class="ident">DynFilterFactory</span>;
+    <span class="kw">type</span> <span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;r</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">DynFilterFactory</span><span class="op">&gt;</span>;
 
     <span class="kw">fn</span> <span class="ident">next</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Item</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">next</span>().<span class="ident">map</span>(<span class="op">|</span>(<span class="kw">_</span>, <span class="ident">v</span>)<span class="op">|</span> <span class="ident">v</span>)

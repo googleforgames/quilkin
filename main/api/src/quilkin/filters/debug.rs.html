@@ -188,10 +188,6 @@
 <span id="186">186</span>
 <span id="187">187</span>
 <span id="188">188</span>
-<span id="189">189</span>
-<span id="190">190</span>
-<span id="191">191</span>
-<span id="192">192</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -313,7 +309,6 @@
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters::FilterRegistry</span>;
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::test_utils</span>::{<span class="ident">assert_filter_read_no_change</span>, <span class="ident">assert_write_no_change</span>};
     <span class="kw">use</span> <span class="ident">serde_yaml::Mapping</span>;
     <span class="kw">use</span> <span class="ident">serde_yaml::Value</span>;
@@ -347,7 +342,6 @@
         <span class="ident">map</span>.<span class="ident">insert</span>(<span class="ident">Value::from</span>(<span class="string">&quot;id&quot;</span>), <span class="ident">Value::from</span>(<span class="string">&quot;name&quot;</span>));
         <span class="macro">assert!</span>(<span class="ident">factory</span>
             .<span class="ident">create_filter</span>(<span class="ident">CreateFilterArgs::fixed</span>(
-                <span class="ident">FilterRegistry::default</span>(),
                 <span class="ident">Registry::default</span>(),
                 <span class="prelude-val">Some</span>(<span class="ident">Value::Mapping</span>(<span class="ident">map</span>)),
             ))
@@ -362,7 +356,6 @@
         <span class="ident">map</span>.<span class="ident">insert</span>(<span class="ident">Value::from</span>(<span class="string">&quot;id&quot;</span>), <span class="ident">Value::from</span>(<span class="string">&quot;name&quot;</span>));
         <span class="macro">assert!</span>(<span class="ident">factory</span>
             .<span class="ident">create_filter</span>(<span class="ident">CreateFilterArgs::fixed</span>(
-                <span class="ident">FilterRegistry::default</span>(),
                 <span class="ident">Registry::default</span>(),
                 <span class="prelude-val">Some</span>(<span class="ident">Value::Mapping</span>(<span class="ident">map</span>)),
             ))
@@ -377,7 +370,6 @@
         <span class="ident">map</span>.<span class="ident">insert</span>(<span class="ident">Value::from</span>(<span class="string">&quot;id&quot;</span>), <span class="ident">Value::Sequence</span>(<span class="macro">vec!</span>[]));
         <span class="macro">assert!</span>(<span class="ident">factory</span>
             .<span class="ident">create_filter</span>(<span class="ident">CreateFilterArgs::fixed</span>(
-                <span class="ident">FilterRegistry::default</span>(),
                 <span class="ident">Registry::default</span>(),
                 <span class="prelude-val">Some</span>(<span class="ident">Value::Mapping</span>(<span class="ident">map</span>))
             ))

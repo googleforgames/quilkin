@@ -432,7 +432,6 @@
 <span id="430">430</span>
 <span id="431">431</span>
 <span id="432">432</span>
-<span id="433">433</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -717,7 +716,6 @@ period: 0
             .<span class="ident">create_filter</span>(<span class="ident">CreateFilterArgs</span> {
                 <span class="ident">config</span>: <span class="prelude-val">Some</span>(<span class="ident">ConfigType::Static</span>(<span class="ident">serde_yaml::from_str</span>(<span class="ident">config</span>).<span class="ident">unwrap</span>())),
                 <span class="ident">metrics_registry</span>: <span class="ident">Default::default</span>(),
-                <span class="ident">filter_registry</span>: <span class="ident"><span class="kw">crate</span>::filters::FilterRegistry::default</span>(),
             })
             .<span class="ident">err</span>()
             .<span class="ident">unwrap</span>();

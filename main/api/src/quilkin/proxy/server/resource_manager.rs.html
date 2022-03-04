@@ -207,11 +207,6 @@
 <span id="205">205</span>
 <span id="206">206</span>
 <span id="207">207</span>
-<span id="208">208</span>
-<span id="209">209</span>
-<span id="210">210</span>
-<span id="211">211</span>
-<span id="212">212</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -234,7 +229,7 @@
     <span class="ident">endpoint::Endpoints</span>,
     <span class="ident">filters</span>::{
         <span class="ident">manager</span>::{<span class="ident">FilterManager</span>, <span class="ident">ListenerManagerArgs</span>, <span class="ident">SharedFilterManager</span>},
-        <span class="ident">FilterChain</span>, <span class="ident">FilterRegistry</span>,
+        <span class="ident">FilterChain</span>,
     },
     <span class="ident">xds::ads_client</span>::{<span class="ident">AdsClient</span>, <span class="ident">ClusterUpdate</span>, <span class="ident">UPDATES_CHANNEL_BUFFER_SIZE</span>},
 };
@@ -284,7 +279,6 @@
     <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">xds_node_id</span>: <span class="ident">String</span>,
         <span class="ident">metrics_registry</span>: <span class="ident">Registry</span>,
-        <span class="ident">filter_registry</span>: <span class="ident">FilterRegistry</span>,
         <span class="ident">management_servers</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ManagementServer</span><span class="op">&gt;</span>,
         <span class="ident">shutdown_rx</span>: <span class="ident">watch::Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">DynamicResourceManagers</span>, <span class="ident">InitializeError</span><span class="op">&gt;</span> {
@@ -292,11 +286,8 @@
         <span class="kw">let</span> (<span class="ident">filter_chain_updates_tx</span>, <span class="ident">filter_chain_updates_rx</span>) <span class="op">=</span>
             <span class="ident"><span class="self">Self</span>::filter_chain_updates_channel</span>();
 
-        <span class="kw">let</span> <span class="ident">listener_manager_args</span> <span class="op">=</span> <span class="ident">ListenerManagerArgs::new</span>(
-            <span class="ident">metrics_registry</span>.<span class="ident">clone</span>(),
-            <span class="ident">filter_registry</span>,
-            <span class="ident">filter_chain_updates_tx</span>,
-        );
+        <span class="kw">let</span> <span class="ident">listener_manager_args</span> <span class="op">=</span>
+            <span class="ident">ListenerManagerArgs::new</span>(<span class="ident">metrics_registry</span>.<span class="ident">clone</span>(), <span class="ident">filter_chain_updates_tx</span>);
 
         <span class="kw">let</span> (<span class="ident">execution_result_tx</span>, <span class="ident">execution_result_rx</span>) <span class="op">=</span> <span class="ident">oneshot::channel</span>::<span class="op">&lt;</span><span class="ident"><span class="kw">crate</span>::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span>();
         <span class="ident"><span class="self">Self</span>::spawn_ads_client</span>(<span class="ident">SpawnAdsClient</span> {
@@ -378,7 +369,7 @@
 
     <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::DynamicResourceManagers</span>;
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::config::ManagementServer</span>;
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters</span>::{<span class="ident">manager::ListenerManagerArgs</span>, <span class="ident">FilterRegistry</span>};
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters::manager::ListenerManagerArgs</span>;
 
     <span class="kw">use</span> <span class="ident">std::time::Duration</span>;
 
@@ -407,7 +398,6 @@
             <span class="ident">cluster_updates_tx</span>,
             <span class="ident">listener_manager_args</span>: <span class="ident">ListenerManagerArgs::new</span>(
                 <span class="ident">Registry::default</span>(),
-                <span class="ident">FilterRegistry::default</span>(),
                 <span class="ident">filter_chain_updates_tx</span>,
             ),
             <span class="ident">execution_result_tx</span>,

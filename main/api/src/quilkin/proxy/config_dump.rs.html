@@ -178,7 +178,6 @@
 <span id="176">176</span>
 <span id="177">177</span>
 <span id="178">178</span>
-<span id="179">179</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -292,7 +291,7 @@
     <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::handle_request</span>;
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::cluster::cluster_manager::ClusterManager</span>;
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">Endpoints</span>};
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters</span>::{<span class="ident">manager::FilterManager</span>, <span class="ident">CreateFilterArgs</span>, <span class="ident">FilterChain</span>, <span class="ident">FilterRegistry</span>};
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters</span>::{<span class="ident">manager::FilterManager</span>, <span class="ident">CreateFilterArgs</span>, <span class="ident">FilterChain</span>};
     <span class="kw">use</span> <span class="ident">prometheus::Registry</span>;
     <span class="kw">use</span> <span class="ident">std::sync::Arc</span>;
 
@@ -309,7 +308,6 @@
         <span class="kw">let</span> <span class="ident">debug_factory</span> <span class="op">=</span> <span class="ident"><span class="kw">crate</span>::filters::debug::factory</span>();
         <span class="kw">let</span> <span class="ident">debug_filter</span> <span class="op">=</span> <span class="ident">debug_factory</span>
             .<span class="ident">create_filter</span>(<span class="ident">CreateFilterArgs::fixed</span>(
-                <span class="ident">FilterRegistry::default</span>(),
                 <span class="ident">registry</span>.<span class="ident">clone</span>(),
                 <span class="prelude-val">Some</span>(<span class="ident">debug_config</span>),
             ))

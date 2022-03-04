@@ -338,23 +338,6 @@
 <span id="336">336</span>
 <span id="337">337</span>
 <span id="338">338</span>
-<span id="339">339</span>
-<span id="340">340</span>
-<span id="341">341</span>
-<span id="342">342</span>
-<span id="343">343</span>
-<span id="344">344</span>
-<span id="345">345</span>
-<span id="346">346</span>
-<span id="347">347</span>
-<span id="348">348</span>
-<span id="349">349</span>
-<span id="350">350</span>
-<span id="351">351</span>
-<span id="352">352</span>
-<span id="353">353</span>
-<span id="354">354</span>
-<span id="355">355</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -378,7 +361,7 @@
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::config</span>::{<span class="ident">Config</span>, <span class="ident">ManagementServer</span>, <span class="ident">Proxy</span>, <span class="ident">Source</span>, <span class="ident">ValidationError</span>, <span class="ident">ValueInvalidArgs</span>};
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::endpoint::Endpoints</span>;
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters</span>::{<span class="ident">chain::Error</span> <span class="kw">as</span> <span class="ident">FilterChainError</span>, <span class="ident">FilterChain</span>, <span class="ident">FilterRegistry</span>, <span class="ident">FilterSet</span>};
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters</span>::{<span class="ident">chain::Error</span> <span class="kw">as</span> <span class="ident">FilterChainError</span>, <span class="ident">FilterChain</span>};
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::proxy::server::metrics::Metrics</span> <span class="kw">as</span> <span class="ident">ProxyMetrics</span>;
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::proxy::sessions::metrics::Metrics</span> <span class="kw">as</span> <span class="ident">SessionMetrics</span>;
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::proxy</span>::{<span class="ident">Admin</span> <span class="kw">as</span> <span class="ident">ProxyAdmin</span>, <span class="ident">Health</span>, <span class="ident">Metrics</span>, <span class="ident">Server</span>};
@@ -444,7 +427,6 @@
 <span class="doccomment">/// Represents the components needed to create a Server.</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Builder</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span> {
     <span class="ident">config</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Config</span><span class="op">&gt;</span>,
-    <span class="ident">filter_registry</span>: <span class="ident">FilterRegistry</span>,
     <span class="ident">admin</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ProxyAdmin</span><span class="op">&gt;</span>,
     <span class="ident">metrics</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Metrics</span><span class="op">&gt;</span>,
     <span class="ident">validation_status</span>: <span class="ident">V</span>,
@@ -457,7 +439,6 @@
         <span class="kw">let</span> <span class="ident">admin</span> <span class="op">=</span> <span class="ident">ProxyAdmin::new</span>(<span class="ident">config</span>.<span class="ident">admin</span>.<span class="ident">address</span>, <span class="ident">metrics</span>.<span class="ident">clone</span>(), <span class="ident">health</span>);
         <span class="ident">Builder</span> {
             <span class="ident">config</span>,
-            <span class="ident">filter_registry</span>: <span class="ident">FilterRegistry::new</span>(<span class="ident">FilterSet::default</span>()),
             <span class="ident">admin</span>: <span class="prelude-val">Some</span>(<span class="ident">admin</span>),
             <span class="ident">metrics</span>,
             <span class="ident">validation_status</span>: <span class="ident">PendingValidation</span>,
@@ -466,11 +447,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">ValidatedConfig</span> {
-    <span class="kw">fn</span> <span class="ident">validate</span>(
-        <span class="ident">config</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Config</span><span class="op">&gt;</span>,
-        <span class="ident">filter_registry</span>: <span class="kw-2">&amp;</span><span class="ident">FilterRegistry</span>,
-        <span class="ident">metrics</span>: <span class="kw-2">&amp;</span><span class="ident">Metrics</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">validate</span>(<span class="ident">config</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Config</span><span class="op">&gt;</span>, <span class="ident">metrics</span>: <span class="kw-2">&amp;</span><span class="ident">Metrics</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">validated_source</span> <span class="op">=</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">source</span> {
             <span class="ident">Source::Static</span> {
                 <span class="ident">filters</span>,
@@ -494,7 +471,6 @@
                 <span class="ident">ValidatedSource::Static</span> {
                     <span class="ident">filter_chain</span>: <span class="ident">Arc::new</span>(<span class="ident">FilterChain::try_create</span>(
                         <span class="ident">filters</span>.<span class="ident">clone</span>(),
-                        <span class="ident">filter_registry</span>,
                         <span class="kw-2">&amp;</span><span class="ident">metrics</span>.<span class="ident">registry</span>,
                     )<span class="question-mark">?</span>),
                     <span class="ident">endpoints</span>,
@@ -552,13 +528,6 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Builder</span><span class="op">&lt;</span><span class="ident">PendingValidation</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_filter_registry</span>(<span class="self">self</span>, <span class="ident">filter_registry</span>: <span class="ident">FilterRegistry</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">filter_registry</span>,
-            ..<span class="self">self</span>
-        }
-    }
-
     <span class="doccomment">/// Disable the admin interface</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">disable_admin</span>(<span class="self">self</span>) -&gt; <span class="self">Self</span> {
         <span class="self">Self</span> {
@@ -569,14 +538,12 @@
 
     <span class="comment">// Validates the builder&#39;s config and filter configurations.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">validate</span>(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Builder</span><span class="op">&lt;</span><span class="ident">Validated</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">validated_config</span> <span class="op">=</span>
-            <span class="ident">ValidatedConfig::validate</span>(<span class="self">self</span>.<span class="ident">config</span>.<span class="ident">clone</span>(), <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">filter_registry</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">metrics</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">validated_config</span> <span class="op">=</span> <span class="ident">ValidatedConfig::validate</span>(<span class="self">self</span>.<span class="ident">config</span>.<span class="ident">clone</span>(), <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">metrics</span>)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(<span class="ident">Builder</span> {
             <span class="ident">config</span>: <span class="self">self</span>.<span class="ident">config</span>,
             <span class="ident">admin</span>: <span class="self">self</span>.<span class="ident">admin</span>,
             <span class="ident">metrics</span>: <span class="self">self</span>.<span class="ident">metrics</span>,
-            <span class="ident">filter_registry</span>: <span class="self">self</span>.<span class="ident">filter_registry</span>,
             <span class="ident">validation_status</span>: <span class="ident">Validated</span>(<span class="ident">validated_config</span>),
         })
     }
@@ -592,7 +559,6 @@
                 .<span class="ident">expect</span>(<span class="string">&quot;session metrics should be setup properly&quot;</span>),
             <span class="ident">admin</span>: <span class="self">self</span>.<span class="ident">admin</span>,
             <span class="ident">metrics</span>: <span class="self">self</span>.<span class="ident">metrics</span>,
-            <span class="ident">filter_registry</span>: <span class="self">self</span>.<span class="ident">filter_registry</span>,
         }
     }
 }

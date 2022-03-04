@@ -75,10 +75,6 @@
 <span id="73">73</span>
 <span id="74">74</span>
 <span id="75">75</span>
-<span id="76">76</span>
-<span id="77">77</span>
-<span id="78">78</span>
-<span id="79">79</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -102,7 +98,7 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">config::Config</span>,
-    <span class="ident">filters</span>::{<span class="ident">DynFilterFactory</span>, <span class="ident">FilterRegistry</span>, <span class="ident">FilterSet</span>},
+    <span class="ident">filters</span>::{<span class="ident">DynFilterFactory</span>, <span class="ident">FilterRegistry</span>},
     <span class="ident">proxy::Builder</span>,
     <span class="prelude-ty">Result</span>,
 };
@@ -119,12 +115,8 @@
     <span class="kw">let</span> <span class="ident">span</span> <span class="op">=</span> <span class="macro">span!</span>(<span class="ident">Level::INFO</span>, <span class="string">&quot;source::run&quot;</span>);
     <span class="kw">let</span> <span class="ident">_enter</span> <span class="op">=</span> <span class="ident">span</span>.<span class="ident">enter</span>();
 
-    <span class="kw">let</span> <span class="ident">server</span> <span class="op">=</span> <span class="ident">Builder::from</span>(<span class="ident">Arc::new</span>(<span class="ident">config</span>))
-        .<span class="ident">with_filter_registry</span>(<span class="ident">FilterRegistry::new</span>(<span class="ident">FilterSet::default_with</span>(
-            <span class="ident">filter_factories</span>.<span class="ident">into_iter</span>(),
-        )))
-        .<span class="ident">validate</span>()<span class="question-mark">?</span>
-        .<span class="ident">build</span>();
+    <span class="ident">FilterRegistry::register</span>(<span class="ident">filter_factories</span>);
+    <span class="kw">let</span> <span class="ident">server</span> <span class="op">=</span> <span class="ident">Builder::from</span>(<span class="ident">Arc::new</span>(<span class="ident">config</span>)).<span class="ident">validate</span>()<span class="question-mark">?</span>.<span class="ident">build</span>();
 
     <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">target_os</span> <span class="op">=</span> <span class="string">&quot;linux&quot;</span>)]</span>
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">sig_term_fut</span> <span class="op">=</span> <span class="ident">signal::unix::signal</span>(<span class="ident">signal::unix::SignalKind::terminate</span>())<span class="question-mark">?</span>;

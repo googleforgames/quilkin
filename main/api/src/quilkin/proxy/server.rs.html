@@ -854,10 +854,6 @@
 <span id="852">852</span>
 <span id="853">853</span>
 <span id="854">854</span>
-<span id="855">855</span>
-<span id="856">856</span>
-<span id="857">857</span>
-<span id="858">858</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -889,7 +885,7 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">cluster::cluster_manager::SharedClusterManager</span>,
     <span class="ident">endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">EndpointAddress</span>},
-    <span class="ident">filters</span>::{<span class="ident">manager::SharedFilterManager</span>, <span class="ident">Filter</span>, <span class="ident">FilterRegistry</span>, <span class="ident">ReadContext</span>},
+    <span class="ident">filters</span>::{<span class="ident">manager::SharedFilterManager</span>, <span class="ident">Filter</span>, <span class="ident">ReadContext</span>},
     <span class="ident">proxy</span>::{
         <span class="ident">builder</span>::{<span class="ident">ValidatedConfig</span>, <span class="ident">ValidatedSource</span>},
         <span class="ident">sessions</span>::{
@@ -916,7 +912,6 @@
     <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">metrics</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Metrics</span><span class="op">&gt;</span>,
     <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">proxy_metrics</span>: <span class="ident">ProxyMetrics</span>,
     <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">session_metrics</span>: <span class="ident">SessionMetrics</span>,
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">filter_registry</span>: <span class="ident">FilterRegistry</span>,
 }
 
 <span class="doccomment">/// Represents arguments to the `Server::run_recv_from` method.</span>
@@ -1038,7 +1033,6 @@
                 <span class="kw">let</span> <span class="ident">manager</span> <span class="op">=</span> <span class="ident">DynamicResourceManagers::new</span>(
                     <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">proxy</span>.<span class="ident">id</span>.<span class="ident">clone</span>(),
                     <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">registry</span>.<span class="ident">clone</span>(),
-                    <span class="self">self</span>.<span class="ident">filter_registry</span>.<span class="ident">clone</span>(),
                     <span class="ident">management_servers</span>.<span class="ident">to_vec</span>(),
                     <span class="ident">shutdown_rx</span>,
                 )
@@ -1378,7 +1372,9 @@
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters</span>::{<span class="ident">manager::FilterManager</span>, <span class="ident">FilterChain</span>};
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::proxy::sessions::UpstreamPacket</span>;
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::proxy::Builder</span>;
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::test_utils</span>::{<span class="ident">config_with_dummy_endpoint</span>, <span class="ident">new_registry</span>, <span class="ident">new_test_chain</span>, <span class="ident">TestHelper</span>};
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::test_utils</span>::{
+        <span class="ident">config_with_dummy_endpoint</span>, <span class="ident">load_test_filters</span>, <span class="ident">new_test_chain</span>, <span class="ident">TestHelper</span>,
+    };
 
     <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
 
@@ -1441,7 +1437,7 @@
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">run_with_filter</span>() {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">t</span> <span class="op">=</span> <span class="ident">TestHelper::default</span>();
 
-        <span class="kw">let</span> <span class="ident">registry</span> <span class="op">=</span> <span class="ident">new_registry</span>();
+        <span class="ident">load_test_filters</span>();
         <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="ident">t</span>.<span class="ident">open_socket_and_recv_single_packet</span>().<span class="kw">await</span>;
         <span class="kw">let</span> <span class="ident">local_addr</span> <span class="op">=</span> <span class="ident">SocketAddr::new</span>(<span class="ident">IpAddr::V4</span>(<span class="ident">Ipv4Addr::new</span>(<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>)), <span class="number">12367</span>);
         <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">ConfigBuilder::empty</span>()
@@ -1454,11 +1450,7 @@
                 <span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(<span class="ident">endpoint</span>.<span class="ident">socket</span>.<span class="ident">local_addr</span>().<span class="ident">unwrap</span>().<span class="ident">into</span>())],
             )
             .<span class="ident">build</span>();
-        <span class="ident">t</span>.<span class="ident">run_server_with_builder</span>(
-            <span class="ident">Builder::from</span>(<span class="ident">Arc::new</span>(<span class="ident">config</span>))
-                .<span class="ident">with_filter_registry</span>(<span class="ident">registry</span>)
-                .<span class="ident">disable_admin</span>(),
-        );
+        <span class="ident">t</span>.<span class="ident">run_server_with_builder</span>(<span class="ident">Builder::from</span>(<span class="ident">Arc::new</span>(<span class="ident">config</span>)).<span class="ident">disable_admin</span>());
 
         <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="string">&quot;hello&quot;</span>;
         <span class="ident">endpoint</span>

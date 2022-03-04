@@ -342,8 +342,6 @@
 <span id="340">340</span>
 <span id="341">341</span>
 <span id="342">342</span>
-<span id="343">343</span>
-<span id="344">344</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -370,7 +368,7 @@
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::config</span>::{<span class="ident">Builder</span> <span class="kw">as</span> <span class="ident">ConfigBuilder</span>, <span class="ident">Config</span>};
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">EndpointAddress</span>, <span class="ident">Endpoints</span>};
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters</span>::{<span class="ident">prelude</span>::<span class="kw-2">*</span>, <span class="ident">FilterChain</span>, <span class="ident">FilterRegistry</span>, <span class="ident">FilterSet</span>};
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters</span>::{<span class="ident">prelude</span>::<span class="kw-2">*</span>, <span class="ident">FilterChain</span>, <span class="ident">FilterRegistry</span>};
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::metadata::Value</span>;
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::proxy</span>::{<span class="ident">Builder</span>, <span class="ident">PendingValidation</span>};
 
@@ -664,10 +662,8 @@
     )
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_registry</span>() -&gt; <span class="ident">FilterRegistry</span> {
-    <span class="ident">FilterRegistry::new</span>(<span class="ident">FilterSet::default_with</span>([<span class="ident">DynFilterFactory::from</span>(
-        <span class="ident">Box::from</span>(<span class="ident">TestFilterFactory</span> {}),
-    )]))
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">load_test_filters</span>() {
+    <span class="ident">FilterRegistry::register</span>([<span class="ident">DynFilterFactory::from</span>(<span class="ident">Box::from</span>(<span class="ident">TestFilterFactory</span> {}))]);
 }
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>

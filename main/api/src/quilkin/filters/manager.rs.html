@@ -226,9 +226,6 @@
 <span id="224">224</span>
 <span id="225">225</span>
 <span id="226">226</span>
-<span id="227">227</span>
-<span id="228">228</span>
-<span id="229">229</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -245,7 +242,7 @@
  * limitations under the License.
  */</span>
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters</span>::{<span class="ident">chain::Error</span> <span class="kw">as</span> <span class="ident">FilterChainError</span>, <span class="ident">FilterChain</span>, <span class="ident">FilterRegistry</span>};
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters</span>::{<span class="ident">chain::Error</span> <span class="kw">as</span> <span class="ident">FilterChainError</span>, <span class="ident">FilterChain</span>};
 
 <span class="kw">use</span> <span class="ident">std::sync::Arc</span>;
 
@@ -266,19 +263,16 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">ListenerManagerArgs</span> {
     <span class="kw">pub</span> <span class="ident">filter_chain_updates_tx</span>: <span class="ident">mpsc::Sender</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">FilterChain</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span> <span class="ident">filter_registry</span>: <span class="ident">FilterRegistry</span>,
     <span class="kw">pub</span> <span class="ident">metrics_registry</span>: <span class="ident">Registry</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">ListenerManagerArgs</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">metrics_registry</span>: <span class="ident">Registry</span>,
-        <span class="ident">filter_registry</span>: <span class="ident">FilterRegistry</span>,
         <span class="ident">filter_chain_updates_tx</span>: <span class="ident">mpsc::Sender</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">FilterChain</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     ) -&gt; <span class="ident">ListenerManagerArgs</span> {
         <span class="ident">ListenerManagerArgs</span> {
             <span class="ident">filter_chain_updates_tx</span>,
-            <span class="ident">filter_registry</span>,
             <span class="ident">metrics_registry</span>,
         }
     }
