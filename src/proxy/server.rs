@@ -29,7 +29,7 @@ use resource_manager::{DynamicResourceManagers, StaticResourceManagers};
 use crate::{
     cluster::cluster_manager::SharedClusterManager,
     endpoint::{Endpoint, EndpointAddress},
-    filters::{manager::SharedFilterManager, Filter, FilterRegistry, ReadContext},
+    filters::{manager::SharedFilterManager, Filter, ReadContext},
     proxy::{
         builder::{ValidatedConfig, ValidatedSource},
         sessions::{
@@ -56,7 +56,6 @@ pub struct Server {
     pub(super) metrics: Arc<Metrics>,
     pub(super) proxy_metrics: ProxyMetrics,
     pub(super) session_metrics: SessionMetrics,
-    pub(super) filter_registry: FilterRegistry,
 }
 
 /// Represents arguments to the `Server::run_recv_from` method.
@@ -178,7 +177,6 @@ impl Server {
                 let manager = DynamicResourceManagers::new(
                     self.config.proxy.id.clone(),
                     self.metrics.registry.clone(),
-                    self.filter_registry.clone(),
                     management_servers.to_vec(),
                     shutdown_rx,
                 )
@@ -518,7 +516,9 @@ mod tests {
     use crate::filters::{manager::FilterManager, FilterChain};
     use crate::proxy::sessions::UpstreamPacket;
     use crate::proxy::Builder;
-    use crate::test_utils::{config_with_dummy_endpoint, new_registry, new_test_chain, TestHelper};
+    use crate::test_utils::{
+        config_with_dummy_endpoint, load_test_filters, new_test_chain, TestHelper,
+    };
 
     use super::*;
 
@@ -581,7 +581,7 @@ mod tests {
     async fn run_with_filter() {
         let mut t = TestHelper::default();
 
-        let registry = new_registry();
+        load_test_filters();
         let endpoint = t.open_socket_and_recv_single_packet().await;
         let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12367);
         let config = ConfigBuilder::empty()
@@ -594,11 +594,7 @@ mod tests {
                 vec![Endpoint::new(endpoint.socket.local_addr().unwrap().into())],
             )
             .build();
-        t.run_server_with_builder(
-            Builder::from(Arc::new(config))
-                .with_filter_registry(registry)
-                .disable_admin(),
-        );
+        t.run_server_with_builder(Builder::from(Arc::new(config)).disable_admin());
 
         let msg = "hello";
         endpoint

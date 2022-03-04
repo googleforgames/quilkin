@@ -20,7 +20,7 @@ use crate::{
     endpoint::Endpoints,
     filters::{
         manager::{FilterManager, ListenerManagerArgs, SharedFilterManager},
-        FilterChain, FilterRegistry,
+        FilterChain,
     },
     xds::ads_client::{AdsClient, ClusterUpdate, UPDATES_CHANNEL_BUFFER_SIZE},
 };
@@ -70,7 +70,6 @@ impl DynamicResourceManagers {
     pub(super) async fn new(
         xds_node_id: String,
         metrics_registry: Registry,
-        filter_registry: FilterRegistry,
         management_servers: Vec<ManagementServer>,
         shutdown_rx: watch::Receiver<()>,
     ) -> Result<DynamicResourceManagers, InitializeError> {
@@ -78,11 +77,8 @@ impl DynamicResourceManagers {
         let (filter_chain_updates_tx, filter_chain_updates_rx) =
             Self::filter_chain_updates_channel();
 
-        let listener_manager_args = ListenerManagerArgs::new(
-            metrics_registry.clone(),
-            filter_registry,
-            filter_chain_updates_tx,
-        );
+        let listener_manager_args =
+            ListenerManagerArgs::new(metrics_registry.clone(), filter_chain_updates_tx);
 
         let (execution_result_tx, execution_result_rx) = oneshot::channel::<crate::Result<()>>();
         Self::spawn_ads_client(SpawnAdsClient {
@@ -164,7 +160,7 @@ mod tests {
 
     use super::DynamicResourceManagers;
     use crate::config::ManagementServer;
-    use crate::filters::{manager::ListenerManagerArgs, FilterRegistry};
+    use crate::filters::manager::ListenerManagerArgs;
 
     use std::time::Duration;
 
@@ -193,7 +189,6 @@ mod tests {
             cluster_updates_tx,
             listener_manager_args: ListenerManagerArgs::new(
                 Registry::default(),
-                FilterRegistry::default(),
                 filter_chain_updates_tx,
             ),
             execution_result_tx,

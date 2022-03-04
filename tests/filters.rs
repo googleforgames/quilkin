@@ -25,7 +25,7 @@ use quilkin::{
     config::{Builder as ConfigBuilder, Filter},
     endpoint::Endpoint,
     filters::debug,
-    test_utils::{new_registry, TestHelper},
+    test_utils::{load_test_filters, TestHelper},
     Builder as ProxyBuilder,
 };
 
@@ -50,12 +50,8 @@ async fn test_filter() {
         .build();
 
     // Run server proxy.
-    let registry = new_registry();
-    t.run_server_with_builder(
-        ProxyBuilder::from(Arc::new(server_config))
-            .with_filter_registry(registry)
-            .disable_admin(),
-    );
+    load_test_filters();
+    t.run_server_with_builder(ProxyBuilder::from(Arc::new(server_config)).disable_admin());
 
     // create a local client
     let client_port = 12347;
@@ -73,12 +69,7 @@ async fn test_filter() {
         .build();
 
     // Run client proxy.
-    let registry = new_registry();
-    t.run_server_with_builder(
-        ProxyBuilder::from(Arc::new(client_config))
-            .with_filter_registry(registry)
-            .disable_admin(),
-    );
+    t.run_server_with_builder(ProxyBuilder::from(Arc::new(client_config)).disable_admin());
 
     // let's send the packet
     let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;

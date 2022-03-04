@@ -21,7 +21,7 @@ use tonic::transport::Endpoint as TonicEndpoint;
 
 use crate::config::{Config, ManagementServer, Proxy, Source, ValidationError, ValueInvalidArgs};
 use crate::endpoint::Endpoints;
-use crate::filters::{chain::Error as FilterChainError, FilterChain, FilterRegistry, FilterSet};
+use crate::filters::{chain::Error as FilterChainError, FilterChain};
 use crate::proxy::server::metrics::Metrics as ProxyMetrics;
 use crate::proxy::sessions::metrics::Metrics as SessionMetrics;
 use crate::proxy::{Admin as ProxyAdmin, Health, Metrics, Server};
@@ -87,7 +87,6 @@ impl ValidationStatus for PendingValidation {
 /// Represents the components needed to create a Server.
 pub struct Builder<V> {
     config: Arc<Config>,
-    filter_registry: FilterRegistry,
     admin: Option<ProxyAdmin>,
     metrics: Arc<Metrics>,
     validation_status: V,
@@ -100,7 +99,6 @@ impl From<Arc<Config>> for Builder<PendingValidation> {
         let admin = ProxyAdmin::new(config.admin.address, metrics.clone(), health);
         Builder {
             config,
-            filter_registry: FilterRegistry::new(FilterSet::default()),
             admin: Some(admin),
             metrics,
             validation_status: PendingValidation,
@@ -109,11 +107,7 @@ impl From<Arc<Config>> for Builder<PendingValidation> {
 }
 
 impl ValidatedConfig {
-    fn validate(
-        config: Arc<Config>,
-        filter_registry: &FilterRegistry,
-        metrics: &Metrics,
-    ) -> Result<Self, Error> {
+    fn validate(config: Arc<Config>, metrics: &Metrics) -> Result<Self, Error> {
         let validated_source = match &config.source {
             Source::Static {
                 filters,
@@ -137,7 +131,6 @@ impl ValidatedConfig {
                 ValidatedSource::Static {
                     filter_chain: Arc::new(FilterChain::try_create(
                         filters.clone(),
-                        filter_registry,
                         &metrics.registry,
                     )?),
                     endpoints,
@@ -195,13 +188,6 @@ impl ValidatedConfig {
 }
 
 impl Builder<PendingValidation> {
-    pub fn with_filter_registry(self, filter_registry: FilterRegistry) -> Self {
-        Self {
-            filter_registry,
-            ..self
-        }
-    }
-
     /// Disable the admin interface
     pub fn disable_admin(self) -> Self {
         Self {
@@ -212,14 +198,12 @@ impl Builder<PendingValidation> {
 
     // Validates the builder's config and filter configurations.
     pub fn validate(self) -> Result<Builder<Validated>, Error> {
-        let validated_config =
-            ValidatedConfig::validate(self.config.clone(), &self.filter_registry, &self.metrics)?;
+        let validated_config = ValidatedConfig::validate(self.config.clone(), &self.metrics)?;
 
         Ok(Builder {
             config: self.config,
             admin: self.admin,
             metrics: self.metrics,
-            filter_registry: self.filter_registry,
             validation_status: Validated(validated_config),
         })
     }
@@ -235,7 +219,6 @@ impl Builder<Validated> {
                 .expect("session metrics should be setup properly"),
             admin: self.admin,
             metrics: self.metrics,
-            filter_registry: self.filter_registry,
         }
     }
 }

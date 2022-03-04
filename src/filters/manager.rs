@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-use crate::filters::{chain::Error as FilterChainError, FilterChain, FilterRegistry};
+use crate::filters::{chain::Error as FilterChainError, FilterChain};
 
 use std::sync::Arc;
 
@@ -35,19 +35,16 @@ pub struct FilterManager {
 #[derive(Clone)]
 pub(crate) struct ListenerManagerArgs {
     pub filter_chain_updates_tx: mpsc::Sender<Arc<FilterChain>>,
-    pub filter_registry: FilterRegistry,
     pub metrics_registry: Registry,
 }
 
 impl ListenerManagerArgs {
     pub fn new(
         metrics_registry: Registry,
-        filter_registry: FilterRegistry,
         filter_chain_updates_tx: mpsc::Sender<Arc<FilterChain>>,
     ) -> ListenerManagerArgs {
         ListenerManagerArgs {
             filter_chain_updates_tx,
-            filter_registry,
             metrics_registry,
         }
     }

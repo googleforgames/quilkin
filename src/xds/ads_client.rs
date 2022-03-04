@@ -464,7 +464,6 @@ pub(super) async fn send_discovery_req(
 mod tests {
     use super::AdsClient;
     use crate::config::ManagementServer;
-    use crate::filters::FilterRegistry;
     use crate::xds::ads_client::ListenerManagerArgs;
     use crate::xds::envoy::service::discovery::v3::DiscoveryRequest;
     use crate::xds::google::rpc::Status as GrpcStatus;
@@ -489,11 +488,7 @@ mod tests {
                 address: "localhost:18000".into(),
             }],
             cluster_updates_tx,
-            ListenerManagerArgs::new(
-                Registry::default(),
-                FilterRegistry::default(),
-                filter_chain_updates_tx,
-            ),
+            ListenerManagerArgs::new(Registry::default(), filter_chain_updates_tx),
             shutdown_rx,
         );
 

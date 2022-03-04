@@ -123,20 +123,15 @@ impl FilterChain {
     /// a FilterChain if all configurations are valid.
     pub fn try_create(
         filter_configs: Vec<FilterConfig>,
-        filter_registry: &FilterRegistry,
         metrics_registry: &Registry,
     ) -> Result<Self, Error> {
         let mut filters = Vec::new();
 
         for filter_config in filter_configs {
-            match filter_registry.get(
+            match FilterRegistry::get(
                 &filter_config.name,
-                CreateFilterArgs::fixed(
-                    filter_registry.clone(),
-                    metrics_registry.clone(),
-                    filter_config.config,
-                )
-                .with_metrics_registry(metrics_registry.clone()),
+                CreateFilterArgs::fixed(metrics_registry.clone(), filter_config.config)
+                    .with_metrics_registry(metrics_registry.clone()),
             ) {
                 Ok(filter) => filters.push((filter_config.name, filter)),
                 Err(err) => {
@@ -197,7 +192,7 @@ mod tests {
     use crate::{
         config,
         endpoint::{Endpoint, Endpoints, UpstreamEndpoints},
-        filters::{debug, FilterRegistry, FilterSet},
+        filters::debug,
         test_utils::{new_test_chain, TestFilterFactory},
     };
 
@@ -213,9 +208,7 @@ mod tests {
             config: Default::default(),
         }];
 
-        let registry = FilterRegistry::new(FilterSet::default());
-        let chain =
-            FilterChain::try_create(filter_configs, &registry, &Registry::default()).unwrap();
+        let chain = FilterChain::try_create(filter_configs, &Registry::default()).unwrap();
         assert_eq!(1, chain.filters.len());
 
         // uh oh, something went wrong
@@ -223,7 +216,7 @@ mod tests {
             name: "this is so wrong".into(),
             config: Default::default(),
         }];
-        let result = FilterChain::try_create(filter_configs, &registry, &Registry::default());
+        let result = FilterChain::try_create(filter_configs, &Registry::default());
         assert!(result.is_err());
     }
 

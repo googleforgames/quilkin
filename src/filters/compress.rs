@@ -185,7 +185,7 @@ mod tests {
     use crate::endpoint::{Endpoint, Endpoints, UpstreamEndpoints};
     use crate::filters::{
         compress::{compressor::Snappy, Compressor},
-        CreateFilterArgs, Filter, FilterFactory, FilterRegistry, ReadContext, WriteContext,
+        CreateFilterArgs, Filter, FilterFactory, ReadContext, WriteContext,
     };
 
     use super::quilkin::filters::compress::v1alpha1::{
@@ -297,7 +297,6 @@ mod tests {
         );
         let filter = factory
             .create_filter(CreateFilterArgs::fixed(
-                FilterRegistry::default(),
                 Registry::default(),
                 Some(Value::Mapping(map)),
             ))
@@ -320,8 +319,7 @@ mod tests {
             Value::String("COMPRESS".into()),
         );
         let config = Value::Mapping(map);
-        let args =
-            CreateFilterArgs::fixed(FilterRegistry::default(), Registry::default(), Some(config));
+        let args = CreateFilterArgs::fixed(Registry::default(), Some(config));
 
         let filter = factory
             .create_filter(args)

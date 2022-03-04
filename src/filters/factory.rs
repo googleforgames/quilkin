@@ -19,7 +19,7 @@ use std::sync::Arc;
 
 use crate::{
     config::ConfigType,
-    filters::{Error, Filter, FilterRegistry},
+    filters::{Error, Filter},
 };
 
 /// An owned pointer to a dynamic [`FilterFactory`] instance.
@@ -75,22 +75,15 @@ pub trait FilterFactory: Sync + Send {
 pub struct CreateFilterArgs {
     /// Configuration for the filter.
     pub config: Option<ConfigType>,
-    /// Used if the filter needs to reference or use other filters.
-    pub filter_registry: FilterRegistry,
     /// metrics_registry is used to register filter metrics collectors.
     pub metrics_registry: Registry,
 }
 
 impl CreateFilterArgs {
     /// Create a new instance of [`CreateFilterArgs`].
-    pub fn new(
-        filter_registry: FilterRegistry,
-        metrics_registry: Registry,
-        config: Option<ConfigType>,
-    ) -> CreateFilterArgs {
+    pub fn new(metrics_registry: Registry, config: Option<ConfigType>) -> CreateFilterArgs {
         Self {
             config,
-            filter_registry,
             metrics_registry,
         }
     }
@@ -98,29 +91,19 @@ impl CreateFilterArgs {
     /// Creates a new instance of [`CreateFilterArgs`] using a
     /// fixed [`ConfigType`].
     pub fn fixed(
-        filter_registry: FilterRegistry,
         metrics_registry: Registry,
         config: Option<serde_yaml::Value>,
     ) -> CreateFilterArgs {
-        Self::new(
-            filter_registry,
-            metrics_registry,
-            config.map(ConfigType::Static),
-        )
+        Self::new(metrics_registry, config.map(ConfigType::Static))
     }
 
     /// Creates a new instance of [`CreateFilterArgs`] using a
     /// dynamic [`ConfigType`].
     pub fn dynamic(
-        filter_registry: FilterRegistry,
         metrics_registry: Registry,
         config: Option<prost_types::Any>,
     ) -> CreateFilterArgs {
-        CreateFilterArgs::new(
-            filter_registry,
-            metrics_registry,
-            config.map(ConfigType::Dynamic),
-        )
+        CreateFilterArgs::new(metrics_registry, config.map(ConfigType::Dynamic))
     }
 
     /// Consumes `self` and returns a new instance of [`Self`] using
