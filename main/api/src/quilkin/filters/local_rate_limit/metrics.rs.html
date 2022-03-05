@@ -37,6 +37,7 @@
 <span id="35">35</span>
 <span id="36">36</span>
 <span id="37">37</span>
+<span id="38">38</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -54,23 +55,24 @@
  */</span>
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::metrics</span>::{<span class="ident">filter_opts</span>, <span class="ident">CollectorExt</span>};
-<span class="kw">use</span> <span class="ident">prometheus::core</span>::{<span class="ident">AtomicU64</span>, <span class="ident">GenericCounter</span>};
-<span class="kw">use</span> <span class="ident">prometheus::Result</span> <span class="kw">as</span> <span class="ident">MetricsResult</span>;
-<span class="kw">use</span> <span class="ident">prometheus</span>::{<span class="ident">IntCounter</span>, <span class="ident">Registry</span>};
+<span class="kw">use</span> <span class="ident">prometheus</span>::{
+    <span class="ident">core</span>::{<span class="ident">AtomicU64</span>, <span class="ident">GenericCounter</span>},
+    <span class="ident">IntCounter</span>, <span class="prelude-ty">Result</span> <span class="kw">as</span> <span class="ident">MetricsResult</span>,
+};
 
 <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct</span> <span class="ident">Metrics</span> {
     <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">packets_dropped_total</span>: <span class="ident">GenericCounter</span><span class="op">&lt;</span><span class="ident">AtomicU64</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">Metrics</span> {
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">registry</span>: <span class="kw-2">&amp;</span><span class="ident">Registry</span>) -&gt; <span class="ident">MetricsResult</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">new</span>() -&gt; <span class="ident">MetricsResult</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
         <span class="prelude-val">Ok</span>(<span class="ident">Metrics</span> {
             <span class="ident">packets_dropped_total</span>: <span class="ident">IntCounter::with_opts</span>(<span class="ident">filter_opts</span>(
                 <span class="string">&quot;packets_dropped&quot;</span>,
                 <span class="string">&quot;LocalRateLimit&quot;</span>,
                 <span class="string">&quot;Total number of packets dropped due to rate limiting&quot;</span>,
             ))<span class="question-mark">?</span>
-            .<span class="ident">register_if_not_exists</span>(<span class="ident">registry</span>)<span class="question-mark">?</span>,
+            .<span class="ident">register_if_not_exists</span>()<span class="question-mark">?</span>,
         })
     }
 }

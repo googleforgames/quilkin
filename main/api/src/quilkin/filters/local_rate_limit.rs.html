@@ -430,8 +430,6 @@
 <span id="428">428</span>
 <span id="429">429</span>
 <span id="430">430</span>
-<span id="431">431</span>
-<span id="432">432</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -627,7 +625,7 @@
                 <span class="ident">reason</span>: <span class="string">&quot;value must be at least 1 second&quot;</span>.<span class="ident">into</span>(),
             })
         } <span class="kw">else</span> {
-            <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">LocalRateLimit::new</span>(<span class="ident">config</span>, <span class="ident">Metrics::new</span>(<span class="kw-2">&amp;</span><span class="ident">args</span>.<span class="ident">metrics_registry</span>)<span class="question-mark">?</span>);
+            <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">LocalRateLimit::new</span>(<span class="ident">config</span>, <span class="ident">Metrics::new</span>()<span class="question-mark">?</span>);
             <span class="prelude-val">Ok</span>(<span class="ident">FilterInstance::new</span>(
                 <span class="ident">config_json</span>,
                 <span class="ident">Box::new</span>(<span class="ident">filter</span>) <span class="kw">as</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Filter</span><span class="op">&gt;</span>,
@@ -667,7 +665,6 @@
 <span class="kw">mod</span> <span class="ident">tests</span> {
     <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">convert::TryFrom</span>, <span class="ident">net::Ipv4Addr</span>, <span class="ident">time::Duration</span>};
 
-    <span class="kw">use</span> <span class="ident">prometheus::Registry</span>;
     <span class="kw">use</span> <span class="ident">tokio::time</span>;
 
     <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::ProtoConfig</span>;
@@ -681,7 +678,7 @@
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::test_utils::assert_write_no_change</span>;
 
     <span class="kw">fn</span> <span class="ident">rate_limiter</span>(<span class="ident">config</span>: <span class="ident">Config</span>) -&gt; <span class="ident">LocalRateLimit</span> {
-        <span class="ident">LocalRateLimit::new</span>(<span class="ident">config</span>, <span class="ident">Metrics::new</span>(<span class="kw-2">&amp;</span><span class="ident">Registry::default</span>()).<span class="ident">unwrap</span>())
+        <span class="ident">LocalRateLimit::new</span>(<span class="ident">config</span>, <span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>())
     }
 
     <span class="kw">fn</span> <span class="ident">address_pair</span>() -&gt; (<span class="ident">EndpointAddress</span>, <span class="ident">EndpointAddress</span>) {
@@ -715,7 +712,6 @@ period: 0
         <span class="kw">let</span> <span class="ident">err</span> <span class="op">=</span> <span class="ident">factory</span>
             .<span class="ident">create_filter</span>(<span class="ident">CreateFilterArgs</span> {
                 <span class="ident">config</span>: <span class="prelude-val">Some</span>(<span class="ident">ConfigType::Static</span>(<span class="ident">serde_yaml::from_str</span>(<span class="ident">config</span>).<span class="ident">unwrap</span>())),
-                <span class="ident">metrics_registry</span>: <span class="ident">Default::default</span>(),
             })
             .<span class="ident">err</span>()
             .<span class="ident">unwrap</span>();

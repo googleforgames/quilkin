@@ -210,22 +210,6 @@
 <span id="208">208</span>
 <span id="209">209</span>
 <span id="210">210</span>
-<span id="211">211</span>
-<span id="212">212</span>
-<span id="213">213</span>
-<span id="214">214</span>
-<span id="215">215</span>
-<span id="216">216</span>
-<span id="217">217</span>
-<span id="218">218</span>
-<span id="219">219</span>
-<span id="220">220</span>
-<span id="221">221</span>
-<span id="222">222</span>
-<span id="223">223</span>
-<span id="224">224</span>
-<span id="225">225</span>
-<span id="226">226</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -247,7 +231,6 @@
 <span class="kw">use</span> <span class="ident">std::sync::Arc</span>;
 
 <span class="kw">use</span> <span class="ident">parking_lot::RwLock</span>;
-<span class="kw">use</span> <span class="ident">prometheus::Registry</span>;
 <span class="kw">use</span> <span class="ident">tokio::sync::mpsc</span>;
 <span class="kw">use</span> <span class="ident">tokio::sync::watch</span>;
 
@@ -263,17 +246,12 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">ListenerManagerArgs</span> {
     <span class="kw">pub</span> <span class="ident">filter_chain_updates_tx</span>: <span class="ident">mpsc::Sender</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">FilterChain</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span> <span class="ident">metrics_registry</span>: <span class="ident">Registry</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">ListenerManagerArgs</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
-        <span class="ident">metrics_registry</span>: <span class="ident">Registry</span>,
-        <span class="ident">filter_chain_updates_tx</span>: <span class="ident">mpsc::Sender</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">FilterChain</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="ident">ListenerManagerArgs</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">filter_chain_updates_tx</span>: <span class="ident">mpsc::Sender</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">FilterChain</span><span class="op">&gt;</span><span class="op">&gt;</span>) -&gt; <span class="ident">ListenerManagerArgs</span> {
         <span class="ident">ListenerManagerArgs</span> {
             <span class="ident">filter_chain_updates_tx</span>,
-            <span class="ident">metrics_registry</span>,
         }
     }
 }
@@ -296,14 +274,11 @@
     <span class="doccomment">/// Returns a new instance backed by a stream of filter chain updates.</span>
     <span class="doccomment">/// Updates from the provided stream will be reflected in the current filter chain.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">dynamic</span>(
-        <span class="ident">metrics_registry</span>: <span class="kw-2">&amp;</span><span class="ident">Registry</span>,
         <span class="ident">filter_chain_updates_rx</span>: <span class="ident">mpsc::Receiver</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">FilterChain</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">shutdown_rx</span>: <span class="ident">watch::Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SharedFilterManager</span>, <span class="ident">FilterChainError</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">filter_manager</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">RwLock::new</span>(<span class="ident">FilterManager</span> {
-            <span class="comment">// Start out with an empty filter chain.</span>
-            <span class="ident">filter_chain</span>: <span class="ident">Arc::new</span>(<span class="ident">FilterChain::new</span>(<span class="macro">vec!</span>[], <span class="ident">metrics_registry</span>)<span class="question-mark">?</span>),
-        }));
+        <span class="comment">// Start out with an empty filter chain.</span>
+        <span class="kw">let</span> <span class="ident">filter_manager</span> <span class="op">=</span> <span class="ident">FilterManager::fixed</span>(<span class="ident">Arc::new</span>(<span class="ident">FilterChain::new</span>(<span class="macro">vec!</span>[])<span class="question-mark">?</span>));
 
         <span class="comment">// Start a task in the background to receive LDS updates</span>
         <span class="comment">// and update the FilterManager&#39;s filter chain in turn.</span>
@@ -359,9 +334,7 @@
 
     <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">dynamic_filter_manager_update_filter_chain</span>() {
-        <span class="kw">let</span> <span class="ident">registry</span> <span class="op">=</span> <span class="ident">prometheus::Registry::default</span>();
-        <span class="kw">let</span> <span class="ident">filter_manager</span> <span class="op">=</span>
-            <span class="ident">FilterManager::fixed</span>(<span class="ident">Arc::new</span>(<span class="ident">FilterChain::new</span>(<span class="macro">vec!</span>[], <span class="kw-2">&amp;</span><span class="ident">registry</span>).<span class="ident">unwrap</span>()));
+        <span class="kw">let</span> <span class="ident">filter_manager</span> <span class="op">=</span> <span class="ident">FilterManager::fixed</span>(<span class="ident">Arc::new</span>(<span class="ident">FilterChain::new</span>(<span class="macro">vec!</span>[]).<span class="ident">unwrap</span>()));
         <span class="kw">let</span> (<span class="ident">filter_chain_updates_tx</span>, <span class="ident">filter_chain_updates_rx</span>) <span class="op">=</span> <span class="ident">mpsc::channel</span>(<span class="number">10</span>);
         <span class="kw">let</span> (<span class="ident">_shutdown_tx</span>, <span class="ident">shutdown_rx</span>) <span class="op">=</span> <span class="ident">watch::channel</span>(());
 
@@ -389,13 +362,10 @@
             }
         }
         <span class="kw">let</span> <span class="ident">filter_chain</span> <span class="op">=</span> <span class="ident">Arc::new</span>(
-            <span class="ident">FilterChain::new</span>(
-                <span class="macro">vec!</span>[(
-                    <span class="string">&quot;Drop&quot;</span>.<span class="ident">into</span>(),
-                    <span class="ident">FilterInstance::new</span>(<span class="ident">serde_json::Value::Null</span>, <span class="ident">Box::new</span>(<span class="ident">Drop</span>) <span class="kw">as</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Filter</span><span class="op">&gt;</span>),
-                )],
-                <span class="kw-2">&amp;</span><span class="ident">registry</span>,
-            )
+            <span class="ident">FilterChain::new</span>(<span class="macro">vec!</span>[(
+                <span class="string">&quot;Drop&quot;</span>.<span class="ident">into</span>(),
+                <span class="ident">FilterInstance::new</span>(<span class="ident">serde_json::Value::Null</span>, <span class="ident">Box::new</span>(<span class="ident">Drop</span>) <span class="kw">as</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Filter</span><span class="op">&gt;</span>),
+            )])
             .<span class="ident">unwrap</span>(),
         );
         <span class="macro">assert!</span>(<span class="ident">filter_chain_updates_tx</span>.<span class="ident">send</span>(<span class="ident">filter_chain</span>).<span class="kw">await</span>.<span class="ident">is_ok</span>());
@@ -432,9 +402,7 @@
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">dynamic_filter_manager_shutdown_task_on_shutdown_signal</span>() {
         <span class="comment">// Test that we shut down the background task if we receive a shutdown signal.</span>
 
-        <span class="kw">let</span> <span class="ident">registry</span> <span class="op">=</span> <span class="ident">prometheus::Registry::default</span>();
-        <span class="kw">let</span> <span class="ident">filter_manager</span> <span class="op">=</span>
-            <span class="ident">FilterManager::fixed</span>(<span class="ident">Arc::new</span>(<span class="ident">FilterChain::new</span>(<span class="macro">vec!</span>[], <span class="kw-2">&amp;</span><span class="ident">registry</span>).<span class="ident">unwrap</span>()));
+        <span class="kw">let</span> <span class="ident">filter_manager</span> <span class="op">=</span> <span class="ident">FilterManager::fixed</span>(<span class="ident">Arc::new</span>(<span class="ident">FilterChain::new</span>(<span class="macro">vec!</span>[]).<span class="ident">unwrap</span>()));
         <span class="kw">let</span> (<span class="ident">filter_chain_updates_tx</span>, <span class="ident">filter_chain_updates_rx</span>) <span class="op">=</span> <span class="ident">mpsc::channel</span>(<span class="number">10</span>);
         <span class="kw">let</span> (<span class="ident">shutdown_tx</span>, <span class="ident">shutdown_rx</span>) <span class="op">=</span> <span class="ident">watch::channel</span>(());
 
@@ -448,7 +416,7 @@
 
         <span class="comment">// Send a filter chain update on the channel. This should fail</span>
         <span class="comment">// since the listening task should have shut down.</span>
-        <span class="kw">let</span> <span class="ident">filter_chain</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">FilterChain::new</span>(<span class="macro">vec!</span>[], <span class="kw-2">&amp;</span><span class="ident">registry</span>).<span class="ident">unwrap</span>());
+        <span class="kw">let</span> <span class="ident">filter_chain</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">FilterChain::new</span>(<span class="macro">vec!</span>[]).<span class="ident">unwrap</span>());
         <span class="macro">assert!</span>(<span class="ident">filter_chain_updates_tx</span>.<span class="ident">send</span>(<span class="ident">filter_chain</span>).<span class="kw">await</span>.<span class="ident">is_err</span>());
     }
 }

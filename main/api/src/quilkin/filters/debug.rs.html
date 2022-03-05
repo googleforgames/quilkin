@@ -178,16 +178,6 @@
 <span id="176">176</span>
 <span id="177">177</span>
 <span id="178">178</span>
-<span id="179">179</span>
-<span id="180">180</span>
-<span id="181">181</span>
-<span id="182">182</span>
-<span id="183">183</span>
-<span id="184">184</span>
-<span id="185">185</span>
-<span id="186">186</span>
-<span id="187">187</span>
-<span id="188">188</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -315,7 +305,6 @@
     <span class="kw">use</span> <span class="ident">tracing_test::traced_test</span>;
 
     <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
-    <span class="kw">use</span> <span class="ident">prometheus::Registry</span>;
 
     <span class="attribute">#[<span class="ident">traced_test</span>]</span>
     <span class="attribute">#[<span class="ident">test</span>]</span>
@@ -341,10 +330,7 @@
 
         <span class="ident">map</span>.<span class="ident">insert</span>(<span class="ident">Value::from</span>(<span class="string">&quot;id&quot;</span>), <span class="ident">Value::from</span>(<span class="string">&quot;name&quot;</span>));
         <span class="macro">assert!</span>(<span class="ident">factory</span>
-            .<span class="ident">create_filter</span>(<span class="ident">CreateFilterArgs::fixed</span>(
-                <span class="ident">Registry::default</span>(),
-                <span class="prelude-val">Some</span>(<span class="ident">Value::Mapping</span>(<span class="ident">map</span>)),
-            ))
+            .<span class="ident">create_filter</span>(<span class="ident">CreateFilterArgs::fixed</span>(<span class="prelude-val">Some</span>(<span class="ident">Value::Mapping</span>(<span class="ident">map</span>)),))
             .<span class="ident">is_ok</span>());
     }
 
@@ -355,10 +341,7 @@
 
         <span class="ident">map</span>.<span class="ident">insert</span>(<span class="ident">Value::from</span>(<span class="string">&quot;id&quot;</span>), <span class="ident">Value::from</span>(<span class="string">&quot;name&quot;</span>));
         <span class="macro">assert!</span>(<span class="ident">factory</span>
-            .<span class="ident">create_filter</span>(<span class="ident">CreateFilterArgs::fixed</span>(
-                <span class="ident">Registry::default</span>(),
-                <span class="prelude-val">Some</span>(<span class="ident">Value::Mapping</span>(<span class="ident">map</span>)),
-            ))
+            .<span class="ident">create_filter</span>(<span class="ident">CreateFilterArgs::fixed</span>(<span class="prelude-val">Some</span>(<span class="ident">Value::Mapping</span>(<span class="ident">map</span>)),))
             .<span class="ident">is_ok</span>());
     }
 
@@ -369,10 +352,7 @@
 
         <span class="ident">map</span>.<span class="ident">insert</span>(<span class="ident">Value::from</span>(<span class="string">&quot;id&quot;</span>), <span class="ident">Value::Sequence</span>(<span class="macro">vec!</span>[]));
         <span class="macro">assert!</span>(<span class="ident">factory</span>
-            .<span class="ident">create_filter</span>(<span class="ident">CreateFilterArgs::fixed</span>(
-                <span class="ident">Registry::default</span>(),
-                <span class="prelude-val">Some</span>(<span class="ident">Value::Mapping</span>(<span class="ident">map</span>))
-            ))
+            .<span class="ident">create_filter</span>(<span class="ident">CreateFilterArgs::fixed</span>(<span class="prelude-val">Some</span>(<span class="ident">Value::Mapping</span>(<span class="ident">map</span>))))
             .<span class="ident">is_err</span>());
     }
 }

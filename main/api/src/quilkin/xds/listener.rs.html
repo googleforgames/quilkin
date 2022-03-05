@@ -677,12 +677,6 @@
 <span id="675">675</span>
 <span id="676">676</span>
 <span id="677">677</span>
-<span id="678">678</span>
-<span id="679">679</span>
-<span id="680">680</span>
-<span id="681">681</span>
-<span id="682">682</span>
-<span id="683">683</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -712,7 +706,6 @@
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::xds::ads_client::send_discovery_req</span>;
 <span class="kw">use</span> <span class="ident">bytes::Bytes</span>;
-<span class="kw">use</span> <span class="ident">prometheus::Registry</span>;
 <span class="kw">use</span> <span class="ident">prost::Message</span>;
 <span class="kw">use</span> <span class="ident">tokio::sync::mpsc</span>;
 
@@ -720,8 +713,6 @@
 <span class="doccomment">/// instantiates a corresponding proxy filter chain and exposes it</span>
 <span class="doccomment">/// to the caller whenever the filter chain changes.</span>
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">ListenerManager</span> {
-    <span class="ident">metrics_registry</span>: <span class="ident">Registry</span>,
-
     <span class="comment">// Send discovery requests ACKs/NACKs to the server.</span>
     <span class="ident">discovery_req_tx</span>: <span class="ident">mpsc::Sender</span><span class="op">&lt;</span><span class="ident">DiscoveryRequest</span><span class="op">&gt;</span>,
 
@@ -735,7 +726,6 @@
         <span class="ident">discovery_req_tx</span>: <span class="ident">mpsc::Sender</span><span class="op">&lt;</span><span class="ident">DiscoveryRequest</span><span class="op">&gt;</span>,
     ) -&gt; <span class="self">Self</span> {
         <span class="ident">ListenerManager</span> {
-            <span class="ident">metrics_registry</span>: <span class="ident">args</span>.<span class="ident">metrics_registry</span>,
             <span class="ident">discovery_req_tx</span>,
             <span class="ident">filter_chain_updates_tx</span>: <span class="ident">args</span>.<span class="ident">filter_chain_updates_tx</span>,
         }
@@ -787,7 +777,7 @@
         <span class="kw-2">mut</span> <span class="ident">resources</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">prost_types::Any</span><span class="op">&gt;</span>,
     ) -&gt; <span class="ident"><span class="kw">crate</span>::Result</span><span class="op">&lt;</span><span class="ident">ProxyFilterChain</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">resource</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">resources</span>.<span class="ident">len</span>() {
-            <span class="number">0</span> =&gt; <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">ProxyFilterChain::new</span>(<span class="macro">vec!</span>[], <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">metrics_registry</span>)<span class="question-mark">?</span>),
+            <span class="number">0</span> =&gt; <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">ProxyFilterChain::new</span>(<span class="macro">vec!</span>[])<span class="question-mark">?</span>),
             <span class="number">1</span> =&gt; <span class="ident">resources</span>.<span class="ident">swap_remove</span>(<span class="number">0</span>),
             <span class="ident">n</span> =&gt; {
                 <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(
@@ -801,7 +791,7 @@
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="macro">eyre::eyre!</span>(<span class="string">&quot;listener decode error: {}&quot;</span>, <span class="ident">err</span>.<span class="ident">to_string</span>()))<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="ident">lds_filter_chain</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">listener</span>.<span class="ident">filter_chains</span>.<span class="ident">len</span>() {
-            <span class="number">0</span> =&gt; <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">ProxyFilterChain::new</span>(<span class="macro">vec!</span>[], <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">metrics_registry</span>)<span class="question-mark">?</span>),
+            <span class="number">0</span> =&gt; <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">ProxyFilterChain::new</span>(<span class="macro">vec!</span>[])<span class="question-mark">?</span>),
             <span class="number">1</span> =&gt; <span class="ident">listener</span>.<span class="ident">filter_chains</span>.<span class="ident">swap_remove</span>(<span class="number">0</span>),
             <span class="ident">n</span> =&gt; {
                 <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(
@@ -828,15 +818,14 @@
                 })
                 .<span class="ident">transpose</span>()<span class="question-mark">?</span>;
 
-            <span class="kw">let</span> <span class="ident">create_filter_args</span> <span class="op">=</span>
-                <span class="ident">CreateFilterArgs::dynamic</span>(<span class="self">self</span>.<span class="ident">metrics_registry</span>.<span class="ident">clone</span>(), <span class="ident">config</span>);
+            <span class="kw">let</span> <span class="ident">create_filter_args</span> <span class="op">=</span> <span class="ident">CreateFilterArgs::dynamic</span>(<span class="ident">config</span>);
 
             <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">filter</span>.<span class="ident">name</span>;
             <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">FilterRegistry::get</span>(<span class="kw-2">&amp;</span><span class="ident">name</span>, <span class="ident">create_filter_args</span>)<span class="question-mark">?</span>;
             <span class="ident">filters</span>.<span class="ident">push</span>((<span class="ident">name</span>, <span class="ident">filter</span>));
         }
 
-        <span class="prelude-val">Ok</span>(<span class="ident">ProxyFilterChain::new</span>(<span class="ident">filters</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">metrics_registry</span>)<span class="question-mark">?</span>)
+        <span class="prelude-val">Ok</span>(<span class="ident">ProxyFilterChain::new</span>(<span class="ident">filters</span>)<span class="question-mark">?</span>)
     }
 
     <span class="comment">// Send a DiscoveryRequest ACK/NACK back to the server for the given version and nonce.</span>
@@ -874,7 +863,6 @@
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">Endpoints</span>, <span class="ident">UpstreamEndpoints</span>};
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters</span>::{<span class="ident">ConvertProtoConfigError</span>, <span class="ident">DynFilterFactory</span>, <span class="ident">FilterRegistry</span>};
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::xds::LISTENER_TYPE</span>;
-    <span class="kw">use</span> <span class="ident">prometheus::Registry</span>;
     <span class="kw">use</span> <span class="ident">prost::Message</span>;
     <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
     <span class="kw">use</span> <span class="ident">std::convert::TryFrom</span>;
@@ -957,7 +945,7 @@
         <span class="kw">let</span> (<span class="ident">filter_chain_updates_tx</span>, <span class="kw-2">mut</span> <span class="ident">filter_chain_updates_rx</span>) <span class="op">=</span> <span class="ident">mpsc::channel</span>(<span class="number">10</span>);
         <span class="kw">let</span> (<span class="ident">discovery_req_tx</span>, <span class="kw-2">mut</span> <span class="ident">discovery_req_rx</span>) <span class="op">=</span> <span class="ident">mpsc::channel</span>(<span class="number">10</span>);
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">manager</span> <span class="op">=</span> <span class="ident">ListenerManager::new</span>(
-            <span class="ident">ListenerManagerArgs::new</span>(<span class="ident">Registry::default</span>(), <span class="ident">filter_chain_updates_tx</span>),
+            <span class="ident">ListenerManagerArgs::new</span>(<span class="ident">filter_chain_updates_tx</span>),
             <span class="ident">discovery_req_tx</span>,
         );
 
@@ -1057,7 +1045,7 @@
         <span class="kw">let</span> (<span class="ident">filter_chain_updates_tx</span>, <span class="kw-2">mut</span> <span class="ident">filter_chain_updates_rx</span>) <span class="op">=</span> <span class="ident">mpsc::channel</span>(<span class="number">10</span>);
         <span class="kw">let</span> (<span class="ident">discovery_req_tx</span>, <span class="kw-2">mut</span> <span class="ident">discovery_req_rx</span>) <span class="op">=</span> <span class="ident">mpsc::channel</span>(<span class="number">10</span>);
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">manager</span> <span class="op">=</span> <span class="ident">ListenerManager::new</span>(
-            <span class="ident">ListenerManagerArgs::new</span>(<span class="ident">Registry::default</span>(), <span class="ident">filter_chain_updates_tx</span>),
+            <span class="ident">ListenerManagerArgs::new</span>(<span class="ident">filter_chain_updates_tx</span>),
             <span class="ident">discovery_req_tx</span>,
         );
 
@@ -1161,7 +1149,7 @@
         <span class="kw">let</span> (<span class="ident">filter_chain_updates_tx</span>, <span class="ident">_filter_chain_updates_rx</span>) <span class="op">=</span> <span class="ident">mpsc::channel</span>(<span class="number">10</span>);
         <span class="kw">let</span> (<span class="ident">discovery_req_tx</span>, <span class="kw-2">mut</span> <span class="ident">discovery_req_rx</span>) <span class="op">=</span> <span class="ident">mpsc::channel</span>(<span class="number">10</span>);
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">manager</span> <span class="op">=</span> <span class="ident">ListenerManager::new</span>(
-            <span class="ident">ListenerManagerArgs::new</span>(<span class="ident">Registry::default</span>(), <span class="ident">filter_chain_updates_tx</span>),
+            <span class="ident">ListenerManagerArgs::new</span>(<span class="ident">filter_chain_updates_tx</span>),
             <span class="ident">discovery_req_tx</span>,
         );
 
@@ -1264,7 +1252,7 @@
         <span class="kw">let</span> (<span class="ident">filter_chain_updates_tx</span>, <span class="ident">_filter_chain_updates_rx</span>) <span class="op">=</span> <span class="ident">mpsc::channel</span>(<span class="number">10</span>);
         <span class="kw">let</span> (<span class="ident">discovery_req_tx</span>, <span class="kw-2">mut</span> <span class="ident">discovery_req_rx</span>) <span class="op">=</span> <span class="ident">mpsc::channel</span>(<span class="number">10</span>);
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">manager</span> <span class="op">=</span> <span class="ident">ListenerManager::new</span>(
-            <span class="ident">ListenerManagerArgs::new</span>(<span class="ident">Registry::default</span>(), <span class="ident">filter_chain_updates_tx</span>),
+            <span class="ident">ListenerManagerArgs::new</span>(<span class="ident">filter_chain_updates_tx</span>),
             <span class="ident">discovery_req_tx</span>,
         );
         <span class="kw">let</span> <span class="ident">lds_listener</span> <span class="op">=</span> <span class="ident">create_lds_listener</span>(

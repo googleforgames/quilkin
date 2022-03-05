@@ -601,23 +601,6 @@
 <span id="599">599</span>
 <span id="600">600</span>
 <span id="601">601</span>
-<span id="602">602</span>
-<span id="603">603</span>
-<span id="604">604</span>
-<span id="605">605</span>
-<span id="606">606</span>
-<span id="607">607</span>
-<span id="608">608</span>
-<span id="609">609</span>
-<span id="610">610</span>
-<span id="611">611</span>
-<span id="612">612</span>
-<span id="613">613</span>
-<span id="614">614</span>
-<span id="615">615</span>
-<span id="616">616</span>
-<span id="617">617</span>
-<span id="618">618</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -981,7 +964,7 @@
 
     <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">Metrics</span>, <span class="ident">ProxyMetrics</span>, <span class="ident">Session</span>, <span class="ident">UpstreamPacket</span>};
 
-    <span class="kw">use</span> <span class="ident">prometheus</span>::{<span class="ident">Histogram</span>, <span class="ident">HistogramOpts</span>, <span class="ident">Registry</span>};
+    <span class="kw">use</span> <span class="ident">prometheus</span>::{<span class="ident">Histogram</span>, <span class="ident">HistogramOpts</span>};
     <span class="kw">use</span> <span class="ident">tokio::time::timeout</span>;
 
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters::FilterChain</span>;
@@ -999,14 +982,11 @@
         <span class="kw">let</span> <span class="ident">addr</span>: <span class="ident">EndpointAddress</span> <span class="op">=</span> <span class="ident">socket</span>.<span class="ident">local_addr</span>().<span class="ident">unwrap</span>().<span class="ident">into</span>();
         <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="ident">Endpoint::new</span>(<span class="ident">addr</span>.<span class="ident">clone</span>());
         <span class="kw">let</span> (<span class="ident">send_packet</span>, <span class="kw-2">mut</span> <span class="ident">recv_packet</span>) <span class="op">=</span> <span class="ident">mpsc::channel</span>::<span class="op">&lt;</span><span class="ident">UpstreamPacket</span><span class="op">&gt;</span>(<span class="number">5</span>);
-        <span class="kw">let</span> <span class="ident">registry</span> <span class="op">=</span> <span class="ident">Registry::default</span>();
 
         <span class="kw">let</span> <span class="ident">sess</span> <span class="op">=</span> <span class="ident">Session::new</span>(<span class="ident">SessionArgs</span> {
-            <span class="ident">metrics</span>: <span class="ident">Metrics::new</span>(<span class="kw-2">&amp;</span><span class="ident">registry</span>).<span class="ident">unwrap</span>(),
-            <span class="ident">proxy_metrics</span>: <span class="ident">ProxyMetrics::new</span>(<span class="kw-2">&amp;</span><span class="ident">registry</span>).<span class="ident">unwrap</span>(),
-            <span class="ident">filter_manager</span>: <span class="ident">FilterManager::fixed</span>(<span class="ident">Arc::new</span>(
-                <span class="ident">FilterChain::new</span>(<span class="macro">vec!</span>[], <span class="kw-2">&amp;</span><span class="ident">registry</span>).<span class="ident">unwrap</span>(),
-            )),
+            <span class="ident">metrics</span>: <span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>(),
+            <span class="ident">proxy_metrics</span>: <span class="ident">ProxyMetrics::new</span>().<span class="ident">unwrap</span>(),
+            <span class="ident">filter_manager</span>: <span class="ident">FilterManager::fixed</span>(<span class="ident">Arc::new</span>(<span class="ident">FilterChain::new</span>(<span class="macro">vec!</span>[]).<span class="ident">unwrap</span>())),
             <span class="ident">source</span>: <span class="ident">addr</span>.<span class="ident">clone</span>(),
             <span class="ident">dest</span>: <span class="ident">endpoint</span>,
             <span class="ident">sender</span>: <span class="ident">send_packet</span>,
@@ -1051,14 +1031,11 @@
         <span class="kw">let</span> <span class="ident">ep</span> <span class="op">=</span> <span class="ident">t</span>.<span class="ident">open_socket_and_recv_single_packet</span>().<span class="kw">await</span>;
         <span class="kw">let</span> <span class="ident">addr</span>: <span class="ident">EndpointAddress</span> <span class="op">=</span> <span class="ident">ep</span>.<span class="ident">socket</span>.<span class="ident">local_addr</span>().<span class="ident">unwrap</span>().<span class="ident">into</span>();
         <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="ident">Endpoint::new</span>(<span class="ident">addr</span>.<span class="ident">clone</span>());
-        <span class="kw">let</span> <span class="ident">registry</span> <span class="op">=</span> <span class="ident">Registry::default</span>();
 
         <span class="kw">let</span> <span class="ident">session</span> <span class="op">=</span> <span class="ident">Session::new</span>(<span class="ident">SessionArgs</span> {
-            <span class="ident">metrics</span>: <span class="ident">Metrics::new</span>(<span class="kw-2">&amp;</span><span class="ident">registry</span>).<span class="ident">unwrap</span>(),
-            <span class="ident">proxy_metrics</span>: <span class="ident">ProxyMetrics::new</span>(<span class="kw-2">&amp;</span><span class="ident">registry</span>).<span class="ident">unwrap</span>(),
-            <span class="ident">filter_manager</span>: <span class="ident">FilterManager::fixed</span>(<span class="ident">Arc::new</span>(
-                <span class="ident">FilterChain::new</span>(<span class="macro">vec!</span>[], <span class="kw-2">&amp;</span><span class="ident">registry</span>).<span class="ident">unwrap</span>(),
-            )),
+            <span class="ident">metrics</span>: <span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>(),
+            <span class="ident">proxy_metrics</span>: <span class="ident">ProxyMetrics::new</span>().<span class="ident">unwrap</span>(),
+            <span class="ident">filter_manager</span>: <span class="ident">FilterManager::fixed</span>(<span class="ident">Arc::new</span>(<span class="ident">FilterChain::new</span>(<span class="macro">vec!</span>[]).<span class="ident">unwrap</span>())),
             <span class="ident">source</span>: <span class="ident">addr</span>,
             <span class="ident">dest</span>: <span class="ident">endpoint</span>.<span class="ident">clone</span>(),
             <span class="ident">sender</span>,
@@ -1072,10 +1049,9 @@
 
     <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_recv_packet</span>() {
-        <span class="kw">let</span> <span class="ident">registry</span> <span class="op">=</span> <span class="ident">Registry::default</span>();
         <span class="kw">let</span> <span class="ident">histogram</span> <span class="op">=</span> <span class="ident">Histogram::with_opts</span>(<span class="ident">HistogramOpts::new</span>(<span class="string">&quot;test&quot;</span>, <span class="string">&quot;test&quot;</span>)).<span class="ident">unwrap</span>();
 
-        <span class="kw">let</span> <span class="ident">chain</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">FilterChain::new</span>(<span class="macro">vec!</span>[], <span class="kw-2">&amp;</span><span class="ident">registry</span>).<span class="ident">unwrap</span>());
+        <span class="kw">let</span> <span class="ident">chain</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">FilterChain::new</span>(<span class="macro">vec!</span>[]).<span class="ident">unwrap</span>());
         <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="ident">Endpoint::new</span>(<span class="string">&quot;127.0.1.1:80&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>());
         <span class="kw">let</span> <span class="ident">dest</span>: <span class="ident">EndpointAddress</span> <span class="op">=</span> (<span class="ident">Ipv4Addr::LOCALHOST</span>, <span class="number">88</span>).<span class="ident">into</span>();
         <span class="kw">let</span> (<span class="kw-2">mut</span> <span class="ident">sender</span>, <span class="kw-2">mut</span> <span class="ident">receiver</span>) <span class="op">=</span> <span class="ident">mpsc::channel</span>::<span class="op">&lt;</span><span class="ident">UpstreamPacket</span><span class="op">&gt;</span>(<span class="number">10</span>);
@@ -1090,7 +1066,7 @@
         <span class="comment">// first test with no filtering</span>
         <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="string">&quot;hello&quot;</span>;
         <span class="ident">Session::process_recv_packet</span>(
-            <span class="kw-2">&amp;</span><span class="ident">Metrics::new</span>(<span class="kw-2">&amp;</span><span class="ident">Registry::default</span>()).<span class="ident">unwrap</span>(),
+            <span class="kw-2">&amp;</span><span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>(),
             <span class="kw-2">&amp;mut</span> <span class="ident">sender</span>,
             <span class="kw-2">&amp;</span><span class="ident">expiration</span>,
             <span class="ident">Duration::from_secs</span>(<span class="number">10</span>),
@@ -1121,10 +1097,9 @@
         ));
         <span class="kw">let</span> <span class="ident">initial_expiration</span> <span class="op">=</span> <span class="ident">expiration</span>.<span class="ident">load</span>(<span class="ident">Ordering::Relaxed</span>);
         <span class="comment">// add filter</span>
-        <span class="kw">let</span> <span class="ident">registry</span> <span class="op">=</span> <span class="ident">Registry::default</span>();
-        <span class="kw">let</span> <span class="ident">chain</span> <span class="op">=</span> <span class="ident">new_test_chain</span>(<span class="kw-2">&amp;</span><span class="ident">registry</span>);
+        <span class="kw">let</span> <span class="ident">chain</span> <span class="op">=</span> <span class="ident">new_test_chain</span>();
         <span class="ident">Session::process_recv_packet</span>(
-            <span class="kw-2">&amp;</span><span class="ident">Metrics::new</span>(<span class="kw-2">&amp;</span><span class="ident">registry</span>).<span class="ident">unwrap</span>(),
+            <span class="kw-2">&amp;</span><span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>(),
             <span class="kw-2">&amp;mut</span> <span class="ident">sender</span>,
             <span class="kw-2">&amp;</span><span class="ident">expiration</span>,
             <span class="ident">Duration::from_secs</span>(<span class="number">10</span>),
@@ -1158,14 +1133,11 @@
         <span class="kw">let</span> <span class="ident">addr</span>: <span class="ident">EndpointAddress</span> <span class="op">=</span> <span class="ident">ep</span>.<span class="ident">socket</span>.<span class="ident">local_addr</span>().<span class="ident">unwrap</span>().<span class="ident">into</span>();
         <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="ident">Endpoint::new</span>(<span class="ident">addr</span>.<span class="ident">clone</span>());
         <span class="kw">let</span> (<span class="ident">send_packet</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">mpsc::channel</span>::<span class="op">&lt;</span><span class="ident">UpstreamPacket</span><span class="op">&gt;</span>(<span class="number">5</span>);
-        <span class="kw">let</span> <span class="ident">registry</span> <span class="op">=</span> <span class="ident">Registry::default</span>();
 
         <span class="kw">let</span> <span class="ident">session</span> <span class="op">=</span> <span class="ident">Session::new</span>(<span class="ident">SessionArgs</span> {
-            <span class="ident">metrics</span>: <span class="ident">Metrics::new</span>(<span class="kw-2">&amp;</span><span class="ident">registry</span>).<span class="ident">unwrap</span>(),
-            <span class="ident">proxy_metrics</span>: <span class="ident">ProxyMetrics::new</span>(<span class="kw-2">&amp;</span><span class="ident">registry</span>).<span class="ident">unwrap</span>(),
-            <span class="ident">filter_manager</span>: <span class="ident">FilterManager::fixed</span>(<span class="ident">Arc::new</span>(
-                <span class="ident">FilterChain::new</span>(<span class="macro">vec!</span>[], <span class="kw-2">&amp;</span><span class="ident">registry</span>).<span class="ident">unwrap</span>(),
-            )),
+            <span class="ident">metrics</span>: <span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>(),
+            <span class="ident">proxy_metrics</span>: <span class="ident">ProxyMetrics::new</span>().<span class="ident">unwrap</span>(),
+            <span class="ident">filter_manager</span>: <span class="ident">FilterManager::fixed</span>(<span class="ident">Arc::new</span>(<span class="ident">FilterChain::new</span>(<span class="macro">vec!</span>[]).<span class="ident">unwrap</span>())),
             <span class="ident">source</span>: <span class="ident">addr</span>,
             <span class="ident">dest</span>: <span class="ident">endpoint</span>,
             <span class="ident">sender</span>: <span class="ident">send_packet</span>,
@@ -1185,13 +1157,10 @@
         <span class="kw">let</span> (<span class="ident">sender</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">mpsc::channel</span>::<span class="op">&lt;</span><span class="ident">UpstreamPacket</span><span class="op">&gt;</span>(<span class="number">1</span>);
         <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="ident">t</span>.<span class="ident">open_socket_and_recv_single_packet</span>().<span class="kw">await</span>;
         <span class="kw">let</span> <span class="ident">addr</span>: <span class="ident">EndpointAddress</span> <span class="op">=</span> <span class="ident">endpoint</span>.<span class="ident">socket</span>.<span class="ident">local_addr</span>().<span class="ident">unwrap</span>().<span class="ident">into</span>();
-        <span class="kw">let</span> <span class="ident">registry</span> <span class="op">=</span> <span class="ident">Registry::default</span>();
         <span class="kw">let</span> <span class="ident">session</span> <span class="op">=</span> <span class="ident">Session::new</span>(<span class="ident">SessionArgs</span> {
-            <span class="ident">metrics</span>: <span class="ident">Metrics::new</span>(<span class="kw-2">&amp;</span><span class="ident">registry</span>).<span class="ident">unwrap</span>(),
-            <span class="ident">proxy_metrics</span>: <span class="ident">ProxyMetrics::new</span>(<span class="kw-2">&amp;</span><span class="ident">registry</span>).<span class="ident">unwrap</span>(),
-            <span class="ident">filter_manager</span>: <span class="ident">FilterManager::fixed</span>(<span class="ident">Arc::new</span>(
-                <span class="ident">FilterChain::new</span>(<span class="macro">vec!</span>[], <span class="kw-2">&amp;</span><span class="ident">registry</span>).<span class="ident">unwrap</span>(),
-            )),
+            <span class="ident">metrics</span>: <span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>(),
+            <span class="ident">proxy_metrics</span>: <span class="ident">ProxyMetrics::new</span>().<span class="ident">unwrap</span>(),
+            <span class="ident">filter_manager</span>: <span class="ident">FilterManager::fixed</span>(<span class="ident">Arc::new</span>(<span class="ident">FilterChain::new</span>(<span class="macro">vec!</span>[]).<span class="ident">unwrap</span>())),
             <span class="ident">source</span>: <span class="ident">addr</span>.<span class="ident">clone</span>(),
             <span class="ident">dest</span>: <span class="ident">Endpoint::new</span>(<span class="ident">addr</span>),
             <span class="ident">sender</span>,
@@ -1212,13 +1181,10 @@
         <span class="kw">let</span> (<span class="ident">send_packet</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">mpsc::channel</span>::<span class="op">&lt;</span><span class="ident">UpstreamPacket</span><span class="op">&gt;</span>(<span class="number">5</span>);
         <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="ident">t</span>.<span class="ident">open_socket_and_recv_single_packet</span>().<span class="kw">await</span>;
         <span class="kw">let</span> <span class="ident">addr</span>: <span class="ident">EndpointAddress</span> <span class="op">=</span> <span class="ident">endpoint</span>.<span class="ident">socket</span>.<span class="ident">local_addr</span>().<span class="ident">unwrap</span>().<span class="ident">into</span>();
-        <span class="kw">let</span> <span class="ident">registry</span> <span class="op">=</span> <span class="ident">Registry::default</span>();
         <span class="kw">let</span> <span class="ident">session</span> <span class="op">=</span> <span class="ident">Session::new</span>(<span class="ident">SessionArgs</span> {
-            <span class="ident">metrics</span>: <span class="ident">Metrics::new</span>(<span class="kw-2">&amp;</span><span class="ident">registry</span>).<span class="ident">unwrap</span>(),
-            <span class="ident">proxy_metrics</span>: <span class="ident">ProxyMetrics::new</span>(<span class="kw-2">&amp;</span><span class="ident">registry</span>).<span class="ident">unwrap</span>(),
-            <span class="ident">filter_manager</span>: <span class="ident">FilterManager::fixed</span>(<span class="ident">Arc::new</span>(
-                <span class="ident">FilterChain::new</span>(<span class="macro">vec!</span>[], <span class="kw-2">&amp;</span><span class="ident">registry</span>).<span class="ident">unwrap</span>(),
-            )),
+            <span class="ident">metrics</span>: <span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>(),
+            <span class="ident">proxy_metrics</span>: <span class="ident">ProxyMetrics::new</span>().<span class="ident">unwrap</span>(),
+            <span class="ident">filter_manager</span>: <span class="ident">FilterManager::fixed</span>(<span class="ident">Arc::new</span>(<span class="ident">FilterChain::new</span>(<span class="macro">vec!</span>[]).<span class="ident">unwrap</span>())),
             <span class="ident">source</span>: <span class="ident">addr</span>.<span class="ident">clone</span>(),
             <span class="ident">dest</span>: <span class="ident">Endpoint::new</span>(<span class="ident">addr</span>),
             <span class="ident">sender</span>: <span class="ident">send_packet</span>,

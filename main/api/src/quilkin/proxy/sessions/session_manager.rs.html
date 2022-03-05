@@ -256,13 +256,6 @@
 <span id="254">254</span>
 <span id="255">255</span>
 <span id="256">256</span>
-<span id="257">257</span>
-<span id="258">258</span>
-<span id="259">259</span>
-<span id="260">260</span>
-<span id="261">261</span>
-<span id="262">262</span>
-<span id="263">263</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -380,7 +373,6 @@
     <span class="kw">use</span> <span class="ident">std::sync::Arc</span>;
     <span class="kw">use</span> <span class="ident">std::time::Duration</span>;
 
-    <span class="kw">use</span> <span class="ident">prometheus::Registry</span>;
     <span class="kw">use</span> <span class="ident">tokio::sync</span>::{<span class="ident">mpsc</span>, <span class="ident">watch</span>, <span class="ident">RwLock</span>};
 
     <span class="kw">use</span> <span class="kw">crate</span>::{
@@ -424,14 +416,11 @@
 
         <span class="comment">// Insert key.</span>
         {
-            <span class="kw">let</span> <span class="ident">registry</span> <span class="op">=</span> <span class="ident">Registry::default</span>();
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">sessions</span> <span class="op">=</span> <span class="ident">sessions</span>.<span class="ident">write</span>().<span class="kw">await</span>;
             <span class="kw">let</span> <span class="ident">session_args</span> <span class="op">=</span> <span class="ident">SessionArgs</span> {
-                <span class="ident">metrics</span>: <span class="ident">Metrics::new</span>(<span class="kw-2">&amp;</span><span class="ident">registry</span>).<span class="ident">unwrap</span>(),
-                <span class="ident">proxy_metrics</span>: <span class="ident">ProxyMetrics::new</span>(<span class="kw-2">&amp;</span><span class="ident">registry</span>).<span class="ident">unwrap</span>(),
-                <span class="ident">filter_manager</span>: <span class="ident">FilterManager::fixed</span>(<span class="ident">Arc::new</span>(
-                    <span class="ident">FilterChain::new</span>(<span class="macro">vec!</span>[], <span class="kw-2">&amp;</span><span class="ident">registry</span>).<span class="ident">unwrap</span>(),
-                )),
+                <span class="ident">metrics</span>: <span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>(),
+                <span class="ident">proxy_metrics</span>: <span class="ident">ProxyMetrics::new</span>().<span class="ident">unwrap</span>(),
+                <span class="ident">filter_manager</span>: <span class="ident">FilterManager::fixed</span>(<span class="ident">Arc::new</span>(<span class="ident">FilterChain::new</span>(<span class="macro">vec!</span>[]).<span class="ident">unwrap</span>())),
                 <span class="ident">source</span>: <span class="ident">from</span>,
                 <span class="ident">dest</span>: <span class="ident">endpoint</span>.<span class="ident">clone</span>(),
                 <span class="ident">sender</span>: <span class="ident">send</span>,
@@ -481,14 +470,11 @@
         <span class="kw">let</span> <span class="ident">ttl</span> <span class="op">=</span> <span class="ident">Duration::from_secs</span>(<span class="number">1</span>);
 
         {
-            <span class="kw">let</span> <span class="ident">registry</span> <span class="op">=</span> <span class="ident">Registry::default</span>();
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">sessions</span> <span class="op">=</span> <span class="ident">sessions</span>.<span class="ident">write</span>().<span class="kw">await</span>;
             <span class="kw">let</span> <span class="ident">session_args</span> <span class="op">=</span> <span class="ident">SessionArgs</span> {
-                <span class="ident">metrics</span>: <span class="ident">Metrics::new</span>(<span class="kw-2">&amp;</span><span class="ident">registry</span>).<span class="ident">unwrap</span>(),
-                <span class="ident">proxy_metrics</span>: <span class="ident">ProxyMetrics::new</span>(<span class="kw-2">&amp;</span><span class="ident">registry</span>).<span class="ident">unwrap</span>(),
-                <span class="ident">filter_manager</span>: <span class="ident">FilterManager::fixed</span>(<span class="ident">Arc::new</span>(
-                    <span class="ident">FilterChain::new</span>(<span class="macro">vec!</span>[], <span class="kw-2">&amp;</span><span class="ident">registry</span>).<span class="ident">unwrap</span>(),
-                )),
+                <span class="ident">metrics</span>: <span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>(),
+                <span class="ident">proxy_metrics</span>: <span class="ident">ProxyMetrics::new</span>().<span class="ident">unwrap</span>(),
+                <span class="ident">filter_manager</span>: <span class="ident">FilterManager::fixed</span>(<span class="ident">Arc::new</span>(<span class="ident">FilterChain::new</span>(<span class="macro">vec!</span>[]).<span class="ident">unwrap</span>())),
                 <span class="ident">source</span>: <span class="ident">from</span>,
                 <span class="ident">dest</span>: <span class="ident">endpoint</span>.<span class="ident">clone</span>(),
                 <span class="ident">sender</span>: <span class="ident">send</span>,

@@ -240,7 +240,6 @@
 <span id="238">238</span>
 <span id="239">239</span>
 <span id="240">240</span>
-<span id="241">241</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -301,7 +300,7 @@
             .<span class="ident">require_config</span>(<span class="ident">args</span>.<span class="ident">config</span>)<span class="question-mark">?</span>
             .<span class="ident">deserialize</span>::<span class="op">&lt;</span><span class="ident">Config</span>, <span class="ident">ProtoConfig</span><span class="op">&gt;</span>(<span class="self">self</span>.<span class="ident">name</span>())<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">Firewall::new</span>(<span class="ident">config</span>, <span class="ident">Metrics::new</span>(<span class="kw-2">&amp;</span><span class="ident">args</span>.<span class="ident">metrics_registry</span>)<span class="question-mark">?</span>);
+        <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">Firewall::new</span>(<span class="ident">config</span>, <span class="ident">Metrics::new</span>()<span class="question-mark">?</span>);
         <span class="prelude-val">Ok</span>(<span class="ident">FilterInstance::new</span>(
             <span class="ident">config_json</span>,
             <span class="ident">Box::new</span>(<span class="ident">filter</span>) <span class="kw">as</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Filter</span><span class="op">&gt;</span>,
@@ -391,7 +390,6 @@
 }
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="ident">prometheus::Registry</span>;
     <span class="kw">use</span> <span class="ident">std::net::Ipv4Addr</span>;
 
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">Endpoints</span>, <span class="ident">UpstreamEndpoints</span>};
@@ -404,7 +402,7 @@
     <span class="attribute">#[<span class="ident">traced_test</span>]</span>
     <span class="kw">fn</span> <span class="ident">read</span>() {
         <span class="kw">let</span> <span class="ident">firewall</span> <span class="op">=</span> <span class="ident">Firewall</span> {
-            <span class="ident">metrics</span>: <span class="ident">Metrics::new</span>(<span class="kw-2">&amp;</span><span class="ident">Registry::default</span>()).<span class="ident">unwrap</span>(),
+            <span class="ident">metrics</span>: <span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>(),
             <span class="ident">on_read</span>: <span class="macro">vec!</span>[<span class="ident">Rule</span> {
                 <span class="ident">action</span>: <span class="ident">Action::Allow</span>,
                 <span class="ident">source</span>: <span class="string">&quot;192.168.75.0/24&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
@@ -446,7 +444,7 @@
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">write</span>() {
         <span class="kw">let</span> <span class="ident">firewall</span> <span class="op">=</span> <span class="ident">Firewall</span> {
-            <span class="ident">metrics</span>: <span class="ident">Metrics::new</span>(<span class="kw-2">&amp;</span><span class="ident">Registry::default</span>()).<span class="ident">unwrap</span>(),
+            <span class="ident">metrics</span>: <span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>(),
             <span class="ident">on_read</span>: <span class="macro">vec!</span>[],
             <span class="ident">on_write</span>: <span class="macro">vec!</span>[<span class="ident">Rule</span> {
                 <span class="ident">action</span>: <span class="ident">Action::Allow</span>,

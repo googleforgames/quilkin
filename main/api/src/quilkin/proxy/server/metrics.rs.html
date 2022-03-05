@@ -95,9 +95,9 @@
  * limitations under the License.
  */</span>
 
-<span class="kw">use</span> <span class="ident">prometheus::core</span>::{<span class="ident">AtomicU64</span>, <span class="ident">GenericCounter</span>};
 <span class="kw">use</span> <span class="ident">prometheus</span>::{
-    <span class="ident">exponential_buckets</span>, <span class="ident">Histogram</span>, <span class="ident">HistogramVec</span>, <span class="ident">IntCounterVec</span>, <span class="ident">Registry</span>, <span class="prelude-ty">Result</span> <span class="kw">as</span> <span class="ident">MetricsResult</span>,
+    <span class="ident">core</span>::{<span class="ident">AtomicU64</span>, <span class="ident">GenericCounter</span>},
+    <span class="ident">exponential_buckets</span>, <span class="ident">Histogram</span>, <span class="ident">HistogramVec</span>, <span class="ident">IntCounterVec</span>, <span class="prelude-ty">Result</span> <span class="kw">as</span> <span class="ident">MetricsResult</span>,
 };
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::metrics</span>::{
@@ -125,7 +125,7 @@
 <span class="kw">const</span> <span class="ident">BUCKET_COUNT</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">13</span>;
 
 <span class="kw">impl</span> <span class="ident">Metrics</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">registry</span>: <span class="kw-2">&amp;</span><span class="ident">Registry</span>) -&gt; <span class="ident">MetricsResult</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>() -&gt; <span class="ident">MetricsResult</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">subsystem</span> <span class="op">=</span> <span class="string">&quot;proxy&quot;</span>;
         <span class="kw">let</span> <span class="ident">event_labels</span> <span class="op">=</span> <span class="kw-2">&amp;</span>[<span class="ident">EVENT_LABEL</span>];
 
@@ -138,7 +138,7 @@
             ),
             <span class="ident">event_labels</span>,
         )<span class="question-mark">?</span>
-        .<span class="ident">register_if_not_exists</span>(<span class="ident">registry</span>)<span class="question-mark">?</span>;
+        .<span class="ident">register_if_not_exists</span>()<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
             <span class="ident">packets_dropped_no_endpoints</span>: <span class="ident">IntCounterVec::new</span>(
@@ -149,7 +149,7 @@
                 ),
                 <span class="kw-2">&amp;</span>[<span class="string">&quot;reason&quot;</span>],
             )<span class="question-mark">?</span>
-            .<span class="ident">register_if_not_exists</span>(<span class="ident">registry</span>)<span class="question-mark">?</span>
+            .<span class="ident">register_if_not_exists</span>()<span class="question-mark">?</span>
             .<span class="ident">get_metric_with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;NoConfiguredEndpoints&quot;</span>])<span class="question-mark">?</span>,
             <span class="ident">read_processing_time_seconds</span>: <span class="ident">processing_time</span>
                 .<span class="ident">get_metric_with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident">EVENT_READ_LABEL_VALUE</span>])<span class="question-mark">?</span>,

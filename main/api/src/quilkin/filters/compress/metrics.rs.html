@@ -66,6 +66,7 @@
 <span id="64">64</span>
 <span id="65">65</span>
 <span id="66">66</span>
+<span id="67">67</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -81,9 +82,10 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */</span>
-<span class="kw">use</span> <span class="ident">prometheus::core</span>::{<span class="ident">AtomicU64</span>, <span class="ident">GenericCounter</span>};
-<span class="kw">use</span> <span class="ident">prometheus</span>::{<span class="ident">IntCounter</span>, <span class="ident">Registry</span>};
-<span class="kw">use</span> <span class="ident">prometheus</span>::{<span class="ident">IntCounterVec</span>, <span class="prelude-ty">Result</span> <span class="kw">as</span> <span class="ident">MetricsResult</span>};
+<span class="kw">use</span> <span class="ident">prometheus</span>::{
+    <span class="ident">core</span>::{<span class="ident">AtomicU64</span>, <span class="ident">GenericCounter</span>},
+    <span class="ident">IntCounter</span>, <span class="ident">IntCounterVec</span>, <span class="prelude-ty">Result</span> <span class="kw">as</span> <span class="ident">MetricsResult</span>,
+};
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::metrics</span>::{<span class="ident">filter_opts</span>, <span class="ident">CollectorExt</span>};
 
@@ -96,7 +98,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Metrics</span> {
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">registry</span>: <span class="kw-2">&amp;</span><span class="ident">Registry</span>) -&gt; <span class="ident">MetricsResult</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">new</span>() -&gt; <span class="ident">MetricsResult</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">operation_labels</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="string">&quot;action&quot;</span>];
         <span class="kw">let</span> <span class="ident">dropped_metric</span> <span class="op">=</span> <span class="ident">IntCounterVec::new</span>(
             <span class="ident">filter_opts</span>(
@@ -106,21 +108,21 @@
             ),
             <span class="kw-2">&amp;</span><span class="ident">operation_labels</span>,
         )<span class="question-mark">?</span>
-        .<span class="ident">register_if_not_exists</span>(<span class="ident">registry</span>)<span class="question-mark">?</span>;
+        .<span class="ident">register_if_not_exists</span>()<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="ident">decompressed_bytes_total</span> <span class="op">=</span> <span class="ident">IntCounter::with_opts</span>(<span class="ident">filter_opts</span>(
             <span class="string">&quot;decompressed_bytes_total&quot;</span>,
             <span class="string">&quot;Compress&quot;</span>,
             <span class="string">&quot;Total number of decompressed bytes either received or sent.&quot;</span>,
         ))<span class="question-mark">?</span>
-        .<span class="ident">register_if_not_exists</span>(<span class="ident">registry</span>)<span class="question-mark">?</span>;
+        .<span class="ident">register_if_not_exists</span>()<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="ident">compressed_bytes_total</span> <span class="op">=</span> <span class="ident">IntCounter::with_opts</span>(<span class="ident">filter_opts</span>(
             <span class="string">&quot;compressed_bytes_total&quot;</span>,
             <span class="string">&quot;Compress&quot;</span>,
             <span class="string">&quot;Total number of compressed bytes either received or sent.&quot;</span>,
         ))<span class="question-mark">?</span>
-        .<span class="ident">register_if_not_exists</span>(<span class="ident">registry</span>)<span class="question-mark">?</span>;
+        .<span class="ident">register_if_not_exists</span>()<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(<span class="ident">Metrics</span> {
             <span class="ident">packets_dropped_compress</span>: <span class="ident">dropped_metric</span>
