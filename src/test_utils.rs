@@ -305,15 +305,12 @@ pub fn ep(id: u8) -> Endpoint {
     }
 }
 
-pub fn new_test_chain(registry: &prometheus::Registry) -> Arc<FilterChain> {
+pub fn new_test_chain() -> Arc<FilterChain> {
     Arc::new(
-        FilterChain::new(
-            vec![(
-                "TestFilter".into(),
-                TestFilterFactory::create_empty_filter(),
-            )],
-            registry,
-        )
+        FilterChain::new(vec![(
+            "TestFilter".into(),
+            TestFilterFactory::create_empty_filter(),
+        )])
         .unwrap(),
     )
 }

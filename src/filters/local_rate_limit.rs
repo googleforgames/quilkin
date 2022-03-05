@@ -193,7 +193,7 @@ impl FilterFactory for LocalRateLimitFactory {
                 reason: "value must be at least 1 second".into(),
             })
         } else {
-            let filter = LocalRateLimit::new(config, Metrics::new(&args.metrics_registry)?);
+            let filter = LocalRateLimit::new(config, Metrics::new()?);
             Ok(FilterInstance::new(
                 config_json,
                 Box::new(filter) as Box<dyn Filter>,
@@ -233,7 +233,6 @@ impl TryFrom<ProtoConfig> for Config {
 mod tests {
     use std::{convert::TryFrom, net::Ipv4Addr, time::Duration};
 
-    use prometheus::Registry;
     use tokio::time;
 
     use super::ProtoConfig;
@@ -247,7 +246,7 @@ mod tests {
     use crate::test_utils::assert_write_no_change;
 
     fn rate_limiter(config: Config) -> LocalRateLimit {
-        LocalRateLimit::new(config, Metrics::new(&Registry::default()).unwrap())
+        LocalRateLimit::new(config, Metrics::new().unwrap())
     }
 
     fn address_pair() -> (EndpointAddress, EndpointAddress) {
@@ -281,7 +280,6 @@ period: 0
         let err = factory
             .create_filter(CreateFilterArgs {
                 config: Some(ConfigType::Static(serde_yaml::from_str(config).unwrap())),
-                metrics_registry: Default::default(),
             })
             .err()
             .unwrap();

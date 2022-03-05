@@ -112,14 +112,11 @@ mod tests {
     use crate::cluster::cluster_manager::ClusterManager;
     use crate::endpoint::{Endpoint, Endpoints};
     use crate::filters::{manager::FilterManager, CreateFilterArgs, FilterChain};
-    use prometheus::Registry;
     use std::sync::Arc;
 
     #[tokio::test]
     async fn test_handle_request() {
-        let registry = Registry::default();
         let cluster_manager = ClusterManager::fixed(
-            &registry,
             Endpoints::new(vec![Endpoint::new(([127, 0, 0, 1], 8080).into())]).unwrap(),
         )
         .unwrap();
@@ -127,13 +124,10 @@ mod tests {
 
         let debug_factory = crate::filters::debug::factory();
         let debug_filter = debug_factory
-            .create_filter(CreateFilterArgs::fixed(
-                registry.clone(),
-                Some(debug_config),
-            ))
+            .create_filter(CreateFilterArgs::fixed(Some(debug_config)))
             .unwrap();
         let filter_manager = FilterManager::fixed(Arc::new(
-            FilterChain::new(vec![(debug_factory.name().into(), debug_filter)], &registry).unwrap(),
+            FilterChain::new(vec![(debug_factory.name().into(), debug_filter)]).unwrap(),
         ));
 
         let mut response = handle_request(cluster_manager, filter_manager);

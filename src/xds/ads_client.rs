@@ -17,7 +17,7 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
-use prometheus::{Registry, Result as MetricsResult};
+use prometheus::Result as MetricsResult;
 use rand::Rng;
 use tokio::{
     sync::{
@@ -79,8 +79,8 @@ const BACKOFF_MAX_DELAY_SECONDS: u64 = 30;
 const BACKOFF_MAX_JITTER_MILLISECONDS: u64 = 2000;
 
 impl AdsClient {
-    pub fn new(metrics_registry: &Registry) -> MetricsResult<Self> {
-        let metrics = Metrics::new(metrics_registry)?;
+    pub fn new() -> MetricsResult<Self> {
+        let metrics = Metrics::new()?;
         Ok(Self { metrics })
     }
 
@@ -471,7 +471,6 @@ mod tests {
 
     use std::time::Duration;
 
-    use prometheus::Registry;
     use tokio::sync::{mpsc, watch};
 
     #[tokio::test]
@@ -482,13 +481,13 @@ mod tests {
         let (_shutdown_tx, shutdown_rx) = watch::channel::<()>(());
         let (cluster_updates_tx, _) = mpsc::channel(10);
         let (filter_chain_updates_tx, _) = mpsc::channel(10);
-        let run = AdsClient::new(&Registry::default()).unwrap().run(
+        let run = AdsClient::new().unwrap().run(
             "test-id".into(),
             vec![ManagementServer {
                 address: "localhost:18000".into(),
             }],
             cluster_updates_tx,
-            ListenerManagerArgs::new(Registry::default(), filter_chain_updates_tx),
+            ListenerManagerArgs::new(filter_chain_updates_tx),
             shutdown_rx,
         );
 

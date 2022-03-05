@@ -14,8 +14,7 @@
  *  limitations under the License.
  */
 use prometheus::core::{AtomicU64, GenericCounter};
-use prometheus::Result as MetricsResult;
-use prometheus::{IntCounter, Registry};
+use prometheus::IntCounter;
 
 use crate::metrics::{filter_opts, CollectorExt};
 
@@ -25,14 +24,14 @@ pub struct Metrics {
 }
 
 impl Metrics {
-    pub(super) fn new(registry: &Registry) -> MetricsResult<Self> {
+    pub(super) fn new() -> prometheus::Result<Self> {
         Ok(Metrics {
             packets_dropped_total: IntCounter::with_opts(filter_opts(
                 "packets_dropped",
                 "CaptureBytes",
                 "Total number of packets dropped due capture size being larger than the received packet",
             ))?
-            .register_if_not_exists(registry)?,
+            .register_if_not_exists()?,
         })
     }
 }

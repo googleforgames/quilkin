@@ -15,23 +15,24 @@
  */
 
 use crate::metrics::{filter_opts, CollectorExt};
-use prometheus::core::{AtomicU64, GenericCounter};
-use prometheus::Result as MetricsResult;
-use prometheus::{IntCounter, Registry};
+use prometheus::{
+    core::{AtomicU64, GenericCounter},
+    IntCounter, Result as MetricsResult,
+};
 
 pub(super) struct Metrics {
     pub(super) packets_dropped_total: GenericCounter<AtomicU64>,
 }
 
 impl Metrics {
-    pub(super) fn new(registry: &Registry) -> MetricsResult<Self> {
+    pub(super) fn new() -> MetricsResult<Self> {
         Ok(Metrics {
             packets_dropped_total: IntCounter::with_opts(filter_opts(
                 "packets_dropped",
                 "LocalRateLimit",
                 "Total number of packets dropped due to rate limiting",
             ))?
-            .register_if_not_exists(registry)?,
+            .register_if_not_exists()?,
         })
     }
 }

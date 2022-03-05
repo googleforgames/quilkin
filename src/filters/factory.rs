@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-use prometheus::Registry;
 use std::sync::Arc;
 
 use crate::{
@@ -75,43 +74,23 @@ pub trait FilterFactory: Sync + Send {
 pub struct CreateFilterArgs {
     /// Configuration for the filter.
     pub config: Option<ConfigType>,
-    /// metrics_registry is used to register filter metrics collectors.
-    pub metrics_registry: Registry,
 }
 
 impl CreateFilterArgs {
     /// Create a new instance of [`CreateFilterArgs`].
-    pub fn new(metrics_registry: Registry, config: Option<ConfigType>) -> CreateFilterArgs {
-        Self {
-            config,
-            metrics_registry,
-        }
+    pub fn new(config: Option<ConfigType>) -> CreateFilterArgs {
+        Self { config }
     }
 
     /// Creates a new instance of [`CreateFilterArgs`] using a
     /// fixed [`ConfigType`].
-    pub fn fixed(
-        metrics_registry: Registry,
-        config: Option<serde_yaml::Value>,
-    ) -> CreateFilterArgs {
-        Self::new(metrics_registry, config.map(ConfigType::Static))
+    pub fn fixed(config: Option<serde_yaml::Value>) -> CreateFilterArgs {
+        Self::new(config.map(ConfigType::Static))
     }
 
     /// Creates a new instance of [`CreateFilterArgs`] using a
     /// dynamic [`ConfigType`].
-    pub fn dynamic(
-        metrics_registry: Registry,
-        config: Option<prost_types::Any>,
-    ) -> CreateFilterArgs {
-        CreateFilterArgs::new(metrics_registry, config.map(ConfigType::Dynamic))
-    }
-
-    /// Consumes `self` and returns a new instance of [`Self`] using
-    /// `metrics_registry` for metrics.
-    pub(crate) fn with_metrics_registry(self, metrics_registry: Registry) -> Self {
-        CreateFilterArgs {
-            metrics_registry,
-            ..self
-        }
+    pub fn dynamic(config: Option<prost_types::Any>) -> CreateFilterArgs {
+        CreateFilterArgs::new(config.map(ConfigType::Dynamic))
     }
 }

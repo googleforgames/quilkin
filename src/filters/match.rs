@@ -22,15 +22,9 @@ struct ConfigInstance {
 }
 
 impl ConfigInstance {
-    fn new(
-        config: config::DirectionalConfig,
-        metrics_registry: prometheus::Registry,
-    ) -> Result<Self, Error> {
+    fn new(config: config::DirectionalConfig) -> Result<Self, Error> {
         let map_to_instance = |filter: &str, config_type: Option<ConfigType>| {
-            let args = CreateFilterArgs::new(metrics_registry.clone(), config_type)
-                .with_metrics_registry(metrics_registry.clone());
-
-            FilterRegistry::get(filter, args)
+            FilterRegistry::get(filter, CreateFilterArgs::new(config_type))
         };
 
         let branches = config
@@ -56,16 +50,9 @@ struct MatchInstance {
 }
 
 impl MatchInstance {
-    fn new(config: Config, metrics_registry: prometheus::Registry) -> Result<Self, Error> {
-        let on_read_filters = config
-            .on_read
-            .map(|config| ConfigInstance::new(config, metrics_registry.clone()))
-            .transpose()?;
-
-        let on_write_filters = config
-            .on_write
-            .map(|config| ConfigInstance::new(config, metrics_registry.clone()))
-            .transpose()?;
+    fn new(config: Config) -> Result<Self, Error> {
+        let on_read_filters = config.on_read.map(ConfigInstance::new).transpose()?;
+        let on_write_filters = config.on_write.map(ConfigInstance::new).transpose()?;
 
         if on_read_filters.is_none() && on_write_filters.is_none() {
             return Err(Error::MissingConfig(NAME));
@@ -144,7 +131,7 @@ impl FilterFactory for MatchFactory {
             .require_config(args.config)?
             .deserialize::<Config, config::proto::Match>(self.name())?;
 
-        let filter = MatchInstance::new(config, args.metrics_registry)?;
+        let filter = MatchInstance::new(config)?;
         Ok(FilterInstance::new(
             config_json,
             Box::new(filter) as Box<dyn Filter>,
