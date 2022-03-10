@@ -15,15 +15,13 @@
  */
 
 use crate::filters::{
-    manager::ListenerManagerArgs, CreateFilterArgs, FilterChain as ProxyFilterChain, FilterRegistry,
+    CreateFilterArgs, FilterChain as ProxyFilterChain, FilterRegistry, SharedFilterChain,
 };
 use crate::xds::envoy::config::listener::v3::{
     filter::ConfigType as LdsConfigType, FilterChain, Listener,
 };
 use crate::xds::envoy::service::discovery::v3::{DiscoveryRequest, DiscoveryResponse};
 use crate::xds::LISTENER_TYPE;
-
-use std::sync::Arc;
 
 use crate::xds::ads_client::send_discovery_req;
 use bytes::Bytes;
@@ -38,17 +36,17 @@ pub(crate) struct ListenerManager {
     discovery_req_tx: mpsc::Sender<DiscoveryRequest>,
 
     // Sends listener state updates to the caller.
-    filter_chain_updates_tx: mpsc::Sender<Arc<ProxyFilterChain>>,
+    filter_chain: SharedFilterChain,
 }
 
 impl ListenerManager {
     pub(in crate::xds) fn new(
-        args: ListenerManagerArgs,
+        filter_chain: SharedFilterChain,
         discovery_req_tx: mpsc::Sender<DiscoveryRequest>,
     ) -> Self {
         ListenerManager {
             discovery_req_tx,
-            filter_chain_updates_tx: args.filter_chain_updates_tx,
+            filter_chain,
         }
     }
 
@@ -66,18 +64,7 @@ impl ListenerManager {
 
         let error_message = match result {
             Ok(filter_chain) => {
-                self.filter_chain_updates_tx
-                    .send(Arc::new(filter_chain))
-                    .await
-                    .map_err(|err| {
-                        tracing::warn!("Failed to send filter chain update on channel");
-                        err
-                    })
-                    // ok is safe here because an error can only be due to the consumer dropping
-                    // the receiving side and we can't do much about that since it could mean
-                    // that they're no longer interested or we're shutting down.
-                    .ok();
-
+                self.filter_chain.store_chain(filter_chain);
                 None
             }
             Err(message) => Some(message),
@@ -173,7 +160,7 @@ impl ListenerManager {
 #[cfg(test)]
 mod tests {
     use super::ListenerManager;
-    use crate::filters::{manager::ListenerManagerArgs, prelude::*};
+    use crate::filters::prelude::*;
     use crate::xds::envoy::config::listener::v3::{
         filter::ConfigType, Filter as LdsFilter, FilterChain as LdsFilterChain, Listener,
     };
@@ -182,7 +169,9 @@ mod tests {
     use std::time::Duration;
 
     use crate::endpoint::{Endpoint, Endpoints, UpstreamEndpoints};
-    use crate::filters::{ConvertProtoConfigError, DynFilterFactory, FilterRegistry};
+    use crate::filters::{
+        ConvertProtoConfigError, DynFilterFactory, FilterRegistry, SharedFilterChain,
+    };
     use crate::xds::LISTENER_TYPE;
     use prost::Message;
     use serde::{Deserialize, Serialize};
@@ -263,12 +252,9 @@ mod tests {
 
         // Prepare a filter registry with the filter factories we need for the test.
         load_append_filter();
-        let (filter_chain_updates_tx, mut filter_chain_updates_rx) = mpsc::channel(10);
+        let filter_chain = SharedFilterChain::empty();
         let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel(10);
-        let mut manager = ListenerManager::new(
-            ListenerManagerArgs::new(filter_chain_updates_tx),
-            discovery_req_tx,
-        );
+        let mut manager = ListenerManager::new(filter_chain.clone(), discovery_req_tx);
 
         // Create two LDS filters forming the filter chain.
         let filters = vec!["world", "!"]
@@ -333,12 +319,6 @@ mod tests {
             discovery_req,
         );
 
-        // Expect a filter chain update from the manager.
-        let filter_chain = time::timeout(Duration::from_secs(5), filter_chain_updates_rx.recv())
-            .await
-            .unwrap()
-            .unwrap();
-
         // Test the new filter chain's functionality. It should append to payloads.
         let response = filter_chain
             .read(ReadContext::new(
@@ -363,12 +343,9 @@ mod tests {
 
         // Prepare a filter registry with the filter factories we need for the test.
         load_append_filter();
-        let (filter_chain_updates_tx, mut filter_chain_updates_rx) = mpsc::channel(10);
+        let filter_chain = SharedFilterChain::empty();
         let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel(10);
-        let mut manager = ListenerManager::new(
-            ListenerManagerArgs::new(filter_chain_updates_tx),
-            discovery_req_tx,
-        );
+        let mut manager = ListenerManager::new(filter_chain.clone(), discovery_req_tx);
 
         let test_cases = vec![
             (
@@ -436,13 +413,6 @@ mod tests {
                 discovery_req,
             );
 
-            // Expect a filter chain update from the manager.
-            let filter_chain =
-                time::timeout(Duration::from_secs(5), filter_chain_updates_rx.recv())
-                    .await
-                    .unwrap()
-                    .unwrap();
-
             // Test the new filter chain's functionality.
             let response = filter_chain
                 .read(ReadContext::new(
@@ -467,12 +437,9 @@ mod tests {
         // Test that the manager returns NACK DiscoveryRequests for updates it failed to process.
 
         load_append_filter();
-        let (filter_chain_updates_tx, _filter_chain_updates_rx) = mpsc::channel(10);
+        let filter_chain = SharedFilterChain::empty();
         let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel(10);
-        let mut manager = ListenerManager::new(
-            ListenerManagerArgs::new(filter_chain_updates_tx),
-            discovery_req_tx,
-        );
+        let mut manager = ListenerManager::new(filter_chain.clone(), discovery_req_tx);
 
         let test_cases = vec![
             (
@@ -567,15 +534,11 @@ mod tests {
     }
 
     #[tokio::test]
+    /// Test that the manager returns NACK DiscoveryRequests for updates with
+    /// multiple listeners.
     async fn listener_manager_reject_multiple_listeners() {
-        // Test that the manager returns NACK DiscoveryRequests for updates with multiple listeners.
-
-        let (filter_chain_updates_tx, _filter_chain_updates_rx) = mpsc::channel(10);
         let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel(10);
-        let mut manager = ListenerManager::new(
-            ListenerManagerArgs::new(filter_chain_updates_tx),
-            discovery_req_tx,
-        );
+        let mut manager = ListenerManager::new(SharedFilterChain::empty(), discovery_req_tx);
         let lds_listener = create_lds_listener(
             "test-listener".into(),
             vec![create_lds_filter_chain(vec![LdsFilter {

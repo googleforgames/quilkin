@@ -1,10 +1,6 @@
 mod config;
 
-use crate::{
-    config::ConfigType,
-    filters::{prelude::*, registry::FilterRegistry},
-    metadata::Value,
-};
+use crate::{config::ConfigType, filters::prelude::*, metadata::Value};
 
 pub use config::Config;
 
@@ -24,7 +20,7 @@ struct ConfigInstance {
 impl ConfigInstance {
     fn new(config: config::DirectionalConfig) -> Result<Self, Error> {
         let map_to_instance = |filter: &str, config_type: Option<ConfigType>| {
-            FilterRegistry::get(filter, CreateFilterArgs::new(config_type))
+            crate::filters::FilterRegistry::get(filter, CreateFilterArgs::new(config_type))
         };
 
         let branches = config

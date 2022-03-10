@@ -24,11 +24,12 @@ use tokio::sync::{mpsc, oneshot, watch};
 
 use crate::config::{Builder as ConfigBuilder, Config};
 use crate::endpoint::{Endpoint, EndpointAddress, Endpoints};
-use crate::filters::{prelude::*, FilterChain, FilterRegistry};
+use crate::filters::{prelude::*, FilterRegistry};
 use crate::metadata::Value;
 use crate::proxy::{Builder, PendingValidation};
 
-pub struct TestFilterFactory {}
+pub struct TestFilterFactory;
+
 impl FilterFactory for TestFilterFactory {
     fn name(&self) -> &'static str {
         "TestFilter"
@@ -305,18 +306,16 @@ pub fn ep(id: u8) -> Endpoint {
     }
 }
 
-pub fn new_test_chain() -> Arc<FilterChain> {
-    Arc::new(
-        FilterChain::new(vec![(
-            "TestFilter".into(),
-            TestFilterFactory::create_empty_filter(),
-        )])
-        .unwrap(),
-    )
+pub fn new_test_chain() -> crate::filters::SharedFilterChain {
+    <_>::try_from([crate::config::Filter {
+        name: "TestFilter".into(),
+        config: None,
+    }])
+    .unwrap()
 }
 
 pub fn load_test_filters() {
-    FilterRegistry::register([DynFilterFactory::from(Box::from(TestFilterFactory {}))]);
+    FilterRegistry::register([DynFilterFactory::from(Box::from(TestFilterFactory))]);
 }
 
 #[cfg(test)]

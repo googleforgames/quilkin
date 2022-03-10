@@ -24,7 +24,6 @@ mod set;
 mod write;
 
 pub(crate) mod chain;
-pub(crate) mod manager;
 
 pub mod capture;
 pub mod compress;
@@ -58,7 +57,7 @@ pub use self::{
     write::{WriteContext, WriteResponse},
 };
 
-pub(crate) use self::chain::FilterChain;
+pub(crate) use self::chain::{FilterChain, SharedFilterChain};
 
 /// Trait for routing and manipulating packets.
 ///

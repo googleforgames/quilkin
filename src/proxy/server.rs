@@ -29,7 +29,7 @@ use resource_manager::{DynamicResourceManagers, StaticResourceManagers};
 use crate::{
     cluster::cluster_manager::SharedClusterManager,
     endpoint::{Endpoint, EndpointAddress},
-    filters::{manager::SharedFilterManager, Filter, ReadContext},
+    filters::{Filter, ReadContext, SharedFilterChain},
     proxy::{
         builder::{ValidatedConfig, ValidatedSource},
         sessions::{
@@ -58,7 +58,7 @@ pub struct Server {
 /// Represents arguments to the `Server::run_recv_from` method.
 struct RunRecvFromArgs {
     cluster_manager: SharedClusterManager,
-    filter_manager: SharedFilterManager,
+    filter_chain: SharedFilterChain,
     socket: Arc<UdpSocket>,
     session_manager: SessionManager,
     session_ttl: Duration,
@@ -93,7 +93,7 @@ struct ProcessDownstreamReceiveConfig {
     proxy_metrics: ProxyMetrics,
     session_metrics: SessionMetrics,
     cluster_manager: SharedClusterManager,
-    filter_manager: SharedFilterManager,
+    filter_chain: SharedFilterChain,
     session_manager: SessionManager,
     session_ttl: Duration,
     send_packets: mpsc::Sender<UpstreamPacket>,
@@ -115,13 +115,13 @@ impl Server {
 
         let session_ttl = Duration::from_secs(SESSION_TIMEOUT_SECONDS);
 
-        let (cluster_manager, filter_manager) =
+        let (cluster_manager, filter_chain) =
             self.create_resource_managers(shutdown_rx.clone()).await?;
 
         if let Some(admin) = &self.admin {
             admin.run(
                 cluster_manager.clone(),
-                filter_manager.clone(),
+                filter_chain.clone(),
                 shutdown_rx.clone(),
             );
         }
@@ -129,7 +129,7 @@ impl Server {
         self.run_receive_packet(socket.clone(), receive_packets);
         let recv_loop = self.run_recv_from(RunRecvFromArgs {
             cluster_manager,
-            filter_manager,
+            filter_chain,
             socket,
             session_manager,
             session_ttl,
@@ -154,21 +154,22 @@ impl Server {
     async fn create_resource_managers(
         &self,
         shutdown_rx: watch::Receiver<()>,
-    ) -> Result<(SharedClusterManager, SharedFilterManager)> {
+    ) -> Result<(SharedClusterManager, SharedFilterChain)> {
         match &self.config.source {
             ValidatedSource::Static {
                 filter_chain,
                 endpoints,
             } => {
-                let manager = StaticResourceManagers::new(endpoints.clone(), filter_chain.clone())
+                let manager = StaticResourceManagers::new(endpoints.clone(), filter_chain)
                     .map_err(|err| {
                         eyre::eyre!(err).wrap_err("Failed to initialise static resource manager.")
                     })?;
-                Ok((manager.cluster_manager, manager.filter_manager))
+                Ok((manager.cluster_manager, manager.filter_chain))
             }
             ValidatedSource::Dynamic { management_servers } => {
                 let manager = DynamicResourceManagers::new(
                     self.config.proxy.id.clone(),
+                    SharedFilterChain::empty(),
                     management_servers.to_vec(),
                     shutdown_rx,
                 )
@@ -191,7 +192,7 @@ impl Server {
                     }
                 });
 
-                Ok((manager.cluster_manager, manager.filter_manager))
+                Ok((manager.cluster_manager, manager.filter_chain))
             }
         }
     }
@@ -225,7 +226,7 @@ impl Server {
                     proxy_metrics: proxy_metrics.clone(),
                     session_metrics: session_metrics.clone(),
                     cluster_manager: args.cluster_manager.clone(),
-                    filter_manager: args.filter_manager.clone(),
+                    filter_chain: args.filter_chain.clone(),
                     session_manager: session_manager.clone(),
                     session_ttl: args.session_ttl,
                     send_packets: args.send_packets.clone(),
@@ -335,11 +336,7 @@ impl Server {
             }
         };
 
-        let filter_chain = {
-            let filter_manager_guard = args.filter_manager.read();
-            filter_manager_guard.get_filter_chain()
-        };
-        let result = filter_chain.read(ReadContext::new(
+        let result = args.filter_chain.read(ReadContext::new(
             endpoints,
             packet.source.clone(),
             packet.contents,
@@ -399,7 +396,7 @@ impl Server {
                 let session_args = SessionArgs {
                     metrics: args.session_metrics.clone(),
                     proxy_metrics: args.proxy_metrics.clone(),
-                    filter_manager: args.filter_manager.clone(),
+                    filter_chain: args.filter_chain.clone(),
                     source: session_key.source.clone(),
                     dest: endpoint.clone(),
                     sender: args.send_packets.clone(),
@@ -496,20 +493,19 @@ mod tests {
     use std::time::{SystemTime, UNIX_EPOCH};
 
     use prometheus::{Histogram, HistogramOpts};
-    use tokio::sync::mpsc;
-    use tokio::time;
-    use tokio::time::timeout;
-    use tokio::time::Duration;
+    use tokio::{
+        sync::mpsc,
+        time::{self, timeout, Duration},
+    };
 
-    use crate::cluster::cluster_manager::ClusterManager;
-    use crate::config;
-    use crate::config::Builder as ConfigBuilder;
-    use crate::endpoint::{Endpoint, Endpoints};
-    use crate::filters::{manager::FilterManager, FilterChain};
-    use crate::proxy::sessions::UpstreamPacket;
-    use crate::proxy::Builder;
-    use crate::test_utils::{
-        config_with_dummy_endpoint, load_test_filters, new_test_chain, TestHelper,
+    use crate::{
+        cluster::cluster_manager::ClusterManager,
+        config::{self, Builder as ConfigBuilder},
+        endpoint::{Endpoint, Endpoints},
+        filters::SharedFilterChain,
+        proxy::sessions::UpstreamPacket,
+        proxy::Builder,
+        test_utils::{config_with_dummy_endpoint, load_test_filters, new_test_chain, TestHelper},
     };
 
     use super::*;
@@ -625,7 +621,7 @@ mod tests {
 
         async fn test(
             name: String,
-            chain: Arc<FilterChain>,
+            filter_chain: SharedFilterChain,
             expected: Expected,
             shutdown_rx: watch::Receiver<()>,
         ) -> Result {
@@ -656,7 +652,6 @@ mod tests {
                 Endpoints::new(vec![Endpoint::new(endpoint_address)]).unwrap(),
             )
             .unwrap();
-            let filter_manager = FilterManager::fixed(chain.clone());
             let proxy_metrics = ProxyMetrics::new().unwrap();
 
             for worker_id in 0..num_workers {
@@ -674,7 +669,7 @@ mod tests {
                         proxy_metrics: proxy_metrics.clone(),
                         session_metrics,
                         cluster_manager: cluster_manager.clone(),
-                        filter_manager: filter_manager.clone(),
+                        filter_chain: filter_chain.clone(),
                         session_manager: session_manager.clone(),
                         session_ttl: Duration::from_secs(10),
                         send_packets: send_packets.clone(),
@@ -731,7 +726,7 @@ mod tests {
         }
 
         let (_shutdown_tx, shutdown_rx) = watch::channel(());
-        let chain = Arc::new(FilterChain::new(vec![]).unwrap());
+        let chain = SharedFilterChain::empty();
         let result = test(
             "no filter".to_string(),
             chain,
@@ -780,7 +775,7 @@ mod tests {
                 .unwrap(),
             )
             .unwrap(),
-            filter_manager: FilterManager::fixed(Arc::new(FilterChain::new(vec![]).unwrap())),
+            filter_chain: SharedFilterChain::empty(),
             socket: socket.clone(),
             session_manager: session_manager.clone(),
             session_ttl: Duration::from_secs(10),

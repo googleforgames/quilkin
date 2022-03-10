@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+mod shared;
+
 use std::sync::Arc;
 
 use prometheus::{exponential_buckets, Error as PrometheusError, Histogram};
@@ -23,6 +25,8 @@ use crate::filters::{prelude::*, FilterRegistry};
 use crate::metrics::{histogram_opts, CollectorExt};
 
 const FILTER_LABEL: &str = "filter";
+
+pub use shared::SharedFilterChain;
 
 /// A chain of [`Filter`]s to be executed in order.
 ///
@@ -121,15 +125,46 @@ impl FilterChain {
 
     /// Validates the filter configurations in the provided config and constructs
     /// a FilterChain if all configurations are valid.
-    pub fn try_create(filter_configs: Vec<FilterConfig>) -> Result<Self, Error> {
+    pub fn try_create(filter_configs: &[FilterConfig]) -> Result<Self, Error> {
+        Self::try_from(filter_configs)
+    }
+
+    /// Returns an iterator over the current filters' configs.
+    pub(crate) fn get_configs(&self) -> impl Iterator<Item = (&str, Arc<serde_json::Value>)> {
+        self.filters
+            .iter()
+            .map(|(config_json, config)| (config_json.as_str(), config.config.clone()))
+    }
+}
+
+impl<const N: usize> TryFrom<&[FilterConfig; N]> for FilterChain {
+    type Error = Error;
+
+    fn try_from(filter_configs: &[FilterConfig; N]) -> Result<Self, Error> {
+        Self::try_from(&filter_configs[..])
+    }
+}
+
+impl<const N: usize> TryFrom<[FilterConfig; N]> for FilterChain {
+    type Error = Error;
+
+    fn try_from(filter_configs: [FilterConfig; N]) -> Result<Self, Error> {
+        Self::try_from(&filter_configs[..])
+    }
+}
+
+impl TryFrom<&[FilterConfig]> for FilterChain {
+    type Error = Error;
+
+    fn try_from(filter_configs: &[FilterConfig]) -> Result<Self, Error> {
         let mut filters = Vec::new();
 
         for filter_config in filter_configs {
             match FilterRegistry::get(
                 &filter_config.name,
-                CreateFilterArgs::fixed(filter_config.config),
+                CreateFilterArgs::fixed(filter_config.config.clone()),
             ) {
-                Ok(filter) => filters.push((filter_config.name, filter)),
+                Ok(filter) => filters.push((filter_config.name.clone(), filter)),
                 Err(err) => {
                     return Err(Error::Filter {
                         filter_name: filter_config.name.clone(),
@@ -139,14 +174,7 @@ impl FilterChain {
             }
         }
 
-        FilterChain::new(filters)
-    }
-
-    /// Returns an iterator over the current filters' configs.
-    pub(crate) fn get_configs(&self) -> impl Iterator<Item = (&str, Arc<serde_json::Value>)> {
-        self.filters
-            .iter()
-            .map(|(config_json, config)| (config_json.as_str(), config.config.clone()))
+        Self::new(filters)
     }
 }
 
@@ -199,7 +227,7 @@ mod tests {
         let provider = debug::factory();
 
         // everything is fine
-        let filter_configs = vec![config::Filter {
+        let filter_configs = &[config::Filter {
             name: provider.name().into(),
             config: Default::default(),
         }];
@@ -208,7 +236,7 @@ mod tests {
         assert_eq!(1, chain.filters.len());
 
         // uh oh, something went wrong
-        let filter_configs = vec![config::Filter {
+        let filter_configs = &[config::Filter {
             name: "this is so wrong".into(),
             config: Default::default(),
         }];
@@ -229,6 +257,7 @@ mod tests {
 
     #[test]
     fn chain_single_test_filter() {
+        crate::test_utils::load_test_filters();
         let chain = new_test_chain();
         let endpoints_fixture = endpoints();
 
