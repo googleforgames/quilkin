@@ -56,7 +56,7 @@ impl Cluster {
     }
 }
 
-/// Represents a full snapshot the all clusters.
+/// Represents a full snapshot of all clusters.
 #[derive(Clone, Debug, Default)]
 pub struct ClusterMap(HashMap<String, Cluster>);
 

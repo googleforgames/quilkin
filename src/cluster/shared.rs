@@ -32,7 +32,7 @@ pub(crate) struct SharedCluster {
 }
 
 impl SharedCluster {
-    /// Returns a ClusterManager backed by the fixed set of clusters provided in the config.
+    /// Returns a SharedCluster backed by the fixed set of clusters provided in the config.
     pub fn new(clusters: ClusterMap) -> MetricsResult<Self> {
         let metrics = Metrics::new()?;
 
