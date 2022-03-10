@@ -377,7 +377,7 @@
 
     <span class="kw">use</span> <span class="kw">crate</span>::{
         <span class="ident">endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">EndpointAddress</span>},
-        <span class="ident">filters</span>::{<span class="ident">manager::FilterManager</span>, <span class="ident">FilterChain</span>},
+        <span class="ident">filters::SharedFilterChain</span>,
         <span class="ident">proxy</span>::{
             <span class="ident">server::metrics::Metrics</span> <span class="kw">as</span> <span class="ident">ProxyMetrics</span>,
             <span class="ident">sessions</span>::{
@@ -420,7 +420,7 @@
             <span class="kw">let</span> <span class="ident">session_args</span> <span class="op">=</span> <span class="ident">SessionArgs</span> {
                 <span class="ident">metrics</span>: <span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>(),
                 <span class="ident">proxy_metrics</span>: <span class="ident">ProxyMetrics::new</span>().<span class="ident">unwrap</span>(),
-                <span class="ident">filter_manager</span>: <span class="ident">FilterManager::fixed</span>(<span class="ident">Arc::new</span>(<span class="ident">FilterChain::new</span>(<span class="macro">vec!</span>[]).<span class="ident">unwrap</span>())),
+                <span class="ident">filter_chain</span>: <span class="ident">SharedFilterChain::empty</span>(),
                 <span class="ident">source</span>: <span class="ident">from</span>,
                 <span class="ident">dest</span>: <span class="ident">endpoint</span>.<span class="ident">clone</span>(),
                 <span class="ident">sender</span>: <span class="ident">send</span>,
@@ -474,7 +474,7 @@
             <span class="kw">let</span> <span class="ident">session_args</span> <span class="op">=</span> <span class="ident">SessionArgs</span> {
                 <span class="ident">metrics</span>: <span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>(),
                 <span class="ident">proxy_metrics</span>: <span class="ident">ProxyMetrics::new</span>().<span class="ident">unwrap</span>(),
-                <span class="ident">filter_manager</span>: <span class="ident">FilterManager::fixed</span>(<span class="ident">Arc::new</span>(<span class="ident">FilterChain::new</span>(<span class="macro">vec!</span>[]).<span class="ident">unwrap</span>())),
+                <span class="ident">filter_chain</span>: <span class="ident">SharedFilterChain::empty</span>(),
                 <span class="ident">source</span>: <span class="ident">from</span>,
                 <span class="ident">dest</span>: <span class="ident">endpoint</span>.<span class="ident">clone</span>(),
                 <span class="ident">sender</span>: <span class="ident">send</span>,

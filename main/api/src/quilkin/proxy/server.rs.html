@@ -831,11 +831,6 @@
 <span id="829">829</span>
 <span id="830">830</span>
 <span id="831">831</span>
-<span id="832">832</span>
-<span id="833">833</span>
-<span id="834">834</span>
-<span id="835">835</span>
-<span id="836">836</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -867,7 +862,7 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">cluster::cluster_manager::SharedClusterManager</span>,
     <span class="ident">endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">EndpointAddress</span>},
-    <span class="ident">filters</span>::{<span class="ident">manager::SharedFilterManager</span>, <span class="ident">Filter</span>, <span class="ident">ReadContext</span>},
+    <span class="ident">filters</span>::{<span class="ident">Filter</span>, <span class="ident">ReadContext</span>, <span class="ident">SharedFilterChain</span>},
     <span class="ident">proxy</span>::{
         <span class="ident">builder</span>::{<span class="ident">ValidatedConfig</span>, <span class="ident">ValidatedSource</span>},
         <span class="ident">sessions</span>::{
@@ -896,7 +891,7 @@
 <span class="doccomment">/// Represents arguments to the `Server::run_recv_from` method.</span>
 <span class="kw">struct</span> <span class="ident">RunRecvFromArgs</span> {
     <span class="ident">cluster_manager</span>: <span class="ident">SharedClusterManager</span>,
-    <span class="ident">filter_manager</span>: <span class="ident">SharedFilterManager</span>,
+    <span class="ident">filter_chain</span>: <span class="ident">SharedFilterChain</span>,
     <span class="ident">socket</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">UdpSocket</span><span class="op">&gt;</span>,
     <span class="ident">session_manager</span>: <span class="ident">SessionManager</span>,
     <span class="ident">session_ttl</span>: <span class="ident">Duration</span>,
@@ -931,7 +926,7 @@
     <span class="ident">proxy_metrics</span>: <span class="ident">ProxyMetrics</span>,
     <span class="ident">session_metrics</span>: <span class="ident">SessionMetrics</span>,
     <span class="ident">cluster_manager</span>: <span class="ident">SharedClusterManager</span>,
-    <span class="ident">filter_manager</span>: <span class="ident">SharedFilterManager</span>,
+    <span class="ident">filter_chain</span>: <span class="ident">SharedFilterChain</span>,
     <span class="ident">session_manager</span>: <span class="ident">SessionManager</span>,
     <span class="ident">session_ttl</span>: <span class="ident">Duration</span>,
     <span class="ident">send_packets</span>: <span class="ident">mpsc::Sender</span><span class="op">&lt;</span><span class="ident">UpstreamPacket</span><span class="op">&gt;</span>,
@@ -953,13 +948,13 @@
 
         <span class="kw">let</span> <span class="ident">session_ttl</span> <span class="op">=</span> <span class="ident">Duration::from_secs</span>(<span class="ident">SESSION_TIMEOUT_SECONDS</span>);
 
-        <span class="kw">let</span> (<span class="ident">cluster_manager</span>, <span class="ident">filter_manager</span>) <span class="op">=</span>
+        <span class="kw">let</span> (<span class="ident">cluster_manager</span>, <span class="ident">filter_chain</span>) <span class="op">=</span>
             <span class="self">self</span>.<span class="ident">create_resource_managers</span>(<span class="ident">shutdown_rx</span>.<span class="ident">clone</span>()).<span class="kw">await</span><span class="question-mark">?</span>;
 
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">admin</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">admin</span> {
             <span class="ident">admin</span>.<span class="ident">run</span>(
                 <span class="ident">cluster_manager</span>.<span class="ident">clone</span>(),
-                <span class="ident">filter_manager</span>.<span class="ident">clone</span>(),
+                <span class="ident">filter_chain</span>.<span class="ident">clone</span>(),
                 <span class="ident">shutdown_rx</span>.<span class="ident">clone</span>(),
             );
         }
@@ -967,7 +962,7 @@
         <span class="self">self</span>.<span class="ident">run_receive_packet</span>(<span class="ident">socket</span>.<span class="ident">clone</span>(), <span class="ident">receive_packets</span>);
         <span class="kw">let</span> <span class="ident">recv_loop</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">run_recv_from</span>(<span class="ident">RunRecvFromArgs</span> {
             <span class="ident">cluster_manager</span>,
-            <span class="ident">filter_manager</span>,
+            <span class="ident">filter_chain</span>,
             <span class="ident">socket</span>,
             <span class="ident">session_manager</span>,
             <span class="ident">session_ttl</span>,
@@ -992,21 +987,22 @@
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">create_resource_managers</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">shutdown_rx</span>: <span class="ident">watch::Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">SharedClusterManager</span>, <span class="ident">SharedFilterManager</span>)<span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">SharedClusterManager</span>, <span class="ident">SharedFilterChain</span>)<span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">config</span>.<span class="ident">source</span> {
             <span class="ident">ValidatedSource::Static</span> {
                 <span class="ident">filter_chain</span>,
                 <span class="ident">endpoints</span>,
             } =&gt; {
-                <span class="kw">let</span> <span class="ident">manager</span> <span class="op">=</span> <span class="ident">StaticResourceManagers::new</span>(<span class="ident">endpoints</span>.<span class="ident">clone</span>(), <span class="ident">filter_chain</span>.<span class="ident">clone</span>())
+                <span class="kw">let</span> <span class="ident">manager</span> <span class="op">=</span> <span class="ident">StaticResourceManagers::new</span>(<span class="ident">endpoints</span>.<span class="ident">clone</span>(), <span class="ident">filter_chain</span>)
                     .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
                         <span class="macro">eyre::eyre!</span>(<span class="ident">err</span>).<span class="ident">wrap_err</span>(<span class="string">&quot;Failed to initialise static resource manager.&quot;</span>)
                     })<span class="question-mark">?</span>;
-                <span class="prelude-val">Ok</span>((<span class="ident">manager</span>.<span class="ident">cluster_manager</span>, <span class="ident">manager</span>.<span class="ident">filter_manager</span>))
+                <span class="prelude-val">Ok</span>((<span class="ident">manager</span>.<span class="ident">cluster_manager</span>, <span class="ident">manager</span>.<span class="ident">filter_chain</span>))
             }
             <span class="ident">ValidatedSource::Dynamic</span> { <span class="ident">management_servers</span> } =&gt; {
                 <span class="kw">let</span> <span class="ident">manager</span> <span class="op">=</span> <span class="ident">DynamicResourceManagers::new</span>(
                     <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">proxy</span>.<span class="ident">id</span>.<span class="ident">clone</span>(),
+                    <span class="ident">SharedFilterChain::empty</span>(),
                     <span class="ident">management_servers</span>.<span class="ident">to_vec</span>(),
                     <span class="ident">shutdown_rx</span>,
                 )
@@ -1029,7 +1025,7 @@
                     }
                 });
 
-                <span class="prelude-val">Ok</span>((<span class="ident">manager</span>.<span class="ident">cluster_manager</span>, <span class="ident">manager</span>.<span class="ident">filter_manager</span>))
+                <span class="prelude-val">Ok</span>((<span class="ident">manager</span>.<span class="ident">cluster_manager</span>, <span class="ident">manager</span>.<span class="ident">filter_chain</span>))
             }
         }
     }
@@ -1063,7 +1059,7 @@
                     <span class="ident">proxy_metrics</span>: <span class="ident">proxy_metrics</span>.<span class="ident">clone</span>(),
                     <span class="ident">session_metrics</span>: <span class="ident">session_metrics</span>.<span class="ident">clone</span>(),
                     <span class="ident">cluster_manager</span>: <span class="ident">args</span>.<span class="ident">cluster_manager</span>.<span class="ident">clone</span>(),
-                    <span class="ident">filter_manager</span>: <span class="ident">args</span>.<span class="ident">filter_manager</span>.<span class="ident">clone</span>(),
+                    <span class="ident">filter_chain</span>: <span class="ident">args</span>.<span class="ident">filter_chain</span>.<span class="ident">clone</span>(),
                     <span class="ident">session_manager</span>: <span class="ident">session_manager</span>.<span class="ident">clone</span>(),
                     <span class="ident">session_ttl</span>: <span class="ident">args</span>.<span class="ident">session_ttl</span>,
                     <span class="ident">send_packets</span>: <span class="ident">args</span>.<span class="ident">send_packets</span>.<span class="ident">clone</span>(),
@@ -1173,11 +1169,7 @@
             }
         };
 
-        <span class="kw">let</span> <span class="ident">filter_chain</span> <span class="op">=</span> {
-            <span class="kw">let</span> <span class="ident">filter_manager_guard</span> <span class="op">=</span> <span class="ident">args</span>.<span class="ident">filter_manager</span>.<span class="ident">read</span>();
-            <span class="ident">filter_manager_guard</span>.<span class="ident">get_filter_chain</span>()
-        };
-        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">filter_chain</span>.<span class="ident">read</span>(<span class="ident">ReadContext::new</span>(
+        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">args</span>.<span class="ident">filter_chain</span>.<span class="ident">read</span>(<span class="ident">ReadContext::new</span>(
             <span class="ident">endpoints</span>,
             <span class="ident">packet</span>.<span class="ident">source</span>.<span class="ident">clone</span>(),
             <span class="ident">packet</span>.<span class="ident">contents</span>,
@@ -1237,7 +1229,7 @@
                 <span class="kw">let</span> <span class="ident">session_args</span> <span class="op">=</span> <span class="ident">SessionArgs</span> {
                     <span class="ident">metrics</span>: <span class="ident">args</span>.<span class="ident">session_metrics</span>.<span class="ident">clone</span>(),
                     <span class="ident">proxy_metrics</span>: <span class="ident">args</span>.<span class="ident">proxy_metrics</span>.<span class="ident">clone</span>(),
-                    <span class="ident">filter_manager</span>: <span class="ident">args</span>.<span class="ident">filter_manager</span>.<span class="ident">clone</span>(),
+                    <span class="ident">filter_chain</span>: <span class="ident">args</span>.<span class="ident">filter_chain</span>.<span class="ident">clone</span>(),
                     <span class="ident">source</span>: <span class="ident">session_key</span>.<span class="ident">source</span>.<span class="ident">clone</span>(),
                     <span class="ident">dest</span>: <span class="ident">endpoint</span>.<span class="ident">clone</span>(),
                     <span class="ident">sender</span>: <span class="ident">args</span>.<span class="ident">send_packets</span>.<span class="ident">clone</span>(),
@@ -1334,20 +1326,19 @@
     <span class="kw">use</span> <span class="ident">std::time</span>::{<span class="ident">SystemTime</span>, <span class="ident">UNIX_EPOCH</span>};
 
     <span class="kw">use</span> <span class="ident">prometheus</span>::{<span class="ident">Histogram</span>, <span class="ident">HistogramOpts</span>};
-    <span class="kw">use</span> <span class="ident">tokio::sync::mpsc</span>;
-    <span class="kw">use</span> <span class="ident">tokio::time</span>;
-    <span class="kw">use</span> <span class="ident">tokio::time::timeout</span>;
-    <span class="kw">use</span> <span class="ident">tokio::time::Duration</span>;
+    <span class="kw">use</span> <span class="ident">tokio</span>::{
+        <span class="ident">sync::mpsc</span>,
+        <span class="ident">time</span>::{<span class="self">self</span>, <span class="ident">timeout</span>, <span class="ident">Duration</span>},
+    };
 
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::cluster::cluster_manager::ClusterManager</span>;
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::config</span>;
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::config::Builder</span> <span class="kw">as</span> <span class="ident">ConfigBuilder</span>;
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">Endpoints</span>};
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters</span>::{<span class="ident">manager::FilterManager</span>, <span class="ident">FilterChain</span>};
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::proxy::sessions::UpstreamPacket</span>;
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::proxy::Builder</span>;
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::test_utils</span>::{
-        <span class="ident">config_with_dummy_endpoint</span>, <span class="ident">load_test_filters</span>, <span class="ident">new_test_chain</span>, <span class="ident">TestHelper</span>,
+    <span class="kw">use</span> <span class="kw">crate</span>::{
+        <span class="ident">cluster::cluster_manager::ClusterManager</span>,
+        <span class="ident">config</span>::{<span class="self">self</span>, <span class="ident">Builder</span> <span class="kw">as</span> <span class="ident">ConfigBuilder</span>},
+        <span class="ident">endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">Endpoints</span>},
+        <span class="ident">filters::SharedFilterChain</span>,
+        <span class="ident">proxy::sessions::UpstreamPacket</span>,
+        <span class="ident">proxy::Builder</span>,
+        <span class="ident">test_utils</span>::{<span class="ident">config_with_dummy_endpoint</span>, <span class="ident">load_test_filters</span>, <span class="ident">new_test_chain</span>, <span class="ident">TestHelper</span>},
     };
 
     <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
@@ -1463,7 +1454,7 @@
 
         <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">test</span>(
             <span class="ident">name</span>: <span class="ident">String</span>,
-            <span class="ident">chain</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">FilterChain</span><span class="op">&gt;</span>,
+            <span class="ident">filter_chain</span>: <span class="ident">SharedFilterChain</span>,
             <span class="ident">expected</span>: <span class="ident">Expected</span>,
             <span class="ident">shutdown_rx</span>: <span class="ident">watch::Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
         ) -&gt; <span class="prelude-ty">Result</span> {
@@ -1494,7 +1485,6 @@
                 <span class="ident">Endpoints::new</span>(<span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(<span class="ident">endpoint_address</span>)]).<span class="ident">unwrap</span>(),
             )
             .<span class="ident">unwrap</span>();
-            <span class="kw">let</span> <span class="ident">filter_manager</span> <span class="op">=</span> <span class="ident">FilterManager::fixed</span>(<span class="ident">chain</span>.<span class="ident">clone</span>());
             <span class="kw">let</span> <span class="ident">proxy_metrics</span> <span class="op">=</span> <span class="ident">ProxyMetrics::new</span>().<span class="ident">unwrap</span>();
 
             <span class="kw">for</span> <span class="ident">worker_id</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">num_workers</span> {
@@ -1512,7 +1502,7 @@
                         <span class="ident">proxy_metrics</span>: <span class="ident">proxy_metrics</span>.<span class="ident">clone</span>(),
                         <span class="ident">session_metrics</span>,
                         <span class="ident">cluster_manager</span>: <span class="ident">cluster_manager</span>.<span class="ident">clone</span>(),
-                        <span class="ident">filter_manager</span>: <span class="ident">filter_manager</span>.<span class="ident">clone</span>(),
+                        <span class="ident">filter_chain</span>: <span class="ident">filter_chain</span>.<span class="ident">clone</span>(),
                         <span class="ident">session_manager</span>: <span class="ident">session_manager</span>.<span class="ident">clone</span>(),
                         <span class="ident">session_ttl</span>: <span class="ident">Duration::from_secs</span>(<span class="number">10</span>),
                         <span class="ident">send_packets</span>: <span class="ident">send_packets</span>.<span class="ident">clone</span>(),
@@ -1569,7 +1559,7 @@
         }
 
         <span class="kw">let</span> (<span class="ident">_shutdown_tx</span>, <span class="ident">shutdown_rx</span>) <span class="op">=</span> <span class="ident">watch::channel</span>(());
-        <span class="kw">let</span> <span class="ident">chain</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">FilterChain::new</span>(<span class="macro">vec!</span>[]).<span class="ident">unwrap</span>());
+        <span class="kw">let</span> <span class="ident">chain</span> <span class="op">=</span> <span class="ident">SharedFilterChain::empty</span>();
         <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">test</span>(
             <span class="string">&quot;no filter&quot;</span>.<span class="ident">to_string</span>(),
             <span class="ident">chain</span>,
@@ -1618,7 +1608,7 @@
                 .<span class="ident">unwrap</span>(),
             )
             .<span class="ident">unwrap</span>(),
-            <span class="ident">filter_manager</span>: <span class="ident">FilterManager::fixed</span>(<span class="ident">Arc::new</span>(<span class="ident">FilterChain::new</span>(<span class="macro">vec!</span>[]).<span class="ident">unwrap</span>())),
+            <span class="ident">filter_chain</span>: <span class="ident">SharedFilterChain::empty</span>(),
             <span class="ident">socket</span>: <span class="ident">socket</span>.<span class="ident">clone</span>(),
             <span class="ident">session_manager</span>: <span class="ident">session_manager</span>.<span class="ident">clone</span>(),
             <span class="ident">session_ttl</span>: <span class="ident">Duration::from_secs</span>(<span class="number">10</span>),

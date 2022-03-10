@@ -135,6 +135,8 @@
 <span id="133">133</span>
 <span id="134">134</span>
 <span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -159,9 +161,11 @@
 <span class="kw">use</span> <span class="ident">hyper</span>::{<span class="ident">Body</span>, <span class="ident">Method</span>, <span class="ident">Request</span>, <span class="ident">Response</span>, <span class="ident">Server</span> <span class="kw">as</span> <span class="ident">HyperServer</span>, <span class="ident">StatusCode</span>};
 <span class="kw">use</span> <span class="ident">tokio::sync::watch</span>;
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::cluster::cluster_manager::SharedClusterManager</span>;
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters::manager::SharedFilterManager</span>;
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::proxy</span>::{<span class="ident">config_dump</span>, <span class="ident">Health</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::{
+    <span class="ident">cluster::cluster_manager::SharedClusterManager</span>,
+    <span class="ident">filters::SharedFilterChain</span>,
+    <span class="ident">proxy</span>::{<span class="ident">config_dump</span>, <span class="ident">Health</span>},
+};
 
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Admin</span> {
     <span class="doccomment">/// The address that the Admin server starts on</span>
@@ -173,7 +177,7 @@
 <span class="kw">struct</span> <span class="ident">HandleRequestArgs</span> {
     <span class="ident">health</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Health</span><span class="op">&gt;</span>,
     <span class="ident">cluster_manager</span>: <span class="ident">SharedClusterManager</span>,
-    <span class="ident">filter_manager</span>: <span class="ident">SharedFilterManager</span>,
+    <span class="ident">filter_manager</span>: <span class="ident">SharedFilterChain</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">Admin</span> {
@@ -187,7 +191,7 @@
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">run</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">cluster_manager</span>: <span class="ident">SharedClusterManager</span>,
-        <span class="ident">filter_manager</span>: <span class="ident">SharedFilterManager</span>,
+        <span class="ident">filter_manager</span>: <span class="ident">SharedFilterChain</span>,
         <span class="kw-2">mut</span> <span class="ident">shutdown_rx</span>: <span class="ident">watch::Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
     ) {
         <span class="macro">tracing::info!</span>(<span class="ident">address</span> <span class="op">=</span> <span class="op">%</span><span class="self">self</span>.<span class="ident">addr</span>, <span class="string">&quot;Starting admin endpoint&quot;</span>);

@@ -106,7 +106,6 @@
 <span id="104">104</span>
 <span id="105">105</span>
 <span id="106">106</span>
-<span id="107">107</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -133,7 +132,6 @@
 <span class="kw">mod</span> <span class="ident">write</span>;
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod</span> <span class="ident">chain</span>;
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod</span> <span class="ident">manager</span>;
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">capture</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">compress</span>;
@@ -167,7 +165,7 @@
     <span class="ident">write</span>::{<span class="ident">WriteContext</span>, <span class="ident">WriteResponse</span>},
 };
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">use</span> <span class="ident"><span class="self">self</span>::chain::FilterChain</span>;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">use</span> <span class="ident"><span class="self">self</span>::chain</span>::{<span class="ident">FilterChain</span>, <span class="ident">SharedFilterChain</span>};
 
 <span class="doccomment">/// Trait for routing and manipulating packets.</span>
 <span class="doccomment">///</span>

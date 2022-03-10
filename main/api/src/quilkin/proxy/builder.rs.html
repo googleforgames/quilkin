@@ -352,9 +352,9 @@
 <span class="kw">use</span> <span class="ident">tonic::transport::Endpoint</span> <span class="kw">as</span> <span class="ident">TonicEndpoint</span>;
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">config</span>::{<span class="ident">Config</span>, <span class="ident">ManagementServer</span>, <span class="ident">Proxy</span>, <span class="ident">Source</span>, <span class="ident">ValidationError</span>, <span class="ident">ValueInvalidArgs</span>},
+    <span class="ident">config</span>::{<span class="self">self</span>, <span class="ident">Config</span>, <span class="ident">ManagementServer</span>, <span class="ident">Proxy</span>, <span class="ident">Source</span>, <span class="ident">ValidationError</span>, <span class="ident">ValueInvalidArgs</span>},
     <span class="ident">endpoint::Endpoints</span>,
-    <span class="ident">filters</span>::{<span class="ident">chain::Error</span> <span class="kw">as</span> <span class="ident">FilterChainError</span>, <span class="ident">FilterChain</span>},
+    <span class="ident">filters::chain::Error</span> <span class="kw">as</span> <span class="ident">FilterChainError</span>,
     <span class="ident">proxy</span>::{
         <span class="ident">server::metrics::Metrics</span> <span class="kw">as</span> <span class="ident">ProxyMetrics</span>, <span class="ident">sessions::metrics::Metrics</span> <span class="kw">as</span> <span class="ident">SessionMetrics</span>,
         <span class="ident">Admin</span> <span class="kw">as</span> <span class="ident">ProxyAdmin</span>, <span class="ident">Health</span>, <span class="ident">Server</span>,
@@ -363,7 +363,7 @@
 
 <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">enum</span> <span class="ident">ValidatedSource</span> {
     <span class="ident">Static</span> {
-        <span class="ident">filter_chain</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">FilterChain</span><span class="op">&gt;</span>,
+        <span class="ident">filter_chain</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">config::Filter</span><span class="op">&gt;</span>,
         <span class="ident">endpoints</span>: <span class="ident">Endpoints</span>,
     },
     <span class="ident">Dynamic</span> {
@@ -461,7 +461,7 @@
                     .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">ValidationError::EmptyList</span>(<span class="string">&quot;static.endpoints&quot;</span>.<span class="ident">into</span>()))<span class="question-mark">?</span>;
 
                 <span class="ident">ValidatedSource::Static</span> {
-                    <span class="ident">filter_chain</span>: <span class="ident">Arc::new</span>(<span class="ident">FilterChain::try_create</span>(<span class="ident">filters</span>.<span class="ident">clone</span>())<span class="question-mark">?</span>),
+                    <span class="ident">filter_chain</span>: <span class="ident">filters</span>.<span class="ident">to_owned</span>(),
                     <span class="ident">endpoints</span>,
                 }
             }

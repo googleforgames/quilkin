@@ -594,13 +594,6 @@
 <span id="592">592</span>
 <span id="593">593</span>
 <span id="594">594</span>
-<span id="595">595</span>
-<span id="596">596</span>
-<span id="597">597</span>
-<span id="598">598</span>
-<span id="599">599</span>
-<span id="600">600</span>
-<span id="601">601</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -635,7 +628,7 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">EndpointAddress</span>},
-    <span class="ident">filters</span>::{<span class="ident">manager::SharedFilterManager</span>, <span class="ident">Filter</span>, <span class="ident">WriteContext</span>},
+    <span class="ident">filters</span>::{<span class="ident">Filter</span>, <span class="ident">SharedFilterChain</span>, <span class="ident">WriteContext</span>},
     <span class="ident">proxy</span>::{
         <span class="ident">server::metrics::Metrics</span> <span class="kw">as</span> <span class="ident">ProxyMetrics</span>,
         <span class="ident">sessions</span>::{<span class="ident">error::Error</span>, <span class="ident">metrics::Metrics</span>},
@@ -649,7 +642,7 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Session</span> {
     <span class="ident">metrics</span>: <span class="ident">Metrics</span>,
     <span class="ident">proxy_metrics</span>: <span class="ident">ProxyMetrics</span>,
-    <span class="ident">filter_manager</span>: <span class="ident">SharedFilterManager</span>,
+    <span class="ident">filter_chain</span>: <span class="ident">SharedFilterChain</span>,
     <span class="doccomment">/// created_at is time at which the session was created</span>
     <span class="ident">created_at</span>: <span class="ident">Instant</span>,
     <span class="ident">socket</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">UdpSocket</span><span class="op">&gt;</span>,
@@ -679,7 +672,7 @@
 <span class="doccomment">/// ReceivedPacketContext contains state needed to process a received packet.</span>
 <span class="kw">struct</span> <span class="ident">ReceivedPacketContext</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
     <span class="ident">packet</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> [<span class="ident">u8</span>],
-    <span class="ident">filter_manager</span>: <span class="ident">SharedFilterManager</span>,
+    <span class="ident">filter_chain</span>: <span class="ident">SharedFilterChain</span>,
     <span class="ident">endpoint</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Endpoint</span>,
     <span class="ident">source</span>: <span class="ident">EndpointAddress</span>,
     <span class="ident">dest</span>: <span class="ident">EndpointAddress</span>,
@@ -719,7 +712,7 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SessionArgs</span> {
     <span class="kw">pub</span> <span class="ident">metrics</span>: <span class="ident">Metrics</span>,
     <span class="kw">pub</span> <span class="ident">proxy_metrics</span>: <span class="ident">ProxyMetrics</span>,
-    <span class="kw">pub</span> <span class="ident">filter_manager</span>: <span class="ident">SharedFilterManager</span>,
+    <span class="kw">pub</span> <span class="ident">filter_chain</span>: <span class="ident">SharedFilterChain</span>,
     <span class="kw">pub</span> <span class="ident">source</span>: <span class="ident">EndpointAddress</span>,
     <span class="kw">pub</span> <span class="ident">dest</span>: <span class="ident">Endpoint</span>,
     <span class="kw">pub</span> <span class="ident">sender</span>: <span class="ident">mpsc::Sender</span><span class="op">&lt;</span><span class="ident">UpstreamPacket</span><span class="op">&gt;</span>,
@@ -747,7 +740,7 @@
         <span class="kw">let</span> <span class="ident">s</span> <span class="op">=</span> <span class="ident">Session</span> {
             <span class="ident">metrics</span>: <span class="ident">args</span>.<span class="ident">metrics</span>,
             <span class="ident">proxy_metrics</span>: <span class="ident">args</span>.<span class="ident">proxy_metrics</span>,
-            <span class="ident">filter_manager</span>: <span class="ident">args</span>.<span class="ident">filter_manager</span>,
+            <span class="ident">filter_chain</span>: <span class="ident">args</span>.<span class="ident">filter_chain</span>,
             <span class="ident">socket</span>: <span class="ident">socket</span>.<span class="ident">clone</span>(),
             <span class="ident">source</span>: <span class="ident">args</span>.<span class="ident">source</span>,
             <span class="ident">dest</span>: <span class="ident">args</span>.<span class="ident">dest</span>,
@@ -774,7 +767,7 @@
     ) {
         <span class="kw">let</span> <span class="ident">source</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">source</span>.<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">expiration</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">expiration</span>.<span class="ident">clone</span>();
-        <span class="kw">let</span> <span class="ident">filter_manager</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">filter_manager</span>.<span class="ident">clone</span>();
+        <span class="kw">let</span> <span class="ident">filter_chain</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">filter_chain</span>.<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">dest</span>.<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">metrics</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">proxy_metrics</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">proxy_metrics</span>.<span class="ident">clone</span>();
@@ -799,7 +792,7 @@
                                     <span class="kw-2">&amp;</span><span class="ident">expiration</span>,
                                     <span class="ident">ttl</span>,
                                     <span class="ident">ReceivedPacketContext</span> {
-                                        <span class="ident">filter_manager</span>: <span class="ident">filter_manager</span>.<span class="ident">clone</span>(),
+                                        <span class="ident">filter_chain</span>: <span class="ident">filter_chain</span>.<span class="ident">clone</span>(),
                                         <span class="ident">packet</span>: <span class="kw-2">&amp;</span><span class="ident">buf</span>[..<span class="ident">size</span>],
                                         <span class="ident">endpoint</span>: <span class="kw-2">&amp;</span><span class="ident">endpoint</span>,
                                         <span class="ident">source</span>: <span class="ident">recv_addr</span>.<span class="ident">into</span>(),
@@ -841,7 +834,7 @@
     ) {
         <span class="kw">let</span> <span class="ident">ReceivedPacketContext</span> {
             <span class="ident">packet</span>,
-            <span class="ident">filter_manager</span>,
+            <span class="ident">filter_chain</span>,
             <span class="ident">endpoint</span>,
             <span class="ident">source</span>: <span class="ident">from</span>,
             <span class="ident">dest</span>: <span class="ident">to</span>,
@@ -853,11 +846,6 @@
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">error</span>) <span class="op">=</span> <span class="ident">Session::do_update_expiration</span>(<span class="ident">expiration</span>, <span class="ident">ttl</span>) {
             <span class="macro">tracing::warn!</span>(<span class="op">%</span><span class="ident">error</span>, <span class="string">&quot;Error updating session expiration&quot;</span>)
         }
-
-        <span class="kw">let</span> <span class="ident">filter_chain</span> <span class="op">=</span> {
-            <span class="kw">let</span> <span class="ident">filter_manager_guard</span> <span class="op">=</span> <span class="ident">filter_manager</span>.<span class="ident">read</span>();
-            <span class="ident">filter_manager_guard</span>.<span class="ident">get_filter_chain</span>()
-        };
 
         <span class="kw">let</span> <span class="ident">write_result</span>: <span class="ident">futures::future::OptionFuture</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">filter_chain</span>
             .<span class="ident">write</span>(<span class="ident">WriteContext::new</span>(
@@ -967,11 +955,10 @@
     <span class="kw">use</span> <span class="ident">prometheus</span>::{<span class="ident">Histogram</span>, <span class="ident">HistogramOpts</span>};
     <span class="kw">use</span> <span class="ident">tokio::time::timeout</span>;
 
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters::FilterChain</span>;
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::test_utils</span>::{<span class="ident">new_test_chain</span>, <span class="ident">TestHelper</span>};
 
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">EndpointAddress</span>};
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters::manager::FilterManager</span>;
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters::SharedFilterChain</span>;
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::proxy::sessions::session</span>::{<span class="ident">ReceivedPacketContext</span>, <span class="ident">SessionArgs</span>};
     <span class="kw">use</span> <span class="ident">tokio::sync::mpsc</span>;
 
@@ -986,7 +973,7 @@
         <span class="kw">let</span> <span class="ident">sess</span> <span class="op">=</span> <span class="ident">Session::new</span>(<span class="ident">SessionArgs</span> {
             <span class="ident">metrics</span>: <span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>(),
             <span class="ident">proxy_metrics</span>: <span class="ident">ProxyMetrics::new</span>().<span class="ident">unwrap</span>(),
-            <span class="ident">filter_manager</span>: <span class="ident">FilterManager::fixed</span>(<span class="ident">Arc::new</span>(<span class="ident">FilterChain::new</span>(<span class="macro">vec!</span>[]).<span class="ident">unwrap</span>())),
+            <span class="ident">filter_chain</span>: <span class="ident">SharedFilterChain::empty</span>(),
             <span class="ident">source</span>: <span class="ident">addr</span>.<span class="ident">clone</span>(),
             <span class="ident">dest</span>: <span class="ident">endpoint</span>,
             <span class="ident">sender</span>: <span class="ident">send_packet</span>,
@@ -1035,7 +1022,7 @@
         <span class="kw">let</span> <span class="ident">session</span> <span class="op">=</span> <span class="ident">Session::new</span>(<span class="ident">SessionArgs</span> {
             <span class="ident">metrics</span>: <span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>(),
             <span class="ident">proxy_metrics</span>: <span class="ident">ProxyMetrics::new</span>().<span class="ident">unwrap</span>(),
-            <span class="ident">filter_manager</span>: <span class="ident">FilterManager::fixed</span>(<span class="ident">Arc::new</span>(<span class="ident">FilterChain::new</span>(<span class="macro">vec!</span>[]).<span class="ident">unwrap</span>())),
+            <span class="ident">filter_chain</span>: <span class="ident">SharedFilterChain::empty</span>(),
             <span class="ident">source</span>: <span class="ident">addr</span>,
             <span class="ident">dest</span>: <span class="ident">endpoint</span>.<span class="ident">clone</span>(),
             <span class="ident">sender</span>,
@@ -1051,7 +1038,6 @@
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_recv_packet</span>() {
         <span class="kw">let</span> <span class="ident">histogram</span> <span class="op">=</span> <span class="ident">Histogram::with_opts</span>(<span class="ident">HistogramOpts::new</span>(<span class="string">&quot;test&quot;</span>, <span class="string">&quot;test&quot;</span>)).<span class="ident">unwrap</span>();
 
-        <span class="kw">let</span> <span class="ident">chain</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">FilterChain::new</span>(<span class="macro">vec!</span>[]).<span class="ident">unwrap</span>());
         <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="ident">Endpoint::new</span>(<span class="string">&quot;127.0.1.1:80&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>());
         <span class="kw">let</span> <span class="ident">dest</span>: <span class="ident">EndpointAddress</span> <span class="op">=</span> (<span class="ident">Ipv4Addr::LOCALHOST</span>, <span class="number">88</span>).<span class="ident">into</span>();
         <span class="kw">let</span> (<span class="kw-2">mut</span> <span class="ident">sender</span>, <span class="kw-2">mut</span> <span class="ident">receiver</span>) <span class="op">=</span> <span class="ident">mpsc::channel</span>::<span class="op">&lt;</span><span class="ident">UpstreamPacket</span><span class="op">&gt;</span>(<span class="number">10</span>);
@@ -1072,7 +1058,7 @@
             <span class="ident">Duration::from_secs</span>(<span class="number">10</span>),
             <span class="ident">ReceivedPacketContext</span> {
                 <span class="ident">packet</span>: <span class="ident">msg</span>.<span class="ident">as_bytes</span>(),
-                <span class="ident">filter_manager</span>: <span class="ident">FilterManager::fixed</span>(<span class="ident">chain</span>),
+                <span class="ident">filter_chain</span>: <span class="ident"><span class="kw">crate</span>::filters::SharedFilterChain::empty</span>(),
                 <span class="ident">endpoint</span>: <span class="kw-2">&amp;</span><span class="ident">endpoint</span>,
                 <span class="ident">source</span>: <span class="ident">endpoint</span>.<span class="ident">address</span>.<span class="ident">clone</span>(),
                 <span class="ident">dest</span>: <span class="ident">dest</span>.<span class="ident">clone</span>(),
@@ -1097,14 +1083,14 @@
         ));
         <span class="kw">let</span> <span class="ident">initial_expiration</span> <span class="op">=</span> <span class="ident">expiration</span>.<span class="ident">load</span>(<span class="ident">Ordering::Relaxed</span>);
         <span class="comment">// add filter</span>
-        <span class="kw">let</span> <span class="ident">chain</span> <span class="op">=</span> <span class="ident">new_test_chain</span>();
+        <span class="kw">let</span> <span class="ident">filter_chain</span> <span class="op">=</span> <span class="ident">new_test_chain</span>();
         <span class="ident">Session::process_recv_packet</span>(
             <span class="kw-2">&amp;</span><span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>(),
             <span class="kw-2">&amp;mut</span> <span class="ident">sender</span>,
             <span class="kw-2">&amp;</span><span class="ident">expiration</span>,
             <span class="ident">Duration::from_secs</span>(<span class="number">10</span>),
             <span class="ident">ReceivedPacketContext</span> {
-                <span class="ident">filter_manager</span>: <span class="ident">FilterManager::fixed</span>(<span class="ident">chain</span>),
+                <span class="ident">filter_chain</span>,
                 <span class="ident">packet</span>: <span class="ident">msg</span>.<span class="ident">as_bytes</span>(),
                 <span class="ident">endpoint</span>: <span class="kw-2">&amp;</span><span class="ident">endpoint</span>,
                 <span class="ident">source</span>: <span class="ident">endpoint</span>.<span class="ident">address</span>.<span class="ident">clone</span>(),
@@ -1137,7 +1123,7 @@
         <span class="kw">let</span> <span class="ident">session</span> <span class="op">=</span> <span class="ident">Session::new</span>(<span class="ident">SessionArgs</span> {
             <span class="ident">metrics</span>: <span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>(),
             <span class="ident">proxy_metrics</span>: <span class="ident">ProxyMetrics::new</span>().<span class="ident">unwrap</span>(),
-            <span class="ident">filter_manager</span>: <span class="ident">FilterManager::fixed</span>(<span class="ident">Arc::new</span>(<span class="ident">FilterChain::new</span>(<span class="macro">vec!</span>[]).<span class="ident">unwrap</span>())),
+            <span class="ident">filter_chain</span>: <span class="ident">SharedFilterChain::empty</span>(),
             <span class="ident">source</span>: <span class="ident">addr</span>,
             <span class="ident">dest</span>: <span class="ident">endpoint</span>,
             <span class="ident">sender</span>: <span class="ident">send_packet</span>,
@@ -1160,7 +1146,7 @@
         <span class="kw">let</span> <span class="ident">session</span> <span class="op">=</span> <span class="ident">Session::new</span>(<span class="ident">SessionArgs</span> {
             <span class="ident">metrics</span>: <span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>(),
             <span class="ident">proxy_metrics</span>: <span class="ident">ProxyMetrics::new</span>().<span class="ident">unwrap</span>(),
-            <span class="ident">filter_manager</span>: <span class="ident">FilterManager::fixed</span>(<span class="ident">Arc::new</span>(<span class="ident">FilterChain::new</span>(<span class="macro">vec!</span>[]).<span class="ident">unwrap</span>())),
+            <span class="ident">filter_chain</span>: <span class="ident">SharedFilterChain::empty</span>(),
             <span class="ident">source</span>: <span class="ident">addr</span>.<span class="ident">clone</span>(),
             <span class="ident">dest</span>: <span class="ident">Endpoint::new</span>(<span class="ident">addr</span>),
             <span class="ident">sender</span>,
@@ -1184,7 +1170,7 @@
         <span class="kw">let</span> <span class="ident">session</span> <span class="op">=</span> <span class="ident">Session::new</span>(<span class="ident">SessionArgs</span> {
             <span class="ident">metrics</span>: <span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>(),
             <span class="ident">proxy_metrics</span>: <span class="ident">ProxyMetrics::new</span>().<span class="ident">unwrap</span>(),
-            <span class="ident">filter_manager</span>: <span class="ident">FilterManager::fixed</span>(<span class="ident">Arc::new</span>(<span class="ident">FilterChain::new</span>(<span class="macro">vec!</span>[]).<span class="ident">unwrap</span>())),
+            <span class="ident">filter_chain</span>: <span class="ident">SharedFilterChain::empty</span>(),
             <span class="ident">source</span>: <span class="ident">addr</span>.<span class="ident">clone</span>(),
             <span class="ident">dest</span>: <span class="ident">Endpoint::new</span>(<span class="ident">addr</span>),
             <span class="ident">sender</span>: <span class="ident">send_packet</span>,
