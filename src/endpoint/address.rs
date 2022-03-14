@@ -23,7 +23,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::xds::envoy::config::core::v3::{
+use crate::xds::config::core::v3::{
     address::Address as EnvoyAddress, SocketAddress as EnvoySocketAddress,
 };
 
@@ -162,7 +162,7 @@ impl TryFrom<EnvoySocketAddress> for EndpointAddress {
     type Error = eyre::Error;
 
     fn try_from(value: EnvoySocketAddress) -> Result<Self, Self::Error> {
-        use crate::xds::envoy::config::core::v3::socket_address::PortSpecifier;
+        use crate::xds::config::core::v3::socket_address::PortSpecifier;
 
         let address = Self {
             host: value.address.parse()?,

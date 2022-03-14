@@ -3,7 +3,7 @@
 	url = https://github.com/envoyproxy/data-plane-api.git
 [submodule "proto/udpa"]
 	path = proto/udpa
-	url = https://github.com/cncf/udpa.git
+	url = https://github.com/cncf/xds.git
 [submodule "proto/protoc-gen-validate"]
 	path = proto/protoc-gen-validate
 	url = https://github.com/envoyproxy/protoc-gen-validate.git

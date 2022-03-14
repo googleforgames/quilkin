@@ -16,7 +16,7 @@
 
 use std::{collections::HashMap, convert::TryFrom, sync::Arc};
 
-use crate::xds::envoy::config::core::v3::Metadata as ProtoMetadata;
+use crate::xds::config::core::v3::Metadata as ProtoMetadata;
 
 /// Shared state between [`Filter`][crate::filters::Filter]s during processing for a single packet.
 pub type DynamicMetadata = HashMap<Arc<String>, Value>;

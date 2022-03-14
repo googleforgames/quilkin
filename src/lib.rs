@@ -22,7 +22,6 @@ mod proxy;
 mod runner;
 pub(crate) mod ttl_map;
 pub(crate) mod utils;
-pub(crate) mod xds;
 
 pub mod config;
 pub mod endpoint;
@@ -30,6 +29,8 @@ pub mod filters;
 
 #[doc(hidden)]
 pub mod test_utils;
+#[doc(hidden)]
+pub mod xds;
 
 pub type Result<T, E = eyre::Error> = std::result::Result<T, E>;
 

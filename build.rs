@@ -18,6 +18,7 @@
 // we need for XDS GRPC communication.
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let proto_files = vec![
+        "proto/data-plane-api/envoy/config/common/matcher/v3/matcher.proto",
         "proto/data-plane-api/envoy/config/accesslog/v3/accesslog.proto",
         "proto/data-plane-api/envoy/config/cluster/v3/cluster.proto",
         "proto/data-plane-api/envoy/config/listener/v3/listener.proto",
