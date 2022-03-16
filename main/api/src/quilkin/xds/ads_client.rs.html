@@ -528,11 +528,6 @@
 <span id="526">526</span>
 <span id="527">527</span>
 <span id="528">528</span>
-<span id="529">529</span>
-<span id="530">530</span>
-<span id="531">531</span>
-<span id="532">532</span>
-<span id="533">533</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -549,7 +544,6 @@
  * limitations under the License.
  */</span>
 
-<span class="kw">use</span> <span class="ident">std::collections::HashMap</span>;
 <span class="kw">use</span> <span class="ident">std::time::Duration</span>;
 
 <span class="kw">use</span> <span class="ident">prometheus::Result</span> <span class="kw">as</span> <span class="ident">MetricsResult</span>;
@@ -572,7 +566,7 @@
 };
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">cluster::Cluster</span>,
+    <span class="ident">cluster::SharedCluster</span>,
     <span class="ident">config::ManagementServer</span>,
     <span class="ident">xds</span>::{
         <span class="ident">cluster::ClusterManager</span>,
@@ -590,9 +584,6 @@
     },
     <span class="prelude-ty">Result</span>,
 };
-
-<span class="doccomment">/// Represents a full snapshot the all clusters.</span>
-<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">ClusterUpdate</span> <span class="op">=</span> <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Cluster</span><span class="op">&gt;</span>;
 
 <span class="doccomment">/// Use a bounded channel of size 1 on the channels between</span>
 <span class="doccomment">///   - the xds listeners and their associated resource manager.</span>
@@ -623,9 +614,9 @@
     <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">run</span>(
         <span class="self">self</span>,
         <span class="ident">node_id</span>: <span class="ident">String</span>,
-        <span class="ident">filter_chain</span>: <span class="ident"><span class="kw">crate</span>::filters::SharedFilterChain</span>,
+        <span class="ident">cluster</span>: <span class="ident">SharedCluster</span>,
         <span class="ident">management_servers</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ManagementServer</span><span class="op">&gt;</span>,
-        <span class="ident">cluster_updates_tx</span>: <span class="ident">mpsc::Sender</span><span class="op">&lt;</span><span class="ident">ClusterUpdate</span><span class="op">&gt;</span>,
+        <span class="ident">filter_chain</span>: <span class="ident"><span class="kw">crate</span>::filters::SharedFilterChain</span>,
         <span class="kw-2">mut</span> <span class="ident">shutdown_rx</span>: <span class="ident">watch::Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">metrics</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">metrics</span>;
@@ -682,8 +673,7 @@
         <span class="kw">let</span> <span class="ident">handle</span> <span class="op">=</span> <span class="ident">tryhard::retry_fn</span>(<span class="op">|</span><span class="op">|</span> {
             <span class="kw">let</span> (<span class="ident">discovery_req_tx</span>, <span class="ident">discovery_req_rx</span>) <span class="op">=</span>
                 <span class="ident">mpsc::channel</span>::<span class="op">&lt;</span><span class="ident">DiscoveryRequest</span><span class="op">&gt;</span>(<span class="ident">UPDATES_CHANNEL_BUFFER_SIZE</span>);
-            <span class="kw">let</span> <span class="ident">cluster_manager</span> <span class="op">=</span>
-                <span class="ident">ClusterManager::new</span>(<span class="ident">cluster_updates_tx</span>.<span class="ident">clone</span>(), <span class="ident">discovery_req_tx</span>.<span class="ident">clone</span>());
+            <span class="kw">let</span> <span class="ident">cluster_manager</span> <span class="op">=</span> <span class="ident">ClusterManager::new</span>(<span class="ident">cluster</span>.<span class="ident">clone</span>(), <span class="ident">discovery_req_tx</span>.<span class="ident">clone</span>());
             <span class="kw">let</span> <span class="ident">listener_manager</span> <span class="op">=</span> <span class="ident">ListenerManager::new</span>(<span class="ident">filter_chain</span>.<span class="ident">clone</span>(), <span class="ident">discovery_req_tx</span>);
 
             <span class="kw">let</span> <span class="ident">resource_handlers</span> <span class="op">=</span> <span class="ident">ResourceHandlers</span> {
@@ -1010,15 +1000,15 @@
     <span class="doccomment">/// than backoff or retry.</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">invalid_url</span>() {
         <span class="kw">let</span> <span class="ident">filter_chain</span> <span class="op">=</span> <span class="ident"><span class="kw">crate</span>::filters::SharedFilterChain::empty</span>();
+        <span class="kw">let</span> <span class="ident">cluster</span> <span class="op">=</span> <span class="ident"><span class="kw">crate</span>::cluster::SharedCluster::empty</span>().<span class="ident">unwrap</span>();
         <span class="kw">let</span> (<span class="ident">_shutdown_tx</span>, <span class="ident">shutdown_rx</span>) <span class="op">=</span> <span class="ident">watch::channel</span>::<span class="op">&lt;</span>()<span class="op">&gt;</span>(());
-        <span class="kw">let</span> (<span class="ident">cluster_updates_tx</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">mpsc::channel</span>(<span class="number">10</span>);
         <span class="kw">let</span> <span class="ident">run</span> <span class="op">=</span> <span class="ident">AdsClient::new</span>().<span class="ident">unwrap</span>().<span class="ident">run</span>(
             <span class="string">&quot;test-id&quot;</span>.<span class="ident">into</span>(),
-            <span class="ident">filter_chain</span>,
+            <span class="ident">cluster</span>,
             <span class="macro">vec!</span>[<span class="ident">ManagementServer</span> {
                 <span class="ident">address</span>: <span class="string">&quot;localhost:18000&quot;</span>.<span class="ident">into</span>(),
             }],
-            <span class="ident">cluster_updates_tx</span>,
+            <span class="ident">filter_chain</span>,
             <span class="ident">shutdown_rx</span>,
         );
 

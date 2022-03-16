@@ -919,9 +919,9 @@
         <span class="comment">// read compress</span>
         <span class="kw">let</span> <span class="ident">read_response</span> <span class="op">=</span> <span class="ident">compress</span>
             .<span class="ident">read</span>(<span class="ident">ReadContext::new</span>(
-                <span class="ident">UpstreamEndpoints::from</span>(
-                    <span class="ident">Endpoints::new</span>(<span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(<span class="string">&quot;127.0.0.1:80&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>())]).<span class="ident">unwrap</span>(),
-                ),
+                <span class="ident">UpstreamEndpoints::from</span>(<span class="ident">Endpoints::new</span>(<span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(
+                    <span class="string">&quot;127.0.0.1:80&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
+                )])),
                 <span class="string">&quot;127.0.0.1:8080&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
                 <span class="ident">expected</span>.<span class="ident">clone</span>(),
             ))
@@ -1028,9 +1028,9 @@
         );
 
         <span class="kw">let</span> <span class="ident">read_response</span> <span class="op">=</span> <span class="ident">compression</span>.<span class="ident">read</span>(<span class="ident">ReadContext::new</span>(
-            <span class="ident">UpstreamEndpoints::from</span>(
-                <span class="ident">Endpoints::new</span>(<span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(<span class="string">&quot;127.0.0.1:80&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>())]).<span class="ident">unwrap</span>(),
-            ),
+            <span class="ident">UpstreamEndpoints::from</span>(<span class="ident">Endpoints::new</span>(<span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(
+                <span class="string">&quot;127.0.0.1:80&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
+            )])),
             <span class="string">&quot;127.0.0.1:8080&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
             <span class="string">b&quot;hello&quot;</span>.<span class="ident">to_vec</span>(),
         ));
@@ -1059,9 +1059,9 @@
         );
 
         <span class="kw">let</span> <span class="ident">read_response</span> <span class="op">=</span> <span class="ident">compression</span>.<span class="ident">read</span>(<span class="ident">ReadContext::new</span>(
-            <span class="ident">UpstreamEndpoints::from</span>(
-                <span class="ident">Endpoints::new</span>(<span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(<span class="string">&quot;127.0.0.1:80&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>())]).<span class="ident">unwrap</span>(),
-            ),
+            <span class="ident">UpstreamEndpoints::from</span>(<span class="ident">Endpoints::new</span>(<span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(
+                <span class="string">&quot;127.0.0.1:80&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
+            )])),
             <span class="string">&quot;127.0.0.1:8080&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
             <span class="string">b&quot;hello&quot;</span>.<span class="ident">to_vec</span>(),
         ));
@@ -1144,9 +1144,9 @@
         <span class="comment">// read decompress</span>
         <span class="kw">let</span> <span class="ident">read_response</span> <span class="op">=</span> <span class="ident">filter</span>
             .<span class="ident">read</span>(<span class="ident">ReadContext::new</span>(
-                <span class="ident">UpstreamEndpoints::from</span>(
-                    <span class="ident">Endpoints::new</span>(<span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(<span class="string">&quot;127.0.0.1:80&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>())]).<span class="ident">unwrap</span>(),
-                ),
+                <span class="ident">UpstreamEndpoints::from</span>(<span class="ident">Endpoints::new</span>(<span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(
+                    <span class="string">&quot;127.0.0.1:80&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
+                )])),
                 <span class="string">&quot;127.0.0.1:8080&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
                 <span class="ident">write_response</span>.<span class="ident">contents</span>.<span class="ident">clone</span>(),
             ))

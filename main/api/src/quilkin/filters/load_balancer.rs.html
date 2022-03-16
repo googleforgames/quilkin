@@ -289,8 +289,6 @@
 <span id="287">287</span>
 <span id="288">288</span>
 <span id="289">289</span>
-<span id="290">290</span>
-<span id="291">291</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC All Rights Reserved.
  *
@@ -390,9 +388,7 @@
     ) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">EndpointAddress</span><span class="op">&gt;</span> {
         <span class="ident">filter</span>
             .<span class="ident">read</span>(<span class="ident">ReadContext::new</span>(
-                <span class="ident">Endpoints::new</span>(<span class="ident">input_addresses</span>.<span class="ident">iter</span>().<span class="ident">cloned</span>().<span class="ident">map</span>(<span class="ident">Endpoint::new</span>).<span class="ident">collect</span>())
-                    .<span class="ident">unwrap</span>()
-                    .<span class="ident">into</span>(),
+                <span class="ident">Endpoints::new</span>(<span class="ident">input_addresses</span>.<span class="ident">iter</span>().<span class="ident">cloned</span>().<span class="ident">map</span>(<span class="ident">Endpoint::new</span>).<span class="ident">collect</span>()).<span class="ident">into</span>(),
                 <span class="ident">source</span>,
                 <span class="macro">vec!</span>[],
             ))

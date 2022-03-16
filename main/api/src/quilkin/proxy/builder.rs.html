@@ -457,7 +457,7 @@
                     );
                 }
 
-                <span class="kw">let</span> <span class="ident">endpoints</span> <span class="op">=</span> <span class="ident">Endpoints::new</span>(<span class="ident">config_endpoints</span>.<span class="ident">clone</span>())
+                <span class="kw">let</span> <span class="ident">endpoints</span> <span class="op">=</span> <span class="ident">Endpoints::try_new</span>(<span class="ident">config_endpoints</span>.<span class="ident">clone</span>())
                     .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">ValidationError::EmptyList</span>(<span class="string">&quot;static.endpoints&quot;</span>.<span class="ident">into</span>()))<span class="question-mark">?</span>;
 
                 <span class="ident">ValidatedSource::Static</span> {

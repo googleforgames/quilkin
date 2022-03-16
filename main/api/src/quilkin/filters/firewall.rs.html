@@ -413,9 +413,9 @@
 
         <span class="kw">let</span> <span class="ident">local_ip</span> <span class="op">=</span> [<span class="number">192</span>, <span class="number">168</span>, <span class="number">75</span>, <span class="number">20</span>];
         <span class="kw">let</span> <span class="ident">ctx</span> <span class="op">=</span> <span class="ident">ReadContext::new</span>(
-            <span class="ident">UpstreamEndpoints::from</span>(
-                <span class="ident">Endpoints::new</span>(<span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>((<span class="ident">Ipv4Addr::LOCALHOST</span>, <span class="number">8080</span>).<span class="ident">into</span>())]).<span class="ident">unwrap</span>(),
-            ),
+            <span class="ident">UpstreamEndpoints::from</span>(<span class="ident">Endpoints::new</span>(<span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(
+                (<span class="ident">Ipv4Addr::LOCALHOST</span>, <span class="number">8080</span>).<span class="ident">into</span>(),
+            )])),
             (<span class="ident">local_ip</span>, <span class="number">80</span>).<span class="ident">into</span>(),
             <span class="macro">vec!</span>[],
         );
@@ -424,9 +424,9 @@
         <span class="macro">assert_eq!</span>(<span class="number">0</span>, <span class="ident">firewall</span>.<span class="ident">metrics</span>.<span class="ident">packets_denied_read</span>.<span class="ident">get</span>());
 
         <span class="kw">let</span> <span class="ident">ctx</span> <span class="op">=</span> <span class="ident">ReadContext::new</span>(
-            <span class="ident">UpstreamEndpoints::from</span>(
-                <span class="ident">Endpoints::new</span>(<span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>((<span class="ident">Ipv4Addr::LOCALHOST</span>, <span class="number">8080</span>).<span class="ident">into</span>())]).<span class="ident">unwrap</span>(),
-            ),
+            <span class="ident">UpstreamEndpoints::from</span>(<span class="ident">Endpoints::new</span>(<span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(
+                (<span class="ident">Ipv4Addr::LOCALHOST</span>, <span class="number">8080</span>).<span class="ident">into</span>(),
+            )])),
             (<span class="ident">local_ip</span>, <span class="number">2000</span>).<span class="ident">into</span>(),
             <span class="macro">vec!</span>[],
         );

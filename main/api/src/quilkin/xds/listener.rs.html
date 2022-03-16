@@ -639,7 +639,6 @@
 <span id="637">637</span>
 <span id="638">638</span>
 <span id="639">639</span>
-<span id="640">640</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -964,9 +963,9 @@
         <span class="comment">// Test the new filter chain&#39;s functionality. It should append to payloads.</span>
         <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">filter_chain</span>
             .<span class="ident">read</span>(<span class="ident">ReadContext::new</span>(
-                <span class="ident">UpstreamEndpoints::from</span>(
-                    <span class="ident">Endpoints::new</span>(<span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(<span class="string">&quot;127.0.0.1:8080&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>())]).<span class="ident">unwrap</span>(),
-                ),
+                <span class="ident">UpstreamEndpoints::from</span>(<span class="ident">Endpoints::new</span>(<span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(
+                    <span class="string">&quot;127.0.0.1:8080&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
+                )])),
                 <span class="string">&quot;127.0.0.1:8081&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
                 <span class="string">&quot;hello-&quot;</span>.<span class="ident">into</span>(),
             ))
@@ -1058,10 +1057,9 @@
             <span class="comment">// Test the new filter chain&#39;s functionality.</span>
             <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">filter_chain</span>
                 .<span class="ident">read</span>(<span class="ident">ReadContext::new</span>(
-                    <span class="ident">UpstreamEndpoints::from</span>(
-                        <span class="ident">Endpoints::new</span>(<span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(<span class="string">&quot;127.0.0.1:8080&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>())])
-                            .<span class="ident">unwrap</span>(),
-                    ),
+                    <span class="ident">UpstreamEndpoints::from</span>(<span class="ident">Endpoints::new</span>(<span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(
+                        <span class="string">&quot;127.0.0.1:8080&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
+                    )])),
                     <span class="string">&quot;127.0.0.1:8081&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
                     <span class="string">&quot;hello-&quot;</span>.<span class="ident">into</span>(),
                 ))

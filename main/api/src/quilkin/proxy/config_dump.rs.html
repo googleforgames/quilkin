@@ -152,18 +152,6 @@
 <span id="150">150</span>
 <span id="151">151</span>
 <span id="152">152</span>
-<span id="153">153</span>
-<span id="154">154</span>
-<span id="155">155</span>
-<span id="156">156</span>
-<span id="157">157</span>
-<span id="158">158</span>
-<span id="159">159</span>
-<span id="160">160</span>
-<span id="161">161</span>
-<span id="162">162</span>
-<span id="163">163</span>
-<span id="164">164</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -180,14 +168,12 @@
  *  limitations under the License.
  */</span>
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::cluster::cluster_manager::SharedClusterManager</span>;
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters::SharedFilterChain</span>;
-
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::endpoint::Endpoint</span>;
 <span class="kw">use</span> <span class="ident">hyper::http::HeaderValue</span>;
 <span class="kw">use</span> <span class="ident">hyper</span>::{<span class="ident">Body</span>, <span class="ident">Response</span>, <span class="ident">StatusCode</span>};
 <span class="kw">use</span> <span class="ident">serde::Serialize</span>;
 <span class="kw">use</span> <span class="ident">std::sync::Arc</span>;
+
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">cluster::SharedCluster</span>, <span class="ident">endpoint::Endpoint</span>, <span class="ident">filters::SharedFilterChain</span>};
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Serialize</span>)]</span>
 <span class="kw">struct</span> <span class="ident">ClusterDump</span> {
@@ -213,11 +199,11 @@
 }
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">handle_request</span>(
-    <span class="ident">cluster_manager</span>: <span class="ident">SharedClusterManager</span>,
+    <span class="ident">cluster</span>: <span class="ident">SharedCluster</span>,
     <span class="ident">filter_chain</span>: <span class="ident">SharedFilterChain</span>,
 ) -&gt; <span class="ident">Response</span><span class="op">&lt;</span><span class="ident">Body</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">Response::new</span>(<span class="ident">Body::empty</span>());
-    <span class="kw">match</span> <span class="ident">create_config_dump_json</span>(<span class="ident">cluster_manager</span>, <span class="ident">filter_chain</span>) {
+    <span class="kw">match</span> <span class="ident">create_config_dump_json</span>(<span class="ident">cluster</span>, <span class="ident">filter_chain</span>) {
         <span class="prelude-val">Ok</span>(<span class="ident">body</span>) =&gt; {
             <span class="kw-2">*</span><span class="ident">response</span>.<span class="ident">status_mut</span>() <span class="op">=</span> <span class="ident">StatusCode::OK</span>;
             <span class="ident">response</span>
@@ -235,28 +221,21 @@
 }
 
 <span class="kw">fn</span> <span class="ident">create_config_dump_json</span>(
-    <span class="ident">cluster_manager</span>: <span class="ident">SharedClusterManager</span>,
+    <span class="ident">cluster</span>: <span class="ident">SharedCluster</span>,
     <span class="ident">filter_chain</span>: <span class="ident">SharedFilterChain</span>,
 ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">serde_json::Error</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">endpoints</span> <span class="op">=</span> {
-        <span class="kw">let</span> <span class="ident">cluster_manager</span> <span class="op">=</span> <span class="ident">cluster_manager</span>.<span class="ident">read</span>();
-        <span class="comment">// Clone the list of endpoints immediately so that we don&#39;t hold on</span>
-        <span class="comment">// to the cluster manager&#39;s lock while serializing.</span>
-        <span class="ident">cluster_manager</span>
-            .<span class="ident">get_all_endpoints</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">upstream_endpoints</span><span class="op">|</span> <span class="ident">upstream_endpoints</span>.<span class="ident">iter</span>().<span class="ident">cloned</span>().<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>())
-            .<span class="ident">unwrap_or_default</span>()
-    };
-    <span class="kw">let</span> <span class="ident">filters</span> <span class="op">=</span> {
-        <span class="ident">filter_chain</span>
-            .<span class="ident">load</span>()
-            .<span class="ident">get_configs</span>()
-            .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">name</span>, <span class="ident">config</span>)<span class="op">|</span> <span class="ident">FilterConfigDump</span> {
-                <span class="ident">name</span>: <span class="ident">name</span>.<span class="ident">into</span>(),
-                <span class="ident">config</span>,
-            })
-            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
-    };
+    <span class="kw">let</span> <span class="ident">endpoints</span> <span class="op">=</span> <span class="ident">cluster</span>
+        .<span class="ident">endpoints</span>()
+        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">upstream_endpoints</span><span class="op">|</span> <span class="ident">upstream_endpoints</span>.<span class="ident">iter</span>().<span class="ident">cloned</span>().<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>())
+        .<span class="ident">unwrap_or_default</span>();
+    <span class="kw">let</span> <span class="ident">filters</span> <span class="op">=</span> <span class="ident">filter_chain</span>
+        .<span class="ident">load</span>()
+        .<span class="ident">get_configs</span>()
+        .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">name</span>, <span class="ident">config</span>)<span class="op">|</span> <span class="ident">FilterConfigDump</span> {
+            <span class="ident">name</span>: <span class="ident">name</span>.<span class="ident">into</span>(),
+            <span class="ident">config</span>,
+        })
+        .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
 
     <span class="kw">let</span> <span class="ident">dump</span> <span class="op">=</span> <span class="ident">ConfigDump</span> {
         <span class="ident">clusters</span>: <span class="macro">vec!</span>[<span class="ident">ClusterDump</span> {
@@ -272,23 +251,20 @@
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span> {
     <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::handle_request</span>;
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::cluster::cluster_manager::ClusterManager</span>;
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">Endpoints</span>};
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters::SharedFilterChain</span>;
+    <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">cluster::SharedCluster</span>, <span class="ident">endpoint::Endpoint</span>, <span class="ident">filters::SharedFilterChain</span>};
 
     <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">test_handle_request</span>() {
-        <span class="kw">let</span> <span class="ident">cluster_manager</span> <span class="op">=</span> <span class="ident">ClusterManager::fixed</span>(
-            <span class="ident">Endpoints::new</span>(<span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(([<span class="number">127</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">1</span>], <span class="number">8080</span>).<span class="ident">into</span>())]).<span class="ident">unwrap</span>(),
-        )
-        .<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="ident">cluster</span> <span class="op">=</span>
+            <span class="ident">SharedCluster::new_static_cluster</span>(<span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(([<span class="number">127</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">1</span>], <span class="number">8080</span>).<span class="ident">into</span>())])
+                .<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="ident">filter_chain</span> <span class="op">=</span> <span class="ident">SharedFilterChain::new</span>(<span class="kw-2">&amp;</span>[<span class="ident"><span class="kw">crate</span>::config::Filter</span> {
             <span class="ident">name</span>: <span class="ident"><span class="kw">crate</span>::filters::debug::NAME</span>.<span class="ident">into</span>(),
             <span class="ident">config</span>: <span class="prelude-val">Some</span>(<span class="ident">serde_yaml::from_str</span>(<span class="string">&quot;id: hello&quot;</span>).<span class="ident">unwrap</span>()),
         }])
         .<span class="ident">unwrap</span>();
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">handle_request</span>(<span class="ident">cluster_manager</span>, <span class="ident">filter_chain</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">handle_request</span>(<span class="ident">cluster</span>, <span class="ident">filter_chain</span>);
         <span class="macro">assert_eq!</span>(<span class="ident">response</span>.<span class="ident">status</span>(), <span class="ident">hyper::StatusCode::OK</span>);
         <span class="macro">assert_eq!</span>(
             <span class="ident">response</span>.<span class="ident">headers</span>().<span class="ident">get</span>(<span class="string">&quot;Content-Type&quot;</span>).<span class="ident">unwrap</span>(),

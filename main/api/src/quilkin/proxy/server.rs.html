@@ -805,32 +805,6 @@
 <span id="803">803</span>
 <span id="804">804</span>
 <span id="805">805</span>
-<span id="806">806</span>
-<span id="807">807</span>
-<span id="808">808</span>
-<span id="809">809</span>
-<span id="810">810</span>
-<span id="811">811</span>
-<span id="812">812</span>
-<span id="813">813</span>
-<span id="814">814</span>
-<span id="815">815</span>
-<span id="816">816</span>
-<span id="817">817</span>
-<span id="818">818</span>
-<span id="819">819</span>
-<span id="820">820</span>
-<span id="821">821</span>
-<span id="822">822</span>
-<span id="823">823</span>
-<span id="824">824</span>
-<span id="825">825</span>
-<span id="826">826</span>
-<span id="827">827</span>
-<span id="828">828</span>
-<span id="829">829</span>
-<span id="830">830</span>
-<span id="831">831</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -847,6 +821,8 @@
  * limitations under the License.
  */</span>
 
+<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">mod</span> <span class="ident">metrics</span>;
+
 <span class="kw">use</span> <span class="ident">std::net</span>::{<span class="ident">Ipv4Addr</span>, <span class="ident">SocketAddrV4</span>};
 <span class="kw">use</span> <span class="ident">std::sync::Arc</span>;
 
@@ -857,10 +833,9 @@
 <span class="kw">use</span> <span class="ident">tokio::time::Duration</span>;
 
 <span class="kw">use</span> <span class="ident">metrics::Metrics</span> <span class="kw">as</span> <span class="ident">ProxyMetrics</span>;
-<span class="kw">use</span> <span class="ident">resource_manager</span>::{<span class="ident">DynamicResourceManagers</span>, <span class="ident">StaticResourceManagers</span>};
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">cluster::cluster_manager::SharedClusterManager</span>,
+    <span class="ident">cluster::SharedCluster</span>,
     <span class="ident">endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">EndpointAddress</span>},
     <span class="ident">filters</span>::{<span class="ident">Filter</span>, <span class="ident">ReadContext</span>, <span class="ident">SharedFilterChain</span>},
     <span class="ident">proxy</span>::{
@@ -875,9 +850,6 @@
     <span class="prelude-ty">Result</span>,
 };
 
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">mod</span> <span class="ident">metrics</span>;
-<span class="kw">mod</span> <span class="ident">resource_manager</span>;
-
 <span class="doccomment">/// Server is the UDP server main implementation</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Server</span> {
     <span class="comment">// We use pub(super) to limit instantiation only to the Builder.</span>
@@ -890,7 +862,7 @@
 
 <span class="doccomment">/// Represents arguments to the `Server::run_recv_from` method.</span>
 <span class="kw">struct</span> <span class="ident">RunRecvFromArgs</span> {
-    <span class="ident">cluster_manager</span>: <span class="ident">SharedClusterManager</span>,
+    <span class="ident">cluster</span>: <span class="ident">SharedCluster</span>,
     <span class="ident">filter_chain</span>: <span class="ident">SharedFilterChain</span>,
     <span class="ident">socket</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">UdpSocket</span><span class="op">&gt;</span>,
     <span class="ident">session_manager</span>: <span class="ident">SessionManager</span>,
@@ -925,7 +897,7 @@
 <span class="kw">struct</span> <span class="ident">ProcessDownstreamReceiveConfig</span> {
     <span class="ident">proxy_metrics</span>: <span class="ident">ProxyMetrics</span>,
     <span class="ident">session_metrics</span>: <span class="ident">SessionMetrics</span>,
-    <span class="ident">cluster_manager</span>: <span class="ident">SharedClusterManager</span>,
+    <span class="ident">cluster</span>: <span class="ident">SharedCluster</span>,
     <span class="ident">filter_chain</span>: <span class="ident">SharedFilterChain</span>,
     <span class="ident">session_manager</span>: <span class="ident">SessionManager</span>,
     <span class="ident">session_ttl</span>: <span class="ident">Duration</span>,
@@ -948,20 +920,15 @@
 
         <span class="kw">let</span> <span class="ident">session_ttl</span> <span class="op">=</span> <span class="ident">Duration::from_secs</span>(<span class="ident">SESSION_TIMEOUT_SECONDS</span>);
 
-        <span class="kw">let</span> (<span class="ident">cluster_manager</span>, <span class="ident">filter_chain</span>) <span class="op">=</span>
-            <span class="self">self</span>.<span class="ident">create_resource_managers</span>(<span class="ident">shutdown_rx</span>.<span class="ident">clone</span>()).<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="kw">let</span> (<span class="ident">cluster</span>, <span class="ident">filter_chain</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">create_resource_managers</span>(<span class="ident">shutdown_rx</span>.<span class="ident">clone</span>())<span class="question-mark">?</span>;
 
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">admin</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">admin</span> {
-            <span class="ident">admin</span>.<span class="ident">run</span>(
-                <span class="ident">cluster_manager</span>.<span class="ident">clone</span>(),
-                <span class="ident">filter_chain</span>.<span class="ident">clone</span>(),
-                <span class="ident">shutdown_rx</span>.<span class="ident">clone</span>(),
-            );
+            <span class="ident">admin</span>.<span class="ident">run</span>(<span class="ident">cluster</span>.<span class="ident">clone</span>(), <span class="ident">filter_chain</span>.<span class="ident">clone</span>(), <span class="ident">shutdown_rx</span>.<span class="ident">clone</span>());
         }
 
         <span class="self">self</span>.<span class="ident">run_receive_packet</span>(<span class="ident">socket</span>.<span class="ident">clone</span>(), <span class="ident">receive_packets</span>);
         <span class="kw">let</span> <span class="ident">recv_loop</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">run_recv_from</span>(<span class="ident">RunRecvFromArgs</span> {
-            <span class="ident">cluster_manager</span>,
+            <span class="ident">cluster</span>,
             <span class="ident">filter_chain</span>,
             <span class="ident">socket</span>,
             <span class="ident">session_manager</span>,
@@ -984,48 +951,34 @@
         }
     }
 
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">create_resource_managers</span>(
+    <span class="kw">fn</span> <span class="ident">create_resource_managers</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">shutdown_rx</span>: <span class="ident">watch::Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">SharedClusterManager</span>, <span class="ident">SharedFilterChain</span>)<span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">SharedCluster</span>, <span class="ident">SharedFilterChain</span>)<span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">config</span>.<span class="ident">source</span> {
             <span class="ident">ValidatedSource::Static</span> {
                 <span class="ident">filter_chain</span>,
                 <span class="ident">endpoints</span>,
             } =&gt; {
-                <span class="kw">let</span> <span class="ident">manager</span> <span class="op">=</span> <span class="ident">StaticResourceManagers::new</span>(<span class="ident">endpoints</span>.<span class="ident">clone</span>(), <span class="ident">filter_chain</span>)
-                    .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-                        <span class="macro">eyre::eyre!</span>(<span class="ident">err</span>).<span class="ident">wrap_err</span>(<span class="string">&quot;Failed to initialise static resource manager.&quot;</span>)
-                    })<span class="question-mark">?</span>;
-                <span class="prelude-val">Ok</span>((<span class="ident">manager</span>.<span class="ident">cluster_manager</span>, <span class="ident">manager</span>.<span class="ident">filter_chain</span>))
+                <span class="kw">let</span> <span class="ident">cluster</span> <span class="op">=</span> <span class="ident">SharedCluster::new_static_cluster</span>(<span class="ident">endpoints</span>.<span class="ident">to_vec</span>())<span class="question-mark">?</span>;
+                <span class="kw">let</span> <span class="ident">filter_chain</span> <span class="op">=</span> <span class="ident">SharedFilterChain::try_from</span>(<span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">filter_chain</span>)<span class="question-mark">?</span>;
+                <span class="prelude-val">Ok</span>((<span class="ident">cluster</span>, <span class="ident">filter_chain</span>))
             }
             <span class="ident">ValidatedSource::Dynamic</span> { <span class="ident">management_servers</span> } =&gt; {
-                <span class="kw">let</span> <span class="ident">manager</span> <span class="op">=</span> <span class="ident">DynamicResourceManagers::new</span>(
+                <span class="kw">let</span> <span class="ident">cluster</span> <span class="op">=</span> <span class="ident">SharedCluster::empty</span>()<span class="question-mark">?</span>;
+                <span class="kw">let</span> <span class="ident">filter_chain</span> <span class="op">=</span> <span class="ident">SharedFilterChain::empty</span>();
+
+                <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident"><span class="kw">crate</span>::xds::AdsClient::new</span>()<span class="question-mark">?</span>;
+
+                <span class="ident">tokio::spawn</span>(<span class="ident">client</span>.<span class="ident">run</span>(
                     <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">proxy</span>.<span class="ident">id</span>.<span class="ident">clone</span>(),
-                    <span class="ident">SharedFilterChain::empty</span>(),
-                    <span class="ident">management_servers</span>.<span class="ident">to_vec</span>(),
+                    <span class="ident">cluster</span>.<span class="ident">clone</span>(),
+                    <span class="ident">management_servers</span>.<span class="ident">clone</span>(),
+                    <span class="ident">filter_chain</span>.<span class="ident">clone</span>(),
                     <span class="ident">shutdown_rx</span>,
-                )
-                .<span class="kw">await</span>
-                .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-                    <span class="macro">eyre::eyre!</span>(<span class="ident">err</span>).<span class="ident">wrap_err</span>(<span class="string">&quot;Failed to initialise xDS management servers.&quot;</span>)
-                })<span class="question-mark">?</span>;
+                ));
 
-                <span class="kw">let</span> <span class="ident">execution_result_rx</span> <span class="op">=</span> <span class="ident">manager</span>.<span class="ident">execution_result_rx</span>;
-                <span class="comment">// Spawn a task to check for an error if the XDS client</span>
-                <span class="comment">// terminates and forward the error upstream.</span>
-                <span class="ident">tokio::spawn</span>(<span class="kw">async</span> <span class="kw">move</span> {
-                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">error</span>) <span class="op">=</span> <span class="ident">execution_result_rx</span>.<span class="kw">await</span> {
-                        <span class="comment">// TODO: For now only log the error but we would like to</span>
-                        <span class="comment">//   initiate a shut down instead once this happens.</span>
-                        <span class="macro">tracing::error!</span>(
-                            <span class="op">%</span><span class="ident">error</span>,
-                            <span class="string">&quot;ClusterManager XDS client terminated with an error&quot;</span>
-                        );
-                    }
-                });
-
-                <span class="prelude-val">Ok</span>((<span class="ident">manager</span>.<span class="ident">cluster_manager</span>, <span class="ident">manager</span>.<span class="ident">filter_chain</span>))
+                <span class="prelude-val">Ok</span>((<span class="ident">cluster</span>, <span class="ident">filter_chain</span>))
             }
         }
     }
@@ -1058,7 +1011,7 @@
                 <span class="ident">receive_config</span>: <span class="ident">ProcessDownstreamReceiveConfig</span> {
                     <span class="ident">proxy_metrics</span>: <span class="ident">proxy_metrics</span>.<span class="ident">clone</span>(),
                     <span class="ident">session_metrics</span>: <span class="ident">session_metrics</span>.<span class="ident">clone</span>(),
-                    <span class="ident">cluster_manager</span>: <span class="ident">args</span>.<span class="ident">cluster_manager</span>.<span class="ident">clone</span>(),
+                    <span class="ident">cluster</span>: <span class="ident">args</span>.<span class="ident">cluster</span>.<span class="ident">clone</span>(),
                     <span class="ident">filter_chain</span>: <span class="ident">args</span>.<span class="ident">filter_chain</span>.<span class="ident">clone</span>(),
                     <span class="ident">session_manager</span>: <span class="ident">session_manager</span>.<span class="ident">clone</span>(),
                     <span class="ident">session_ttl</span>: <span class="ident">args</span>.<span class="ident">session_ttl</span>,
@@ -1161,7 +1114,7 @@
             <span class="string">&quot;Packet Received&quot;</span>
         );
 
-        <span class="kw">let</span> <span class="ident">endpoints</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">args</span>.<span class="ident">cluster_manager</span>.<span class="ident">read</span>().<span class="ident">get_all_endpoints</span>() {
+        <span class="kw">let</span> <span class="ident">endpoints</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">args</span>.<span class="ident">cluster</span>.<span class="ident">endpoints</span>() {
             <span class="prelude-val">Some</span>(<span class="ident">endpoints</span>) =&gt; <span class="ident">endpoints</span>,
             <span class="prelude-val">None</span> =&gt; {
                 <span class="ident">args</span>.<span class="ident">proxy_metrics</span>.<span class="ident">packets_dropped_no_endpoints</span>.<span class="ident">inc</span>();
@@ -1332,9 +1285,9 @@
     };
 
     <span class="kw">use</span> <span class="kw">crate</span>::{
-        <span class="ident">cluster::cluster_manager::ClusterManager</span>,
+        <span class="ident">cluster::SharedCluster</span>,
         <span class="ident">config</span>::{<span class="self">self</span>, <span class="ident">Builder</span> <span class="kw">as</span> <span class="ident">ConfigBuilder</span>},
-        <span class="ident">endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">Endpoints</span>},
+        <span class="ident">endpoint::Endpoint</span>,
         <span class="ident">filters::SharedFilterChain</span>,
         <span class="ident">proxy::sessions::UpstreamPacket</span>,
         <span class="ident">proxy::Builder</span>,
@@ -1481,10 +1434,8 @@
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">packet_txs</span> <span class="op">=</span> <span class="ident">Vec::with_capacity</span>(<span class="ident">num_workers</span>);
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">worker_configs</span> <span class="op">=</span> <span class="ident">Vec::with_capacity</span>(<span class="ident">num_workers</span>);
 
-            <span class="kw">let</span> <span class="ident">cluster_manager</span> <span class="op">=</span> <span class="ident">ClusterManager::fixed</span>(
-                <span class="ident">Endpoints::new</span>(<span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(<span class="ident">endpoint_address</span>)]).<span class="ident">unwrap</span>(),
-            )
-            .<span class="ident">unwrap</span>();
+            <span class="kw">let</span> <span class="ident">cluster</span> <span class="op">=</span>
+                <span class="ident">SharedCluster::new_static_cluster</span>(<span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(<span class="ident">endpoint_address</span>)]).<span class="ident">unwrap</span>();
             <span class="kw">let</span> <span class="ident">proxy_metrics</span> <span class="op">=</span> <span class="ident">ProxyMetrics::new</span>().<span class="ident">unwrap</span>();
 
             <span class="kw">for</span> <span class="ident">worker_id</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">num_workers</span> {
@@ -1501,7 +1452,7 @@
                     <span class="ident">receive_config</span>: <span class="ident">ProcessDownstreamReceiveConfig</span> {
                         <span class="ident">proxy_metrics</span>: <span class="ident">proxy_metrics</span>.<span class="ident">clone</span>(),
                         <span class="ident">session_metrics</span>,
-                        <span class="ident">cluster_manager</span>: <span class="ident">cluster_manager</span>.<span class="ident">clone</span>(),
+                        <span class="ident">cluster</span>: <span class="ident">cluster</span>.<span class="ident">clone</span>(),
                         <span class="ident">filter_chain</span>: <span class="ident">filter_chain</span>.<span class="ident">clone</span>(),
                         <span class="ident">session_manager</span>: <span class="ident">session_manager</span>.<span class="ident">clone</span>(),
                         <span class="ident">session_ttl</span>: <span class="ident">Duration::from_secs</span>(<span class="number">10</span>),
@@ -1601,12 +1552,9 @@
         <span class="kw">let</span> <span class="ident">server</span> <span class="op">=</span> <span class="ident">Builder::from</span>(<span class="ident">config</span>).<span class="ident">validate</span>().<span class="ident">unwrap</span>().<span class="ident">build</span>();
 
         <span class="ident">server</span>.<span class="ident">run_recv_from</span>(<span class="ident">RunRecvFromArgs</span> {
-            <span class="ident">cluster_manager</span>: <span class="ident">ClusterManager::fixed</span>(
-                <span class="ident">Endpoints::new</span>(<span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(
-                    <span class="ident">endpoint</span>.<span class="ident">socket</span>.<span class="ident">local_addr</span>().<span class="ident">unwrap</span>().<span class="ident">into</span>(),
-                )])
-                .<span class="ident">unwrap</span>(),
-            )
+            <span class="ident">cluster</span>: <span class="ident">SharedCluster::new_static_cluster</span>(<span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(
+                <span class="ident">endpoint</span>.<span class="ident">socket</span>.<span class="ident">local_addr</span>().<span class="ident">unwrap</span>().<span class="ident">into</span>(),
+            )])
             .<span class="ident">unwrap</span>(),
             <span class="ident">filter_chain</span>: <span class="ident">SharedFilterChain::empty</span>(),
             <span class="ident">socket</span>: <span class="ident">socket</span>.<span class="ident">clone</span>(),
