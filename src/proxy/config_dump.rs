@@ -15,7 +15,7 @@
  */
 
 use crate::cluster::cluster_manager::SharedClusterManager;
-use crate::filters::manager::SharedFilterManager;
+use crate::filters::SharedFilterChain;
 
 use crate::endpoint::Endpoint;
 use hyper::http::HeaderValue;
@@ -48,10 +48,10 @@ struct FilterChainDump {
 
 pub(crate) fn handle_request(
     cluster_manager: SharedClusterManager,
-    filter_manager: SharedFilterManager,
+    filter_chain: SharedFilterChain,
 ) -> Response<Body> {
     let mut response = Response::new(Body::empty());
-    match create_config_dump_json(cluster_manager, filter_manager) {
+    match create_config_dump_json(cluster_manager, filter_chain) {
         Ok(body) => {
             *response.status_mut() = StatusCode::OK;
             response
@@ -70,7 +70,7 @@ pub(crate) fn handle_request(
 
 fn create_config_dump_json(
     cluster_manager: SharedClusterManager,
-    filter_manager: SharedFilterManager,
+    filter_chain: SharedFilterChain,
 ) -> Result<String, serde_json::Error> {
     let endpoints = {
         let cluster_manager = cluster_manager.read();
@@ -82,11 +82,8 @@ fn create_config_dump_json(
             .unwrap_or_default()
     };
     let filters = {
-        let filter_manager = filter_manager.read();
-        // Clone the list of filter configs immediately so that we don't hold on
-        // to the filter manager's lock while serializing.
-        filter_manager
-            .get_filter_chain()
+        filter_chain
+            .load()
             .get_configs()
             .map(|(name, config)| FilterConfigDump {
                 name: name.into(),
@@ -111,33 +108,21 @@ mod tests {
     use super::handle_request;
     use crate::cluster::cluster_manager::ClusterManager;
     use crate::endpoint::{Endpoint, Endpoints};
-    use crate::filters::{manager::FilterManager, CreateFilterArgs, FilterChain, FilterRegistry};
-    use prometheus::Registry;
-    use std::sync::Arc;
+    use crate::filters::SharedFilterChain;
 
     #[tokio::test]
     async fn test_handle_request() {
-        let registry = Registry::default();
         let cluster_manager = ClusterManager::fixed(
-            &registry,
             Endpoints::new(vec![Endpoint::new(([127, 0, 0, 1], 8080).into())]).unwrap(),
         )
         .unwrap();
-        let debug_config = serde_yaml::from_str("id: hello").unwrap();
+        let filter_chain = SharedFilterChain::new(&[crate::config::Filter {
+            name: crate::filters::debug::NAME.into(),
+            config: Some(serde_yaml::from_str("id: hello").unwrap()),
+        }])
+        .unwrap();
 
-        let debug_factory = crate::filters::debug::factory();
-        let debug_filter = debug_factory
-            .create_filter(CreateFilterArgs::fixed(
-                FilterRegistry::default(),
-                registry.clone(),
-                Some(debug_config),
-            ))
-            .unwrap();
-        let filter_manager = FilterManager::fixed(Arc::new(
-            FilterChain::new(vec![(debug_factory.name().into(), debug_filter)], &registry).unwrap(),
-        ));
-
-        let mut response = handle_request(cluster_manager, filter_manager);
+        let mut response = handle_request(cluster_manager, filter_chain);
         assert_eq!(response.status(), hyper::StatusCode::OK);
         assert_eq!(
             response.headers().get("Content-Type").unwrap(),
@@ -163,7 +148,7 @@ mod tests {
             }],
             "filterchain": {
                 "filters": [{
-                    "name": "quilkin.extensions.filters.debug.v1alpha1.Debug",
+                    "name": "quilkin.filters.debug.v1alpha1.Debug",
                     "config":{
                         "id": "hello"
                     }

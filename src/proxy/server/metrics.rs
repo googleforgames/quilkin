@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-use prometheus::core::{AtomicU64, GenericCounter};
 use prometheus::{
-    exponential_buckets, Histogram, HistogramVec, IntCounterVec, Registry, Result as MetricsResult,
+    core::{AtomicU64, GenericCounter},
+    exponential_buckets, Histogram, HistogramVec, IntCounterVec, Result as MetricsResult,
 };
 
 use crate::metrics::{
@@ -44,7 +44,7 @@ const BUCKET_FACTOR: f64 = 2.0;
 const BUCKET_COUNT: usize = 13;
 
 impl Metrics {
-    pub fn new(registry: &Registry) -> MetricsResult<Self> {
+    pub fn new() -> MetricsResult<Self> {
         let subsystem = "proxy";
         let event_labels = &[EVENT_LABEL];
 
@@ -57,7 +57,7 @@ impl Metrics {
             ),
             event_labels,
         )?
-        .register_if_not_exists(registry)?;
+        .register_if_not_exists()?;
 
         Ok(Self {
             packets_dropped_no_endpoints: IntCounterVec::new(
@@ -68,7 +68,7 @@ impl Metrics {
                 ),
                 &["reason"],
             )?
-            .register_if_not_exists(registry)?
+            .register_if_not_exists()?
             .get_metric_with_label_values(&["NoConfiguredEndpoints"])?,
             read_processing_time_seconds: processing_time
                 .get_metric_with_label_values(&[EVENT_READ_LABEL_VALUE])?,

@@ -26,7 +26,7 @@ ENV RUSTUP_HOME=/usr/local/rustup \
 # Install packages
 RUN set -eux && \
     apt-get update && \
-    apt-get install -y wget zip build-essential libssl-dev pkg-config python3-pip && \
+    apt-get install -y jq wget zip build-essential libssl-dev pkg-config python3-pip && \
     pip3 install live-server
 
 # Install Go

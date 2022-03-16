@@ -21,12 +21,12 @@ use tokio::time::{timeout, Duration};
 use quilkin::{
     config::{Builder, Filter},
     endpoint::Endpoint,
-    filters::{capture_bytes, token_router},
+    filters::{capture, token_router},
     metadata::MetadataView,
     test_utils::TestHelper,
 };
 
-/// This test covers both token_router and capture_bytes filters,
+/// This test covers both token_router and capture filters,
 /// since they work in concert together.
 #[tokio::test]
 async fn token_router() {
@@ -34,8 +34,9 @@ async fn token_router() {
     let echo = t.run_echo_server().await;
 
     let capture_yaml = "
-size: 3
-remove: true
+suffix:
+    size: 3
+    remove: true
 ";
     let endpoint_metadata = "
 quilkin.dev:
@@ -48,7 +49,7 @@ quilkin.dev:
         .with_static(
             vec![
                 Filter {
-                    name: capture_bytes::factory().name().into(),
+                    name: capture::factory().name().into(),
                     config: serde_yaml::from_str(capture_yaml).unwrap(),
                 },
                 Filter {

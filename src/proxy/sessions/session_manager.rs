@@ -115,12 +115,11 @@ mod tests {
     use std::sync::Arc;
     use std::time::Duration;
 
-    use prometheus::Registry;
     use tokio::sync::{mpsc, watch, RwLock};
 
     use crate::{
         endpoint::{Endpoint, EndpointAddress},
-        filters::{manager::FilterManager, FilterChain},
+        filters::SharedFilterChain,
         proxy::{
             server::metrics::Metrics as ProxyMetrics,
             sessions::{
@@ -159,14 +158,11 @@ mod tests {
 
         // Insert key.
         {
-            let registry = Registry::default();
             let mut sessions = sessions.write().await;
             let session_args = SessionArgs {
-                metrics: Metrics::new(&registry).unwrap(),
-                proxy_metrics: ProxyMetrics::new(&registry).unwrap(),
-                filter_manager: FilterManager::fixed(Arc::new(
-                    FilterChain::new(vec![], &registry).unwrap(),
-                )),
+                metrics: Metrics::new().unwrap(),
+                proxy_metrics: ProxyMetrics::new().unwrap(),
+                filter_chain: SharedFilterChain::empty(),
                 source: from,
                 dest: endpoint.clone(),
                 sender: send,
@@ -216,14 +212,11 @@ mod tests {
         let ttl = Duration::from_secs(1);
 
         {
-            let registry = Registry::default();
             let mut sessions = sessions.write().await;
             let session_args = SessionArgs {
-                metrics: Metrics::new(&registry).unwrap(),
-                proxy_metrics: ProxyMetrics::new(&registry).unwrap(),
-                filter_manager: FilterManager::fixed(Arc::new(
-                    FilterChain::new(vec![], &registry).unwrap(),
-                )),
+                metrics: Metrics::new().unwrap(),
+                proxy_metrics: ProxyMetrics::new().unwrap(),
+                filter_chain: SharedFilterChain::empty(),
                 source: from,
                 dest: endpoint.clone(),
                 sender: send,

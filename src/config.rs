@@ -56,35 +56,9 @@ pub struct Config {
 }
 
 impl Config {
-    /// Attempts to locate and parse a `Config` located at either `path`, the
-    /// `$QUILKIN_CONFIG` environment variable if set, the current directory,
-    /// or the `/etc/quilkin` directory (on unix platforms only). Returns an
-    /// error if the found configuration is invalid, or if no configuration
-    /// could be found at any location.
-    pub fn find(path: Option<&str>) -> crate::Result<Self> {
-        const ENV_CONFIG_PATH: &str = "QUILKIN_CONFIG";
-        const CONFIG_FILE: &str = "quilkin.yaml";
-
-        let config_env = std::env::var(ENV_CONFIG_PATH).ok();
-
-        let config_path = std::path::Path::new(
-            path.or_else(|| config_env.as_deref())
-                .unwrap_or(CONFIG_FILE),
-        )
-        .canonicalize()?;
-
-        tracing::info!(path = %config_path.display(), "Found configuration file");
-
-        std::fs::File::open(&config_path)
-            .or_else(|error| {
-                if cfg!(unix) {
-                    std::fs::File::open("/etc/quilkin/quilkin.yaml")
-                } else {
-                    Err(error)
-                }
-            })
-            .map_err(From::from)
-            .and_then(|file| Self::from_reader(file).map_err(From::from))
+    /// Returns a new empty [`Builder`] for [`Config`].
+    pub fn builder() -> Builder {
+        Builder::empty()
     }
 
     /// Attempts to deserialize `input` as a YAML object representing `Self`.

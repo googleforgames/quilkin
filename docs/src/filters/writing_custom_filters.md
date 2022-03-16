@@ -21,7 +21,7 @@ A [trait][FilterFactory] representing a type that knows how to create instances 
 
 - An implementation provides a `name` and `create_filter` method.
 - `create_filter` takes in [configuration][filter configuration] for the filter to create and returns a [FilterInstance] type containing a new instance of its filter type.  
-  `name` returns the Filter name - a unique identifier of filters of the created type (e.g quilkin.extensions.filters.debug.v1alpha1.Debug).
+  `name` returns the Filter name - a unique identifier of filters of the created type (e.g quilkin.filters.debug.v1alpha1.Debug).
 
 ### FilterRegistry
 
@@ -111,6 +111,11 @@ impl FilterFactory for GreetFilterFactory {
     fn name(&self) -> &'static str {
         NAME
     }
+
+    fn config_schema(&self) -> schemars::schema::RootSchema {
+        schemars::schema_for!(serde_json::Value)
+    }
+
     fn create_filter(&self, _: CreateFilterArgs) -> Result<FilterInstance, Error> {
         let filter: Box<dyn Filter> = Box::new(Greet);
         Ok(FilterInstance::new(serde_json::Value::Null, filter))
@@ -235,6 +240,11 @@ impl FilterFactory for GreetFilterFactory {
     fn name(&self) -> &'static str {
         NAME
     }
+
+    fn config_schema(&self) -> schemars::schema::RootSchema {
+        schemars::schema_for!(serde_json::Value)
+    }
+
     fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
         let config = match args.config.unwrap() {
           ConfigType::Static(config) => {

@@ -14,15 +14,19 @@
  * limitations under the License.
  */
 
+mod shared;
+
 use std::sync::Arc;
 
-use prometheus::{exponential_buckets, Error as PrometheusError, Histogram, Registry};
+use prometheus::{exponential_buckets, Error as PrometheusError, Histogram};
 
 use crate::config::{Filter as FilterConfig, ValidationError};
 use crate::filters::{prelude::*, FilterRegistry};
 use crate::metrics::{histogram_opts, CollectorExt};
 
 const FILTER_LABEL: &str = "filter";
+
+pub use shared::SharedFilterChain;
 
 /// A chain of [`Filter`]s to be executed in order.
 ///
@@ -34,6 +38,18 @@ pub struct FilterChain {
     filters: Vec<(String, FilterInstance)>,
     filter_read_duration_seconds: Vec<Histogram>,
     filter_write_duration_seconds: Vec<Histogram>,
+}
+
+impl std::fmt::Debug for FilterChain {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut filters = f.debug_struct("Filters");
+
+        for (id, instance) in &self.filters {
+            filters.field(id, &*instance.config);
+        }
+
+        filters.finish()
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -66,7 +82,7 @@ const BUCKET_FACTOR: f64 = 2.5;
 const BUCKET_COUNT: usize = 11;
 
 impl FilterChain {
-    pub fn new(filters: Vec<(String, FilterInstance)>, registry: &Registry) -> Result<Self, Error> {
+    pub fn new(filters: Vec<(String, FilterInstance)>) -> Result<Self, Error> {
         let subsystem = "filter";
 
         Ok(Self {
@@ -85,7 +101,7 @@ impl FilterChain {
                         )
                         .const_label(FILTER_LABEL, name),
                     )
-                    .and_then(|histogram| histogram.register_if_not_exists(registry))
+                    .and_then(|histogram| histogram.register_if_not_exists())
                 })
                 .collect::<Result<_, prometheus::Error>>()?,
             filter_write_duration_seconds: filters
@@ -100,7 +116,7 @@ impl FilterChain {
                         )
                         .const_label(FILTER_LABEL, name),
                     )
-                    .and_then(|histogram| histogram.register_if_not_exists(registry))
+                    .and_then(|histogram| histogram.register_if_not_exists())
                 })
                 .collect::<Result<_, prometheus::Error>>()?,
             filters,
@@ -109,24 +125,46 @@ impl FilterChain {
 
     /// Validates the filter configurations in the provided config and constructs
     /// a FilterChain if all configurations are valid.
-    pub fn try_create(
-        filter_configs: Vec<FilterConfig>,
-        filter_registry: &FilterRegistry,
-        metrics_registry: &Registry,
-    ) -> Result<Self, Error> {
+    pub fn try_create(filter_configs: &[FilterConfig]) -> Result<Self, Error> {
+        Self::try_from(filter_configs)
+    }
+
+    /// Returns an iterator over the current filters' configs.
+    pub(crate) fn get_configs(&self) -> impl Iterator<Item = (&str, Arc<serde_json::Value>)> {
+        self.filters
+            .iter()
+            .map(|(config_json, config)| (config_json.as_str(), config.config.clone()))
+    }
+}
+
+impl<const N: usize> TryFrom<&[FilterConfig; N]> for FilterChain {
+    type Error = Error;
+
+    fn try_from(filter_configs: &[FilterConfig; N]) -> Result<Self, Error> {
+        Self::try_from(&filter_configs[..])
+    }
+}
+
+impl<const N: usize> TryFrom<[FilterConfig; N]> for FilterChain {
+    type Error = Error;
+
+    fn try_from(filter_configs: [FilterConfig; N]) -> Result<Self, Error> {
+        Self::try_from(&filter_configs[..])
+    }
+}
+
+impl TryFrom<&[FilterConfig]> for FilterChain {
+    type Error = Error;
+
+    fn try_from(filter_configs: &[FilterConfig]) -> Result<Self, Error> {
         let mut filters = Vec::new();
 
         for filter_config in filter_configs {
-            match filter_registry.get(
+            match FilterRegistry::get(
                 &filter_config.name,
-                CreateFilterArgs::fixed(
-                    filter_registry.clone(),
-                    metrics_registry.clone(),
-                    filter_config.config,
-                )
-                .with_metrics_registry(metrics_registry.clone()),
+                CreateFilterArgs::fixed(filter_config.config.clone()),
             ) {
-                Ok(filter) => filters.push((filter_config.name, filter)),
+                Ok(filter) => filters.push((filter_config.name.clone(), filter)),
                 Err(err) => {
                     return Err(Error::Filter {
                         filter_name: filter_config.name.clone(),
@@ -136,14 +174,7 @@ impl FilterChain {
             }
         }
 
-        FilterChain::new(filters, metrics_registry)
-    }
-
-    /// Returns an iterator over the current filters' configs.
-    pub(crate) fn get_configs(&self) -> impl Iterator<Item = (&str, Arc<serde_json::Value>)> {
-        self.filters
-            .iter()
-            .map(|(config_json, config)| (config_json.as_str(), config.config.clone()))
+        Self::new(filters)
     }
 }
 
@@ -185,7 +216,7 @@ mod tests {
     use crate::{
         config,
         endpoint::{Endpoint, Endpoints, UpstreamEndpoints},
-        filters::{debug, FilterRegistry, FilterSet},
+        filters::debug,
         test_utils::{new_test_chain, TestFilterFactory},
     };
 
@@ -196,22 +227,20 @@ mod tests {
         let provider = debug::factory();
 
         // everything is fine
-        let filter_configs = vec![config::Filter {
+        let filter_configs = &[config::Filter {
             name: provider.name().into(),
             config: Default::default(),
         }];
 
-        let registry = FilterRegistry::new(FilterSet::default());
-        let chain =
-            FilterChain::try_create(filter_configs, &registry, &Registry::default()).unwrap();
+        let chain = FilterChain::try_create(filter_configs).unwrap();
         assert_eq!(1, chain.filters.len());
 
         // uh oh, something went wrong
-        let filter_configs = vec![config::Filter {
+        let filter_configs = &[config::Filter {
             name: "this is so wrong".into(),
             config: Default::default(),
         }];
-        let result = FilterChain::try_create(filter_configs, &registry, &Registry::default());
+        let result = FilterChain::try_create(filter_configs);
         assert!(result.is_err());
     }
 
@@ -228,8 +257,8 @@ mod tests {
 
     #[test]
     fn chain_single_test_filter() {
-        let registry = prometheus::Registry::default();
-        let chain = new_test_chain(&registry);
+        crate::test_utils::load_test_filters();
+        let chain = new_test_chain();
         let endpoints_fixture = endpoints();
 
         let response = chain
@@ -279,20 +308,16 @@ mod tests {
 
     #[test]
     fn chain_double_test_filter() {
-        let registry = prometheus::Registry::default();
-        let chain = FilterChain::new(
-            vec![
-                (
-                    "TestFilter".into(),
-                    TestFilterFactory::create_empty_filter(),
-                ),
-                (
-                    "TestFilter".into(),
-                    TestFilterFactory::create_empty_filter(),
-                ),
-            ],
-            &registry,
-        )
+        let chain = FilterChain::new(vec![
+            (
+                "TestFilter".into(),
+                TestFilterFactory::create_empty_filter(),
+            ),
+            (
+                "TestFilter".into(),
+                TestFilterFactory::create_empty_filter(),
+            ),
+        ])
         .unwrap();
 
         let endpoints_fixture = endpoints();
@@ -346,26 +371,22 @@ mod tests {
         struct TestFilter2 {}
         impl Filter for TestFilter2 {}
 
-        let registry = prometheus::Registry::default();
-        let filter_chain = FilterChain::new(
-            vec![
-                (
-                    "TestFilter".into(),
-                    TestFilterFactory::create_empty_filter(),
-                ),
-                (
-                    "TestFilter2".into(),
-                    FilterInstance {
-                        config: Arc::new(serde_json::json!({
-                            "k1": "v1",
-                            "k2": 2
-                        })),
-                        filter: Box::new(TestFilter2 {}),
-                    },
-                ),
-            ],
-            &registry,
-        )
+        let filter_chain = FilterChain::new(vec![
+            (
+                "TestFilter".into(),
+                TestFilterFactory::create_empty_filter(),
+            ),
+            (
+                "TestFilter2".into(),
+                FilterInstance {
+                    config: Arc::new(serde_json::json!({
+                        "k1": "v1",
+                        "k2": 2
+                    })),
+                    filter: Box::new(TestFilter2 {}),
+                },
+            ),
+        ])
         .unwrap();
 
         let configs = filter_chain.get_configs().collect::<Vec<_>>();

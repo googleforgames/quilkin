@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+use once_cell::sync::Lazy;
+
 use prometheus::core::Collector;
 pub use prometheus::Result;
 use prometheus::{HistogramOpts, Opts, Registry, DEFAULT_BUCKETS};
@@ -26,6 +28,14 @@ pub const EVENT_LABEL: &str = "event";
 pub const EVENT_READ_LABEL_VALUE: &str = "read";
 /// Label value for [EVENT_LABEL] for `write` events
 pub const EVENT_WRITE_LABEL_VALUE: &str = "write";
+
+/// Returns the [prometheus::Registry] containing all the metrics
+/// registered in Quilkin.
+pub fn registry() -> &'static Registry {
+    static REGISTRY: Lazy<Registry> = Lazy::new(Registry::default);
+
+    &*REGISTRY
+}
 
 /// Create a generic metrics options.
 /// Use [filter_opts] instead if the intended target is a filter.
@@ -65,8 +75,8 @@ fn register_metric<T: Collector + Sized + 'static>(
 pub trait CollectorExt: Collector + Clone + Sized + 'static {
     /// Registers the current metric collector with the provided registry
     /// if not already registered.
-    fn register_if_not_exists(self, registry: &Registry) -> Result<Self> {
-        match register_metric(registry, self.clone()) {
+    fn register_if_not_exists(self) -> Result<Self> {
+        match register_metric(crate::metrics::registry(), self.clone()) {
             Ok(_) | Err(prometheus::Error::AlreadyReg) => Ok(self),
             Err(err) => Err(err),
         }

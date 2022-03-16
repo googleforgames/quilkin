@@ -19,7 +19,7 @@ members = [".", "./macros"]
 
 [package]
 name = "quilkin"
-version = "0.3.0-dev"
+version = "0.4.0-dev"
 authors = ["Mark Mandel <markmandel@google.com>", "Ifeanyi Ubah <ifeanyi.ubah@embark-studios.com>"]
 license = "Apache-2.0"
 description = "Quilkin is a non-transparent UDP proxy specifically designed for use with large scale multiplayer dedicated game server deployments, to ensure security, access control, telemetry data, metrics and more."
@@ -38,38 +38,43 @@ test = true
 
 [dependencies]
 # Local
-quilkin-macros = { version = "0.3.0-dev", path = "./macros" }
+quilkin-macros = { version = "0.4.0-dev", path = "./macros" }
 
 # Crates.io
+arc-swap = "1.5.0"
 base64 = "0.13.0"
 base64-serde = "0.6.1"
 bytes = { version = "1.1.0", features = ["serde"] }
-clap = { version = "3", features = ["cargo"] }
+clap = { version = "3.1.2", features = ["cargo", "derive", "env"] }
 dashmap = "4.0.2"
 either = "1.6.1"
-hyper = "0.14.15"
+eyre = "0.6.7"
+futures = "0.3.21"
+hyper = "0.14.17"
+ipnetwork = "0.18.0"
 num_cpus = "1.13.0"
-parking_lot = "0.11.2"
+once_cell = "1.9.0"
+parking_lot = "0.12"
 prometheus = { version = "0.13.0", default-features = false }
 prost = "=0.9.0"
 prost-types = "=0.9.0"
-rand = "0.8.4"
+rand = "0.8.5"
+regex = "1.5.4"
+schemars = { version = "0.8.8", features = ["bytes"] }
 serde = { version = "1.0.130", features = ["derive", "rc"] }
-serde_json = "1.0.68"
+serde_json = "1.0.79"
+serde_regex = "1.1.0"
 serde_yaml = "0.8.21"
 snap = "1.0.5"
-tokio = { version = "1.16.1", features = ["rt-multi-thread", "signal", "test-util", "parking_lot"] }
+stable-eyre = "0.2.2"
+thiserror = "1.0.30"
+tokio = { version = "1.17", features = ["rt-multi-thread", "signal", "test-util", "parking_lot"] }
 tokio-stream = "0.1.8"
 tonic = "0.6.1"
-tracing = {version = "0.1"}
-tracing-subscriber = { version = "0.3", features = ["json"] }
-uuid = { version = "0.8.2", default-features = false, features = ["v4"] }
-thiserror = "1.0.30"
+tracing = {version = "0.1.31" }
+tracing-subscriber = { version = "0.3.9", features = ["json"] }
 tryhard = "0.4.0"
-eyre = "0.6.5"
-stable-eyre = "0.2.2"
-ipnetwork = "0.18.0"
-futures = "0.3.17"
+uuid = { version = "0.8.2", default-features = false, features = ["v4"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 sys-info = "0.9.0"

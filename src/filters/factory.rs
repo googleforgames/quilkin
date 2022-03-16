@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-use prometheus::Registry;
 use std::sync::Arc;
 
 use crate::{
     config::ConfigType,
-    filters::{Error, Filter, FilterRegistry},
+    filters::{Error, Filter},
 };
 
 /// An owned pointer to a dynamic [`FilterFactory`] instance.
@@ -49,14 +48,17 @@ impl FilterInstance {
 pub trait FilterFactory: Sync + Send {
     /// name returns the configuration name for the Filter
     /// The returned string identifies the filter item's path with the following format:
-    ///     `quilkin.extensions.filters.<module>.<version>.<item-name>`
+    ///     `quilkin.filters.<module>.<version>.<item-name>`
     /// where:
     ///     <module>: The rust module name containing the filter item
     ///     <version>: The filter's version.
     ///     <item-name>: The name of the rust item (e.g enum, struct) implementing the filter.
     /// For example the `v1alpha1` version of the debug filter has the name:
-    ///     `quilkin.extensions.filters.debug_filter.v1alpha1.Debug`
+    ///     `quilkin.filters.debug_filter.v1alpha1.Debug`
     fn name(&self) -> &'static str;
+
+    /// Returns the schema for the configuration of the [`Filter`].
+    fn config_schema(&self) -> schemars::schema::RootSchema;
 
     /// Returns a filter based on the provided arguments.
     fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error>;
@@ -72,60 +74,23 @@ pub trait FilterFactory: Sync + Send {
 pub struct CreateFilterArgs {
     /// Configuration for the filter.
     pub config: Option<ConfigType>,
-    /// Used if the filter needs to reference or use other filters.
-    pub filter_registry: FilterRegistry,
-    /// metrics_registry is used to register filter metrics collectors.
-    pub metrics_registry: Registry,
 }
 
 impl CreateFilterArgs {
     /// Create a new instance of [`CreateFilterArgs`].
-    pub fn new(
-        filter_registry: FilterRegistry,
-        metrics_registry: Registry,
-        config: Option<ConfigType>,
-    ) -> CreateFilterArgs {
-        Self {
-            config,
-            filter_registry,
-            metrics_registry,
-        }
+    pub fn new(config: Option<ConfigType>) -> CreateFilterArgs {
+        Self { config }
     }
 
     /// Creates a new instance of [`CreateFilterArgs`] using a
     /// fixed [`ConfigType`].
-    pub fn fixed(
-        filter_registry: FilterRegistry,
-        metrics_registry: Registry,
-        config: Option<serde_yaml::Value>,
-    ) -> CreateFilterArgs {
-        Self::new(
-            filter_registry,
-            metrics_registry,
-            config.map(ConfigType::Static),
-        )
+    pub fn fixed(config: Option<serde_yaml::Value>) -> CreateFilterArgs {
+        Self::new(config.map(ConfigType::Static))
     }
 
     /// Creates a new instance of [`CreateFilterArgs`] using a
     /// dynamic [`ConfigType`].
-    pub fn dynamic(
-        filter_registry: FilterRegistry,
-        metrics_registry: Registry,
-        config: Option<prost_types::Any>,
-    ) -> CreateFilterArgs {
-        CreateFilterArgs::new(
-            filter_registry,
-            metrics_registry,
-            config.map(ConfigType::Dynamic),
-        )
-    }
-
-    /// Consumes `self` and returns a new instance of [`Self`] using
-    /// `metrics_registry` for metrics.
-    pub(crate) fn with_metrics_registry(self, metrics_registry: Registry) -> Self {
-        CreateFilterArgs {
-            metrics_registry,
-            ..self
-        }
+    pub fn dynamic(config: Option<prost_types::Any>) -> CreateFilterArgs {
+        CreateFilterArgs::new(config.map(ConfigType::Dynamic))
     }
 }

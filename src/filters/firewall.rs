@@ -21,16 +21,16 @@ use tracing::debug;
 use crate::filters::firewall::metrics::Metrics;
 use crate::filters::prelude::*;
 
-use self::quilkin::extensions::filters::firewall::v1alpha1::Firewall as ProtoConfig;
+use self::quilkin::filters::firewall::v1alpha1::Firewall as ProtoConfig;
 
-crate::include_proto!("quilkin.extensions.filters.firewall.v1alpha1");
+crate::include_proto!("quilkin.filters.firewall.v1alpha1");
 
 mod config;
 mod metrics;
 
 pub use config::{Action, Config, PortRange, PortRangeError, Rule};
 
-pub const NAME: &str = "quilkin.extensions.filters.firewall.v1alpha1.Firewall";
+pub const NAME: &str = "quilkin.filters.firewall.v1alpha1.Firewall";
 
 pub fn factory() -> DynFilterFactory {
     Box::from(FirewallFactory::new())
@@ -49,12 +49,16 @@ impl FilterFactory for FirewallFactory {
         NAME
     }
 
+    fn config_schema(&self) -> schemars::schema::RootSchema {
+        schemars::schema_for!(Config)
+    }
+
     fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
         let (config_json, config) = self
             .require_config(args.config)?
             .deserialize::<Config, ProtoConfig>(self.name())?;
 
-        let filter = Firewall::new(config, Metrics::new(&args.metrics_registry)?);
+        let filter = Firewall::new(config, Metrics::new()?);
         Ok(FilterInstance::new(
             config_json,
             Box::new(filter) as Box<dyn Filter>,
@@ -144,7 +148,6 @@ impl Filter for Firewall {
 }
 #[cfg(test)]
 mod tests {
-    use prometheus::Registry;
     use std::net::Ipv4Addr;
 
     use crate::endpoint::{Endpoint, Endpoints, UpstreamEndpoints};
@@ -157,7 +160,7 @@ mod tests {
     #[traced_test]
     fn read() {
         let firewall = Firewall {
-            metrics: Metrics::new(&Registry::default()).unwrap(),
+            metrics: Metrics::new().unwrap(),
             on_read: vec![Rule {
                 action: Action::Allow,
                 source: "192.168.75.0/24".parse().unwrap(),
@@ -199,7 +202,7 @@ mod tests {
     #[test]
     fn write() {
         let firewall = Firewall {
-            metrics: Metrics::new(&Registry::default()).unwrap(),
+            metrics: Metrics::new().unwrap(),
             on_read: vec![],
             on_write: vec![Rule {
                 action: Action::Allow,
@@ -227,7 +230,7 @@ mod tests {
             local_addr,
             vec![],
         );
-        assert!(!firewall.write(ctx).is_some());
+        assert!(firewall.write(ctx).is_none());
         assert_eq!(1, firewall.metrics.packets_allowed_write.get());
         assert_eq!(1, firewall.metrics.packets_denied_write.get());
 

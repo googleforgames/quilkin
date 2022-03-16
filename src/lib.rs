@@ -37,7 +37,7 @@ pub type Result<T, E = eyre::Error> = std::result::Result<T, E>;
 pub use self::{
     config::Config,
     proxy::{Builder, PendingValidation, Server, Validated},
-    runner::{run, run_with_config},
+    runner::run,
 };
 
 pub use quilkin_macros::include_proto;
@@ -50,7 +50,7 @@ mod external_doc_tests {
     #![doc = include_str!("../docs/src/filters/local_rate_limit.md")]
     #![doc = include_str!("../docs/src/filters/debug.md")]
     #![doc = include_str!("../docs/src/filters/concatenate_bytes.md")]
-    #![doc = include_str!("../docs/src/filters/capture_bytes.md")]
+    #![doc = include_str!("../docs/src/filters/capture.md")]
     #![doc = include_str!("../docs/src/filters/token_router.md")]
     #![doc = include_str!("../docs/src/filters/compress.md")]
     #![doc = include_str!("../docs/src/filters/firewall.md")]

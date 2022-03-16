@@ -21,7 +21,7 @@ use tracing::{debug, info, span, Level};
 
 use crate::{
     config::Config,
-    filters::{DynFilterFactory, FilterRegistry, FilterSet},
+    filters::{DynFilterFactory, FilterRegistry},
     proxy::Builder,
     Result,
 };
@@ -29,27 +29,17 @@ use crate::{
 #[cfg(doc)]
 use crate::filters::FilterFactory;
 
-/// Calls [`run`] with the [`Config`] found by [`Config::find`] and the
-/// default [`FilterSet`].
-pub async fn run(filter_factories: impl IntoIterator<Item = DynFilterFactory>) -> Result<()> {
-    run_with_config(Config::find(None).map(Arc::new)?, filter_factories).await
-}
-
 /// Start and run a proxy. Any passed in [`FilterFactory`]s are included
 /// alongside the default filter factories.
-pub async fn run_with_config(
-    config: Arc<Config>,
+pub async fn run(
+    config: Config,
     filter_factories: impl IntoIterator<Item = DynFilterFactory>,
 ) -> Result<()> {
     let span = span!(Level::INFO, "source::run");
     let _enter = span.enter();
 
-    let server = Builder::from(config)
-        .with_filter_registry(FilterRegistry::new(FilterSet::default_with(
-            filter_factories.into_iter(),
-        )))
-        .validate()?
-        .build();
+    FilterRegistry::register(filter_factories);
+    let server = Builder::from(Arc::new(config)).validate()?.build();
 
     #[cfg(target_os = "linux")]
     let mut sig_term_fut = signal::unix::signal(signal::unix::SignalKind::terminate())?;

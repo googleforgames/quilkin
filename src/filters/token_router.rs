@@ -16,7 +16,7 @@
 
 mod metrics;
 
-crate::include_proto!("quilkin.extensions.filters.token_router.v1alpha1");
+crate::include_proto!("quilkin.filters.token_router.v1alpha1");
 
 use std::convert::TryFrom;
 use std::sync::Arc;
@@ -33,9 +33,9 @@ use crate::{
 
 use metrics::Metrics;
 
-use self::quilkin::extensions::filters::token_router::v1alpha1::TokenRouter as ProtoConfig;
+use self::quilkin::filters::token_router::v1alpha1::TokenRouter as ProtoConfig;
 
-pub const NAME: &str = "quilkin.extensions.filters.token_router.v1alpha1.TokenRouter";
+pub const NAME: &str = "quilkin.filters.token_router.v1alpha1.TokenRouter";
 
 /// Returns a factory for creating token routing filters.
 pub fn factory() -> DynFilterFactory {
@@ -72,6 +72,10 @@ impl FilterFactory for TokenRouterFactory {
         NAME
     }
 
+    fn config_schema(&self) -> schemars::schema::RootSchema {
+        schemars::schema_for!(Config)
+    }
+
     fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
         let (config_json, config) = args
             .config
@@ -87,7 +91,7 @@ impl FilterFactory for TokenRouterFactory {
                     .map(|config_json| (config_json, config))
             })?;
 
-        let filter = TokenRouter::new(config, Metrics::new(&args.metrics_registry)?);
+        let filter = TokenRouter::new(config, Metrics::new()?);
 
         Ok(FilterInstance::new(
             config_json,
@@ -142,7 +146,7 @@ impl Filter for TokenRouter {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, schemars::JsonSchema)]
 #[serde(default)]
 pub struct Config {
     /// the key to use when retrieving the token from the Filter's dynamic metadata
@@ -179,7 +183,6 @@ mod tests {
     use std::ops::Deref;
     use std::sync::Arc;
 
-    use prometheus::Registry;
     use serde_yaml::Mapping;
 
     use crate::endpoint::{Endpoint, Endpoints, Metadata};
@@ -190,14 +193,13 @@ mod tests {
         default_metadata_key, Config, Metrics, ProtoConfig, TokenRouter, TokenRouterFactory,
     };
     use crate::filters::{
-        metadata::CAPTURED_BYTES, CreateFilterArgs, Filter, FilterFactory, FilterRegistry,
-        ReadContext,
+        metadata::CAPTURED_BYTES, CreateFilterArgs, Filter, FilterFactory, ReadContext,
     };
 
     const TOKEN_KEY: &str = "TOKEN";
 
     fn router(config: Config) -> TokenRouter {
-        TokenRouter::new(config, Metrics::new(&Registry::default()).unwrap())
+        TokenRouter::new(config, Metrics::new().unwrap())
     }
 
     #[test]
@@ -244,11 +246,9 @@ mod tests {
         );
 
         let filter = factory
-            .create_filter(CreateFilterArgs::fixed(
-                FilterRegistry::default(),
-                Registry::default(),
-                Some(serde_yaml::Value::Mapping(map)),
-            ))
+            .create_filter(CreateFilterArgs::fixed(Some(serde_yaml::Value::Mapping(
+                map,
+            ))))
             .unwrap()
             .filter;
         let mut ctx = new_ctx();
@@ -265,11 +265,9 @@ mod tests {
         let map = Mapping::new();
 
         let filter = factory
-            .create_filter(CreateFilterArgs::fixed(
-                FilterRegistry::default(),
-                Registry::default(),
-                Some(serde_yaml::Value::Mapping(map)),
-            ))
+            .create_filter(CreateFilterArgs::fixed(Some(serde_yaml::Value::Mapping(
+                map,
+            ))))
             .unwrap()
             .filter;
         let mut ctx = new_ctx();
@@ -285,11 +283,7 @@ mod tests {
         let factory = TokenRouterFactory::new();
 
         let filter = factory
-            .create_filter(CreateFilterArgs::fixed(
-                FilterRegistry::default(),
-                Registry::default(),
-                None,
-            ))
+            .create_filter(CreateFilterArgs::fixed(None))
             .unwrap()
             .filter;
         let mut ctx = new_ctx();

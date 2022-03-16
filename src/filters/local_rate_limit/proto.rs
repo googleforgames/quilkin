@@ -21,7 +21,7 @@ pub(super) mod quilkin {
             pub mod local_rate_limit {
                 pub mod v1alpha1 {
                     #![doc(hidden)]
-                    tonic::include_proto!("quilkin.extensions.filters.local_rate_limit.v1alpha1");
+                    tonic::include_proto!("quilkin.filters.local_rate_limit.v1alpha1");
                 }
             }
         }

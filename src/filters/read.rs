@@ -76,6 +76,7 @@ impl From<ReadContext> for ReadResponse {
 ///       Some(ctx.into())
 ///   }
 /// ```
+#[derive(Debug)]
 #[non_exhaustive]
 pub struct ReadResponse {
     /// The upstream endpoints that the packet should be forwarded to.

@@ -20,13 +20,13 @@ use crate::filters::prelude::*;
 use serde::{Deserialize, Serialize};
 use tracing::info;
 
-crate::include_proto!("quilkin.extensions.filters.debug.v1alpha1");
-use self::quilkin::extensions::filters::debug::v1alpha1::Debug as ProtoDebug;
+crate::include_proto!("quilkin.filters.debug.v1alpha1");
+use self::quilkin::filters::debug::v1alpha1::Debug as ProtoDebug;
 
 /// Debug logs all incoming and outgoing packets
 struct Debug {}
 
-pub const NAME: &str = "quilkin.extensions.filters.debug.v1alpha1.Debug";
+pub const NAME: &str = "quilkin.filters.debug.v1alpha1.Debug";
 
 /// Creates a new factory for generating debug filters.
 pub fn factory() -> DynFilterFactory {
@@ -80,6 +80,10 @@ impl FilterFactory for DebugFactory {
         NAME
     }
 
+    fn config_schema(&self) -> schemars::schema::RootSchema {
+        schemars::schema_for!(Config)
+    }
+
     fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
         let config: Option<(_, Config)> = args
             .config
@@ -99,7 +103,7 @@ impl FilterFactory for DebugFactory {
 }
 
 /// A Debug filter's configuration.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, schemars::JsonSchema)]
 pub struct Config {
     /// Identifier that will be optionally included with each log message.
     pub id: Option<String>,
@@ -115,14 +119,12 @@ impl TryFrom<ProtoDebug> for Config {
 
 #[cfg(test)]
 mod tests {
-    use crate::filters::FilterRegistry;
     use crate::test_utils::{assert_filter_read_no_change, assert_write_no_change};
     use serde_yaml::Mapping;
     use serde_yaml::Value;
     use tracing_test::traced_test;
 
     use super::*;
-    use prometheus::Registry;
 
     #[traced_test]
     #[test]
@@ -148,11 +150,7 @@ mod tests {
 
         map.insert(Value::from("id"), Value::from("name"));
         assert!(factory
-            .create_filter(CreateFilterArgs::fixed(
-                FilterRegistry::default(),
-                Registry::default(),
-                Some(Value::Mapping(map)),
-            ))
+            .create_filter(CreateFilterArgs::fixed(Some(Value::Mapping(map)),))
             .is_ok());
     }
 
@@ -163,11 +161,7 @@ mod tests {
 
         map.insert(Value::from("id"), Value::from("name"));
         assert!(factory
-            .create_filter(CreateFilterArgs::fixed(
-                FilterRegistry::default(),
-                Registry::default(),
-                Some(Value::Mapping(map)),
-            ))
+            .create_filter(CreateFilterArgs::fixed(Some(Value::Mapping(map)),))
             .is_ok());
     }
 
@@ -178,11 +172,7 @@ mod tests {
 
         map.insert(Value::from("id"), Value::Sequence(vec![]));
         assert!(factory
-            .create_filter(CreateFilterArgs::fixed(
-                FilterRegistry::default(),
-                Registry::default(),
-                Some(Value::Mapping(map))
-            ))
+            .create_filter(CreateFilterArgs::fixed(Some(Value::Mapping(map))))
             .is_err());
     }
 }

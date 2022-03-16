@@ -31,10 +31,10 @@ use crate::{
 
 use metrics::Metrics;
 
-crate::include_proto!("quilkin.extensions.filters.local_rate_limit.v1alpha1");
-use self::quilkin::extensions::filters::local_rate_limit::v1alpha1::LocalRateLimit as ProtoConfig;
+crate::include_proto!("quilkin.filters.local_rate_limit.v1alpha1");
+use self::quilkin::filters::local_rate_limit::v1alpha1::LocalRateLimit as ProtoConfig;
 
-pub const NAME: &str = "quilkin.extensions.filters.local_rate_limit.v1alpha1.LocalRateLimit";
+pub const NAME: &str = "quilkin.filters.local_rate_limit.v1alpha1.LocalRateLimit";
 
 /// Creates a new factory for generating rate limiting filters.
 pub fn factory() -> DynFilterFactory {
@@ -178,6 +178,10 @@ impl FilterFactory for LocalRateLimitFactory {
         NAME
     }
 
+    fn config_schema(&self) -> schemars::schema::RootSchema {
+        schemars::schema_for!(Config)
+    }
+
     fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
         let (config_json, config) = self
             .require_config(args.config)?
@@ -189,7 +193,7 @@ impl FilterFactory for LocalRateLimitFactory {
                 reason: "value must be at least 1 second".into(),
             })
         } else {
-            let filter = LocalRateLimit::new(config, Metrics::new(&args.metrics_registry)?);
+            let filter = LocalRateLimit::new(config, Metrics::new()?);
             Ok(FilterInstance::new(
                 config_json,
                 Box::new(filter) as Box<dyn Filter>,
@@ -199,7 +203,7 @@ impl FilterFactory for LocalRateLimitFactory {
 }
 
 /// Config represents a [self]'s configuration.
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, schemars::JsonSchema)]
 pub struct Config {
     /// The maximum number of packets allowed to be forwarded by the rate
     /// limiter in a given duration.
@@ -229,7 +233,6 @@ impl TryFrom<ProtoConfig> for Config {
 mod tests {
     use std::{convert::TryFrom, net::Ipv4Addr, time::Duration};
 
-    use prometheus::Registry;
     use tokio::time;
 
     use super::ProtoConfig;
@@ -243,7 +246,7 @@ mod tests {
     use crate::test_utils::assert_write_no_change;
 
     fn rate_limiter(config: Config) -> LocalRateLimit {
-        LocalRateLimit::new(config, Metrics::new(&Registry::default()).unwrap())
+        LocalRateLimit::new(config, Metrics::new().unwrap())
     }
 
     fn address_pair() -> (EndpointAddress, EndpointAddress) {
@@ -277,8 +280,6 @@ period: 0
         let err = factory
             .create_filter(CreateFilterArgs {
                 config: Some(ConfigType::Static(serde_yaml::from_str(config).unwrap())),
-                metrics_registry: Default::default(),
-                filter_registry: crate::filters::FilterRegistry::default(),
             })
             .err()
             .unwrap();

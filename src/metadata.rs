@@ -23,7 +23,9 @@ pub type DynamicMetadata = HashMap<Arc<String>, Value>;
 
 pub const KEY: &str = "quilkin.dev";
 
-#[derive(Clone, Debug, PartialOrd, serde::Serialize, serde::Deserialize, Eq, Ord)]
+#[derive(
+    Clone, Debug, PartialOrd, serde::Serialize, serde::Deserialize, Eq, Ord, schemars::JsonSchema,
+)]
 #[serde(untagged)]
 pub enum Value {
     Bool(bool),

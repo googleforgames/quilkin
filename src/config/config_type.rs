@@ -22,11 +22,13 @@ use crate::filters::{ConvertProtoConfigError, Error};
 
 /// The configuration of a [`Filter`][crate::filters::Filter] from either a
 /// static or dynamic source.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, schemars::JsonSchema)]
 pub enum ConfigType {
     /// Static configuration from YAML.
+    #[schemars(with = "serde_json::Value")]
     Static(serde_yaml::Value),
     /// Dynamic configuration from Protobuf.
+    #[schemars(skip)]
     Dynamic(prost_types::Any),
 }
 

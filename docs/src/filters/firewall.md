@@ -5,7 +5,7 @@ the rules set on the Firewall filter.
 
 #### Filter name
 ```text
-quilkin.extensions.filters.firewall.v1alpha1.Firewall
+quilkin.filters.firewall.v1alpha1.Firewall
 ```
 
 ### Configuration Examples
@@ -14,7 +14,7 @@ quilkin.extensions.filters.firewall.v1alpha1.Firewall
 version: v1alpha1
 static:
   filters:
-    - name: quilkin.extensions.filters.firewall.v1alpha1.Firewall
+    - name: quilkin.filters.firewall.v1alpha1.Firewall
       config:
         on_read:
           - action: ALLOW
@@ -38,41 +38,7 @@ static:
 ### Configuration Options ([Rust Doc](../../api/quilkin/filters/firewall/struct.Config.html))
 
 ```yaml
-properties:
-  on_read:
-    '$ref': '#/definitions/rules'
-    description: Rules to match against when reading packets to the local listening port.
-  on_write:
-    type: array
-    '$ref': '#/definitions/rules'
-    description: Rules to match against when writing packets to the local listening port.
-
-definitions:
-  rules:
-    type: array
-    description: Rules to match against when writing packets to the local listening port.
-    items:
-      type: object
-      properties:
-        action:
-          type: string
-          description: |
-            Whether or not a matching Rule should Allow or Deny access
-            - DENY: If the rule matches, block the traffic.
-            - ALLOW: If the rule matches, allow the traffic through.
-          enum: ['ALLOW', 'DENY']
-        source:
-          type: string
-          description: A CIDR network range, either in a v4 or v6 format.
-        ports:
-          type: array
-          description: Array of singular ports or port ranges to match against.
-          items:
-            type: string
-            description: |
-              Either in the format of "10" for a singular port or "10-100" for a port range where 
-              min is inclusive, and max is exclusive.
-      required: ['action', 'source', 'ports']
+{{#include ../../../target/quilkin.filters.firewall.v1alpha1.yaml}}
 ```
 
 #### Rule Evaluation

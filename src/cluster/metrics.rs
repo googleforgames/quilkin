@@ -15,9 +15,10 @@
  */
 
 use crate::metrics::{opts, CollectorExt};
-use prometheus::core::{AtomicI64, GenericGauge};
-use prometheus::Result as MetricsResult;
-use prometheus::{IntGauge, Registry};
+use prometheus::{
+    core::{AtomicI64, GenericGauge},
+    IntGauge, Result as MetricsResult,
+};
 
 #[derive(Clone)]
 pub(super) struct Metrics {
@@ -26,7 +27,7 @@ pub(super) struct Metrics {
 }
 
 impl Metrics {
-    pub fn new(registry: &Registry) -> MetricsResult<Self> {
+    pub fn new() -> MetricsResult<Self> {
         let subsystem = "cluster";
         Ok(Self {
             active_clusters: IntGauge::with_opts(opts(
@@ -34,13 +35,13 @@ impl Metrics {
                 subsystem,
                 "Number of currently active clusters.",
             ))?
-            .register_if_not_exists(registry)?,
+            .register_if_not_exists()?,
             active_endpoints: IntGauge::with_opts(opts(
                 "active_endpoints",
                 subsystem,
                 "Number of currently active endpoints.",
             ))?
-            .register_if_not_exists(registry)?,
+            .register_if_not_exists()?,
         })
     }
 }

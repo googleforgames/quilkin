@@ -77,7 +77,7 @@ async fn metrics_server() {
         .await
         .unwrap();
 
-    assert!(String::from_utf8(resp.to_vec())
-        .unwrap()
-        .contains("quilkin_session_tx_packets_total 1"));
+    let response = String::from_utf8(resp.to_vec()).unwrap();
+    dbg!(&response);
+    assert!(response.contains("quilkin_session_tx_packets_total 1"));
 }

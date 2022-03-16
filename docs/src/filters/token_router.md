@@ -8,7 +8,7 @@ This Filter provides this functionality by comparing a byte array token found in
 
 #### Filter name
 ```text
-quilkin.extensions.filters.token_router.v1alpha1.TokenRouter
+quilkin.filters.token_router.v1alpha1.TokenRouter
 ```
 
 ### Configuration Examples
@@ -17,7 +17,7 @@ quilkin.extensions.filters.token_router.v1alpha1.TokenRouter
 version: v1alpha1
 static:
   filters:
-    - name: quilkin.extensions.filters.token_router.v1alpha1.TokenRouter
+    - name: quilkin.filters.token_router.v1alpha1.TokenRouter
       config:
           metadataKey: myapp.com/myownkey
   endpoints: 
@@ -38,17 +38,12 @@ static:
 # quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
 ```
 
-View the [CaptureBytes](./capture_bytes.md) filter documentation for more details.
+View the [CaptureBytes](./capture.md) filter documentation for more details.
 
 ### Configuration Options ([Rust Doc](../../api/quilkin/filters/token_router/struct.Config.html))
 
 ```yaml
-properties:
-  metadataKey:
-    type: string
-    default: quilkin.dev/captured_bytes
-    description: | 
-      The key under which the token is stored in the Filter dynamic metadata.
+{{#include ../../../target/quilkin.filters.token_router.v1alpha1.yaml}}
 ```
 
 ### Metrics
@@ -68,7 +63,7 @@ properties:
 In combination with several other filters, the `TokenRouter` can be utilised as an authentication and access control
 mechanism for all incoming packets.
 
-Capturing the authentication token from an incoming packet can be implemented via the [CaptureByte](./capture_bytes.md)
+Capturing the authentication token from an incoming packet can be implemented via the [CaptureByte](./capture.md)
 filter, with an example outlined below, or any other filter that populates the configured dynamic metadata key for the
 authentication token to reside.
 
@@ -82,11 +77,12 @@ For example, a configuration would look like:
 version: v1alpha1
 static:
   filters:
-    - name: quilkin.extensions.filters.capture_bytes.v1alpha1.CaptureBytes # Capture and remove the authentication token
+    - name: quilkin.filters.capture.v1alpha1.Capture # Capture and remove the authentication token
       config:
-          size: 3
-          remove: true
-    - name: quilkin.extensions.filters.token_router.v1alpha1.TokenRouter
+        suffix:
+            size: 3
+            remove: true
+    - name: quilkin.filters.token_router.v1alpha1.TokenRouter
   endpoints: 
     - address: 127.0.0.1:26000
       metadata:

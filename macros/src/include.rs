@@ -42,12 +42,9 @@ impl ToTokens for IncludeProto {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let id = &self.id;
 
-        let doc_hidden: syn::Attribute = syn::parse_quote!(#![doc(hidden)]);
         let tonic_include_proto: syn::Stmt = syn::parse_quote!(tonic::include_proto!(#id););
-        let items: Vec<syn::Item> = vec![
-            syn::Item::Verbatim(doc_hidden.to_token_stream()),
-            syn::Item::Verbatim(tonic_include_proto.to_token_stream()),
-        ];
+        let items: Vec<syn::Item> =
+            vec![syn::Item::Verbatim(tonic_include_proto.to_token_stream())];
 
         let module = id.split('.').rev().fold::<Vec<_>, _>(items, |acc, module| {
             let module = syn::Ident::new(module, Span::mixed_site());

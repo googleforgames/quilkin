@@ -24,7 +24,7 @@ use endpoint_chooser::EndpointChooser;
 
 pub use config::{Config, Policy};
 
-pub const NAME: &str = "quilkin.extensions.filters.load_balancer.v1alpha1.LoadBalancer";
+pub const NAME: &str = "quilkin.filters.load_balancer.v1alpha1.LoadBalancer";
 
 /// Returns a factory for creating load balancing filters.
 pub fn factory() -> DynFilterFactory {
@@ -50,6 +50,10 @@ impl FilterFactory for LoadBalancerFilterFactory {
         NAME
     }
 
+    fn config_schema(&self) -> schemars::schema::RootSchema {
+        schemars::schema_for!(Config)
+    }
+
     fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
         let (config_json, config) = self
             .require_config(args.config)?
@@ -72,19 +76,16 @@ mod tests {
         endpoint::{Endpoint, EndpointAddress, Endpoints},
         filters::{
             load_balancer::LoadBalancerFilterFactory, CreateFilterArgs, Filter, FilterFactory,
-            FilterRegistry, ReadContext,
+            ReadContext,
         },
     };
-    use prometheus::Registry;
 
     fn create_filter(config: &str) -> Box<dyn Filter> {
         let factory = LoadBalancerFilterFactory;
         factory
-            .create_filter(CreateFilterArgs::fixed(
-                FilterRegistry::default(),
-                Registry::default(),
-                Some(serde_yaml::from_str(config).unwrap()),
-            ))
+            .create_filter(CreateFilterArgs::fixed(Some(
+                serde_yaml::from_str(config).unwrap(),
+            )))
             .unwrap()
             .filter
     }
