@@ -124,7 +124,7 @@ impl ValidatedConfig {
                     );
                 }
 
-                let endpoints = Endpoints::new(config_endpoints.clone())
+                let endpoints = Endpoints::try_new(config_endpoints.clone())
                     .ok_or_else(|| ValidationError::EmptyList("static.endpoints".into()))?;
 
                 ValidatedSource::Static {

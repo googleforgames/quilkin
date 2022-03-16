@@ -110,3 +110,5 @@ pub(crate) mod ads_client;
 pub(crate) mod cluster;
 pub(crate) mod listener;
 mod metrics;
+
+pub(crate) use ads_client::AdsClient;

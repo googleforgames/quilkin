@@ -24,7 +24,10 @@ use prost::Message;
 use tokio::sync::mpsc;
 
 use crate::{
-    cluster::{Cluster as ProxyCluster, ClusterLocalities, Locality, LocalityEndpoints},
+    cluster::{
+        Cluster as ProxyCluster, ClusterLocalities, ClusterMap, Locality, LocalityEndpoints,
+        SharedCluster,
+    },
     endpoint::{Endpoint, EndpointAddress},
     metadata::MetadataView,
     xds::{
@@ -48,8 +51,7 @@ pub(crate) struct ClusterManager {
     // Send discovery requests ACKs/NACKs to the server.
     discovery_req_tx: mpsc::Sender<DiscoveryRequest>,
 
-    // Sends cluster state updates to the caller.
-    cluster_updates_tx: mpsc::Sender<HashMap<String, ProxyCluster>>,
+    shared_cluster: SharedCluster,
 
     // Tracks each cluster's endpoints and localities.
     clusters: HashMap<String, ProxyCluster>,
@@ -66,12 +68,12 @@ impl ClusterManager {
     /// ACKs/NACKs are sent on the provided channel to be forwarded to the XDS
     /// server.
     pub(in crate::xds) fn new(
-        cluster_updates_tx: mpsc::Sender<HashMap<String, ProxyCluster>>,
+        shared_cluster: SharedCluster,
         discovery_req_tx: mpsc::Sender<DiscoveryRequest>,
     ) -> Self {
         ClusterManager {
             discovery_req_tx,
-            cluster_updates_tx,
+            shared_cluster,
             clusters: HashMap::new(),
             last_seen_cluster_load_assignment_version: None,
         }
@@ -136,7 +138,7 @@ impl ClusterManager {
         std::mem::swap(&mut temp_cluster_set, &mut self.clusters);
 
         // Send the new cluster set downstream.
-        self.send_cluster_update().await;
+        self.update_cluster();
 
         // If we have any added/removed clusters, we need to update our ClusterLoadAssignment watch.
         // This also handles deletion - if a previously existing cluster wasn't returned in a response,
@@ -214,25 +216,15 @@ impl ClusterManager {
             }
         }
 
-        // Send any cluster update downstream.
-        self.send_cluster_update().await;
+        self.update_cluster();
 
         Ok(())
     }
 
-    // Send the current cluster state downstream.
-    async fn send_cluster_update(&mut self) {
-        self.cluster_updates_tx
-            .send(self.clusters.clone())
-            .await
-            .map_err(|err| {
-                tracing::warn!("Failed to send cluster updates downstream");
-                err
-            })
-            // ok is safe here because an error can only be due to downstream dropping
-            // the receiving side and we can't do much about that since it could mean
-            // that they're no longer interested or we're shutting down.
-            .ok();
+    /// Updates the Quilkin socket cluster with the updated clusters.
+    fn update_cluster(&self) {
+        self.shared_cluster
+            .store(ClusterMap::from(self.clusters.clone()));
     }
 
     /// Parses a ClusterLoadAssignment response into the endpoint
@@ -355,17 +347,26 @@ impl ClusterManager {
 #[cfg(test)]
 mod tests {
     use super::{ClusterManager, ProxyCluster};
-    use crate::endpoint::{Endpoint as ProxyEndpoint, EndpointAddress};
-    use crate::xds::envoy::config::cluster::v3::{cluster::ClusterDiscoveryType, Cluster};
-    use crate::xds::envoy::config::core::v3::{
-        address, socket_address::PortSpecifier, Address, Metadata, SocketAddress,
+    use crate::{
+        cluster::SharedCluster,
+        endpoint::{Endpoint as ProxyEndpoint, EndpointAddress},
+        xds::{
+            envoy::{
+                config::{
+                    cluster::v3::{cluster::ClusterDiscoveryType, Cluster},
+                    core::v3::{
+                        address, socket_address::PortSpecifier, Address, Metadata, SocketAddress,
+                    },
+                    endpoint::v3::{
+                        lb_endpoint::HostIdentifier, ClusterLoadAssignment, Endpoint, LbEndpoint,
+                        LocalityLbEndpoints,
+                    },
+                },
+                service::discovery::v3::{DiscoveryRequest, DiscoveryResponse},
+            },
+            CLUSTER_TYPE, ENDPOINT_TYPE,
+        },
     };
-    use crate::xds::envoy::config::endpoint::v3::{
-        lb_endpoint::HostIdentifier, ClusterLoadAssignment, Endpoint, LbEndpoint,
-        LocalityLbEndpoints,
-    };
-    use crate::xds::envoy::service::discovery::v3::{DiscoveryRequest, DiscoveryResponse};
-    use crate::xds::{CLUSTER_TYPE, ENDPOINT_TYPE};
     use prost::Message;
     use prost_types::value::Kind;
     use prost_types::Struct as ProstStruct;
@@ -373,16 +374,14 @@ mod tests {
     use std::collections::{HashMap, HashSet};
     use tokio::sync::mpsc;
 
-    type ClusterState = HashMap<String, ProxyCluster>;
-
     #[tokio::test]
     async fn watch_endpoints_for_new_clusters() {
         // Test that whenever we receive a new cluster, we add it to
         // the endpoint watch list.
 
-        let (cluster_updates_tx, _) = mpsc::channel::<ClusterState>(100);
+        let shared_cluster = SharedCluster::empty().unwrap();
         let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel::<DiscoveryRequest>(100);
-        let mut cm = ClusterManager::new(cluster_updates_tx, discovery_req_tx);
+        let mut cm = ClusterManager::new(shared_cluster, discovery_req_tx);
 
         let initial_names = vec!["a".into()];
         cm.on_cluster_response(cluster_discovery_response("1", "2", initial_names.clone()))
@@ -422,9 +421,9 @@ mod tests {
     async fn endpoint_updates() {
         // Test that whenever we receive endpoint changes, we update our cluster state.
 
-        let (cluster_updates_tx, _) = mpsc::channel::<ClusterState>(100);
+        let shared_cluster = SharedCluster::empty().unwrap();
         let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel::<DiscoveryRequest>(100);
-        let mut cm = ClusterManager::new(cluster_updates_tx, discovery_req_tx);
+        let mut cm = ClusterManager::new(shared_cluster, discovery_req_tx);
 
         let names = vec!["a".into(), "b".into()];
         cm.on_cluster_response(cluster_discovery_response("3", "6", names.clone()))
@@ -506,9 +505,9 @@ mod tests {
     async fn watch_endpoints_for_clusters() {
         // Test that whenever we receive endpoint changes, we send back a new discovery request.
 
-        let (cluster_updates_tx, _) = mpsc::channel::<ClusterState>(100);
+        let shared_cluster = SharedCluster::empty().unwrap();
         let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel::<DiscoveryRequest>(100);
-        let mut cm = ClusterManager::new(cluster_updates_tx, discovery_req_tx);
+        let mut cm = ClusterManager::new(shared_cluster, discovery_req_tx);
 
         let names = vec!["a".into(), "b".into()];
         cm.on_cluster_response(cluster_discovery_response("3", "6", names.clone()))
@@ -542,9 +541,9 @@ mod tests {
     async fn nack_cluster_update() {
         // Test that if we receive a bad cluster update, we NACK.
 
-        let (cluster_updates_tx, _) = mpsc::channel::<ClusterState>(100);
+        let shared_cluster = SharedCluster::empty().unwrap();
         let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel::<DiscoveryRequest>(100);
-        let mut cm = ClusterManager::new(cluster_updates_tx, discovery_req_tx);
+        let mut cm = ClusterManager::new(shared_cluster, discovery_req_tx);
 
         let initial_names = vec!["a".into()];
         cm.on_cluster_response(cluster_discovery_response("1", "2", initial_names.clone()))
@@ -573,9 +572,9 @@ mod tests {
     async fn nack_endpoint_update() {
         // Test that if we receive a bad endpoint update, we NACK.
 
-        let (cluster_updates_tx, _) = mpsc::channel::<ClusterState>(100);
+        let shared_cluster = SharedCluster::empty().unwrap();
         let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel::<DiscoveryRequest>(100);
-        let mut cm = ClusterManager::new(cluster_updates_tx, discovery_req_tx);
+        let mut cm = ClusterManager::new(shared_cluster, discovery_req_tx);
 
         cm.on_cluster_response(cluster_discovery_response(
             "1",
@@ -623,9 +622,9 @@ mod tests {
     async fn cluster_updates() {
         // Test that whenever we receive a cluster update, we send it downstream.
 
-        let (cluster_updates_tx, mut cluster_updates_rx) = mpsc::channel::<ClusterState>(100);
+        let shared_cluster = SharedCluster::empty().unwrap();
         let (discovery_req_tx, _) = mpsc::channel::<DiscoveryRequest>(100);
-        let mut cm = ClusterManager::new(cluster_updates_tx, discovery_req_tx);
+        let mut cm = ClusterManager::new(shared_cluster.clone(), discovery_req_tx);
 
         cm.on_cluster_response(cluster_discovery_response(
             "1",
@@ -634,7 +633,7 @@ mod tests {
         ))
         .await;
 
-        let cluster_state = cluster_updates_rx.recv().await.unwrap();
+        let cluster_state = shared_cluster.load();
         assert_eq!(cluster_state.len(), 2);
 
         let cluster_a = cluster_state.get("a").unwrap();
@@ -672,7 +671,7 @@ mod tests {
         ))
         .await;
 
-        let cluster_state = cluster_updates_rx.recv().await.unwrap();
+        let cluster_state = shared_cluster.load();
         assert_eq!(cluster_state.len(), 2);
 
         let cluster_a = cluster_state.get("a").unwrap();
@@ -686,9 +685,9 @@ mod tests {
     async fn cluster_updates_for_endpoints() {
         // Test that whenever we receive an endpoint update, we send a new cluster set downstream.
 
-        let (cluster_updates_tx, mut cluster_updates_rx) = mpsc::channel::<ClusterState>(100);
+        let shared_cluster = SharedCluster::empty().unwrap();
         let (discovery_req_tx, _) = mpsc::channel::<DiscoveryRequest>(100);
-        let mut cm = ClusterManager::new(cluster_updates_tx, discovery_req_tx);
+        let mut cm = ClusterManager::new(shared_cluster.clone(), discovery_req_tx);
 
         cm.on_cluster_response(cluster_discovery_response(
             "1",
@@ -698,7 +697,7 @@ mod tests {
         .await;
 
         // Read the cluster update.
-        let cluster_state = cluster_updates_rx.recv().await.unwrap();
+        let cluster_state = shared_cluster.load();
         assert_eq!(cluster_state.len(), 2);
 
         // Update one of the endpoints and check that a new cluster set is sent downstream.
@@ -728,7 +727,7 @@ mod tests {
         ))
         .await;
 
-        let cluster_state = cluster_updates_rx.recv().await.unwrap();
+        let cluster_state = shared_cluster.load();
         assert_eq!(cluster_state.len(), 2);
 
         let cluster_a = cluster_state.get("a").unwrap();
@@ -742,9 +741,9 @@ mod tests {
     async fn endpoint_metadata() {
         // Test that we include associated endpoint metadata in cluster update.
 
-        let (cluster_updates_tx, mut cluster_updates_rx) = mpsc::channel::<ClusterState>(100);
+        let shared_cluster = SharedCluster::empty().unwrap();
         let (discovery_req_tx, _) = mpsc::channel::<DiscoveryRequest>(100);
-        let mut cm = ClusterManager::new(cluster_updates_tx, discovery_req_tx);
+        let mut cm = ClusterManager::new(shared_cluster.clone(), discovery_req_tx);
 
         cm.on_cluster_response(cluster_discovery_response_with_update(
             "1",
@@ -778,23 +777,14 @@ mod tests {
         .await;
 
         // Read the cluster update.
-        let cluster_state = cluster_updates_rx.recv().await.unwrap();
-        assert_eq!(cluster_state.len(), 1);
-        let (cluster_name, cluster) = cluster_state.iter().next().unwrap();
-
-        assert_eq!(cluster.localities.len(), 1);
-        let (_, locality) = cluster.localities.iter().next().unwrap();
-
-        // Validate the metadata we set for the endpoint.
-        assert_eq!(locality.endpoints.len(), 1);
-        let endpoint = locality.endpoints.get(0).unwrap();
+        let endpoints = shared_cluster.endpoints().unwrap();
+        assert_eq!(endpoints.size(), 1);
+        let endpoint = endpoints.iter().next().unwrap();
         let dyn_metadata = &endpoint.metadata.unknown;
 
         assert_eq!(dyn_metadata.len(), 1);
 
-        let value = dyn_metadata
-            .get(&format!("key-{cluster_name}").into())
-            .unwrap();
+        let value = dyn_metadata.get(&String::from("key-a").into()).unwrap();
         assert_eq!(
             value,
             &serde_yaml::Value::from(

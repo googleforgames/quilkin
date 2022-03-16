@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+pub(super) mod metrics;
+
 use std::net::{Ipv4Addr, SocketAddrV4};
 use std::sync::Arc;
 
@@ -24,10 +26,9 @@ use tokio::task::JoinHandle;
 use tokio::time::Duration;
 
 use metrics::Metrics as ProxyMetrics;
-use resource_manager::{DynamicResourceManagers, StaticResourceManagers};
 
 use crate::{
-    cluster::cluster_manager::SharedClusterManager,
+    cluster::SharedCluster,
     endpoint::{Endpoint, EndpointAddress},
     filters::{Filter, ReadContext, SharedFilterChain},
     proxy::{
@@ -42,9 +43,6 @@ use crate::{
     Result,
 };
 
-pub(super) mod metrics;
-mod resource_manager;
-
 /// Server is the UDP server main implementation
 pub struct Server {
     // We use pub(super) to limit instantiation only to the Builder.
@@ -57,7 +55,7 @@ pub struct Server {
 
 /// Represents arguments to the `Server::run_recv_from` method.
 struct RunRecvFromArgs {
-    cluster_manager: SharedClusterManager,
+    cluster: SharedCluster,
     filter_chain: SharedFilterChain,
     socket: Arc<UdpSocket>,
     session_manager: SessionManager,
@@ -92,7 +90,7 @@ struct DownstreamReceiveWorkerConfig {
 struct ProcessDownstreamReceiveConfig {
     proxy_metrics: ProxyMetrics,
     session_metrics: SessionMetrics,
-    cluster_manager: SharedClusterManager,
+    cluster: SharedCluster,
     filter_chain: SharedFilterChain,
     session_manager: SessionManager,
     session_ttl: Duration,
@@ -115,20 +113,15 @@ impl Server {
 
         let session_ttl = Duration::from_secs(SESSION_TIMEOUT_SECONDS);
 
-        let (cluster_manager, filter_chain) =
-            self.create_resource_managers(shutdown_rx.clone()).await?;
+        let (cluster, filter_chain) = self.create_resource_managers(shutdown_rx.clone())?;
 
         if let Some(admin) = &self.admin {
-            admin.run(
-                cluster_manager.clone(),
-                filter_chain.clone(),
-                shutdown_rx.clone(),
-            );
+            admin.run(cluster.clone(), filter_chain.clone(), shutdown_rx.clone());
         }
 
         self.run_receive_packet(socket.clone(), receive_packets);
         let recv_loop = self.run_recv_from(RunRecvFromArgs {
-            cluster_manager,
+            cluster,
             filter_chain,
             socket,
             session_manager,
@@ -151,48 +144,34 @@ impl Server {
         }
     }
 
-    async fn create_resource_managers(
+    fn create_resource_managers(
         &self,
         shutdown_rx: watch::Receiver<()>,
-    ) -> Result<(SharedClusterManager, SharedFilterChain)> {
+    ) -> Result<(SharedCluster, SharedFilterChain)> {
         match &self.config.source {
             ValidatedSource::Static {
                 filter_chain,
                 endpoints,
             } => {
-                let manager = StaticResourceManagers::new(endpoints.clone(), filter_chain)
-                    .map_err(|err| {
-                        eyre::eyre!(err).wrap_err("Failed to initialise static resource manager.")
-                    })?;
-                Ok((manager.cluster_manager, manager.filter_chain))
+                let cluster = SharedCluster::new_static_cluster(endpoints.to_vec())?;
+                let filter_chain = SharedFilterChain::try_from(&**filter_chain)?;
+                Ok((cluster, filter_chain))
             }
             ValidatedSource::Dynamic { management_servers } => {
-                let manager = DynamicResourceManagers::new(
+                let cluster = SharedCluster::empty()?;
+                let filter_chain = SharedFilterChain::empty();
+
+                let client = crate::xds::AdsClient::new()?;
+
+                tokio::spawn(client.run(
                     self.config.proxy.id.clone(),
-                    SharedFilterChain::empty(),
-                    management_servers.to_vec(),
+                    cluster.clone(),
+                    management_servers.clone(),
+                    filter_chain.clone(),
                     shutdown_rx,
-                )
-                .await
-                .map_err(|err| {
-                    eyre::eyre!(err).wrap_err("Failed to initialise xDS management servers.")
-                })?;
+                ));
 
-                let execution_result_rx = manager.execution_result_rx;
-                // Spawn a task to check for an error if the XDS client
-                // terminates and forward the error upstream.
-                tokio::spawn(async move {
-                    if let Err(error) = execution_result_rx.await {
-                        // TODO: For now only log the error but we would like to
-                        //   initiate a shut down instead once this happens.
-                        tracing::error!(
-                            %error,
-                            "ClusterManager XDS client terminated with an error"
-                        );
-                    }
-                });
-
-                Ok((manager.cluster_manager, manager.filter_chain))
+                Ok((cluster, filter_chain))
             }
         }
     }
@@ -225,7 +204,7 @@ impl Server {
                 receive_config: ProcessDownstreamReceiveConfig {
                     proxy_metrics: proxy_metrics.clone(),
                     session_metrics: session_metrics.clone(),
-                    cluster_manager: args.cluster_manager.clone(),
+                    cluster: args.cluster.clone(),
                     filter_chain: args.filter_chain.clone(),
                     session_manager: session_manager.clone(),
                     session_ttl: args.session_ttl,
@@ -328,7 +307,7 @@ impl Server {
             "Packet Received"
         );
 
-        let endpoints = match args.cluster_manager.read().get_all_endpoints() {
+        let endpoints = match args.cluster.endpoints() {
             Some(endpoints) => endpoints,
             None => {
                 args.proxy_metrics.packets_dropped_no_endpoints.inc();
@@ -499,9 +478,9 @@ mod tests {
     };
 
     use crate::{
-        cluster::cluster_manager::ClusterManager,
+        cluster::SharedCluster,
         config::{self, Builder as ConfigBuilder},
-        endpoint::{Endpoint, Endpoints},
+        endpoint::Endpoint,
         filters::SharedFilterChain,
         proxy::sessions::UpstreamPacket,
         proxy::Builder,
@@ -648,10 +627,8 @@ mod tests {
             let mut packet_txs = Vec::with_capacity(num_workers);
             let mut worker_configs = Vec::with_capacity(num_workers);
 
-            let cluster_manager = ClusterManager::fixed(
-                Endpoints::new(vec![Endpoint::new(endpoint_address)]).unwrap(),
-            )
-            .unwrap();
+            let cluster =
+                SharedCluster::new_static_cluster(vec![Endpoint::new(endpoint_address)]).unwrap();
             let proxy_metrics = ProxyMetrics::new().unwrap();
 
             for worker_id in 0..num_workers {
@@ -668,7 +645,7 @@ mod tests {
                     receive_config: ProcessDownstreamReceiveConfig {
                         proxy_metrics: proxy_metrics.clone(),
                         session_metrics,
-                        cluster_manager: cluster_manager.clone(),
+                        cluster: cluster.clone(),
                         filter_chain: filter_chain.clone(),
                         session_manager: session_manager.clone(),
                         session_ttl: Duration::from_secs(10),
@@ -768,12 +745,9 @@ mod tests {
         let server = Builder::from(config).validate().unwrap().build();
 
         server.run_recv_from(RunRecvFromArgs {
-            cluster_manager: ClusterManager::fixed(
-                Endpoints::new(vec![Endpoint::new(
-                    endpoint.socket.local_addr().unwrap().into(),
-                )])
-                .unwrap(),
-            )
+            cluster: SharedCluster::new_static_cluster(vec![Endpoint::new(
+                endpoint.socket.local_addr().unwrap().into(),
+            )])
             .unwrap(),
             filter_chain: SharedFilterChain::empty(),
             socket: socket.clone(),

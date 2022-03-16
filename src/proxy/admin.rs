@@ -22,11 +22,9 @@ use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Method, Request, Response, Server as HyperServer, StatusCode};
 use tokio::sync::watch;
 
-use crate::{
-    cluster::cluster_manager::SharedClusterManager,
-    filters::SharedFilterChain,
-    proxy::{config_dump, Health},
-};
+use crate::cluster::SharedCluster;
+use crate::filters::SharedFilterChain;
+use crate::proxy::{config_dump, Health};
 
 pub struct Admin {
     /// The address that the Admin server starts on
@@ -37,7 +35,7 @@ pub struct Admin {
 #[derive(Clone)]
 struct HandleRequestArgs {
     health: Arc<Health>,
-    cluster_manager: SharedClusterManager,
+    cluster_manager: SharedCluster,
     filter_manager: SharedFilterChain,
 }
 
@@ -51,7 +49,7 @@ impl Admin {
 
     pub(crate) fn run(
         &self,
-        cluster_manager: SharedClusterManager,
+        cluster_manager: SharedCluster,
         filter_manager: SharedFilterChain,
         mut shutdown_rx: watch::Receiver<()>,
     ) {

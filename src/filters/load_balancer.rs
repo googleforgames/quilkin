@@ -97,9 +97,7 @@ mod tests {
     ) -> Vec<EndpointAddress> {
         filter
             .read(ReadContext::new(
-                Endpoints::new(input_addresses.iter().cloned().map(Endpoint::new).collect())
-                    .unwrap()
-                    .into(),
+                Endpoints::new(input_addresses.iter().cloned().map(Endpoint::new).collect()).into(),
                 source,
                 vec![],
             ))

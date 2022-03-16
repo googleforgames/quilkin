@@ -80,8 +80,16 @@ impl std::str::FromStr for Endpoint {
 pub struct Endpoints(Arc<Vec<Endpoint>>);
 
 impl Endpoints {
-    /// Returns an [`Endpoints`] backed by the provided list of endpoints.
-    pub fn new(endpoints: Vec<Endpoint>) -> Option<Self> {
+    /// Returns an [`Endpoints`] backed by the non-empty provided list of endpoints.
+    /// # Panics
+    /// If `endpoints` is empty, use [`Endpoints::try_new`] to get a `Result`.
+    pub fn new(endpoints: Vec<Endpoint>) -> Self {
+        Self::try_new(endpoints).unwrap()
+    }
+
+    /// Returns an [`Endpoints`] backed by the provided list of endpoints, if
+    /// the provided list is not empty.
+    pub fn try_new(endpoints: Vec<Endpoint>) -> Option<Self> {
         match endpoints.is_empty() {
             true => None,
             false => Some(Self(Arc::new(endpoints))),
@@ -93,6 +101,20 @@ impl Endpoints {
 impl AsRef<Vec<Endpoint>> for Endpoints {
     fn as_ref(&self) -> &Vec<Endpoint> {
         self.0.as_ref()
+    }
+}
+
+impl AsRef<[Endpoint]> for Endpoints {
+    fn as_ref(&self) -> &[Endpoint] {
+        self.0.as_ref()
+    }
+}
+
+impl std::ops::Deref for Endpoints {
+    type Target = [Endpoint];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
@@ -360,28 +382,34 @@ mod tests {
     }
 
     #[test]
-    fn new_endpoints() {
-        assert!(Endpoints::new(vec![]).is_none());
-        assert!(Endpoints::new(vec![ep(1)]).is_some());
+    #[should_panic]
+    fn non_empty_endpoints() {
+        Endpoints::new(vec![]);
+    }
+
+    #[test]
+    fn try_new_endpoints() {
+        assert!(Endpoints::try_new(vec![]).is_none());
+        assert!(Endpoints::try_new(vec![ep(1)]).is_some());
     }
 
     #[test]
     fn keep() {
         let initial_endpoints = vec![ep(1), ep(2), ep(3)];
 
-        let mut up: UpstreamEndpoints = Endpoints::new(initial_endpoints.clone()).unwrap().into();
+        let mut up: UpstreamEndpoints = Endpoints::new(initial_endpoints.clone()).into();
         assert!(up.keep(initial_endpoints.len() - 1).is_some());
 
-        let mut up: UpstreamEndpoints = Endpoints::new(initial_endpoints.clone()).unwrap().into();
+        let mut up: UpstreamEndpoints = Endpoints::new(initial_endpoints.clone()).into();
         assert!(up.keep(initial_endpoints.len()).is_none());
 
         // Limit the set to only one element.
-        let mut up = UpstreamEndpoints::from(Endpoints::new(initial_endpoints.clone()).unwrap());
+        let mut up = UpstreamEndpoints::from(Endpoints::new(initial_endpoints.clone()));
         up.keep(1).unwrap();
         up.keep(0).unwrap();
         assert_eq!(vec![&initial_endpoints[1]], up.iter().collect::<Vec<_>>());
 
-        let mut up = UpstreamEndpoints::from(Endpoints::new(initial_endpoints).unwrap());
+        let mut up = UpstreamEndpoints::from(Endpoints::new(initial_endpoints));
         up.keep(1).unwrap();
         assert!(up.keep(1).is_none());
     }
@@ -390,7 +418,7 @@ mod tests {
     fn retain() {
         let initial_endpoints = vec![ep(1), ep(2), ep(3), ep(4)];
 
-        let mut up: UpstreamEndpoints = Endpoints::new(initial_endpoints.clone()).unwrap().into();
+        let mut up: UpstreamEndpoints = Endpoints::new(initial_endpoints.clone()).into();
 
         let items = up.retain(|ep| ep.address != ([127, 0, 0, 2], 8080).into());
         assert!(matches!(items, RetainedItems::Some(3)));
@@ -409,14 +437,14 @@ mod tests {
         let result = up.retain(|_| false);
         assert!(result.is_none());
 
-        let mut up: UpstreamEndpoints = Endpoints::new(initial_endpoints).unwrap().into();
+        let mut up: UpstreamEndpoints = Endpoints::new(initial_endpoints).into();
         let result = up.retain(|_| false);
         assert!(result.is_none());
     }
 
     #[test]
     fn upstream_len() {
-        let mut up: UpstreamEndpoints = Endpoints::new(vec![ep(1), ep(2), ep(3)]).unwrap().into();
+        let mut up: UpstreamEndpoints = Endpoints::new(vec![ep(1), ep(2), ep(3)]).into();
         // starts out with all endpoints.
         assert_eq!(up.size(), 3);
         // verify that the set is now a singleton.
@@ -427,7 +455,7 @@ mod tests {
     #[test]
     fn upstream_all_iter() {
         let initial_endpoints = vec![ep(1), ep(2), ep(3)];
-        let up: UpstreamEndpoints = Endpoints::new(initial_endpoints.clone()).unwrap().into();
+        let up: UpstreamEndpoints = Endpoints::new(initial_endpoints.clone()).into();
 
         let result = up.iter().cloned().collect::<Vec<_>>();
         assert_eq!(initial_endpoints, result);
@@ -435,7 +463,7 @@ mod tests {
 
     #[test]
     fn upstream_some_iter() {
-        let mut up = UpstreamEndpoints::from(Endpoints::new(vec![ep(1), ep(2), ep(3)]).unwrap());
+        let mut up = UpstreamEndpoints::from(Endpoints::new(vec![ep(1), ep(2), ep(3)]));
         up.keep(1).unwrap();
         assert_eq!(vec![ep(2)], up.iter().cloned().collect::<Vec<_>>());
     }
