@@ -4,7 +4,7 @@ use crate::{config::ConfigType, filters::prelude::*, metadata::Value};
 
 pub use config::Config;
 
-pub const NAME: &str = "quilkin.filters.matches.v1alpha1.Match";
+pub const NAME: &str = "quilkin.filters.match.v1alpha1.Match";
 
 /// Creates a new factory for generating match filters.
 pub fn factory() -> DynFilterFactory {
