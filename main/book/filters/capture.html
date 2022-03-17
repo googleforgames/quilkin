@@ -161,15 +161,15 @@ multiple matches.</p>
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
 static:
- filters:
- - name: quilkin.filters.capture.v1alpha1.Capture
- config:
- metadataKey: myapp.com/myownkey
- prefix:
- size: 3
- remove: false
- endpoints:
- - address: 127.0.0.1:7001
+  filters:
+    - name: quilkin.filters.capture.v1alpha1.Capture
+      config:
+          metadataKey: myapp.com/myownkey
+          prefix:
+            size: 3
+            remove: false
+  endpoints:
+    - address: 127.0.0.1:7001
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 1);

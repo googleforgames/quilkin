@@ -168,15 +168,25 @@ A packet received downstream will be fed into <code>append</code> and the result
 <ul>
 <li>
 <p><code>quilkin_filter_read_duration_seconds</code> The duration it took for a <code>filter</code>'s
-<code>read</code> implementation to execute.
-book.toml htmltest.yaml logos preprocessor.sh src Labels
-book.toml htmltest.yaml logos preprocessor.sh src <code>filter</code> The name of the filter being executed.</p>
+<code>read</code> implementation to execute.</p>
+<ul>
+<li>Labels
+<ul>
+<li><code>filter</code> The name of the filter being executed.</li>
+</ul>
+</li>
+</ul>
 </li>
 <li>
 <p><code>quilkin_filter_write_duration_seconds</code> The duration it took for a <code>filter</code>'s
-<code>write</code> implementation to execute.
-book.toml htmltest.yaml logos preprocessor.sh src Labels
-book.toml htmltest.yaml logos preprocessor.sh src <code>filter</code> The name of the filter being executed.</p>
+<code>write</code> implementation to execute.</p>
+<ul>
+<li>Labels
+<ul>
+<li><code>filter</code> The name of the filter being executed.</li>
+</ul>
+</li>
+</ul>
 </li>
 </ul>
 <h3 id="configuration-examples"><a class="header" href="#configuration-examples">Configuration Examples</a></h3>
@@ -187,16 +197,16 @@ book.toml htmltest.yaml logos preprocessor.sh src <code>filter</code> The name o
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
 static:
- filters:
- - name: quilkin.filters.debug.v1alpha1.Debug
- config:
- id: debug-1
- - name: quilkin.filters.local_rate_limit.v1alpha1.LocalRateLimit
- config:
- max_packets: 10
- period: 1
- endpoints:
- - address: 127.0.0.1:7001
+  filters:
+    - name: quilkin.filters.debug.v1alpha1.Debug
+      config:
+        id: debug-1
+    - name: quilkin.filters.local_rate_limit.v1alpha1.LocalRateLimit
+      config:
+        max_packets: 10
+        period: 1
+  endpoints:
+    - address: 127.0.0.1:7001
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 2);
@@ -225,29 +235,33 @@ Consequently, we can build a filter chain with a [CaptureBytes] filter preceedin
 <h3 id="built-in-filters"><a class="header" href="#built-in-filters">Built-in filters <a name="built-in-filters"></a></a></h3>
 <p>Quilkin includes several filters out of the box.</p>
 <table><thead><tr><th>Filter</th><th>Description</th></tr></thead><tbody>
-<tr><td><a href="./filters/debug.html">Debug</a></td><td>Logs every packet.</td></tr>
-<tr><td><a href="./filters/local_rate_limit.html">LocalRateLimit</a></td><td>Limit the frequency of packets.</td></tr>
-<tr><td><a href="./filters/concatenate_bytes.html">ConcatenateBytes</a></td><td>Add authentication tokens to packets.</td></tr>
-<tr><td>[CaptureBytes]</td><td>Capture specific bytes from a packet and store them in <a href="#filter-dynamic-metadata">filter dynamic metadata</a>.</td></tr>
-<tr><td><a href="./filters/token_router.html">TokenRouter</a></td><td>Send packets to endpoints based on metadata.</td></tr>
+<tr><td><a href="./filters/capture.html">Capture</a></td><td>Capture specific bytes from a packet and store them in <a href="#filter-dynamic-metadata">filter dynamic metadata</a>.</td></tr>
 <tr><td><a href="./filters/compress.html">Compress</a></td><td>Compress and decompress packets data.</td></tr>
+<tr><td><a href="./filters/concatenate_bytes.html">ConcatenateBytes</a></td><td>Add authentication tokens to packets.</td></tr>
+<tr><td><a href="./filters/debug.html">Debug</a></td><td>Logs every packet.</td></tr>
+<tr><td><a href="./filters/drop.html">Drop</a></td><td>Drop all packets</td></tr>
 <tr><td><a href="./filters/firewall.html">Firewall</a></td><td>Allowing/blocking traffic by IP and port.</td></tr>
+<tr><td><a href="./filters/load_balancer.html">LoadBalancer</a></td><td>Distributes downstream packets among upstream endpoints.</td></tr>
+<tr><td><a href="./filters/local_rate_limit.html">LocalRateLimit</a></td><td>Limit the frequency of packets.</td></tr>
+<tr><td><a href="./filters/match.html">Match</a></td><td>Change Filter behaviour based on dynamic metadata</td></tr>
+<tr><td><a href="./filters/pass.html">Pass</a></td><td>Allow all packets through</td></tr>
+<tr><td><a href="./filters/token_router.html">TokenRouter</a></td><td>Send packets to endpoints based on metadata.</td></tr>
 </tbody></table>
 <h3 id="filterconfig"><a class="header" href="#filterconfig">FilterConfig <a name="filter-config"></a></a></h3>
 <p>Represents configuration for a filter instance.</p>
 <pre><code class="language-yaml">properties:
- name:
- type: string
- description: |
- Identifies the type of filter to be created.
- This value is unique for every filter type - please consult the documentation for the particular filter for this value.
+  name:
+    type: string
+    description: |
+      Identifies the type of filter to be created.
+      This value is unique for every filter type - please consult the documentation for the particular filter for this value.
 
- config:
- type: object
- description: |
- The configuration value to be passed onto the created filter.
- This is passed as an object value since it is specific to the filter's type and is validated by the filter
- implementation. Please consult the documentation for the particular filter for its schema.
+  config:
+    type: object
+    description: |
+      The configuration value to be passed onto the created filter.
+      This is passed as an object value since it is specific to the filter's type and is validated by the filter
+      implementation. Please consult the documentation for the particular filter for its schema.
 
 required: [ 'name', 'config' ]
 </code></pre>

@@ -147,22 +147,22 @@ the rules set on the Firewall filter.</p>
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
 static:
- filters:
- - name: quilkin.filters.firewall.v1alpha1.Firewall
- config:
- on_read:
- - action: ALLOW
- source: 192.168.51.0/24
- ports:
- - 10
- - 1000-7000
- on_write: 
- - action: DENY
- source: 192.168.51.0/24
- ports:
- - 7000
- endpoints:
- - address: 127.0.0.1:7001
+  filters:
+    - name: quilkin.filters.firewall.v1alpha1.Firewall
+      config:
+        on_read:
+          - action: ALLOW
+            source: 192.168.51.0/24
+            ports:
+               - 10
+               - 1000-7000
+        on_write: 
+          - action: DENY
+            source: 192.168.51.0/24
+            ports:
+               - 7000
+  endpoints:
+    - address: 127.0.0.1:7001
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 1);

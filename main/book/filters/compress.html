@@ -147,14 +147,14 @@ and subsequent decompression of UDP data when sent between systems, such as a ga
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
 static:
- filters:
- - name: quilkin.filters.compress.v1alpha1.Compress
- config:
- on_read: COMPRESS
- on_write: DECOMPRESS
- mode: SNAPPY
- endpoints:
- - address: 127.0.0.1:7001
+  filters:
+    - name: quilkin.filters.compress.v1alpha1.Compress
+      config:
+          on_read: COMPRESS
+          on_write: DECOMPRESS
+          mode: SNAPPY
+  endpoints:
+    - address: 127.0.0.1:7001
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 1);
@@ -213,10 +213,19 @@ provided in the future.</p>
 <ul>
 <li><code>quilkin_filter_Compress_packets_dropped_total</code>
 Total number of packets dropped as they could not be processed.
-book.toml htmltest.yaml logos preprocessor.sh src Labels:
-book.toml htmltest.yaml logos preprocessor.sh src <code>action</code>: The action that could not be completed successfully, thereby causing the packet to be dropped.
-book.toml htmltest.yaml logos preprocessor.sh src <code>Compress</code>: Compressing the packet with the configured <code>mode</code> was attempted.
-book.toml htmltest.yaml logos preprocessor.sh src <code>Decompress</code> Decompressing the packet with the configured <code>mode</code> was attempted.</li>
+<ul>
+<li>Labels:
+<ul>
+<li><code>action</code>: The action that could not be completed successfully, thereby causing the packet to be dropped.
+<ul>
+<li><code>Compress</code>: Compressing the packet with the configured <code>mode</code> was attempted.</li>
+<li><code>Decompress</code> Decompressing the packet with the configured <code>mode</code> was attempted.</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
 <li><code>quilkin_filter_Compress_decompressed_bytes_total</code>
 Total number of decompressed bytes either received or sent.</li>
 <li><code>quilkin_filter_Compress_compressed_bytes_total</code>

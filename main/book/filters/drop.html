@@ -167,7 +167,7 @@ static:
             fallthrough: quilkin.filters.drop.v1alpha1.Drop
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-</span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 1);
+</span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 2);
 </span><span class="boring">quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>

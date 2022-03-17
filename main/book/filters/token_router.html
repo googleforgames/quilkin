@@ -135,7 +135,7 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="tokenrouter"><a class="header" href="#tokenrouter">TokenRouter</a></h1>
-<p>The <code>TokenRouter</code> filter's job is to provide a mechanism to declare which Endpoints a packet should be sent to. </p>
+<p>The <code>TokenRouter</code> filter's job is to provide a mechanism to declare which Endpoints a packet should be sent to.</p>
 <p>This Filter provides this functionality by comparing a byte array token found in the
 <a href="../filters.html#filter-dynamic-metadata">Filter Dynamic Metadata</a> from a previous Filter, and comparing it to
 <a href="../proxy.html#upstream-endpoint">Endpoint's tokens</a>, and sending packets to those Endpoints only if there is a match.</p>
@@ -149,22 +149,22 @@
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
 static:
- filters:
- - name: quilkin.filters.token_router.v1alpha1.TokenRouter
- config:
- metadataKey: myapp.com/myownkey
- endpoints: 
- - address: 127.0.0.1:26000
- metadata:
- quilkin.dev:
- tokens:
- - MXg3aWp5Ng== # Authentication is provided by these ids, and matched against 
- - OGdqM3YyaQ== # the value stored in Filter dynamic metadata
- - address: 127.0.0.1:26001
- metadata:
- quilkin.dev:
- tokens:
- - bmt1eTcweA==
+  filters:
+    - name: quilkin.filters.token_router.v1alpha1.TokenRouter
+      config:
+          metadataKey: myapp.com/myownkey
+  endpoints: 
+    - address: 127.0.0.1:26000
+      metadata:
+        quilkin.dev:
+          tokens:
+            - MXg3aWp5Ng== # Authentication is provided by these ids, and matched against 
+            - OGdqM3YyaQ== # the value stored in Filter dynamic metadata
+    - address: 127.0.0.1:26001
+      metadata:
+        quilkin.dev:
+          tokens:
+            - bmt1eTcweA==
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 1);
@@ -185,13 +185,16 @@ properties:
 </code></pre>
 <h3 id="metrics"><a class="header" href="#metrics">Metrics</a></h3>
 <ul>
-<li><code>quilkin_filter_TokenRouter_packets_dropped</code> 
+<li><code>quilkin_filter_TokenRouter_packets_dropped</code><br />
 A counter of the total number of packets that have been dropped. This is also provided with a <code>Reason</code> label, as there
 are differing reasons for packets to be dropped:
-book.toml htmltest.yaml logos preprocessor.sh src <code>NoEndpointMatch</code> - The token provided via the Filter dynamic metadata does not match any Endpoint's tokens.
-book.toml htmltest.yaml logos preprocessor.sh src <code>NoTokenFound</code> - No token has been found in the Filter dynamic metadata.
-book.toml htmltest.yaml logos preprocessor.sh src <code>InvalidToken</code> - The data found for the token in the Filter dynamic metadata is not of the correct data type
+<ul>
+<li><code>NoEndpointMatch</code> - The token provided via the Filter dynamic metadata does not match any Endpoint's tokens.</li>
+<li><code>NoTokenFound</code> - No token has been found in the Filter dynamic metadata.</li>
+<li><code>InvalidToken</code> - The data found for the token in the Filter dynamic metadata is not of the correct data type
 (Vec<u8>)</li>
+</ul>
+</li>
 </ul>
 <h3 id="sample-applications"><a class="header" href="#sample-applications">Sample Applications</a></h3>
 <h4 id="packet-authentication"><a class="header" href="#packet-authentication">Packet Authentication</a></h4>
@@ -209,25 +212,25 @@ appropriately cryptographically random and sent to each proxy securely.</p>
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
 static:
- filters:
- - name: quilkin.filters.capture.v1alpha1.Capture # Capture and remove the authentication token
- config:
- suffix:
- size: 3
- remove: true
- - name: quilkin.filters.token_router.v1alpha1.TokenRouter
- endpoints: 
- - address: 127.0.0.1:26000
- metadata:
- quilkin.dev:
- tokens:
- - MXg3aWp5Ng== # Authentication is provided by these ids, and matched against 
- - OGdqM3YyaQ== # the value stored in Filter dynamic metadata
- - address: 127.0.0.1:26001
- metadata:
- quilkin.dev:
- tokens:
- - bmt1eTcweA==
+  filters:
+    - name: quilkin.filters.capture.v1alpha1.Capture # Capture and remove the authentication token
+      config:
+        suffix:
+            size: 3
+            remove: true
+    - name: quilkin.filters.token_router.v1alpha1.TokenRouter
+  endpoints: 
+    - address: 127.0.0.1:26000
+      metadata:
+        quilkin.dev:
+          tokens:
+            - MXg3aWp5Ng== # Authentication is provided by these ids, and matched against 
+            - OGdqM3YyaQ== # the value stored in Filter dynamic metadata
+    - address: 127.0.0.1:26001
+      metadata:
+        quilkin.dev:
+          tokens:
+            - bmt1eTcweA==
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 2);

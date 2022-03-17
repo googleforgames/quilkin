@@ -148,14 +148,14 @@ Keys must be of type string otherwise the configuration is rejected.</p>
 Such well known values are placed within an object in the endpoint metadata, under the special key <code>quilkin.dev</code>. Currently, only the <code>tokens</code> entry is in use.</p>
 <p>As an example, the following shows the configuration for an endpoint with its metadata:</p>
 <pre><code class="language-yaml">static:
- endpoints:
- - address: 127.0.0.1:26000
- metadata:
- canary: false
- quilkin.dev: # This object is extracted by Quilkin and is usually reserved for built-in features
- tokens:
- - MXg3aWp5Ng== # base64 for 1x7ijy6
- - OGdqM3YyaQ== # base64 for 8gj3v2i
+  endpoints:
+    - address: 127.0.0.1:26000
+      metadata:
+        canary: false
+        quilkin.dev: # This object is extracted by Quilkin and is usually reserved for built-in features
+          tokens:
+            - MXg3aWp5Ng== # base64 for 1x7ijy6
+            - OGdqM3YyaQ== # base64 for 8gj3v2i
 </code></pre>
 <p>An endpoint's metadata can be specified alongside the endpoint in <a href="./proxy-configuration.html">static configuration</a> or using the <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint_components.proto#envoy-v3-api-field-config-endpoint-v3-lbendpoint-metadata">xDS endpoint metadata</a> field when using <a href="./xds.html">dynamic configuration</a> via xDS.</p>
 <h5 id="session"><a class="header" href="#session">Session</a></h5>
@@ -165,31 +165,37 @@ Such well known values are placed within an object in the endpoint metadata, und
 <ul>
 <li>
 <p><code>quilkin_proxy_packet_processing_duration_seconds{event}</code> (Histogram)
-The total duration of time in seconds that it took to process a packet.
-book.toml htmltest.yaml logos preprocessor.sh src The <code>event</code> label is either:
-book.toml htmltest.yaml logos preprocessor.sh src <code>read</code>: when the proxy receives data from a downstream connection on the listening port.
-book.toml htmltest.yaml logos preprocessor.sh src <code>write</code>: when the proxy sends data to a downstream connection via the listening port.</p>
+The total duration of time in seconds that it took to process a packet.</p>
+<ul>
+<li>The <code>event</code> label is either:
+<ul>
+<li><code>read</code>: when the proxy receives data from a downstream connection on the listening port.</li>
+<li><code>write</code>: when the proxy sends data to a downstream connection via the listening port.</li>
+</ul>
+</li>
+</ul>
 </li>
 <li>
 <p><code>quilkin_proxy_packets_dropped_total{reason}</code> (Counter)</p>
+<p>The total number of packets (not associated with any session) that were dropped by proxy.
+Not that packets reflected by this metric were dropped at an earlier stage before they were associated with any session. For session based metrics, see the list of <a href="./session.html#metrics">session metrics</a> instead.</p>
+<ul>
+<li><code>reason = NoConfiguredEndpoints</code>
+<ul>
+<li><code>NoConfiguredEndpoints</code>: No upstream endpoints were available to send the packet to. This can occur e.g if the endpoints cluster was scaled down to zero and the proxy is configured via a control plane.</li>
+</ul>
 </li>
 </ul>
-<p>The total number of packets (not associated with any session) that were dropped by proxy.
-Not that packets reflected by this metric were dropped at an earlier stage before they were associated with any session. For session based metrics, see the list of <a href="./session.html#metrics">session metrics</a> instead.
-book.toml htmltest.yaml logos preprocessor.sh src <code>reason = NoConfiguredEndpoints</code></p>
-<ul>
-<li>
-<p><code>NoConfiguredEndpoints</code>: No upstream endpoints were available to send the packet to. This can occur e.g if the endpoints cluster was scaled down to zero and the proxy is configured via a control plane.</p>
 </li>
 <li>
 <p><code>quilkin_cluster_active</code> (Gauge)</p>
+<p>The number of currently active clusters.</p>
+</li>
+<li>
+<p><code>quilkin_cluster_active_endpoints</code> (Gauge)</p>
+<p>The number of currently active upstream endpoints. Note that this tracks the number of endpoints that the proxy knows of rather than those that it is connected to (see <a href="./session.html#metrics">Session Metrics</a> instead for those)</p>
 </li>
 </ul>
-<p>The number of currently active clusters.</p>
-<ul>
-<li><code>quilkin_cluster_active_endpoints</code> (Gauge)</li>
-</ul>
-<p>The number of currently active upstream endpoints. Note that this tracks the number of endpoints that the proxy knows of rather than those that it is connected to (see <a href="./session.html#metrics">Session Metrics</a> instead for those)</p>
 
                     </main>
 

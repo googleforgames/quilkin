@@ -153,8 +153,8 @@
 <p>Open a new terminal and copy the following to a file named <code>proxy.yaml</code>:</p>
 <pre><code class="language-yaml">version: v1alpha1
 static:
- endpoints:
- - address: 127.0.0.1:8000
+  endpoints:
+    - address: 127.0.0.1:8000
 </code></pre>
 <p>This configuration will start Quilkin on the default port of 7000, and it will redirect all incoming UDP traffic to
 a single endpoint of 127.0.0.1, port 8000.</p>

@@ -145,45 +145,47 @@
 <h4 id="metrics"><a class="header" href="#metrics">Metrics</a></h4>
 <p>The proxy exposes the following metrics around sessions:</p>
 <ul>
-<li><code>quilkin_session_active</code> (Gauge)</li>
-</ul>
+<li>
+<p><code>quilkin_session_active</code> (Gauge)</p>
 <p>The number of currently active sessions.</p>
-<ul>
-<li><code>quilkin_session_duration_secs</code> (Histogram)</li>
-</ul>
+</li>
+<li>
+<p><code>quilkin_session_duration_secs</code> (Histogram)</p>
 <p>A histogram over how long sessions lasted before they were torn down. Note that, by definition, active sessions are not included in this metric.</p>
-<ul>
-<li><code>quilkin_session_total</code> (Counter)</li>
-</ul>
+</li>
+<li>
+<p><code>quilkin_session_total</code> (Counter)</p>
 <p>The total number of sessions that have been created.</p>
-<ul>
-<li><code>quilkin_session_rx_bytes_total</code> (Counter)</li>
-</ul>
+</li>
+<li>
+<p><code>quilkin_session_rx_bytes_total</code> (Counter)</p>
 <p>The total number of bytes received from the upstream endpoint.</p>
-<ul>
-<li><code>quilkin_session_rx_bytes_total</code> (Counter)</li>
-</ul>
+</li>
+<li>
+<p><code>quilkin_session_rx_bytes_total</code> (Counter)</p>
 <p>The total number of bytes sent to the upstream endpoint.</p>
-<ul>
-<li><code>quilkin_session_rx_packets_total</code> (Counter)</li>
-</ul>
+</li>
+<li>
+<p><code>quilkin_session_rx_packets_total</code> (Counter)</p>
 <p>The total number of packets received from the upstream endpoint.</p>
-<ul>
-<li><code>quilkin_session_tx_packets_total</code> (Counter)</li>
-</ul>
+</li>
+<li>
+<p><code>quilkin_session_tx_packets_total</code> (Counter)</p>
 <p>The total number of packets sent to the upstream endpoint.</p>
-<ul>
-<li><code>quilkin_session_packets_dropped_total</code> (Counter)</li>
-</ul>
+</li>
+<li>
+<p><code>quilkin_session_packets_dropped_total</code> (Counter)</p>
 <p>The total number of packets received from the upstream endpoint which were dropped by the filter chain rather than forwarded to the downstream endpoint.</p>
-<ul>
-<li><code>quilkin_session_rx_errors_total</code> (Counter)</li>
-</ul>
+</li>
+<li>
+<p><code>quilkin_session_rx_errors_total</code> (Counter)</p>
 <p>The total number of errors encountered while reading a packet from the upstream endpoint.</p>
-<ul>
-<li><code>quilkin_session_rx_errors_total</code> (Counter)</li>
-</ul>
+</li>
+<li>
+<p><code>quilkin_session_rx_errors_total</code> (Counter)</p>
 <p>The total number of errors encountered while sending a packet to the upstream endpoint.</p>
+</li>
+</ul>
 
                     </main>
 

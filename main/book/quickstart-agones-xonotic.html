@@ -140,9 +140,12 @@
 <li>A terminal with <code>kubectl</code> installed</li>
 <li>A local copy of the <a href="https://xonotic.org/">Xonotic</a> client</li>
 <li>A running <a href="https://agones.dev/">Agones</a> Kubernetes cluster
-book.toml htmltest.yaml logos preprocessor.sh src <a href="https://agones.dev/site/docs/installation/">Installation instructions</a>
-book.toml htmltest.yaml logos preprocessor.sh src If you aren't familiar with Agones, we recommend working through their 
+<ul>
+<li><a href="https://agones.dev/site/docs/installation/">Installation instructions</a></li>
+<li>If you aren't familiar with Agones, we recommend working through their 
 <a href="https://agones.dev/site/docs/getting-started/">Getting Started</a> guides.</li>
+</ul>
+</li>
 </ul>
 <h2 id="1-agones-fleet-with-quilkin"><a class="header" href="#1-agones-fleet-with-quilkin">1. Agones Fleet with Quilkin</a></h2>
 <p>In this step, we're going to set up a Xonotic dedicated game server, with Quilkin running as a 
@@ -159,9 +162,9 @@ to Xonotic, such that it can process all the UDP traffic and pass it to the Xono
 </ol>
 <p>Now you can run <code>kubectl get gameservers</code> until all your Agones <code>GameServers</code> are marked as <code>Ready</code> like so:</p>
 <pre><code class="language-shell">$ kubectl get gameservers
-NAME STATE ADDRESS PORT NODE AGE
-xonotic-sidecar-htc2x-84mzm Ready 34.94.107.201 7533 gke-agones-default-pool-0f7d8adc-7w3c 7m25s
-xonotic-sidecar-htc2x-sdp4k Ready 34.94.107.201 7599 gke-agones-default-pool-0f7d8adc-7w3c 7m25s
+NAME                          STATE   ADDRESS         PORT   NODE                                    AGE
+xonotic-sidecar-htc2x-84mzm   Ready   34.94.107.201   7533   gke-agones-default-pool-0f7d8adc-7w3c   7m25s
+xonotic-sidecar-htc2x-sdp4k   Ready   34.94.107.201   7599   gke-agones-default-pool-0f7d8adc-7w3c   7m25s
 </code></pre>
 <h2 id="2-play-xonotic"><a class="header" href="#2-play-xonotic">2. Play Xonotic!</a></h2>
 <p>Usually with Agones you would
@@ -180,7 +183,7 @@ command. This will forward the <a href="./admin.html">admin</a> interface to loc
 <a href="https://prometheus.io/">Prometheus</a> metrics that Quilkin exports.</p>
 <h2 id="5-cleanup"><a class="header" href="#5-cleanup">5. Cleanup</a></h2>
 <p>Run the following to delete the Fleet and the accompanying ConfigMap:</p>
-<pre><code class="language-shell">kubectl delete -f https://raw.githubusercontent.com/googleforgames/quilkin/main/examples/agones-xonotic/sidecar.yaml
+<pre><code class="language-shell">kubectl delete -f  https://raw.githubusercontent.com/googleforgames/quilkin/main/examples/agones-xonotic/sidecar.yaml
 </code></pre>
 <h2 id="6-agones-fleet-but-with-compression"><a class="header" href="#6-agones-fleet-but-with-compression">6. Agones Fleet, but with Compression</a></h2>
 <p>Let's take this one step further and compress the data between the Xonotic client and the server, without having to 
@@ -194,9 +197,9 @@ packets that are incoming.</p>
 Fleet.</p>
 <p>Now you can run <code>kubectl get gameservers</code> until all your Agones <code>GameServers</code> are marked as <code>Ready</code> like so:</p>
 <pre><code class="language-shell">$ kubectl get gameservers
-NAME STATE ADDRESS PORT NODE AGE
-xonotic-sidecar-compress-htc2x-84mzm Ready 34.94.107.201 7534 gke-agones-default-pool-0f7d8adc-7w3c 7m25s
-xonotic-sidecar-compress-htc2x-sdp4k Ready 34.94.107.201 7592 gke-agones-default-pool-0f7d8adc-7w3c 7m25s
+NAME                                   STATE   ADDRESS         PORT   NODE                                    AGE
+xonotic-sidecar-compress-htc2x-84mzm   Ready   34.94.107.201   7534   gke-agones-default-pool-0f7d8adc-7w3c   7m25s
+xonotic-sidecar-compress-htc2x-sdp4k   Ready   34.94.107.201   7592   gke-agones-default-pool-0f7d8adc-7w3c   7m25s
 </code></pre>
 <h2 id="4-play-xonotic-through-quilkin"><a class="header" href="#4-play-xonotic-through-quilkin">4. Play Xonotic, through Quilkin</a></h2>
 <p>What we will do in this step, is run Quilkin locally as a client-side proxy to compress the UDP data before it is 

@@ -150,7 +150,7 @@ This document provides an overview of the API and how we can go about writing ou
 <p>A <a href="../../api/quilkin/filters/trait.FilterFactory.html">trait</a> representing a type that knows how to create instances of a particular type of <a href="../../api/quilkin/filters/trait.Filter.html">Filter</a>.</p>
 <ul>
 <li>An implementation provides a <code>name</code> and <code>create_filter</code> method.</li>
-<li><code>create_filter</code> takes in <a href="../filters.html#filter-config">configuration</a> for the filter to create and returns a <a href="../../api/quilkin/filters/prelude/struct.FilterInstance.html">FilterInstance</a> type containing a new instance of its filter type. 
+<li><code>create_filter</code> takes in <a href="../filters.html#filter-config">configuration</a> for the filter to create and returns a <a href="../../api/quilkin/filters/prelude/struct.FilterInstance.html">FilterInstance</a> type containing a new instance of its filter type.<br />
 <code>name</code> returns the Filter name - a unique identifier of filters of the created type (e.g quilkin.filters.debug.v1alpha1.Debug).</li>
 </ul>
 <h3 id="filterregistry"><a class="header" href="#filterregistry">FilterRegistry</a></h3>
@@ -194,14 +194,14 @@ use quilkin::filters::prelude::*;
 struct Greet;
 
 impl Filter for Greet {
- fn read(&amp;self, mut ctx: ReadContext) -&gt; Option&lt;ReadResponse&gt; {
- ctx.contents.splice(0..0, String::from(&quot;Hello &quot;).into_bytes());
- Some(ctx.into())
- }
- fn write(&amp;self, mut ctx: WriteContext) -&gt; Option&lt;WriteResponse&gt; {
- ctx.contents.splice(0..0, String::from(&quot;Goodbye &quot;).into_bytes());
- Some(ctx.into())
- }
+    fn read(&amp;self, mut ctx: ReadContext) -&gt; Option&lt;ReadResponse&gt; {
+        ctx.contents.splice(0..0, String::from(&quot;Hello &quot;).into_bytes());
+        Some(ctx.into())
+    }
+    fn write(&amp;self, mut ctx: WriteContext) -&gt; Option&lt;WriteResponse&gt; {
+        ctx.contents.splice(0..0, String::from(&quot;Goodbye &quot;).into_bytes());
+        Some(ctx.into())
+    }
 }
 <span class="boring">}
 </span></code></pre>
@@ -218,23 +218,23 @@ use quilkin::filters::prelude::*;
 pub const NAME: &amp;str = &quot;greet.v1&quot;;
 
 pub fn factory() -&gt; DynFilterFactory {
- Box::from(GreetFilterFactory)
+    Box::from(GreetFilterFactory)
 }
 
 struct GreetFilterFactory;
 impl FilterFactory for GreetFilterFactory {
- fn name(&amp;self) -&gt; &amp;'static str {
- NAME
- }
+    fn name(&amp;self) -&gt; &amp;'static str {
+        NAME
+    }
 
- fn config_schema(&amp;self) -&gt; schemars::schema::RootSchema {
- schemars::schema_for!(serde_json::Value)
- }
+    fn config_schema(&amp;self) -&gt; schemars::schema::RootSchema {
+        schemars::schema_for!(serde_json::Value)
+    }
 
- fn create_filter(&amp;self, _: CreateFilterArgs) -&gt; Result&lt;FilterInstance, Error&gt; {
- let filter: Box&lt;dyn Filter&gt; = Box::new(Greet);
- Ok(FilterInstance::new(serde_json::Value::Null, filter))
- }
+    fn create_filter(&amp;self, _: CreateFilterArgs) -&gt; Result&lt;FilterInstance, Error&gt; {
+        let filter: Box&lt;dyn Filter&gt; = Box::new(Greet);
+        Ok(FilterInstance::new(serde_json::Value::Null, filter))
+    }
 }
 <span class="boring">}
 </span></code></pre>
@@ -268,28 +268,30 @@ forwards all packets to an upstream server at port 4321.</p>
 <pre><code class="language-yaml"># config.yaml
 version: v1alpha1
 proxy:
- port: 7001
+  port: 7001
 static:
- filters:
- - name: greet.v1
- endpoints:
- - address: 127.0.0.1:4321
+  filters:
+  - name: greet.v1
+  endpoints:
+  - address: 127.0.0.1:4321
 </code></pre>
 <ul>
-<li>Start the proxy</li>
-</ul>
+<li>
+<p>Start the proxy</p>
 <pre><code class="language-bash">cargo run -- -c config.yaml
 </code></pre>
-<ul>
-<li>Start a UDP listening server on the configured port</li>
-</ul>
+</li>
+<li>
+<p>Start a UDP listening server on the configured port</p>
 <pre><code class="language-bash">nc -lu 127.0.0.1 4321
 </code></pre>
-<ul>
-<li>Start an interactive UDP client that sends packet to the proxy</li>
-</ul>
+</li>
+<li>
+<p>Start an interactive UDP client that sends packet to the proxy</p>
 <pre><code class="language-bash">nc -u 127.0.0.1 7001
 </code></pre>
+</li>
+</ul>
 <p>Whatever we pass to the client should now show up with our modification on the listening server's standard output.
 For example typing <code>Quilkin</code> in the client prints <code>Hello Quilkin</code> on the server.</p>
 <h4 id="4-working-with-filter-configuration"><a class="header" href="#4-working-with-filter-configuration">4. Working with Filter Configuration</a></h4>
@@ -298,10 +300,10 @@ For example typing <code>Quilkin</code> in the client prints <code>Hello Quilkin
 <h5 id="static-configuration"><a class="header" href="#static-configuration">Static Configuration</a></h5>
 <p>First let's create the config for our static configuration:</p>
 <h6 id="1-add-the-yaml-parsing-crates-to-cargotoml"><a class="header" href="#1-add-the-yaml-parsing-crates-to-cargotoml">1. Add the yaml parsing crates to <code>Cargo.toml</code>:</a></h6>
-<pre><code class="language-toml"> [dependencies]
- # ...
- serde = &quot;1.0&quot;
- serde_yaml = &quot;0.8&quot;
+<pre><code class="language-toml">  [dependencies]
+  # ...
+  serde = &quot;1.0&quot;
+  serde_yaml = &quot;0.8&quot;
 </code></pre>
 <h6 id="2-define-a-struct-representing-the-config"><a class="header" href="#2-define-a-struct-representing-the-config">2. Define a struct representing the config:</a></h6>
 <pre><code class="language-rust no_run noplayground ignore">// src/main.rs
@@ -332,7 +334,7 @@ impl Filter for Greet {
 <span class="boring">use serde::{Deserialize, Serialize};
 </span><span class="boring">#[derive(Serialize, Deserialize, Debug)]
 </span><span class="boring">struct Config {
-</span><span class="boring">greeting: String,
+</span><span class="boring">    greeting: String,
 </span><span class="boring">}
 </span><span class="boring">use quilkin::filters::prelude::*;
 </span><span class="boring">struct Greet(String);
@@ -342,30 +344,30 @@ impl Filter for Greet {
 pub const NAME: &amp;str = &quot;greet.v1&quot;;
 
 pub fn factory() -&gt; DynFilterFactory {
- Box::from(GreetFilterFactory)
+    Box::from(GreetFilterFactory)
 }
 
 struct GreetFilterFactory;
 impl FilterFactory for GreetFilterFactory {
- fn name(&amp;self) -&gt; &amp;'static str {
- NAME
- }
+    fn name(&amp;self) -&gt; &amp;'static str {
+        NAME
+    }
 
- fn config_schema(&amp;self) -&gt; schemars::schema::RootSchema {
- schemars::schema_for!(serde_json::Value)
- }
+    fn config_schema(&amp;self) -&gt; schemars::schema::RootSchema {
+        schemars::schema_for!(serde_json::Value)
+    }
 
- fn create_filter(&amp;self, args: CreateFilterArgs) -&gt; Result&lt;FilterInstance, Error&gt; {
- let config = match args.config.unwrap() {
- ConfigType::Static(config) =&gt; {
- serde_yaml::from_str::&lt;Config&gt;(serde_yaml::to_string(&amp;config).unwrap().as_str())
- .unwrap()
- }
- ConfigType::Dynamic(_) =&gt; unimplemented!(&quot;dynamic config is not yet supported for this filter&quot;),
- };
- let filter: Box&lt;dyn Filter&gt; = Box::new(Greet(config.greeting));
- Ok(FilterInstance::new(serde_json::Value::Null, filter))
- }
+    fn create_filter(&amp;self, args: CreateFilterArgs) -&gt; Result&lt;FilterInstance, Error&gt; {
+        let config = match args.config.unwrap() {
+          ConfigType::Static(config) =&gt; {
+              serde_yaml::from_str::&lt;Config&gt;(serde_yaml::to_string(&amp;config).unwrap().as_str())
+                .unwrap()
+          }
+          ConfigType::Dynamic(_) =&gt; unimplemented!(&quot;dynamic config is not yet supported for this filter&quot;),
+        };
+        let filter: Box&lt;dyn Filter&gt; = Box::new(Greet(config.greeting));
+        Ok(FilterInstance::new(serde_json::Value::Null, filter))
+    }
 }
 </code></pre>
 <p>And with these changes we have wired up static configuration for our filter. Try it out with the following config.yaml:</p>
@@ -385,16 +387,16 @@ static:
 <p>You might have noticed while adding <a href="#static-configuration">static configuration support</a>, that the <a href="../../api/quilkin/filters/prelude/struct.CreateFilterArgs.html#structfield.config">config</a> argument passed into our <a href="../../api/quilkin/filters/trait.FilterFactory.html">FilterFactory</a>
 has a <a href="../../api/quilkin/config/enum.ConfigType.html#variant.Dynamic">Dynamic</a> variant.</p>
 <pre><code class="language-rust ignore">let config = match args.config.unwrap() {
- ConfigType::Static(config) =&gt; {
- serde_yaml::from_str::&lt;Config&gt;(serde_yaml::to_string(&amp;config).unwrap().as_str())
- .unwrap()
- }
- ConfigType::Dynamic(_) =&gt; unimplemented!(&quot;dynamic config is not yet supported for this filter&quot;),
+    ConfigType::Static(config) =&gt; {
+        serde_yaml::from_str::&lt;Config&gt;(serde_yaml::to_string(&amp;config).unwrap().as_str())
+         .unwrap()
+    }
+    ConfigType::Dynamic(_) =&gt; unimplemented!(&quot;dynamic config is not yet supported for this filter&quot;),
 };
 </code></pre>
 <p>The <a href="../../api/quilkin/config/enum.ConfigType.html#variant.Dynamic">Dynamic</a> contains the serialized <a href="https://developers.google.com/protocol-buffers">Protobuf</a> message received from the <a href="../xds.html">management server</a> for the <a href="../../api/quilkin/filters/trait.Filter.html">Filter</a> to create.
 As a result, its contents are entirely opaque to Quilkin and it is represented with the <a href="https://docs.rs/prost-types/0.7.0/prost_types/struct.Any.html">Prost Any</a> type so the <a href="../../api/quilkin/filters/trait.FilterFactory.html">FilterFactory</a>
-can interpret its contents however it wishes. 
+can interpret its contents however it wishes.<br />
 However, it usually contains a Protobuf equivalent of the filter's static configuration.</p>
 <h6 id="1-add-the-proto-parsing-crates-to-cargotoml"><a class="header" href="#1-add-the-proto-parsing-crates-to-cargotoml">1. Add the proto parsing crates to <code>Cargo.toml</code>:</a></h6>
 <pre><code class="language-toml">[dependencies]
@@ -439,7 +441,7 @@ use greet::Greet as ProtoGreet;
 <p>If the message contains a Protobuf equivalent of the filter's static configuration, we can
 leverage the <a href="../../api/quilkin/config/enum.ConfigType.html#method.deserialize">deserialize</a> method to deserialize either a static or dynamic config. 
 The function automatically deserializes and converts from the Protobuf type if the input contains a dynamic
-configuration. 
+configuration.<br />
 As a result, the function requires that the <a href="https://doc.rust-lang.org/std/convert/trait.TryFrom.html">std::convert::TryFrom</a> is implemented from our dynamic
 config type to a static equivalent.</p>
 <pre><code class="language-rust no_run noplayground ignore">// src/main.rs

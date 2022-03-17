@@ -191,8 +191,8 @@ depending on how deep an integration you wish for your system.</li>
 <p>Open a new terminal and copy the following to a file named <code>proxy.yaml</code>:</p>
 <pre><code class="language-yaml">version: v1alpha1
 static:
- endpoints:
- - address: 127.0.0.1:8000
+  endpoints:
+    - address: 127.0.0.1:8000
 </code></pre>
 <p>This configuration will start Quilkin on the default port of 7000, and it will redirect all incoming UDP traffic to
 a single endpoint of 127.0.0.1, port 8000.</p>
@@ -230,9 +230,12 @@ available.</li>
 <li>A terminal with <code>kubectl</code> installed</li>
 <li>A local copy of the <a href="https://xonotic.org/">Xonotic</a> client</li>
 <li>A running <a href="https://agones.dev/">Agones</a> Kubernetes cluster
-book.toml htmltest.yaml logos preprocessor.sh src <a href="https://agones.dev/site/docs/installation/">Installation instructions</a>
-book.toml htmltest.yaml logos preprocessor.sh src If you aren't familiar with Agones, we recommend working through their 
+<ul>
+<li><a href="https://agones.dev/site/docs/installation/">Installation instructions</a></li>
+<li>If you aren't familiar with Agones, we recommend working through their 
 <a href="https://agones.dev/site/docs/getting-started/">Getting Started</a> guides.</li>
+</ul>
+</li>
 </ul>
 <h2 id="1-agones-fleet-with-quilkin"><a class="header" href="#1-agones-fleet-with-quilkin">1. Agones Fleet with Quilkin</a></h2>
 <p>In this step, we're going to set up a Xonotic dedicated game server, with Quilkin running as a 
@@ -249,9 +252,9 @@ to Xonotic, such that it can process all the UDP traffic and pass it to the Xono
 </ol>
 <p>Now you can run <code>kubectl get gameservers</code> until all your Agones <code>GameServers</code> are marked as <code>Ready</code> like so:</p>
 <pre><code class="language-shell">$ kubectl get gameservers
-NAME STATE ADDRESS PORT NODE AGE
-xonotic-sidecar-htc2x-84mzm Ready 34.94.107.201 7533 gke-agones-default-pool-0f7d8adc-7w3c 7m25s
-xonotic-sidecar-htc2x-sdp4k Ready 34.94.107.201 7599 gke-agones-default-pool-0f7d8adc-7w3c 7m25s
+NAME                          STATE   ADDRESS         PORT   NODE                                    AGE
+xonotic-sidecar-htc2x-84mzm   Ready   34.94.107.201   7533   gke-agones-default-pool-0f7d8adc-7w3c   7m25s
+xonotic-sidecar-htc2x-sdp4k   Ready   34.94.107.201   7599   gke-agones-default-pool-0f7d8adc-7w3c   7m25s
 </code></pre>
 <h2 id="2-play-xonotic"><a class="header" href="#2-play-xonotic">2. Play Xonotic!</a></h2>
 <p>Usually with Agones you would
@@ -270,7 +273,7 @@ command. This will forward the <a href="./admin.html">admin</a> interface to loc
 <a href="https://prometheus.io/">Prometheus</a> metrics that Quilkin exports.</p>
 <h2 id="5-cleanup"><a class="header" href="#5-cleanup">5. Cleanup</a></h2>
 <p>Run the following to delete the Fleet and the accompanying ConfigMap:</p>
-<pre><code class="language-shell">kubectl delete -f https://raw.githubusercontent.com/googleforgames/quilkin/main/examples/agones-xonotic/sidecar.yaml
+<pre><code class="language-shell">kubectl delete -f  https://raw.githubusercontent.com/googleforgames/quilkin/main/examples/agones-xonotic/sidecar.yaml
 </code></pre>
 <h2 id="6-agones-fleet-but-with-compression"><a class="header" href="#6-agones-fleet-but-with-compression">6. Agones Fleet, but with Compression</a></h2>
 <p>Let's take this one step further and compress the data between the Xonotic client and the server, without having to 
@@ -284,9 +287,9 @@ packets that are incoming.</p>
 Fleet.</p>
 <p>Now you can run <code>kubectl get gameservers</code> until all your Agones <code>GameServers</code> are marked as <code>Ready</code> like so:</p>
 <pre><code class="language-shell">$ kubectl get gameservers
-NAME STATE ADDRESS PORT NODE AGE
-xonotic-sidecar-compress-htc2x-84mzm Ready 34.94.107.201 7534 gke-agones-default-pool-0f7d8adc-7w3c 7m25s
-xonotic-sidecar-compress-htc2x-sdp4k Ready 34.94.107.201 7592 gke-agones-default-pool-0f7d8adc-7w3c 7m25s
+NAME                                   STATE   ADDRESS         PORT   NODE                                    AGE
+xonotic-sidecar-compress-htc2x-84mzm   Ready   34.94.107.201   7534   gke-agones-default-pool-0f7d8adc-7w3c   7m25s
+xonotic-sidecar-compress-htc2x-sdp4k   Ready   34.94.107.201   7592   gke-agones-default-pool-0f7d8adc-7w3c   7m25s
 </code></pre>
 <h2 id="4-play-xonotic-through-quilkin"><a class="header" href="#4-play-xonotic-through-quilkin">4. Play Xonotic, through Quilkin</a></h2>
 <p>What we will do in this step, is run Quilkin locally as a client-side proxy to compress the UDP data before it is 
@@ -375,45 +378,47 @@ from the dropdown, as the API surface for Quilkin is still under development.</p
 <h4 id="metrics"><a class="header" href="#metrics">Metrics</a></h4>
 <p>The proxy exposes the following metrics around sessions:</p>
 <ul>
-<li><code>quilkin_session_active</code> (Gauge)</li>
-</ul>
+<li>
+<p><code>quilkin_session_active</code> (Gauge)</p>
 <p>The number of currently active sessions.</p>
-<ul>
-<li><code>quilkin_session_duration_secs</code> (Histogram)</li>
-</ul>
+</li>
+<li>
+<p><code>quilkin_session_duration_secs</code> (Histogram)</p>
 <p>A histogram over how long sessions lasted before they were torn down. Note that, by definition, active sessions are not included in this metric.</p>
-<ul>
-<li><code>quilkin_session_total</code> (Counter)</li>
-</ul>
+</li>
+<li>
+<p><code>quilkin_session_total</code> (Counter)</p>
 <p>The total number of sessions that have been created.</p>
-<ul>
-<li><code>quilkin_session_rx_bytes_total</code> (Counter)</li>
-</ul>
+</li>
+<li>
+<p><code>quilkin_session_rx_bytes_total</code> (Counter)</p>
 <p>The total number of bytes received from the upstream endpoint.</p>
-<ul>
-<li><code>quilkin_session_rx_bytes_total</code> (Counter)</li>
-</ul>
+</li>
+<li>
+<p><code>quilkin_session_rx_bytes_total</code> (Counter)</p>
 <p>The total number of bytes sent to the upstream endpoint.</p>
-<ul>
-<li><code>quilkin_session_rx_packets_total</code> (Counter)</li>
-</ul>
+</li>
+<li>
+<p><code>quilkin_session_rx_packets_total</code> (Counter)</p>
 <p>The total number of packets received from the upstream endpoint.</p>
-<ul>
-<li><code>quilkin_session_tx_packets_total</code> (Counter)</li>
-</ul>
+</li>
+<li>
+<p><code>quilkin_session_tx_packets_total</code> (Counter)</p>
 <p>The total number of packets sent to the upstream endpoint.</p>
-<ul>
-<li><code>quilkin_session_packets_dropped_total</code> (Counter)</li>
-</ul>
+</li>
+<li>
+<p><code>quilkin_session_packets_dropped_total</code> (Counter)</p>
 <p>The total number of packets received from the upstream endpoint which were dropped by the filter chain rather than forwarded to the downstream endpoint.</p>
-<ul>
-<li><code>quilkin_session_rx_errors_total</code> (Counter)</li>
-</ul>
+</li>
+<li>
+<p><code>quilkin_session_rx_errors_total</code> (Counter)</p>
 <p>The total number of errors encountered while reading a packet from the upstream endpoint.</p>
-<ul>
-<li><code>quilkin_session_rx_errors_total</code> (Counter)</li>
-</ul>
+</li>
+<li>
+<p><code>quilkin_session_rx_errors_total</code> (Counter)</p>
 <p>The total number of errors encountered while sending a packet to the upstream endpoint.</p>
+</li>
+</ul>
 <div style="break-before: page; page-break-before: always;"></div><h3 id="proxy"><a class="header" href="#proxy">Proxy</a></h3>
 <h4 id="concepts"><a class="header" href="#concepts">Concepts</a></h4>
 <h5 id="upstream-endpoint"><a class="header" href="#upstream-endpoint">Upstream Endpoint</a></h5>
@@ -428,14 +433,14 @@ Keys must be of type string otherwise the configuration is rejected.</p>
 Such well known values are placed within an object in the endpoint metadata, under the special key <code>quilkin.dev</code>. Currently, only the <code>tokens</code> entry is in use.</p>
 <p>As an example, the following shows the configuration for an endpoint with its metadata:</p>
 <pre><code class="language-yaml">static:
- endpoints:
- - address: 127.0.0.1:26000
- metadata:
- canary: false
- quilkin.dev: # This object is extracted by Quilkin and is usually reserved for built-in features
- tokens:
- - MXg3aWp5Ng== # base64 for 1x7ijy6
- - OGdqM3YyaQ== # base64 for 8gj3v2i
+  endpoints:
+    - address: 127.0.0.1:26000
+      metadata:
+        canary: false
+        quilkin.dev: # This object is extracted by Quilkin and is usually reserved for built-in features
+          tokens:
+            - MXg3aWp5Ng== # base64 for 1x7ijy6
+            - OGdqM3YyaQ== # base64 for 8gj3v2i
 </code></pre>
 <p>An endpoint's metadata can be specified alongside the endpoint in <a href="./proxy-configuration.html">static configuration</a> or using the <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint_components.proto#envoy-v3-api-field-config-endpoint-v3-lbendpoint-metadata">xDS endpoint metadata</a> field when using <a href="./xds.html">dynamic configuration</a> via xDS.</p>
 <h5 id="session-1"><a class="header" href="#session-1">Session</a></h5>
@@ -445,31 +450,37 @@ Such well known values are placed within an object in the endpoint metadata, und
 <ul>
 <li>
 <p><code>quilkin_proxy_packet_processing_duration_seconds{event}</code> (Histogram)
-The total duration of time in seconds that it took to process a packet.
-book.toml htmltest.yaml logos preprocessor.sh src The <code>event</code> label is either:
-book.toml htmltest.yaml logos preprocessor.sh src <code>read</code>: when the proxy receives data from a downstream connection on the listening port.
-book.toml htmltest.yaml logos preprocessor.sh src <code>write</code>: when the proxy sends data to a downstream connection via the listening port.</p>
+The total duration of time in seconds that it took to process a packet.</p>
+<ul>
+<li>The <code>event</code> label is either:
+<ul>
+<li><code>read</code>: when the proxy receives data from a downstream connection on the listening port.</li>
+<li><code>write</code>: when the proxy sends data to a downstream connection via the listening port.</li>
+</ul>
+</li>
+</ul>
 </li>
 <li>
 <p><code>quilkin_proxy_packets_dropped_total{reason}</code> (Counter)</p>
+<p>The total number of packets (not associated with any session) that were dropped by proxy.
+Not that packets reflected by this metric were dropped at an earlier stage before they were associated with any session. For session based metrics, see the list of <a href="./session.html#metrics">session metrics</a> instead.</p>
+<ul>
+<li><code>reason = NoConfiguredEndpoints</code>
+<ul>
+<li><code>NoConfiguredEndpoints</code>: No upstream endpoints were available to send the packet to. This can occur e.g if the endpoints cluster was scaled down to zero and the proxy is configured via a control plane.</li>
+</ul>
 </li>
 </ul>
-<p>The total number of packets (not associated with any session) that were dropped by proxy.
-Not that packets reflected by this metric were dropped at an earlier stage before they were associated with any session. For session based metrics, see the list of <a href="./session.html#metrics">session metrics</a> instead.
-book.toml htmltest.yaml logos preprocessor.sh src <code>reason = NoConfiguredEndpoints</code></p>
-<ul>
-<li>
-<p><code>NoConfiguredEndpoints</code>: No upstream endpoints were available to send the packet to. This can occur e.g if the endpoints cluster was scaled down to zero and the proxy is configured via a control plane.</p>
 </li>
 <li>
 <p><code>quilkin_cluster_active</code> (Gauge)</p>
+<p>The number of currently active clusters.</p>
+</li>
+<li>
+<p><code>quilkin_cluster_active_endpoints</code> (Gauge)</p>
+<p>The number of currently active upstream endpoints. Note that this tracks the number of endpoints that the proxy knows of rather than those that it is connected to (see <a href="./session.html#metrics">Session Metrics</a> instead for those)</p>
 </li>
 </ul>
-<p>The number of currently active clusters.</p>
-<ul>
-<li><code>quilkin_cluster_active_endpoints</code> (Gauge)</li>
-</ul>
-<p>The number of currently active upstream endpoints. Note that this tracks the number of endpoints that the proxy knows of rather than those that it is connected to (see <a href="./session.html#metrics">Session Metrics</a> instead for those)</p>
 <div style="break-before: page; page-break-before: always;"></div><p>Proxy Configuration</p>
 <p>The following is the schema and reference for a Quilkin proxy configuration file. See the <a href="https://github.com/googleforgames/quilkin/blob/main/examples">examples</a> folder for 
 example configuration files.</p>
@@ -478,105 +489,105 @@ then if not present, in <code>/etc/quilkin/quilkin.yaml</code> on UNIX systems. 
 <code>-c/--config</code> command-line argument, or the <code>QUILKIN_FILENAME</code> environment variable.</p>
 <pre><code class="language-yaml">type: object
 properties:
- version:
- type: string
- description: |
- The configuration file version to use.
- enum:
- - v1alpha1
- proxy:
- type: object
- description: |
- Configuration of core proxy behavior.
- properties:
- id:
- type: string
- description: |
- An identifier for the proxy instance.
- default: On linux, the machine hostname is used as default. On all other platforms a UUID is generated for the proxy.
- port:
- type: integer
- description: |
- The listening port for the proxy.
- default: 7000
- admin:
- type: object
- description: |
- Configuration of proxy admin HTTP interface.
- properties:
- address:
- type: string
- description: |
- Socket Address and port to bind the administration interface to.
- default: [::]:9091
- static:
- type: object
- description: |
- Static configuration of endpoints and filters.
- NOTE: Exactly one of `static` or `dynamic` can be specified.
- properties:
- filter:
- '$ref': '#/definitions/filterchain'
- endpoints:
- '$ref': '#/definitions/endpoints'
- required:
- - endpoints
- dynamic:
- type: object
- description: |
- Dynamic configuration of endpoints and filters.
- NOTE: Exactly one of `static` or `dynamic` can be specified.
- properties:
- management_servers:
- type: array
- description: |
- A list of XDS management servers to fetch configuration from.
- Multiple servers can be provided for redundancy for the proxy to
- fall back to upon error.
- items:
- type: object
- description: |
- Configuration for a management server.
- properties:
- address:
- type: string
- description: |
- Address of the management server. This must have the `http(s)` scheme prefix.
- Example: `http://example.com`
- required:
- - management_servers
+  version:
+    type: string
+    description: |
+      The configuration file version to use.
+    enum:
+      - v1alpha1
+  proxy:
+    type: object
+    description: |
+      Configuration of core proxy behavior.
+    properties:
+      id:
+        type: string
+        description: |
+          An identifier for the proxy instance.
+        default: On linux, the machine hostname is used as default. On all other platforms a UUID is generated for the proxy.
+      port:
+        type: integer
+        description: |
+          The listening port for the proxy.
+        default: 7000
+  admin:
+    type: object
+    description: |
+      Configuration of proxy admin HTTP interface.
+    properties:
+      address:
+      type: string
+      description: |
+        Socket Address and port to bind the administration interface to.
+      default: [::]:9091
+  static:
+    type: object
+    description: |
+      Static configuration of endpoints and filters.
+      NOTE: Exactly one of `static` or `dynamic` can be specified.
+    properties:
+      filter:
+        '$ref': '#/definitions/filterchain'
+      endpoints:
+        '$ref': '#/definitions/endpoints'
+    required:
+      - endpoints
+  dynamic:
+    type: object
+    description: |
+      Dynamic configuration of endpoints and filters.
+      NOTE: Exactly one of `static` or `dynamic` can be specified.
+    properties:
+      management_servers:
+        type: array
+        description: |
+          A list of XDS management servers to fetch configuration from.
+          Multiple servers can be provided for redundancy for the proxy to
+          fall back to upon error.
+        items:
+          type: object
+            description: |
+              Configuration for a management server.
+            properties:
+              address:
+                type: string
+                description: |
+                  Address of the management server. This must have the `http(s)` scheme prefix.
+                  Example: `http://example.com`
+    required:
+      - management_servers
 
 required:
- - version
+  - version
 
 definitions:
- filterchain:
- type: array
- description: |
- A filter chain.
- items:
- '$ref': {} # Refer to the Filter documentation for a filter configuration schema.
- endpoints:
- type: array
- description: |
- A list of upstream endpoints to forward packets to.
- items:
- type: object
- description: |
- An upstream endpoint
- properties:
- address:
- type: string
- description: |
- Socket address of the endpoint. This must be of the ´IP:Port` form e.g `192.168.1.1:7001`
- metadata:
- type: object
- description: |
- Arbitrary key value pairs that is associated with the endpoint.
- These are visible to Filters when processing packets and can be used to provide more context about endpoints (e.g whether or not to route a packet to an endpoint).
- Keys must be of type string otherwise the configuration is rejected.
- required:
- - address
+  filterchain:
+    type: array
+    description: |
+      A filter chain.
+    items:
+      '$ref': {} # Refer to the Filter documentation for a filter configuration schema.
+  endpoints:
+    type: array
+    description: |
+      A list of upstream endpoints to forward packets to.
+    items:
+      type: object
+        description: |
+          An upstream endpoint
+        properties:
+          address:
+            type: string
+            description: |
+              Socket address of the endpoint. This must be of the ´IP:Port` form e.g `192.168.1.1:7001`
+            metadata:
+              type: object
+              description: |
+                Arbitrary key value pairs that is associated with the endpoint.
+                These are visible to Filters when processing packets and can be used to provide more context about endpoints (e.g whether or not to route a packet to an endpoint).
+                Keys must be of type string otherwise the configuration is rejected.
+      required:
+        - address
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="filters"><a class="header" href="#filters">Filters</a></h1>
 <p>In most cases, we would like Quilkin to do some preprocessing of received packets before sending them off to their destination. Because this stage is entirely specific to the use case at hand and differs between Quilkin deployments, we must have a say over what tweaks to perform - this is where filters come in.</p>
@@ -612,15 +623,25 @@ A packet received downstream will be fed into <code>append</code> and the result
 <ul>
 <li>
 <p><code>quilkin_filter_read_duration_seconds</code> The duration it took for a <code>filter</code>'s
-<code>read</code> implementation to execute.
-book.toml htmltest.yaml logos preprocessor.sh src Labels
-book.toml htmltest.yaml logos preprocessor.sh src <code>filter</code> The name of the filter being executed.</p>
+<code>read</code> implementation to execute.</p>
+<ul>
+<li>Labels
+<ul>
+<li><code>filter</code> The name of the filter being executed.</li>
+</ul>
+</li>
+</ul>
 </li>
 <li>
 <p><code>quilkin_filter_write_duration_seconds</code> The duration it took for a <code>filter</code>'s
-<code>write</code> implementation to execute.
-book.toml htmltest.yaml logos preprocessor.sh src Labels
-book.toml htmltest.yaml logos preprocessor.sh src <code>filter</code> The name of the filter being executed.</p>
+<code>write</code> implementation to execute.</p>
+<ul>
+<li>Labels
+<ul>
+<li><code>filter</code> The name of the filter being executed.</li>
+</ul>
+</li>
+</ul>
 </li>
 </ul>
 <h3 id="configuration-examples"><a class="header" href="#configuration-examples">Configuration Examples</a></h3>
@@ -631,16 +652,16 @@ book.toml htmltest.yaml logos preprocessor.sh src <code>filter</code> The name o
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
 static:
- filters:
- - name: quilkin.filters.debug.v1alpha1.Debug
- config:
- id: debug-1
- - name: quilkin.filters.local_rate_limit.v1alpha1.LocalRateLimit
- config:
- max_packets: 10
- period: 1
- endpoints:
- - address: 127.0.0.1:7001
+  filters:
+    - name: quilkin.filters.debug.v1alpha1.Debug
+      config:
+        id: debug-1
+    - name: quilkin.filters.local_rate_limit.v1alpha1.LocalRateLimit
+      config:
+        max_packets: 10
+        period: 1
+  endpoints:
+    - address: 127.0.0.1:7001
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 2);
@@ -669,29 +690,33 @@ Consequently, we can build a filter chain with a [CaptureBytes] filter preceedin
 <h3 id="built-in-filters"><a class="header" href="#built-in-filters">Built-in filters <a name="built-in-filters"></a></a></h3>
 <p>Quilkin includes several filters out of the box.</p>
 <table><thead><tr><th>Filter</th><th>Description</th></tr></thead><tbody>
-<tr><td><a href="./filters/debug.html">Debug</a></td><td>Logs every packet.</td></tr>
-<tr><td><a href="./filters/local_rate_limit.html">LocalRateLimit</a></td><td>Limit the frequency of packets.</td></tr>
-<tr><td><a href="./filters/concatenate_bytes.html">ConcatenateBytes</a></td><td>Add authentication tokens to packets.</td></tr>
-<tr><td>[CaptureBytes]</td><td>Capture specific bytes from a packet and store them in <a href="filters.html#filter-dynamic-metadata">filter dynamic metadata</a>.</td></tr>
-<tr><td><a href="./filters/token_router.html">TokenRouter</a></td><td>Send packets to endpoints based on metadata.</td></tr>
+<tr><td><a href="./filters/capture.html">Capture</a></td><td>Capture specific bytes from a packet and store them in <a href="filters.html#filter-dynamic-metadata">filter dynamic metadata</a>.</td></tr>
 <tr><td><a href="./filters/compress.html">Compress</a></td><td>Compress and decompress packets data.</td></tr>
+<tr><td><a href="./filters/concatenate_bytes.html">ConcatenateBytes</a></td><td>Add authentication tokens to packets.</td></tr>
+<tr><td><a href="./filters/debug.html">Debug</a></td><td>Logs every packet.</td></tr>
+<tr><td><a href="./filters/drop.html">Drop</a></td><td>Drop all packets</td></tr>
 <tr><td><a href="./filters/firewall.html">Firewall</a></td><td>Allowing/blocking traffic by IP and port.</td></tr>
+<tr><td><a href="./filters/load_balancer.html">LoadBalancer</a></td><td>Distributes downstream packets among upstream endpoints.</td></tr>
+<tr><td><a href="./filters/local_rate_limit.html">LocalRateLimit</a></td><td>Limit the frequency of packets.</td></tr>
+<tr><td><a href="./filters/match.html">Match</a></td><td>Change Filter behaviour based on dynamic metadata</td></tr>
+<tr><td><a href="./filters/pass.html">Pass</a></td><td>Allow all packets through</td></tr>
+<tr><td><a href="./filters/token_router.html">TokenRouter</a></td><td>Send packets to endpoints based on metadata.</td></tr>
 </tbody></table>
 <h3 id="filterconfig"><a class="header" href="#filterconfig">FilterConfig <a name="filter-config"></a></a></h3>
 <p>Represents configuration for a filter instance.</p>
 <pre><code class="language-yaml">properties:
- name:
- type: string
- description: |
- Identifies the type of filter to be created.
- This value is unique for every filter type - please consult the documentation for the particular filter for this value.
+  name:
+    type: string
+    description: |
+      Identifies the type of filter to be created.
+      This value is unique for every filter type - please consult the documentation for the particular filter for this value.
 
- config:
- type: object
- description: |
- The configuration value to be passed onto the created filter.
- This is passed as an object value since it is specific to the filter's type and is validated by the filter
- implementation. Please consult the documentation for the particular filter for its schema.
+  config:
+    type: object
+    description: |
+      The configuration value to be passed onto the created filter.
+      This is passed as an object value since it is specific to the filter's type and is validated by the filter
+      implementation. Please consult the documentation for the particular filter for its schema.
 
 required: [ 'name', 'config' ]
 </code></pre>
@@ -722,15 +747,15 @@ multiple matches.</p>
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
 static:
- filters:
- - name: quilkin.filters.capture.v1alpha1.Capture
- config:
- metadataKey: myapp.com/myownkey
- prefix:
- size: 3
- remove: false
- endpoints:
- - address: 127.0.0.1:7001
+  filters:
+    - name: quilkin.filters.capture.v1alpha1.Capture
+      config:
+          metadataKey: myapp.com/myownkey
+          prefix:
+            size: 3
+            remove: false
+  endpoints:
+    - address: 127.0.0.1:7001
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 1);
@@ -828,14 +853,14 @@ and subsequent decompression of UDP data when sent between systems, such as a ga
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
 static:
- filters:
- - name: quilkin.filters.compress.v1alpha1.Compress
- config:
- on_read: COMPRESS
- on_write: DECOMPRESS
- mode: SNAPPY
- endpoints:
- - address: 127.0.0.1:7001
+  filters:
+    - name: quilkin.filters.compress.v1alpha1.Compress
+      config:
+          on_read: COMPRESS
+          on_write: DECOMPRESS
+          mode: SNAPPY
+  endpoints:
+    - address: 127.0.0.1:7001
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 1);
@@ -894,10 +919,19 @@ provided in the future.</p>
 <ul>
 <li><code>quilkin_filter_Compress_packets_dropped_total</code>
 Total number of packets dropped as they could not be processed.
-book.toml htmltest.yaml logos preprocessor.sh src Labels:
-book.toml htmltest.yaml logos preprocessor.sh src <code>action</code>: The action that could not be completed successfully, thereby causing the packet to be dropped.
-book.toml htmltest.yaml logos preprocessor.sh src <code>Compress</code>: Compressing the packet with the configured <code>mode</code> was attempted.
-book.toml htmltest.yaml logos preprocessor.sh src <code>Decompress</code> Decompressing the packet with the configured <code>mode</code> was attempted.</li>
+<ul>
+<li>Labels:
+<ul>
+<li><code>action</code>: The action that could not be completed successfully, thereby causing the packet to be dropped.
+<ul>
+<li><code>Compress</code>: Compressing the packet with the configured <code>mode</code> was attempted.</li>
+<li><code>Decompress</code> Decompressing the packet with the configured <code>mode</code> was attempted.</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
 <li><code>quilkin_filter_Compress_decompressed_bytes_total</code>
 Total number of decompressed bytes either received or sent.</li>
 <li><code>quilkin_filter_Compress_compressed_bytes_total</code>
@@ -905,7 +939,7 @@ Total number of compressed bytes either received or sent.</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="concatenatebytes"><a class="header" href="#concatenatebytes">ConcatenateBytes</a></h1>
 <p>The <code>ConcatenateBytes</code> filter's job is to add a byte packet to either the beginning or end of each UDP packet that passes
-through. This is commonly used to provide an auth token to each packet, so they can be routed appropriately. </p>
+through. This is commonly used to provide an auth token to each packet, so they can be routed appropriately.</p>
 <h4 id="filter-name-2"><a class="header" href="#filter-name-2">Filter name</a></h4>
 <pre><code class="language-text">quilkin.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
 </code></pre>
@@ -916,14 +950,14 @@ through. This is commonly used to provide an auth token to each packet, so they 
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
 static:
- filters:
- - name: quilkin.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
- config:
- on_read: APPEND
- on_write: DO_NOTHING
- bytes: MXg3aWp5Ng==
- endpoints:
- - address: 127.0.0.1:7001
+  filters:
+    - name: quilkin.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
+      config:
+          on_read: APPEND
+          on_write: DO_NOTHING
+          bytes: MXg3aWp5Ng==
+  endpoints:
+    - address: 127.0.0.1:7001
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 1);
@@ -978,12 +1012,12 @@ definitions:
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
 static:
- filters:
- - name: quilkin.filters.debug.v1alpha1.Debug
- config:
- id: debug-1
- endpoints:
- - address: 127.0.0.1:7001
+  filters:
+    - name: quilkin.filters.debug.v1alpha1.Debug
+      config:
+        id: debug-1
+  endpoints:
+    - address: 127.0.0.1:7001
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 1);
@@ -1038,7 +1072,7 @@ static:
             fallthrough: quilkin.filters.drop.v1alpha1.Drop
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-</span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 1);
+</span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 2);
 </span><span class="boring">quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>
@@ -1059,22 +1093,22 @@ the rules set on the Firewall filter.</p>
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
 static:
- filters:
- - name: quilkin.filters.firewall.v1alpha1.Firewall
- config:
- on_read:
- - action: ALLOW
- source: 192.168.51.0/24
- ports:
- - 10
- - 1000-7000
- on_write: 
- - action: DENY
- source: 192.168.51.0/24
- ports:
- - 7000
- endpoints:
- - address: 127.0.0.1:7001
+  filters:
+    - name: quilkin.filters.firewall.v1alpha1.Firewall
+      config:
+        on_read:
+          - action: ALLOW
+            source: 192.168.51.0/24
+            ports:
+               - 10
+               - 1000-7000
+        on_write: 
+          - action: DENY
+            source: 192.168.51.0/24
+            ports:
+               - 7000
+  endpoints:
+    - address: 127.0.0.1:7001
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 1);
@@ -1166,19 +1200,19 @@ rule deciding if the request is allowed or denied:</p>
 <h3 id="configuration-examples-7"><a class="header" href="#configuration-examples-7">Configuration Examples</a></h3>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">#[tokio::main]
 </span><span class="boring">async fn main() {
-</span><span class="boring">let yaml = &quot;
+</span><span class="boring">  let yaml = &quot;
 </span>version: v1alpha1
 static:
- filters:
- - name: quilkin.filters.load_balancer.v1alpha1.LoadBalancer
- config:
- policy: ROUND_ROBIN
- endpoints:
- - address: 127.0.0.1:7001
+  filters:
+    - name: quilkin.filters.load_balancer.v1alpha1.LoadBalancer
+      config:
+        policy: ROUND_ROBIN
+  endpoints:
+    - address: 127.0.0.1:7001
 <span class="boring">&quot;;
-</span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
+</span><span class="boring">  let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 1);
-</span><span class="boring">quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
+</span><span class="boring">  quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>
 <p>The load balancing policy (the strategy to use to select what endpoint to send traffic to) is configurable.
@@ -1206,7 +1240,7 @@ definitions:
 <h3 id="metrics-8"><a class="header" href="#metrics-8">Metrics</a></h3>
 <p>This filter currently does not expose any metrics.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="localratelimit"><a class="header" href="#localratelimit">LocalRateLimit</a></h1>
-<p>The LocalRateLimit filter controls the frequency at which packets received downstream are forwarded upstream by the proxy. 
+<p>The LocalRateLimit filter controls the frequency at which packets received downstream are forwarded upstream by the proxy.<br />
 Rate limiting is done independently per source (IP, Port) combination.</p>
 <h4 id="filter-name-7"><a class="header" href="#filter-name-7">Filter name</a></h4>
 <pre><code class="language-text">quilkin.filters.local_rate_limit.v1alpha1.LocalRateLimit
@@ -1216,20 +1250,20 @@ Rate limiting is done independently per source (IP, Port) combination.</p>
 </span><span class="boring">// local_rate_limit filter spawns a task on initialization
 </span><span class="boring">#[tokio::main]
 </span><span class="boring">async fn main() {
-</span><span class="boring">let yaml = &quot;
+</span><span class="boring">  let yaml = &quot;
 </span>version: v1alpha1
 static:
- filters:
- - name: quilkin.filters.local_rate_limit.v1alpha1.LocalRateLimit
- config:
- max_packets: 1000
- period: 1
- endpoints:
- - address: 127.0.0.1:7001
+  filters:
+    - name: quilkin.filters.local_rate_limit.v1alpha1.LocalRateLimit
+      config:
+        max_packets: 1000
+        period: 1
+  endpoints:
+    - address: 127.0.0.1:7001
 <span class="boring">&quot;;
-</span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
+</span><span class="boring">  let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 1);
-</span><span class="boring">quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
+</span><span class="boring">  quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>
 <p>To configure a rate limiter, we specify the maximum rate at which the proxy is allowed to forward packets. In the example above, we configured the proxy to forward a maximum of 1000 packets per second).</p>
@@ -1265,11 +1299,11 @@ properties:
 </code></pre>
 <h3 id="metrics-9"><a class="header" href="#metrics-9">Metrics</a></h3>
 <ul>
-<li><code>quilkin_filter_LocalRateLimit_packets_dropped</code> 
+<li><code>quilkin_filter_LocalRateLimit_packets_dropped</code><br />
 A counter over the total number of packets that have exceeded the configured maximum rate limit and have been dropped as a result.</li>
 </ul>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="matches"><a class="header" href="#matches">Matches</a></h1>
-<p>The <code>Matches</code> filter's job is to provide a mechanism to change behaviour based
+<div style="break-before: page; page-break-before: always;"></div><h1 id="match"><a class="header" href="#match">Match</a></h1>
+<p>The <code>Match</code> filter's job is to provide a mechanism to change behaviour based
 on dynamic metadata. This filter behaves similarly to the <code>match</code> expression
 in Rust or <code>switch</code> statements in other languages.</p>
 <h4 id="filter-name-8"><a class="header" href="#filter-name-8">Filter name</a></h4>
@@ -1283,35 +1317,131 @@ in Rust or <code>switch</code> statements in other languages.</p>
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
 static:
- endpoints:
- - address: 127.0.0.1:26000
- - address: 127.0.0.1:26001
- filters:
- - name: quilkin.filters.capture_bytes.v1alpha1.CaptureBytes
- config:
- strategy: PREFIX
- metadataKey: myapp.com/token
- size: 3
- remove: false
- - name: quilkin.filters.match.v1alpha1.Match
- config:
- on_read:
- metadataKey: myapp.com/token
- branches:
- - value: abc
- filter: quilkin.filters.pass.v1alpha1.Pass
- fallthrough: quilkin.filters.drop.v1alpha1.Drop
+  endpoints:
+    - address: 127.0.0.1:26000
+    - address: 127.0.0.1:26001
+  filters:
+    - name: quilkin.filters.capture_bytes.v1alpha1.CaptureBytes
+      config:
+          strategy: PREFIX
+          metadataKey: myapp.com/token
+          size: 3
+          remove: false
+    - name: quilkin.filters.match.v1alpha1.Match
+      config:
+          on_read:
+            metadataKey: myapp.com/token
+            branches:
+                - value: abc
+                  filter: quilkin.filters.pass.v1alpha1.Pass
+            fallthrough: quilkin.filters.drop.v1alpha1.Drop
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-</span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 1);
+</span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 2);
 </span><span class="boring">quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>
-<!-- ANCHOR_END: example -->
+<!--  ANCHOR_END: example -->
 <h3 id="configuration-options-rust-doc-7"><a class="header" href="#configuration-options-rust-doc-7">Configuration Options (<a href="filters/../../api/quilkin/filters/match/struct.Config.html">Rust Doc</a>)</a></h3>
-<pre><code class="language-yaml">{{#include ../../../target/quilkin.filters.match.v1alpha1.yaml}}
+<pre><code class="language-yaml">---
+$schema: &quot;http://json-schema.org/draft-07/schema#&quot;
+title: Config
+description: &quot;Configuration for the [`factory`][crate::filters::match::factory].&quot;
+type: object
+properties:
+  on_read:
+    description: &quot;Configuration for [`Filter::read`][crate::filters::Filter::read].&quot;
+    anyOf:
+      - $ref: &quot;#/definitions/DirectionalConfig&quot;
+      - type: &quot;null&quot;
+  on_write:
+    description: &quot;Configuration for [`Filter::write`][crate::filters::Filter::write].&quot;
+    anyOf:
+      - $ref: &quot;#/definitions/DirectionalConfig&quot;
+      - type: &quot;null&quot;
+additionalProperties: false
+definitions:
+  Branch:
+    description: &quot;A specific match branch. The filter is run when `value` matches the value defined in `metadata_key`.&quot;
+    type: object
+    required:
+      - id
+      - value
+    properties:
+      config:
+        description: &quot;The configuration for the filter to run, if any.&quot;
+        anyOf:
+          - $ref: &quot;#/definitions/ConfigType&quot;
+          - type: &quot;null&quot;
+      id:
+        description: The identifier for the filter to run.
+        type: string
+      value:
+        description: The value to compare against the dynamic metadata.
+        allOf:
+          - $ref: &quot;#/definitions/Value&quot;
+  ConfigType:
+    description: &quot;The configuration of a [`Filter`][crate::filters::Filter] from either a static or dynamic source.&quot;
+    oneOf:
+      - description: Static configuration from YAML.
+        type: object
+        required:
+          - Static
+        properties:
+          Static: true
+        additionalProperties: false
+  DirectionalConfig:
+    description: Configuration for a specific direction.
+    type: object
+    required:
+      - branches
+      - metadataKey
+    properties:
+      branches:
+        description: List of filters to compare and potentially run if any match.
+        type: array
+        items:
+          $ref: &quot;#/definitions/Branch&quot;
+      fallthrough:
+        description: &quot;The behaviour for when none of the `branches` match.&quot;
+        default:
+          config: ~
+          id: quilkin.filters.drop.v1alpha1.Drop
+        allOf:
+          - $ref: &quot;#/definitions/Filter&quot;
+      metadataKey:
+        description: The key for the metadata to compare against.
+        type: string
+  Filter:
+    type: object
+    required:
+      - id
+    properties:
+      config:
+        description: &quot;The configuration for the filter to run, if any.&quot;
+        anyOf:
+          - $ref: &quot;#/definitions/ConfigType&quot;
+          - type: &quot;null&quot;
+      id:
+        description: The identifier for the filter to run.
+        type: string
+  Value:
+    anyOf:
+      - type: boolean
+      - type: integer
+        format: uint64
+        minimum: 0.0
+      - type: array
+        items:
+          $ref: &quot;#/definitions/Value&quot;
+      - type: string
+      - type: array
+        items:
+          type: integer
+          format: uint8
+          minimum: 0.0
 </code></pre>
-<p>View the <a href="filters/../../api/quilkin/filters/match/struct.Config.html">Matches</a> filter documentation for more details.</p>
+<p>View the <a href="filters/../../api/quilkin/filters/match/struct.Config.html">Match</a> filter documentation for more details.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="pass"><a class="header" href="#pass">Pass</a></h1>
 <p>The <code>Pass</code> filter that always passes any packet through it. This is useful in
 combination with conditional flow filters like <a href="filters/./match.html"><code>Matches</code></a></p>
@@ -1345,7 +1475,7 @@ static:
             fallthrough: quilkin.filters.drop.v1alpha1.Drop
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-</span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 1);
+</span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 2);
 </span><span class="boring">quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>
@@ -1354,7 +1484,7 @@ static:
 <h3 id="metrics-10"><a class="header" href="#metrics-10">Metrics</a></h3>
 <p>This filter currently exports no metrics.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="tokenrouter"><a class="header" href="#tokenrouter">TokenRouter</a></h1>
-<p>The <code>TokenRouter</code> filter's job is to provide a mechanism to declare which Endpoints a packet should be sent to. </p>
+<p>The <code>TokenRouter</code> filter's job is to provide a mechanism to declare which Endpoints a packet should be sent to.</p>
 <p>This Filter provides this functionality by comparing a byte array token found in the
 <a href="filters/../filters.html#filter-dynamic-metadata">Filter Dynamic Metadata</a> from a previous Filter, and comparing it to
 <a href="filters/../proxy.html#upstream-endpoint">Endpoint's tokens</a>, and sending packets to those Endpoints only if there is a match.</p>
@@ -1368,22 +1498,22 @@ static:
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
 static:
- filters:
- - name: quilkin.filters.token_router.v1alpha1.TokenRouter
- config:
- metadataKey: myapp.com/myownkey
- endpoints: 
- - address: 127.0.0.1:26000
- metadata:
- quilkin.dev:
- tokens:
- - MXg3aWp5Ng== # Authentication is provided by these ids, and matched against 
- - OGdqM3YyaQ== # the value stored in Filter dynamic metadata
- - address: 127.0.0.1:26001
- metadata:
- quilkin.dev:
- tokens:
- - bmt1eTcweA==
+  filters:
+    - name: quilkin.filters.token_router.v1alpha1.TokenRouter
+      config:
+          metadataKey: myapp.com/myownkey
+  endpoints: 
+    - address: 127.0.0.1:26000
+      metadata:
+        quilkin.dev:
+          tokens:
+            - MXg3aWp5Ng== # Authentication is provided by these ids, and matched against 
+            - OGdqM3YyaQ== # the value stored in Filter dynamic metadata
+    - address: 127.0.0.1:26001
+      metadata:
+        quilkin.dev:
+          tokens:
+            - bmt1eTcweA==
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 1);
@@ -1404,13 +1534,16 @@ properties:
 </code></pre>
 <h3 id="metrics-11"><a class="header" href="#metrics-11">Metrics</a></h3>
 <ul>
-<li><code>quilkin_filter_TokenRouter_packets_dropped</code> 
+<li><code>quilkin_filter_TokenRouter_packets_dropped</code><br />
 A counter of the total number of packets that have been dropped. This is also provided with a <code>Reason</code> label, as there
 are differing reasons for packets to be dropped:
-book.toml htmltest.yaml logos preprocessor.sh src <code>NoEndpointMatch</code> - The token provided via the Filter dynamic metadata does not match any Endpoint's tokens.
-book.toml htmltest.yaml logos preprocessor.sh src <code>NoTokenFound</code> - No token has been found in the Filter dynamic metadata.
-book.toml htmltest.yaml logos preprocessor.sh src <code>InvalidToken</code> - The data found for the token in the Filter dynamic metadata is not of the correct data type
+<ul>
+<li><code>NoEndpointMatch</code> - The token provided via the Filter dynamic metadata does not match any Endpoint's tokens.</li>
+<li><code>NoTokenFound</code> - No token has been found in the Filter dynamic metadata.</li>
+<li><code>InvalidToken</code> - The data found for the token in the Filter dynamic metadata is not of the correct data type
 (Vec<u8>)</li>
+</ul>
+</li>
 </ul>
 <h3 id="sample-applications"><a class="header" href="#sample-applications">Sample Applications</a></h3>
 <h4 id="packet-authentication"><a class="header" href="#packet-authentication">Packet Authentication</a></h4>
@@ -1428,25 +1561,25 @@ appropriately cryptographically random and sent to each proxy securely.</p>
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
 static:
- filters:
- - name: quilkin.filters.capture.v1alpha1.Capture # Capture and remove the authentication token
- config:
- suffix:
- size: 3
- remove: true
- - name: quilkin.filters.token_router.v1alpha1.TokenRouter
- endpoints: 
- - address: 127.0.0.1:26000
- metadata:
- quilkin.dev:
- tokens:
- - MXg3aWp5Ng== # Authentication is provided by these ids, and matched against 
- - OGdqM3YyaQ== # the value stored in Filter dynamic metadata
- - address: 127.0.0.1:26001
- metadata:
- quilkin.dev:
- tokens:
- - bmt1eTcweA==
+  filters:
+    - name: quilkin.filters.capture.v1alpha1.Capture # Capture and remove the authentication token
+      config:
+        suffix:
+            size: 3
+            remove: true
+    - name: quilkin.filters.token_router.v1alpha1.TokenRouter
+  endpoints: 
+    - address: 127.0.0.1:26000
+      metadata:
+        quilkin.dev:
+          tokens:
+            - MXg3aWp5Ng== # Authentication is provided by these ids, and matched against 
+            - OGdqM3YyaQ== # the value stored in Filter dynamic metadata
+    - address: 127.0.0.1:26001
+      metadata:
+        quilkin.dev:
+          tokens:
+            - bmt1eTcweA==
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 2);
@@ -1471,7 +1604,7 @@ This document provides an overview of the API and how we can go about writing ou
 <p>A <a href="filters/../../api/quilkin/filters/trait.FilterFactory.html">trait</a> representing a type that knows how to create instances of a particular type of <a href="filters/../../api/quilkin/filters/trait.Filter.html">Filter</a>.</p>
 <ul>
 <li>An implementation provides a <code>name</code> and <code>create_filter</code> method.</li>
-<li><code>create_filter</code> takes in <a href="filters/../filters.html#filter-config">configuration</a> for the filter to create and returns a <a href="filters/../../api/quilkin/filters/prelude/struct.FilterInstance.html">FilterInstance</a> type containing a new instance of its filter type. 
+<li><code>create_filter</code> takes in <a href="filters/../filters.html#filter-config">configuration</a> for the filter to create and returns a <a href="filters/../../api/quilkin/filters/prelude/struct.FilterInstance.html">FilterInstance</a> type containing a new instance of its filter type.<br />
 <code>name</code> returns the Filter name - a unique identifier of filters of the created type (e.g quilkin.filters.debug.v1alpha1.Debug).</li>
 </ul>
 <h3 id="filterregistry"><a class="header" href="#filterregistry">FilterRegistry</a></h3>
@@ -1515,14 +1648,14 @@ use quilkin::filters::prelude::*;
 struct Greet;
 
 impl Filter for Greet {
- fn read(&amp;self, mut ctx: ReadContext) -&gt; Option&lt;ReadResponse&gt; {
- ctx.contents.splice(0..0, String::from(&quot;Hello &quot;).into_bytes());
- Some(ctx.into())
- }
- fn write(&amp;self, mut ctx: WriteContext) -&gt; Option&lt;WriteResponse&gt; {
- ctx.contents.splice(0..0, String::from(&quot;Goodbye &quot;).into_bytes());
- Some(ctx.into())
- }
+    fn read(&amp;self, mut ctx: ReadContext) -&gt; Option&lt;ReadResponse&gt; {
+        ctx.contents.splice(0..0, String::from(&quot;Hello &quot;).into_bytes());
+        Some(ctx.into())
+    }
+    fn write(&amp;self, mut ctx: WriteContext) -&gt; Option&lt;WriteResponse&gt; {
+        ctx.contents.splice(0..0, String::from(&quot;Goodbye &quot;).into_bytes());
+        Some(ctx.into())
+    }
 }
 <span class="boring">}
 </span></code></pre>
@@ -1539,23 +1672,23 @@ use quilkin::filters::prelude::*;
 pub const NAME: &amp;str = &quot;greet.v1&quot;;
 
 pub fn factory() -&gt; DynFilterFactory {
- Box::from(GreetFilterFactory)
+    Box::from(GreetFilterFactory)
 }
 
 struct GreetFilterFactory;
 impl FilterFactory for GreetFilterFactory {
- fn name(&amp;self) -&gt; &amp;'static str {
- NAME
- }
+    fn name(&amp;self) -&gt; &amp;'static str {
+        NAME
+    }
 
- fn config_schema(&amp;self) -&gt; schemars::schema::RootSchema {
- schemars::schema_for!(serde_json::Value)
- }
+    fn config_schema(&amp;self) -&gt; schemars::schema::RootSchema {
+        schemars::schema_for!(serde_json::Value)
+    }
 
- fn create_filter(&amp;self, _: CreateFilterArgs) -&gt; Result&lt;FilterInstance, Error&gt; {
- let filter: Box&lt;dyn Filter&gt; = Box::new(Greet);
- Ok(FilterInstance::new(serde_json::Value::Null, filter))
- }
+    fn create_filter(&amp;self, _: CreateFilterArgs) -&gt; Result&lt;FilterInstance, Error&gt; {
+        let filter: Box&lt;dyn Filter&gt; = Box::new(Greet);
+        Ok(FilterInstance::new(serde_json::Value::Null, filter))
+    }
 }
 <span class="boring">}
 </span></code></pre>
@@ -1589,28 +1722,30 @@ forwards all packets to an upstream server at port 4321.</p>
 <pre><code class="language-yaml"># config.yaml
 version: v1alpha1
 proxy:
- port: 7001
+  port: 7001
 static:
- filters:
- - name: greet.v1
- endpoints:
- - address: 127.0.0.1:4321
+  filters:
+  - name: greet.v1
+  endpoints:
+  - address: 127.0.0.1:4321
 </code></pre>
 <ul>
-<li>Start the proxy</li>
-</ul>
+<li>
+<p>Start the proxy</p>
 <pre><code class="language-bash">cargo run -- -c config.yaml
 </code></pre>
-<ul>
-<li>Start a UDP listening server on the configured port</li>
-</ul>
+</li>
+<li>
+<p>Start a UDP listening server on the configured port</p>
 <pre><code class="language-bash">nc -lu 127.0.0.1 4321
 </code></pre>
-<ul>
-<li>Start an interactive UDP client that sends packet to the proxy</li>
-</ul>
+</li>
+<li>
+<p>Start an interactive UDP client that sends packet to the proxy</p>
 <pre><code class="language-bash">nc -u 127.0.0.1 7001
 </code></pre>
+</li>
+</ul>
 <p>Whatever we pass to the client should now show up with our modification on the listening server's standard output.
 For example typing <code>Quilkin</code> in the client prints <code>Hello Quilkin</code> on the server.</p>
 <h4 id="4-working-with-filter-configuration"><a class="header" href="#4-working-with-filter-configuration">4. Working with Filter Configuration</a></h4>
@@ -1619,10 +1754,10 @@ For example typing <code>Quilkin</code> in the client prints <code>Hello Quilkin
 <h5 id="static-configuration"><a class="header" href="#static-configuration">Static Configuration</a></h5>
 <p>First let's create the config for our static configuration:</p>
 <h6 id="1-add-the-yaml-parsing-crates-to-cargotoml"><a class="header" href="#1-add-the-yaml-parsing-crates-to-cargotoml">1. Add the yaml parsing crates to <code>Cargo.toml</code>:</a></h6>
-<pre><code class="language-toml"> [dependencies]
- # ...
- serde = &quot;1.0&quot;
- serde_yaml = &quot;0.8&quot;
+<pre><code class="language-toml">  [dependencies]
+  # ...
+  serde = &quot;1.0&quot;
+  serde_yaml = &quot;0.8&quot;
 </code></pre>
 <h6 id="2-define-a-struct-representing-the-config"><a class="header" href="#2-define-a-struct-representing-the-config">2. Define a struct representing the config:</a></h6>
 <pre><code class="language-rust no_run noplayground ignore">// src/main.rs
@@ -1653,7 +1788,7 @@ impl Filter for Greet {
 <span class="boring">use serde::{Deserialize, Serialize};
 </span><span class="boring">#[derive(Serialize, Deserialize, Debug)]
 </span><span class="boring">struct Config {
-</span><span class="boring">greeting: String,
+</span><span class="boring">    greeting: String,
 </span><span class="boring">}
 </span><span class="boring">use quilkin::filters::prelude::*;
 </span><span class="boring">struct Greet(String);
@@ -1663,30 +1798,30 @@ impl Filter for Greet {
 pub const NAME: &amp;str = &quot;greet.v1&quot;;
 
 pub fn factory() -&gt; DynFilterFactory {
- Box::from(GreetFilterFactory)
+    Box::from(GreetFilterFactory)
 }
 
 struct GreetFilterFactory;
 impl FilterFactory for GreetFilterFactory {
- fn name(&amp;self) -&gt; &amp;'static str {
- NAME
- }
+    fn name(&amp;self) -&gt; &amp;'static str {
+        NAME
+    }
 
- fn config_schema(&amp;self) -&gt; schemars::schema::RootSchema {
- schemars::schema_for!(serde_json::Value)
- }
+    fn config_schema(&amp;self) -&gt; schemars::schema::RootSchema {
+        schemars::schema_for!(serde_json::Value)
+    }
 
- fn create_filter(&amp;self, args: CreateFilterArgs) -&gt; Result&lt;FilterInstance, Error&gt; {
- let config = match args.config.unwrap() {
- ConfigType::Static(config) =&gt; {
- serde_yaml::from_str::&lt;Config&gt;(serde_yaml::to_string(&amp;config).unwrap().as_str())
- .unwrap()
- }
- ConfigType::Dynamic(_) =&gt; unimplemented!(&quot;dynamic config is not yet supported for this filter&quot;),
- };
- let filter: Box&lt;dyn Filter&gt; = Box::new(Greet(config.greeting));
- Ok(FilterInstance::new(serde_json::Value::Null, filter))
- }
+    fn create_filter(&amp;self, args: CreateFilterArgs) -&gt; Result&lt;FilterInstance, Error&gt; {
+        let config = match args.config.unwrap() {
+          ConfigType::Static(config) =&gt; {
+              serde_yaml::from_str::&lt;Config&gt;(serde_yaml::to_string(&amp;config).unwrap().as_str())
+                .unwrap()
+          }
+          ConfigType::Dynamic(_) =&gt; unimplemented!(&quot;dynamic config is not yet supported for this filter&quot;),
+        };
+        let filter: Box&lt;dyn Filter&gt; = Box::new(Greet(config.greeting));
+        Ok(FilterInstance::new(serde_json::Value::Null, filter))
+    }
 }
 </code></pre>
 <p>And with these changes we have wired up static configuration for our filter. Try it out with the following config.yaml:</p>
@@ -1706,16 +1841,16 @@ static:
 <p>You might have noticed while adding <a href="filters/writing_custom_filters.html#static-configuration">static configuration support</a>, that the <a href="filters/../../api/quilkin/filters/prelude/struct.CreateFilterArgs.html#structfield.config">config</a> argument passed into our <a href="filters/../../api/quilkin/filters/trait.FilterFactory.html">FilterFactory</a>
 has a <a href="filters/../../api/quilkin/config/enum.ConfigType.html#variant.Dynamic">Dynamic</a> variant.</p>
 <pre><code class="language-rust ignore">let config = match args.config.unwrap() {
- ConfigType::Static(config) =&gt; {
- serde_yaml::from_str::&lt;Config&gt;(serde_yaml::to_string(&amp;config).unwrap().as_str())
- .unwrap()
- }
- ConfigType::Dynamic(_) =&gt; unimplemented!(&quot;dynamic config is not yet supported for this filter&quot;),
+    ConfigType::Static(config) =&gt; {
+        serde_yaml::from_str::&lt;Config&gt;(serde_yaml::to_string(&amp;config).unwrap().as_str())
+         .unwrap()
+    }
+    ConfigType::Dynamic(_) =&gt; unimplemented!(&quot;dynamic config is not yet supported for this filter&quot;),
 };
 </code></pre>
 <p>The <a href="filters/../../api/quilkin/config/enum.ConfigType.html#variant.Dynamic">Dynamic</a> contains the serialized <a href="https://developers.google.com/protocol-buffers">Protobuf</a> message received from the <a href="filters/../xds.html">management server</a> for the <a href="filters/../../api/quilkin/filters/trait.Filter.html">Filter</a> to create.
 As a result, its contents are entirely opaque to Quilkin and it is represented with the <a href="https://docs.rs/prost-types/0.7.0/prost_types/struct.Any.html">Prost Any</a> type so the <a href="filters/../../api/quilkin/filters/trait.FilterFactory.html">FilterFactory</a>
-can interpret its contents however it wishes. 
+can interpret its contents however it wishes.<br />
 However, it usually contains a Protobuf equivalent of the filter's static configuration.</p>
 <h6 id="1-add-the-proto-parsing-crates-to-cargotoml"><a class="header" href="#1-add-the-proto-parsing-crates-to-cargotoml">1. Add the proto parsing crates to <code>Cargo.toml</code>:</a></h6>
 <pre><code class="language-toml">[dependencies]
@@ -1760,7 +1895,7 @@ use greet::Greet as ProtoGreet;
 <p>If the message contains a Protobuf equivalent of the filter's static configuration, we can
 leverage the <a href="filters/../../api/quilkin/config/enum.ConfigType.html#method.deserialize">deserialize</a> method to deserialize either a static or dynamic config. 
 The function automatically deserializes and converts from the Protobuf type if the input contains a dynamic
-configuration. 
+configuration.<br />
 As a result, the function requires that the <a href="https://doc.rust-lang.org/std/convert/trait.TryFrom.html">std::convert::TryFrom</a> is implemented from our dynamic
 config type to a static equivalent.</p>
 <pre><code class="language-rust no_run noplayground ignore">// src/main.rs
@@ -1808,28 +1943,28 @@ each providing different capabilities and complexity tradeoffs.</p>
 <p>Below captures several of the most useful and prevalent architectural patterns to give you inspiration
 on how you can use Quilkin in your multiplayer game networking architecture.</p>
 <h2 id="server-proxy-as-a-sidecar"><a class="header" href="#server-proxy-as-a-sidecar">Server Proxy as a Sidecar</a></h2>
-<pre><code class="language-text"> +
- |
- Internet
- |
- |
- |
-+---------+ | +----------------+ +----------------+
-| Game | | | Quilkin | | Dedicated |
-| Client &lt;------------------&gt; (Server Proxy) | | Game Server |
-+---------+ | | &lt;-&gt; |
- | +----------------+ +----------------+
- |
- |
- | +----------------+ +----------------+
- | | Quilkin | | Dedicated |
- | | (Server Proxy) | | Game Server |
- | | &lt;-&gt; |
- | +----------------+ +----------------+
- |
- |
- |
- +
+<pre><code class="language-text">                  +
+                  |
+               Internet
+                  |
+                  |
+                  |
++---------+       |          +----------------+ +----------------+
+|  Game   |       |          | Quilkin        | | Dedicated      |
+|  Client &lt;------------------&gt; (Server Proxy) | | Game Server    |
++---------+       |          |                &lt;-&gt;                |
+                  |          +----------------+ +----------------+
+                  |
+                  |
+                  |          +----------------+ +----------------+
+                  |          | Quilkin        | | Dedicated      |
+                  |          | (Server Proxy) | | Game Server    |
+                  |          |                &lt;-&gt;                |
+                  |          +----------------+ +----------------+
+                  |
+                  |
+                  |
+                  +
 </code></pre>
 <p>This is the simplest integration and configuration option with Quilkin, but does provide the smallest number
 of possible feature implementations and ability to provide redundancy.</p>
@@ -1837,7 +1972,10 @@ of possible feature implementations and ability to provide redundancy.</p>
 and metric information that comes with Quilkin.</p>
 <ul>
 <li>In this example, the Server proxy is running alongside the dedicated game server - on the same public IP/machine/container.
-book.toml htmltest.yaml logos preprocessor.sh src This is often referred to as a sidecar pattern.</li>
+<ul>
+<li>This is often referred to as a sidecar pattern.</li>
+</ul>
+</li>
 <li>Communication between the Server Proxy and the Dedicated Game Server occurs over the localhost network, with a
 separate port for each Game Client connection.</li>
 <li>Clients connect to the Server Proxy's public port/IP combination, and the Server Proxy routes all traffic directly
@@ -1846,28 +1984,28 @@ to the dedicated game server.</li>
 as long as the Game Client conforms to the standard protocols utilised by those filters as appropriate.</li>
 </ul>
 <h2 id="client-proxy-to-sidecar-server-proxy"><a class="header" href="#client-proxy-to-sidecar-server-proxy">Client Proxy to Sidecar Server Proxy</a></h2>
-<pre><code class="language-text"> +
- |
- Internet
- |
- |
- |
-+---------+ +----------------+ | +----------------+ +----------------+
-| Game | | Quilkin | | | Quilkin | | Dedicated |
-| Client &lt;----&gt; (Client Proxy) &lt;------------&gt; (Server Proxy) | | Game Server |
-+---------+ +----------------+ | | &lt;-&gt; |
- | +----------------+ +----------------+
- |
- |
- | +----------------+ +----------------+
- | | Quilkin | | Dedicated |
- | | (Server Proxy) | | Game Server |
- | | &lt;-&gt; |
- | +----------------+ +----------------+
- |
- |
- |
- +
+<pre><code class="language-text">                                    +
+                                    |
+                                 Internet
+                                    |
+                                    |
+                                    |
++---------+    +----------------+   |        +----------------+ +----------------+
+|  Game   |    | Quilkin        |   |        | Quilkin        | | Dedicated      |
+|  Client &lt;----&gt; (Client Proxy) &lt;------------&gt; (Server Proxy) | | Game Server    |
++---------+    +----------------+   |        |                &lt;-&gt;                |
+                                    |        +----------------+ +----------------+
+                                    |
+                                    |
+                                    |        +----------------+ +----------------+
+                                    |        | Quilkin        | | Dedicated      |
+                                    |        | (Server Proxy) | | Game Server    |
+                                    |        |                &lt;-&gt;                |
+                                    |        +----------------+ +----------------+
+                                    |
+                                    |
+                                    |
+                                    +
 </code></pre>
 <p>This example is the same as the above, but puts a Client Proxy between the Game Client, and the Server Proxy to take
 advantage of Client Proxy functionality.</p>
@@ -1880,28 +2018,28 @@ having to change the Game Client.</li>
 match-made with a Game Server.</li>
 </ul>
 <h2 id="client-proxy-to-separate-server-proxies-pools"><a class="header" href="#client-proxy-to-separate-server-proxies-pools">Client Proxy to Separate Server Proxies Pools</a></h2>
-<pre><code class="language-text"> + +
- | |
- Internet Private
- | Network
- | +----------------+ | +----------------+
- | | Quilkin | | | Dedicated |
- | +--&gt; (Server Proxy) &lt;-------+------&gt; Game Server |
-+---------+ +----------------+ | | | | | | | |
-| Game | | Quilkin &lt;-------+ +----------------+ | | +----------------+
-| Client &lt;------&gt; (Client Proxy) | | | | |
-+---------+ +----------------+ | | +----------------+ | | +----------------+
- | | | Quilkin | | | | Dedicated |
- | +--&gt; (Server Proxy) &lt;-------+ | Game Server |
- | | | | | |
- | +----------------+ | +----------------+
- | |
- | +----------------+ | +----------------+
- | | Quilkin | | | Dedicated |
- | | (Server Proxy) | | | Game Server |
- | | | | | |
- | +----------------+ | +----------------+
- + +
+<pre><code class="language-text">                                       +                          +
+                                       |                          |
+                                    Internet                   Private
+                                       |                       Network
+                                       |     +----------------+   |          +----------------+
+                                       |     | Quilkin        |   |          | Dedicated      |
+                                       |  +--&gt; (Server Proxy) &lt;-------+------&gt; Game Server    |
++---------+      +----------------+    |  |  |                |   |   |      |                |
+|  Game   |      | Quilkin        &lt;-------+  +----------------+   |   |      +----------------+
+|  Client &lt;------&gt; (Client Proxy) |    |  |                       |   |
++---------+      +----------------+    |  |  +----------------+   |   |      +----------------+
+                                       |  |  | Quilkin        |   |   |      | Dedicated      |
+                                       |  +--&gt; (Server Proxy) &lt;-------+      | Game Server    |
+                                       |     |                |   |          |                |
+                                       |     +----------------+   |          +----------------+
+                                       |                          |
+                                       |     +----------------+   |          +----------------+
+                                       |     | Quilkin        |   |          | Dedicated      |
+                                       |     | (Server Proxy) |   |          | Game Server    |
+                                       |     |                |   |          |                |
+                                       |     +----------------+   |          +----------------+
+                                       +                          +
 
 </code></pre>
 <p>This is the most complex configuration, but enables the most reuse of Quilkin's functionality,
@@ -1919,7 +2057,7 @@ to the dedicated game servers, which are on private IP addresses.</li>
 or another service, with an authentication token to pass to the Server proxies, such that the UDP packets can be
 routed correctly to the dedicated game server they should connect to.</li>
 <li>Dedicated game servers receive traffic as per normal from the Server Proxies, and send data back to the proxies
-directly. </li>
+directly.</li>
 <li>If the dedicated game server always expects traffic from only a single ip/port combination for client connection, 
 then traffic will always need to be sent through a single Server Proxy. Otherwise, UDP packets can be load
 balanced via the Client Proxy to multiple Server Proxies for even greater redundancy.</li>
@@ -1939,7 +2077,7 @@ balanced via the Client Proxy to multiple Server Proxies for even greater redund
 <p>By default, the administration interface is bound to <code>[::]:9091</code>, but it can be configured through the 
 <a href="./proxy-configuration.html">proxy configuration file</a>, like so:</p>
 <pre><code class="language-yaml">admin:
- address: [::]:9095
+  address: [::]:9095
 </code></pre>
 <p>The admin interface provides the following endpoints:</p>
 <h2 id="live"><a class="header" href="#live">/live</a></h2>
@@ -2007,49 +2145,57 @@ as its data source, as well as an opinionated integration with <a href="https://
 <p>Since the range of resources configurable by the xDS API extends that of Quilkin's domain (i.e being UDP based, Quilkin does not have a need for HTTP/TCP resources), only a subset of the API is supported. The following lists these relevant parts and any limitation to the provided support as a result:</p>
 <ul>
 <li>
-<p><strong>Cluster Discovery Service <a href="https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/operations/dynamic_configuration#cds">(CDS)</a></strong>: Provides information about known clusters and their membership information.
-book.toml htmltest.yaml logos preprocessor.sh src The proxy uses these resources to discover clusters and their endpoints.
-book.toml htmltest.yaml logos preprocessor.sh src While cluster topology information like <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/base.proto#config-core-v3-locality">locality</a> can be provided in the configuration, the proxy currently does not use this information (support may be included in the future however).
-book.toml htmltest.yaml logos preprocessor.sh src Any <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#enum-config-cluster-v3-cluster-lbpolicy">load balancing information</a> included in this resource is ignored. For load balancing, use <a href="./filters.html">Quilkin filters</a> instead.
-book.toml htmltest.yaml logos preprocessor.sh src Only <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#enum-config-cluster-v3-cluster-discoverytype">cluster discovery type</a> <code>STATIC</code> and <code>EDS</code> is supported. Configuration including other discovery types e.g <code>LOGICAL_DNS</code> is rejected.</p>
+<p><strong>Cluster Discovery Service <a href="https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/operations/dynamic_configuration#cds">(CDS)</a></strong>: Provides information about known clusters and their membership information.</p>
+<ul>
+<li>The proxy uses these resources to discover clusters and their endpoints.</li>
+<li>While cluster topology information like <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/base.proto#config-core-v3-locality">locality</a> can be provided in the configuration, the proxy currently does not use this information (support may be included in the future however).</li>
+<li>Any <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#enum-config-cluster-v3-cluster-lbpolicy">load balancing information</a> included in this resource is ignored. For load balancing, use <a href="./filters.html">Quilkin filters</a> instead.</li>
+<li>Only <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#enum-config-cluster-v3-cluster-discoverytype">cluster discovery type</a> <code>STATIC</code> and <code>EDS</code> is supported. Configuration including other discovery types e.g <code>LOGICAL_DNS</code> is rejected.</li>
+</ul>
 </li>
 <li>
-<p><strong>Endpoint Discovery Service <a href="https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/operations/dynamic_configuration#eds">(EDS)</a></strong>: Provides information about endpoints.
-book.toml htmltest.yaml logos preprocessor.sh src The proxy uses these resources to discover information about endpoints like their IP addresses.
-book.toml htmltest.yaml logos preprocessor.sh src Endpoints may provide <a href="./proxy.html#endpoint-metadata">Endpoint Metadata</a> via the <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/base.proto#envoy-v3-api-msg-config-core-v3-metadata">metadata</a> field. These metadata will be visible to filters as part of the corresponding endpoints information when processing packets.
-book.toml htmltest.yaml logos preprocessor.sh src Only <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-address">socket addresses</a> are supported on an endpoint's address configuration - i.e an IP address and port number combination. Configuration including any other type of addressing e.g named pipes will be rejected.
-book.toml htmltest.yaml logos preprocessor.sh src Any <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint.proto#config-endpoint-v3-clusterloadassignment-policy">load balancing information</a> included in this resource is ignored. For load balancing, use <a href="./filters.html">Quilkin filters</a> instead.</p>
+<p><strong>Endpoint Discovery Service <a href="https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/operations/dynamic_configuration#eds">(EDS)</a></strong>: Provides information about endpoints.</p>
+<ul>
+<li>The proxy uses these resources to discover information about endpoints like their IP addresses.</li>
+<li>Endpoints may provide <a href="./proxy.html#endpoint-metadata">Endpoint Metadata</a> via the <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/base.proto#envoy-v3-api-msg-config-core-v3-metadata">metadata</a> field. These metadata will be visible to filters as part of the corresponding endpoints information when processing packets.</li>
+<li>Only <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-address">socket addresses</a> are supported on an endpoint's address configuration - i.e an IP address and port number combination. Configuration including any other type of addressing e.g named pipes will be rejected.</li>
+<li>Any <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint.proto#config-endpoint-v3-clusterloadassignment-policy">load balancing information</a> included in this resource is ignored. For load balancing, use <a href="./filters.html">Quilkin filters</a> instead.</li>
+</ul>
 </li>
 <li>
-<p><strong>Listener Discovery Service <a href="https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/operations/dynamic_configuration#lds">(LDS)</a></strong>: Provides information about <a href="./filters.html">Filters and Filter Chains</a>.
-book.toml htmltest.yaml logos preprocessor.sh src Only the <code>name</code> and <code>filter_chains</code> fields in the <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto#config-listener-v3-listener">Listener resource</a> are used by the proxy. The rest are ignored.
-book.toml htmltest.yaml logos preprocessor.sh src Since Quilkin only uses one filter chain per proxy, at most one filter chain can be provided in the resource. Otherwise the configuration is rejected.
-book.toml htmltest.yaml logos preprocessor.sh src Only the list of <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener_components.proto#envoy-v3-api-msg-config-listener-v3-filter">filters</a> specified in the <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener_components.proto#config-listener-v3-filterchain">filter chain</a> is used by the proxy - i.e other fields like <code>filter_chain_match</code> are ignored. This list also specifies the order that the corresponding filter chain will be constructed.
-book.toml htmltest.yaml logos preprocessor.sh src gRPC proto configuration for Quilkin's built-in filters <a href="https://github.com/googleforgames/quilkin/tree/main/proto/quilkin/filters">can be found here</a>. They are equivalent to the filter's static configuration.</p>
+<p><strong>Listener Discovery Service <a href="https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/operations/dynamic_configuration#lds">(LDS)</a></strong>: Provides information about <a href="./filters.html">Filters and Filter Chains</a>.</p>
+<ul>
+<li>Only the <code>name</code> and <code>filter_chains</code> fields in the <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto#config-listener-v3-listener">Listener resource</a> are used by the proxy. The rest are ignored.</li>
+<li>Since Quilkin only uses one filter chain per proxy, at most one filter chain can be provided in the resource. Otherwise the configuration is rejected.</li>
+<li>Only the list of <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener_components.proto#envoy-v3-api-msg-config-listener-v3-filter">filters</a> specified in the <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener_components.proto#config-listener-v3-filterchain">filter chain</a> is used by the proxy - i.e other fields like <code>filter_chain_match</code> are ignored. This list also specifies the order that the corresponding filter chain will be constructed.</li>
+<li>gRPC proto configuration for Quilkin's built-in filters <a href="https://github.com/googleforgames/quilkin/tree/main/proto/quilkin/filters">can be found here</a>. They are equivalent to the filter's static configuration.</li>
+</ul>
 </li>
 </ul>
 <h2 id="metrics-13"><a class="header" href="#metrics-13">Metrics</a></h2>
 <p>Quilkin exposes the following metrics around the management servers and its resources:</p>
 <ul>
-<li><code>quilkin_xds_connected_state</code> (Gauge)</li>
-</ul>
+<li>
+<p><code>quilkin_xds_connected_state</code> (Gauge)</p>
 <p>A boolean that indicates whether or not the proxy is currently connected to a management server. A value <code>1</code> means that the proxy is connected while <code>0</code> means that it is not connected to any server at that point in time.</p>
-<ul>
-<li><code>quilkin_xds_update_attempt_total</code> (Counter)</li>
-</ul>
+</li>
+<li>
+<p><code>quilkin_xds_update_attempt_total</code> (Counter)</p>
 <p>The total number of attempts made by a management server to configure the proxy. This is equivalent to the total number of configuration updates received by the proxy from a management server.</p>
-<ul>
-<li><code>quilkin_xds_update_success_total</code> (Counter)</li>
-</ul>
+</li>
+<li>
+<p><code>quilkin_xds_update_success_total</code> (Counter)</p>
 <p>The total number of successful attempts made by a management server to configure the proxy. This is equivalent to the total number of configuration updates received by the proxy from a management server and was successfully applied by the proxy.</p>
-<ul>
-<li><code>quilkin_xds_update_failure_total</code> (Counter)</li>
-</ul>
+</li>
+<li>
+<p><code>quilkin_xds_update_failure_total</code> (Counter)</p>
 <p>The total number of unsuccessful attempts made by a management server to configure the proxy. This is equivalent to the total number of configuration updates received by the proxy from a management server and was rejected by the proxy (e.g due to a bad/inconsistent configuration).</p>
-<ul>
-<li><code>quilkin_xds_requests_total</code> (Counter)</li>
-</ul>
+</li>
+<li>
+<p><code>quilkin_xds_requests_total</code> (Counter)</p>
 <p>The total number of <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/discovery.proto#envoy-api-msg-discoveryrequest">DiscoveryRequest</a>s made by the proxy to management servers. This tracks messages flowing in the direction from the proxy to the management server.</p>
+</li>
+</ul>
 
                     </main>
 
