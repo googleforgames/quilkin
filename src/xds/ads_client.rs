@@ -40,16 +40,14 @@ use crate::{
     config::ManagementServer,
     xds::{
         cluster::ClusterManager,
-        envoy::{
-            config::core::v3::Node,
-            service::discovery::v3::{
-                aggregated_discovery_service_client::AggregatedDiscoveryServiceClient,
-                DiscoveryRequest, DiscoveryResponse,
-            },
-        },
+        config::core::v3::Node,
         google::rpc::Status as GrpcStatus,
         listener::ListenerManager,
         metrics::Metrics,
+        service::discovery::v3::{
+            aggregated_discovery_service_client::AggregatedDiscoveryServiceClient,
+            DiscoveryRequest, DiscoveryResponse,
+        },
         CLUSTER_TYPE, ENDPOINT_TYPE, LISTENER_TYPE,
     },
     Result,
@@ -457,9 +455,9 @@ pub(super) async fn send_discovery_req(
 mod tests {
     use super::AdsClient;
     use crate::config::ManagementServer;
-    use crate::xds::envoy::service::discovery::v3::DiscoveryRequest;
-    use crate::xds::google::rpc::Status as GrpcStatus;
-    use crate::xds::CLUSTER_TYPE;
+    use crate::xds::{
+        google::rpc::Status as GrpcStatus, service::discovery::v3::DiscoveryRequest, CLUSTER_TYPE,
+    };
 
     use std::time::Duration;
 

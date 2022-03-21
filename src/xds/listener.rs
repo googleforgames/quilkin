@@ -17,10 +17,10 @@
 use crate::filters::{
     CreateFilterArgs, FilterChain as ProxyFilterChain, FilterRegistry, SharedFilterChain,
 };
-use crate::xds::envoy::config::listener::v3::{
+use crate::xds::config::listener::v3::{
     filter::ConfigType as LdsConfigType, FilterChain, Listener,
 };
-use crate::xds::envoy::service::discovery::v3::{DiscoveryRequest, DiscoveryResponse};
+use crate::xds::service::discovery::v3::{DiscoveryRequest, DiscoveryResponse};
 use crate::xds::LISTENER_TYPE;
 
 use crate::xds::ads_client::send_discovery_req;
@@ -161,10 +161,12 @@ impl ListenerManager {
 mod tests {
     use super::ListenerManager;
     use crate::filters::prelude::*;
-    use crate::xds::envoy::config::listener::v3::{
-        filter::ConfigType, Filter as LdsFilter, FilterChain as LdsFilterChain, Listener,
+    use crate::xds::{
+        config::listener::v3::{
+            filter::ConfigType, Filter as LdsFilter, FilterChain as LdsFilterChain, Listener,
+        },
+        service::discovery::v3::{DiscoveryRequest, DiscoveryResponse},
     };
-    use crate::xds::envoy::service::discovery::v3::{DiscoveryRequest, DiscoveryResponse};
 
     use std::time::Duration;
 
@@ -605,35 +607,11 @@ mod tests {
         }
     }
 
-    #[allow(deprecated)]
     fn create_lds_listener(name: String, filter_chains: Vec<LdsFilterChain>) -> Listener {
         Listener {
             name,
-            address: None,
             filter_chains,
-            default_filter_chain: None,
-            use_original_dst: None,
-            per_connection_buffer_limit_bytes: None,
-            metadata: None,
-            deprecated_v1: None,
-            drain_type: 0,
-            listener_filters: vec![],
-            listener_filters_timeout: None,
-            continue_on_listener_filters_timeout: false,
-            transparent: None,
-            freebind: None,
-            socket_options: vec![],
-            tcp_fast_open_queue_length: None,
-            traffic_direction: 0,
-            udp_listener_config: None,
-            api_listener: None,
-            connection_balance_config: None,
-            reuse_port: false,
-            access_log: vec![],
-            udp_writer_config: None,
-            tcp_backlog_size: None,
-            bind_to_port: None,
-            listener_specifier: None,
+            ..<_>::default()
         }
     }
 }

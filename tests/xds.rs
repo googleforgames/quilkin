@@ -14,130 +14,32 @@
  * limitations under the License.
  */
 
-quilkin::include_proto!("xds.core.v3");
-quilkin::include_proto!("google.rpc");
-
-#[allow(warnings)]
-mod envoy {
-    pub mod r#type {
-        pub mod matcher {
-            pub mod v3 {
-                #![doc(hidden)]
-                tonic::include_proto!("envoy.r#type.matcher.v3");
-            }
-        }
-        pub mod metadata {
-            pub mod v3 {
-                #![doc(hidden)]
-                tonic::include_proto!("envoy.r#type.metadata.v3");
-            }
-        }
-        pub mod tracing {
-            pub mod v3 {
-                #![doc(hidden)]
-                tonic::include_proto!("envoy.r#type.tracing.v3");
-            }
-        }
-        pub mod v3 {
-            #![doc(hidden)]
-            tonic::include_proto!("envoy.r#type.v3");
-        }
-    }
-    pub mod config {
-        pub mod accesslog {
-            pub mod v3 {
-                #![doc(hidden)]
-                tonic::include_proto!("envoy.config.accesslog.v3");
-            }
-        }
-        pub mod cluster {
-            pub mod v3 {
-                #![doc(hidden)]
-                tonic::include_proto!("envoy.config.cluster.v3");
-            }
-        }
-        pub mod core {
-            pub mod v3 {
-                #![allow(clippy::large_enum_variant)]
-                #![doc(hidden)]
-                tonic::include_proto!("envoy.config.core.v3");
-            }
-        }
-        pub mod endpoint {
-            pub mod v3 {
-                #![doc(hidden)]
-                tonic::include_proto!("envoy.config.endpoint.v3");
-            }
-        }
-        pub mod listener {
-            pub mod v3 {
-                #![allow(clippy::large_enum_variant)]
-                #![doc(hidden)]
-                tonic::include_proto!("envoy.config.listener.v3");
-            }
-        }
-        pub mod route {
-            pub mod v3 {
-                #![doc(hidden)]
-                tonic::include_proto!("envoy.config.route.v3");
-            }
-        }
-    }
-    pub mod service {
-        pub mod discovery {
-            pub mod v3 {
-                #![allow(clippy::unit_arg)]
-                #![doc(hidden)]
-                tonic::include_proto!("envoy.service.discovery.v3");
-            }
-        }
-        pub mod cluster {
-            pub mod v3 {
-                #![allow(clippy::unit_arg)]
-                #![doc(hidden)]
-                tonic::include_proto!("envoy.service.cluster.v3");
-            }
-        }
-    }
-}
-
-#[allow(warnings)]
-mod quilkin_proto {
-    pub mod extensions {
-        pub mod filters {
-            pub mod concatenate_bytes {
-                pub mod v1alpha1 {
-                    #![doc(hidden)]
-                    tonic::include_proto!("quilkin.filters.concatenate_bytes.v1alpha1");
-                }
-            }
-        }
-    }
-}
-
-use envoy::config::cluster::v3::{cluster::ClusterDiscoveryType, Cluster};
-use envoy::config::core::v3::{address, socket_address::PortSpecifier, Address, SocketAddress};
-use envoy::config::endpoint::v3::{
-    lb_endpoint::HostIdentifier, ClusterLoadAssignment, Endpoint, LbEndpoint, LocalityLbEndpoints,
+use quilkin::xds::{
+    config::{
+        cluster::v3::{cluster::ClusterDiscoveryType, Cluster},
+        core::v3::{address, socket_address::PortSpecifier, Address, SocketAddress},
+        endpoint::v3::{
+            lb_endpoint::HostIdentifier, ClusterLoadAssignment, Endpoint, LbEndpoint,
+            LocalityLbEndpoints,
+        },
+        listener::v3::{
+            filter::ConfigType, Filter as LdsFilter, FilterChain as LdsFilterChain, Listener,
+        },
+    },
+    service::discovery::v3::{
+        aggregated_discovery_service_server::{
+            AggregatedDiscoveryService as ADS, AggregatedDiscoveryServiceServer as ADSServer,
+        },
+        DeltaDiscoveryRequest, DeltaDiscoveryResponse, DiscoveryRequest, DiscoveryResponse,
+    },
 };
-use envoy::config::listener::v3::{
-    filter::ConfigType, Filter as LdsFilter, FilterChain as LdsFilterChain, Listener,
-};
-use envoy::service::discovery::v3::aggregated_discovery_service_server::{
-    AggregatedDiscoveryService as ADS, AggregatedDiscoveryServiceServer as ADSServer,
-};
-use envoy::service::discovery::v3::{
-    DeltaDiscoveryRequest, DeltaDiscoveryResponse, DiscoveryRequest, DiscoveryResponse,
-};
-use quilkin_proto::extensions::filters::concatenate_bytes::v1alpha1::{
-    concatenate_bytes::{Strategy, StrategyValue},
-    ConcatenateBytes,
-};
-
 use quilkin::{config::Config, endpoint::EndpointAddress, test_utils::TestHelper, Builder};
 
+tonic::include_proto!("quilkin.filters.concatenate_bytes.v1alpha1");
+
+use concatenate_bytes::{Strategy, StrategyValue};
+
 use prost::Message;
-use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
@@ -392,47 +294,9 @@ fn create_cluster_resource(name: &str, endpoint_addr: EndpointAddress) -> Cluste
     Cluster {
         name: name.into(),
         transport_socket_matches: vec![],
-        alt_stat_name: "".into(),
-        eds_cluster_config: None,
-        connect_timeout: None,
-        per_connection_buffer_limit_bytes: None,
-        lb_policy: 0,
-        load_balancing_policy: None,
         load_assignment: Some(create_endpoint_resource(name, endpoint_addr)),
-        health_checks: vec![],
-        max_requests_per_connection: None,
-        circuit_breakers: None,
-        upstream_http_protocol_options: None,
-        common_http_protocol_options: None,
-        http_protocol_options: None,
-        http2_protocol_options: None,
-        typed_extension_protocol_options: HashMap::new(),
-        dns_refresh_rate: None,
-        dns_failure_refresh_rate: None,
-        respect_dns_ttl: false,
-        dns_lookup_family: 0,
-        dns_resolvers: vec![],
-        use_tcp_for_dns_lookups: false,
-        outlier_detection: None,
-        cleanup_interval: None,
-        upstream_bind_config: None,
-        lb_subset_config: None,
-        common_lb_config: None,
-        transport_socket: None,
-        metadata: None,
-        protocol_selection: 0,
-        upstream_connection_options: None,
-        close_connections_on_host_health_failure: false,
-        ignore_health_on_host_removal: false,
-        filters: vec![],
-        lrs_server: None,
-        track_timeout_budgets: false,
-        upstream_config: None,
-        track_cluster_stats: None,
-        preconnect_policy: None,
-        connection_pool_per_downstream_connection: false,
         cluster_discovery_type: Some(ClusterDiscoveryType::Type(0)),
-        lb_config: None,
+        ..<_>::default()
     }
 }
 
@@ -442,7 +306,6 @@ fn create_endpoint_resource(cluster_name: &str, address: EndpointAddress) -> Clu
     ClusterLoadAssignment {
         cluster_name: cluster_name.into(),
         endpoints: vec![LocalityLbEndpoints {
-            locality: None,
             lb_endpoints: vec![LbEndpoint {
                 health_status: 0,
                 metadata: None,
@@ -461,57 +324,24 @@ fn create_endpoint_resource(cluster_name: &str, address: EndpointAddress) -> Clu
                     hostname: "".into(),
                 })),
             }],
-            load_balancing_weight: None,
-            priority: 0,
-            proximity: None,
+            ..<_>::default()
         }],
-        named_endpoints: HashMap::new(),
-        policy: None,
+        ..<_>::default()
     }
 }
 
-#[allow(deprecated)]
 fn create_lds_filter_chain(filters: Vec<LdsFilter>) -> LdsFilterChain {
     LdsFilterChain {
-        filter_chain_match: None,
-        filters,
-        use_proxy_proto: None,
-        metadata: None,
-        transport_socket: None,
-        transport_socket_connect_timeout: None,
         name: "test-lds-filter-chain".into(),
-        on_demand_configuration: None,
+        filters,
+        ..<_>::default()
     }
 }
 
-#[allow(deprecated)]
 fn create_lds_listener(name: String, filter_chains: Vec<LdsFilterChain>) -> Listener {
     Listener {
         name,
-        address: None,
         filter_chains,
-        default_filter_chain: None,
-        use_original_dst: None,
-        per_connection_buffer_limit_bytes: None,
-        metadata: None,
-        deprecated_v1: None,
-        drain_type: 0,
-        listener_filters: vec![],
-        listener_filters_timeout: None,
-        continue_on_listener_filters_timeout: false,
-        transparent: None,
-        freebind: None,
-        socket_options: vec![],
-        tcp_fast_open_queue_length: None,
-        traffic_direction: 0,
-        udp_listener_config: None,
-        api_listener: None,
-        connection_balance_config: None,
-        reuse_port: false,
-        access_log: vec![],
-        udp_writer_config: None,
-        tcp_backlog_size: None,
-        bind_to_port: None,
-        listener_specifier: None,
+        ..<_>::default()
     }
 }

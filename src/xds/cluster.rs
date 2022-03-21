@@ -32,13 +32,11 @@ use crate::{
     metadata::MetadataView,
     xds::{
         ads_client::send_discovery_req,
-        envoy::{
-            config::{
-                cluster::v3::{cluster, Cluster},
-                endpoint::v3::{lb_endpoint, ClusterLoadAssignment},
-            },
-            service::discovery::v3::{DiscoveryRequest, DiscoveryResponse},
+        config::{
+            cluster::v3::{cluster, Cluster},
+            endpoint::v3::{lb_endpoint, ClusterLoadAssignment},
         },
+        service::discovery::v3::{DiscoveryRequest, DiscoveryResponse},
         CLUSTER_TYPE, ENDPOINT_TYPE,
     },
 };
@@ -351,22 +349,21 @@ mod tests {
         cluster::SharedCluster,
         endpoint::{Endpoint as ProxyEndpoint, EndpointAddress},
         xds::{
-            envoy::{
-                config::{
-                    cluster::v3::{cluster::ClusterDiscoveryType, Cluster},
-                    core::v3::{
-                        address, socket_address::PortSpecifier, Address, Metadata, SocketAddress,
-                    },
-                    endpoint::v3::{
-                        lb_endpoint::HostIdentifier, ClusterLoadAssignment, Endpoint, LbEndpoint,
-                        LocalityLbEndpoints,
-                    },
+            config::{
+                cluster::v3::{cluster::ClusterDiscoveryType, Cluster},
+                core::v3::{
+                    address, socket_address::PortSpecifier, Address, Metadata, SocketAddress,
                 },
-                service::discovery::v3::{DiscoveryRequest, DiscoveryResponse},
+                endpoint::v3::{
+                    lb_endpoint::HostIdentifier, ClusterLoadAssignment, Endpoint, LbEndpoint,
+                    LocalityLbEndpoints,
+                },
             },
+            service::discovery::v3::{DiscoveryRequest, DiscoveryResponse},
             CLUSTER_TYPE, ENDPOINT_TYPE,
         },
     };
+
     use prost::Message;
     use prost_types::value::Kind;
     use prost_types::Struct as ProstStruct;
@@ -768,6 +765,7 @@ mod tests {
                         )]
                         .into_iter()
                         .collect(),
+                        ..<_>::default()
                     })
                 };
 
@@ -800,7 +798,6 @@ mod tests {
         ClusterLoadAssignment {
             cluster_name: cluster_name.into(),
             endpoints: vec![LocalityLbEndpoints {
-                locality: None,
                 lb_endpoints: vec![LbEndpoint {
                     health_status: 0,
                     metadata: None,
@@ -819,9 +816,7 @@ mod tests {
                         hostname: "".into(),
                     })),
                 }],
-                load_balancing_weight: None,
-                priority: 0,
-                proximity: None,
+                ..<_>::default()
             }],
             named_endpoints: HashMap::new(),
             policy: None,
@@ -832,48 +827,9 @@ mod tests {
     fn create_cluster_resource(name: &str) -> Cluster {
         Cluster {
             name: name.into(),
-            transport_socket_matches: vec![],
-            alt_stat_name: "".into(),
-            eds_cluster_config: None,
-            connect_timeout: None,
-            per_connection_buffer_limit_bytes: None,
-            lb_policy: 0,
-            load_balancing_policy: None,
             load_assignment: Some(create_endpoint_resource(name)),
-            health_checks: vec![],
-            max_requests_per_connection: None,
-            circuit_breakers: None,
-            upstream_http_protocol_options: None,
-            common_http_protocol_options: None,
-            http_protocol_options: None,
-            http2_protocol_options: None,
-            typed_extension_protocol_options: HashMap::new(),
-            dns_refresh_rate: None,
-            dns_failure_refresh_rate: None,
-            respect_dns_ttl: false,
-            dns_lookup_family: 0,
-            dns_resolvers: vec![],
-            use_tcp_for_dns_lookups: false,
-            outlier_detection: None,
-            cleanup_interval: None,
-            upstream_bind_config: None,
-            lb_subset_config: None,
-            common_lb_config: None,
-            transport_socket: None,
-            metadata: None,
-            protocol_selection: 0,
-            upstream_connection_options: None,
-            close_connections_on_host_health_failure: false,
-            ignore_health_on_host_removal: false,
-            filters: vec![],
-            lrs_server: None,
-            track_timeout_budgets: false,
-            upstream_config: None,
-            track_cluster_stats: None,
-            preconnect_policy: None,
-            connection_pool_per_downstream_connection: false,
             cluster_discovery_type: Some(ClusterDiscoveryType::Type(0)),
-            lb_config: None,
+            ..<_>::default()
         }
     }
 
