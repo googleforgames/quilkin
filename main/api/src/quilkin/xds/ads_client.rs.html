@@ -526,8 +526,6 @@
 <span id="524">524</span>
 <span id="525">525</span>
 <span id="526">526</span>
-<span id="527">527</span>
-<span id="528">528</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -570,16 +568,14 @@
     <span class="ident">config::ManagementServer</span>,
     <span class="ident">xds</span>::{
         <span class="ident">cluster::ClusterManager</span>,
-        <span class="ident">envoy</span>::{
-            <span class="ident">config::core::v3::Node</span>,
-            <span class="ident">service::discovery::v3</span>::{
-                <span class="ident">aggregated_discovery_service_client::AggregatedDiscoveryServiceClient</span>,
-                <span class="ident">DiscoveryRequest</span>, <span class="ident">DiscoveryResponse</span>,
-            },
-        },
+        <span class="ident">config::core::v3::Node</span>,
         <span class="ident">google::rpc::Status</span> <span class="kw">as</span> <span class="ident">GrpcStatus</span>,
         <span class="ident">listener::ListenerManager</span>,
         <span class="ident">metrics::Metrics</span>,
+        <span class="ident">service::discovery::v3</span>::{
+            <span class="ident">aggregated_discovery_service_client::AggregatedDiscoveryServiceClient</span>,
+            <span class="ident">DiscoveryRequest</span>, <span class="ident">DiscoveryResponse</span>,
+        },
         <span class="ident">CLUSTER_TYPE</span>, <span class="ident">ENDPOINT_TYPE</span>, <span class="ident">LISTENER_TYPE</span>,
     },
     <span class="prelude-ty">Result</span>,
@@ -987,9 +983,9 @@
 <span class="kw">mod</span> <span class="ident">tests</span> {
     <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::AdsClient</span>;
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::config::ManagementServer</span>;
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::xds::envoy::service::discovery::v3::DiscoveryRequest</span>;
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::xds::google::rpc::Status</span> <span class="kw">as</span> <span class="ident">GrpcStatus</span>;
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::xds::CLUSTER_TYPE</span>;
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::xds</span>::{
+        <span class="ident">google::rpc::Status</span> <span class="kw">as</span> <span class="ident">GrpcStatus</span>, <span class="ident">service::discovery::v3::DiscoveryRequest</span>, <span class="ident">CLUSTER_TYPE</span>,
+    };
 
     <span class="kw">use</span> <span class="ident">std::time::Duration</span>;
 

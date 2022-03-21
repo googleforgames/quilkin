@@ -617,28 +617,6 @@
 <span id="615">615</span>
 <span id="616">616</span>
 <span id="617">617</span>
-<span id="618">618</span>
-<span id="619">619</span>
-<span id="620">620</span>
-<span id="621">621</span>
-<span id="622">622</span>
-<span id="623">623</span>
-<span id="624">624</span>
-<span id="625">625</span>
-<span id="626">626</span>
-<span id="627">627</span>
-<span id="628">628</span>
-<span id="629">629</span>
-<span id="630">630</span>
-<span id="631">631</span>
-<span id="632">632</span>
-<span id="633">633</span>
-<span id="634">634</span>
-<span id="635">635</span>
-<span id="636">636</span>
-<span id="637">637</span>
-<span id="638">638</span>
-<span id="639">639</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -658,10 +636,10 @@
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters</span>::{
     <span class="ident">CreateFilterArgs</span>, <span class="ident">FilterChain</span> <span class="kw">as</span> <span class="ident">ProxyFilterChain</span>, <span class="ident">FilterRegistry</span>, <span class="ident">SharedFilterChain</span>,
 };
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::xds::envoy::config::listener::v3</span>::{
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::xds::config::listener::v3</span>::{
     <span class="ident">filter::ConfigType</span> <span class="kw">as</span> <span class="ident">LdsConfigType</span>, <span class="ident">FilterChain</span>, <span class="ident">Listener</span>,
 };
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::xds::envoy::service::discovery::v3</span>::{<span class="ident">DiscoveryRequest</span>, <span class="ident">DiscoveryResponse</span>};
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::xds::service::discovery::v3</span>::{<span class="ident">DiscoveryRequest</span>, <span class="ident">DiscoveryResponse</span>};
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::xds::LISTENER_TYPE</span>;
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::xds::ads_client::send_discovery_req</span>;
@@ -802,10 +780,12 @@
 <span class="kw">mod</span> <span class="ident">tests</span> {
     <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::ListenerManager</span>;
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters::prelude</span>::<span class="kw-2">*</span>;
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::xds::envoy::config::listener::v3</span>::{
-        <span class="ident">filter::ConfigType</span>, <span class="ident">Filter</span> <span class="kw">as</span> <span class="ident">LdsFilter</span>, <span class="ident">FilterChain</span> <span class="kw">as</span> <span class="ident">LdsFilterChain</span>, <span class="ident">Listener</span>,
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::xds</span>::{
+        <span class="ident">config::listener::v3</span>::{
+            <span class="ident">filter::ConfigType</span>, <span class="ident">Filter</span> <span class="kw">as</span> <span class="ident">LdsFilter</span>, <span class="ident">FilterChain</span> <span class="kw">as</span> <span class="ident">LdsFilterChain</span>, <span class="ident">Listener</span>,
+        },
+        <span class="ident">service::discovery::v3</span>::{<span class="ident">DiscoveryRequest</span>, <span class="ident">DiscoveryResponse</span>},
     };
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::xds::envoy::service::discovery::v3</span>::{<span class="ident">DiscoveryRequest</span>, <span class="ident">DiscoveryResponse</span>};
 
     <span class="kw">use</span> <span class="ident">std::time::Duration</span>;
 
@@ -1246,35 +1226,11 @@
         }
     }
 
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">deprecated</span>)]</span>
     <span class="kw">fn</span> <span class="ident">create_lds_listener</span>(<span class="ident">name</span>: <span class="ident">String</span>, <span class="ident">filter_chains</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">LdsFilterChain</span><span class="op">&gt;</span>) -&gt; <span class="ident">Listener</span> {
         <span class="ident">Listener</span> {
             <span class="ident">name</span>,
-            <span class="ident">address</span>: <span class="prelude-val">None</span>,
             <span class="ident">filter_chains</span>,
-            <span class="ident">default_filter_chain</span>: <span class="prelude-val">None</span>,
-            <span class="ident">use_original_dst</span>: <span class="prelude-val">None</span>,
-            <span class="ident">per_connection_buffer_limit_bytes</span>: <span class="prelude-val">None</span>,
-            <span class="ident">metadata</span>: <span class="prelude-val">None</span>,
-            <span class="ident">deprecated_v1</span>: <span class="prelude-val">None</span>,
-            <span class="ident">drain_type</span>: <span class="number">0</span>,
-            <span class="ident">listener_filters</span>: <span class="macro">vec!</span>[],
-            <span class="ident">listener_filters_timeout</span>: <span class="prelude-val">None</span>,
-            <span class="ident">continue_on_listener_filters_timeout</span>: <span class="bool-val">false</span>,
-            <span class="ident">transparent</span>: <span class="prelude-val">None</span>,
-            <span class="ident">freebind</span>: <span class="prelude-val">None</span>,
-            <span class="ident">socket_options</span>: <span class="macro">vec!</span>[],
-            <span class="ident">tcp_fast_open_queue_length</span>: <span class="prelude-val">None</span>,
-            <span class="ident">traffic_direction</span>: <span class="number">0</span>,
-            <span class="ident">udp_listener_config</span>: <span class="prelude-val">None</span>,
-            <span class="ident">api_listener</span>: <span class="prelude-val">None</span>,
-            <span class="ident">connection_balance_config</span>: <span class="prelude-val">None</span>,
-            <span class="ident">reuse_port</span>: <span class="bool-val">false</span>,
-            <span class="ident">access_log</span>: <span class="macro">vec!</span>[],
-            <span class="ident">udp_writer_config</span>: <span class="prelude-val">None</span>,
-            <span class="ident">tcp_backlog_size</span>: <span class="prelude-val">None</span>,
-            <span class="ident">bind_to_port</span>: <span class="prelude-val">None</span>,
-            <span class="ident">listener_specifier</span>: <span class="prelude-val">None</span>,
+            ..<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>()
         }
     }
 }
