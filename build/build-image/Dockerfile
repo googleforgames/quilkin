@@ -38,8 +38,8 @@ ENV PATH /usr/local/go/bin:$PATH
 
 # Install htmltest
 WORKDIR /tmp
-# TODO (markmandel): replace with official release once https://github.com/wjdp/htmltest/pull/181 is merged and released.
-RUN git clone --branch debug/panic --depth=5 https://github.com/markmandel/htmltest.git && \
+# TODO (markmandel): replace with official release once a 0.16.0 release is created.
+RUN git clone --depth=5 https://github.com/wjdp/htmltest.git && \
     cd htmltest && ./build.sh && cp ./bin/htmltest /usr/local/bin/ && \
     rm -r /tmp/htmltest
 
