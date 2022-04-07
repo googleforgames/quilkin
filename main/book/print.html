@@ -1442,6 +1442,13 @@ definitions:
           minimum: 0.0
 </code></pre>
 <p>View the <a href="filters/../../api/quilkin/filters/match/struct.Config.html">Match</a> filter documentation for more details.</p>
+<h3 id="metrics-10"><a class="header" href="#metrics-10">Metrics</a></h3>
+<ul>
+<li><code>quilkin_filter_Match_packets_matched_total</code>
+A counter of the total number of packets where the dynamic metadata matches a branch value.</li>
+<li><code>quilkin_filter_Match_packets_fallthrough_total</code>
+A counter of the total number of packets that are processed by the fallthrough configuration.</li>
+</ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="pass"><a class="header" href="#pass">Pass</a></h1>
 <p>The <code>Pass</code> filter that always passes any packet through it. This is useful in
 combination with conditional flow filters like <a href="filters/./match.html"><code>Matches</code></a></p>
@@ -1481,7 +1488,7 @@ static:
 </span></code></pre></pre>
 <h3 id="configuration-1"><a class="header" href="#configuration-1">Configuration</a></h3>
 <p>No defined configuration options.</p>
-<h3 id="metrics-10"><a class="header" href="#metrics-10">Metrics</a></h3>
+<h3 id="metrics-11"><a class="header" href="#metrics-11">Metrics</a></h3>
 <p>This filter currently exports no metrics.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="tokenrouter"><a class="header" href="#tokenrouter">TokenRouter</a></h1>
 <p>The <code>TokenRouter</code> filter's job is to provide a mechanism to declare which Endpoints a packet should be sent to.</p>
@@ -1532,7 +1539,7 @@ properties:
     default: quilkin.dev/capture
     type: string
 </code></pre>
-<h3 id="metrics-11"><a class="header" href="#metrics-11">Metrics</a></h3>
+<h3 id="metrics-12"><a class="header" href="#metrics-12">Metrics</a></h3>
 <ul>
 <li><code>quilkin_filter_TokenRouter_packets_dropped</code><br />
 A counter of the total number of packets that have been dropped. This is also provided with a <code>Reason</code> label, as there
@@ -2084,7 +2091,7 @@ balanced via the Client Proxy to multiple Server Proxies for even greater redund
 <p>This provides a liveness probe endpoint, most commonly used in 
 <a href="https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-command">Kubernetes based systems</a>.</p>
 <p>Will return an HTTP status of 200 when all health checks pass.</p>
-<h2 id="metrics-12"><a class="header" href="#metrics-12">/metrics</a></h2>
+<h2 id="metrics-13"><a class="header" href="#metrics-13">/metrics</a></h2>
 <p>Outputs <a href="https://prometheus.io/">Prometheus</a> formatted metrics for this proxy.</p>
 <p>See the <a href="./proxy.html#metrics">Proxy Metrics</a> documentation for what metrics are available.</p>
 <h2 id="config"><a class="header" href="#config">/config</a></h2>
@@ -2172,7 +2179,7 @@ as its data source, as well as an opinionated integration with <a href="https://
 </ul>
 </li>
 </ul>
-<h2 id="metrics-13"><a class="header" href="#metrics-13">Metrics</a></h2>
+<h2 id="metrics-14"><a class="header" href="#metrics-14">Metrics</a></h2>
 <p>Quilkin exposes the following metrics around the management servers and its resources:</p>
 <ul>
 <li>
