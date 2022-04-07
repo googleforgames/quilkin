@@ -30,13 +30,13 @@ impl Metrics {
     pub(super) fn new() -> prometheus::Result<Self> {
         Ok(Metrics {
             packets_matched_total: IntCounter::with_opts(filter_opts(
-                "packets_matched",
+                "packets_matched_total",
                 "Match",
                 "Total number of packets where the dynamic metadata matches a branch value.",
             ))?
             .register_if_not_exists()?,
             packets_fallthrough_total: IntCounter::with_opts(filter_opts(
-                "packets_fallthrough",
+                "packets_fallthrough_total",
                 "Match",
                 "Total number of packets that are processed by the fallthrough configuration",
             ))?
