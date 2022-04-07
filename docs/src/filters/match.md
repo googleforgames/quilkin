@@ -47,3 +47,10 @@ static:
 ```
 
 View the [Match](../../api/quilkin/filters/match/struct.Config.html) filter documentation for more details.
+
+### Metrics
+
+* `quilkin_filter_Match_packets_matched_total`
+  A counter of the total number of packets where the dynamic metadata matches a branch value.
+* `quilkin_filter_Match_packets_fallthrough_total`
+  A counter of the total number of packets that are processed by the fallthrough configuration.
