@@ -24,13 +24,11 @@ mod xds {
             tonic::include_proto!("xds.core.v3");
         }
     }
-}
 
-#[allow(warnings)]
-pub(crate) mod envoy {
     pub mod r#type {
         pub mod matcher {
             pub mod v3 {
+                pub use super::super::super::config::common::matcher::v3::*;
                 tonic::include_proto!("envoy.r#type.matcher.v3");
             }
         }
@@ -57,6 +55,13 @@ pub(crate) mod envoy {
         pub mod cluster {
             pub mod v3 {
                 tonic::include_proto!("envoy.config.cluster.v3");
+            }
+        }
+        pub mod common {
+            pub mod matcher {
+                pub mod v3 {
+                    tonic::include_proto!("envoy.config.common.matcher.v3");
+                }
             }
         }
         pub mod core {
@@ -106,7 +111,11 @@ const ENDPOINT_TYPE: &str = "type.googleapis.com/envoy.config.endpoint.v3.Cluste
 const CLUSTER_TYPE: &str = "type.googleapis.com/envoy.config.cluster.v3.Cluster";
 const LISTENER_TYPE: &str = "type.googleapis.com/envoy.config.listener.v3.Listener";
 
+pub use xds::*;
+
 pub(crate) mod ads_client;
 pub(crate) mod cluster;
 pub(crate) mod listener;
 mod metrics;
+
+pub(crate) use ads_client::AdsClient;

@@ -339,9 +339,9 @@ mod tests {
         // read compress
         let read_response = compress
             .read(ReadContext::new(
-                UpstreamEndpoints::from(
-                    Endpoints::new(vec![Endpoint::new("127.0.0.1:80".parse().unwrap())]).unwrap(),
-                ),
+                UpstreamEndpoints::from(Endpoints::new(vec![Endpoint::new(
+                    "127.0.0.1:80".parse().unwrap(),
+                )])),
                 "127.0.0.1:8080".parse().unwrap(),
                 expected.clone(),
             ))
@@ -448,9 +448,9 @@ mod tests {
         );
 
         let read_response = compression.read(ReadContext::new(
-            UpstreamEndpoints::from(
-                Endpoints::new(vec![Endpoint::new("127.0.0.1:80".parse().unwrap())]).unwrap(),
-            ),
+            UpstreamEndpoints::from(Endpoints::new(vec![Endpoint::new(
+                "127.0.0.1:80".parse().unwrap(),
+            )])),
             "127.0.0.1:8080".parse().unwrap(),
             b"hello".to_vec(),
         ));
@@ -479,9 +479,9 @@ mod tests {
         );
 
         let read_response = compression.read(ReadContext::new(
-            UpstreamEndpoints::from(
-                Endpoints::new(vec![Endpoint::new("127.0.0.1:80".parse().unwrap())]).unwrap(),
-            ),
+            UpstreamEndpoints::from(Endpoints::new(vec![Endpoint::new(
+                "127.0.0.1:80".parse().unwrap(),
+            )])),
             "127.0.0.1:8080".parse().unwrap(),
             b"hello".to_vec(),
         ));
@@ -564,9 +564,9 @@ mod tests {
         // read decompress
         let read_response = filter
             .read(ReadContext::new(
-                UpstreamEndpoints::from(
-                    Endpoints::new(vec![Endpoint::new("127.0.0.1:80".parse().unwrap())]).unwrap(),
-                ),
+                UpstreamEndpoints::from(Endpoints::new(vec![Endpoint::new(
+                    "127.0.0.1:80".parse().unwrap(),
+                )])),
                 "127.0.0.1:8080".parse().unwrap(),
                 write_response.contents.clone(),
             ))

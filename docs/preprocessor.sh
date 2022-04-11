@@ -17,4 +17,5 @@ set -euo pipefail
 
 cargo run -q --manifest-path ../Cargo.toml -- -q generate-config-schema -o ../target
 
-echo $(jq -M -c .[1] <&0)
+# Credit: https://github.com/rust-lang/mdBook/issues/1462#issuecomment-778650045
+jq -M -c .[1] <&0

@@ -1,10 +1,12 @@
 mod config;
+mod metrics;
 
 use crate::{config::ConfigType, filters::prelude::*, metadata::Value};
 
+use crate::filters::r#match::metrics::Metrics;
 pub use config::Config;
 
-pub const NAME: &str = "quilkin.filters.matches.v1alpha1.Match";
+pub const NAME: &str = "quilkin.filters.match.v1alpha1.Match";
 
 /// Creates a new factory for generating match filters.
 pub fn factory() -> DynFilterFactory {
@@ -41,12 +43,13 @@ impl ConfigInstance {
 }
 
 struct MatchInstance {
+    metrics: Metrics,
     on_read_filters: Option<ConfigInstance>,
     on_write_filters: Option<ConfigInstance>,
 }
 
 impl MatchInstance {
-    fn new(config: Config) -> Result<Self, Error> {
+    fn new(config: Config, metrics: Metrics) -> Result<Self, Error> {
         let on_read_filters = config.on_read.map(ConfigInstance::new).transpose()?;
         let on_write_filters = config.on_write.map(ConfigInstance::new).transpose()?;
 
@@ -55,6 +58,7 @@ impl MatchInstance {
         }
 
         Ok(Self {
+            metrics,
             on_read_filters,
             on_write_filters,
         })
@@ -63,6 +67,7 @@ impl MatchInstance {
 
 fn match_filter<'config, Ctx, R>(
     config: &'config Option<ConfigInstance>,
+    metrics: &'config Metrics,
     ctx: Ctx,
     get_metadata: impl for<'ctx> Fn(&'ctx Ctx, &'config String) -> Option<&'ctx Value>,
     and_then: impl Fn(Ctx, &'config FilterInstance) -> Option<R>,
@@ -75,8 +80,14 @@ where
             let value = (get_metadata)(&ctx, &config.metadata_key)?;
 
             match config.branches.iter().find(|(key, _)| key == value) {
-                Some((_, instance)) => (and_then)(ctx, instance),
-                None => (and_then)(ctx, &config.fallthrough),
+                Some((_, instance)) => {
+                    metrics.packets_matched_total.inc();
+                    (and_then)(ctx, instance)
+                }
+                None => {
+                    metrics.packets_fallthrough_total.inc();
+                    (and_then)(ctx, &config.fallthrough)
+                }
             }
         }
         None => Some(ctx.into()),
@@ -88,6 +99,7 @@ impl Filter for MatchInstance {
     fn read(&self, ctx: ReadContext) -> Option<ReadResponse> {
         match_filter(
             &self.on_read_filters,
+            &self.metrics,
             ctx,
             |ctx, metadata_key| ctx.metadata.get(metadata_key),
             |ctx, instance| instance.filter.read(ctx),
@@ -98,6 +110,7 @@ impl Filter for MatchInstance {
     fn write(&self, ctx: WriteContext) -> Option<WriteResponse> {
         match_filter(
             &self.on_write_filters,
+            &self.metrics,
             ctx,
             |ctx, metadata_key| ctx.metadata.get(metadata_key),
             |ctx, instance| instance.filter.write(ctx),
@@ -127,10 +140,82 @@ impl FilterFactory for MatchFactory {
             .require_config(args.config)?
             .deserialize::<Config, config::proto::Match>(self.name())?;
 
-        let filter = MatchInstance::new(config)?;
+        let filter = MatchInstance::new(config, Metrics::new()?)?;
         Ok(FilterInstance::new(
             config_json,
             Box::new(filter) as Box<dyn Filter>,
         ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        endpoint::{Endpoint, Endpoints, UpstreamEndpoints},
+        filters::{
+            r#match::{
+                config::{Branch, DirectionalConfig, Fallthrough, Filter as ConfigFilter},
+                Config, MatchInstance, Metrics,
+            },
+            Filter, ReadContext, WriteContext,
+        },
+    };
+    use std::sync::Arc;
+
+    #[test]
+    fn metrics() {
+        let metrics = Metrics::new().unwrap();
+        let key = "myapp.com/token";
+        let config = Config {
+            on_read: Some(DirectionalConfig {
+                metadata_key: key.into(),
+                branches: vec![Branch {
+                    value: "abc".into(),
+                    filter: ConfigFilter::new("quilkin.filters.pass.v1alpha1.Pass"),
+                }],
+                fallthrough: Fallthrough(ConfigFilter::new("quilkin.filters.drop.v1alpha1.Drop")),
+            }),
+            on_write: None,
+        };
+        let filter = MatchInstance::new(config, metrics).unwrap();
+        let endpoint: Endpoint = Default::default();
+        let contents = "hello".to_string().into_bytes();
+
+        // no config, so should make no change.
+        filter
+            .write(WriteContext::new(
+                &endpoint,
+                endpoint.address.clone(),
+                "127.0.0.1:70".parse().unwrap(),
+                contents.clone(),
+            ))
+            .unwrap();
+
+        assert_eq!(0, filter.metrics.packets_fallthrough_total.get());
+        assert_eq!(0, filter.metrics.packets_matched_total.get());
+
+        // config so we can test match and fallthrough.
+        let mut ctx = ReadContext::new(
+            UpstreamEndpoints::from(Endpoints::new(vec![Default::default()])),
+            ([127, 0, 0, 1], 7000).into(),
+            contents.clone(),
+        );
+        ctx.metadata.insert(Arc::new(key.into()), "abc".into());
+
+        filter.read(ctx).unwrap();
+        assert_eq!(1, filter.metrics.packets_matched_total.get());
+        assert_eq!(0, filter.metrics.packets_fallthrough_total.get());
+
+        let mut ctx = ReadContext::new(
+            UpstreamEndpoints::from(Endpoints::new(vec![Default::default()])),
+            ([127, 0, 0, 1], 7000).into(),
+            contents,
+        );
+        ctx.metadata.insert(Arc::new(key.into()), "xyz".into());
+
+        let result = filter.read(ctx);
+        assert!(result.is_none());
+        assert_eq!(1, filter.metrics.packets_matched_total.get());
+        assert_eq!(1, filter.metrics.packets_fallthrough_total.get());
     }
 }

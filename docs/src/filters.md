@@ -101,15 +101,19 @@ The following metadata are currently used by Quilkin core and built-in filters.
 ### Built-in filters <a name="built-in-filters"></a>
 Quilkin includes several filters out of the box.
 
-| Filter                                    | Description                    |
-| ----------------------------------------- | ------------------------------ |
-| [Debug]                | Logs every packet.              |
-| [LocalRateLimit] | Limit the frequency of packets. |
-| [ConcatenateBytes](./filters/concatenate_bytes.md) | Add authentication tokens to packets. |
-| [CaptureBytes] | Capture specific bytes from a packet and store them in [filter dynamic metadata](#filter-dynamic-metadata). |
-| [TokenRouter] | Send packets to endpoints based on metadata. |
-| [Compress](./filters/compress.md) | Compress and decompress packets data. |
-| [Firewall](./filters/firewall.md) | Allowing/blocking traffic by IP and port. |
+| Filter                                             | Description                                                                                                 |
+|----------------------------------------------------|-------------------------------------------------------------------------------------------------------------|
+| [Capture]                                          | Capture specific bytes from a packet and store them in [filter dynamic metadata](#filter-dynamic-metadata). |
+| [Compress](./filters/compress.md)                  | Compress and decompress packets data.                                                                       |
+| [ConcatenateBytes](./filters/concatenate_bytes.md) | Add authentication tokens to packets.                                                                       |
+| [Debug]                                            | Logs every packet.                                                                                          |
+| [Drop](./filters/drop.md)                          | Drop all packets                                                                                            |
+| [Firewall](./filters/firewall.md)                  | Allowing/blocking traffic by IP and port.                                                                   |
+| [LoadBalancer](./filters/load_balancer.md)         | Distributes downstream packets among upstream endpoints.                                                    |
+| [LocalRateLimit]                                   | Limit the frequency of packets.                                                                             |
+| [Match](./filters/match.md)                        | Change Filter behaviour based on dynamic metadata                                                           |
+| [Pass](./filters/pass.md)                          | Allow all packets through                                                                                   |
+| [TokenRouter]                                      | Send packets to endpoints based on metadata.                                                                |
 
 ### FilterConfig <a name="filter-config"></a>
 Represents configuration for a filter instance.

@@ -114,8 +114,7 @@ mod tests {
     #[tokio::test]
     async fn dynamic_filter_manager_update_filter_chain() {
         let filter_chain = SharedFilterChain::empty();
-        let test_endpoints =
-            Endpoints::new(vec![Endpoint::new("127.0.0.1:8080".parse().unwrap())]).unwrap();
+        let test_endpoints = Endpoints::new(vec![Endpoint::new("127.0.0.1:8080".parse().unwrap())]);
         let response = filter_chain.read(ReadContext::new(
             UpstreamEndpoints::from(test_endpoints.clone()),
             "127.0.0.1:8081".parse().unwrap(),

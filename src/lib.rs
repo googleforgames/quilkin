@@ -22,7 +22,6 @@ mod proxy;
 mod runner;
 pub(crate) mod ttl_map;
 pub(crate) mod utils;
-pub(crate) mod xds;
 
 pub mod config;
 pub mod endpoint;
@@ -30,6 +29,8 @@ pub mod filters;
 
 #[doc(hidden)]
 pub mod test_utils;
+#[doc(hidden)]
+pub mod xds;
 
 pub type Result<T, E = eyre::Error> = std::result::Result<T, E>;
 
@@ -45,13 +46,14 @@ pub use quilkin_macros::include_proto;
 #[cfg(doctest)]
 mod external_doc_tests {
     #![doc = include_str!("../docs/src/filters.md")]
-    #![doc = include_str!("../docs/src/filters/writing_custom_filters.md")]
+    #![doc = include_str!("../docs/src/filters/capture.md")]
+    #![doc = include_str!("../docs/src/filters/compress.md")]
+    #![doc = include_str!("../docs/src/filters/concatenate_bytes.md")]
+    #![doc = include_str!("../docs/src/filters/debug.md")]
+    #![doc = include_str!("../docs/src/filters/firewall.md")]
     #![doc = include_str!("../docs/src/filters/load_balancer.md")]
     #![doc = include_str!("../docs/src/filters/local_rate_limit.md")]
-    #![doc = include_str!("../docs/src/filters/debug.md")]
-    #![doc = include_str!("../docs/src/filters/concatenate_bytes.md")]
-    #![doc = include_str!("../docs/src/filters/capture.md")]
+    #![doc = include_str!("../docs/src/filters/match.md")]
     #![doc = include_str!("../docs/src/filters/token_router.md")]
-    #![doc = include_str!("../docs/src/filters/compress.md")]
-    #![doc = include_str!("../docs/src/filters/firewall.md")]
+    #![doc = include_str!("../docs/src/filters/writing_custom_filters.md")]
 }

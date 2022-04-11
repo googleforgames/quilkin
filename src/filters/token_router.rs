@@ -359,7 +359,7 @@ mod tests {
         );
 
         ReadContext::new(
-            Endpoints::new(vec![endpoint1, endpoint2]).unwrap().into(),
+            Endpoints::new(vec![endpoint1, endpoint2]).into(),
             "127.0.0.1:100".parse().unwrap(),
             b"hello".to_vec(),
         )
