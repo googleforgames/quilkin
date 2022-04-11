@@ -1,6 +1,8 @@
 mod agones;
+mod file;
 
 pub use agones::AgonesProvider;
+pub use file::FileProvider;
 
 use crate::xds::{service::discovery::v3::DiscoveryResponse, ResourceType};
 

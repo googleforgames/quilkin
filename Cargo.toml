@@ -73,8 +73,9 @@ serde_regex = "1.1.0"
 serde_yaml = "0.8.21"
 snap = "1.0.5"
 stable-eyre = "0.2.2"
+tempdir = "0.3"
 thiserror = "1.0.30"
-tokio = { version = "1.17", features = ["rt-multi-thread", "signal", "test-util", "parking_lot"] }
+tokio = { version = "1.17", features = ["rt-multi-thread", "fs", "signal", "test-util", "parking_lot"] }
 tokio-stream = "0.1.8"
 tonic = "0.6.1"
 tracing = {version = "0.1.31" }

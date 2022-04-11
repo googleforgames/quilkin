@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 
 use tracing::info;
 
@@ -97,6 +97,16 @@ enum ProviderCommands {
         )]
         gameservers_namespace: String,
     },
+
+    File {
+        #[clap(
+            short,
+            long,
+            default_value = "config.yaml",
+            help = "Configuration file on disk and sends updates to proxies"
+        )]
+        config_file_path: PathBuf,
+    },
 }
 
 #[tokio::main]
@@ -136,20 +146,23 @@ async fn main() -> quilkin::Result<()> {
             admin_port,
             provider,
         } => {
-            let provider = match provider {
+            let prvd: Arc<dyn quilkin::xds::DiscoveryServiceProvider> = match provider {
                 ProviderCommands::Agones {
                     gameservers_namespace,
                     config_namespace,
-                } => std::sync::Arc::from(
+                } => Arc::from(
                     quilkin::xds::provider::AgonesProvider::new(
                         gameservers_namespace,
                         config_namespace,
                     )
                     .await?,
                 ),
+                ProviderCommands::File { config_file_path } => {
+                    Arc::from(quilkin::xds::provider::FileProvider::new(config_file_path))
+                }
             };
 
-            quilkin::manage(port, admin_port, provider).await
+            quilkin::manage(port, admin_port, prvd).await
         }
 
         Commands::GenerateConfigSchema {
