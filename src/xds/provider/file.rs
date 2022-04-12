@@ -1,7 +1,6 @@
 use crate::config::Filter;
 use crate::endpoint::Endpoint;
 
-use prost::Message;
 use prost_types::Any;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -87,31 +86,35 @@ impl crate::xds::DiscoveryServiceProvider for FileProvider {
         kind: ResourceType,
         _names: &[String],
     ) -> Result<DiscoveryResponse, tonic::Status> {
-        let rs = self.read_config_file().await.unwrap();
-        let cluster = self.create_cluster_resources(&rs).await?;
-        let mut buf_cl = Vec::new();
-        buf_cl.reserve(cluster.encoded_len());
-        cluster.encode(&mut buf_cl).unwrap();
+        let prost_to_tonic = |error: prost::EncodeError| tonic::Status::internal(error.to_string());
+        let rs = self
+            .read_config_file()
+            .await
+            .map_err(|error| tonic::Status::internal(error.to_string()))?;
 
-        let listener = self.create_listener_resources(&rs).await?;
-        let mut buf_ls = Vec::new();
-        buf_ls.reserve(listener.encoded_len());
-        listener.encode(&mut buf_ls).unwrap();
-
-        let resp = vec![
-            Any {
-                type_url: crate::xds::ENDPOINT_TYPE.into(),
-                value: buf_cl,
-            },
-            Any {
-                type_url: crate::xds::ENDPOINT_TYPE.into(),
-                value: buf_ls,
-            },
-        ];
+        let value = match kind {
+            ResourceType::Endpoint => {
+                let cluster = self.create_cluster_resources(&rs).await?;
+                crate::prost::encode(&cluster).map_err(prost_to_tonic)?
+            }
+            ResourceType::Listener => {
+                let listener = self.create_listener_resources(&rs).await?;
+                crate::prost::encode(&listener).map_err(prost_to_tonic)?
+            }
+            _ => {
+                return Err(tonic::Status::unimplemented(format!(
+                    "This version of Quilkin does not support {}",
+                    kind.type_url()
+                )))
+            }
+        };
 
         Ok(DiscoveryResponse {
             version_info: version.to_string(),
-            resources: resp,
+            resources: vec![Any {
+                type_url: kind.type_url().into(),
+                value,
+            }],
             type_url: kind.type_url().into(),
             ..<_>::default()
         })
@@ -160,16 +163,16 @@ mod tests {
                 - MXg3aWp5Ng==
         filters:
         - name: quilkin.filters.firewall.v1alpha1.Firewall
-          config:  
-            on_read: 
-                - action: ALLOW 
+          config:
+            on_read:
+                - action: ALLOW
                   source: "192.168.75.0/24"
-                  ports: 
+                  ports:
                     - "10"
             on_write:
-                - action: ALLOW 
+                - action: ALLOW
                   source: "192.168.75.0/24"
-                  ports: 
+                  ports:
                    - "10"
     "#;
 
@@ -178,7 +181,7 @@ mod tests {
 
         let file_path = tmp_path.join("config.yaml");
         let mut tmp_file = File::create(file_path.clone()).unwrap();
-        writeln!(tmp_file, "{}", test_case);
+        writeln!(tmp_file, "{}", test_case).unwrap();
 
         let fp = FileProvider::new(file_path.clone());
         let rs = fp.read_config_file().await.unwrap();
