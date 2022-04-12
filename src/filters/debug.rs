@@ -14,14 +14,15 @@
  * limitations under the License.
  */
 
+crate::include_proto!("quilkin.filters.debug.v1alpha1");
+
 use std::convert::TryFrom;
 
 use crate::filters::prelude::*;
 use serde::{Deserialize, Serialize};
 use tracing::info;
 
-crate::include_proto!("quilkin.filters.debug.v1alpha1");
-use self::quilkin::filters::debug::v1alpha1::Debug as ProtoDebug;
+use self::quilkin::filters::debug::v1alpha1 as proto;
 
 /// Debug logs all incoming and outgoing packets
 struct Debug {}
@@ -87,7 +88,7 @@ impl FilterFactory for DebugFactory {
     fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
         let config: Option<(_, Config)> = args
             .config
-            .map(|config| config.deserialize::<Config, ProtoDebug>(self.name()))
+            .map(|config| config.deserialize::<Config, proto::Debug>(self.name()))
             .transpose()?;
 
         let (config_json, config) = config
@@ -109,10 +110,16 @@ pub struct Config {
     pub id: Option<String>,
 }
 
-impl TryFrom<ProtoDebug> for Config {
+impl From<Config> for proto::Debug {
+    fn from(config: Config) -> Self {
+        Self { id: config.id }
+    }
+}
+
+impl TryFrom<proto::Debug> for Config {
     type Error = ConvertProtoConfigError;
 
-    fn try_from(p: ProtoDebug) -> Result<Self, Self::Error> {
+    fn try_from(p: proto::Debug) -> Result<Self, Self::Error> {
         Ok(Config { id: p.id })
     }
 }

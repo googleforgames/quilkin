@@ -21,7 +21,7 @@ use tracing::debug;
 use crate::filters::firewall::metrics::Metrics;
 use crate::filters::prelude::*;
 
-use self::quilkin::filters::firewall::v1alpha1::Firewall as ProtoConfig;
+use self::quilkin::filters::firewall::v1alpha1 as proto;
 
 crate::include_proto!("quilkin.filters.firewall.v1alpha1");
 
@@ -56,7 +56,7 @@ impl FilterFactory for FirewallFactory {
     fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
         let (config_json, config) = self
             .require_config(args.config)?
-            .deserialize::<Config, ProtoConfig>(self.name())?;
+            .deserialize::<Config, proto::Firewall>(self.name())?;
 
         let filter = Firewall::new(config, Metrics::new()?);
         Ok(FilterInstance::new(
@@ -146,6 +146,7 @@ impl Filter for Firewall {
         None
     }
 }
+
 #[cfg(test)]
 mod tests {
     use std::net::Ipv4Addr;

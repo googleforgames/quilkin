@@ -1,8 +1,27 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+crate::include_proto!("quilkin.filters.matches.v1alpha1");
+
 mod config;
 mod metrics;
 
 use crate::{config::ConfigType, filters::prelude::*, metadata::Value};
 
+use self::quilkin::filters::matches::v1alpha1 as proto;
 use crate::filters::r#match::metrics::Metrics;
 pub use config::Config;
 
@@ -138,7 +157,7 @@ impl FilterFactory for MatchFactory {
     fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
         let (config_json, config) = self
             .require_config(args.config)?
-            .deserialize::<Config, config::proto::Match>(self.name())?;
+            .deserialize::<Config, proto::Match>(self.name())?;
 
         let filter = MatchInstance::new(config, Metrics::new()?)?;
         Ok(FilterInstance::new(

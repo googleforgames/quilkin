@@ -165,6 +165,15 @@ impl<'de> serde::Deserialize<'de> for Config {
     }
 }
 
+impl From<Config> for proto::Capture {
+    fn from(config: Config) -> Self {
+        Self {
+            metadata_key: Some(config.metadata_key),
+            strategy: Some(config.strategy.into()),
+        }
+    }
+}
+
 impl TryFrom<proto::Capture> for Config {
     type Error = ConvertProtoConfigError;
 
@@ -179,6 +188,24 @@ impl TryFrom<proto::Capture> for Config {
             })?,
             strategy: strategy.try_into()?,
         })
+    }
+}
+
+impl From<Strategy> for proto::capture::Strategy {
+    fn from(strategy: Strategy) -> Self {
+        match strategy {
+            Strategy::Prefix(prefix) => Self::Prefix(proto::capture::Prefix {
+                size: prefix.size,
+                remove: Some(prefix.remove),
+            }),
+            Strategy::Suffix(suffix) => Self::Suffix(proto::capture::Suffix {
+                size: suffix.size,
+                remove: Some(suffix.remove),
+            }),
+            Strategy::Regex(regex) => Self::Regex(proto::capture::Regex {
+                regex: Some(regex.pattern.as_str().into()),
+            }),
+        }
     }
 }
 

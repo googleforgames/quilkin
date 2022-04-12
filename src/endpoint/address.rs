@@ -158,6 +158,19 @@ impl From<(Ipv6Addr, u16)> for EndpointAddress {
     }
 }
 
+impl From<EndpointAddress> for EnvoySocketAddress {
+    fn from(address: EndpointAddress) -> Self {
+        use crate::xds::config::core::v3::socket_address::{PortSpecifier, Protocol};
+
+        Self {
+            protocol: Protocol::Udp as i32,
+            address: address.host.to_string(),
+            port_specifier: address.port.map(u32::from).map(PortSpecifier::PortValue),
+            ..<_>::default()
+        }
+    }
+}
+
 impl TryFrom<EnvoySocketAddress> for EndpointAddress {
     type Error = eyre::Error;
 
@@ -179,6 +192,20 @@ impl TryFrom<EnvoySocketAddress> for EndpointAddress {
         address.to_socket_addrs()?;
 
         Ok(address)
+    }
+}
+
+impl From<EndpointAddress> for crate::xds::config::core::v3::Address {
+    fn from(address: EndpointAddress) -> Self {
+        Self {
+            address: Some(address.into()),
+        }
+    }
+}
+
+impl From<EndpointAddress> for EnvoyAddress {
+    fn from(address: EndpointAddress) -> Self {
+        Self::SocketAddress(address.into())
     }
 }
 

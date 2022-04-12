@@ -193,6 +193,15 @@ mod tests {
         #[prost(message, optional, tag = "1")]
         pub value: Option<prost::alloc::string::String>,
     }
+
+    impl From<Append> for ProtoAppend {
+        fn from(append: Append) -> Self {
+            Self {
+                value: append.value,
+            }
+        }
+    }
+
     impl TryFrom<ProtoAppend> for Append {
         type Error = ConvertProtoConfigError;
         fn try_from(p: ProtoAppend) -> std::result::Result<Self, Self::Error> {
