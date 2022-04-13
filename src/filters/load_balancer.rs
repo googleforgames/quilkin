@@ -14,15 +14,17 @@
  * limitations under the License.
  */
 
+crate::include_proto!("quilkin.filters.load_balancer.v1alpha1");
+
 mod config;
 mod endpoint_chooser;
 
 use crate::filters::{prelude::*, DynFilterFactory};
 
-use config::ProtoConfig;
+pub use config::{Config, Policy};
 use endpoint_chooser::EndpointChooser;
 
-pub use config::{Config, Policy};
+use self::quilkin::filters::load_balancer::v1alpha1 as proto;
 
 pub const NAME: &str = "quilkin.filters.load_balancer.v1alpha1.LoadBalancer";
 
@@ -57,7 +59,7 @@ impl FilterFactory for LoadBalancerFilterFactory {
     fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
         let (config_json, config) = self
             .require_config(args.config)?
-            .deserialize::<Config, ProtoConfig>(self.name())?;
+            .deserialize::<Config, proto::LoadBalancer>(self.name())?;
         let filter = LoadBalancer {
             endpoint_chooser: config.policy.as_endpoint_chooser(),
         };

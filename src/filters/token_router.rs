@@ -33,7 +33,7 @@ use crate::{
 
 use metrics::Metrics;
 
-use self::quilkin::filters::token_router::v1alpha1::TokenRouter as ProtoConfig;
+use self::quilkin::filters::token_router::v1alpha1 as proto;
 
 pub const NAME: &str = "quilkin.filters.token_router.v1alpha1.TokenRouter";
 
@@ -79,7 +79,7 @@ impl FilterFactory for TokenRouterFactory {
     fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
         let (config_json, config) = args
             .config
-            .map(|config| config.deserialize::<Config, ProtoConfig>(self.name()))
+            .map(|config| config.deserialize::<Config, proto::TokenRouter>(self.name()))
             .unwrap_or_else(|| {
                 let config = Config::default();
                 serde_json::to_value(&config)
@@ -167,10 +167,18 @@ impl Default for Config {
     }
 }
 
-impl TryFrom<ProtoConfig> for Config {
+impl From<Config> for proto::TokenRouter {
+    fn from(config: Config) -> Self {
+        Self {
+            metadata_key: Some(config.metadata_key),
+        }
+    }
+}
+
+impl TryFrom<proto::TokenRouter> for Config {
     type Error = ConvertProtoConfigError;
 
-    fn try_from(p: ProtoConfig) -> Result<Self, Self::Error> {
+    fn try_from(p: proto::TokenRouter) -> Result<Self, Self::Error> {
         Ok(Self {
             metadata_key: p.metadata_key.unwrap_or_else(default_metadata_key),
         })
@@ -189,9 +197,7 @@ mod tests {
     use crate::metadata::Value;
     use crate::test_utils::assert_write_no_change;
 
-    use super::{
-        default_metadata_key, Config, Metrics, ProtoConfig, TokenRouter, TokenRouterFactory,
-    };
+    use super::*;
     use crate::filters::{
         metadata::CAPTURED_BYTES, CreateFilterArgs, Filter, FilterFactory, ReadContext,
     };
@@ -207,7 +213,7 @@ mod tests {
         let test_cases = vec![
             (
                 "should succeed when all valid values are provided",
-                ProtoConfig {
+                proto::TokenRouter {
                     metadata_key: Some("foobar".into()),
                 },
                 Some(Config {
@@ -216,7 +222,7 @@ mod tests {
             ),
             (
                 "should use correct default values",
-                ProtoConfig { metadata_key: None },
+                proto::TokenRouter { metadata_key: None },
                 Some(Config {
                     metadata_key: default_metadata_key(),
                 }),

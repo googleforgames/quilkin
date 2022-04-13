@@ -14,11 +14,13 @@
  * limitations under the License.
  */
 
+crate::include_proto!("quilkin.filters.concatenate_bytes.v1alpha1");
+
 mod config;
 
 use crate::filters::prelude::*;
 
-use config::ProtoConfig;
+use self::quilkin::filters::concatenate_bytes::v1alpha1 as proto;
 pub use config::{Config, Strategy};
 
 pub const NAME: &str = "quilkin.filters.concatenate_bytes.v1alpha1.ConcatenateBytes";
@@ -93,7 +95,7 @@ impl FilterFactory for ConcatBytesFactory {
     fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
         let (config_json, config) = self
             .require_config(args.config)?
-            .deserialize::<Config, ProtoConfig>(self.name())?;
+            .deserialize::<Config, proto::ConcatenateBytes>(self.name())?;
         let filter = ConcatenateBytes::new(config);
         Ok(FilterInstance::new(
             config_json,

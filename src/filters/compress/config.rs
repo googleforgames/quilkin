@@ -21,7 +21,8 @@ use serde::{Deserialize, Serialize};
 
 use super::compressor::{Compressor, Snappy};
 use super::quilkin::filters::compress::v1alpha1::{
-    compress::Action as ProtoAction, compress::Mode as ProtoMode, Compress as ProtoConfig,
+    compress::{Action as ProtoAction, ActionValue, Mode as ProtoMode, ModeValue},
+    Compress as ProtoConfig,
 };
 use crate::{filters::ConvertProtoConfigError, map_proto_enum};
 
@@ -49,6 +50,22 @@ impl Default for Mode {
     }
 }
 
+impl From<Mode> for ProtoMode {
+    fn from(mode: Mode) -> Self {
+        match mode {
+            Mode::Snappy => Self::Snappy,
+        }
+    }
+}
+
+impl From<Mode> for ModeValue {
+    fn from(mode: Mode) -> Self {
+        ModeValue {
+            value: ProtoMode::from(mode) as i32,
+        }
+    }
+}
+
 /// Whether to do nothing, compress or decompress the packet.
 #[derive(Clone, Copy, Deserialize, Debug, PartialEq, Serialize, JsonSchema)]
 pub enum Action {
@@ -66,13 +83,41 @@ impl Default for Action {
     }
 }
 
-#[derive(Clone, Copy, Deserialize, Debug, PartialEq, Serialize, JsonSchema)]
+impl From<Action> for ProtoAction {
+    fn from(action: Action) -> Self {
+        match action {
+            Action::DoNothing => Self::DoNothing,
+            Action::Compress => Self::Compress,
+            Action::Decompress => Self::Decompress,
+        }
+    }
+}
+
+impl From<Action> for ActionValue {
+    fn from(action: Action) -> Self {
+        Self {
+            value: ProtoAction::from(action) as i32,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Default, Deserialize, Debug, PartialEq, Serialize, JsonSchema)]
 #[non_exhaustive]
 pub struct Config {
     #[serde(default)]
     pub mode: Mode,
     pub on_read: Action,
     pub on_write: Action,
+}
+
+impl From<Config> for ProtoConfig {
+    fn from(config: Config) -> Self {
+        Self {
+            mode: Some(config.mode.into()),
+            on_read: Some(config.on_read.into()),
+            on_write: Some(config.on_write.into()),
+        }
+    }
 }
 
 impl TryFrom<ProtoConfig> for Config {

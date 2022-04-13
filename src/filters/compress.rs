@@ -23,7 +23,7 @@ crate::include_proto!("quilkin.filters.compress.v1alpha1");
 use crate::{config::LOG_SAMPLING_RATE, filters::prelude::*};
 use tracing::warn;
 
-use self::quilkin::filters::compress::v1alpha1::Compress as ProtoConfig;
+use self::quilkin::filters::compress::v1alpha1 as proto;
 use compressor::Compressor;
 use metrics::Metrics;
 
@@ -165,7 +165,7 @@ impl FilterFactory for CompressFactory {
     fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
         let (config_json, config) = self
             .require_config(args.config)?
-            .deserialize::<Config, ProtoConfig>(self.name())?;
+            .deserialize::<Config, proto::Compress>(self.name())?;
         let filter = Compress::new(config, Metrics::new()?);
         Ok(FilterInstance::new(
             config_json,
@@ -187,18 +187,15 @@ mod tests {
         CreateFilterArgs, Filter, FilterFactory, ReadContext, WriteContext,
     };
 
-    use super::quilkin::filters::compress::v1alpha1::{
-        compress::{Action as ProtoAction, ActionValue, Mode as ProtoMode, ModeValue},
-        Compress as ProtoConfig,
-    };
-    use super::{Action, Compress, CompressFactory, Config, Metrics, Mode};
+    use super::*;
+    use proto::compress::{Action as ProtoAction, ActionValue, Mode as ProtoMode, ModeValue};
 
     #[test]
     fn convert_proto_config() {
         let test_cases = vec![
             (
                 "should succeed when all valid values are provided",
-                ProtoConfig {
+                proto::Compress {
                     mode: Some(ModeValue {
                         value: ProtoMode::Snappy as i32,
                     }),
@@ -217,7 +214,7 @@ mod tests {
             ),
             (
                 "should fail when invalid mode is provided",
-                ProtoConfig {
+                proto::Compress {
                     mode: Some(ModeValue { value: 42 }),
                     on_read: Some(ActionValue {
                         value: ProtoAction::Compress as i32,
@@ -230,7 +227,7 @@ mod tests {
             ),
             (
                 "should fail when invalid on_read is provided",
-                ProtoConfig {
+                proto::Compress {
                     mode: Some(ModeValue {
                         value: ProtoMode::Snappy as i32,
                     }),
@@ -243,7 +240,7 @@ mod tests {
             ),
             (
                 "should fail when invalid on_write is provided",
-                ProtoConfig {
+                proto::Compress {
                     mode: Some(ModeValue {
                         value: ProtoMode::Snappy as i32,
                     }),
@@ -256,16 +253,12 @@ mod tests {
             ),
             (
                 "should use correct default values",
-                ProtoConfig {
+                proto::Compress {
                     mode: None,
                     on_read: None,
                     on_write: None,
                 },
-                Some(Config {
-                    mode: Mode::default(),
-                    on_read: Action::default(),
-                    on_write: Action::default(),
-                }),
+                Some(Config::default()),
             ),
         ];
         for (name, proto_config, expected) in test_cases {

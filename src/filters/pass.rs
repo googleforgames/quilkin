@@ -90,6 +90,12 @@ impl FilterFactory for PassFactory {
 #[derive(Serialize, Deserialize, Debug, schemars::JsonSchema)]
 pub struct Config;
 
+impl From<Config> for proto::Pass {
+    fn from(_config: Config) -> Self {
+        Self {}
+    }
+}
+
 impl TryFrom<proto::Pass> for Config {
     type Error = ConvertProtoConfigError;
 

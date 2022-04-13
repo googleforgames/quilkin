@@ -14,26 +14,27 @@
  * limitations under the License.
  */
 
-use quilkin::xds::{
-    config::{
-        cluster::v3::{cluster::ClusterDiscoveryType, Cluster},
-        core::v3::{address, socket_address::PortSpecifier, Address, SocketAddress},
-        endpoint::v3::{
-            lb_endpoint::HostIdentifier, ClusterLoadAssignment, Endpoint, LbEndpoint,
-            LocalityLbEndpoints,
+use quilkin::{
+    config::Config,
+    endpoint::{Endpoint, EndpointAddress},
+    test_utils::TestHelper,
+    xds::{
+        config::{
+            cluster::v3::{cluster::ClusterDiscoveryType, Cluster},
+            endpoint::v3::{ClusterLoadAssignment, LocalityLbEndpoints},
+            listener::v3::{
+                filter::ConfigType, Filter as LdsFilter, FilterChain as LdsFilterChain, Listener,
+            },
         },
-        listener::v3::{
-            filter::ConfigType, Filter as LdsFilter, FilterChain as LdsFilterChain, Listener,
+        service::discovery::v3::{
+            aggregated_discovery_service_server::{
+                AggregatedDiscoveryService as ADS, AggregatedDiscoveryServiceServer as ADSServer,
+            },
+            DeltaDiscoveryRequest, DeltaDiscoveryResponse, DiscoveryRequest, DiscoveryResponse,
         },
     },
-    service::discovery::v3::{
-        aggregated_discovery_service_server::{
-            AggregatedDiscoveryService as ADS, AggregatedDiscoveryServiceServer as ADSServer,
-        },
-        DeltaDiscoveryRequest, DeltaDiscoveryResponse, DiscoveryRequest, DiscoveryResponse,
-    },
+    Builder,
 };
-use quilkin::{config::Config, endpoint::EndpointAddress, test_utils::TestHelper, Builder};
 
 tonic::include_proto!("quilkin.filters.concatenate_bytes.v1alpha1");
 
@@ -293,7 +294,6 @@ fn cluster_discovery_response(
 fn create_cluster_resource(name: &str, endpoint_addr: EndpointAddress) -> Cluster {
     Cluster {
         name: name.into(),
-        transport_socket_matches: vec![],
         load_assignment: Some(create_endpoint_resource(name, endpoint_addr)),
         cluster_discovery_type: Some(ClusterDiscoveryType::Type(0)),
         ..<_>::default()
@@ -301,29 +301,10 @@ fn create_cluster_resource(name: &str, endpoint_addr: EndpointAddress) -> Cluste
 }
 
 fn create_endpoint_resource(cluster_name: &str, address: EndpointAddress) -> ClusterLoadAssignment {
-    let address = address.to_socket_addr().unwrap();
-
     ClusterLoadAssignment {
         cluster_name: cluster_name.into(),
         endpoints: vec![LocalityLbEndpoints {
-            lb_endpoints: vec![LbEndpoint {
-                health_status: 0,
-                metadata: None,
-                load_balancing_weight: None,
-                host_identifier: Some(HostIdentifier::Endpoint(Endpoint {
-                    address: Some(Address {
-                        address: Some(address::Address::SocketAddress(SocketAddress {
-                            protocol: 1,
-                            address: address.ip().to_string(),
-                            resolver_name: "".into(),
-                            ipv4_compat: true,
-                            port_specifier: Some(PortSpecifier::PortValue(address.port() as u32)),
-                        })),
-                    }),
-                    health_check_config: None,
-                    hostname: "".into(),
-                })),
-            }],
+            lb_endpoints: vec![Endpoint::new(address).into()],
             ..<_>::default()
         }],
         ..<_>::default()

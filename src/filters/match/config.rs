@@ -14,12 +14,9 @@
  * limitations under the License.
  */
 
-crate::include_proto!("quilkin.filters.matches.v1alpha1");
-
-pub(crate) use self::quilkin::filters::matches::v1alpha1 as proto;
-
 use serde::{Deserialize, Serialize};
 
+use super::proto;
 use crate::{config::ConfigType, filters::ConvertProtoConfigError};
 
 /// Configuration for the [`factory`][crate::filters::match::factory].

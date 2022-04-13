@@ -14,20 +14,16 @@
  * limitations under the License.
  */
 
-crate::include_proto!("quilkin.filters.load_balancer.v1alpha1");
-
 use std::convert::TryFrom;
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use self::quilkin::filters::load_balancer::v1alpha1::load_balancer::Policy as ProtoPolicy;
 use super::endpoint_chooser::{
     EndpointChooser, HashEndpointChooser, RandomEndpointChooser, RoundRobinEndpointChooser,
 };
+use super::proto;
 use crate::{filters::ConvertProtoConfigError, map_proto_enum};
-
-pub use self::quilkin::filters::load_balancer::v1alpha1::LoadBalancer as ProtoConfig;
 
 /// The configuration for [`load_balancer`][super].
 #[derive(Serialize, Deserialize, Debug, PartialEq, JsonSchema)]
@@ -37,17 +33,25 @@ pub struct Config {
     pub policy: Policy,
 }
 
-impl TryFrom<ProtoConfig> for Config {
+impl From<Config> for super::proto::LoadBalancer {
+    fn from(config: Config) -> Self {
+        Self {
+            policy: Some(config.policy.into()),
+        }
+    }
+}
+
+impl TryFrom<proto::LoadBalancer> for Config {
     type Error = ConvertProtoConfigError;
 
-    fn try_from(p: ProtoConfig) -> Result<Self, Self::Error> {
+    fn try_from(p: proto::LoadBalancer) -> Result<Self, Self::Error> {
         let policy = p
             .policy
             .map(|policy| {
                 map_proto_enum!(
                     value = policy.value,
                     field = "policy",
-                    proto_enum_type = ProtoPolicy,
+                    proto_enum_type = proto::load_balancer::Policy,
                     target_enum_type = Policy,
                     variants = [RoundRobin, Random, Hash]
                 )
@@ -89,25 +93,38 @@ impl Default for Policy {
     }
 }
 
+impl From<Policy> for proto::load_balancer::Policy {
+    fn from(policy: Policy) -> Self {
+        match policy {
+            Policy::RoundRobin => Self::RoundRobin,
+            Policy::Random => Self::Random,
+            Policy::Hash => Self::Hash,
+        }
+    }
+}
+
+impl From<Policy> for proto::load_balancer::PolicyValue {
+    fn from(policy: Policy) -> Self {
+        Self {
+            value: proto::load_balancer::Policy::from(policy) as i32,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::convert::TryFrom;
 
-    use super::{
-        quilkin::filters::load_balancer::v1alpha1::load_balancer::{
-            Policy as ProtoPolicy, PolicyValue,
-        },
-        Config, Policy, ProtoConfig,
-    };
+    use super::*;
 
     #[test]
     fn convert_proto_config() {
         let test_cases = vec![
             (
                 "RandomPolicy",
-                ProtoConfig {
-                    policy: Some(PolicyValue {
-                        value: ProtoPolicy::Random as i32,
+                proto::LoadBalancer {
+                    policy: Some(proto::load_balancer::PolicyValue {
+                        value: proto::load_balancer::Policy::Random as i32,
                     }),
                 },
                 Some(Config {
@@ -116,9 +133,9 @@ mod tests {
             ),
             (
                 "RoundRobinPolicy",
-                ProtoConfig {
-                    policy: Some(PolicyValue {
-                        value: ProtoPolicy::RoundRobin as i32,
+                proto::LoadBalancer {
+                    policy: Some(proto::load_balancer::PolicyValue {
+                        value: proto::load_balancer::Policy::RoundRobin as i32,
                     }),
                 },
                 Some(Config {
@@ -127,9 +144,9 @@ mod tests {
             ),
             (
                 "HashPolicy",
-                ProtoConfig {
-                    policy: Some(PolicyValue {
-                        value: ProtoPolicy::Hash as i32,
+                proto::LoadBalancer {
+                    policy: Some(proto::load_balancer::PolicyValue {
+                        value: proto::load_balancer::Policy::Hash as i32,
                     }),
                 },
                 Some(Config {
@@ -138,14 +155,14 @@ mod tests {
             ),
             (
                 "should fail when invalid policy is provided",
-                ProtoConfig {
-                    policy: Some(PolicyValue { value: 42 }),
+                proto::LoadBalancer {
+                    policy: Some(proto::load_balancer::PolicyValue { value: 42 }),
                 },
                 None,
             ),
             (
                 "should use correct default values",
-                ProtoConfig { policy: None },
+                proto::LoadBalancer { policy: None },
                 Some(Config {
                     policy: Policy::default(),
                 }),

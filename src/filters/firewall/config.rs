@@ -23,10 +23,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::{filters::ConvertProtoConfigError, map_proto_enum};
 
-use super::quilkin::filters::firewall::v1alpha1::{
-    firewall::{Action as ProtoAction, PortRange as ProtoPortRange, Rule as ProtoRule},
-    Firewall as ProtoConfig,
-};
+use super::proto;
 
 /// Represents how a Firewall filter is configured for read and write
 /// operations.
@@ -46,6 +43,15 @@ pub enum Action {
     /// Matching rules will block packets.
     #[serde(rename = "DENY")]
     Deny,
+}
+
+impl From<Action> for proto::firewall::Action {
+    fn from(action: Action) -> Self {
+        match action {
+            Action::Allow => Self::Allow,
+            Action::Deny => Self::Deny,
+        }
+    }
 }
 
 /// Combination of CIDR range, port range and action to take.
@@ -92,6 +98,16 @@ impl Rule {
     }
 }
 
+impl From<Rule> for proto::firewall::Rule {
+    fn from(rule: Rule) -> Self {
+        Self {
+            action: proto::firewall::Action::from(rule.action) as i32,
+            source: rule.source.to_string(),
+            ports: rule.ports.into_iter().map(From::from).collect(),
+        }
+    }
+}
+
 /// Invalid min and max values for a [PortRange].
 #[derive(Debug, thiserror::Error)]
 pub enum PortRangeError {
@@ -120,6 +136,15 @@ impl PortRange {
     /// Returns true if the range contain the given `port`.
     pub fn contains(&self, port: &u16) -> bool {
         self.0.contains(port)
+    }
+}
+
+impl From<PortRange> for proto::firewall::PortRange {
+    fn from(range: PortRange) -> Self {
+        Self {
+            min: range.0.start.into(),
+            max: range.0.end.into(),
+        }
     }
 }
 
@@ -178,11 +203,22 @@ impl<'de> Deserialize<'de> for PortRange {
     }
 }
 
-impl TryFrom<ProtoConfig> for Config {
+impl From<Config> for proto::Firewall {
+    fn from(config: Config) -> Self {
+        Self {
+            on_read: config.on_read.into_iter().map(From::from).collect(),
+            on_write: config.on_write.into_iter().map(From::from).collect(),
+        }
+    }
+}
+
+impl TryFrom<proto::Firewall> for Config {
     type Error = ConvertProtoConfigError;
 
-    fn try_from(p: ProtoConfig) -> Result<Self, Self::Error> {
-        fn convert_port(range: &ProtoPortRange) -> Result<PortRange, ConvertProtoConfigError> {
+    fn try_from(p: proto::Firewall) -> Result<Self, Self::Error> {
+        fn convert_port(
+            range: &proto::firewall::PortRange,
+        ) -> Result<PortRange, ConvertProtoConfigError> {
             let min = u16::try_from(range.min).map_err(|err| {
                 ConvertProtoConfigError::new(
                     format!("min too large: {err}"),
@@ -201,11 +237,11 @@ impl TryFrom<ProtoConfig> for Config {
                 .map_err(|err| ConvertProtoConfigError::new(format!("{err}"), Some("ports".into())))
         }
 
-        fn convert_rule(rule: &ProtoRule) -> Result<Rule, ConvertProtoConfigError> {
+        fn convert_rule(rule: &proto::firewall::Rule) -> Result<Rule, ConvertProtoConfigError> {
             let action = map_proto_enum!(
                 value = rule.action,
                 field = "policy",
-                proto_enum_type = ProtoAction,
+                proto_enum_type = proto::firewall::Action,
                 target_enum_type = Action,
                 variants = [Allow, Deny]
             )?;
@@ -301,16 +337,16 @@ on_write:
 
     #[test]
     fn convert() {
-        let proto_config = ProtoConfig {
-            on_read: vec![ProtoRule {
-                action: ProtoAction::Allow as i32,
+        let proto_config = proto::Firewall {
+            on_read: vec![proto::firewall::Rule {
+                action: proto::firewall::Action::Allow as i32,
                 source: "192.168.75.0/24".into(),
-                ports: vec![ProtoPortRange { min: 10, max: 100 }],
+                ports: vec![proto::firewall::PortRange { min: 10, max: 100 }],
             }],
-            on_write: vec![ProtoRule {
-                action: ProtoAction::Deny as i32,
+            on_write: vec![proto::firewall::Rule {
+                action: proto::firewall::Action::Deny as i32,
                 source: "192.168.124.0/24".into(),
-                ports: vec![ProtoPortRange { min: 50, max: 51 }],
+                ports: vec![proto::firewall::PortRange { min: 50, max: 51 }],
             }],
         };
 

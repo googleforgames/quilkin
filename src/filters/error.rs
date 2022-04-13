@@ -36,6 +36,8 @@ pub enum Error {
     InitializeMetricsFailed(String),
     #[error("Protobuf error: {}", .0)]
     ConvertProtoConfig(ConvertProtoConfigError),
+    #[error("Infallible! This should never occur")]
+    Infallible,
 }
 
 impl From<Error> for ValidationError {
@@ -44,9 +46,27 @@ impl From<Error> for ValidationError {
     }
 }
 
+impl From<std::convert::Infallible> for Error {
+    fn from(_: std::convert::Infallible) -> Self {
+        Self::Infallible
+    }
+}
+
 impl From<MetricsError> for Error {
     fn from(error: MetricsError) -> Self {
         Error::InitializeMetricsFailed(error.to_string())
+    }
+}
+
+impl From<serde_yaml::Error> for Error {
+    fn from(error: serde_yaml::Error) -> Self {
+        Self::DeserializeFailed(error.to_string())
+    }
+}
+
+impl From<prost::EncodeError> for Error {
+    fn from(error: prost::EncodeError) -> Self {
+        Self::ConvertProtoConfig(ConvertProtoConfigError::new(error, None))
     }
 }
 

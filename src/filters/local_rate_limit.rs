@@ -32,7 +32,7 @@ use crate::{
 use metrics::Metrics;
 
 crate::include_proto!("quilkin.filters.local_rate_limit.v1alpha1");
-use self::quilkin::filters::local_rate_limit::v1alpha1::LocalRateLimit as ProtoConfig;
+use self::quilkin::filters::local_rate_limit::v1alpha1 as proto;
 
 pub const NAME: &str = "quilkin.filters.local_rate_limit.v1alpha1.LocalRateLimit";
 
@@ -185,7 +185,7 @@ impl FilterFactory for LocalRateLimitFactory {
     fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
         let (config_json, config) = self
             .require_config(args.config)?
-            .deserialize::<Config, ProtoConfig>(self.name())?;
+            .deserialize::<Config, proto::LocalRateLimit>(self.name())?;
 
         if config.period < 1 {
             Err(Error::FieldInvalid {
@@ -218,10 +218,19 @@ fn default_period() -> u32 {
     1
 }
 
-impl TryFrom<ProtoConfig> for Config {
+impl From<Config> for proto::LocalRateLimit {
+    fn from(config: Config) -> Self {
+        Self {
+            max_packets: config.max_packets as u64,
+            period: Some(config.period),
+        }
+    }
+}
+
+impl TryFrom<proto::LocalRateLimit> for Config {
     type Error = ConvertProtoConfigError;
 
-    fn try_from(p: ProtoConfig) -> Result<Self, Self::Error> {
+    fn try_from(p: proto::LocalRateLimit) -> Result<Self, Self::Error> {
         Ok(Self {
             max_packets: p.max_packets as usize,
             period: p.period.unwrap_or_else(default_period),
@@ -235,7 +244,7 @@ mod tests {
 
     use tokio::time;
 
-    use super::ProtoConfig;
+    use super::*;
     use crate::config::ConfigType;
     use crate::endpoint::{Endpoint, EndpointAddress, Endpoints};
     use crate::filters::local_rate_limit::LocalRateLimitFactory;
@@ -290,7 +299,7 @@ period: 0
         let test_cases = vec![
             (
                 "should succeed when all valid values are provided",
-                ProtoConfig {
+                proto::LocalRateLimit {
                     max_packets: 10,
                     period: Some(2),
                 },
@@ -301,7 +310,7 @@ period: 0
             ),
             (
                 "should use correct default values",
-                ProtoConfig {
+                proto::LocalRateLimit {
                     max_packets: 10,
                     period: None,
                 },
