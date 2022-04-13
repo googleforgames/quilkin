@@ -15,18 +15,22 @@
  */
 
 /// Common utilities for testing
-use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
-use std::str::from_utf8;
-use std::sync::Arc;
+use std::{
+    net::{Ipv4Addr, SocketAddr, SocketAddrV4},
+    str::from_utf8,
+    sync::Arc,
+};
 
 use tokio::net::UdpSocket;
 use tokio::sync::{mpsc, oneshot, watch};
 
-use crate::config::{Builder as ConfigBuilder, Config};
-use crate::endpoint::{Endpoint, EndpointAddress, Endpoints};
-use crate::filters::{prelude::*, FilterRegistry};
-use crate::metadata::Value;
-use crate::proxy::{Builder, PendingValidation};
+use crate::{
+    config::{Builder as ConfigBuilder, Config},
+    endpoint::{Endpoint, EndpointAddress, Endpoints},
+    filters::{prelude::*, FilterRegistry},
+    metadata::Value,
+    proxy::{Builder, PendingValidation},
+};
 
 pub struct TestFilterFactory;
 
@@ -37,6 +41,17 @@ impl FilterFactory for TestFilterFactory {
 
     fn config_schema(&self) -> schemars::schema::RootSchema {
         schemars::schema_for_value!(serde_json::Value::Null)
+    }
+
+    fn encode_config_to_protobuf(
+        &self,
+        _config: serde_json::Value,
+    ) -> Result<prost_types::Any, Error> {
+        Ok(<_>::default())
+    }
+
+    fn encode_config_to_json(&self, _config: prost_types::Any) -> Result<serde_json::Value, Error> {
+        Ok(serde_json::Value::Null)
     }
 
     fn create_filter(&self, _: CreateFilterArgs) -> Result<FilterInstance, Error> {

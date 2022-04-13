@@ -16,7 +16,7 @@
 
 use std::{iter::FromIterator, sync::Arc};
 
-use crate::filters::{self, DynFilterFactory};
+use crate::filters::{self, DynFilterFactory, StaticFilter};
 
 #[cfg(doc)]
 use crate::filters::{FilterFactory, FilterRegistry};
@@ -52,17 +52,17 @@ impl FilterSet {
     pub fn default_with(filters: impl IntoIterator<Item = DynFilterFactory>) -> Self {
         Self::with(
             [
-                filters::capture::factory(),
-                filters::compress::factory(),
-                filters::concatenate_bytes::factory(),
-                filters::debug::factory(),
-                filters::drop::factory(),
-                filters::firewall::factory(),
-                filters::load_balancer::factory(),
-                filters::local_rate_limit::factory(),
-                filters::r#match::factory(),
-                filters::pass::factory(),
-                filters::token_router::factory(),
+                filters::Capture::factory(),
+                filters::Compress::factory(),
+                filters::ConcatenateBytes::factory(),
+                filters::Debug::factory(),
+                filters::Drop::factory(),
+                filters::Firewall::factory(),
+                filters::LoadBalancer::factory(),
+                filters::LocalRateLimit::factory(),
+                filters::Match::factory(),
+                filters::Pass::factory(),
+                filters::TokenRouter::factory(),
             ]
             .into_iter()
             .chain(filters),

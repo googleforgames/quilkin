@@ -21,7 +21,7 @@ use tokio::time::{timeout, Duration};
 use quilkin::{
     config::{Builder, Filter},
     endpoint::Endpoint,
-    filters::concatenate_bytes,
+    filters::{ConcatenateBytes, StaticFilter},
     test_utils::TestHelper,
 };
 
@@ -39,7 +39,7 @@ bytes: YWJj #abc
         .with_port(server_port)
         .with_static(
             vec![Filter {
-                name: concatenate_bytes::factory().name().into(),
+                name: ConcatenateBytes::factory().name().into(),
                 config: serde_yaml::from_str(yaml).unwrap(),
             }],
             vec![Endpoint::new(echo)],

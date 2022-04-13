@@ -32,14 +32,8 @@ use self::{
 };
 
 use self::quilkin::filters::capture::v1alpha1 as proto;
+
 pub use config::{Config, Strategy};
-
-pub const NAME: &str = "quilkin.filters.capture.v1alpha1.Capture";
-
-/// Creates a new factory for generating capture filters.
-pub fn factory() -> DynFilterFactory {
-    Box::from(CaptureFactory::new())
-}
 
 /// Trait to implement different strategies for capturing packet data.
 pub trait CaptureStrategy {
@@ -48,7 +42,7 @@ pub trait CaptureStrategy {
     fn capture(&self, contents: &mut Vec<u8>, metrics: &Metrics) -> Option<Value>;
 }
 
-struct Capture {
+pub struct Capture {
     capture: Box<dyn CaptureStrategy + Sync + Send>,
     /// metrics reporter for this filter.
     metrics: Metrics,
@@ -83,31 +77,15 @@ impl Filter for Capture {
     }
 }
 
-struct CaptureFactory;
+impl StaticFilter for Capture {
+    const NAME: &'static str = "quilkin.filters.capture.v1alpha1.Capture";
+    type Configuration = Config;
+    type BinaryConfiguration = proto::Capture;
 
-impl CaptureFactory {
-    pub fn new() -> Self {
-        CaptureFactory
-    }
-}
-
-impl FilterFactory for CaptureFactory {
-    fn name(&self) -> &'static str {
-        NAME
-    }
-
-    fn config_schema(&self) -> schemars::schema::RootSchema {
-        schemars::schema_for!(Config)
-    }
-
-    fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
-        let (config_json, config) = self
-            .require_config(args.config)?
-            .deserialize::<Config, proto::Capture>(self.name())?;
-        let filter = Capture::new(config, Metrics::new()?);
-        Ok(FilterInstance::new(
-            config_json,
-            Box::new(filter) as Box<dyn Filter>,
+    fn new(config: Option<Self::Configuration>) -> Result<Self, Error> {
+        Ok(Capture::new(
+            Self::ensure_config_exists(config)?,
+            Metrics::new()?,
         ))
     }
 }
@@ -119,14 +97,11 @@ mod tests {
     use crate::{
         endpoint::{Endpoint, Endpoints},
         filters::metadata::CAPTURED_BYTES,
-        filters::prelude::*,
         metadata::Value,
         test_utils::assert_write_no_change,
     };
 
-    use super::{
-        Capture, CaptureFactory, CaptureStrategy, Config, Metrics, Prefix, Regex, Strategy, Suffix,
-    };
+    use super::*;
 
     const TOKEN_KEY: &str = "TOKEN";
 
@@ -136,8 +111,6 @@ mod tests {
 
     #[test]
     fn factory_valid_config_all() {
-        let factory = CaptureFactory::new();
-
         let config = serde_json::json!({
             "metadataKey": TOKEN_KEY.to_string(),
             "suffix": {
@@ -146,39 +119,30 @@ mod tests {
             }
         });
 
-        let filter = factory
-            .create_filter(CreateFilterArgs::fixed(Some(config)))
-            .unwrap()
-            .filter;
+        let filter = Capture::from_config(Some(serde_json::from_value(config).unwrap()));
         assert_end_strategy(filter.as_ref(), TOKEN_KEY, true);
     }
 
     #[test]
     fn factory_valid_config_defaults() {
-        let factory = CaptureFactory::new();
-
         let config = serde_json::json!({
             "suffix": {
                 "size": 3_i64,
             }
         });
 
-        let filter = factory
-            .create_filter(CreateFilterArgs::fixed(Some(config)))
-            .unwrap()
-            .filter;
-        assert_end_strategy(filter.as_ref(), CAPTURED_BYTES, false);
+        let filter = Capture::from_config(Some(serde_json::from_value(config).unwrap()));
+        assert_end_strategy(&filter, CAPTURED_BYTES, false);
     }
 
     #[test]
     fn factory_invalid_config() {
-        let factory = CaptureFactory::new();
         let config = serde_json::json!({
             "suffix": {
                 "size": "WRONG",
             }
         });
-        let result = factory.create_filter(CreateFilterArgs::fixed(Some(config)));
+        let filter = Capture::from_config(Some(serde_json::from_value(config).unwrap()));
         assert!(result.is_err(), "Should be an error");
     }
 
@@ -235,7 +199,7 @@ mod tests {
     fn regex_capture() {
         let metrics = Metrics::new().unwrap();
         let end = Regex {
-            pattern: regex::bytes::Regex::new(".{3}$").unwrap(),
+            pattern: ::regex::bytes::Regex::new(".{3}$").unwrap(),
         };
         let mut contents = b"helloabc".to_vec();
         let result = end.capture(&mut contents, &metrics).unwrap();

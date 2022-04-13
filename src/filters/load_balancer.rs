@@ -19,23 +19,23 @@ crate::include_proto!("quilkin.filters.load_balancer.v1alpha1");
 mod config;
 mod endpoint_chooser;
 
-use crate::filters::{prelude::*, DynFilterFactory};
-
-pub use config::{Config, Policy};
+use self::quilkin::filters::load_balancer::v1alpha1 as proto;
+use crate::filters::prelude::*;
 use endpoint_chooser::EndpointChooser;
 
-use self::quilkin::filters::load_balancer::v1alpha1 as proto;
-
-pub const NAME: &str = "quilkin.filters.load_balancer.v1alpha1.LoadBalancer";
-
-/// Returns a factory for creating load balancing filters.
-pub fn factory() -> DynFilterFactory {
-    Box::from(LoadBalancerFilterFactory)
-}
+pub use config::{Config, Policy};
 
 /// Balances packets over the upstream endpoints.
-struct LoadBalancer {
+pub struct LoadBalancer {
     endpoint_chooser: Box<dyn EndpointChooser>,
+}
+
+impl LoadBalancer {
+    fn new(config: Config) -> Self {
+        Self {
+            endpoint_chooser: config.policy.as_endpoint_chooser(),
+        }
+    }
 }
 
 impl Filter for LoadBalancer {
@@ -45,28 +45,13 @@ impl Filter for LoadBalancer {
     }
 }
 
-struct LoadBalancerFilterFactory;
+impl StaticFilter for LoadBalancer {
+    const NAME: &'static str = "quilkin.filters.load_balancer.v1alpha1.LoadBalancer";
+    type Configuration = Config;
+    type BinaryConfiguration = proto::LoadBalancer;
 
-impl FilterFactory for LoadBalancerFilterFactory {
-    fn name(&self) -> &'static str {
-        NAME
-    }
-
-    fn config_schema(&self) -> schemars::schema::RootSchema {
-        schemars::schema_for!(Config)
-    }
-
-    fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
-        let (config_json, config) = self
-            .require_config(args.config)?
-            .deserialize::<Config, proto::LoadBalancer>(self.name())?;
-        let filter = LoadBalancer {
-            endpoint_chooser: config.policy.as_endpoint_chooser(),
-        };
-        Ok(FilterInstance::new(
-            config_json,
-            Box::new(filter) as Box<dyn Filter>,
-        ))
+    fn new(config: Option<Self::Configuration>) -> Result<Self, Error> {
+        Ok(LoadBalancer::new(Self::ensure_config_exists(config)?))
     }
 }
 
@@ -74,16 +59,11 @@ impl FilterFactory for LoadBalancerFilterFactory {
 mod tests {
     use std::{collections::HashSet, net::Ipv4Addr};
 
-    use crate::{
-        endpoint::{Endpoint, EndpointAddress, Endpoints},
-        filters::{
-            load_balancer::LoadBalancerFilterFactory, CreateFilterArgs, Filter, FilterFactory,
-            ReadContext,
-        },
-    };
+    use super::*;
+    use crate::endpoint::{Endpoint, EndpointAddress, Endpoints};
 
     fn create_filter(config: &str) -> Box<dyn Filter> {
-        let factory = LoadBalancerFilterFactory;
+        let factory = LoadBalancer::factory();
         factory
             .create_filter(CreateFilterArgs::fixed(Some(
                 serde_yaml::from_str(config).unwrap(),

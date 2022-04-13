@@ -16,14 +16,14 @@
 
 //! Filters for processing packets.
 
+mod chain;
 mod error;
 mod factory;
+mod metadata;
 mod read;
 mod registry;
 mod set;
 mod write;
-
-pub(crate) mod chain;
 
 pub mod capture;
 pub mod compress;
@@ -34,7 +34,6 @@ pub mod firewall;
 pub mod load_balancer;
 pub mod local_rate_limit;
 pub mod r#match;
-pub mod metadata;
 pub mod pass;
 pub mod token_router;
 
@@ -43,21 +42,84 @@ pub mod token_router;
 pub mod prelude {
     pub use super::{
         ConvertProtoConfigError, CreateFilterArgs, DynFilterFactory, Error, Filter, FilterFactory,
-        FilterInstance, ReadContext, ReadResponse, WriteContext, WriteResponse,
+        FilterInstance, ReadContext, ReadResponse, StaticFilter, WriteContext, WriteResponse,
     };
 }
 
 // Core Filter types
 pub use self::{
+    capture::Capture,
+    compress::Compress,
+    concatenate_bytes::ConcatenateBytes,
+    debug::Debug,
+    drop::Drop,
     error::{ConvertProtoConfigError, Error},
     factory::{CreateFilterArgs, DynFilterFactory, FilterFactory, FilterInstance},
+    firewall::Firewall,
+    load_balancer::LoadBalancer,
+    local_rate_limit::LocalRateLimit,
+    pass::Pass,
+    r#match::Match,
     read::{ReadContext, ReadResponse},
     registry::FilterRegistry,
     set::{FilterMap, FilterSet},
+    token_router::TokenRouter,
     write::{WriteContext, WriteResponse},
 };
 
-pub(crate) use self::chain::{FilterChain, SharedFilterChain};
+pub(crate) use self::chain::{Error as FilterChainError, FilterChain, SharedFilterChain};
+
+/// Statically safe version of [`Filter`], if you're writing a Rust filter, you
+/// should implement [`StaticFilter`] in addition to [`Filter`], as
+/// [`StaticFilter`] guarantees all of the required properties through the type
+/// system, allowing Quilkin take care of the virtual table boilerplate
+/// automatically at compile-time.
+pub trait StaticFilter: Filter + Sized
+// This where clause simply states that `Configuration`'s and
+// `BinaryConfiguration`'s `Error` types are compatible with `filters::Error`.
+where
+    Error: From<<Self::Configuration as TryFrom<Self::BinaryConfiguration>>::Error>
+        + From<<Self::BinaryConfiguration as TryFrom<Self::Configuration>>::Error>,
+{
+    /// The globally unique name of the filter.
+    const NAME: &'static str;
+    /// The human-readable configuration of the filter. **Must** be [`serde`]
+    /// compatible, have a JSON schema, and be convertible to and
+    /// from [`Self::BinaryConfiguration`].
+    type Configuration: schemars::JsonSchema
+        + serde::Serialize
+        + for<'de> serde::Deserialize<'de>
+        + TryFrom<Self::BinaryConfiguration>;
+    /// The binary configuration of the filter. **Must** be [`prost`] compatible,
+    /// and be convertible to and from [`Self::Configuration`].
+    type BinaryConfiguration: prost::Message
+        + Default
+        + TryFrom<Self::Configuration>
+        + Send
+        + Sync
+        + Sized;
+
+    /// Instaniates a new [`StaticFilter`] from the given configuration, if any.
+    /// # Errors
+    /// If the provided configuration is invalid.
+    fn new(config: Option<Self::Configuration>) -> Result<Self, Error>;
+
+    /// Creates a new dynamic [`FilterFactory`] virtual table.
+    fn factory() -> DynFilterFactory
+    where
+        Self: 'static,
+    {
+        Box::from(std::marker::PhantomData::<fn() -> Self>)
+    }
+
+    /// Convenience method for providing a consistent error message for filters
+    /// which require a fully initialized [`Self::Configuration`].
+    fn ensure_config_exists(
+        config: Option<Self::Configuration>,
+    ) -> Result<Self::Configuration, Error> {
+        config.ok_or(Error::MissingConfig(Self::NAME))
+    }
+}
 
 /// Trait for routing and manipulating packets.
 ///

@@ -25,86 +25,47 @@ use tracing::info;
 use self::quilkin::filters::debug::v1alpha1 as proto;
 
 /// Debug logs all incoming and outgoing packets
-struct Debug {}
-
-pub const NAME: &str = "quilkin.filters.debug.v1alpha1.Debug";
-
-/// Creates a new factory for generating debug filters.
-pub fn factory() -> DynFilterFactory {
-    Box::from(DebugFactory::new())
+pub struct Debug {
+    config: Config,
 }
 
 impl Debug {
     /// Constructor for the Debug. Pass in a "id" to append a string to your log messages from this
     /// Filter.
-
-    fn new(_: Option<String>) -> Self {
-        Debug {}
+    fn new(config: Option<Config>) -> Self {
+        Self {
+            config: config.unwrap_or_default(),
+        }
     }
 }
 
 impl Filter for Debug {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
     fn read(&self, ctx: ReadContext) -> Option<ReadResponse> {
-        info!(source = ?&ctx.source, contents = ?packet_to_string(ctx.contents.clone()), "Read filter event");
+        info!(id = ?self.config.id, source = ?&ctx.source, contents = ?String::from_utf8_lossy(&ctx.contents), "Read filter event");
         Some(ctx.into())
     }
 
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
     fn write(&self, ctx: WriteContext) -> Option<WriteResponse> {
-        info!(endpoint = ?ctx.endpoint.address, source = ?&ctx.source,
-            dest = ?&ctx.dest, contents = ?packet_to_string(ctx.contents.clone()), "Write filter event");
+        info!(id = ?self.config.id, endpoint = ?ctx.endpoint.address, source = ?&ctx.source,
+            dest = ?&ctx.dest, contents = ?String::from_utf8_lossy(&ctx.contents), "Write filter event");
         Some(ctx.into())
     }
 }
 
-/// packet_to_string takes the content, and attempts to convert it to a string.
-/// Returns a string of "error decoding packet" on failure.
-fn packet_to_string(contents: Vec<u8>) -> String {
-    match String::from_utf8(contents) {
-        Ok(str) => str,
-        Err(_) => String::from("error decoding packet as UTF-8"),
-    }
-}
+impl StaticFilter for Debug {
+    const NAME: &'static str = "quilkin.filters.debug.v1alpha1.Debug";
+    type Configuration = Config;
+    type BinaryConfiguration = proto::Debug;
 
-/// Factory for the Debug
-struct DebugFactory {}
-
-impl DebugFactory {
-    pub fn new() -> Self {
-        DebugFactory {}
-    }
-}
-
-impl FilterFactory for DebugFactory {
-    fn name(&self) -> &'static str {
-        NAME
-    }
-
-    fn config_schema(&self) -> schemars::schema::RootSchema {
-        schemars::schema_for!(Config)
-    }
-
-    fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
-        let config: Option<(_, Config)> = args
-            .config
-            .map(|config| config.deserialize::<Config, proto::Debug>(self.name()))
-            .transpose()?;
-
-        let (config_json, config) = config
-            .map(|(config_json, config)| (config_json, Some(config)))
-            .unwrap_or_else(|| (serde_json::Value::Null, None));
-        let filter = Debug::new(config.and_then(|cfg| cfg.id));
-
-        Ok(FilterInstance::new(
-            config_json,
-            Box::new(filter) as Box<dyn Filter>,
-        ))
+    fn new(config: Option<Self::Configuration>) -> Result<Self, Error> {
+        Ok(Debug::new(config))
     }
 }
 
 /// A Debug filter's configuration.
-#[derive(Serialize, Deserialize, Debug, schemars::JsonSchema)]
+#[derive(Serialize, Default, Deserialize, Debug, schemars::JsonSchema)]
 pub struct Config {
     /// Identifier that will be optionally included with each log message.
     pub id: Option<String>,
@@ -150,37 +111,19 @@ mod tests {
 
     #[test]
     fn from_config_with_id() {
-        let factory = DebugFactory::new();
-        let config = serde_json::json!({
-            "id": "name".to_string(),
-        });
-
-        assert!(factory
-            .create_filter(CreateFilterArgs::fixed(Some(config)))
-            .is_ok());
+        let config = serde_json::json!({ "id": "name", });
+        Debug::from_config(Some(serde_json::from_value(config).unwrap()));
     }
 
     #[test]
     fn from_config_without_id() {
-        let factory = DebugFactory::new();
-        let config = serde_json::json!({
-            "id": "name",
-        });
-
-        assert!(factory
-            .create_filter(CreateFilterArgs::fixed(Some(config)))
-            .is_ok());
+        let config = serde_json::json!({});
+        Debug::from_config(Some(serde_json::from_value(config).unwrap()));
     }
 
     #[test]
     fn from_config_should_error() {
-        let factory = DebugFactory::new();
-
-        let config = serde_json::json!({
-            "id": {},
-        });
-        assert!(factory
-            .create_filter(CreateFilterArgs::fixed(Some(config)))
-            .is_err());
+        let config = serde_json::json!({ "id": {} });
+        Debug::try_from_config(Some(serde_json::from_value(config).unwrap())).unwrap_err();
     }
 }

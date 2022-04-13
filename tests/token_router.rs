@@ -21,7 +21,7 @@ use tokio::time::{timeout, Duration};
 use quilkin::{
     config::{Builder, Filter},
     endpoint::Endpoint,
-    filters::{capture, token_router},
+    filters::{Capture, StaticFilter, TokenRouter},
     metadata::MetadataView,
     test_utils::TestHelper,
 };
@@ -49,11 +49,11 @@ quilkin.dev:
         .with_static(
             vec![
                 Filter {
-                    name: capture::factory().name().into(),
+                    name: Capture::factory().name().into(),
                     config: serde_yaml::from_str(capture_yaml).unwrap(),
                 },
                 Filter {
-                    name: token_router::factory().name().into(),
+                    name: TokenRouter::factory().name().into(),
                     config: None,
                 },
             ],

@@ -21,7 +21,7 @@ use tokio::time::{timeout, Duration};
 use quilkin::{
     config::{Builder, Filter},
     endpoint::Endpoint,
-    filters::{capture, r#match},
+    filters::{Capture, Match, StaticFilter},
     test_utils::TestHelper,
 };
 
@@ -62,11 +62,11 @@ on_read:
         .with_static(
             vec![
                 Filter {
-                    name: capture::NAME.into(),
+                    name: Capture::NAME.into(),
                     config: serde_yaml::from_str(capture_yaml).unwrap(),
                 },
                 Filter {
-                    name: r#match::NAME.into(),
+                    name: Match::NAME.into(),
                     config: serde_yaml::from_str(matches_yaml).unwrap(),
                 },
             ],

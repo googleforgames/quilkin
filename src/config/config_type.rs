@@ -18,7 +18,7 @@ use std::convert::TryFrom;
 
 use bytes::Bytes;
 
-use crate::filters::{ConvertProtoConfigError, Error};
+use crate::filters::Error;
 
 /// The configuration of a [`Filter`][crate::filters::Filter] from either a
 /// static or dynamic source.
@@ -48,19 +48,21 @@ impl ConfigType {
     /// It returns both the deserialized, as well as, a JSON representation
     /// of the provided config.
     /// It returns an error if any of the serialization or deserialization steps fail.
-    pub fn deserialize<Static, Dynamic>(
+    pub fn deserialize<TextConfiguration, BinaryConfiguration>(
         self,
         filter_name: &str,
-    ) -> Result<(serde_json::Value, Static), Error>
+    ) -> Result<(serde_json::Value, TextConfiguration), Error>
     where
-        Dynamic: prost::Message + Default,
-        Static: serde::Serialize
-            + for<'de> serde::Deserialize<'de>
-            + TryFrom<Dynamic, Error = ConvertProtoConfigError>,
+        BinaryConfiguration: prost::Message + Default,
+        TextConfiguration:
+            serde::Serialize + for<'de> serde::Deserialize<'de> + TryFrom<BinaryConfiguration>,
+        Error: From<<BinaryConfiguration as TryInto<TextConfiguration>>::Error>,
     {
         match self {
             ConfigType::Static(ref config) => serde_yaml::to_string(config)
-                .and_then(|raw_config| serde_yaml::from_str::<Static>(raw_config.as_str()))
+                .and_then(|raw_config| {
+                    serde_yaml::from_str::<TextConfiguration>(raw_config.as_str())
+                })
                 .map_err(|err| {
                     Error::DeserializeFailed(format!(
                         "filter `{filter_name}`: failed to YAML deserialize config: {err}",
@@ -76,7 +78,7 @@ impl ConfigType {
                         "filter `{filter_name}`: config decode error: {err}",
                     ))
                 })
-                .and_then(|config| Static::try_from(config).map_err(Error::ConvertProtoConfig))
+                .and_then(|config| TextConfiguration::try_from(config).map_err(From::from))
                 .and_then(|config| {
                     Self::get_json_config(filter_name, &config)
                         .map(|config_json| (config_json, config))

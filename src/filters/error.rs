@@ -26,6 +26,8 @@ use crate::filters::{Filter, FilterFactory};
 pub enum Error {
     #[error("filter `{}` not found", .0)]
     NotFound(String),
+    #[error("Expected <{}> message, received <{}> ", expected, actual)]
+    MismatchedTypes { expected: String, actual: String },
     #[error("filter `{}` requires configuration, but none provided", .0)]
     MissingConfig(&'static str),
     #[error("field `{}` is invalid, reason: {}", field, reason)]
@@ -64,9 +66,27 @@ impl From<serde_yaml::Error> for Error {
     }
 }
 
+impl From<serde_json::Error> for Error {
+    fn from(error: serde_json::Error) -> Self {
+        Self::DeserializeFailed(error.to_string())
+    }
+}
+
 impl From<prost::EncodeError> for Error {
     fn from(error: prost::EncodeError) -> Self {
         Self::ConvertProtoConfig(ConvertProtoConfigError::new(error, None))
+    }
+}
+
+impl From<prost::DecodeError> for Error {
+    fn from(error: prost::DecodeError) -> Self {
+        Self::ConvertProtoConfig(ConvertProtoConfigError::new(error, None))
+    }
+}
+
+impl From<ConvertProtoConfigError> for Error {
+    fn from(error: ConvertProtoConfigError) -> Self {
+        Self::ConvertProtoConfig(error)
     }
 }
 

@@ -15,8 +15,9 @@
  */
 
 // ANCHOR: include_proto
-quilkin::include_proto!("greet");
-use greet::Greet as ProtoGreet;
+mod proto {
+    tonic::include_proto!("greet");
+}
 // ANCHOR_END: include_proto
 use quilkin::filters::prelude::*;
 
@@ -31,13 +32,21 @@ struct Config {
 // ANCHOR_END: serde_config
 
 // ANCHOR: TryFrom
-impl TryFrom<ProtoGreet> for Config {
+impl TryFrom<proto::Greet> for Config {
     type Error = ConvertProtoConfigError;
 
-    fn try_from(p: ProtoGreet) -> Result<Self, Self::Error> {
-        Ok(Config {
+    fn try_from(p: proto::Greet) -> Result<Self, Self::Error> {
+        Ok(Self {
             greeting: p.greeting,
         })
+    }
+}
+
+impl From<Config> for proto::Greet {
+    fn from(config: Config) -> Self {
+        Self {
+            greeting: config.greeting,
+        }
     }
 }
 // ANCHOR_END: TryFrom
@@ -60,28 +69,15 @@ impl Filter for Greet {
 // ANCHOR_END: filter
 
 // ANCHOR: factory
-pub const NAME: &str = "greet.v1";
+use quilkin::filters::StaticFilter;
 
-pub fn factory() -> DynFilterFactory {
-    Box::from(GreetFilterFactory)
-}
+impl StaticFilter for Greet {
+    const NAME: &'static str = "greet.v1";
+    type Configuration = Config;
+    type BinaryConfiguration = proto::Greet;
 
-struct GreetFilterFactory;
-impl FilterFactory for GreetFilterFactory {
-    fn name(&self) -> &'static str {
-        NAME
-    }
-
-    fn config_schema(&self) -> schemars::schema::RootSchema {
-        schemars::schema_for!(Config)
-    }
-
-    fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
-        let (config_json, config) = self
-            .require_config(args.config)?
-            .deserialize::<Config, ProtoGreet>(self.name())?;
-        let filter: Box<dyn Filter> = Box::new(Greet(config.greeting));
-        Ok(FilterInstance::new(config_json, filter))
+    fn new(config: Option<Self::Configuration>) -> Result<Self, quilkin::filters::Error> {
+        Ok(Self(Self::ensure_config_exists(config)?.greeting))
     }
 }
 // ANCHOR_END: factory
@@ -91,7 +87,7 @@ impl FilterFactory for GreetFilterFactory {
 async fn main() {
     quilkin::run(
         quilkin::Config::builder().build(),
-        vec![self::factory()].into_iter(),
+        vec![Greet::factory()].into_iter(),
     )
     .await
     .unwrap();

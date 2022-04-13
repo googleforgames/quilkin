@@ -216,7 +216,7 @@ mod tests {
     use crate::{
         config,
         endpoint::{Endpoint, Endpoints, UpstreamEndpoints},
-        filters::debug,
+        filters::Debug,
         test_utils::{new_test_chain, TestFilterFactory},
     };
 
@@ -224,12 +224,12 @@ mod tests {
 
     #[test]
     fn from_config() {
-        let provider = debug::factory();
+        let provider = Debug::factory();
 
         // everything is fine
         let filter_configs = &[config::Filter {
             name: provider.name().into(),
-            config: Default::default(),
+            config: Some(serde_yaml::Mapping::default().into()),
         }];
 
         let chain = FilterChain::try_create(filter_configs).unwrap();
