@@ -278,9 +278,6 @@
 <span id="276">276</span>
 <span id="277">277</span>
 <span id="278">278</span>
-<span id="279">279</span>
-<span id="280">280</span>
-<span id="281">281</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -297,12 +294,9 @@
  * limitations under the License.
  */</span>
 
-<span class="macro">crate::include_proto!</span>(<span class="string">&quot;quilkin.filters.matches.v1alpha1&quot;</span>);
-
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">use</span> <span class="ident"><span class="self">self</span>::quilkin::filters::matches::v1alpha1</span> <span class="kw">as</span> <span class="ident">proto</span>;
-
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
 
+<span class="kw">use</span> <span class="ident"><span class="kw">super</span>::proto</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">config::ConfigType</span>, <span class="ident">filters::ConvertProtoConfigError</span>};
 
 <span class="doccomment">/// Configuration for the [`factory`][crate::filters::match::factory].</span>

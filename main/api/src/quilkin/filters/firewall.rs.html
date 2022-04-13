@@ -240,6 +240,7 @@
 <span id="238">238</span>
 <span id="239">239</span>
 <span id="240">240</span>
+<span id="241">241</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -263,7 +264,7 @@
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters::firewall::metrics::Metrics</span>;
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters::prelude</span>::<span class="kw-2">*</span>;
 
-<span class="kw">use</span> <span class="ident"><span class="self">self</span>::quilkin::filters::firewall::v1alpha1::Firewall</span> <span class="kw">as</span> <span class="ident">ProtoConfig</span>;
+<span class="kw">use</span> <span class="ident"><span class="self">self</span>::quilkin::filters::firewall::v1alpha1</span> <span class="kw">as</span> <span class="ident">proto</span>;
 
 <span class="macro">crate::include_proto!</span>(<span class="string">&quot;quilkin.filters.firewall.v1alpha1&quot;</span>);
 
@@ -298,7 +299,7 @@
     <span class="kw">fn</span> <span class="ident">create_filter</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">args</span>: <span class="ident">CreateFilterArgs</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">FilterInstance</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> (<span class="ident">config_json</span>, <span class="ident">config</span>) <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">require_config</span>(<span class="ident">args</span>.<span class="ident">config</span>)<span class="question-mark">?</span>
-            .<span class="ident">deserialize</span>::<span class="op">&lt;</span><span class="ident">Config</span>, <span class="ident">ProtoConfig</span><span class="op">&gt;</span>(<span class="self">self</span>.<span class="ident">name</span>())<span class="question-mark">?</span>;
+            .<span class="ident">deserialize</span>::<span class="op">&lt;</span><span class="ident">Config</span>, <span class="ident">proto::Firewall</span><span class="op">&gt;</span>(<span class="self">self</span>.<span class="ident">name</span>())<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">Firewall::new</span>(<span class="ident">config</span>, <span class="ident">Metrics::new</span>()<span class="question-mark">?</span>);
         <span class="prelude-val">Ok</span>(<span class="ident">FilterInstance::new</span>(
@@ -388,6 +389,7 @@
         <span class="prelude-val">None</span>
     }
 }
+
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span> {
     <span class="kw">use</span> <span class="ident">std::net::Ipv4Addr</span>;

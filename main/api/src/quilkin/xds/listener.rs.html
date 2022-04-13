@@ -617,6 +617,15 @@
 <span id="615">615</span>
 <span id="616">616</span>
 <span id="617">617</span>
+<span id="618">618</span>
+<span id="619">619</span>
+<span id="620">620</span>
+<span id="621">621</span>
+<span id="622">622</span>
+<span id="623">623</span>
+<span id="624">624</span>
+<span id="625">625</span>
+<span id="626">626</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -812,6 +821,15 @@
         <span class="attribute">#[<span class="ident">prost</span>(<span class="ident">message</span>, <span class="ident">optional</span>, <span class="ident">tag</span> <span class="op">=</span> <span class="string">&quot;1&quot;</span>)]</span>
         <span class="kw">pub</span> <span class="ident">value</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">prost::alloc::string::String</span><span class="op">&gt;</span>,
     }
+
+    <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">Append</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ProtoAppend</span> {
+        <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">append</span>: <span class="ident">Append</span>) -&gt; <span class="self">Self</span> {
+            <span class="self">Self</span> {
+                <span class="ident">value</span>: <span class="ident">append</span>.<span class="ident">value</span>,
+            }
+        }
+    }
+
     <span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident">ProtoAppend</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Append</span> {
         <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">ConvertProtoConfigError</span>;
         <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">p</span>: <span class="ident">ProtoAppend</span>) -&gt; <span class="ident">std::result::Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident"><span class="self">Self</span>::Error</span><span class="op">&gt;</span> {

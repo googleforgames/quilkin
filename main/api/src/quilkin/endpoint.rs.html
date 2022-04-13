@@ -521,6 +521,44 @@
 <span id="519">519</span>
 <span id="520">520</span>
 <span id="521">521</span>
+<span id="522">522</span>
+<span id="523">523</span>
+<span id="524">524</span>
+<span id="525">525</span>
+<span id="526">526</span>
+<span id="527">527</span>
+<span id="528">528</span>
+<span id="529">529</span>
+<span id="530">530</span>
+<span id="531">531</span>
+<span id="532">532</span>
+<span id="533">533</span>
+<span id="534">534</span>
+<span id="535">535</span>
+<span id="536">536</span>
+<span id="537">537</span>
+<span id="538">538</span>
+<span id="539">539</span>
+<span id="540">540</span>
+<span id="541">541</span>
+<span id="542">542</span>
+<span id="543">543</span>
+<span id="544">544</span>
+<span id="545">545</span>
+<span id="546">546</span>
+<span id="547">547</span>
+<span id="548">548</span>
+<span id="549">549</span>
+<span id="550">550</span>
+<span id="551">551</span>
+<span id="552">552</span>
+<span id="553">553</span>
+<span id="554">554</span>
+<span id="555">555</span>
+<span id="556">556</span>
+<span id="557">557</span>
+<span id="558">558</span>
+<span id="559">559</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -598,6 +636,22 @@
     }
 }
 
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">Endpoint</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident"><span class="kw">crate</span>::xds::config::endpoint::v3::LbEndpoint</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">endpoint</span>: <span class="ident">Endpoint</span>) -&gt; <span class="self">Self</span> {
+        <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::xds::config::endpoint::v3</span>::{
+            <span class="ident">lb_endpoint::HostIdentifier</span>, <span class="ident">Endpoint</span> <span class="kw">as</span> <span class="ident">EnvoyEndpoint</span>,
+        };
+        <span class="self">Self</span> {
+            <span class="ident">host_identifier</span>: <span class="prelude-val">Some</span>(<span class="ident">HostIdentifier::Endpoint</span>(<span class="ident">EnvoyEndpoint</span> {
+                <span class="ident">address</span>: <span class="prelude-val">Some</span>(<span class="ident">endpoint</span>.<span class="ident">address</span>.<span class="ident">into</span>()),
+                ..<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>()
+            })),
+            <span class="ident">metadata</span>: <span class="prelude-val">Some</span>(<span class="ident">endpoint</span>.<span class="ident">metadata</span>.<span class="ident">into</span>()),
+            ..<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>()
+        }
+    }
+}
+
 <span class="doccomment">/// Represents the set of all known upstream endpoints.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Endpoints</span>(<span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Endpoint</span><span class="op">&gt;</span><span class="op">&gt;</span>);
@@ -647,6 +701,28 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Metadata</span> {
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">with</span> <span class="op">=</span> <span class="string">&quot;base64_set&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">tokens</span>: <span class="ident">base64_set::Set</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">Metadata</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">prost_types::Struct</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">metadata</span>: <span class="ident">Metadata</span>) -&gt; <span class="self">Self</span> {
+        <span class="kw">let</span> <span class="ident">tokens</span> <span class="op">=</span> <span class="ident">prost_types::Value</span> {
+            <span class="ident">kind</span>: <span class="prelude-val">Some</span>(<span class="ident">prost_types::value::Kind::ListValue</span>(
+                <span class="ident">prost_types::ListValue</span> {
+                    <span class="ident">values</span>: <span class="ident">metadata</span>
+                        .<span class="ident">tokens</span>
+                        .<span class="ident">into_iter</span>()
+                        .<span class="ident">map</span>(<span class="ident">base64::encode</span>)
+                        .<span class="ident">map</span>(<span class="ident">prost_types::value::Kind::StringValue</span>)
+                        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">k</span><span class="op">|</span> <span class="ident">prost_types::Value</span> { <span class="ident">kind</span>: <span class="prelude-val">Some</span>(<span class="ident">k</span>) })
+                        .<span class="ident">collect</span>(),
+                },
+            )),
+        };
+
+        <span class="self">Self</span> {
+            <span class="ident">fields</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::from</span>([(<span class="string">&quot;tokens&quot;</span>.<span class="ident">into</span>(), <span class="ident">tokens</span>)]),
+        }
+    }
 }
 
 <span class="doccomment">/// A module for providing base64 encoding for a `BTreeSet` at the `serde`</span>

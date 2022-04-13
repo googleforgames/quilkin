@@ -222,6 +222,47 @@
 <span id="220">220</span>
 <span id="221">221</span>
 <span id="222">222</span>
+<span id="223">223</span>
+<span id="224">224</span>
+<span id="225">225</span>
+<span id="226">226</span>
+<span id="227">227</span>
+<span id="228">228</span>
+<span id="229">229</span>
+<span id="230">230</span>
+<span id="231">231</span>
+<span id="232">232</span>
+<span id="233">233</span>
+<span id="234">234</span>
+<span id="235">235</span>
+<span id="236">236</span>
+<span id="237">237</span>
+<span id="238">238</span>
+<span id="239">239</span>
+<span id="240">240</span>
+<span id="241">241</span>
+<span id="242">242</span>
+<span id="243">243</span>
+<span id="244">244</span>
+<span id="245">245</span>
+<span id="246">246</span>
+<span id="247">247</span>
+<span id="248">248</span>
+<span id="249">249</span>
+<span id="250">250</span>
+<span id="251">251</span>
+<span id="252">252</span>
+<span id="253">253</span>
+<span id="254">254</span>
+<span id="255">255</span>
+<span id="256">256</span>
+<span id="257">257</span>
+<span id="258">258</span>
+<span id="259">259</span>
+<span id="260">260</span>
+<span id="261">261</span>
+<span id="262">262</span>
+<span id="263">263</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -342,6 +383,31 @@
     }
 }
 
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">prost_types::Value</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">value</span>: <span class="ident">Value</span>) -&gt; <span class="self">Self</span> {
+        <span class="kw">use</span> <span class="ident">prost_types::value::Kind</span>;
+
+        <span class="self">Self</span> {
+            <span class="ident">kind</span>: <span class="prelude-val">Some</span>(<span class="kw">match</span> <span class="ident">value</span> {
+                <span class="ident">Value::Number</span>(<span class="ident">number</span>) =&gt; <span class="ident">Kind::NumberValue</span>(<span class="ident">number</span> <span class="kw">as</span> <span class="ident">f64</span>),
+                <span class="ident">Value::String</span>(<span class="ident">string</span>) =&gt; <span class="ident">Kind::StringValue</span>(<span class="ident">string</span>),
+                <span class="ident">Value::Bool</span>(<span class="ident">value</span>) =&gt; <span class="ident">Kind::BoolValue</span>(<span class="ident">value</span>),
+                <span class="ident">Value::Bytes</span>(<span class="ident">bytes</span>) =&gt; <span class="ident">Kind::ListValue</span>(<span class="ident">prost_types::ListValue</span> {
+                    <span class="ident">values</span>: <span class="ident">bytes</span>
+                        .<span class="ident">into_iter</span>()
+                        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">number</span><span class="op">|</span> <span class="ident">prost_types::Value</span> {
+                            <span class="ident">kind</span>: <span class="prelude-val">Some</span>(<span class="ident">Kind::NumberValue</span>(<span class="ident">number</span> <span class="kw">as</span> <span class="ident">f64</span>)),
+                        })
+                        .<span class="ident">collect</span>(),
+                }),
+                <span class="ident">Value::List</span>(<span class="ident">list</span>) =&gt; <span class="ident">Kind::ListValue</span>(<span class="ident">prost_types::ListValue</span> {
+                    <span class="ident">values</span>: <span class="ident">list</span>.<span class="ident">into_iter</span>().<span class="ident">map</span>(<span class="ident">From::from</span>).<span class="ident">collect</span>(),
+                }),
+            }),
+        }
+    }
+}
+
 <span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident">prost_types::Value</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Value</span> {
     <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">eyre::Report</span>;
 
@@ -405,6 +471,22 @@
         <span class="self">Self</span> {
             <span class="ident">known</span>,
             <span class="ident">unknown</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
+        }
+    }
+}
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">prost_types::Struct</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">MetadataView</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ProtoMetadata</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">metadata</span>: <span class="ident">MetadataView</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">filter_metadata</span> <span class="op">=</span> <span class="ident">HashMap::new</span>();
+        <span class="ident">filter_metadata</span>.<span class="ident">insert</span>(<span class="ident">String::from</span>(<span class="string">&quot;quilkin.dev&quot;</span>), <span class="ident">metadata</span>.<span class="ident">known</span>.<span class="ident">into</span>());
+        <span class="ident">filter_metadata</span>.<span class="ident">extend</span>(<span class="ident">metadata</span>.<span class="ident">unknown</span>.<span class="ident">into_iter</span>().<span class="ident">filter_map</span>(<span class="op">|</span>(<span class="ident">k</span>, <span class="ident">v</span>)<span class="op">|</span> {
+            <span class="ident">k</span>.<span class="ident">as_str</span>()
+                .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">k</span><span class="op">|</span> <span class="ident"><span class="kw">crate</span>::prost::struct_from_yaml</span>(<span class="ident">v</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> (<span class="ident">k</span>.<span class="ident">into</span>(), <span class="ident">v</span>)))
+        }));
+
+        <span class="self">Self</span> {
+            <span class="ident">filter_metadata</span>,
+            ..<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>()
         }
     }
 }

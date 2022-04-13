@@ -571,13 +571,6 @@
 <span id="569">569</span>
 <span id="570">570</span>
 <span id="571">571</span>
-<span id="572">572</span>
-<span id="573">573</span>
-<span id="574">574</span>
-<span id="575">575</span>
-<span id="576">576</span>
-<span id="577">577</span>
-<span id="578">578</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -603,7 +596,7 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">config::LOG_SAMPLING_RATE</span>, <span class="ident">filters::prelude</span>::<span class="kw-2">*</span>};
 <span class="kw">use</span> <span class="ident">tracing::warn</span>;
 
-<span class="kw">use</span> <span class="ident"><span class="self">self</span>::quilkin::filters::compress::v1alpha1::Compress</span> <span class="kw">as</span> <span class="ident">ProtoConfig</span>;
+<span class="kw">use</span> <span class="ident"><span class="self">self</span>::quilkin::filters::compress::v1alpha1</span> <span class="kw">as</span> <span class="ident">proto</span>;
 <span class="kw">use</span> <span class="ident">compressor::Compressor</span>;
 <span class="kw">use</span> <span class="ident">metrics::Metrics</span>;
 
@@ -745,7 +738,7 @@
     <span class="kw">fn</span> <span class="ident">create_filter</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">args</span>: <span class="ident">CreateFilterArgs</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">FilterInstance</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> (<span class="ident">config_json</span>, <span class="ident">config</span>) <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">require_config</span>(<span class="ident">args</span>.<span class="ident">config</span>)<span class="question-mark">?</span>
-            .<span class="ident">deserialize</span>::<span class="op">&lt;</span><span class="ident">Config</span>, <span class="ident">ProtoConfig</span><span class="op">&gt;</span>(<span class="self">self</span>.<span class="ident">name</span>())<span class="question-mark">?</span>;
+            .<span class="ident">deserialize</span>::<span class="op">&lt;</span><span class="ident">Config</span>, <span class="ident">proto::Compress</span><span class="op">&gt;</span>(<span class="self">self</span>.<span class="ident">name</span>())<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">Compress::new</span>(<span class="ident">config</span>, <span class="ident">Metrics::new</span>()<span class="question-mark">?</span>);
         <span class="prelude-val">Ok</span>(<span class="ident">FilterInstance::new</span>(
             <span class="ident">config_json</span>,
@@ -767,18 +760,15 @@
         <span class="ident">CreateFilterArgs</span>, <span class="ident">Filter</span>, <span class="ident">FilterFactory</span>, <span class="ident">ReadContext</span>, <span class="ident">WriteContext</span>,
     };
 
-    <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::quilkin::filters::compress::v1alpha1</span>::{
-        <span class="ident">compress</span>::{<span class="ident">Action</span> <span class="kw">as</span> <span class="ident">ProtoAction</span>, <span class="ident">ActionValue</span>, <span class="ident">Mode</span> <span class="kw">as</span> <span class="ident">ProtoMode</span>, <span class="ident">ModeValue</span>},
-        <span class="ident">Compress</span> <span class="kw">as</span> <span class="ident">ProtoConfig</span>,
-    };
-    <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">Action</span>, <span class="ident">Compress</span>, <span class="ident">CompressFactory</span>, <span class="ident">Config</span>, <span class="ident">Metrics</span>, <span class="ident">Mode</span>};
+    <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
+    <span class="kw">use</span> <span class="ident">proto::compress</span>::{<span class="ident">Action</span> <span class="kw">as</span> <span class="ident">ProtoAction</span>, <span class="ident">ActionValue</span>, <span class="ident">Mode</span> <span class="kw">as</span> <span class="ident">ProtoMode</span>, <span class="ident">ModeValue</span>};
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">convert_proto_config</span>() {
         <span class="kw">let</span> <span class="ident">test_cases</span> <span class="op">=</span> <span class="macro">vec!</span>[
             (
                 <span class="string">&quot;should succeed when all valid values are provided&quot;</span>,
-                <span class="ident">ProtoConfig</span> {
+                <span class="ident">proto::Compress</span> {
                     <span class="ident">mode</span>: <span class="prelude-val">Some</span>(<span class="ident">ModeValue</span> {
                         <span class="ident">value</span>: <span class="ident">ProtoMode::Snappy</span> <span class="kw">as</span> <span class="ident">i32</span>,
                     }),
@@ -797,7 +787,7 @@
             ),
             (
                 <span class="string">&quot;should fail when invalid mode is provided&quot;</span>,
-                <span class="ident">ProtoConfig</span> {
+                <span class="ident">proto::Compress</span> {
                     <span class="ident">mode</span>: <span class="prelude-val">Some</span>(<span class="ident">ModeValue</span> { <span class="ident">value</span>: <span class="number">42</span> }),
                     <span class="ident">on_read</span>: <span class="prelude-val">Some</span>(<span class="ident">ActionValue</span> {
                         <span class="ident">value</span>: <span class="ident">ProtoAction::Compress</span> <span class="kw">as</span> <span class="ident">i32</span>,
@@ -810,7 +800,7 @@
             ),
             (
                 <span class="string">&quot;should fail when invalid on_read is provided&quot;</span>,
-                <span class="ident">ProtoConfig</span> {
+                <span class="ident">proto::Compress</span> {
                     <span class="ident">mode</span>: <span class="prelude-val">Some</span>(<span class="ident">ModeValue</span> {
                         <span class="ident">value</span>: <span class="ident">ProtoMode::Snappy</span> <span class="kw">as</span> <span class="ident">i32</span>,
                     }),
@@ -823,7 +813,7 @@
             ),
             (
                 <span class="string">&quot;should fail when invalid on_write is provided&quot;</span>,
-                <span class="ident">ProtoConfig</span> {
+                <span class="ident">proto::Compress</span> {
                     <span class="ident">mode</span>: <span class="prelude-val">Some</span>(<span class="ident">ModeValue</span> {
                         <span class="ident">value</span>: <span class="ident">ProtoMode::Snappy</span> <span class="kw">as</span> <span class="ident">i32</span>,
                     }),
@@ -836,16 +826,12 @@
             ),
             (
                 <span class="string">&quot;should use correct default values&quot;</span>,
-                <span class="ident">ProtoConfig</span> {
+                <span class="ident">proto::Compress</span> {
                     <span class="ident">mode</span>: <span class="prelude-val">None</span>,
                     <span class="ident">on_read</span>: <span class="prelude-val">None</span>,
                     <span class="ident">on_write</span>: <span class="prelude-val">None</span>,
                 },
-                <span class="prelude-val">Some</span>(<span class="ident">Config</span> {
-                    <span class="ident">mode</span>: <span class="ident">Mode::default</span>(),
-                    <span class="ident">on_read</span>: <span class="ident">Action::default</span>(),
-                    <span class="ident">on_write</span>: <span class="ident">Action::default</span>(),
-                }),
+                <span class="prelude-val">Some</span>(<span class="ident">Config::default</span>()),
             ),
         ];
         <span class="kw">for</span> (<span class="ident">name</span>, <span class="ident">proto_config</span>, <span class="ident">expected</span>) <span class="kw">in</span> <span class="ident">test_cases</span> {

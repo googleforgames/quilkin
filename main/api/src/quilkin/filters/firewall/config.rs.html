@@ -351,6 +351,42 @@
 <span id="349">349</span>
 <span id="350">350</span>
 <span id="351">351</span>
+<span id="352">352</span>
+<span id="353">353</span>
+<span id="354">354</span>
+<span id="355">355</span>
+<span id="356">356</span>
+<span id="357">357</span>
+<span id="358">358</span>
+<span id="359">359</span>
+<span id="360">360</span>
+<span id="361">361</span>
+<span id="362">362</span>
+<span id="363">363</span>
+<span id="364">364</span>
+<span id="365">365</span>
+<span id="366">366</span>
+<span id="367">367</span>
+<span id="368">368</span>
+<span id="369">369</span>
+<span id="370">370</span>
+<span id="371">371</span>
+<span id="372">372</span>
+<span id="373">373</span>
+<span id="374">374</span>
+<span id="375">375</span>
+<span id="376">376</span>
+<span id="377">377</span>
+<span id="378">378</span>
+<span id="379">379</span>
+<span id="380">380</span>
+<span id="381">381</span>
+<span id="382">382</span>
+<span id="383">383</span>
+<span id="384">384</span>
+<span id="385">385</span>
+<span id="386">386</span>
+<span id="387">387</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -376,10 +412,7 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">filters::ConvertProtoConfigError</span>, <span class="ident">map_proto_enum</span>};
 
-<span class="kw">use</span> <span class="ident"><span class="kw">super</span>::quilkin::filters::firewall::v1alpha1</span>::{
-    <span class="ident">firewall</span>::{<span class="ident">Action</span> <span class="kw">as</span> <span class="ident">ProtoAction</span>, <span class="ident">PortRange</span> <span class="kw">as</span> <span class="ident">ProtoPortRange</span>, <span class="ident">Rule</span> <span class="kw">as</span> <span class="ident">ProtoRule</span>},
-    <span class="ident">Firewall</span> <span class="kw">as</span> <span class="ident">ProtoConfig</span>,
-};
+<span class="kw">use</span> <span class="ident"><span class="kw">super</span>::proto</span>;
 
 <span class="doccomment">/// Represents how a Firewall filter is configured for read and write</span>
 <span class="doccomment">/// operations.</span>
@@ -399,6 +432,15 @@
     <span class="doccomment">/// Matching rules will block packets.</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;DENY&quot;</span>)]</span>
     <span class="ident">Deny</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">Action</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">proto::firewall::Action</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">action</span>: <span class="ident">Action</span>) -&gt; <span class="self">Self</span> {
+        <span class="kw">match</span> <span class="ident">action</span> {
+            <span class="ident">Action::Allow</span> =&gt; <span class="ident"><span class="self">Self</span>::Allow</span>,
+            <span class="ident">Action::Deny</span> =&gt; <span class="ident"><span class="self">Self</span>::Deny</span>,
+        }
+    }
 }
 
 <span class="doccomment">/// Combination of CIDR range, port range and action to take.</span>
@@ -445,6 +487,16 @@
     }
 }
 
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">Rule</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">proto::firewall::Rule</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">rule</span>: <span class="ident">Rule</span>) -&gt; <span class="self">Self</span> {
+        <span class="self">Self</span> {
+            <span class="ident">action</span>: <span class="ident">proto::firewall::Action::from</span>(<span class="ident">rule</span>.<span class="ident">action</span>) <span class="kw">as</span> <span class="ident">i32</span>,
+            <span class="ident">source</span>: <span class="ident">rule</span>.<span class="ident">source</span>.<span class="ident">to_string</span>(),
+            <span class="ident">ports</span>: <span class="ident">rule</span>.<span class="ident">ports</span>.<span class="ident">into_iter</span>().<span class="ident">map</span>(<span class="ident">From::from</span>).<span class="ident">collect</span>(),
+        }
+    }
+}
+
 <span class="doccomment">/// Invalid min and max values for a [PortRange].</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">thiserror::Error</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">PortRangeError</span> {
@@ -473,6 +525,15 @@
     <span class="doccomment">/// Returns true if the range contain the given `port`.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">port</span>: <span class="kw-2">&amp;</span><span class="ident">u16</span>) -&gt; <span class="ident">bool</span> {
         <span class="self">self</span>.<span class="number">0</span>.<span class="ident">contains</span>(<span class="ident">port</span>)
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">PortRange</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">proto::firewall::PortRange</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">range</span>: <span class="ident">PortRange</span>) -&gt; <span class="self">Self</span> {
+        <span class="self">Self</span> {
+            <span class="ident">min</span>: <span class="ident">range</span>.<span class="number">0</span>.<span class="ident">start</span>.<span class="ident">into</span>(),
+            <span class="ident">max</span>: <span class="ident">range</span>.<span class="number">0</span>.<span class="ident">end</span>.<span class="ident">into</span>(),
+        }
     }
 }
 
@@ -531,11 +592,22 @@
     }
 }
 
-<span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident">ProtoConfig</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Config</span> {
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">Config</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">proto::Firewall</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">config</span>: <span class="ident">Config</span>) -&gt; <span class="self">Self</span> {
+        <span class="self">Self</span> {
+            <span class="ident">on_read</span>: <span class="ident">config</span>.<span class="ident">on_read</span>.<span class="ident">into_iter</span>().<span class="ident">map</span>(<span class="ident">From::from</span>).<span class="ident">collect</span>(),
+            <span class="ident">on_write</span>: <span class="ident">config</span>.<span class="ident">on_write</span>.<span class="ident">into_iter</span>().<span class="ident">map</span>(<span class="ident">From::from</span>).<span class="ident">collect</span>(),
+        }
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident">proto::Firewall</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Config</span> {
     <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">ConvertProtoConfigError</span>;
 
-    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">p</span>: <span class="ident">ProtoConfig</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident"><span class="self">Self</span>::Error</span><span class="op">&gt;</span> {
-        <span class="kw">fn</span> <span class="ident">convert_port</span>(<span class="ident">range</span>: <span class="kw-2">&amp;</span><span class="ident">ProtoPortRange</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">PortRange</span>, <span class="ident">ConvertProtoConfigError</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">p</span>: <span class="ident">proto::Firewall</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident"><span class="self">Self</span>::Error</span><span class="op">&gt;</span> {
+        <span class="kw">fn</span> <span class="ident">convert_port</span>(
+            <span class="ident">range</span>: <span class="kw-2">&amp;</span><span class="ident">proto::firewall::PortRange</span>,
+        ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">PortRange</span>, <span class="ident">ConvertProtoConfigError</span><span class="op">&gt;</span> {
             <span class="kw">let</span> <span class="ident">min</span> <span class="op">=</span> <span class="ident">u16::try_from</span>(<span class="ident">range</span>.<span class="ident">min</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
                 <span class="ident">ConvertProtoConfigError::new</span>(
                     <span class="macro">format!</span>(<span class="string">&quot;min too large: {err}&quot;</span>),
@@ -554,11 +626,11 @@
                 .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="ident">ConvertProtoConfigError::new</span>(<span class="macro">format!</span>(<span class="string">&quot;{err}&quot;</span>), <span class="prelude-val">Some</span>(<span class="string">&quot;ports&quot;</span>.<span class="ident">into</span>())))
         }
 
-        <span class="kw">fn</span> <span class="ident">convert_rule</span>(<span class="ident">rule</span>: <span class="kw-2">&amp;</span><span class="ident">ProtoRule</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Rule</span>, <span class="ident">ConvertProtoConfigError</span><span class="op">&gt;</span> {
+        <span class="kw">fn</span> <span class="ident">convert_rule</span>(<span class="ident">rule</span>: <span class="kw-2">&amp;</span><span class="ident">proto::firewall::Rule</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Rule</span>, <span class="ident">ConvertProtoConfigError</span><span class="op">&gt;</span> {
             <span class="kw">let</span> <span class="ident">action</span> <span class="op">=</span> <span class="macro">map_proto_enum!</span>(
                 <span class="ident">value</span> <span class="op">=</span> <span class="ident">rule</span>.<span class="ident">action</span>,
                 <span class="ident">field</span> <span class="op">=</span> <span class="string">&quot;policy&quot;</span>,
-                <span class="ident">proto_enum_type</span> <span class="op">=</span> <span class="ident">ProtoAction</span>,
+                <span class="ident">proto_enum_type</span> <span class="op">=</span> <span class="ident">proto::firewall::Action</span>,
                 <span class="ident">target_enum_type</span> <span class="op">=</span> <span class="ident">Action</span>,
                 <span class="ident">variants</span> <span class="op">=</span> [<span class="ident">Allow</span>, <span class="ident">Deny</span>]
             )<span class="question-mark">?</span>;
@@ -654,16 +726,16 @@ on_write:
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">convert</span>() {
-        <span class="kw">let</span> <span class="ident">proto_config</span> <span class="op">=</span> <span class="ident">ProtoConfig</span> {
-            <span class="ident">on_read</span>: <span class="macro">vec!</span>[<span class="ident">ProtoRule</span> {
-                <span class="ident">action</span>: <span class="ident">ProtoAction::Allow</span> <span class="kw">as</span> <span class="ident">i32</span>,
+        <span class="kw">let</span> <span class="ident">proto_config</span> <span class="op">=</span> <span class="ident">proto::Firewall</span> {
+            <span class="ident">on_read</span>: <span class="macro">vec!</span>[<span class="ident">proto::firewall::Rule</span> {
+                <span class="ident">action</span>: <span class="ident">proto::firewall::Action::Allow</span> <span class="kw">as</span> <span class="ident">i32</span>,
                 <span class="ident">source</span>: <span class="string">&quot;192.168.75.0/24&quot;</span>.<span class="ident">into</span>(),
-                <span class="ident">ports</span>: <span class="macro">vec!</span>[<span class="ident">ProtoPortRange</span> { <span class="ident">min</span>: <span class="number">10</span>, <span class="ident">max</span>: <span class="number">100</span> }],
+                <span class="ident">ports</span>: <span class="macro">vec!</span>[<span class="ident">proto::firewall::PortRange</span> { <span class="ident">min</span>: <span class="number">10</span>, <span class="ident">max</span>: <span class="number">100</span> }],
             }],
-            <span class="ident">on_write</span>: <span class="macro">vec!</span>[<span class="ident">ProtoRule</span> {
-                <span class="ident">action</span>: <span class="ident">ProtoAction::Deny</span> <span class="kw">as</span> <span class="ident">i32</span>,
+            <span class="ident">on_write</span>: <span class="macro">vec!</span>[<span class="ident">proto::firewall::Rule</span> {
+                <span class="ident">action</span>: <span class="ident">proto::firewall::Action::Deny</span> <span class="kw">as</span> <span class="ident">i32</span>,
                 <span class="ident">source</span>: <span class="string">&quot;192.168.124.0/24&quot;</span>.<span class="ident">into</span>(),
-                <span class="ident">ports</span>: <span class="macro">vec!</span>[<span class="ident">ProtoPortRange</span> { <span class="ident">min</span>: <span class="number">50</span>, <span class="ident">max</span>: <span class="number">51</span> }],
+                <span class="ident">ports</span>: <span class="macro">vec!</span>[<span class="ident">proto::firewall::PortRange</span> { <span class="ident">min</span>: <span class="number">50</span>, <span class="ident">max</span>: <span class="number">51</span> }],
             }],
         };
 

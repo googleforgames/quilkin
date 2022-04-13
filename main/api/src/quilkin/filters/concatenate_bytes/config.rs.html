@@ -105,6 +105,30 @@
 <span id="103">103</span>
 <span id="104">104</span>
 <span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
+<span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
+<span id="123">123</span>
+<span id="124">124</span>
+<span id="125">125</span>
+<span id="126">126</span>
+<span id="127">127</span>
+<span id="128">128</span>
+<span id="129">129</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -121,8 +145,6 @@
  * limitations under the License.
  */</span>
 
-<span class="macro">crate::include_proto!</span>(<span class="string">&quot;quilkin.filters.concatenate_bytes.v1alpha1&quot;</span>);
-
 <span class="kw">use</span> <span class="ident">std::convert::TryFrom</span>;
 
 <span class="kw">use</span> <span class="ident">base64_serde::base64_serde_type</span>;
@@ -131,9 +153,7 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">filters::prelude</span>::<span class="kw-2">*</span>, <span class="ident">map_proto_enum</span>};
 
-<span class="kw">use</span> <span class="ident"><span class="self">self</span>::quilkin::filters::concatenate_bytes::v1alpha1::concatenate_bytes::Strategy</span> <span class="kw">as</span> <span class="ident">ProtoStrategy</span>;
-
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident"><span class="self">self</span>::quilkin::filters::concatenate_bytes::v1alpha1::ConcatenateBytes</span> <span class="kw">as</span> <span class="ident">ProtoConfig</span>;
+<span class="kw">use</span> <span class="ident"><span class="kw">super</span>::proto</span>;
 
 <span class="macro">base64_serde_type!</span>(<span class="ident">Base64Standard</span>, <span class="ident">base64::STANDARD</span>);
 
@@ -150,6 +170,24 @@
 <span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">Strategy</span> {
     <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
         <span class="ident">Strategy::DoNothing</span>
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">Strategy</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">proto::concatenate_bytes::Strategy</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">strategy</span>: <span class="ident">Strategy</span>) -&gt; <span class="self">Self</span> {
+        <span class="kw">match</span> <span class="ident">strategy</span> {
+            <span class="ident">Strategy::Append</span> =&gt; <span class="ident"><span class="self">Self</span>::Append</span>,
+            <span class="ident">Strategy::Prepend</span> =&gt; <span class="ident"><span class="self">Self</span>::Prepend</span>,
+            <span class="ident">Strategy::DoNothing</span> =&gt; <span class="ident"><span class="self">Self</span>::DoNothing</span>,
+        }
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">Strategy</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">proto::concatenate_bytes::StrategyValue</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">strategy</span>: <span class="ident">Strategy</span>) -&gt; <span class="self">Self</span> {
+        <span class="self">Self</span> {
+            <span class="ident">value</span>: <span class="ident">proto::concatenate_bytes::Strategy::from</span>(<span class="ident">strategy</span>) <span class="kw">as</span> <span class="ident">i32</span>,
+        }
     }
 }
 
@@ -171,17 +209,27 @@
     <span class="kw">pub</span> <span class="ident">bytes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
 }
 
-<span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident">ProtoConfig</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Config</span> {
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">Config</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">proto::ConcatenateBytes</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">config</span>: <span class="ident">Config</span>) -&gt; <span class="self">Self</span> {
+        <span class="self">Self</span> {
+            <span class="ident">on_read</span>: <span class="prelude-val">Some</span>(<span class="ident">config</span>.<span class="ident">on_read</span>.<span class="ident">into</span>()),
+            <span class="ident">on_write</span>: <span class="prelude-val">Some</span>(<span class="ident">config</span>.<span class="ident">on_write</span>.<span class="ident">into</span>()),
+            <span class="ident">bytes</span>: <span class="ident">config</span>.<span class="ident">bytes</span>,
+        }
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident">proto::ConcatenateBytes</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Config</span> {
     <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">ConvertProtoConfigError</span>;
 
-    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">p</span>: <span class="ident">ProtoConfig</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident"><span class="self">Self</span>::Error</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">p</span>: <span class="ident">proto::ConcatenateBytes</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident"><span class="self">Self</span>::Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">on_read</span> <span class="op">=</span> <span class="ident">p</span>
             .<span class="ident">on_read</span>
             .<span class="ident">map</span>(<span class="op">|</span><span class="ident">strategy</span><span class="op">|</span> {
                 <span class="macro">map_proto_enum!</span>(
                     <span class="ident">value</span> <span class="op">=</span> <span class="ident">strategy</span>.<span class="ident">value</span>,
                     <span class="ident">field</span> <span class="op">=</span> <span class="string">&quot;on_read&quot;</span>,
-                    <span class="ident">proto_enum_type</span> <span class="op">=</span> <span class="ident">ProtoStrategy</span>,
+                    <span class="ident">proto_enum_type</span> <span class="op">=</span> <span class="ident">proto::concatenate_bytes::Strategy</span>,
                     <span class="ident">target_enum_type</span> <span class="op">=</span> <span class="ident">Strategy</span>,
                     <span class="ident">variants</span> <span class="op">=</span> [<span class="ident">DoNothing</span>, <span class="ident">Append</span>, <span class="ident">Prepend</span>]
                 )
@@ -195,7 +243,7 @@
                 <span class="macro">map_proto_enum!</span>(
                     <span class="ident">value</span> <span class="op">=</span> <span class="ident">strategy</span>.<span class="ident">value</span>,
                     <span class="ident">field</span> <span class="op">=</span> <span class="string">&quot;on_write&quot;</span>,
-                    <span class="ident">proto_enum_type</span> <span class="op">=</span> <span class="ident">ProtoStrategy</span>,
+                    <span class="ident">proto_enum_type</span> <span class="op">=</span> <span class="ident">proto::concatenate_bytes::Strategy</span>,
                     <span class="ident">target_enum_type</span> <span class="op">=</span> <span class="ident">Strategy</span>,
                     <span class="ident">variants</span> <span class="op">=</span> [<span class="ident">DoNothing</span>, <span class="ident">Append</span>, <span class="ident">Prepend</span>]
                 )

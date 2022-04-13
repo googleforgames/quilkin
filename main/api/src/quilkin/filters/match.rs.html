@@ -221,11 +221,49 @@
 <span id="219">219</span>
 <span id="220">220</span>
 <span id="221">221</span>
-</pre><pre class="rust"><code><span class="kw">mod</span> <span class="ident">config</span>;
+<span id="222">222</span>
+<span id="223">223</span>
+<span id="224">224</span>
+<span id="225">225</span>
+<span id="226">226</span>
+<span id="227">227</span>
+<span id="228">228</span>
+<span id="229">229</span>
+<span id="230">230</span>
+<span id="231">231</span>
+<span id="232">232</span>
+<span id="233">233</span>
+<span id="234">234</span>
+<span id="235">235</span>
+<span id="236">236</span>
+<span id="237">237</span>
+<span id="238">238</span>
+<span id="239">239</span>
+<span id="240">240</span>
+</pre><pre class="rust"><code><span class="comment">/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */</span>
+
+<span class="macro">crate::include_proto!</span>(<span class="string">&quot;quilkin.filters.matches.v1alpha1&quot;</span>);
+
+<span class="kw">mod</span> <span class="ident">config</span>;
 <span class="kw">mod</span> <span class="ident">metrics</span>;
 
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">config::ConfigType</span>, <span class="ident">filters::prelude</span>::<span class="kw-2">*</span>, <span class="ident">metadata::Value</span>};
 
+<span class="kw">use</span> <span class="ident"><span class="self">self</span>::quilkin::filters::matches::v1alpha1</span> <span class="kw">as</span> <span class="ident">proto</span>;
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters</span>::<span class="ident">r#match</span><span class="ident">::metrics::Metrics</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">config::Config</span>;
 
@@ -361,7 +399,7 @@
     <span class="kw">fn</span> <span class="ident">create_filter</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">args</span>: <span class="ident">CreateFilterArgs</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">FilterInstance</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> (<span class="ident">config_json</span>, <span class="ident">config</span>) <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">require_config</span>(<span class="ident">args</span>.<span class="ident">config</span>)<span class="question-mark">?</span>
-            .<span class="ident">deserialize</span>::<span class="op">&lt;</span><span class="ident">Config</span>, <span class="ident">config::proto::Match</span><span class="op">&gt;</span>(<span class="self">self</span>.<span class="ident">name</span>())<span class="question-mark">?</span>;
+            .<span class="ident">deserialize</span>::<span class="op">&lt;</span><span class="ident">Config</span>, <span class="ident">proto::Match</span><span class="op">&gt;</span>(<span class="self">self</span>.<span class="ident">name</span>())<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">MatchInstance::new</span>(<span class="ident">config</span>, <span class="ident">Metrics::new</span>()<span class="question-mark">?</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="ident">FilterInstance::new</span>(

@@ -128,6 +128,26 @@
 <span id="126">126</span>
 <span id="127">127</span>
 <span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
+<span id="131">131</span>
+<span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -166,6 +186,8 @@
     <span class="ident">InitializeMetricsFailed</span>(<span class="ident">String</span>),
     <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Protobuf error: {}&quot;</span>, .<span class="number">0</span>)]</span>
     <span class="ident">ConvertProtoConfig</span>(<span class="ident">ConvertProtoConfigError</span>),
+    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Infallible! This should never occur&quot;</span>)]</span>
+    <span class="ident">Infallible</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">Error</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ValidationError</span> {
@@ -174,9 +196,27 @@
     }
 }
 
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">std::convert::Infallible</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Error</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="kw">_</span>: <span class="ident">std::convert::Infallible</span>) -&gt; <span class="self">Self</span> {
+        <span class="ident"><span class="self">Self</span>::Infallible</span>
+    }
+}
+
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">MetricsError</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Error</span> {
     <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">error</span>: <span class="ident">MetricsError</span>) -&gt; <span class="self">Self</span> {
         <span class="ident">Error::InitializeMetricsFailed</span>(<span class="ident">error</span>.<span class="ident">to_string</span>())
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">serde_yaml::Error</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Error</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">error</span>: <span class="ident">serde_yaml::Error</span>) -&gt; <span class="self">Self</span> {
+        <span class="ident"><span class="self">Self</span>::DeserializeFailed</span>(<span class="ident">error</span>.<span class="ident">to_string</span>())
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">prost::EncodeError</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Error</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">error</span>: <span class="ident">prost::EncodeError</span>) -&gt; <span class="self">Self</span> {
+        <span class="ident"><span class="self">Self</span>::ConvertProtoConfig</span>(<span class="ident">ConvertProtoConfigError::new</span>(<span class="ident">error</span>, <span class="prelude-val">None</span>))
     }
 }
 
