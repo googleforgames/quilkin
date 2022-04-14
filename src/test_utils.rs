@@ -14,15 +14,17 @@
  * limitations under the License.
  */
 
+use once_cell::sync::Lazy;
+use std::sync::atomic::Ordering;
 /// Common utilities for testing
 use std::{
     net::{Ipv4Addr, SocketAddr, SocketAddrV4},
     str::from_utf8,
-    sync::Arc,
+    sync::{atomic::AtomicU16, Arc},
 };
 
 use tokio::net::UdpSocket;
-use tokio::sync::{mpsc, oneshot, watch};
+use tokio::sync::{mpsc, watch};
 
 use crate::{
     config::{Builder as ConfigBuilder, Config},
@@ -30,6 +32,30 @@ use crate::{
     filters::{prelude::*, FilterRegistry},
     metadata::Value,
 };
+
+static PORT_COUNTER: Lazy<AtomicU16> = Lazy::new(|| AtomicU16::new(7000));
+
+static PRETTY_PRINT: Lazy<()> = Lazy::new(|| {
+    tracing_subscriber::fmt()
+        .pretty()
+        .with_max_level(tracing::Level::DEBUG)
+        .init()
+});
+
+/// Returns a local address on a port that is atomically incremented on each request.
+/// This is an easy way to get an address/port that hasn't been assigned to another test.
+/// Starts at 7000 to avoid the higher ephemeral port range.
+pub fn get_local_addr() -> SocketAddr {
+    let port = (&*PORT_COUNTER).fetch_add(1, Ordering::SeqCst);
+    let addr = SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, port).into();
+    tracing::debug!(addr = ?addr, "test_util::get_local_addr");
+    addr
+}
+
+/// Put in a test to turn on pretty printing for `tracing` logging statements.
+pub fn pretty_print() {
+    Lazy::force(&PRETTY_PRINT);
+}
 
 // TestFilter is useful for testing that commands are executing filters appropriately.
 pub struct TestFilter;
@@ -82,7 +108,7 @@ pub struct OpenSocketRecvPacket {
     /// The opened socket
     pub socket: Arc<UdpSocket>,
     /// A channel on which the received packet will be forwarded.
-    pub packet_rx: oneshot::Receiver<String>,
+    pub packet_rx: watch::Receiver<String>,
 }
 
 impl Drop for TestHelper {
@@ -107,16 +133,17 @@ impl Drop for TestHelper {
 
 impl TestHelper {
     /// Opens a new socket bound to an ephemeral port
-    pub async fn create_socket(&self) -> Arc<UdpSocket> {
-        let addr = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 0);
-        Arc::new(UdpSocket::bind(addr).await.unwrap())
+    pub async fn create_socket(&self) -> UdpSocket {
+        let addr = SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, 0);
+        // Use a standard socket in test utils as we only want to bind sockets to unused ports.
+        UdpSocket::bind(addr).await.unwrap()
     }
 
     /// Opens a socket, listening for a packet. Once a packet is received, it
     /// is forwarded over the returned channel.
     pub async fn open_socket_and_recv_single_packet(&self) -> OpenSocketRecvPacket {
-        let socket = self.create_socket().await;
-        let (packet_tx, packet_rx) = oneshot::channel::<String>();
+        let socket = Arc::new(self.create_socket().await);
+        let (packet_tx, packet_rx) = watch::channel::<String>("".into());
         let socket_recv = socket.clone();
         tokio::spawn(async move {
             let mut buf = vec![0; 1024];
@@ -134,7 +161,7 @@ impl TestHelper {
         &mut self,
     ) -> (mpsc::Receiver<String>, Arc<UdpSocket>) {
         let (packet_tx, packet_rx) = mpsc::channel::<String>(10);
-        let socket = self.create_socket().await;
+        let socket = Arc::new(self.create_socket().await);
         let mut shutdown_rx = self.get_shutdown_subscriber().await;
         let socket_recv = socket.clone();
         tokio::spawn(async move {
@@ -203,7 +230,7 @@ impl TestHelper {
     pub fn run_server_with_config(&mut self, mut config: Config) {
         config.admin = None;
 
-        self.run_server(<_>::try_from(config).unwrap());
+        self.run_server(<_>::try_from(config).unwrap())
     }
 
     pub fn run_server(&mut self, server: crate::Server) {
@@ -302,18 +329,24 @@ pub fn load_test_filters() {
 #[cfg(test)]
 mod tests {
     use crate::test_utils::TestHelper;
+    use std::time::Duration;
+    use tokio::time::timeout;
 
     #[tokio::test]
     async fn test_echo_server() {
         let mut t = TestHelper::default();
         let echo_addr = t.run_echo_server().await;
-        let endpoint = t.open_socket_and_recv_single_packet().await;
+        let mut endpoint = t.open_socket_and_recv_single_packet().await;
         let msg = "hello";
         endpoint
             .socket
             .send_to(msg.as_bytes(), &echo_addr.to_socket_addr().unwrap())
             .await
             .unwrap();
-        assert_eq!(msg, endpoint.packet_rx.await.unwrap());
+        timeout(Duration::from_secs(5), endpoint.packet_rx.changed())
+            .await
+            .expect("should not timeout")
+            .unwrap();
+        assert_eq!(msg, *endpoint.packet_rx.borrow());
     }
 }

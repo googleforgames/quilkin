@@ -21,8 +21,10 @@ use quilkin::{
     test_utils::TestHelper,
 };
 use std::net::SocketAddr;
-use tokio::sync::oneshot::Receiver;
-use tokio::time::{timeout, Duration};
+use tokio::{
+    sync::watch,
+    time::{timeout, Duration},
+};
 
 #[tokio::test]
 async fn firewall_allow() {
@@ -39,15 +41,13 @@ on_write:
     ports:
        - %2
 ";
-    let recv = test(&mut t, 12354, yaml).await;
+    let mut recv = test(&mut t, 12354, yaml).await;
 
-    assert_eq!(
-        "hello",
-        timeout(Duration::from_secs(5), recv)
-            .await
-            .expect("should have received a packet")
-            .unwrap()
-    );
+    timeout(Duration::from_secs(5), recv.changed())
+        .await
+        .expect("should have received a packet")
+        .unwrap();
+    assert_eq!("hello", *recv.borrow());
 }
 
 #[tokio::test]
@@ -65,9 +65,8 @@ on_write:
     ports:
        - %2
 ";
-    let recv = test(&mut t, 12355, yaml).await;
-
-    let result = timeout(Duration::from_secs(3), recv).await;
+    let mut recv = test(&mut t, 12355, yaml).await;
+    let result = timeout(Duration::from_secs(3), recv.changed()).await;
     assert!(result.is_err(), "should not have received a packet");
 }
 
@@ -86,13 +85,12 @@ on_write:
     ports:
        - %2
 ";
-    let recv = test(&mut t, 12356, yaml).await;
-
-    let result = timeout(Duration::from_secs(3), recv).await;
+    let mut recv = test(&mut t, 12356, yaml).await;
+    let result = timeout(Duration::from_secs(3), recv.changed()).await;
     assert!(result.is_err(), "should not have received a packet");
 }
 
-async fn test(t: &mut TestHelper, server_port: u16, yaml: &str) -> Receiver<String> {
+async fn test(t: &mut TestHelper, server_port: u16, yaml: &str) -> watch::Receiver<String> {
     let echo = t.run_echo_server().await;
 
     let recv = t.open_socket_and_recv_single_packet().await;

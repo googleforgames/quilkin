@@ -72,7 +72,7 @@ impl SessionManager {
                         break;
                     }
                     _ = interval.tick() => {
-                        tracing::debug!("Attempting to Prune Sessions");
+                        tracing::debug!("Pruning Sessions");
                         Self::prune_sessions(&mut sessions).await;
 
                     }

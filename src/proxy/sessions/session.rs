@@ -419,7 +419,7 @@ mod tests {
 
         // without a filter
         let (sender, _) = mpsc::channel::<UpstreamPacket>(1);
-        let ep = t.open_socket_and_recv_single_packet().await;
+        let mut ep = t.open_socket_and_recv_single_packet().await;
         let addr: EndpointAddress = ep.socket.local_addr().unwrap().into();
         let endpoint = Endpoint::new(addr.clone());
 
@@ -435,7 +435,11 @@ mod tests {
         .await
         .unwrap();
         session.send(msg.as_bytes()).await.unwrap();
-        assert_eq!(msg, ep.packet_rx.await.unwrap());
+        timeout(Duration::from_secs(1), ep.packet_rx.changed())
+            .await
+            .expect("should receive a packet")
+            .unwrap();
+        assert_eq!(msg, *ep.packet_rx.borrow());
     }
 
     #[tokio::test]
@@ -545,7 +549,7 @@ mod tests {
         let t = TestHelper::default();
 
         let (sender, _) = mpsc::channel::<UpstreamPacket>(1);
-        let endpoint = t.open_socket_and_recv_single_packet().await;
+        let mut endpoint = t.open_socket_and_recv_single_packet().await;
         let addr: EndpointAddress = endpoint.socket.local_addr().unwrap().into();
         let session = Session::new(SessionArgs {
             metrics: Metrics::new().unwrap(),
@@ -559,7 +563,10 @@ mod tests {
         .await
         .unwrap();
         session.send(b"hello").await.unwrap();
-        endpoint.packet_rx.await.unwrap();
+        timeout(Duration::from_secs(1), endpoint.packet_rx.changed())
+            .await
+            .expect("should receive a packet")
+            .unwrap();
 
         assert_eq!(session.metrics.tx_bytes_total.get(), 5);
         assert_eq!(session.metrics.tx_packets_total.get(), 1);
