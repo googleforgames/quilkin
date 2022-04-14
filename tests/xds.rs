@@ -22,16 +22,10 @@ use quilkin::{
         config::{
             cluster::v3::{cluster::ClusterDiscoveryType, Cluster},
             endpoint::v3::{ClusterLoadAssignment, LocalityLbEndpoints},
-            listener::v3::{
-                filter::ConfigType, Filter as LdsFilter, FilterChain as LdsFilterChain, Listener,
-            },
+            listener::v3::{filter::ConfigType, Filter, FilterChain, Listener},
         },
-        service::discovery::v3::{
-            aggregated_discovery_service_server::{
-                AggregatedDiscoveryService as ADS, AggregatedDiscoveryServiceServer as ADSServer,
-            },
-            DeltaDiscoveryRequest, DeltaDiscoveryResponse, DiscoveryRequest, DiscoveryResponse,
-        },
+        service::discovery::v3::DiscoveryResponse,
+        DiscoveryServiceProvider, ResourceType,
     },
 };
 
@@ -40,76 +34,51 @@ tonic::include_proto!("quilkin.filters.concatenate_bytes.v1alpha1");
 use concatenate_bytes::{Strategy, StrategyValue};
 
 use prost::Message;
-use std::net::SocketAddr;
-use std::sync::Arc;
-use std::time::Duration;
-use tokio::sync::mpsc;
-use tokio::sync::watch;
+use std::{collections::HashMap, net::SocketAddr, sync::Arc, time::Duration};
+use tokio::sync::{mpsc, Mutex};
 use tokio::time;
-use tonic::transport::Server;
 
 const CLUSTER_TYPE: &str = "type.googleapis.com/envoy.config.cluster.v3.Cluster";
 const LISTENER_TYPE: &str = "type.googleapis.com/envoy.config.listener.v3.Listener";
 
-// A test xDS server implementation that waits for a client to connect and
-// forwards DiscoveryResponse(s) to the client. A rx chan is passed in upon creation
-// and can be used by the test to drive the DiscoveryResponses sent by the server to the client.
-struct ControlPlane {
-    source_discovery_response_rx:
-        tokio::sync::Mutex<Option<mpsc::Receiver<Result<DiscoveryResponse, tonic::Status>>>>,
-    shutdown_rx: watch::Receiver<()>,
+struct MessageServiceProvider {
+    resources: Arc<Mutex<HashMap<ResourceType, DiscoveryResponse>>>,
 }
 
-#[tonic::async_trait]
-impl ADS for ControlPlane {
-    type StreamAggregatedResourcesStream =
-        tokio_stream::wrappers::ReceiverStream<Result<DiscoveryResponse, tonic::Status>>;
-    type DeltaAggregatedResourcesStream =
-        tokio_stream::wrappers::ReceiverStream<Result<DeltaDiscoveryResponse, tonic::Status>>;
+impl MessageServiceProvider {
+    fn new() -> (Self, mpsc::Sender<(ResourceType, DiscoveryResponse)>) {
+        let (tx, mut rx) = mpsc::channel(1);
+        let resources = Arc::<Mutex<HashMap<_, _>>>::default();
 
-    async fn stream_aggregated_resources(
-        &self,
-        _request: tonic::Request<tonic::Streaming<DiscoveryRequest>>,
-    ) -> Result<tonic::Response<Self::StreamAggregatedResourcesStream>, tonic::Status> {
-        let mut source_discovery_response_rx = self
-            .source_discovery_response_rx
-            .lock()
-            .await
-            .take()
-            .unwrap();
-
-        let mut shutdown_rx = self.shutdown_rx.clone();
-        let (discovery_response_tx, discovery_response_rx) = mpsc::channel(1);
-        tokio::spawn(async move {
-            loop {
-                tokio::select! {
-                    _ = shutdown_rx.changed() => {
-                        return;
-                    }
-                    source_response = source_discovery_response_rx.recv() => {
-                        match source_response {
-                            None => {
-                                tracing::info!("Stopping updates to client: source was dropped");
-                                return;
-                            },
-                            Some(result) => {
-                                let _ = discovery_response_tx.send(result).await.unwrap();
-                            }
-                        }
-                    }
+        tokio::spawn({
+            let resources = resources.clone();
+            async move {
+                loop {
+                    let (kind, response) = rx.recv().await.unwrap();
+                    resources.lock().await.insert(kind, response);
                 }
             }
         });
-        Ok(tonic::Response::new(
-            tokio_stream::wrappers::ReceiverStream::new(discovery_response_rx),
-        ))
-    }
 
-    async fn delta_aggregated_resources(
+        (Self { resources }, tx)
+    }
+}
+
+#[tonic::async_trait]
+impl DiscoveryServiceProvider for MessageServiceProvider {
+    async fn discovery_request(
         &self,
-        _request: tonic::Request<tonic::Streaming<DeltaDiscoveryRequest>>,
-    ) -> Result<tonic::Response<Self::DeltaAggregatedResourcesStream>, tonic::Status> {
-        unimplemented!()
+        _node_id: &str,
+        _version: u64,
+        kind: ResourceType,
+        _names: &[String],
+    ) -> Result<DiscoveryResponse, tonic::Status> {
+        self.resources
+            .lock()
+            .await
+            .get(&kind)
+            .cloned()
+            .ok_or_else(|| tonic::Status::not_found("No resource supplied"))
     }
 }
 
@@ -130,22 +99,13 @@ management_servers:
     let server = quilkin::Server::try_from(config).unwrap();
 
     let (_shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(());
-    let (discovery_response_tx, discovery_response_rx) = mpsc::channel(1);
 
-    let mut control_plane_shutdown_rx = shutdown_rx.clone();
-    tokio::spawn(async move {
-        let server = ADSServer::new(ControlPlane {
-            source_discovery_response_rx: tokio::sync::Mutex::new(Some(discovery_response_rx)),
-            shutdown_rx: control_plane_shutdown_rx.clone(),
-        });
-        let server = Server::builder().add_service(server);
-        server
-            .serve_with_shutdown("0.0.0.0:23456".parse().unwrap(), async move {
-                let _: Result<(), _> = control_plane_shutdown_rx.changed().await;
-            })
-            .await
-            .unwrap();
-    });
+    let (message_provider, discovery_response_tx) = MessageServiceProvider::new();
+    tokio::spawn(quilkin::manage(
+        23456,
+        0,
+        std::sync::Arc::from(message_provider),
+    ));
 
     // Run the server.
     tokio::spawn(async move {
@@ -168,7 +128,7 @@ management_servers:
             upstream_address,
         );
         discovery_response_tx
-            .send(Ok(cluster_update))
+            .send((ResourceType::Endpoint, cluster_update))
             .await
             .unwrap();
 
@@ -178,7 +138,10 @@ management_servers:
             i.to_string().as_str(),
             vec![b1.into(), b2.into()],
         );
-        discovery_response_tx.send(Ok(filter_update)).await.unwrap();
+        discovery_response_tx
+            .send((ResourceType::Listener, filter_update))
+            .await
+            .unwrap();
 
         // Open a socket we can use to talk to the proxy and receive response back on.
         let (mut response_rx, socket) = t.open_socket_and_recv_multiple_packets().await;
@@ -222,7 +185,7 @@ fn concat_listener_discovery_response(
     let filter_name = "quilkin.filters.concatenate_bytes.v1alpha1.ConcatenateBytes";
     let filters = bytes
         .into_iter()
-        .map(|value| LdsFilter {
+        .map(|value| Filter {
             name: filter_name.into(),
             config_type: Some(ConfigType::TypedConfig({
                 let mut buf = vec![];
@@ -309,15 +272,15 @@ fn create_endpoint_resource(cluster_name: &str, address: EndpointAddress) -> Clu
     }
 }
 
-fn create_lds_filter_chain(filters: Vec<LdsFilter>) -> LdsFilterChain {
-    LdsFilterChain {
+fn create_lds_filter_chain(filters: Vec<Filter>) -> FilterChain {
+    FilterChain {
         name: "test-lds-filter-chain".into(),
         filters,
         ..<_>::default()
     }
 }
 
-fn create_lds_listener(name: String, filter_chains: Vec<LdsFilterChain>) -> Listener {
+fn create_lds_listener(name: String, filter_chains: Vec<FilterChain>) -> Listener {
     Listener {
         name,
         filter_chains,

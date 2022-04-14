@@ -125,13 +125,35 @@ mod google {
     }
 }
 
-pub use xds::*;
-
+mod cache;
+mod metrics;
+mod resource;
+pub mod provider;
 pub(crate) mod client;
 pub(crate) mod cluster;
 pub(crate) mod listener;
-mod metrics;
-mod resource;
+pub(crate) mod server;
 
-pub use client::Client;
-pub use resource::{Resource, ResourceType};
+pub use self::{
+    cache::Cache,
+    client::Client,
+    provider::DiscoveryServiceProvider,
+    resource::{Resource, ResourceType},
+    server::ControlPlane,
+    service::discovery::v3::aggregated_discovery_service_client::AggregatedDiscoveryServiceClient,
+    xds::*,
+};
+
+use service::discovery::v3::aggregated_discovery_service_server::AggregatedDiscoveryServiceServer;
+
+pub async fn manage(
+    port: u16,
+    _admin_port: u16,
+    provider: std::sync::Arc<dyn DiscoveryServiceProvider>,
+) -> crate::Result<()> {
+    let server = AggregatedDiscoveryServiceServer::new(ControlPlane::from_arc(provider));
+    let server = tonic::transport::Server::builder().add_service(server);
+    Ok(server
+        .serve((std::net::Ipv4Addr::UNSPECIFIED, port).into())
+        .await?)
+}

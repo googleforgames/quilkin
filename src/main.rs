@@ -59,6 +59,44 @@ enum Commands {
         )]
         filter_ids: Vec<String>,
     },
+    Manage {
+        #[clap(
+            short,
+            long,
+            default_value = "18000",
+            help = "The listening port for the management server."
+        )]
+        port: u16,
+        #[clap(
+            short,
+            long,
+            default_value = "18090",
+            help = "The listening port for the admin server."
+        )]
+        admin_port: u16,
+        #[clap(subcommand)]
+        provider: ProviderCommands,
+    },
+}
+
+#[derive(clap::Subcommand)]
+enum ProviderCommands {
+    Agones {
+        #[clap(
+            short,
+            long,
+            default_value = "quilkin",
+            help = "Namespace under which the proxies run."
+        )]
+        config_namespace: String,
+        #[clap(
+            short,
+            long,
+            default_value = "gameservers",
+            help = "Namespace under which the game servers run."
+        )]
+        gameservers_namespace: String,
+    },
 }
 
 #[tokio::main]
@@ -91,6 +129,27 @@ async fn main() -> quilkin::Result<()> {
                 .and_then(|file| quilkin::Config::from_reader(file).map_err(From::from))?;
 
             quilkin::run(config, vec![]).await
+        }
+
+        Commands::Manage {
+            port,
+            admin_port,
+            provider,
+        } => {
+            let provider = match provider {
+                ProviderCommands::Agones {
+                    gameservers_namespace,
+                    config_namespace,
+                } => std::sync::Arc::from(
+                    quilkin::xds::provider::AgonesProvider::new(
+                        gameservers_namespace,
+                        config_namespace,
+                    )
+                    .await?,
+                ),
+            };
+
+            quilkin::manage(port, admin_port, provider).await
         }
 
         Commands::GenerateConfigSchema {
