@@ -107,15 +107,57 @@ mod google {
     }
 }
 
-const ENDPOINT_TYPE: &str = "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment";
-const CLUSTER_TYPE: &str = "type.googleapis.com/envoy.config.cluster.v3.Cluster";
-const LISTENER_TYPE: &str = "type.googleapis.com/envoy.config.listener.v3.Listener";
+macro_rules! type_urls {
+    ($($base_url:literal : {$($const_name:ident = $type_url:literal),+ $(,)?})+) => {
+        $(
+            $(
+                pub const $const_name : &str = concat!($base_url, "/", $type_url);
+            )+
+        )+
+    }
+}
 
-pub use xds::*;
+type_urls! {
+    "type.googleapis.com": {
+        CLUSTER_TYPE = "envoy.config.cluster.v3.Cluster",
+        ENDPOINT_TYPE = "envoy.config.endpoint.v3.ClusterLoadAssignment",
+        EXTENSION_CONFIG_TYPE = "envoy.config.core.v3.TypedExtensionConfig",
+        LISTENER_TYPE = "envoy.config.listener.v3.Listener",
+        ROUTE_TYPE = "envoy.config.route.v3.RouteConfiguration",
+        RUNTIME_TYPE = "envoy.service.runtime.v3.Runtime",
+        SCOPED_ROUTE_TYPE = "envoy.config.route.v3.ScopedRouteConfiguration",
+        SECRET_TYPE = "envoy.extensions.transport_sockets.tls.v3.Secret",
+        VIRTUAL_HOST_TYPE = "envoy.config.route.v3.VirtualHost",
+    }
+}
 
 pub(crate) mod ads_client;
+mod cache;
 pub(crate) mod cluster;
 pub(crate) mod listener;
 mod metrics;
+pub mod provider;
+mod resource;
+pub(crate) mod server;
 
 pub(crate) use ads_client::AdsClient;
+pub use cache::Cache;
+pub use provider::DiscoveryServiceProvider;
+pub use resource::ResourceType;
+pub use server::ControlPlane;
+pub use service::discovery::v3::aggregated_discovery_service_client::AggregatedDiscoveryServiceClient;
+pub use xds::*;
+
+use service::discovery::v3::aggregated_discovery_service_server::AggregatedDiscoveryServiceServer;
+
+pub async fn manage(
+    port: u16,
+    _admin_port: u16,
+    provider: std::sync::Arc<dyn DiscoveryServiceProvider>,
+) -> crate::Result<()> {
+    let server = AggregatedDiscoveryServiceServer::new(ControlPlane::from_arc(provider));
+    let server = tonic::transport::Server::builder().add_service(server);
+    Ok(server
+        .serve((std::net::Ipv4Addr::UNSPECIFIED, port).into())
+        .await?)
+}

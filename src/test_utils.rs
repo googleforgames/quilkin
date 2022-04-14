@@ -16,6 +16,7 @@
 
 /// Common utilities for testing
 use std::{
+    collections::HashMap,
     net::{Ipv4Addr, SocketAddr, SocketAddrV4},
     str::from_utf8,
     sync::Arc,
@@ -29,6 +30,7 @@ use crate::{
     endpoint::{Endpoint, EndpointAddress, Endpoints},
     filters::{prelude::*, FilterRegistry},
     metadata::Value,
+    xds::{service::discovery::v3::DiscoveryResponse, DiscoveryServiceProvider, ResourceType},
 };
 
 // TestFilter is useful for testing that commands are executing filters appropriately.
@@ -297,6 +299,32 @@ pub fn new_test_chain() -> crate::filters::SharedFilterChain {
 
 pub fn load_test_filters() {
     FilterRegistry::register([TestFilter::factory()]);
+}
+
+pub struct TestProvider {
+    resources: HashMap<ResourceType, DiscoveryResponse>,
+}
+
+impl TestProvider {
+    pub fn new(resources: HashMap<ResourceType, DiscoveryResponse>) -> Self {
+        Self { resources }
+    }
+}
+
+#[tonic::async_trait]
+impl DiscoveryServiceProvider for TestProvider {
+    async fn discovery_request(
+        &self,
+        _node_id: &str,
+        _version: u64,
+        kind: ResourceType,
+        _names: &[String],
+    ) -> Result<DiscoveryResponse, tonic::Status> {
+        self.resources
+            .get(&kind)
+            .cloned()
+            .ok_or_else(|| tonic::Status::not_found("No resource supplied"))
+    }
 }
 
 #[cfg(test)]

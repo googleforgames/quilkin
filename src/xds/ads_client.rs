@@ -327,7 +327,7 @@ impl RpcSender {
         &self,
         node_id: String,
     ) -> Result<(), RpcSessionError> {
-        for resource_type in &[CLUSTER_TYPE, LISTENER_TYPE] {
+        for resource_type in &[ENDPOINT_TYPE, LISTENER_TYPE] {
             let send_result = self
                 .send_discovery_request(DiscoveryRequest {
                     node: Some(Node {

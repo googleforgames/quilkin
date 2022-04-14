@@ -29,13 +29,17 @@ pub mod filters;
 
 #[doc(hidden)]
 pub mod test_utils;
-#[doc(hidden)]
 pub mod xds;
 
 pub type Result<T, E = eyre::Error> = std::result::Result<T, E>;
 
 #[doc(inline)]
-pub use self::{config::Config, proxy::Server, runner::run};
+pub use self::{
+    config::Config,
+    proxy::Server,
+    runner::run,
+    xds::manage,
+};
 
 pub use quilkin_macros::include_proto;
 
