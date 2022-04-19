@@ -177,7 +177,7 @@
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ConfigType</span> {
     <span class="doccomment">/// Static configuration from YAML.</span>
     <span class="attribute">#[<span class="ident">schemars</span>(<span class="ident">with</span> <span class="op">=</span> <span class="string">&quot;serde_json::Value&quot;</span>)]</span>
-    <span class="ident">Static</span>(<span class="ident">serde_yaml::Value</span>),
+    <span class="ident">Static</span>(<span class="ident">serde_json::Value</span>),
     <span class="doccomment">/// Dynamic configuration from Protobuf.</span>
     <span class="attribute">#[<span class="ident">schemars</span>(<span class="ident">skip</span>)]</span>
     <span class="ident">Dynamic</span>(<span class="ident">prost_types::Any</span>),
@@ -253,7 +253,7 @@
     <span class="kw">where</span>
         <span class="ident">D</span>: <span class="ident">serde::Deserializer</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span>,
     {
-        <span class="ident">serde_yaml::Value::deserialize</span>(<span class="ident">de</span>).<span class="ident">map</span>(<span class="ident">ConfigType::Static</span>)
+        <span class="ident">serde_json::Value::deserialize</span>(<span class="ident">de</span>).<span class="ident">map</span>(<span class="ident">ConfigType::Static</span>)
     }
 }
 

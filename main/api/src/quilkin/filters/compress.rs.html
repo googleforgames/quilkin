@@ -561,16 +561,6 @@
 <span id="559">559</span>
 <span id="560">560</span>
 <span id="561">561</span>
-<span id="562">562</span>
-<span id="563">563</span>
-<span id="564">564</span>
-<span id="565">565</span>
-<span id="566">566</span>
-<span id="567">567</span>
-<span id="568">568</span>
-<span id="569">569</span>
-<span id="570">570</span>
-<span id="571">571</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -750,8 +740,6 @@
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span> {
     <span class="kw">use</span> <span class="ident">std::convert::TryFrom</span>;
-
-    <span class="kw">use</span> <span class="ident">serde_yaml</span>::{<span class="ident">Mapping</span>, <span class="ident">Value</span>};
     <span class="kw">use</span> <span class="ident">tracing_test::traced_test</span>;
 
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">Endpoints</span>, <span class="ident">UpstreamEndpoints</span>};
@@ -851,17 +839,13 @@
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">default_mode_factory</span>() {
         <span class="kw">let</span> <span class="ident">factory</span> <span class="op">=</span> <span class="ident">CompressFactory::new</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">Mapping::new</span>();
-        <span class="ident">map</span>.<span class="ident">insert</span>(
-            <span class="ident">Value::String</span>(<span class="string">&quot;on_read&quot;</span>.<span class="ident">into</span>()),
-            <span class="ident">Value::String</span>(<span class="string">&quot;DECOMPRESS&quot;</span>.<span class="ident">into</span>()),
-        );
-        <span class="ident">map</span>.<span class="ident">insert</span>(
-            <span class="ident">Value::String</span>(<span class="string">&quot;on_write&quot;</span>.<span class="ident">into</span>()),
-            <span class="ident">Value::String</span>(<span class="string">&quot;COMPRESS&quot;</span>.<span class="ident">into</span>()),
-        );
+        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="macro">serde_json::json!</span>({
+            <span class="string">&quot;on_read&quot;</span>: <span class="string">&quot;DECOMPRESS&quot;</span>.<span class="ident">to_string</span>(),
+            <span class="string">&quot;on_write&quot;</span>: <span class="string">&quot;COMPRESS&quot;</span>.<span class="ident">to_string</span>(),
+
+        });
         <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">factory</span>
-            .<span class="ident">create_filter</span>(<span class="ident">CreateFilterArgs::fixed</span>(<span class="prelude-val">Some</span>(<span class="ident">Value::Mapping</span>(<span class="ident">map</span>))))
+            .<span class="ident">create_filter</span>(<span class="ident">CreateFilterArgs::fixed</span>(<span class="prelude-val">Some</span>(<span class="ident">config</span>)))
             .<span class="ident">expect</span>(<span class="string">&quot;should create a filter&quot;</span>)
             .<span class="ident">filter</span>;
         <span class="ident">assert_downstream</span>(<span class="ident">filter</span>.<span class="ident">as_ref</span>());
@@ -870,17 +854,13 @@
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">config_factory</span>() {
         <span class="kw">let</span> <span class="ident">factory</span> <span class="op">=</span> <span class="ident">CompressFactory::new</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">Mapping::new</span>();
-        <span class="ident">map</span>.<span class="ident">insert</span>(<span class="ident">Value::String</span>(<span class="string">&quot;mode&quot;</span>.<span class="ident">into</span>()), <span class="ident">Value::String</span>(<span class="string">&quot;SNAPPY&quot;</span>.<span class="ident">into</span>()));
-        <span class="ident">map</span>.<span class="ident">insert</span>(
-            <span class="ident">Value::String</span>(<span class="string">&quot;on_read&quot;</span>.<span class="ident">into</span>()),
-            <span class="ident">Value::String</span>(<span class="string">&quot;DECOMPRESS&quot;</span>.<span class="ident">into</span>()),
-        );
-        <span class="ident">map</span>.<span class="ident">insert</span>(
-            <span class="ident">Value::String</span>(<span class="string">&quot;on_write&quot;</span>.<span class="ident">into</span>()),
-            <span class="ident">Value::String</span>(<span class="string">&quot;COMPRESS&quot;</span>.<span class="ident">into</span>()),
-        );
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">Value::Mapping</span>(<span class="ident">map</span>);
+
+        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="macro">serde_json::json!</span>({
+            <span class="string">&quot;mode&quot;</span>: <span class="string">&quot;SNAPPY&quot;</span>.<span class="ident">to_string</span>(),
+            <span class="string">&quot;on_read&quot;</span>: <span class="string">&quot;DECOMPRESS&quot;</span>.<span class="ident">to_string</span>(),
+            <span class="string">&quot;on_write&quot;</span>: <span class="string">&quot;COMPRESS&quot;</span>.<span class="ident">to_string</span>(),
+
+        });
         <span class="kw">let</span> <span class="ident">args</span> <span class="op">=</span> <span class="ident">CreateFilterArgs::fixed</span>(<span class="prelude-val">Some</span>(<span class="ident">config</span>));
 
         <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">factory</span>

@@ -444,12 +444,6 @@
 <span id="442">442</span>
 <span id="443">443</span>
 <span id="444">444</span>
-<span id="445">445</span>
-<span id="446">446</span>
-<span id="447">447</span>
-<span id="448">448</span>
-<span id="449">449</span>
-<span id="450">450</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -613,13 +607,11 @@
 <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Filter</span> {
     <span class="kw">pub</span> <span class="ident">name</span>: <span class="ident">String</span>,
-    <span class="kw">pub</span> <span class="ident">config</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">serde_yaml::Value</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">config</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">serde_json::Value</span><span class="op">&gt;</span>,
 }
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="ident">serde_yaml::Value</span>;
-
     <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
 
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::endpoint::Metadata</span>;
@@ -714,17 +706,13 @@ static:
 
         <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">source</span>.<span class="ident">get_static_filters</span>().<span class="ident">unwrap</span>().<span class="ident">get</span>(<span class="number">0</span>).<span class="ident">unwrap</span>();
         <span class="macro">assert_eq!</span>(<span class="string">&quot;quilkin.core.v1.rate-limiter&quot;</span>, <span class="ident">filter</span>.<span class="ident">name</span>);
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">filter</span>.<span class="ident">config</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="ident">filter_config</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">as_mapping</span>().<span class="ident">unwrap</span>();
-
-        <span class="kw">let</span> <span class="ident">key</span> <span class="op">=</span> <span class="ident">Value::from</span>(<span class="string">&quot;map&quot;</span>);
+        <span class="kw">let</span> <span class="ident">filter_config</span> <span class="op">=</span> <span class="ident">filter</span>.<span class="ident">config</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>();
         <span class="macro">assert_eq!</span>(
             <span class="string">&quot;of arbitrary key value pairs&quot;</span>,
-            <span class="ident">filter_config</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">key</span>).<span class="ident">unwrap</span>().<span class="ident">as_str</span>().<span class="ident">unwrap</span>()
+            <span class="ident">filter_config</span>.<span class="ident">get</span>(<span class="string">&quot;map&quot;</span>).<span class="ident">unwrap</span>()
         );
 
-        <span class="kw">let</span> <span class="ident">key</span> <span class="op">=</span> <span class="ident">Value::from</span>(<span class="string">&quot;could&quot;</span>);
-        <span class="kw">let</span> <span class="ident">could</span> <span class="op">=</span> <span class="ident">filter_config</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">key</span>).<span class="ident">unwrap</span>().<span class="ident">as_sequence</span>().<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="ident">could</span> <span class="op">=</span> <span class="ident">filter_config</span>.<span class="ident">get</span>(<span class="string">&quot;could&quot;</span>).<span class="ident">unwrap</span>().<span class="ident">as_array</span>().<span class="ident">unwrap</span>();
         <span class="macro">assert_eq!</span>(<span class="string">&quot;also&quot;</span>, <span class="ident">could</span>.<span class="ident">get</span>(<span class="number">0</span>).<span class="ident">unwrap</span>().<span class="ident">as_str</span>().<span class="ident">unwrap</span>());
         <span class="macro">assert_eq!</span>(<span class="string">&quot;be&quot;</span>, <span class="ident">could</span>.<span class="ident">get</span>(<span class="number">1</span>).<span class="ident">unwrap</span>().<span class="ident">as_str</span>().<span class="ident">unwrap</span>());
         <span class="macro">assert_eq!</span>(<span class="number">27</span>, <span class="ident">could</span>.<span class="ident">get</span>(<span class="number">2</span>).<span class="ident">unwrap</span>().<span class="ident">as_i64</span>().<span class="ident">unwrap</span>());

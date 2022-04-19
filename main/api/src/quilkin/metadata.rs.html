@@ -263,6 +263,9 @@
 <span id="261">261</span>
 <span id="262">262</span>
 <span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -438,9 +441,7 @@
 <span class="doccomment">/// Represents a view into the metadata object attached to another object. `T`</span>
 <span class="doccomment">/// represents metadata known to Quilkin under `quilkin.dev` (available under</span>
 <span class="doccomment">/// the [`KEY`] constant.)</span>
-<span class="attribute">#[<span class="ident">derive</span>(
-    <span class="ident">Default</span>, <span class="ident">Debug</span>, <span class="ident">serde::Deserialize</span>, <span class="ident">serde::Serialize</span>, <span class="ident">PartialEq</span>, <span class="ident">Clone</span>, <span class="ident">PartialOrd</span>, <span class="ident">Eq</span>,
-)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Default</span>, <span class="ident">Debug</span>, <span class="ident">serde::Deserialize</span>, <span class="ident">serde::Serialize</span>, <span class="ident">PartialEq</span>, <span class="ident">Clone</span>, <span class="ident">Eq</span>)]</span>
 <span class="attribute">#[<span class="ident">non_exhaustive</span>]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">MetadataView</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
     <span class="doccomment">/// Known Quilkin metadata.</span>
@@ -448,11 +449,14 @@
     <span class="kw">pub</span> <span class="ident">known</span>: <span class="ident">T</span>,
     <span class="doccomment">/// User created metadata.</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">flatten</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">unknown</span>: <span class="ident">serde_yaml::Mapping</span>,
+    <span class="kw">pub</span> <span class="ident">unknown</span>: <span class="ident">serde_json::Map</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">serde_json::Value</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">MetadataView</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_unknown</span>(<span class="ident">known</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>, <span class="ident">unknown</span>: <span class="ident">serde_yaml::Mapping</span>) -&gt; <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_unknown</span>(
+        <span class="ident">known</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
+        <span class="ident">unknown</span>: <span class="ident">serde_json::Map</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">serde_json::Value</span><span class="op">&gt;</span>,
+    ) -&gt; <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">known</span>: <span class="ident">known</span>.<span class="ident">into</span>(),
             <span class="ident">unknown</span>,
@@ -479,10 +483,12 @@
     <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">metadata</span>: <span class="ident">MetadataView</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">filter_metadata</span> <span class="op">=</span> <span class="ident">HashMap::new</span>();
         <span class="ident">filter_metadata</span>.<span class="ident">insert</span>(<span class="ident">String::from</span>(<span class="string">&quot;quilkin.dev&quot;</span>), <span class="ident">metadata</span>.<span class="ident">known</span>.<span class="ident">into</span>());
-        <span class="ident">filter_metadata</span>.<span class="ident">extend</span>(<span class="ident">metadata</span>.<span class="ident">unknown</span>.<span class="ident">into_iter</span>().<span class="ident">filter_map</span>(<span class="op">|</span>(<span class="ident">k</span>, <span class="ident">v</span>)<span class="op">|</span> {
-            <span class="ident">k</span>.<span class="ident">as_str</span>()
-                .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">k</span><span class="op">|</span> <span class="ident"><span class="kw">crate</span>::prost::struct_from_yaml</span>(<span class="ident">v</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> (<span class="ident">k</span>.<span class="ident">into</span>(), <span class="ident">v</span>)))
-        }));
+        <span class="ident">filter_metadata</span>.<span class="ident">extend</span>(
+            <span class="ident">metadata</span>
+                .<span class="ident">unknown</span>
+                .<span class="ident">into_iter</span>()
+                .<span class="ident">filter_map</span>(<span class="op">|</span>(<span class="ident">k</span>, <span class="ident">v</span>)<span class="op">|</span> <span class="ident"><span class="kw">crate</span>::prost::struct_from_json</span>(<span class="ident">v</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> (<span class="ident">k</span>, <span class="ident">v</span>))),
+        );
 
         <span class="self">Self</span> {
             <span class="ident">filter_metadata</span>,

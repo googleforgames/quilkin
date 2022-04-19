@@ -312,20 +312,6 @@
 <span id="310">310</span>
 <span id="311">311</span>
 <span id="312">312</span>
-<span id="313">313</span>
-<span id="314">314</span>
-<span id="315">315</span>
-<span id="316">316</span>
-<span id="317">317</span>
-<span id="318">318</span>
-<span id="319">319</span>
-<span id="320">320</span>
-<span id="321">321</span>
-<span id="322">322</span>
-<span id="323">323</span>
-<span id="324">324</span>
-<span id="325">325</span>
-<span id="326">326</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -444,8 +430,6 @@
 <span class="kw">mod</span> <span class="ident">tests</span> {
     <span class="kw">use</span> <span class="ident">std::sync::Arc</span>;
 
-    <span class="kw">use</span> <span class="ident">serde_yaml</span>::{<span class="ident">Mapping</span>, <span class="ident">Value</span> <span class="kw">as</span> <span class="ident">YamlValue</span>};
-
     <span class="kw">use</span> <span class="kw">crate</span>::{
         <span class="ident">endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">Endpoints</span>},
         <span class="ident">filters::metadata::CAPTURED_BYTES</span>,
@@ -467,25 +451,17 @@
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">factory_valid_config_all</span>() {
         <span class="kw">let</span> <span class="ident">factory</span> <span class="op">=</span> <span class="ident">CaptureFactory::new</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">Mapping::new</span>();
-        <span class="ident">map</span>.<span class="ident">insert</span>(
-            <span class="ident">YamlValue::String</span>(<span class="string">&quot;metadataKey&quot;</span>.<span class="ident">into</span>()),
-            <span class="ident">YamlValue::String</span>(<span class="ident">TOKEN_KEY</span>.<span class="ident">into</span>()),
-        );
-        <span class="ident">map</span>.<span class="ident">insert</span>(
-            <span class="ident">YamlValue::String</span>(<span class="string">&quot;suffix&quot;</span>.<span class="ident">into</span>()),
-            <span class="ident">YamlValue::Mapping</span>({
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">Mapping::new</span>();
 
-                <span class="ident">map</span>.<span class="ident">insert</span>(<span class="string">&quot;size&quot;</span>.<span class="ident">into</span>(), <span class="ident">YamlValue::Number</span>(<span class="number">3</span>.<span class="ident">into</span>()));
-                <span class="ident">map</span>.<span class="ident">insert</span>(<span class="string">&quot;remove&quot;</span>.<span class="ident">into</span>(), <span class="ident">YamlValue::Bool</span>(<span class="bool-val">true</span>));
-
-                <span class="ident">map</span>
-            }),
-        );
+        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="macro">serde_json::json!</span>({
+            <span class="string">&quot;metadataKey&quot;</span>: <span class="ident">TOKEN_KEY</span>.<span class="ident">to_string</span>(),
+            <span class="string">&quot;suffix&quot;</span>: {
+                <span class="string">&quot;size&quot;</span>: <span class="number">3_i64</span>,
+                <span class="string">&quot;remove&quot;</span>: <span class="bool-val">true</span>,
+            }
+        });
 
         <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">factory</span>
-            .<span class="ident">create_filter</span>(<span class="ident">CreateFilterArgs::fixed</span>(<span class="prelude-val">Some</span>(<span class="ident">YamlValue::Mapping</span>(<span class="ident">map</span>))))
+            .<span class="ident">create_filter</span>(<span class="ident">CreateFilterArgs::fixed</span>(<span class="prelude-val">Some</span>(<span class="ident">config</span>)))
             .<span class="ident">unwrap</span>()
             .<span class="ident">filter</span>;
         <span class="ident">assert_end_strategy</span>(<span class="ident">filter</span>.<span class="ident">as_ref</span>(), <span class="ident">TOKEN_KEY</span>, <span class="bool-val">true</span>);
@@ -494,18 +470,15 @@
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">factory_valid_config_defaults</span>() {
         <span class="kw">let</span> <span class="ident">factory</span> <span class="op">=</span> <span class="ident">CaptureFactory::new</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">Mapping::new</span>();
-        <span class="ident">map</span>.<span class="ident">insert</span>(<span class="string">&quot;suffix&quot;</span>.<span class="ident">into</span>(), {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">Mapping::new</span>();
-            <span class="ident">map</span>.<span class="ident">insert</span>(
-                <span class="ident">YamlValue::String</span>(<span class="string">&quot;size&quot;</span>.<span class="ident">into</span>()),
-                <span class="ident">YamlValue::Number</span>(<span class="number">3</span>.<span class="ident">into</span>()),
-            );
-            <span class="ident">map</span>.<span class="ident">into</span>()
+
+        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="macro">serde_json::json!</span>({
+            <span class="string">&quot;suffix&quot;</span>: {
+                <span class="string">&quot;size&quot;</span>: <span class="number">3_i64</span>,
+            }
         });
 
         <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">factory</span>
-            .<span class="ident">create_filter</span>(<span class="ident">CreateFilterArgs::fixed</span>(<span class="prelude-val">Some</span>(<span class="ident">YamlValue::Mapping</span>(<span class="ident">map</span>))))
+            .<span class="ident">create_filter</span>(<span class="ident">CreateFilterArgs::fixed</span>(<span class="prelude-val">Some</span>(<span class="ident">config</span>)))
             .<span class="ident">unwrap</span>()
             .<span class="ident">filter</span>;
         <span class="ident">assert_end_strategy</span>(<span class="ident">filter</span>.<span class="ident">as_ref</span>(), <span class="ident">CAPTURED_BYTES</span>, <span class="bool-val">false</span>);
@@ -514,13 +487,12 @@
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">factory_invalid_config</span>() {
         <span class="kw">let</span> <span class="ident">factory</span> <span class="op">=</span> <span class="ident">CaptureFactory::new</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">Mapping::new</span>();
-        <span class="ident">map</span>.<span class="ident">insert</span>(
-            <span class="ident">YamlValue::String</span>(<span class="string">&quot;size&quot;</span>.<span class="ident">into</span>()),
-            <span class="ident">YamlValue::String</span>(<span class="string">&quot;WRONG&quot;</span>.<span class="ident">into</span>()),
-        );
-
-        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">factory</span>.<span class="ident">create_filter</span>(<span class="ident">CreateFilterArgs::fixed</span>(<span class="prelude-val">Some</span>(<span class="ident">YamlValue::Mapping</span>(<span class="ident">map</span>))));
+        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="macro">serde_json::json!</span>({
+            <span class="string">&quot;suffix&quot;</span>: {
+                <span class="string">&quot;size&quot;</span>: <span class="string">&quot;WRONG&quot;</span>,
+            }
+        });
+        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">factory</span>.<span class="ident">create_filter</span>(<span class="ident">CreateFilterArgs::fixed</span>(<span class="prelude-val">Some</span>(<span class="ident">config</span>)));
         <span class="macro">assert!</span>(<span class="ident">result</span>.<span class="ident">is_err</span>(), <span class="string">&quot;Should be an error&quot;</span>);
     }
 

@@ -377,12 +377,6 @@
 <span id="375">375</span>
 <span id="376">376</span>
 <span id="377">377</span>
-<span id="378">378</span>
-<span id="379">379</span>
-<span id="380">380</span>
-<span id="381">381</span>
-<span id="382">382</span>
-<span id="383">383</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -576,8 +570,6 @@
     <span class="kw">use</span> <span class="ident">std::ops::Deref</span>;
     <span class="kw">use</span> <span class="ident">std::sync::Arc</span>;
 
-    <span class="kw">use</span> <span class="ident">serde_yaml::Mapping</span>;
-
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">Endpoints</span>, <span class="ident">Metadata</span>};
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::metadata::Value</span>;
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::test_utils::assert_write_no_change</span>;
@@ -630,16 +622,12 @@
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">factory_custom_tokens</span>() {
         <span class="kw">let</span> <span class="ident">factory</span> <span class="op">=</span> <span class="ident">TokenRouterFactory::new</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">Mapping::new</span>();
-        <span class="ident">map</span>.<span class="ident">insert</span>(
-            <span class="ident">serde_yaml::Value::String</span>(<span class="string">&quot;metadataKey&quot;</span>.<span class="ident">into</span>()),
-            <span class="ident">serde_yaml::Value::String</span>(<span class="ident">TOKEN_KEY</span>.<span class="ident">into</span>()),
-        );
+        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="macro">serde_json::json!</span>({
+            <span class="string">&quot;metadataKey&quot;</span>: <span class="ident">TOKEN_KEY</span>.<span class="ident">to_string</span>(),
+        });
 
         <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">factory</span>
-            .<span class="ident">create_filter</span>(<span class="ident">CreateFilterArgs::fixed</span>(<span class="prelude-val">Some</span>(<span class="ident">serde_yaml::Value::Mapping</span>(
-                <span class="ident">map</span>,
-            ))))
+            .<span class="ident">create_filter</span>(<span class="ident">CreateFilterArgs::fixed</span>(<span class="prelude-val">Some</span>(<span class="ident">config</span>)))
             .<span class="ident">unwrap</span>()
             .<span class="ident">filter</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ctx</span> <span class="op">=</span> <span class="ident">new_ctx</span>();
@@ -653,10 +641,10 @@
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">factory_empty_config</span>() {
         <span class="kw">let</span> <span class="ident">factory</span> <span class="op">=</span> <span class="ident">TokenRouterFactory::new</span>();
-        <span class="kw">let</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">Mapping::new</span>();
+        <span class="kw">let</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">serde_json::Map::new</span>();
 
         <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">factory</span>
-            .<span class="ident">create_filter</span>(<span class="ident">CreateFilterArgs::fixed</span>(<span class="prelude-val">Some</span>(<span class="ident">serde_yaml::Value::Mapping</span>(
+            .<span class="ident">create_filter</span>(<span class="ident">CreateFilterArgs::fixed</span>(<span class="prelude-val">Some</span>(<span class="ident">serde_json::Value::Object</span>(
                 <span class="ident">map</span>,
             ))))
             .<span class="ident">unwrap</span>()

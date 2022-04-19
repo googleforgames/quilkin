@@ -182,7 +182,7 @@
 
     <span class="doccomment">/// Creates a new instance of [`CreateFilterArgs`] using a</span>
     <span class="doccomment">/// fixed [`ConfigType`].</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">fixed</span>(<span class="ident">config</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">serde_yaml::Value</span><span class="op">&gt;</span>) -&gt; <span class="ident">CreateFilterArgs</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">fixed</span>(<span class="ident">config</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">serde_json::Value</span><span class="op">&gt;</span>) -&gt; <span class="ident">CreateFilterArgs</span> {
         <span class="ident"><span class="self">Self</span>::new</span>(<span class="ident">config</span>.<span class="ident">map</span>(<span class="ident">ConfigType::Static</span>))
     }
 

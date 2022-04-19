@@ -79,14 +79,6 @@
 <span id="77">77</span>
 <span id="78">78</span>
 <span id="79">79</span>
-<span id="80">80</span>
-<span id="81">81</span>
-<span id="82">82</span>
-<span id="83">83</span>
-<span id="84">84</span>
-<span id="85">85</span>
-<span id="86">86</span>
-<span id="87">87</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -106,11 +98,11 @@
 <span class="doccomment">//! Extensions to `prost` and related crates.</span>
 
 <span class="kw">use</span> <span class="ident">prost_types::value::Kind</span>;
-<span class="kw">use</span> <span class="ident">serde_yaml::Value</span>;
+<span class="kw">use</span> <span class="ident">serde_json::Value</span>;
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">mapping_from_kind</span>(<span class="ident">kind</span>: <span class="ident">Kind</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">serde_yaml::Mapping</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">mapping_from_kind</span>(<span class="ident">kind</span>: <span class="ident">Kind</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">serde_json::Map</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">serde_json::Value</span><span class="op">&gt;</span><span class="op">&gt;</span> {
     <span class="kw">match</span> <span class="ident">value_from_kind</span>(<span class="ident">kind</span>) {
-        <span class="ident">Value::Mapping</span>(<span class="ident">mapping</span>) =&gt; <span class="prelude-val">Some</span>(<span class="ident">mapping</span>),
+        <span class="ident">Value::Object</span>(<span class="ident">mapping</span>) =&gt; <span class="prelude-val">Some</span>(<span class="ident">mapping</span>),
         <span class="kw">_</span> =&gt; <span class="prelude-val">None</span>,
     }
 }
@@ -119,26 +111,26 @@
     <span class="kw">match</span> <span class="ident">kind</span> {
         <span class="ident">Kind::NullValue</span>(<span class="kw">_</span>) =&gt; <span class="ident">Value::Null</span>,
         <span class="ident">Kind::BoolValue</span>(<span class="ident">v</span>) =&gt; <span class="ident">Value::Bool</span>(<span class="ident">v</span>),
-        <span class="ident">Kind::NumberValue</span>(<span class="ident">v</span>) =&gt; <span class="ident">Value::Number</span>(<span class="ident">serde_yaml::Number::from</span>(<span class="ident">v</span>)),
+        <span class="ident">Kind::NumberValue</span>(<span class="ident">v</span>) =&gt; <span class="ident">Value::Number</span>(<span class="ident">serde_json::Number::from</span>(<span class="ident">v</span> <span class="kw">as</span> <span class="ident">i64</span>)), <span class="comment">// TODO: Call out in documentation or find solution</span>
         <span class="ident">Kind::StringValue</span>(<span class="ident">v</span>) =&gt; <span class="ident">Value::String</span>(<span class="ident">v</span>),
-        <span class="ident">Kind::ListValue</span>(<span class="ident">v</span>) =&gt; <span class="ident">Value::Sequence</span>(
+        <span class="ident">Kind::ListValue</span>(<span class="ident">v</span>) =&gt; <span class="ident">Value::Array</span>(
             <span class="ident">v</span>.<span class="ident">values</span>
                 .<span class="ident">into_iter</span>()
                 .<span class="ident">filter_map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="ident">kind</span>)
                 .<span class="ident">map</span>(<span class="ident">value_from_kind</span>)
                 .<span class="ident">collect</span>(),
         ),
-        <span class="ident">Kind::StructValue</span>(<span class="ident">v</span>) =&gt; <span class="ident">Value::Mapping</span>(
+        <span class="ident">Kind::StructValue</span>(<span class="ident">v</span>) =&gt; <span class="ident">Value::Object</span>(
             <span class="ident">v</span>.<span class="ident">fields</span>
                 .<span class="ident">into_iter</span>()
-                .<span class="ident">filter_map</span>(<span class="op">|</span>(<span class="ident">k</span>, <span class="ident">v</span>)<span class="op">|</span> <span class="ident">v</span>.<span class="ident">kind</span>.<span class="ident">map</span>(<span class="ident">value_from_kind</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> (<span class="ident">k</span>.<span class="ident">into</span>(), <span class="ident">v</span>)))
+                .<span class="ident">filter_map</span>(<span class="op">|</span>(<span class="ident">k</span>, <span class="ident">v</span>)<span class="op">|</span> <span class="ident">v</span>.<span class="ident">kind</span>.<span class="ident">map</span>(<span class="ident">value_from_kind</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> (<span class="ident">k</span>, <span class="ident">v</span>)))
                 .<span class="ident">collect</span>(),
         ),
     }
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">struct_from_yaml</span>(<span class="ident">value</span>: <span class="ident">Value</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">prost_types::Struct</span><span class="op">&gt;</span> {
-    <span class="kw">match</span> <span class="ident">from_yaml</span>(<span class="ident">value</span>) {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">struct_from_json</span>(<span class="ident">value</span>: <span class="ident">Value</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">prost_types::Struct</span><span class="op">&gt;</span> {
+    <span class="kw">match</span> <span class="ident">from_json</span>(<span class="ident">value</span>) {
         <span class="ident">prost_types::Value</span> {
             <span class="ident">kind</span>: <span class="prelude-val">Some</span>(<span class="ident">Kind::StructValue</span>(<span class="ident">r#struct</span>)),
         } =&gt; <span class="prelude-val">Some</span>(<span class="ident">r#struct</span>),
@@ -146,7 +138,7 @@
     }
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_yaml</span>(<span class="ident">value</span>: <span class="ident">Value</span>) -&gt; <span class="ident">prost_types::Value</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_json</span>(<span class="ident">value</span>: <span class="ident">Value</span>) -&gt; <span class="ident">prost_types::Value</span> {
     <span class="ident">prost_types::Value</span> {
         <span class="ident">kind</span>: <span class="prelude-val">Some</span>(<span class="kw">match</span> <span class="ident">value</span> {
             <span class="ident">Value::Null</span> =&gt; <span class="ident">Kind::NullValue</span>(<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>()),
@@ -154,21 +146,13 @@
             <span class="comment">// as_f64 never returns None, so unwrap is safe here.</span>
             <span class="ident">Value::Number</span>(<span class="ident">v</span>) =&gt; <span class="ident">Kind::NumberValue</span>(<span class="ident">v</span>.<span class="ident">as_f64</span>().<span class="ident">unwrap</span>()),
             <span class="ident">Value::String</span>(<span class="ident">v</span>) =&gt; <span class="ident">Kind::StringValue</span>(<span class="ident">v</span>),
-            <span class="ident">Value::Sequence</span>(<span class="ident">v</span>) =&gt; <span class="ident">Kind::ListValue</span>(<span class="ident">prost_types::ListValue</span> {
-                <span class="ident">values</span>: <span class="ident">v</span>.<span class="ident">into_iter</span>().<span class="ident">map</span>(<span class="ident">from_yaml</span>).<span class="ident">collect</span>(),
+            <span class="ident">Value::Array</span>(<span class="ident">v</span>) =&gt; <span class="ident">Kind::ListValue</span>(<span class="ident">prost_types::ListValue</span> {
+                <span class="ident">values</span>: <span class="ident">v</span>.<span class="ident">into_iter</span>().<span class="ident">map</span>(<span class="ident">from_json</span>).<span class="ident">collect</span>(),
             }),
-            <span class="ident">Value::Mapping</span>(<span class="ident">v</span>) =&gt; <span class="ident">Kind::StructValue</span>(<span class="ident">prost_types::Struct</span> {
+            <span class="ident">Value::Object</span>(<span class="ident">v</span>) =&gt; <span class="ident">Kind::StructValue</span>(<span class="ident">prost_types::Struct</span> {
                 <span class="ident">fields</span>: <span class="ident">v</span>
                     .<span class="ident">into_iter</span>()
-                    .<span class="ident">filter_map</span>(<span class="op">|</span>(<span class="ident">key</span>, <span class="ident">value</span>)<span class="op">|</span> {
-                        <span class="kw">let</span> <span class="ident">key</span> <span class="op">=</span> <span class="kw">if</span> <span class="kw">let</span> <span class="ident">Value::String</span>(<span class="ident">value</span>) <span class="op">=</span> <span class="ident">key</span> {
-                            <span class="ident">value</span>
-                        } <span class="kw">else</span> {
-                            <span class="kw">return</span> <span class="prelude-val">None</span>;
-                        };
-
-                        <span class="prelude-val">Some</span>((<span class="ident">key</span>, <span class="ident">from_yaml</span>(<span class="ident">value</span>)))
-                    })
+                    .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">key</span>, <span class="ident">value</span>)<span class="op">|</span> (<span class="ident">key</span>, <span class="ident">from_json</span>(<span class="ident">value</span>)))
                     .<span class="ident">collect</span>(),
             }),
         }),
