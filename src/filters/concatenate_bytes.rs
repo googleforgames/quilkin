@@ -78,7 +78,7 @@ impl StaticFilter for ConcatenateBytes {
     type Configuration = Config;
     type BinaryConfiguration = proto::ConcatenateBytes;
 
-    fn new(config: Option<Self::Configuration>) -> Result<Self, Error> {
+    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, Error> {
         Ok(ConcatenateBytes::new(Self::ensure_config_exists(config)?))
     }
 }

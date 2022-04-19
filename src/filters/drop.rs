@@ -50,7 +50,7 @@ impl StaticFilter for Drop {
     type Configuration = Config;
     type BinaryConfiguration = proto::Drop;
 
-    fn new(_: Option<Self::Configuration>) -> Result<Self, Error> {
+    fn try_from_config(_: Option<Self::Configuration>) -> Result<Self, Error> {
         Ok(Drop::new())
     }
 }

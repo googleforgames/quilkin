@@ -25,6 +25,7 @@ use tracing::info;
 use self::quilkin::filters::debug::v1alpha1 as proto;
 
 /// Debug logs all incoming and outgoing packets
+#[derive(Debug)]
 pub struct Debug {
     config: Config,
 }
@@ -59,7 +60,7 @@ impl StaticFilter for Debug {
     type Configuration = Config;
     type BinaryConfiguration = proto::Debug;
 
-    fn new(config: Option<Self::Configuration>) -> Result<Self, Error> {
+    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, Error> {
         Ok(Debug::new(config))
     }
 }
@@ -123,7 +124,6 @@ mod tests {
 
     #[test]
     fn from_config_should_error() {
-        let config = serde_json::json!({ "id": {} });
-        Debug::try_from_config(Some(serde_json::from_value(config).unwrap())).unwrap_err();
+        serde_json::from_value::<Config>(serde_json::json!({ "id": {} })).unwrap_err();
     }
 }

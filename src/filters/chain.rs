@@ -217,7 +217,7 @@ mod tests {
         config,
         endpoint::{Endpoint, Endpoints, UpstreamEndpoints},
         filters::Debug,
-        test_utils::{new_test_chain, TestFilterFactory},
+        test_utils::{new_test_chain, TestFilter},
     };
 
     use super::*;
@@ -229,7 +229,7 @@ mod tests {
         // everything is fine
         let filter_configs = &[config::Filter {
             name: provider.name().into(),
-            config: Some(serde_yaml::Mapping::default().into()),
+            config: Some(serde_json::Map::default().into()),
         }];
 
         let chain = FilterChain::try_create(filter_configs).unwrap();
@@ -310,12 +310,18 @@ mod tests {
     fn chain_double_test_filter() {
         let chain = FilterChain::new(vec![
             (
-                "TestFilter".into(),
-                TestFilterFactory::create_empty_filter(),
+                TestFilter::NAME.into(),
+                FilterInstance {
+                    config: Arc::new(serde_json::json!(null)),
+                    filter: Box::new(TestFilter),
+                },
             ),
             (
-                "TestFilter".into(),
-                TestFilterFactory::create_empty_filter(),
+                TestFilter::NAME.into(),
+                FilterInstance {
+                    config: Arc::new(serde_json::json!(null)),
+                    filter: Box::new(TestFilter),
+                },
             ),
         ])
         .unwrap();
@@ -368,13 +374,16 @@ mod tests {
 
     #[test]
     fn get_configs() {
-        struct TestFilter2 {}
+        struct TestFilter2;
         impl Filter for TestFilter2 {}
 
         let filter_chain = FilterChain::new(vec![
             (
                 "TestFilter".into(),
-                TestFilterFactory::create_empty_filter(),
+                FilterInstance {
+                    config: Arc::new(serde_json::json!(null)),
+                    filter: Box::new(TestFilter),
+                },
             ),
             (
                 "TestFilter2".into(),
@@ -383,7 +392,7 @@ mod tests {
                         "k1": "v1",
                         "k2": 2
                     })),
-                    filter: Box::new(TestFilter2 {}),
+                    filter: Box::new(TestFilter2),
                 },
             ),
         ])

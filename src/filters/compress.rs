@@ -143,7 +143,7 @@ impl StaticFilter for Compress {
     type Configuration = Config;
     type BinaryConfiguration = proto::Compress;
 
-    fn new(config: Option<Self::Configuration>) -> Result<Self, Error> {
+    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, Error> {
         Ok(Compress::new(
             Self::ensure_config_exists(config)?,
             Metrics::new()?,

@@ -32,44 +32,8 @@ use crate::{
     proxy::{Builder, PendingValidation},
 };
 
-pub struct TestFilterFactory;
-
-impl FilterFactory for TestFilterFactory {
-    fn name(&self) -> &'static str {
-        "TestFilter"
-    }
-
-    fn config_schema(&self) -> schemars::schema::RootSchema {
-        schemars::schema_for_value!(serde_json::Value::Null)
-    }
-
-    fn encode_config_to_protobuf(
-        &self,
-        _config: serde_json::Value,
-    ) -> Result<prost_types::Any, Error> {
-        Ok(<_>::default())
-    }
-
-    fn encode_config_to_json(&self, _config: prost_types::Any) -> Result<serde_json::Value, Error> {
-        Ok(serde_json::Value::Null)
-    }
-
-    fn create_filter(&self, _: CreateFilterArgs) -> Result<FilterInstance, Error> {
-        Ok(Self::create_empty_filter())
-    }
-}
-
-impl TestFilterFactory {
-    pub(crate) fn create_empty_filter() -> FilterInstance {
-        FilterInstance::new(
-            serde_json::Value::Null,
-            Box::new(TestFilter {}) as Box<dyn Filter>,
-        )
-    }
-}
-
 // TestFilter is useful for testing that commands are executing filters appropriately.
-pub struct TestFilter {}
+pub struct TestFilter;
 
 impl Filter for TestFilter {
     fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
@@ -94,6 +58,16 @@ impl Filter for TestFilter {
         ctx.contents
             .append(&mut format!(":our:{}:{}", ctx.source, ctx.dest).into_bytes());
         Some(ctx.into())
+    }
+}
+
+impl StaticFilter for TestFilter {
+    const NAME: &'static str = "TestFilter";
+    type Configuration = ();
+    type BinaryConfiguration = ();
+
+    fn try_from_config(_: Option<Self::Configuration>) -> Result<Self, Error> {
+        Ok(Self)
     }
 }
 
@@ -330,7 +304,7 @@ pub fn new_test_chain() -> crate::filters::SharedFilterChain {
 }
 
 pub fn load_test_filters() {
-    FilterRegistry::register([DynFilterFactory::from(Box::from(TestFilterFactory))]);
+    FilterRegistry::register([TestFilter::factory()]);
 }
 
 #[cfg(test)]

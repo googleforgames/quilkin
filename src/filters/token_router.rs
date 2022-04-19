@@ -56,7 +56,7 @@ impl StaticFilter for TokenRouter {
     type Configuration = Config;
     type BinaryConfiguration = proto::TokenRouter;
 
-    fn new(config: Option<Self::Configuration>) -> Result<Self, Error> {
+    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, Error> {
         Ok(TokenRouter::new(
             config.unwrap_or_default(),
             Metrics::new()?,
@@ -151,21 +151,17 @@ impl TryFrom<proto::TokenRouter> for Config {
 
 #[cfg(test)]
 mod tests {
-    use std::{ops::Deref, sync::Arc};
+    use std::sync::Arc;
 
     use crate::{
-        metadata::Value,
         endpoint::{Endpoint, Endpoints, Metadata},
+        metadata::Value,
         test_utils::assert_write_no_change,
     };
 
     use super::*;
 
     const TOKEN_KEY: &str = "TOKEN";
-
-    fn router(config: Config) -> TokenRouter {
-        TokenRouter::new(config, Metrics::new().unwrap())
-    }
 
     #[test]
     fn convert_proto_config() {
@@ -203,9 +199,12 @@ mod tests {
 
     #[test]
     fn factory_custom_tokens() {
-        let filter = TokenRouter::from_config(Config {
-            metadataKey: TOKEN_KEY.to_string()
-        }.into());
+        let filter = TokenRouter::from_config(
+            Config {
+                metadata_key: TOKEN_KEY.to_string(),
+            }
+            .into(),
+        );
         let mut ctx = new_ctx();
         ctx.metadata.insert(
             Arc::new(TOKEN_KEY.into()),
@@ -231,7 +230,7 @@ mod tests {
         let config = Config {
             metadata_key: CAPTURED_BYTES.into(),
         };
-        let filter = router(config);
+        let filter = TokenRouter::from_config(config.into());
 
         let mut ctx = new_ctx();
         ctx.metadata.insert(
@@ -271,7 +270,7 @@ mod tests {
         let config = Config {
             metadata_key: CAPTURED_BYTES.into(),
         };
-        let filter = router(config);
+        let filter = TokenRouter::from_config(config.into());
         assert_write_no_change(&filter);
     }
 

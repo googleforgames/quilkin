@@ -82,7 +82,7 @@ impl StaticFilter for Capture {
     type Configuration = Config;
     type BinaryConfiguration = proto::Capture;
 
-    fn new(config: Option<Self::Configuration>) -> Result<Self, Error> {
+    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, Error> {
         Ok(Capture::new(
             Self::ensure_config_exists(config)?,
             Metrics::new()?,
@@ -105,10 +105,6 @@ mod tests {
 
     const TOKEN_KEY: &str = "TOKEN";
 
-    fn capture_bytes(config: Config) -> Capture {
-        Capture::new(config, Metrics::new().unwrap())
-    }
-
     #[test]
     fn factory_valid_config_all() {
         let config = serde_json::json!({
@@ -118,9 +114,8 @@ mod tests {
                 "remove": true,
             }
         });
-
         let filter = Capture::from_config(Some(serde_json::from_value(config).unwrap()));
-        assert_end_strategy(filter.as_ref(), TOKEN_KEY, true);
+        assert_end_strategy(&filter, TOKEN_KEY, true);
     }
 
     #[test]
@@ -136,14 +131,13 @@ mod tests {
     }
 
     #[test]
-    fn factory_invalid_config() {
+    fn invalid_config() {
         let config = serde_json::json!({
             "suffix": {
                 "size": "WRONG",
             }
         });
-        let filter = Capture::from_config(Some(serde_json::from_value(config).unwrap()));
-        assert!(result.is_err(), "Should be an error");
+        assert!(serde_json::from_value::<Config>(config).is_err());
     }
 
     #[test]
@@ -156,7 +150,7 @@ mod tests {
             }),
         };
 
-        let filter = capture_bytes(config);
+        let filter = Capture::from_config(config.into());
         assert_end_strategy(&filter, TOKEN_KEY, true);
     }
 
@@ -169,11 +163,11 @@ mod tests {
                 remove: true,
             }),
         };
-        let filter = capture_bytes(config);
+        let filter = Capture::from_config(config.into());
         let endpoints = vec![Endpoint::new("127.0.0.1:81".parse().unwrap())];
         let response = filter.read(ReadContext::new(
             Endpoints::new(endpoints).into(),
-            "127.0.0.1:80".parse().unwrap(),
+            (std::net::Ipv4Addr::LOCALHOST, 80).into(),
             "abc".to_string().into_bytes(),
         ));
 
@@ -191,7 +185,7 @@ mod tests {
             }),
             metadata_key: TOKEN_KEY.into(),
         };
-        let filter = capture_bytes(config);
+        let filter = Capture::from_config(config.into());
         assert_write_no_change(&filter);
     }
 

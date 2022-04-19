@@ -226,7 +226,7 @@ mod tests {
         type Configuration = Append;
         type BinaryConfiguration = ProtoAppend;
 
-        fn new(config: Option<Self::Configuration>) -> Result<Self, Error> {
+        fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, Error> {
             let config = Self::ensure_config_exists(config)?;
 
             if config.value.as_ref().unwrap() == "reject" {

@@ -50,7 +50,7 @@ impl StaticFilter for LoadBalancer {
     type Configuration = Config;
     type BinaryConfiguration = proto::LoadBalancer;
 
-    fn new(config: Option<Self::Configuration>) -> Result<Self, Error> {
+    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, Error> {
         Ok(LoadBalancer::new(Self::ensure_config_exists(config)?))
     }
 }
@@ -61,16 +61,6 @@ mod tests {
 
     use super::*;
     use crate::endpoint::{Endpoint, EndpointAddress, Endpoints};
-
-    fn create_filter(config: &str) -> Box<dyn Filter> {
-        let factory = LoadBalancer::factory();
-        factory
-            .create_filter(CreateFilterArgs::fixed(Some(
-                serde_yaml::from_str(config).unwrap(),
-            )))
-            .unwrap()
-            .filter
-    }
 
     fn get_response_addresses(
         filter: &dyn Filter,
@@ -99,7 +89,7 @@ mod tests {
         ];
 
         let yaml = "policy: ROUND_ROBIN";
-        let filter = create_filter(yaml);
+        let filter = LoadBalancer::from_config(serde_yaml::from_str(yaml).unwrap());
 
         // Check that we repeat the same addresses in sequence forever.
         let expected_sequence = addresses
@@ -112,7 +102,7 @@ mod tests {
                 expected_sequence,
                 (0..addresses.len())
                     .map(|_| get_response_addresses(
-                        filter.as_ref(),
+                        &filter,
                         &addresses,
                         "127.0.0.1:8080".parse().unwrap()
                     ))
@@ -132,18 +122,14 @@ mod tests {
         let yaml = "
 policy: RANDOM
 ";
-        let filter = create_filter(yaml);
+        let filter = LoadBalancer::from_config(serde_yaml::from_str(yaml).unwrap());
 
         // Run a few selection rounds through the addresses.
         let mut result_sequences = vec![];
         for _ in 0..10 {
             let sequence = (0..addresses.len())
                 .map(|_| {
-                    get_response_addresses(
-                        filter.as_ref(),
-                        &addresses,
-                        "127.0.0.1:8080".parse().unwrap(),
-                    )
+                    get_response_addresses(&filter, &addresses, "127.0.0.1:8080".parse().unwrap())
                 })
                 .collect::<Vec<_>>();
             result_sequences.push(sequence);
@@ -179,21 +165,15 @@ policy: RANDOM
         let source_ips = vec![[127u8, 1, 1, 1], [127, 2, 2, 2], [127, 3, 3, 3]];
         let source_ports = vec![11111u16, 22222, 33333, 44444, 55555];
 
-        let yaml = "
-policy: HASH
-";
-        let filter = create_filter(yaml);
+        let yaml = "policy: HASH";
+        let filter = LoadBalancer::from_config(serde_yaml::from_str(yaml).unwrap());
 
         // Run a few selection rounds through the addresses.
         let mut result_sequences = vec![];
         for _ in 0..10 {
             let sequence = (0..addresses.len())
                 .map(|_| {
-                    get_response_addresses(
-                        filter.as_ref(),
-                        &addresses,
-                        (Ipv4Addr::LOCALHOST, 8080).into(),
-                    )
+                    get_response_addresses(&filter, &addresses, (Ipv4Addr::LOCALHOST, 8080).into())
                 })
                 .collect::<Vec<_>>();
             result_sequences.push(sequence);
@@ -216,11 +196,7 @@ policy: HASH
         for port in source_ports.iter().copied() {
             let sequence = (0..addresses.len())
                 .map(|_| {
-                    get_response_addresses(
-                        filter.as_ref(),
-                        &addresses,
-                        (Ipv4Addr::LOCALHOST, port).into(),
-                    )
+                    get_response_addresses(&filter, &addresses, (Ipv4Addr::LOCALHOST, port).into())
                 })
                 .collect::<Vec<_>>();
             result_sequences.push(sequence);
@@ -243,7 +219,7 @@ policy: HASH
         for ip in source_ips {
             for port in source_ports.iter().copied() {
                 let sequence = (0..addresses.len())
-                    .map(|_| get_response_addresses(filter.as_ref(), &addresses, (ip, port).into()))
+                    .map(|_| get_response_addresses(&filter, &addresses, (ip, port).into()))
                     .collect::<Vec<_>>();
                 result_sequences.push(sequence);
             }

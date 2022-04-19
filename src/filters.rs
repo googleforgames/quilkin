@@ -41,12 +41,13 @@ pub mod token_router;
 /// [`FilterFactory`].
 pub mod prelude {
     pub use super::{
-        ConvertProtoConfigError, CreateFilterArgs, DynFilterFactory, Error, Filter, FilterFactory,
-        FilterInstance, ReadContext, ReadResponse, StaticFilter, WriteContext, WriteResponse,
+        ConvertProtoConfigError, CreateFilterArgs, Error, Filter, FilterInstance, ReadContext,
+        ReadResponse, StaticFilter, WriteContext, WriteResponse,
     };
 }
 
 // Core Filter types
+#[doc(inline)]
 pub use self::{
     capture::Capture,
     compress::Compress,
@@ -74,6 +75,32 @@ pub(crate) use self::chain::{Error as FilterChainError, FilterChain, SharedFilte
 /// [`StaticFilter`] guarantees all of the required properties through the type
 /// system, allowing Quilkin take care of the virtual table boilerplate
 /// automatically at compile-time.
+/// ```
+/// use quilkin::filters::prelude::*;
+///
+/// struct Greet;
+///
+/// impl Filter for Greet {
+///     fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
+///         ctx.contents.splice(0..0, b"Hello ".into_iter().copied());
+///         Some(ctx.into())
+///     }
+///     fn write(&self, mut ctx: WriteContext) -> Option<WriteResponse> {
+///         ctx.contents.splice(0..0, b"Goodbye ".into_iter().copied());
+///         Some(ctx.into())
+///     }
+/// }
+///
+/// impl StaticFilter for Greet {
+///     const NAME: &'static str = "greet.v1";
+///     type Configuration = ();
+///     type BinaryConfiguration = ();
+///
+///     fn try_from_config(_: Option<Self::Configuration>) -> Result<Self, quilkin::filters::Error> {
+///         Ok(Self)
+///     }
+/// }
+/// ```
 pub trait StaticFilter: Filter + Sized
 // This where clause simply states that `Configuration`'s and
 // `BinaryConfiguration`'s `Error` types are compatible with `filters::Error`.
@@ -102,7 +129,14 @@ where
     /// Instantiates a new [`StaticFilter`] from the given configuration, if any.
     /// # Errors
     /// If the provided configuration is invalid.
-    fn new(config: Option<Self::Configuration>) -> Result<Self, Error>;
+    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, Error>;
+
+    /// Instantiates a new [`StaticFilter`] from the given configuration, if any.
+    /// # Panics
+    /// If the provided configuration is invalid.
+    fn from_config(config: Option<Self::Configuration>) -> Self {
+        Self::try_from_config(config).unwrap()
+    }
 
     /// Creates a new dynamic [`FilterFactory`] virtual table.
     fn factory() -> DynFilterFactory

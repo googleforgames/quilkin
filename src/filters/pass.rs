@@ -49,7 +49,7 @@ impl StaticFilter for Pass {
     type Configuration = Config;
     type BinaryConfiguration = proto::Pass;
 
-    fn new(_config: Option<Self::Configuration>) -> Result<Self, Error> {
+    fn try_from_config(_config: Option<Self::Configuration>) -> Result<Self, Error> {
         Ok(Pass::new())
     }
 }

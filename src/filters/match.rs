@@ -136,7 +136,7 @@ impl StaticFilter for Match {
     type Configuration = Config;
     type BinaryConfiguration = proto::Match;
 
-    fn new(config: Option<Self::Configuration>) -> Result<Self, Error> {
+    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, Error> {
         Self::new(Self::ensure_config_exists(config)?, Metrics::new()?)
     }
 }

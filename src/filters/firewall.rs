@@ -50,7 +50,7 @@ impl StaticFilter for Firewall {
     type Configuration = Config;
     type BinaryConfiguration = proto::Firewall;
 
-    fn new(config: Option<Self::Configuration>) -> Result<Self, Error> {
+    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, Error> {
         Ok(Firewall::new(
             Self::ensure_config_exists(config)?,
             Metrics::new()?,

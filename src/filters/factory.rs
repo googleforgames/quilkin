@@ -104,7 +104,7 @@ where
 
         Ok(FilterInstance::new(
             config_json,
-            Box::from(F::new(config)?) as Box<dyn Filter>,
+            Box::from(F::try_from_config(config)?) as Box<dyn Filter>,
         ))
     }
 
