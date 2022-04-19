@@ -111,6 +111,12 @@
 <span id="109">109</span>
 <span id="110">110</span>
 <span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -162,6 +168,12 @@
             <span class="prelude-val">None</span> =&gt; <span class="prelude-val">Err</span>(<span class="ident">Error::NotFound</span>(<span class="ident">key</span>.<span class="ident">to_owned</span>())),
             <span class="prelude-val">Some</span>(<span class="ident">filter</span>) =&gt; <span class="ident">filter</span>,
         }
+    }
+
+    <span class="doccomment">/// Returns a [`DynFilterFactory`] for a given `key`. Returning `None` if the</span>
+    <span class="doccomment">/// factory cannot be found.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_factory</span>(<span class="ident">key</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">std::sync::Arc</span><span class="op">&lt;</span><span class="ident">DynFilterFactory</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="ident">REGISTRY</span>.<span class="ident">load</span>().<span class="ident">get</span>(<span class="ident">key</span>).<span class="ident">cloned</span>()
     }
 }
 

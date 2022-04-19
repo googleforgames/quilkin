@@ -327,17 +327,6 @@
 <span id="325">325</span>
 <span id="326">326</span>
 <span id="327">327</span>
-<span id="328">328</span>
-<span id="329">329</span>
-<span id="330">330</span>
-<span id="331">331</span>
-<span id="332">332</span>
-<span id="333">333</span>
-<span id="334">334</span>
-<span id="335">335</span>
-<span id="336">336</span>
-<span id="337">337</span>
-<span id="338">338</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -355,46 +344,25 @@
  */</span>
 
 <span class="doccomment">/// Common utilities for testing</span>
-<span class="kw">use</span> <span class="ident">std::net</span>::{<span class="ident">Ipv4Addr</span>, <span class="ident">SocketAddr</span>, <span class="ident">SocketAddrV4</span>};
-<span class="kw">use</span> <span class="ident">std::str::from_utf8</span>;
-<span class="kw">use</span> <span class="ident">std::sync::Arc</span>;
+<span class="kw">use</span> <span class="ident">std</span>::{
+    <span class="ident">net</span>::{<span class="ident">Ipv4Addr</span>, <span class="ident">SocketAddr</span>, <span class="ident">SocketAddrV4</span>},
+    <span class="ident">str::from_utf8</span>,
+    <span class="ident">sync::Arc</span>,
+};
 
 <span class="kw">use</span> <span class="ident">tokio::net::UdpSocket</span>;
 <span class="kw">use</span> <span class="ident">tokio::sync</span>::{<span class="ident">mpsc</span>, <span class="ident">oneshot</span>, <span class="ident">watch</span>};
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::config</span>::{<span class="ident">Builder</span> <span class="kw">as</span> <span class="ident">ConfigBuilder</span>, <span class="ident">Config</span>};
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">EndpointAddress</span>, <span class="ident">Endpoints</span>};
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters</span>::{<span class="ident">prelude</span>::<span class="kw-2">*</span>, <span class="ident">FilterRegistry</span>};
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::metadata::Value</span>;
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::proxy</span>::{<span class="ident">Builder</span>, <span class="ident">PendingValidation</span>};
-
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TestFilterFactory</span>;
-
-<span class="kw">impl</span> <span class="ident">FilterFactory</span> <span class="kw">for</span> <span class="ident">TestFilterFactory</span> {
-    <span class="kw">fn</span> <span class="ident">name</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
-        <span class="string">&quot;TestFilter&quot;</span>
-    }
-
-    <span class="kw">fn</span> <span class="ident">config_schema</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">schemars::schema::RootSchema</span> {
-        <span class="macro">schemars::schema_for_value!</span>(<span class="ident">serde_json::Value::Null</span>)
-    }
-
-    <span class="kw">fn</span> <span class="ident">create_filter</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="ident">CreateFilterArgs</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">FilterInstance</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="prelude-val">Ok</span>(<span class="ident"><span class="self">Self</span>::create_empty_filter</span>())
-    }
-}
-
-<span class="kw">impl</span> <span class="ident">TestFilterFactory</span> {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">create_empty_filter</span>() -&gt; <span class="ident">FilterInstance</span> {
-        <span class="ident">FilterInstance::new</span>(
-            <span class="ident">serde_json::Value::Null</span>,
-            <span class="ident">Box::new</span>(<span class="ident">TestFilter</span> {}) <span class="kw">as</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Filter</span><span class="op">&gt;</span>,
-        )
-    }
-}
+<span class="kw">use</span> <span class="kw">crate</span>::{
+    <span class="ident">config</span>::{<span class="ident">Builder</span> <span class="kw">as</span> <span class="ident">ConfigBuilder</span>, <span class="ident">Config</span>},
+    <span class="ident">endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">EndpointAddress</span>, <span class="ident">Endpoints</span>},
+    <span class="ident">filters</span>::{<span class="ident">prelude</span>::<span class="kw-2">*</span>, <span class="ident">FilterRegistry</span>},
+    <span class="ident">metadata::Value</span>,
+    <span class="ident">proxy</span>::{<span class="ident">Builder</span>, <span class="ident">PendingValidation</span>},
+};
 
 <span class="comment">// TestFilter is useful for testing that commands are executing filters appropriately.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TestFilter</span> {}
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TestFilter</span>;
 
 <span class="kw">impl</span> <span class="ident">Filter</span> <span class="kw">for</span> <span class="ident">TestFilter</span> {
     <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut</span> <span class="ident">ctx</span>: <span class="ident">ReadContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ReadResponse</span><span class="op">&gt;</span> {
@@ -419,6 +387,16 @@
         <span class="ident">ctx</span>.<span class="ident">contents</span>
             .<span class="ident">append</span>(<span class="kw-2">&amp;mut</span> <span class="macro">format!</span>(<span class="string">&quot;:our:{}:{}&quot;</span>, <span class="ident">ctx</span>.<span class="ident">source</span>, <span class="ident">ctx</span>.<span class="ident">dest</span>).<span class="ident">into_bytes</span>());
         <span class="prelude-val">Some</span>(<span class="ident">ctx</span>.<span class="ident">into</span>())
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">StaticFilter</span> <span class="kw">for</span> <span class="ident">TestFilter</span> {
+    <span class="kw">const</span> <span class="ident">NAME</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;TestFilter&quot;</span>;
+    <span class="kw">type</span> <span class="ident">Configuration</span> <span class="op">=</span> ();
+    <span class="kw">type</span> <span class="ident">BinaryConfiguration</span> <span class="op">=</span> ();
+
+    <span class="kw">fn</span> <span class="ident">try_from_config</span>(<span class="kw">_</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Configuration</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+        <span class="prelude-val">Ok</span>(<span class="self">Self</span>)
     }
 }
 
@@ -655,7 +633,7 @@
 }
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">load_test_filters</span>() {
-    <span class="ident">FilterRegistry::register</span>([<span class="ident">DynFilterFactory::from</span>(<span class="ident">Box::from</span>(<span class="ident">TestFilterFactory</span>))]);
+    <span class="ident">FilterRegistry::register</span>([<span class="ident">TestFilter::factory</span>()]);
 }
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>

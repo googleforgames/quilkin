@@ -148,6 +148,26 @@
 <span id="146">146</span>
 <span id="147">147</span>
 <span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -176,6 +196,8 @@
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Error</span> {
     <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;filter `{}` not found&quot;</span>, .<span class="number">0</span>)]</span>
     <span class="ident">NotFound</span>(<span class="ident">String</span>),
+    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Expected &lt;{}&gt; message, received &lt;{}&gt; &quot;</span>, <span class="ident">expected</span>, <span class="ident">actual</span>)]</span>
+    <span class="ident">MismatchedTypes</span> { <span class="ident">expected</span>: <span class="ident">String</span>, <span class="ident">actual</span>: <span class="ident">String</span> },
     <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;filter `{}` requires configuration, but none provided&quot;</span>, .<span class="number">0</span>)]</span>
     <span class="ident">MissingConfig</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>),
     <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;field `{}` is invalid, reason: {}&quot;</span>, <span class="ident">field</span>, <span class="ident">reason</span>)]</span>
@@ -214,9 +236,27 @@
     }
 }
 
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">serde_json::Error</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Error</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">error</span>: <span class="ident">serde_json::Error</span>) -&gt; <span class="self">Self</span> {
+        <span class="ident"><span class="self">Self</span>::DeserializeFailed</span>(<span class="ident">error</span>.<span class="ident">to_string</span>())
+    }
+}
+
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">prost::EncodeError</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Error</span> {
     <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">error</span>: <span class="ident">prost::EncodeError</span>) -&gt; <span class="self">Self</span> {
         <span class="ident"><span class="self">Self</span>::ConvertProtoConfig</span>(<span class="ident">ConvertProtoConfigError::new</span>(<span class="ident">error</span>, <span class="prelude-val">None</span>))
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">prost::DecodeError</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Error</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">error</span>: <span class="ident">prost::DecodeError</span>) -&gt; <span class="self">Self</span> {
+        <span class="ident"><span class="self">Self</span>::ConvertProtoConfig</span>(<span class="ident">ConvertProtoConfigError::new</span>(<span class="ident">error</span>, <span class="prelude-val">None</span>))
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">ConvertProtoConfigError</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Error</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">error</span>: <span class="ident">ConvertProtoConfigError</span>) -&gt; <span class="self">Self</span> {
+        <span class="ident"><span class="self">Self</span>::ConvertProtoConfig</span>(<span class="ident">error</span>)
     }
 }
 

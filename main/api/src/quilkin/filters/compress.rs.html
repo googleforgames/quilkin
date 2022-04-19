@@ -525,42 +525,6 @@
 <span id="523">523</span>
 <span id="524">524</span>
 <span id="525">525</span>
-<span id="526">526</span>
-<span id="527">527</span>
-<span id="528">528</span>
-<span id="529">529</span>
-<span id="530">530</span>
-<span id="531">531</span>
-<span id="532">532</span>
-<span id="533">533</span>
-<span id="534">534</span>
-<span id="535">535</span>
-<span id="536">536</span>
-<span id="537">537</span>
-<span id="538">538</span>
-<span id="539">539</span>
-<span id="540">540</span>
-<span id="541">541</span>
-<span id="542">542</span>
-<span id="543">543</span>
-<span id="544">544</span>
-<span id="545">545</span>
-<span id="546">546</span>
-<span id="547">547</span>
-<span id="548">548</span>
-<span id="549">549</span>
-<span id="550">550</span>
-<span id="551">551</span>
-<span id="552">552</span>
-<span id="553">553</span>
-<span id="554">554</span>
-<span id="555">555</span>
-<span id="556">556</span>
-<span id="557">557</span>
-<span id="558">558</span>
-<span id="559">559</span>
-<span id="560">560</span>
-<span id="561">561</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -592,15 +556,8 @@
 
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">config</span>::{<span class="ident">Action</span>, <span class="ident">Config</span>, <span class="ident">Mode</span>};
 
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">NAME</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;quilkin.filters.compress.v1alpha1.Compress&quot;</span>;
-
-<span class="doccomment">/// Returns a factory for creating compression filters.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">factory</span>() -&gt; <span class="ident">DynFilterFactory</span> {
-    <span class="ident">Box::from</span>(<span class="ident">CompressFactory::new</span>())
-}
-
 <span class="doccomment">/// Filter for compressing and decompressing packet data</span>
-<span class="kw">struct</span> <span class="ident">Compress</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Compress</span> {
     <span class="ident">metrics</span>: <span class="ident">Metrics</span>,
     <span class="ident">compression_mode</span>: <span class="ident">Mode</span>,
     <span class="ident">on_read</span>: <span class="ident">Action</span>,
@@ -708,44 +665,26 @@
     }
 }
 
-<span class="kw">struct</span> <span class="ident">CompressFactory</span> {}
+<span class="kw">impl</span> <span class="ident">StaticFilter</span> <span class="kw">for</span> <span class="ident">Compress</span> {
+    <span class="kw">const</span> <span class="ident">NAME</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;quilkin.filters.compress.v1alpha1.Compress&quot;</span>;
+    <span class="kw">type</span> <span class="ident">Configuration</span> <span class="op">=</span> <span class="ident">Config</span>;
+    <span class="kw">type</span> <span class="ident">BinaryConfiguration</span> <span class="op">=</span> <span class="ident">proto::Compress</span>;
 
-<span class="kw">impl</span> <span class="ident">CompressFactory</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>() -&gt; <span class="self">Self</span> {
-        <span class="ident">CompressFactory</span> {}
-    }
-}
-
-<span class="kw">impl</span> <span class="ident">FilterFactory</span> <span class="kw">for</span> <span class="ident">CompressFactory</span> {
-    <span class="kw">fn</span> <span class="ident">name</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
-        <span class="ident">NAME</span>
-    }
-
-    <span class="kw">fn</span> <span class="ident">config_schema</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">schemars::schema::RootSchema</span> {
-        <span class="macro">schemars::schema_for!</span>(<span class="ident">Config</span>)
-    }
-
-    <span class="kw">fn</span> <span class="ident">create_filter</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">args</span>: <span class="ident">CreateFilterArgs</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">FilterInstance</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> (<span class="ident">config_json</span>, <span class="ident">config</span>) <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">require_config</span>(<span class="ident">args</span>.<span class="ident">config</span>)<span class="question-mark">?</span>
-            .<span class="ident">deserialize</span>::<span class="op">&lt;</span><span class="ident">Config</span>, <span class="ident">proto::Compress</span><span class="op">&gt;</span>(<span class="self">self</span>.<span class="ident">name</span>())<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">Compress::new</span>(<span class="ident">config</span>, <span class="ident">Metrics::new</span>()<span class="question-mark">?</span>);
-        <span class="prelude-val">Ok</span>(<span class="ident">FilterInstance::new</span>(
-            <span class="ident">config_json</span>,
-            <span class="ident">Box::new</span>(<span class="ident">filter</span>) <span class="kw">as</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Filter</span><span class="op">&gt;</span>,
+    <span class="kw">fn</span> <span class="ident">try_from_config</span>(<span class="ident">config</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Configuration</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+        <span class="prelude-val">Ok</span>(<span class="ident">Compress::new</span>(
+            <span class="ident"><span class="self">Self</span>::ensure_config_exists</span>(<span class="ident">config</span>)<span class="question-mark">?</span>,
+            <span class="ident">Metrics::new</span>()<span class="question-mark">?</span>,
         ))
     }
 }
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="ident">std::convert::TryFrom</span>;
     <span class="kw">use</span> <span class="ident">tracing_test::traced_test</span>;
 
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">Endpoints</span>, <span class="ident">UpstreamEndpoints</span>};
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters</span>::{
-        <span class="ident">compress</span>::{<span class="ident">compressor::Snappy</span>, <span class="ident">Compressor</span>},
-        <span class="ident">CreateFilterArgs</span>, <span class="ident">Filter</span>, <span class="ident">FilterFactory</span>, <span class="ident">ReadContext</span>, <span class="ident">WriteContext</span>,
+    <span class="kw">use</span> <span class="kw">crate</span>::{
+        <span class="ident">endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">Endpoints</span>, <span class="ident">UpstreamEndpoints</span>},
+        <span class="ident">filters::compress::compressor::Snappy</span>,
     };
 
     <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
@@ -838,36 +777,25 @@
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">default_mode_factory</span>() {
-        <span class="kw">let</span> <span class="ident">factory</span> <span class="op">=</span> <span class="ident">CompressFactory::new</span>();
         <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="macro">serde_json::json!</span>({
             <span class="string">&quot;on_read&quot;</span>: <span class="string">&quot;DECOMPRESS&quot;</span>.<span class="ident">to_string</span>(),
             <span class="string">&quot;on_write&quot;</span>: <span class="string">&quot;COMPRESS&quot;</span>.<span class="ident">to_string</span>(),
 
         });
-        <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">factory</span>
-            .<span class="ident">create_filter</span>(<span class="ident">CreateFilterArgs::fixed</span>(<span class="prelude-val">Some</span>(<span class="ident">config</span>)))
-            .<span class="ident">expect</span>(<span class="string">&quot;should create a filter&quot;</span>)
-            .<span class="ident">filter</span>;
-        <span class="ident">assert_downstream</span>(<span class="ident">filter</span>.<span class="ident">as_ref</span>());
+        <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">Compress::from_config</span>(<span class="prelude-val">Some</span>(<span class="ident">serde_json::from_value</span>(<span class="ident">config</span>).<span class="ident">unwrap</span>()));
+        <span class="ident">assert_downstream</span>(<span class="kw-2">&amp;</span><span class="ident">filter</span>);
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">config_factory</span>() {
-        <span class="kw">let</span> <span class="ident">factory</span> <span class="op">=</span> <span class="ident">CompressFactory::new</span>();
-
         <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="macro">serde_json::json!</span>({
             <span class="string">&quot;mode&quot;</span>: <span class="string">&quot;SNAPPY&quot;</span>.<span class="ident">to_string</span>(),
             <span class="string">&quot;on_read&quot;</span>: <span class="string">&quot;DECOMPRESS&quot;</span>.<span class="ident">to_string</span>(),
             <span class="string">&quot;on_write&quot;</span>: <span class="string">&quot;COMPRESS&quot;</span>.<span class="ident">to_string</span>(),
 
         });
-        <span class="kw">let</span> <span class="ident">args</span> <span class="op">=</span> <span class="ident">CreateFilterArgs::fixed</span>(<span class="prelude-val">Some</span>(<span class="ident">config</span>));
-
-        <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">factory</span>
-            .<span class="ident">create_filter</span>(<span class="ident">args</span>)
-            .<span class="ident">expect</span>(<span class="string">&quot;should create a filter&quot;</span>)
-            .<span class="ident">filter</span>;
-        <span class="ident">assert_downstream</span>(<span class="ident">filter</span>.<span class="ident">as_ref</span>());
+        <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">Compress::from_config</span>(<span class="prelude-val">Some</span>(<span class="ident">serde_json::from_value</span>(<span class="ident">config</span>).<span class="ident">unwrap</span>()));
+        <span class="ident">assert_downstream</span>(<span class="kw-2">&amp;</span><span class="ident">filter</span>);
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>

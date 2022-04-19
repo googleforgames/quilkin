@@ -1,1 +1,1 @@
-initSidebarItems({"constant":[["NAME",""]],"fn":[["factory","Creates a new factory for generating debug filters."]],"struct":[["Config","A Debug filter’s configuration."]]});
+initSidebarItems({"struct":[["Config","A Debug filter’s configuration."],["Debug","Debug logs all incoming and outgoing packets"]]});

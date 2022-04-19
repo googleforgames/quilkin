@@ -407,37 +407,6 @@
 <span id="405">405</span>
 <span id="406">406</span>
 <span id="407">407</span>
-<span id="408">408</span>
-<span id="409">409</span>
-<span id="410">410</span>
-<span id="411">411</span>
-<span id="412">412</span>
-<span id="413">413</span>
-<span id="414">414</span>
-<span id="415">415</span>
-<span id="416">416</span>
-<span id="417">417</span>
-<span id="418">418</span>
-<span id="419">419</span>
-<span id="420">420</span>
-<span id="421">421</span>
-<span id="422">422</span>
-<span id="423">423</span>
-<span id="424">424</span>
-<span id="425">425</span>
-<span id="426">426</span>
-<span id="427">427</span>
-<span id="428">428</span>
-<span id="429">429</span>
-<span id="430">430</span>
-<span id="431">431</span>
-<span id="432">432</span>
-<span id="433">433</span>
-<span id="434">434</span>
-<span id="435">435</span>
-<span id="436">436</span>
-<span id="437">437</span>
-<span id="438">438</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -474,13 +443,6 @@
 <span class="macro">crate::include_proto!</span>(<span class="string">&quot;quilkin.filters.local_rate_limit.v1alpha1&quot;</span>);
 <span class="kw">use</span> <span class="ident"><span class="self">self</span>::quilkin::filters::local_rate_limit::v1alpha1</span> <span class="kw">as</span> <span class="ident">proto</span>;
 
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">NAME</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;quilkin.filters.local_rate_limit.v1alpha1.LocalRateLimit&quot;</span>;
-
-<span class="doccomment">/// Creates a new factory for generating rate limiting filters.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">factory</span>() -&gt; <span class="ident">DynFilterFactory</span> {
-    <span class="ident">Box::from</span>(<span class="ident">LocalRateLimitFactory::new</span>())
-}
-
 <span class="comment">// TODO: we should make these values configurable and transparent to the filter.</span>
 <span class="doccomment">/// SESSION_TIMEOUT_SECONDS is the default session timeout.</span>
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">SESSION_TIMEOUT_SECONDS</span>: <span class="ident">Duration</span> <span class="op">=</span> <span class="ident">Duration::from_secs</span>(<span class="number">60</span>);
@@ -511,7 +473,7 @@
 <span class="doccomment">/// applies rate limiting on packets received from a downstream connection (processed</span>
 <span class="doccomment">/// through [`LocalRateLimit::read`]). Packets coming from upstream endpoints</span>
 <span class="doccomment">/// flow through the filter untouched.</span>
-<span class="kw">struct</span> <span class="ident">LocalRateLimit</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">LocalRateLimit</span> {
     <span class="doccomment">/// Tracks rate limiting state per source address.</span>
     <span class="ident">state</span>: <span class="ident">TtlMap</span><span class="op">&lt;</span><span class="ident">Bucket</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Filter configuration.</span>
@@ -523,12 +485,19 @@
 <span class="kw">impl</span> <span class="ident">LocalRateLimit</span> {
     <span class="doccomment">/// new returns a new LocalRateLimit. It spawns a future in the background</span>
     <span class="doccomment">/// that periodically refills the rate limiter&#39;s tokens.</span>
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">config</span>: <span class="ident">Config</span>, <span class="ident">metrics</span>: <span class="ident">Metrics</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">LocalRateLimit</span> {
+    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">config</span>: <span class="ident">Config</span>, <span class="ident">metrics</span>: <span class="ident">Metrics</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+        <span class="kw">if</span> <span class="ident">config</span>.<span class="ident">period</span> <span class="op">&lt;</span> <span class="number">1</span> {
+            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error::FieldInvalid</span> {
+                <span class="ident">field</span>: <span class="string">&quot;period&quot;</span>.<span class="ident">into</span>(),
+                <span class="ident">reason</span>: <span class="string">&quot;value must be at least 1 second&quot;</span>.<span class="ident">into</span>(),
+            });
+        }
+
+        <span class="prelude-val">Ok</span>(<span class="ident">LocalRateLimit</span> {
             <span class="ident">state</span>: <span class="ident">TtlMap::new</span>(<span class="ident">SESSION_TIMEOUT_SECONDS</span>, <span class="ident">SESSION_EXPIRY_POLL_INTERVAL</span>),
             <span class="ident">config</span>,
             <span class="ident">metrics</span>,
-        }
+        })
     }
 
     <span class="doccomment">/// acquire_token is called on behalf of every packet that is eligible</span>
@@ -604,41 +573,13 @@
     }
 }
 
-<span class="doccomment">/// Creates instances of [`LocalRateLimit`].</span>
-<span class="kw">struct</span> <span class="ident">LocalRateLimitFactory</span> {}
+<span class="kw">impl</span> <span class="ident">StaticFilter</span> <span class="kw">for</span> <span class="ident">LocalRateLimit</span> {
+    <span class="kw">const</span> <span class="ident">NAME</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;quilkin.filters.local_rate_limit.v1alpha1.LocalRateLimit&quot;</span>;
+    <span class="kw">type</span> <span class="ident">Configuration</span> <span class="op">=</span> <span class="ident">Config</span>;
+    <span class="kw">type</span> <span class="ident">BinaryConfiguration</span> <span class="op">=</span> <span class="ident">proto::LocalRateLimit</span>;
 
-<span class="kw">impl</span> <span class="ident">LocalRateLimitFactory</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>() -&gt; <span class="self">Self</span> {
-        <span class="ident">LocalRateLimitFactory</span> {}
-    }
-}
-
-<span class="kw">impl</span> <span class="ident">FilterFactory</span> <span class="kw">for</span> <span class="ident">LocalRateLimitFactory</span> {
-    <span class="kw">fn</span> <span class="ident">name</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
-        <span class="ident">NAME</span>
-    }
-
-    <span class="kw">fn</span> <span class="ident">config_schema</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">schemars::schema::RootSchema</span> {
-        <span class="macro">schemars::schema_for!</span>(<span class="ident">Config</span>)
-    }
-
-    <span class="kw">fn</span> <span class="ident">create_filter</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">args</span>: <span class="ident">CreateFilterArgs</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">FilterInstance</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> (<span class="ident">config_json</span>, <span class="ident">config</span>) <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">require_config</span>(<span class="ident">args</span>.<span class="ident">config</span>)<span class="question-mark">?</span>
-            .<span class="ident">deserialize</span>::<span class="op">&lt;</span><span class="ident">Config</span>, <span class="ident">proto::LocalRateLimit</span><span class="op">&gt;</span>(<span class="self">self</span>.<span class="ident">name</span>())<span class="question-mark">?</span>;
-
-        <span class="kw">if</span> <span class="ident">config</span>.<span class="ident">period</span> <span class="op">&lt;</span> <span class="number">1</span> {
-            <span class="prelude-val">Err</span>(<span class="ident">Error::FieldInvalid</span> {
-                <span class="ident">field</span>: <span class="string">&quot;period&quot;</span>.<span class="ident">into</span>(),
-                <span class="ident">reason</span>: <span class="string">&quot;value must be at least 1 second&quot;</span>.<span class="ident">into</span>(),
-            })
-        } <span class="kw">else</span> {
-            <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">LocalRateLimit::new</span>(<span class="ident">config</span>, <span class="ident">Metrics::new</span>()<span class="question-mark">?</span>);
-            <span class="prelude-val">Ok</span>(<span class="ident">FilterInstance::new</span>(
-                <span class="ident">config_json</span>,
-                <span class="ident">Box::new</span>(<span class="ident">filter</span>) <span class="kw">as</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Filter</span><span class="op">&gt;</span>,
-            ))
-        }
+    <span class="kw">fn</span> <span class="ident">try_from_config</span>(<span class="ident">config</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Configuration</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+        <span class="ident"><span class="self">Self</span>::new</span>(<span class="ident"><span class="self">Self</span>::ensure_config_exists</span>(<span class="ident">config</span>)<span class="question-mark">?</span>, <span class="ident">Metrics::new</span>()<span class="question-mark">?</span>)
     }
 }
 
@@ -685,17 +626,14 @@
     <span class="kw">use</span> <span class="ident">tokio::time</span>;
 
     <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::config::ConfigType</span>;
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">EndpointAddress</span>, <span class="ident">Endpoints</span>};
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters::local_rate_limit::LocalRateLimitFactory</span>;
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters</span>::{
-        <span class="ident">local_rate_limit</span>::{<span class="ident">metrics::Metrics</span>, <span class="ident">Config</span>, <span class="ident">LocalRateLimit</span>},
-        <span class="ident">CreateFilterArgs</span>, <span class="ident">Filter</span>, <span class="ident">FilterFactory</span>, <span class="ident">ReadContext</span>,
+    <span class="kw">use</span> <span class="kw">crate</span>::{
+        <span class="ident">config::ConfigType</span>,
+        <span class="ident">endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">Endpoints</span>},
+        <span class="ident">test_utils::assert_write_no_change</span>,
     };
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::test_utils::assert_write_no_change</span>;
 
     <span class="kw">fn</span> <span class="ident">rate_limiter</span>(<span class="ident">config</span>: <span class="ident">Config</span>) -&gt; <span class="ident">LocalRateLimit</span> {
-        <span class="ident">LocalRateLimit::new</span>(<span class="ident">config</span>, <span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>())
+        <span class="ident">LocalRateLimit::new</span>(<span class="ident">config</span>, <span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>()).<span class="ident">unwrap</span>()
     }
 
     <span class="kw">fn</span> <span class="ident">address_pair</span>() -&gt; (<span class="ident">EndpointAddress</span>, <span class="ident">EndpointAddress</span>) {
@@ -720,7 +658,7 @@
 
     <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">config_minimum_period</span>() {
-        <span class="kw">let</span> <span class="ident">factory</span> <span class="op">=</span> <span class="ident">LocalRateLimitFactory::new</span>();
+        <span class="kw">let</span> <span class="ident">factory</span> <span class="op">=</span> <span class="ident">LocalRateLimit::factory</span>();
         <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="string">&quot;
 max_packets: 10
 period: 0
