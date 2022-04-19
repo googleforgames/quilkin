@@ -782,7 +782,7 @@ mod tests {
 
         assert_eq!(dyn_metadata.len(), 1);
 
-        let value = dyn_metadata.get("key-a".into()).unwrap();
+        let value = dyn_metadata.get("key-a").unwrap();
         assert_eq!(
             value,
             &serde_json::Value::Object([("one".into(), "two".into())].into_iter().collect())

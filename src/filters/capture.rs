@@ -141,7 +141,7 @@ mod tests {
         let config = serde_json::json!({
             "metadataKey": TOKEN_KEY.to_string(),
             "suffix": {
-                "size": 3 as i64,
+                "size": 3_i64,
                 "remove": true,
             }
         });
@@ -159,7 +159,7 @@ mod tests {
 
         let config = serde_json::json!({
             "suffix": {
-                "size": 3 as i64,
+                "size": 3_i64,
             }
         });
 
