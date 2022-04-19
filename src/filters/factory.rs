@@ -84,7 +84,7 @@ impl CreateFilterArgs {
 
     /// Creates a new instance of [`CreateFilterArgs`] using a
     /// fixed [`ConfigType`].
-    pub fn fixed(config: Option<serde_yaml::Value>) -> CreateFilterArgs {
+    pub fn fixed(config: Option<serde_json::Value>) -> CreateFilterArgs {
         Self::new(config.map(ConfigType::Static))
     }
 

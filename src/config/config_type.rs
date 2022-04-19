@@ -26,7 +26,7 @@ use crate::filters::{ConvertProtoConfigError, Error};
 pub enum ConfigType {
     /// Static configuration from YAML.
     #[schemars(with = "serde_json::Value")]
-    Static(serde_yaml::Value),
+    Static(serde_json::Value),
     /// Dynamic configuration from Protobuf.
     #[schemars(skip)]
     Dynamic(prost_types::Any),
@@ -102,7 +102,7 @@ impl<'de> serde::Deserialize<'de> for ConfigType {
     where
         D: serde::Deserializer<'de>,
     {
-        serde_yaml::Value::deserialize(de).map(ConfigType::Static)
+        serde_json::Value::deserialize(de).map(ConfigType::Static)
     }
 }
 

@@ -177,8 +177,6 @@ impl FilterFactory for CompressFactory {
 #[cfg(test)]
 mod tests {
     use std::convert::TryFrom;
-
-    use serde_yaml::{Mapping, Value};
     use tracing_test::traced_test;
 
     use crate::endpoint::{Endpoint, Endpoints, UpstreamEndpoints};
@@ -278,17 +276,13 @@ mod tests {
     #[test]
     fn default_mode_factory() {
         let factory = CompressFactory::new();
-        let mut map = Mapping::new();
-        map.insert(
-            Value::String("on_read".into()),
-            Value::String("DECOMPRESS".into()),
-        );
-        map.insert(
-            Value::String("on_write".into()),
-            Value::String("COMPRESS".into()),
-        );
+        let config = serde_json::json!({
+            "on_read": "DECOMPRESS".to_string(),
+            "on_write": "COMPRESS".to_string(),
+
+        });
         let filter = factory
-            .create_filter(CreateFilterArgs::fixed(Some(Value::Mapping(map))))
+            .create_filter(CreateFilterArgs::fixed(Some(config)))
             .expect("should create a filter")
             .filter;
         assert_downstream(filter.as_ref());
@@ -297,17 +291,13 @@ mod tests {
     #[test]
     fn config_factory() {
         let factory = CompressFactory::new();
-        let mut map = Mapping::new();
-        map.insert(Value::String("mode".into()), Value::String("SNAPPY".into()));
-        map.insert(
-            Value::String("on_read".into()),
-            Value::String("DECOMPRESS".into()),
-        );
-        map.insert(
-            Value::String("on_write".into()),
-            Value::String("COMPRESS".into()),
-        );
-        let config = Value::Mapping(map);
+
+        let config = serde_json::json!({
+            "mode": "SNAPPY".to_string(),
+            "on_read": "DECOMPRESS".to_string(),
+            "on_write": "COMPRESS".to_string(),
+
+        });
         let args = CreateFilterArgs::fixed(Some(config));
 
         let filter = factory

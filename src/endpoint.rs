@@ -27,7 +27,7 @@ pub use address::EndpointAddress;
 type EndpointMetadata = crate::metadata::MetadataView<Metadata>;
 
 /// A destination endpoint with any associated metadata.
-#[derive(Debug, Deserialize, Serialize, PartialEq, Clone, PartialOrd, Eq)]
+#[derive(Debug, Deserialize, Serialize, PartialEq, Clone, Eq)]
 #[non_exhaustive]
 #[serde(deny_unknown_fields)]
 pub struct Endpoint {

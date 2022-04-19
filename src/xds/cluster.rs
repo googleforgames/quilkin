@@ -782,14 +782,10 @@ mod tests {
 
         assert_eq!(dyn_metadata.len(), 1);
 
-        let value = dyn_metadata.get(&String::from("key-a").into()).unwrap();
+        let value = dyn_metadata.get("key-a".into()).unwrap();
         assert_eq!(
             value,
-            &serde_yaml::Value::from(
-                [("one".into(), "two".into())]
-                    .into_iter()
-                    .collect::<serde_yaml::Mapping>()
-            )
+            &serde_json::Value::Object([("one".into(), "two".into())].into_iter().collect())
         );
     }
 

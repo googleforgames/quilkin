@@ -161,13 +161,11 @@ impl Source {
 #[serde(deny_unknown_fields)]
 pub struct Filter {
     pub name: String,
-    pub config: Option<serde_yaml::Value>,
+    pub config: Option<serde_json::Value>,
 }
 
 #[cfg(test)]
 mod tests {
-    use serde_yaml::Value;
-
     use super::*;
 
     use crate::endpoint::Metadata;
@@ -262,17 +260,13 @@ static:
 
         let filter = config.source.get_static_filters().unwrap().get(0).unwrap();
         assert_eq!("quilkin.core.v1.rate-limiter", filter.name);
-        let config = filter.config.as_ref().unwrap();
-        let filter_config = config.as_mapping().unwrap();
-
-        let key = Value::from("map");
+        let filter_config = filter.config.as_ref().unwrap();
         assert_eq!(
             "of arbitrary key value pairs",
-            filter_config.get(&key).unwrap().as_str().unwrap()
+            filter_config.get("map").unwrap()
         );
 
-        let key = Value::from("could");
-        let could = filter_config.get(&key).unwrap().as_sequence().unwrap();
+        let could = filter_config.get("could").unwrap().as_array().unwrap();
         assert_eq!("also", could.get(0).unwrap().as_str().unwrap());
         assert_eq!("be", could.get(1).unwrap().as_str().unwrap());
         assert_eq!(27, could.get(2).unwrap().as_i64().unwrap());

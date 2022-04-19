@@ -191,8 +191,6 @@ mod tests {
     use std::ops::Deref;
     use std::sync::Arc;
 
-    use serde_yaml::Mapping;
-
     use crate::endpoint::{Endpoint, Endpoints, Metadata};
     use crate::metadata::Value;
     use crate::test_utils::assert_write_no_change;
@@ -245,16 +243,12 @@ mod tests {
     #[test]
     fn factory_custom_tokens() {
         let factory = TokenRouterFactory::new();
-        let mut map = Mapping::new();
-        map.insert(
-            serde_yaml::Value::String("metadataKey".into()),
-            serde_yaml::Value::String(TOKEN_KEY.into()),
-        );
+        let config = serde_json::json!({
+            "metadataKey": TOKEN_KEY.to_string(),
+        });
 
         let filter = factory
-            .create_filter(CreateFilterArgs::fixed(Some(serde_yaml::Value::Mapping(
-                map,
-            ))))
+            .create_filter(CreateFilterArgs::fixed(Some(config)))
             .unwrap()
             .filter;
         let mut ctx = new_ctx();
@@ -268,10 +262,10 @@ mod tests {
     #[test]
     fn factory_empty_config() {
         let factory = TokenRouterFactory::new();
-        let map = Mapping::new();
+        let map = serde_json::Map::new();
 
         let filter = factory
-            .create_filter(CreateFilterArgs::fixed(Some(serde_yaml::Value::Mapping(
+            .create_filter(CreateFilterArgs::fixed(Some(serde_json::Value::Object(
                 map,
             ))))
             .unwrap()
