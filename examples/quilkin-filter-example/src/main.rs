@@ -52,17 +52,19 @@ impl From<Config> for proto::Greet {
 // ANCHOR_END: TryFrom
 
 // ANCHOR: filter
-struct Greet(String);
+struct Greet {
+    config: Config,
+}
 
 impl Filter for Greet {
     fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
         ctx.contents
-            .splice(0..0, format!("{} ", self.0).into_bytes());
+            .splice(0..0, format!("{} ", self.config.greeting).into_bytes());
         Some(ctx.into())
     }
     fn write(&self, mut ctx: WriteContext) -> Option<WriteResponse> {
         ctx.contents
-            .splice(0..0, format!("{} ", self.0).into_bytes());
+            .splice(0..0, format!("{} ", self.config.greeting).into_bytes());
         Some(ctx.into())
     }
 }
@@ -76,8 +78,12 @@ impl StaticFilter for Greet {
     type Configuration = Config;
     type BinaryConfiguration = proto::Greet;
 
-    fn new(config: Option<Self::Configuration>) -> Result<Self, quilkin::filters::Error> {
-        Ok(Self(Self::ensure_config_exists(config)?.greeting))
+    fn try_from_config(
+        config: Option<Self::Configuration>,
+    ) -> Result<Self, quilkin::filters::Error> {
+        Ok(Self {
+            config: Self::ensure_config_exists(config)?,
+        })
     }
 }
 // ANCHOR_END: factory
@@ -86,7 +92,18 @@ impl StaticFilter for Greet {
 #[tokio::main]
 async fn main() {
     quilkin::run(
-        quilkin::Config::builder().build(),
+        quilkin::Config::builder()
+            .with_port(7001)
+            .with_static(
+                vec![quilkin::config::Filter {
+                    name: Greet::NAME.into(),
+                    config: None,
+                }],
+                vec![quilkin::endpoint::Endpoint::new(
+                    (std::net::Ipv4Addr::LOCALHOST, 4321).into(),
+                )],
+            )
+            .build(),
         vec![Greet::factory()].into_iter(),
     )
     .await
