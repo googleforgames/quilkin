@@ -21,7 +21,7 @@ use tokio::time::{timeout, Duration};
 use quilkin::{
     config::{Builder as ConfigBuilder, Filter},
     endpoint::Endpoint,
-    filters::local_rate_limit,
+    filters::{LocalRateLimit, StaticFilter},
     test_utils::TestHelper,
 };
 
@@ -40,7 +40,7 @@ period: 1
         .with_port(server_port)
         .with_static(
             vec![Filter {
-                name: local_rate_limit::factory().name().into(),
+                name: LocalRateLimit::factory().name().into(),
                 config: serde_yaml::from_str(yaml).unwrap(),
             }],
             vec![Endpoint::new(echo)],

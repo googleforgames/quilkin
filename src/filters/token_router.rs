@@ -35,16 +35,9 @@ use metrics::Metrics;
 
 use self::quilkin::filters::token_router::v1alpha1 as proto;
 
-pub const NAME: &str = "quilkin.filters.token_router.v1alpha1.TokenRouter";
-
-/// Returns a factory for creating token routing filters.
-pub fn factory() -> DynFilterFactory {
-    Box::from(TokenRouterFactory::new())
-}
-
 /// Filter that only allows packets to be passed to Endpoints that have a matching
 /// connection_id to the token stored in the Filter's dynamic metadata.
-struct TokenRouter {
+pub struct TokenRouter {
     metadata_key: Arc<String>,
     metrics: Metrics,
 }
@@ -58,44 +51,15 @@ impl TokenRouter {
     }
 }
 
-/// Factory for the TokenRouter filter
-struct TokenRouterFactory {}
+impl StaticFilter for TokenRouter {
+    const NAME: &'static str = "quilkin.filters.token_router.v1alpha1.TokenRouter";
+    type Configuration = Config;
+    type BinaryConfiguration = proto::TokenRouter;
 
-impl TokenRouterFactory {
-    pub fn new() -> Self {
-        TokenRouterFactory {}
-    }
-}
-
-impl FilterFactory for TokenRouterFactory {
-    fn name(&self) -> &'static str {
-        NAME
-    }
-
-    fn config_schema(&self) -> schemars::schema::RootSchema {
-        schemars::schema_for!(Config)
-    }
-
-    fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
-        let (config_json, config) = args
-            .config
-            .map(|config| config.deserialize::<Config, proto::TokenRouter>(self.name()))
-            .unwrap_or_else(|| {
-                let config = Config::default();
-                serde_json::to_value(&config)
-                    .map_err(|err| {
-                        Error::DeserializeFailed(format!(
-                            "failed to JSON deserialize default config: {err}",
-                        ))
-                    })
-                    .map(|config_json| (config_json, config))
-            })?;
-
-        let filter = TokenRouter::new(config, Metrics::new()?);
-
-        Ok(FilterInstance::new(
-            config_json,
-            Box::new(filter) as Box<dyn Filter>,
+    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, Error> {
+        Ok(TokenRouter::new(
+            config.unwrap_or_default(),
+            Metrics::new()?,
         ))
     }
 }
@@ -187,24 +151,17 @@ impl TryFrom<proto::TokenRouter> for Config {
 
 #[cfg(test)]
 mod tests {
-    use std::convert::TryFrom;
-    use std::ops::Deref;
     use std::sync::Arc;
 
-    use crate::endpoint::{Endpoint, Endpoints, Metadata};
-    use crate::metadata::Value;
-    use crate::test_utils::assert_write_no_change;
-
-    use super::*;
-    use crate::filters::{
-        metadata::CAPTURED_BYTES, CreateFilterArgs, Filter, FilterFactory, ReadContext,
+    use crate::{
+        endpoint::{Endpoint, Endpoints, Metadata},
+        metadata::Value,
+        test_utils::assert_write_no_change,
     };
 
-    const TOKEN_KEY: &str = "TOKEN";
+    use super::*;
 
-    fn router(config: Config) -> TokenRouter {
-        TokenRouter::new(config, Metrics::new().unwrap())
-    }
+    const TOKEN_KEY: &str = "TOKEN";
 
     #[test]
     fn convert_proto_config() {
@@ -242,56 +199,29 @@ mod tests {
 
     #[test]
     fn factory_custom_tokens() {
-        let factory = TokenRouterFactory::new();
-        let config = serde_json::json!({
-            "metadataKey": TOKEN_KEY.to_string(),
-        });
-
-        let filter = factory
-            .create_filter(CreateFilterArgs::fixed(Some(config)))
-            .unwrap()
-            .filter;
+        let filter = TokenRouter::from_config(
+            Config {
+                metadata_key: TOKEN_KEY.to_string(),
+            }
+            .into(),
+        );
         let mut ctx = new_ctx();
         ctx.metadata.insert(
             Arc::new(TOKEN_KEY.into()),
             Value::Bytes(b"123".to_vec().into()),
         );
-        assert_read(filter.deref(), ctx);
+        assert_read(&filter, ctx);
     }
 
     #[test]
     fn factory_empty_config() {
-        let factory = TokenRouterFactory::new();
-        let map = serde_json::Map::new();
-
-        let filter = factory
-            .create_filter(CreateFilterArgs::fixed(Some(serde_json::Value::Object(
-                map,
-            ))))
-            .unwrap()
-            .filter;
+        let filter = TokenRouter::from_config(None);
         let mut ctx = new_ctx();
         ctx.metadata.insert(
             Arc::new(CAPTURED_BYTES.into()),
             Value::Bytes(b"123".to_vec().into()),
         );
-        assert_read(filter.deref(), ctx);
-    }
-
-    #[test]
-    fn factory_no_config() {
-        let factory = TokenRouterFactory::new();
-
-        let filter = factory
-            .create_filter(CreateFilterArgs::fixed(None))
-            .unwrap()
-            .filter;
-        let mut ctx = new_ctx();
-        ctx.metadata.insert(
-            Arc::new(CAPTURED_BYTES.into()),
-            Value::Bytes(b"123".to_vec().into()),
-        );
-        assert_read(filter.deref(), ctx);
+        assert_read(&filter, ctx);
     }
 
     #[test]
@@ -300,7 +230,7 @@ mod tests {
         let config = Config {
             metadata_key: CAPTURED_BYTES.into(),
         };
-        let filter = router(config);
+        let filter = TokenRouter::from_config(config.into());
 
         let mut ctx = new_ctx();
         ctx.metadata.insert(
@@ -340,7 +270,7 @@ mod tests {
         let config = Config {
             metadata_key: CAPTURED_BYTES.into(),
         };
-        let filter = router(config);
+        let filter = TokenRouter::from_config(config.into());
         assert_write_no_change(&filter);
     }
 

@@ -34,13 +34,6 @@ use metrics::Metrics;
 crate::include_proto!("quilkin.filters.local_rate_limit.v1alpha1");
 use self::quilkin::filters::local_rate_limit::v1alpha1 as proto;
 
-pub const NAME: &str = "quilkin.filters.local_rate_limit.v1alpha1.LocalRateLimit";
-
-/// Creates a new factory for generating rate limiting filters.
-pub fn factory() -> DynFilterFactory {
-    Box::from(LocalRateLimitFactory::new())
-}
-
 // TODO: we should make these values configurable and transparent to the filter.
 /// SESSION_TIMEOUT_SECONDS is the default session timeout.
 pub const SESSION_TIMEOUT_SECONDS: Duration = Duration::from_secs(60);
@@ -71,7 +64,7 @@ struct Bucket {
 /// applies rate limiting on packets received from a downstream connection (processed
 /// through [`LocalRateLimit::read`]). Packets coming from upstream endpoints
 /// flow through the filter untouched.
-struct LocalRateLimit {
+pub struct LocalRateLimit {
     /// Tracks rate limiting state per source address.
     state: TtlMap<Bucket>,
     /// Filter configuration.
@@ -83,12 +76,19 @@ struct LocalRateLimit {
 impl LocalRateLimit {
     /// new returns a new LocalRateLimit. It spawns a future in the background
     /// that periodically refills the rate limiter's tokens.
-    fn new(config: Config, metrics: Metrics) -> Self {
-        LocalRateLimit {
+    fn new(config: Config, metrics: Metrics) -> Result<Self, Error> {
+        if config.period < 1 {
+            return Err(Error::FieldInvalid {
+                field: "period".into(),
+                reason: "value must be at least 1 second".into(),
+            });
+        }
+
+        Ok(LocalRateLimit {
             state: TtlMap::new(SESSION_TIMEOUT_SECONDS, SESSION_EXPIRY_POLL_INTERVAL),
             config,
             metrics,
-        }
+        })
     }
 
     /// acquire_token is called on behalf of every packet that is eligible
@@ -164,41 +164,13 @@ impl Filter for LocalRateLimit {
     }
 }
 
-/// Creates instances of [`LocalRateLimit`].
-struct LocalRateLimitFactory {}
+impl StaticFilter for LocalRateLimit {
+    const NAME: &'static str = "quilkin.filters.local_rate_limit.v1alpha1.LocalRateLimit";
+    type Configuration = Config;
+    type BinaryConfiguration = proto::LocalRateLimit;
 
-impl LocalRateLimitFactory {
-    pub fn new() -> Self {
-        LocalRateLimitFactory {}
-    }
-}
-
-impl FilterFactory for LocalRateLimitFactory {
-    fn name(&self) -> &'static str {
-        NAME
-    }
-
-    fn config_schema(&self) -> schemars::schema::RootSchema {
-        schemars::schema_for!(Config)
-    }
-
-    fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
-        let (config_json, config) = self
-            .require_config(args.config)?
-            .deserialize::<Config, proto::LocalRateLimit>(self.name())?;
-
-        if config.period < 1 {
-            Err(Error::FieldInvalid {
-                field: "period".into(),
-                reason: "value must be at least 1 second".into(),
-            })
-        } else {
-            let filter = LocalRateLimit::new(config, Metrics::new()?);
-            Ok(FilterInstance::new(
-                config_json,
-                Box::new(filter) as Box<dyn Filter>,
-            ))
-        }
+    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, Error> {
+        Self::new(Self::ensure_config_exists(config)?, Metrics::new()?)
     }
 }
 
@@ -245,17 +217,14 @@ mod tests {
     use tokio::time;
 
     use super::*;
-    use crate::config::ConfigType;
-    use crate::endpoint::{Endpoint, EndpointAddress, Endpoints};
-    use crate::filters::local_rate_limit::LocalRateLimitFactory;
-    use crate::filters::{
-        local_rate_limit::{metrics::Metrics, Config, LocalRateLimit},
-        CreateFilterArgs, Filter, FilterFactory, ReadContext,
+    use crate::{
+        config::ConfigType,
+        endpoint::{Endpoint, Endpoints},
+        test_utils::assert_write_no_change,
     };
-    use crate::test_utils::assert_write_no_change;
 
     fn rate_limiter(config: Config) -> LocalRateLimit {
-        LocalRateLimit::new(config, Metrics::new().unwrap())
+        LocalRateLimit::new(config, Metrics::new().unwrap()).unwrap()
     }
 
     fn address_pair() -> (EndpointAddress, EndpointAddress) {
@@ -280,7 +249,7 @@ mod tests {
 
     #[tokio::test]
     async fn config_minimum_period() {
-        let factory = LocalRateLimitFactory::new();
+        let factory = LocalRateLimit::factory();
         let config = "
 max_packets: 10
 period: 0

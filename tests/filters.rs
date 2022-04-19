@@ -22,7 +22,7 @@ use std::{
 use quilkin::{
     config::{Builder as ConfigBuilder, Filter},
     endpoint::Endpoint,
-    filters::debug,
+    filters::{Debug, StaticFilter},
     test_utils::{load_test_filters, TestHelper},
     Builder as ProxyBuilder,
 };
@@ -100,7 +100,7 @@ async fn debug_filter() {
     let mut t = TestHelper::default();
 
     // handy for grabbing the configuration name
-    let factory = debug::factory();
+    let factory = Debug::factory();
 
     // create an echo server as an endpoint.
     let echo = t.run_echo_server().await;

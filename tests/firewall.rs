@@ -14,10 +14,12 @@
  * limitations under the License.
  */
 
-use quilkin::config::{Builder, Filter};
-use quilkin::endpoint::Endpoint;
-use quilkin::filters::firewall;
-use quilkin::test_utils::TestHelper;
+use quilkin::{
+    config::{Builder, Filter},
+    endpoint::Endpoint,
+    filters::{Firewall, StaticFilter},
+    test_utils::TestHelper,
+};
 use std::net::SocketAddr;
 use tokio::sync::oneshot::Receiver;
 use tokio::time::{timeout, Duration};
@@ -104,7 +106,7 @@ async fn test(t: &mut TestHelper, server_port: u16, yaml: &str) -> Receiver<Stri
         .with_port(server_port)
         .with_static(
             vec![Filter {
-                name: firewall::factory().name().into(),
+                name: Firewall::factory().name().into(),
                 config: serde_yaml::from_str(yaml.as_str()).unwrap(),
             }],
             vec![Endpoint::new(echo)],

@@ -21,7 +21,7 @@ use tonic::transport::Endpoint as TonicEndpoint;
 use crate::{
     config::{self, Config, ManagementServer, Proxy, Source, ValidationError, ValueInvalidArgs},
     endpoint::Endpoints,
-    filters::chain::Error as FilterChainError,
+    filters::FilterChainError,
     proxy::{
         server::metrics::Metrics as ProxyMetrics, sessions::metrics::Metrics as SessionMetrics,
         Admin as ProxyAdmin, Health, Server,

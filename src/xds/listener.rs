@@ -159,35 +159,35 @@ impl ListenerManager {
 
 #[cfg(test)]
 mod tests {
-    use super::ListenerManager;
-    use crate::filters::prelude::*;
-    use crate::xds::{
-        config::listener::v3::{
-            filter::ConfigType, Filter as LdsFilter, FilterChain as LdsFilterChain, Listener,
-        },
-        service::discovery::v3::{DiscoveryRequest, DiscoveryResponse},
-    };
-
     use std::time::Duration;
 
-    use crate::endpoint::{Endpoint, Endpoints, UpstreamEndpoints};
-    use crate::filters::{
-        ConvertProtoConfigError, DynFilterFactory, FilterRegistry, SharedFilterChain,
-    };
-    use crate::xds::LISTENER_TYPE;
-    use prost::Message;
     use serde::{Deserialize, Serialize};
-    use std::convert::TryFrom;
-    use tokio::sync::mpsc;
     use tokio::time;
+
+    use super::*;
+    use crate::{
+        endpoint::{Endpoint, Endpoints, UpstreamEndpoints},
+        filters::prelude::*,
+        xds::config::listener::v3::{
+            filter::ConfigType, Filter as LdsFilter, FilterChain as LdsFilterChain,
+        },
+    };
 
     // A simple filter that will be used in the following tests.
     // It appends a string to each payload.
     const APPEND_TYPE_URL: &str = "filter.append";
+
     #[derive(Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
     pub struct Append {
         pub value: Option<prost::alloc::string::String>,
     }
+
+    impl Append {
+        fn load() {
+            FilterRegistry::register([Self::factory()])
+        }
+    }
+
     #[derive(Clone, PartialEq, prost::Message)]
     pub struct ProtoAppend {
         #[prost(message, optional, tag = "1")]
@@ -221,38 +221,22 @@ mod tests {
         }
     }
 
-    fn load_append_filter() {
-        FilterRegistry::register([DynFilterFactory::from(Box::from(AppendFactory))])
-    }
+    impl StaticFilter for Append {
+        const NAME: &'static str = APPEND_TYPE_URL;
+        type Configuration = Append;
+        type BinaryConfiguration = ProtoAppend;
 
-    struct AppendFactory;
+        fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, Error> {
+            let config = Self::ensure_config_exists(config)?;
 
-    impl FilterFactory for AppendFactory {
-        fn name(&self) -> &'static str {
-            APPEND_TYPE_URL
-        }
-
-        fn config_schema(&self) -> schemars::schema::RootSchema {
-            schemars::schema_for!(Append)
-        }
-
-        fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
-            let (config_json, filter) = args
-                .config
-                .map(|config| config.deserialize::<Append, ProtoAppend>(self.name()))
-                .transpose()?
-                .unwrap();
-            if filter.value.as_ref().unwrap() == "reject" {
-                Err(Error::FieldInvalid {
+            if config.value.as_ref().unwrap() == "reject" {
+                return Err(Error::FieldInvalid {
                     field: "value".into(),
                     reason: "reject requested".into(),
-                })
-            } else {
-                Ok(FilterInstance::new(
-                    config_json,
-                    Box::new(filter) as Box<dyn Filter>,
-                ))
+                });
             }
+
+            Ok(config)
         }
     }
 
@@ -262,7 +246,7 @@ mod tests {
         // LDS filters and it can build up a filter chain from it.
 
         // Prepare a filter registry with the filter factories we need for the test.
-        load_append_filter();
+        Append::load();
         let filter_chain = SharedFilterChain::empty();
         let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel(10);
         let mut manager = ListenerManager::new(filter_chain.clone(), discovery_req_tx);
@@ -353,7 +337,7 @@ mod tests {
         // contains no filter chain.
 
         // Prepare a filter registry with the filter factories we need for the test.
-        load_append_filter();
+        Append::load();
         let filter_chain = SharedFilterChain::empty();
         let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel(10);
         let mut manager = ListenerManager::new(filter_chain.clone(), discovery_req_tx);
@@ -446,7 +430,7 @@ mod tests {
     async fn listener_manager_reject_updates() {
         // Test that the manager returns NACK DiscoveryRequests for updates it failed to process.
 
-        load_append_filter();
+        Append::load();
         let filter_chain = SharedFilterChain::empty();
         let (discovery_req_tx, mut discovery_req_rx) = mpsc::channel(10);
         let mut manager = ListenerManager::new(filter_chain.clone(), discovery_req_tx);
@@ -602,17 +586,11 @@ mod tests {
         );
     }
 
-    #[allow(deprecated)]
     fn create_lds_filter_chain(filters: Vec<LdsFilter>) -> LdsFilterChain {
         LdsFilterChain {
-            filter_chain_match: None,
             filters,
-            use_proxy_proto: None,
-            metadata: None,
-            transport_socket: None,
-            transport_socket_connect_timeout: None,
             name: "test-lds-filter-chain".into(),
-            on_demand_configuration: None,
+            ..<_>::default()
         }
     }
 

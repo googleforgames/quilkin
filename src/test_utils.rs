@@ -15,46 +15,25 @@
  */
 
 /// Common utilities for testing
-use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
-use std::str::from_utf8;
-use std::sync::Arc;
+use std::{
+    net::{Ipv4Addr, SocketAddr, SocketAddrV4},
+    str::from_utf8,
+    sync::Arc,
+};
 
 use tokio::net::UdpSocket;
 use tokio::sync::{mpsc, oneshot, watch};
 
-use crate::config::{Builder as ConfigBuilder, Config};
-use crate::endpoint::{Endpoint, EndpointAddress, Endpoints};
-use crate::filters::{prelude::*, FilterRegistry};
-use crate::metadata::Value;
-use crate::proxy::{Builder, PendingValidation};
-
-pub struct TestFilterFactory;
-
-impl FilterFactory for TestFilterFactory {
-    fn name(&self) -> &'static str {
-        "TestFilter"
-    }
-
-    fn config_schema(&self) -> schemars::schema::RootSchema {
-        schemars::schema_for_value!(serde_json::Value::Null)
-    }
-
-    fn create_filter(&self, _: CreateFilterArgs) -> Result<FilterInstance, Error> {
-        Ok(Self::create_empty_filter())
-    }
-}
-
-impl TestFilterFactory {
-    pub(crate) fn create_empty_filter() -> FilterInstance {
-        FilterInstance::new(
-            serde_json::Value::Null,
-            Box::new(TestFilter {}) as Box<dyn Filter>,
-        )
-    }
-}
+use crate::{
+    config::{Builder as ConfigBuilder, Config},
+    endpoint::{Endpoint, EndpointAddress, Endpoints},
+    filters::{prelude::*, FilterRegistry},
+    metadata::Value,
+    proxy::{Builder, PendingValidation},
+};
 
 // TestFilter is useful for testing that commands are executing filters appropriately.
-pub struct TestFilter {}
+pub struct TestFilter;
 
 impl Filter for TestFilter {
     fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
@@ -79,6 +58,16 @@ impl Filter for TestFilter {
         ctx.contents
             .append(&mut format!(":our:{}:{}", ctx.source, ctx.dest).into_bytes());
         Some(ctx.into())
+    }
+}
+
+impl StaticFilter for TestFilter {
+    const NAME: &'static str = "TestFilter";
+    type Configuration = ();
+    type BinaryConfiguration = ();
+
+    fn try_from_config(_: Option<Self::Configuration>) -> Result<Self, Error> {
+        Ok(Self)
     }
 }
 
@@ -315,7 +304,7 @@ pub fn new_test_chain() -> crate::filters::SharedFilterChain {
 }
 
 pub fn load_test_filters() {
-    FilterRegistry::register([DynFilterFactory::from(Box::from(TestFilterFactory))]);
+    FilterRegistry::register([TestFilter::factory()]);
 }
 
 #[cfg(test)]

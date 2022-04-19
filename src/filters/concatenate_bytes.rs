@@ -23,18 +23,11 @@ use crate::filters::prelude::*;
 use self::quilkin::filters::concatenate_bytes::v1alpha1 as proto;
 pub use config::{Config, Strategy};
 
-pub const NAME: &str = "quilkin.filters.concatenate_bytes.v1alpha1.ConcatenateBytes";
-
-/// Returns a factory for creating concatenation filters.
-pub fn factory() -> DynFilterFactory {
-    Box::from(ConcatBytesFactory)
-}
-
 /// The `ConcatenateBytes` filter's job is to add a byte packet to either the
 /// beginning or end of each UDP packet that passes through. This is commonly
 /// used to provide an auth token to each packet, so they can be
 /// routed appropriately.
-struct ConcatenateBytes {
+pub struct ConcatenateBytes {
     on_read: Strategy,
     on_write: Strategy,
     bytes: Vec<u8>,
@@ -80,26 +73,12 @@ impl Filter for ConcatenateBytes {
     }
 }
 
-#[derive(Default)]
-struct ConcatBytesFactory;
+impl StaticFilter for ConcatenateBytes {
+    const NAME: &'static str = "quilkin.filters.concatenate_bytes.v1alpha1.ConcatenateBytes";
+    type Configuration = Config;
+    type BinaryConfiguration = proto::ConcatenateBytes;
 
-impl FilterFactory for ConcatBytesFactory {
-    fn name(&self) -> &'static str {
-        NAME
-    }
-
-    fn config_schema(&self) -> schemars::schema::RootSchema {
-        schemars::schema_for!(Config)
-    }
-
-    fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
-        let (config_json, config) = self
-            .require_config(args.config)?
-            .deserialize::<Config, proto::ConcatenateBytes>(self.name())?;
-        let filter = ConcatenateBytes::new(config);
-        Ok(FilterInstance::new(
-            config_json,
-            Box::new(filter) as Box<dyn Filter>,
-        ))
+    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, Error> {
+        Ok(ConcatenateBytes::new(Self::ensure_config_exists(config)?))
     }
 }

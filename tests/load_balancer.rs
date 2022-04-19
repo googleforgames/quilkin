@@ -20,7 +20,7 @@ use std::sync::{Arc, Mutex};
 use quilkin::{
     config::{Builder as ConfigBuilder, Filter},
     endpoint::Endpoint,
-    filters::load_balancer,
+    filters::{LoadBalancer, StaticFilter},
     test_utils::TestHelper,
 };
 
@@ -49,7 +49,7 @@ policy: ROUND_ROBIN
         .with_port(server_port)
         .with_static(
             vec![Filter {
-                name: load_balancer::factory().name().into(),
+                name: LoadBalancer::factory().name().into(),
                 config: serde_yaml::from_str(yaml).unwrap(),
             }],
             echo_addresses

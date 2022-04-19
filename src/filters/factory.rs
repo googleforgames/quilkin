@@ -18,7 +18,7 @@ use std::sync::Arc;
 
 use crate::{
     config::ConfigType,
-    filters::{Error, Filter},
+    filters::{Error, Filter, StaticFilter},
 };
 
 /// An owned pointer to a dynamic [`FilterFactory`] instance.
@@ -63,10 +63,75 @@ pub trait FilterFactory: Sync + Send {
     /// Returns a filter based on the provided arguments.
     fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error>;
 
+    /// Converts YAML configuration into its Protobuf equivalvent.
+    fn encode_config_to_protobuf(&self, args: serde_json::Value)
+        -> Result<prost_types::Any, Error>;
+
+    /// Converts YAML configuration into its Protobuf equivalvent.
+    fn encode_config_to_json(&self, args: prost_types::Any) -> Result<serde_json::Value, Error>;
+
     /// Returns the [`ConfigType`] from the provided Option, otherwise it returns
     /// Error::MissingConfig if the Option is None.
     fn require_config(&self, config: Option<ConfigType>) -> Result<ConfigType, Error> {
         config.ok_or_else(|| Error::MissingConfig(self.name()))
+    }
+}
+
+impl<F> FilterFactory for std::marker::PhantomData<fn() -> F>
+where
+    F: StaticFilter + 'static,
+    Error: From<<F::Configuration as TryFrom<F::BinaryConfiguration>>::Error>
+        + From<<F::BinaryConfiguration as TryFrom<F::Configuration>>::Error>,
+{
+    fn name(&self) -> &'static str {
+        F::NAME
+    }
+
+    fn config_schema(&self) -> schemars::schema::RootSchema {
+        schemars::schema_for!(F::Configuration)
+    }
+
+    /// Returns a filter based on the provided arguments.
+    fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
+        let (config_json, config): (_, Option<F::Configuration>) = if let Some(config) = args.config
+        {
+            config
+                .deserialize::<F::Configuration, F::BinaryConfiguration>(self.name())
+                .map(|(j, c)| (j, Some(c)))?
+        } else {
+            (serde_json::Value::Null, None)
+        };
+
+        Ok(FilterInstance::new(
+            config_json,
+            Box::from(F::try_from_config(config)?) as Box<dyn Filter>,
+        ))
+    }
+
+    fn encode_config_to_protobuf(
+        &self,
+        config: serde_json::Value,
+    ) -> Result<prost_types::Any, Error> {
+        let config: F::Configuration = serde_json::from_value(config)?;
+
+        Ok(prost_types::Any {
+            type_url: self.name().into(),
+            value: crate::prost::encode::<F::BinaryConfiguration>(&config.try_into()?)?,
+        })
+    }
+
+    fn encode_config_to_json(&self, config: prost_types::Any) -> Result<serde_json::Value, Error> {
+        if self.name() != config.type_url {
+            return Err(crate::filters::Error::MismatchedTypes {
+                expected: self.name().into(),
+                actual: config.type_url,
+            });
+        }
+
+        let message = <F::BinaryConfiguration as prost::Message>::decode(&*config.value)?;
+        let config = F::Configuration::try_from(message)?;
+
+        Ok(serde_json::to_value(&config)?)
     }
 }
 

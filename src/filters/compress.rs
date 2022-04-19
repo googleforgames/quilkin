@@ -29,15 +29,8 @@ use metrics::Metrics;
 
 pub use config::{Action, Config, Mode};
 
-pub const NAME: &str = "quilkin.filters.compress.v1alpha1.Compress";
-
-/// Returns a factory for creating compression filters.
-pub fn factory() -> DynFilterFactory {
-    Box::from(CompressFactory::new())
-}
-
 /// Filter for compressing and decompressing packet data
-struct Compress {
+pub struct Compress {
     metrics: Metrics,
     compression_mode: Mode,
     on_read: Action,
@@ -145,44 +138,26 @@ impl Filter for Compress {
     }
 }
 
-struct CompressFactory {}
+impl StaticFilter for Compress {
+    const NAME: &'static str = "quilkin.filters.compress.v1alpha1.Compress";
+    type Configuration = Config;
+    type BinaryConfiguration = proto::Compress;
 
-impl CompressFactory {
-    pub fn new() -> Self {
-        CompressFactory {}
-    }
-}
-
-impl FilterFactory for CompressFactory {
-    fn name(&self) -> &'static str {
-        NAME
-    }
-
-    fn config_schema(&self) -> schemars::schema::RootSchema {
-        schemars::schema_for!(Config)
-    }
-
-    fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
-        let (config_json, config) = self
-            .require_config(args.config)?
-            .deserialize::<Config, proto::Compress>(self.name())?;
-        let filter = Compress::new(config, Metrics::new()?);
-        Ok(FilterInstance::new(
-            config_json,
-            Box::new(filter) as Box<dyn Filter>,
+    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, Error> {
+        Ok(Compress::new(
+            Self::ensure_config_exists(config)?,
+            Metrics::new()?,
         ))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::convert::TryFrom;
     use tracing_test::traced_test;
 
-    use crate::endpoint::{Endpoint, Endpoints, UpstreamEndpoints};
-    use crate::filters::{
-        compress::{compressor::Snappy, Compressor},
-        CreateFilterArgs, Filter, FilterFactory, ReadContext, WriteContext,
+    use crate::{
+        endpoint::{Endpoint, Endpoints, UpstreamEndpoints},
+        filters::compress::compressor::Snappy,
     };
 
     use super::*;
@@ -275,36 +250,25 @@ mod tests {
 
     #[test]
     fn default_mode_factory() {
-        let factory = CompressFactory::new();
         let config = serde_json::json!({
             "on_read": "DECOMPRESS".to_string(),
             "on_write": "COMPRESS".to_string(),
 
         });
-        let filter = factory
-            .create_filter(CreateFilterArgs::fixed(Some(config)))
-            .expect("should create a filter")
-            .filter;
-        assert_downstream(filter.as_ref());
+        let filter = Compress::from_config(Some(serde_json::from_value(config).unwrap()));
+        assert_downstream(&filter);
     }
 
     #[test]
     fn config_factory() {
-        let factory = CompressFactory::new();
-
         let config = serde_json::json!({
             "mode": "SNAPPY".to_string(),
             "on_read": "DECOMPRESS".to_string(),
             "on_write": "COMPRESS".to_string(),
 
         });
-        let args = CreateFilterArgs::fixed(Some(config));
-
-        let filter = factory
-            .create_filter(args)
-            .expect("should create a filter")
-            .filter;
-        assert_downstream(filter.as_ref());
+        let filter = Compress::from_config(Some(serde_json::from_value(config).unwrap()));
+        assert_downstream(&filter);
     }
 
     #[test]

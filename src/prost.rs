@@ -19,6 +19,13 @@
 use prost_types::value::Kind;
 use serde_json::Value;
 
+pub fn encode<M: prost::Message>(message: &M) -> Result<Vec<u8>, prost::EncodeError> {
+    let mut buf = Vec::new();
+    buf.reserve(message.encoded_len());
+    message.encode(&mut buf)?;
+    Ok(buf)
+}
+
 pub fn mapping_from_kind(kind: Kind) -> Option<serde_json::Map<String, serde_json::Value>> {
     match value_from_kind(kind) {
         Value::Object(mapping) => Some(mapping),

@@ -21,7 +21,7 @@ use tokio::time::{timeout, Duration};
 use quilkin::{
     config::{Builder, Filter},
     endpoint::Endpoint,
-    filters::compress,
+    filters::{Compress, StaticFilter},
     test_utils::TestHelper,
 };
 
@@ -40,7 +40,7 @@ on_write: COMPRESS
         .with_port(server_port)
         .with_static(
             vec![Filter {
-                name: compress::factory().name().into(),
+                name: Compress::factory().name().into(),
                 config: serde_yaml::from_str(yaml).unwrap(),
             }],
             vec![Endpoint::new(echo)],
@@ -59,7 +59,7 @@ on_write: DECOMPRESS
         .with_port(client_port)
         .with_static(
             vec![Filter {
-                name: compress::factory().name().into(),
+                name: Compress::factory().name().into(),
                 config: serde_yaml::from_str(yaml).unwrap(),
             }],
             vec![Endpoint::new((Ipv4Addr::LOCALHOST, server_port).into())],
