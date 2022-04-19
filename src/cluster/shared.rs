@@ -100,7 +100,9 @@ mod tests {
     async fn dynamic_cluster_manager_process_cluster_update() {
         let shared_cluster = SharedCluster::empty().unwrap();
 
-        fn mapping(entries: &[(&str, &str)]) -> serde_yaml::Mapping {
+        fn mapping(
+            entries: &[(&str, &str)],
+        ) -> serde_json::Map<std::string::String, serde_json::Value> {
             entries
                 .iter()
                 .map(|(k, v)| ((*k).into(), (*v).into()))

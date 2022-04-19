@@ -127,8 +127,6 @@ impl TryFrom<proto::Debug> for Config {
 #[cfg(test)]
 mod tests {
     use crate::test_utils::{assert_filter_read_no_change, assert_write_no_change};
-    use serde_yaml::Mapping;
-    use serde_yaml::Value;
     use tracing_test::traced_test;
 
     use super::*;
@@ -152,34 +150,37 @@ mod tests {
 
     #[test]
     fn from_config_with_id() {
-        let mut map = Mapping::new();
         let factory = DebugFactory::new();
+        let config = serde_json::json!({
+            "id": "name".to_string(),
+        });
 
-        map.insert(Value::from("id"), Value::from("name"));
         assert!(factory
-            .create_filter(CreateFilterArgs::fixed(Some(Value::Mapping(map)),))
+            .create_filter(CreateFilterArgs::fixed(Some(config)))
             .is_ok());
     }
 
     #[test]
     fn from_config_without_id() {
-        let mut map = Mapping::new();
         let factory = DebugFactory::new();
+        let config = serde_json::json!({
+            "id": "name",
+        });
 
-        map.insert(Value::from("id"), Value::from("name"));
         assert!(factory
-            .create_filter(CreateFilterArgs::fixed(Some(Value::Mapping(map)),))
+            .create_filter(CreateFilterArgs::fixed(Some(config)))
             .is_ok());
     }
 
     #[test]
     fn from_config_should_error() {
-        let mut map = Mapping::new();
         let factory = DebugFactory::new();
 
-        map.insert(Value::from("id"), Value::Sequence(vec![]));
+        let config = serde_json::json!({
+            "id": {},
+        });
         assert!(factory
-            .create_filter(CreateFilterArgs::fixed(Some(Value::Mapping(map))))
+            .create_filter(CreateFilterArgs::fixed(Some(config)))
             .is_err());
     }
 }

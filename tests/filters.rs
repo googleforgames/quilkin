@@ -19,8 +19,6 @@ use std::{
     sync::Arc,
 };
 
-use serde_yaml::{Mapping, Value};
-
 use quilkin::{
     config::{Builder as ConfigBuilder, Filter},
     endpoint::Endpoint,
@@ -108,8 +106,9 @@ async fn debug_filter() {
     let echo = t.run_echo_server().await;
 
     // filter config
-    let mut map = Mapping::new();
-    map.insert(Value::from("id"), Value::from("server"));
+    let config = serde_json::json!({
+    "id":  "server",
+    });
     // create server configuration
     let server_port = 12247;
     let server_config = ConfigBuilder::empty()
@@ -117,15 +116,17 @@ async fn debug_filter() {
         .with_static(
             vec![Filter {
                 name: factory.name().into(),
-                config: Some(serde_yaml::Value::Mapping(map)),
+                config: Some(config),
             }],
             vec![Endpoint::new(echo)],
         )
         .build();
     t.run_server_with_config(server_config);
 
-    let mut map = Mapping::new();
-    map.insert(Value::from("id"), Value::from("client"));
+    let config = serde_json::json!({
+    "id":  "client",
+    });
+
     // create a local client
     let client_port = 12248;
     let client_config = ConfigBuilder::empty()
@@ -133,7 +134,7 @@ async fn debug_filter() {
         .with_static(
             vec![Filter {
                 name: factory.name().into(),
-                config: Some(serde_yaml::Value::Mapping(map)),
+                config: Some(config),
             }],
             vec![Endpoint::new(
                 SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port).into(),

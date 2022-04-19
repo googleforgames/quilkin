@@ -116,8 +116,6 @@ impl FilterFactory for CaptureFactory {
 mod tests {
     use std::sync::Arc;
 
-    use serde_yaml::{Mapping, Value as YamlValue};
-
     use crate::{
         endpoint::{Endpoint, Endpoints},
         filters::metadata::CAPTURED_BYTES,
@@ -139,25 +137,17 @@ mod tests {
     #[test]
     fn factory_valid_config_all() {
         let factory = CaptureFactory::new();
-        let mut map = Mapping::new();
-        map.insert(
-            YamlValue::String("metadataKey".into()),
-            YamlValue::String(TOKEN_KEY.into()),
-        );
-        map.insert(
-            YamlValue::String("suffix".into()),
-            YamlValue::Mapping({
-                let mut map = Mapping::new();
 
-                map.insert("size".into(), YamlValue::Number(3.into()));
-                map.insert("remove".into(), YamlValue::Bool(true));
-
-                map
-            }),
-        );
+        let config = serde_json::json!({
+            "metadataKey": TOKEN_KEY.to_string(),
+            "suffix": {
+                "size": 3_i64,
+                "remove": true,
+            }
+        });
 
         let filter = factory
-            .create_filter(CreateFilterArgs::fixed(Some(YamlValue::Mapping(map))))
+            .create_filter(CreateFilterArgs::fixed(Some(config)))
             .unwrap()
             .filter;
         assert_end_strategy(filter.as_ref(), TOKEN_KEY, true);
@@ -166,18 +156,15 @@ mod tests {
     #[test]
     fn factory_valid_config_defaults() {
         let factory = CaptureFactory::new();
-        let mut map = Mapping::new();
-        map.insert("suffix".into(), {
-            let mut map = Mapping::new();
-            map.insert(
-                YamlValue::String("size".into()),
-                YamlValue::Number(3.into()),
-            );
-            map.into()
+
+        let config = serde_json::json!({
+            "suffix": {
+                "size": 3_i64,
+            }
         });
 
         let filter = factory
-            .create_filter(CreateFilterArgs::fixed(Some(YamlValue::Mapping(map))))
+            .create_filter(CreateFilterArgs::fixed(Some(config)))
             .unwrap()
             .filter;
         assert_end_strategy(filter.as_ref(), CAPTURED_BYTES, false);
@@ -186,13 +173,12 @@ mod tests {
     #[test]
     fn factory_invalid_config() {
         let factory = CaptureFactory::new();
-        let mut map = Mapping::new();
-        map.insert(
-            YamlValue::String("size".into()),
-            YamlValue::String("WRONG".into()),
-        );
-
-        let result = factory.create_filter(CreateFilterArgs::fixed(Some(YamlValue::Mapping(map))));
+        let config = serde_json::json!({
+            "suffix": {
+                "size": "WRONG",
+            }
+        });
+        let result = factory.create_filter(CreateFilterArgs::fixed(Some(config)));
         assert!(result.is_err(), "Should be an error");
     }
 
