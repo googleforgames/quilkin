@@ -99,7 +99,7 @@ where
         + Sync
         + Sized;
 
-    /// Instaniates a new [`StaticFilter`] from the given configuration, if any.
+    /// Instantiates a new [`StaticFilter`] from the given configuration, if any.
     /// # Errors
     /// If the provided configuration is invalid.
     fn new(config: Option<Self::Configuration>) -> Result<Self, Error>;
