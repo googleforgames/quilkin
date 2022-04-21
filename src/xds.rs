@@ -134,6 +134,11 @@ pub(crate) mod cluster;
 pub(crate) mod listener;
 pub(crate) mod server;
 
+use tokio::sync::watch;
+
+use crate::{cluster::SharedCluster, filters::SharedFilterChain, proxy::{Admin as ProxyAdmin, Health}};
+use service::discovery::v3::aggregated_discovery_service_server::AggregatedDiscoveryServiceServer;
+
 pub use self::{
     cache::Cache,
     client::Client,
@@ -144,16 +149,29 @@ pub use self::{
     xds::*,
 };
 
-use service::discovery::v3::aggregated_discovery_service_server::AggregatedDiscoveryServiceServer;
-
 pub async fn manage(
     port: u16,
-    _admin_port: u16,
+    admin_port: u16,
     provider: std::sync::Arc<dyn DiscoveryServiceProvider>,
 ) -> crate::Result<()> {
+    // TODO: change this to receive config as param
+    spawn_admin_server(admin_port)?;
+
     let server = AggregatedDiscoveryServiceServer::new(ControlPlane::from_arc(provider));
     let server = tonic::transport::Server::builder().add_service(server);
     Ok(server
         .serve((std::net::Ipv4Addr::UNSPECIFIED, port).into())
         .await?)
+}
+
+fn spawn_admin_server(admin_port: u16) -> crate::Result<()> {
+    let health = Health::new();
+    let admin = ProxyAdmin::new((std::net::Ipv4Addr::UNSPECIFIED, admin_port).into(), health);
+
+    let cluster = SharedCluster::empty()?;
+    let filter_chain = SharedFilterChain::empty();
+    let (_tx, shutdown_rx) = watch::channel(());
+
+    admin.run(cluster, filter_chain, shutdown_rx);
+    Ok(())
 }
