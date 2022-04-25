@@ -36,16 +36,15 @@ async fn client_and_server() {
 on_read: DECOMPRESS
 on_write: COMPRESS
 ";
-    let server_config = Builder::empty()
-        .with_port(server_port)
-        .with_static(
-            vec![Filter {
-                name: Compress::factory().name().into(),
-                config: serde_yaml::from_str(yaml).unwrap(),
-            }],
-            vec![Endpoint::new(echo)],
-        )
-        .build();
+    let server_config = quilkin::Server::builder()
+        .port(server_port)
+        .filters(vec![Filter {
+            name: Compress::factory().name().into(),
+            config: serde_yaml::from_str(yaml).unwrap(),
+        }])
+        .endpoints(vec![Endpoint::new(echo)])
+        .build()
+        .unwrap();
     // Run server proxy.
     t.run_server_with_config(server_config);
 
@@ -55,16 +54,17 @@ on_write: COMPRESS
 on_read: COMPRESS
 on_write: DECOMPRESS
 ";
-    let client_config = Builder::empty()
-        .with_port(client_port)
-        .with_static(
-            vec![Filter {
-                name: Compress::factory().name().into(),
-                config: serde_yaml::from_str(yaml).unwrap(),
-            }],
-            vec![Endpoint::new((Ipv4Addr::LOCALHOST, server_port).into())],
-        )
-        .build();
+    let client_config = quilkin::Server::builder()
+        .port(client_port)
+        .filters(vec![Filter {
+            name: Compress::factory().name().into(),
+            config: serde_yaml::from_str(yaml).unwrap(),
+        }])
+        .endpoints(vec![Endpoint::new(
+            (Ipv4Addr::LOCALHOST, server_port).into(),
+        )])
+        .build()
+        .unwrap();
     // Run client proxy.
     t.run_server_with_config(client_config);
 

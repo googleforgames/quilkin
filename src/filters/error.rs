@@ -42,12 +42,6 @@ pub enum Error {
     Infallible,
 }
 
-impl From<Error> for ValidationError {
-    fn from(error: Error) -> Self {
-        Self::FilterInvalid(error)
-    }
-}
-
 impl From<std::convert::Infallible> for Error {
     fn from(_: std::convert::Infallible) -> Self {
         Self::Infallible

@@ -35,16 +35,15 @@ bytes: YWJj #abc
     let echo = t.run_echo_server().await;
 
     let server_port = 12346;
-    let server_config = Builder::empty()
-        .with_port(server_port)
-        .with_static(
-            vec![Filter {
-                name: ConcatenateBytes::factory().name().into(),
-                config: serde_yaml::from_str(yaml).unwrap(),
-            }],
-            vec![Endpoint::new(echo)],
-        )
-        .build();
+    let server_config = quilkin::Server::builder()
+        .port(server_port)
+        .filters(vec![Filter {
+            name: ConcatenateBytes::factory().name().into(),
+            config: serde_yaml::from_str(yaml).unwrap(),
+        }])
+        .endpoints(vec![Endpoint::new(echo)])
+        .build()
+        .unwrap();
     t.run_server_with_config(server_config);
 
     // let's send the packet

@@ -85,6 +85,12 @@ impl Admin {
     }
 }
 
+impl From<crate::config::Admin> for Admin {
+    fn from(config: crate::config::Admin) -> Self {
+        Self::new(config.address, Health::new())
+    }
+}
+
 fn handle_request(request: Request<Body>, args: HandleRequestArgs) -> Response<Body> {
     match (request.method(), request.uri().path()) {
         (&Method::GET, "/metrics") => collect_metrics(),

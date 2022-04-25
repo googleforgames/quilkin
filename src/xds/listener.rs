@@ -14,19 +14,22 @@
  * limitations under the License.
  */
 
-use crate::filters::{
-    CreateFilterArgs, FilterChain as ProxyFilterChain, FilterRegistry, SharedFilterChain,
-};
-use crate::xds::config::listener::v3::{
-    filter::ConfigType as LdsConfigType, FilterChain, Listener,
-};
-use crate::xds::service::discovery::v3::{DiscoveryRequest, DiscoveryResponse};
-use crate::xds::LISTENER_TYPE;
-
-use crate::xds::ads_client::send_discovery_req;
 use bytes::Bytes;
 use prost::Message;
 use tokio::sync::mpsc;
+
+use crate::{
+    filters::{
+        CreateFilterArgs, FilterChain as ProxyFilterChain, FilterRegistry, SharedFilterChain,
+    },
+    xds::{
+        client::send_discovery_req,
+        config::listener::v3::{filter::ConfigType as LdsConfigType, FilterChain, Listener},
+        service::discovery::v3::{DiscoveryRequest, DiscoveryResponse},
+    },
+};
+
+const LISTENER_TYPE: &'static str = crate::xds::ResourceType::Listener.type_url();
 
 /// Tracks FilterChain resources on the LDS DiscoveryResponses and
 /// instantiates a corresponding proxy filter chain and exposes it

@@ -44,31 +44,30 @@ quilkin.dev:
         - YWJj # abc
         ";
     let server_port = 12348;
-    let server_config = Builder::empty()
-        .with_port(server_port)
-        .with_static(
-            vec![
-                Filter {
-                    name: Capture::factory().name().into(),
-                    config: serde_yaml::from_str(capture_yaml).unwrap(),
-                },
-                Filter {
-                    name: TokenRouter::factory().name().into(),
-                    config: None,
-                },
-            ],
-            vec![Endpoint::with_metadata(
-                echo,
-                serde_yaml::from_str::<MetadataView<_>>(endpoint_metadata).unwrap(),
-            )],
-        )
-        .build();
+    let server_config = quilkin::Server::builder()
+        .port(server_port)
+        .filters(vec![
+            Filter {
+                name: Capture::factory().name().into(),
+                config: serde_yaml::from_str(capture_yaml).unwrap(),
+            },
+            Filter {
+                name: TokenRouter::factory().name().into(),
+                config: None,
+            },
+        ])
+        .endpoints(vec![Endpoint::with_metadata(
+            echo,
+            serde_yaml::from_str::<MetadataView<_>>(endpoint_metadata).unwrap(),
+        )])
+        .build()
+        .unwrap();
     t.run_server_with_config(server_config);
 
     // valid packet
     let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
 
-    let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port);
+    let local_addr = SocketAddr::from((Ipv4Addr::LOCALHOST, server_port));
     let msg = b"helloabc";
     socket.send_to(msg, &local_addr).await.unwrap();
 

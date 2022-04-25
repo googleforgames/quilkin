@@ -32,36 +32,35 @@ use quilkin::{
 async fn token_router() {
     let mut t = TestHelper::default();
     let echo = t.run_echo_server().await;
-
-    let capture_yaml = r#"
-regex:
-    pattern: .{3}$
-"#;
-    let endpoint_metadata = "
-quilkin.dev:
-    tokens:
-        - YWJj # abc
-        ";
     let server_port = 12348;
-    let server_config = Builder::empty()
-        .with_port(server_port)
-        .with_static(
-            vec![
-                Filter {
-                    name: Capture::factory().name().into(),
-                    config: serde_yaml::from_str(capture_yaml).unwrap(),
-                },
-                Filter {
-                    name: TokenRouter::factory().name().into(),
-                    config: None,
-                },
-            ],
-            vec![Endpoint::with_metadata(
-                echo,
-                serde_yaml::from_str::<MetadataView<_>>(endpoint_metadata).unwrap(),
-            )],
-        )
-        .build();
+    let server_config = quilkin::Server::builder()
+        .port(server_port)
+        .filters(vec![
+            Filter {
+                name: Capture::factory().name().into(),
+                config: serde_json::from_value(serde_json::json!({
+                    "regex": {
+                        "pattern": ".{3}$"
+                    }
+                }))
+                .unwrap(),
+            },
+            Filter {
+                name: TokenRouter::factory().name().into(),
+                config: None,
+            },
+        ])
+        .endpoints(vec![Endpoint::with_metadata(
+            echo,
+            serde_json::from_value::<MetadataView<_>>(serde_json::json!({
+                "quilkin.dev": {
+                    "tokens": ["YWJj"]
+                }
+            }))
+            .unwrap(),
+        )])
+        .build()
+        .unwrap();
     t.run_server_with_config(server_config);
 
     // valid packet

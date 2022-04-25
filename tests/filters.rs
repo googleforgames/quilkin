@@ -24,7 +24,6 @@ use quilkin::{
     endpoint::Endpoint,
     filters::{Debug, StaticFilter},
     test_utils::{load_test_filters, TestHelper},
-    Builder as ProxyBuilder,
 };
 
 #[tokio::test]
@@ -36,38 +35,36 @@ async fn test_filter() {
 
     // create server configuration
     let server_port = 12346;
-    let server_config = ConfigBuilder::empty()
-        .with_port(server_port)
-        .with_static(
-            vec![Filter {
-                name: "TestFilter".to_string(),
-                config: None,
-            }],
-            vec![Endpoint::new(echo)],
-        )
-        .build();
+    let server_config = quilkin::Server::builder()
+        .port(server_port)
+        .filters(vec![Filter {
+            name: "TestFilter".to_string(),
+            config: None,
+        }])
+        .endpoints(vec![Endpoint::new(echo)])
+        .build()
+        .unwrap();
 
     // Run server proxy.
     load_test_filters();
-    t.run_server_with_builder(ProxyBuilder::from(Arc::new(server_config)).disable_admin());
+    t.run_server_with_config(server_config);
 
     // create a local client
     let client_port = 12347;
-    let client_config = ConfigBuilder::empty()
-        .with_port(client_port)
-        .with_static(
-            vec![Filter {
-                name: "TestFilter".to_string(),
-                config: None,
-            }],
-            vec![Endpoint::new(
-                SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port).into(),
-            )],
-        )
-        .build();
+    let client_config = quilkin::Server::builder()
+        .port(client_port)
+        .filters(vec![Filter {
+            name: "TestFilter".to_string(),
+            config: None,
+        }])
+        .endpoints(vec![Endpoint::new(
+            SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port).into(),
+        )])
+        .build()
+        .unwrap();
 
     // Run client proxy.
-    t.run_server_with_builder(ProxyBuilder::from(Arc::new(client_config)).disable_admin());
+    t.run_server_with_config(client_config);
 
     // let's send the packet
     let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
@@ -111,16 +108,15 @@ async fn debug_filter() {
     });
     // create server configuration
     let server_port = 12247;
-    let server_config = ConfigBuilder::empty()
-        .with_port(server_port)
-        .with_static(
-            vec![Filter {
-                name: factory.name().into(),
-                config: Some(config),
-            }],
-            vec![Endpoint::new(echo)],
-        )
-        .build();
+    let server_config = quilkin::Server::builder()
+        .port(server_port)
+        .filters(vec![Filter {
+            name: factory.name().into(),
+            config: Some(config),
+        }])
+        .endpoints(vec![Endpoint::new(echo)])
+        .build()
+        .unwrap();
     t.run_server_with_config(server_config);
 
     let config = serde_json::json!({
@@ -129,18 +125,17 @@ async fn debug_filter() {
 
     // create a local client
     let client_port = 12248;
-    let client_config = ConfigBuilder::empty()
-        .with_port(client_port)
-        .with_static(
-            vec![Filter {
-                name: factory.name().into(),
-                config: Some(config),
-            }],
-            vec![Endpoint::new(
-                SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port).into(),
-            )],
-        )
-        .build();
+    let client_config = quilkin::Server::builder()
+        .port(client_port)
+        .filters(vec![Filter {
+            name: factory.name().into(),
+            config: Some(config),
+        }])
+        .endpoints(vec![Endpoint::new(
+            SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port).into(),
+        )])
+        .build()
+        .unwrap();
     t.run_server_with_config(client_config);
 
     // let's send the packet

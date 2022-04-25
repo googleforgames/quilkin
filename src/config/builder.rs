@@ -14,9 +14,13 @@
  *  limitations under the License.
  */
 
+use std::{collections::HashSet, sync::Arc};
+
+use arc_swap::ArcSwap;
+
 use super::{Config, Filter};
 use crate::{
-    config::{Admin, Proxy, Source, Version},
+    config::{Admin, ManagementServer, Proxy, ValidationError, Version},
     endpoint::Endpoint,
 };
 
@@ -24,56 +28,99 @@ use crate::{
 #[derive(Debug)]
 pub struct Builder {
     pub port: u16,
-    pub source: Source,
-    pub admin: Admin,
+    pub admin: Option<Admin>,
+    pub endpoints: Vec<Endpoint>,
+    pub filters: Vec<Filter>,
+    pub management_servers: Vec<ManagementServer>,
+}
+
+impl Default for Builder {
+    fn default() -> Self {
+        Self {
+            admin: Some(<_>::default()),
+            port: <_>::default(),
+            endpoints: <_>::default(),
+            filters: <_>::default(),
+            management_servers: <_>::default(),
+        }
+    }
 }
 
 impl Builder {
-    /// Returns a [`Builder`] with empty values.
-    pub fn empty() -> Self {
-        Builder {
-            port: 0,
-            admin: Admin::default(),
-            source: Source::Static {
-                filters: vec![],
-                endpoints: vec![],
-            },
-        }
-    }
-
-    pub fn with_port(self, port: u16) -> Self {
+    pub fn port(self, port: u16) -> Self {
         Builder { port, ..self }
     }
 
-    pub fn with_static(self, filters: Vec<Filter>, endpoints: Vec<Endpoint>) -> Self {
-        let source = Source::Static { filters, endpoints };
-        Builder { source, ..self }
+    pub fn filters(self, filters: Vec<Filter>) -> Self {
+        Self { filters, ..self }
     }
 
-    pub fn with_dynamic(self, filters: impl IntoIterator<Item = String>) -> Self {
-        let source = Source::Dynamic {
-            management_servers: filters
-                .into_iter()
-                .map(|address| super::ManagementServer { address })
-                .collect(),
-        };
-
-        Self { source, ..self }
+    pub fn endpoints(self, endpoints: Vec<Endpoint>) -> Self {
+        Self { endpoints, ..self }
     }
 
-    pub fn with_admin(self, admin: Admin) -> Self {
-        Self { admin, ..self }
+    pub fn management_servers(self, management_servers: impl IntoIterator<Item = String>) -> Self {
+        let management_servers = management_servers
+            .into_iter()
+            .map(|address| ManagementServer { address })
+            .collect();
+        Self {
+            management_servers,
+            ..self
+        }
     }
 
-    pub fn build(self) -> Config {
-        Config {
+    pub fn admin(self, admin: impl Into<Option<Admin>>) -> Self {
+        Self {
+            admin: admin.into(),
+            ..self
+        }
+    }
+
+    pub fn build(self) -> crate::Result<Config> {
+        self.try_into().map_err(<_>::from)
+    }
+}
+
+impl TryFrom<Builder> for Config {
+    type Error = ValidationError;
+
+    fn try_from(builder: Builder) -> Result<Self, Self::Error> {
+        if builder
+            .endpoints
+            .iter()
+            .map(|ep| ep.address.clone())
+            .collect::<HashSet<_>>()
+            .len()
+            != builder.endpoints.len()
+        {
+            return Err(ValidationError::NotUnique("static.endpoints.address".to_string()).into());
+        }
+
+        if builder
+            .management_servers
+            .iter()
+            .map(|server| &server.address)
+            .collect::<HashSet<_>>()
+            .len()
+            != builder.management_servers.len()
+        {
+            return Err(ValidationError::NotUnique(
+                "dynamic.management_servers.address".to_string(),
+            )
+            .into());
+        }
+
+        Ok(Self {
             version: Version::V1Alpha1,
             proxy: Proxy {
                 id: "test".into(),
-                port: self.port,
+                port: builder.port,
             },
-            admin: self.admin,
-            source: self.source,
-        }
+            admin: builder.admin,
+            endpoints: Arc::from(ArcSwap::new(Arc::from(builder.endpoints))),
+            filters: Arc::from(ArcSwap::new(Arc::from(builder.filters))),
+            management_servers: Arc::from(ArcSwap::new(Arc::from(builder.management_servers))),
+        })
     }
 }

@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#![deny(unused_must_use)]
+
 mod cluster;
 pub mod metadata;
 pub(crate) mod metrics;
@@ -29,17 +31,12 @@ pub mod filters;
 
 #[doc(hidden)]
 pub mod test_utils;
-#[doc(hidden)]
 pub mod xds;
 
 pub type Result<T, E = eyre::Error> = std::result::Result<T, E>;
 
 #[doc(inline)]
-pub use self::{
-    config::Config,
-    proxy::{Builder, PendingValidation, Server, Validated},
-    runner::run,
-};
+pub use self::{config::Config, proxy::Server, runner::run};
 
 pub use quilkin_macros::include_proto;
 

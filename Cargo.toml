@@ -41,7 +41,7 @@ test = true
 quilkin-macros = { version = "0.4.0-dev", path = "./macros" }
 
 # Crates.io
-arc-swap = "1.5.0"
+arc-swap = { version = "1.5.0", features = ["serde"] }
 base64 = "0.13.0"
 base64-serde = "0.6.1"
 bytes = { version = "1.1.0", features = ["serde"] }
@@ -75,6 +75,7 @@ tracing = {version = "0.1.31" }
 tracing-subscriber = { version = "0.3.9", features = ["json"] }
 tryhard = "0.4.0"
 uuid = { version = "0.8.2", default-features = false, features = ["v4"] }
+async-stream = "0.3.3"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 sys-info = "0.9.0"

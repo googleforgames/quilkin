@@ -31,15 +31,18 @@ use crate::{
     endpoint::{Endpoint, EndpointAddress},
     metadata::MetadataView,
     xds::{
-        ads_client::send_discovery_req,
+        client::send_discovery_req,
         config::{
             cluster::v3::{cluster, Cluster},
             endpoint::v3::{lb_endpoint, ClusterLoadAssignment},
         },
         service::discovery::v3::{DiscoveryRequest, DiscoveryResponse},
-        CLUSTER_TYPE, ENDPOINT_TYPE,
+        ResourceType,
     },
 };
+
+const CLUSTER_TYPE: &'static str = ResourceType::Cluster.type_url();
+const ENDPOINT_TYPE: &'static str = ResourceType::Endpoint.type_url();
 
 /// Tracks clusters and endpoints reported by an XDS server.
 /// This struct handles, parsing and aggregating XDS DiscoveryResponse
@@ -344,7 +347,7 @@ impl ClusterManager {
 
 #[cfg(test)]
 mod tests {
-    use super::{ClusterManager, ProxyCluster};
+    use super::*;
     use crate::{
         cluster::SharedCluster,
         endpoint::{Endpoint as ProxyEndpoint, EndpointAddress},
@@ -360,7 +363,6 @@ mod tests {
                 },
             },
             service::discovery::v3::{DiscoveryRequest, DiscoveryResponse},
-            CLUSTER_TYPE, ENDPOINT_TYPE,
         },
     };
 

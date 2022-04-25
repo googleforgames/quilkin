@@ -20,7 +20,7 @@ use quilkin::{
     config::{Admin, Builder},
     endpoint::Endpoint,
     test_utils::TestHelper,
-    Builder as ProxyBuilder,
+    Server,
 };
 
 const LIVE_ADDRESS: &str = "http://localhost:9093/live";
@@ -31,14 +31,15 @@ async fn health_server() {
 
     // create server configuration
     let server_port = 12349;
-    let server_config = Builder::empty()
-        .with_port(server_port)
-        .with_static(vec![], vec!["127.0.0.1:0".parse::<Endpoint>().unwrap()])
-        .with_admin(Admin {
+    let server_config = quilkin::Server::builder()
+        .port(server_port)
+        .endpoints(vec!["127.0.0.1:0".parse::<Endpoint>().unwrap()])
+        .admin(Admin {
             address: "[::]:9093".parse().unwrap(),
         })
-        .build();
-    t.run_server_with_builder(ProxyBuilder::from(Arc::new(server_config)));
+        .build()
+        .unwrap();
+    t.run_server(Server::try_from(server_config).unwrap());
 
     let client = Client::new();
     let resp = client

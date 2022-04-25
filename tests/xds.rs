@@ -33,7 +33,6 @@ use quilkin::{
             DeltaDiscoveryRequest, DeltaDiscoveryResponse, DiscoveryRequest, DiscoveryResponse,
         },
     },
-    Builder,
 };
 
 tonic::include_proto!("quilkin.filters.concatenate_bytes.v1alpha1");
@@ -123,13 +122,12 @@ version: v1alpha1
 proxy:
   id: test-proxy
   port: 34567
-dynamic:
-  management_servers:
-    - address: http://127.0.0.1:23456
+management_servers:
+  - address: http://127.0.0.1:23456
     ";
 
-    let config: Arc<Config> = Arc::new(serde_yaml::from_str(config).unwrap());
-    let server = Builder::from(config).validate().unwrap().build();
+    let config: Config = serde_yaml::from_str(config).unwrap();
+    let server = quilkin::Server::try_from(config).unwrap();
 
     let (_shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(());
     let (discovery_response_tx, discovery_response_rx) = mpsc::channel(1);
