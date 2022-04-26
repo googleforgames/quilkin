@@ -135,6 +135,12 @@
 <span id="133">133</span>
 <span id="134">134</span>
 <span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -219,6 +225,12 @@
                 <span class="macro">tracing::error!</span>(<span class="op">%</span><span class="ident">error</span>, <span class="string">&quot;Admin server exited with an error&quot;</span>);
             }
         });
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident"><span class="kw">crate</span>::config::Admin</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Admin</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">config</span>: <span class="ident"><span class="kw">crate</span>::config::Admin</span>) -&gt; <span class="self">Self</span> {
+        <span class="ident"><span class="self">Self</span>::new</span>(<span class="ident">config</span>.<span class="ident">address</span>, <span class="ident">Health::new</span>())
     }
 }
 

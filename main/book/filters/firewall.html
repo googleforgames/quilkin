@@ -146,27 +146,26 @@ the rules set on the Firewall filter.</p>
 </span><span class="boring">fn main() {
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
-static:
-  filters:
-    - name: quilkin.filters.firewall.v1alpha1.Firewall
-      config:
-        on_read:
-          - action: ALLOW
-            source: 192.168.51.0/24
-            ports:
-               - 10
-               - 1000-7000
-        on_write: 
-          - action: DENY
-            source: 192.168.51.0/24
-            ports:
-               - 7000
-  endpoints:
-    - address: 127.0.0.1:7001
+filters:
+  - name: quilkin.filters.firewall.v1alpha1.Firewall
+    config:
+      on_read:
+        - action: ALLOW
+          source: 192.168.51.0/24
+          ports:
+             - 10
+             - 1000-7000
+      on_write: 
+        - action: DENY
+          source: 192.168.51.0/24
+          ports:
+             - 7000
+endpoints:
+  - address: 127.0.0.1:7001
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-</span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 1);
-</span><span class="boring">quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
+</span><span class="boring">assert_eq!(config.filters.load().len(), 1);
+</span><span class="boring">quilkin::Server::try_from(config).unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>
 <h3 id="configuration-options-rust-doc"><a class="header" href="#configuration-options-rust-doc">Configuration Options (<a href="../../api/quilkin/filters/firewall/struct.Config.html">Rust Doc</a>)</a></h3>

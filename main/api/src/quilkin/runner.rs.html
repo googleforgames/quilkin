@@ -72,9 +72,6 @@
 <span id="70">70</span>
 <span id="71">71</span>
 <span id="72">72</span>
-<span id="73">73</span>
-<span id="74">74</span>
-<span id="75">75</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -91,15 +88,12 @@
  * limitations under the License.
  */</span>
 
-<span class="kw">use</span> <span class="ident">std::sync::Arc</span>;
-
 <span class="kw">use</span> <span class="ident">tokio</span>::{<span class="ident">signal</span>, <span class="ident">sync::watch</span>};
 <span class="kw">use</span> <span class="ident">tracing</span>::{<span class="ident">debug</span>, <span class="ident">info</span>, <span class="ident">span</span>, <span class="ident">Level</span>};
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">config::Config</span>,
     <span class="ident">filters</span>::{<span class="ident">DynFilterFactory</span>, <span class="ident">FilterRegistry</span>},
-    <span class="ident">proxy::Builder</span>,
     <span class="prelude-ty">Result</span>,
 };
 
@@ -116,7 +110,7 @@
     <span class="kw">let</span> <span class="ident">_enter</span> <span class="op">=</span> <span class="ident">span</span>.<span class="ident">enter</span>();
 
     <span class="ident">FilterRegistry::register</span>(<span class="ident">filter_factories</span>);
-    <span class="kw">let</span> <span class="ident">server</span> <span class="op">=</span> <span class="ident">Builder::from</span>(<span class="ident">Arc::new</span>(<span class="ident">config</span>)).<span class="ident">validate</span>()<span class="question-mark">?</span>.<span class="ident">build</span>();
+    <span class="kw">let</span> <span class="ident">server</span> <span class="op">=</span> <span class="ident"><span class="kw">crate</span>::Server::try_from</span>(<span class="ident">config</span>)<span class="question-mark">?</span>;
 
     <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">target_os</span> <span class="op">=</span> <span class="string">&quot;linux&quot;</span>)]</span>
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">sig_term_fut</span> <span class="op">=</span> <span class="ident">signal::unix::signal</span>(<span class="ident">signal::unix::SignalKind::terminate</span>())<span class="question-mark">?</span>;

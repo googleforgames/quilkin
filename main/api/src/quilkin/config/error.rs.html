@@ -46,18 +46,6 @@
 <span id="44">44</span>
 <span id="45">45</span>
 <span id="46">46</span>
-<span id="47">47</span>
-<span id="48">48</span>
-<span id="49">49</span>
-<span id="50">50</span>
-<span id="51">51</span>
-<span id="52">52</span>
-<span id="53">53</span>
-<span id="54">54</span>
-<span id="55">55</span>
-<span id="56">56</span>
-<span id="57">57</span>
-<span id="58">58</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -74,9 +62,18 @@
  *  limitations under the License.
  */</span>
 
-<span class="kw">use</span> <span class="ident">std::fmt</span>::{<span class="self">self</span>, <span class="ident">Display</span>, <span class="ident">Formatter</span>};
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">thiserror::Error</span>)]</span>
+<span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;{field} has invalid value{clarification}{examples}&quot;</span>,
+    <span class="ident">clarification</span> <span class="op">=</span> <span class="ident">clarification</span>
+                    .<span class="ident">as_ref</span>()
+                    .<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;: {}&quot;</span>, <span class="ident">v</span>))
+                    .<span class="ident">unwrap_or_default</span>(),
+    <span class="ident">examples</span> <span class="op">=</span> <span class="ident">examples</span>
+                    .<span class="ident">as_ref</span>()
+                    .<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;: {}&quot;</span>, <span class="ident">v</span>.<span class="ident">join</span>(<span class="string">&quot;, &quot;</span>)))
+                    .<span class="ident">unwrap_or_default</span>(),
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
+    )]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ValueInvalidArgs</span> {
     <span class="kw">pub</span> <span class="ident">field</span>: <span class="ident">String</span>,
     <span class="kw">pub</span> <span class="ident">clarification</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
@@ -84,37 +81,16 @@
 }
 
 <span class="doccomment">/// Validation failure for a Config</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">thiserror::Error</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ValidationError</span> {
+    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;field {0} is not unique&quot;</span>)]</span>
     <span class="ident">NotUnique</span>(<span class="ident">String</span>),
+    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;field {0} cannot be empty&quot;</span>)]</span>
     <span class="ident">EmptyList</span>(<span class="ident">String</span>),
-    <span class="ident">ValueInvalid</span>(<span class="ident">ValueInvalidArgs</span>),
-    <span class="ident">FilterInvalid</span>(<span class="ident"><span class="kw">crate</span>::filters::Error</span>),
-}
-
-<span class="kw">impl</span> <span class="ident">Display</span> <span class="kw">for</span> <span class="ident">ValidationError</span> {
-    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="ident">fmt::Result</span> {
-        <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">ValidationError::NotUnique</span>(<span class="ident">field</span>) =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;field {} is not unique&quot;</span>, <span class="ident">field</span>),
-            <span class="ident">ValidationError::EmptyList</span>(<span class="ident">field</span>) =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;field {} is cannot be an empty&quot;</span>, <span class="ident">field</span>),
-            <span class="ident">ValidationError::ValueInvalid</span>(<span class="ident">args</span>) =&gt; <span class="macro">write!</span>(
-                <span class="ident">f</span>,
-                <span class="string">&quot;{} has an invalid value{}{}&quot;</span>,
-                <span class="ident">args</span>.<span class="ident">field</span>,
-                <span class="ident">args</span>.<span class="ident">clarification</span>
-                    .<span class="ident">as_ref</span>()
-                    .<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;: {}&quot;</span>, <span class="ident">v</span>))
-                    .<span class="ident">unwrap_or_default</span>(),
-                <span class="ident">args</span>.<span class="ident">examples</span>
-                    .<span class="ident">as_ref</span>()
-                    .<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;examples: {}&quot;</span>, <span class="ident">v</span>.<span class="ident">join</span>(<span class="string">&quot;,&quot;</span>)))
-                    .<span class="ident">unwrap_or_default</span>()
-            ),
-            <span class="ident">ValidationError::FilterInvalid</span>(<span class="ident">reason</span>) =&gt; {
-                <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;filter configuration is invalid: {}&quot;</span>, <span class="ident">reason</span>)
-            }
-        }
-    }
+    <span class="attribute">#[<span class="ident">error</span>(<span class="ident">transparent</span>)]</span>
+    <span class="ident">ValueInvalid</span>(<span class="attribute">#[<span class="ident">from</span>]</span> <span class="ident">ValueInvalidArgs</span>),
+    <span class="attribute">#[<span class="ident">error</span>(<span class="ident">transparent</span>)]</span>
+    <span class="ident">FilterInvalid</span>(<span class="attribute">#[<span class="ident">from</span>]</span> <span class="ident"><span class="kw">crate</span>::filters::Error</span>),
 }
 </code></pre></div>
 </section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.59.0 (9d1b2106e 2022-02-23)" ></div>

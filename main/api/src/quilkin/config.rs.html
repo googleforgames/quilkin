@@ -444,6 +444,11 @@
 <span id="442">442</span>
 <span id="443">443</span>
 <span id="444">444</span>
+<span id="445">445</span>
+<span id="446">446</span>
+<span id="447">447</span>
+<span id="448">448</span>
+<span id="449">449</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -462,8 +467,9 @@
 
 <span class="doccomment">//! Quilkin configuration.</span>
 
-<span class="kw">use</span> <span class="ident">std::net::SocketAddr</span>;
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">net::SocketAddr</span>, <span class="ident">sync::Arc</span>};
 
+<span class="kw">use</span> <span class="ident">arc_swap::ArcSwap</span>;
 <span class="kw">use</span> <span class="ident">base64_serde::base64_serde_type</span>;
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
 <span class="kw">use</span> <span class="ident">uuid::Uuid</span>;
@@ -473,8 +479,6 @@
 <span class="kw">mod</span> <span class="ident">error</span>;
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::endpoint::Endpoint</span>;
-
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">use</span> <span class="ident"><span class="self">self</span>::error::ValueInvalidArgs</span>;
 
 <span class="kw">pub</span> <span class="kw">use</span> <span class="self">self</span>::{<span class="ident">builder::Builder</span>, <span class="ident">config_type::ConfigType</span>, <span class="ident">error::ValidationError</span>};
 
@@ -489,22 +493,23 @@
 <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
 <span class="attribute">#[<span class="ident">non_exhaustive</span>]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Config</span> {
-    <span class="kw">pub</span> <span class="ident">version</span>: <span class="ident">Version</span>,
-
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">admin</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Admin</span><span class="op">&gt;</span>,
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">endpoints</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ArcSwap</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Endpoint</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">filters</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ArcSwap</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Filter</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">management_servers</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ArcSwap</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ManagementServer</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
     <span class="kw">pub</span> <span class="ident">proxy</span>: <span class="ident">Proxy</span>,
-
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">admin</span>: <span class="ident">Admin</span>,
-
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">flatten</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">source</span>: <span class="ident">Source</span>,
+    <span class="kw">pub</span> <span class="ident">version</span>: <span class="ident">Version</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">Config</span> {
     <span class="doccomment">/// Returns a new empty [`Builder`] for [`Config`].</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">builder</span>() -&gt; <span class="ident">Builder</span> {
-        <span class="ident">Builder::empty</span>()
+        <span class="ident">Builder::default</span>()
     }
 
     <span class="doccomment">/// Attempts to deserialize `input` as a YAML object representing `Self`.</span>
@@ -560,7 +565,7 @@
 <span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">Admin</span> {
     <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
         <span class="ident">Admin</span> {
-            <span class="ident">address</span>: <span class="string">&quot;[::]:9091&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
+            <span class="ident">address</span>: (<span class="ident">std::net::Ipv4Addr::UNSPECIFIED</span>, <span class="number">9091</span>).<span class="ident">into</span>(),
         }
     }
 }
@@ -571,37 +576,6 @@
     <span class="kw">pub</span> <span class="ident">address</span>: <span class="ident">String</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Source</span> {
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;static&quot;</span>)]</span>
-    <span class="ident">Static</span> {
-        <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
-        <span class="ident">filters</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Filter</span><span class="op">&gt;</span>,
-
-        <span class="ident">endpoints</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Endpoint</span><span class="op">&gt;</span>,
-    },
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;dynamic&quot;</span>)]</span>
-    <span class="ident">Dynamic</span> {
-        <span class="ident">management_servers</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ManagementServer</span><span class="op">&gt;</span>,
-    },
-}
-
-<span class="kw">impl</span> <span class="ident">Source</span> {
-    <span class="doccomment">/// Returns the list of filters if the config is a static config and None otherwise.</span>
-    <span class="doccomment">/// This is a convenience function and should only be used for doc tests and tests.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_static_filters</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span>[<span class="ident">Filter</span>]<span class="op">&gt;</span> {
-        <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">Source::Static</span> {
-                <span class="ident">filters</span>,
-                <span class="ident">endpoints</span>: <span class="kw">_</span>,
-            } =&gt; <span class="prelude-val">Some</span>(<span class="ident">filters</span>),
-            <span class="ident">Source::Dynamic</span> {
-                <span class="ident">management_servers</span>: <span class="kw">_</span>,
-            } =&gt; <span class="prelude-val">None</span>,
-        }
-    }
-}
-
 <span class="doccomment">/// Filter is the configuration for a single filter</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>, <span class="ident">Clone</span>)]</span>
 <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
@@ -610,73 +584,101 @@
     <span class="kw">pub</span> <span class="ident">config</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">serde_json::Value</span><span class="op">&gt;</span>,
 }
 
+<span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident"><span class="kw">crate</span>::xds::config::listener::v3::Filter</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Filter</span> {
+    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">eyre::Error</span>;
+
+    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">filter</span>: <span class="ident"><span class="kw">crate</span>::xds::config::listener::v3::Filter</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident"><span class="self">Self</span>::Error</span><span class="op">&gt;</span> {
+        <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::xds::config::listener::v3::filter::ConfigType</span>;
+
+        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">config_type</span>) <span class="op">=</span> <span class="ident">filter</span>.<span class="ident">config_type</span> {
+            <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">config_type</span> {
+                <span class="ident">ConfigType::TypedConfig</span>(<span class="ident">any</span>) =&gt; <span class="ident">any</span>,
+                <span class="ident">ConfigType::ConfigDiscovery</span>(<span class="kw">_</span>) =&gt; {
+                    <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">&quot;Config discovery is not supported.&quot;</span>))
+                }
+            };
+            <span class="prelude-val">Some</span>(
+                <span class="ident"><span class="kw">crate</span>::filters::FilterRegistry::get_factory</span>(<span class="kw-2">&amp;</span><span class="ident">filter</span>.<span class="ident">name</span>)
+                    .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">eyre::eyre!</span>(<span class="string">&quot;Missing filter&quot;</span>))<span class="question-mark">?</span>
+                    .<span class="ident">encode_config_to_json</span>(<span class="ident">config</span>)<span class="question-mark">?</span>,
+            )
+        } <span class="kw">else</span> {
+            <span class="prelude-val">None</span>
+        };
+
+        <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
+            <span class="ident">name</span>: <span class="ident">filter</span>.<span class="ident">name</span>,
+            <span class="ident">config</span>,
+        })
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident">Filter</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident"><span class="kw">crate</span>::xds::config::listener::v3::Filter</span> {
+    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">eyre::Error</span>;
+
+    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">filter</span>: <span class="ident">Filter</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident"><span class="self">Self</span>::Error</span><span class="op">&gt;</span> {
+        <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::xds::config::listener::v3::filter::ConfigType</span>;
+
+        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">config</span>) <span class="op">=</span> <span class="ident">filter</span>.<span class="ident">config</span> {
+            <span class="prelude-val">Some</span>(
+                <span class="ident"><span class="kw">crate</span>::filters::FilterRegistry::get_factory</span>(<span class="kw-2">&amp;</span><span class="ident">filter</span>.<span class="ident">name</span>)
+                    .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">eyre::eyre!</span>(<span class="string">&quot;Missing filter&quot;</span>))<span class="question-mark">?</span>
+                    .<span class="ident">encode_config_to_protobuf</span>(<span class="ident">config</span>)<span class="question-mark">?</span>,
+            )
+        } <span class="kw">else</span> {
+            <span class="prelude-val">None</span>
+        };
+
+        <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
+            <span class="ident">name</span>: <span class="ident">filter</span>.<span class="ident">name</span>,
+            <span class="ident">config_type</span>: <span class="ident">config</span>.<span class="ident">map</span>(<span class="ident">ConfigType::TypedConfig</span>),
+        })
+    }
+}
+
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
+    <span class="kw">use</span> <span class="ident">serde_json::json</span>;
 
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::endpoint::Metadata</span>;
+    <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
+    <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">endpoint::Metadata</span>, <span class="ident">filters::StaticFilter</span>};
 
     <span class="kw">fn</span> <span class="ident">parse_config</span>(<span class="ident">yaml</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="ident">Config</span> {
         <span class="ident">Config::from_reader</span>(<span class="ident">yaml</span>.<span class="ident">as_bytes</span>()).<span class="ident">unwrap</span>()
     }
 
-    <span class="kw">fn</span> <span class="ident">assert_static_endpoints</span>(<span class="ident">source</span>: <span class="kw-2">&amp;</span><span class="ident">Source</span>, <span class="ident">expected_endpoints</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Endpoint</span><span class="op">&gt;</span>) {
-        <span class="kw">match</span> <span class="ident">source</span> {
-            <span class="ident">Source::Static</span> {
-                <span class="ident">filters</span>: <span class="kw">_</span>,
-                <span class="ident">endpoints</span>,
-            } =&gt; {
-                <span class="macro">assert_eq!</span>(<span class="kw-2">&amp;</span><span class="ident">expected_endpoints</span>, <span class="ident">endpoints</span>,);
-            }
-            <span class="kw">_</span> =&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;expected static config source&quot;</span>),
-        }
-    }
-
-    <span class="kw">fn</span> <span class="ident">assert_management_servers</span>(<span class="ident">source</span>: <span class="kw-2">&amp;</span><span class="ident">Source</span>, <span class="ident">expected</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ManagementServer</span><span class="op">&gt;</span>) {
-        <span class="kw">match</span> <span class="ident">source</span> {
-            <span class="ident">Source::Dynamic</span> { <span class="ident">management_servers</span> } =&gt; {
-                <span class="macro">assert_eq!</span>(<span class="kw-2">&amp;</span><span class="ident">expected</span>, <span class="ident">management_servers</span>,);
-            }
-            <span class="kw">_</span> =&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;expected dynamic config source&quot;</span>),
-        }
-    }
-
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">deserialise_client</span>() {
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">Builder::empty</span>()
-            .<span class="ident">with_port</span>(<span class="number">7000</span>)
-            .<span class="ident">with_static</span>(
-                <span class="macro">vec!</span>[],
-                <span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(<span class="string">&quot;127.0.0.1:25999&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>())],
-            )
-            .<span class="ident">build</span>();
+        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">Builder::default</span>()
+            .<span class="ident">port</span>(<span class="number">7000</span>)
+            .<span class="ident">endpoints</span>(<span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(<span class="string">&quot;127.0.0.1:25999&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>())])
+            .<span class="ident">build</span>()
+            .<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">serde_yaml::to_string</span>(<span class="kw-2">&amp;</span><span class="ident">config</span>).<span class="ident">unwrap</span>();
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">deserialise_server</span>() {
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">Builder::empty</span>()
-            .<span class="ident">with_port</span>(<span class="number">7000</span>)
-            .<span class="ident">with_static</span>(
-                <span class="macro">vec!</span>[],
-                <span class="macro">vec!</span>[
-                    <span class="ident">Endpoint::new</span>(<span class="string">&quot;127.0.0.1:26000&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>()),
-                    <span class="ident">Endpoint::new</span>(<span class="string">&quot;127.0.0.1:26001&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>()),
-                ],
-            )
-            .<span class="ident">build</span>();
+        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">Builder::default</span>()
+            .<span class="ident">port</span>(<span class="number">7000</span>)
+            .<span class="ident">endpoints</span>(<span class="macro">vec!</span>[
+                <span class="ident">Endpoint::new</span>(<span class="string">&quot;127.0.0.1:26000&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>()),
+                <span class="ident">Endpoint::new</span>(<span class="string">&quot;127.0.0.1:26001&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>()),
+            ])
+            .<span class="ident">build</span>()
+            .<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">serde_yaml::to_string</span>(<span class="kw-2">&amp;</span><span class="ident">config</span>).<span class="ident">unwrap</span>();
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">parse_default_values</span>() {
-        <span class="kw">let</span> <span class="ident">yaml</span> <span class="op">=</span> <span class="string">&quot;
-version: v1alpha1
-static:
-  endpoints:
-    - address: 127.0.0.1:25999
-  &quot;</span>;
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">parse_config</span>(<span class="ident">yaml</span>);
+        <span class="kw">let</span> <span class="ident">config</span>: <span class="ident">Config</span> <span class="op">=</span> <span class="ident">serde_json::from_value</span>(<span class="macro">json!</span>({
+            <span class="string">&quot;version&quot;</span>: <span class="string">&quot;v1alpha1&quot;</span>,
+            <span class="string">&quot;endpoints&quot;</span>: [{
+                <span class="string">&quot;address&quot;</span>: <span class="string">&quot;127.0.0.1:25999&quot;</span>,
+            }],
+        }))
+        .<span class="ident">unwrap</span>();
 
         <span class="macro">assert_eq!</span>(<span class="ident">config</span>.<span class="ident">proxy</span>.<span class="ident">port</span>, <span class="number">7000</span>);
         <span class="macro">assert!</span>(<span class="ident">config</span>.<span class="ident">proxy</span>.<span class="ident">id</span>.<span class="ident">len</span>() <span class="op">&gt;</span> <span class="number">1</span>);
@@ -684,28 +686,32 @@ static:
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">parse_filter_config</span>() {
-        <span class="kw">let</span> <span class="ident">yaml</span> <span class="op">=</span> <span class="string">&quot;
-version: v1alpha1
-proxy:
-  id: client-proxy
-  port: 7000 # the port to receive traffic to locally
-static:
-  filters: # new filters section
-    - name: quilkin.core.v1.rate-limiter
-      config:
-        map: of arbitrary key value pairs
-        could:
-          - also
-          - be
-          - 27
-          - true
-  endpoints:
-    - address: 127.0.0.1:7001
-        &quot;</span>;
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">parse_config</span>(<span class="ident">yaml</span>);
+        <span class="kw">let</span> <span class="ident">config</span>: <span class="ident">Config</span> <span class="op">=</span> <span class="ident">serde_json::from_value</span>(<span class="macro">json!</span>({
+            <span class="string">&quot;version&quot;</span>: <span class="string">&quot;v1alpha1&quot;</span>,
+            <span class="string">&quot;proxy&quot;</span>: {
+                <span class="string">&quot;id&quot;</span>: <span class="string">&quot;client-proxy&quot;</span>,
+                <span class="string">&quot;port&quot;</span>: <span class="number">7000</span> <span class="comment">// the port to receive traffic to locally</span>
+            },
+            <span class="string">&quot;endpoints&quot;</span>: [{
+                <span class="string">&quot;address&quot;</span>: <span class="string">&quot;127.0.0.1:7001&quot;</span>,
+            }],
+            <span class="string">&quot;filters&quot;</span>: [{
+                <span class="string">&quot;name&quot;</span>: <span class="ident"><span class="kw">crate</span>::filters::LocalRateLimit::NAME</span>,
+                <span class="string">&quot;config&quot;</span>: {
+                    <span class="string">&quot;map&quot;</span>: <span class="string">&quot;of arbitrary key value pairs&quot;</span>,
+                    <span class="string">&quot;could&quot;</span>: [
+                        <span class="string">&quot;also&quot;</span>,
+                        <span class="string">&quot;be&quot;</span>,
+                        <span class="number">27u8</span>,
+                        <span class="bool-val">true</span>,
+                    ],
+                }
+            }],
+        }))
+        .<span class="ident">unwrap</span>();
 
-        <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">source</span>.<span class="ident">get_static_filters</span>().<span class="ident">unwrap</span>().<span class="ident">get</span>(<span class="number">0</span>).<span class="ident">unwrap</span>();
-        <span class="macro">assert_eq!</span>(<span class="string">&quot;quilkin.core.v1.rate-limiter&quot;</span>, <span class="ident">filter</span>.<span class="ident">name</span>);
+        <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">filters</span>.<span class="ident">load</span>().<span class="ident">get</span>(<span class="number">0</span>).<span class="ident">cloned</span>().<span class="ident">unwrap</span>();
+        <span class="macro">assert_eq!</span>(<span class="ident"><span class="kw">crate</span>::filters::LocalRateLimit::NAME</span>, <span class="ident">filter</span>.<span class="ident">name</span>);
         <span class="kw">let</span> <span class="ident">filter_config</span> <span class="op">=</span> <span class="ident">filter</span>.<span class="ident">config</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>();
         <span class="macro">assert_eq!</span>(
             <span class="string">&quot;of arbitrary key value pairs&quot;</span>,
@@ -726,9 +732,8 @@ version: v1alpha1
 proxy:
   id: server-proxy
   port: 7000
-static:
-  endpoints:
-    - address: 127.0.0.1:25999
+endpoints:
+  - address: 127.0.0.1:25999
   &quot;</span>;
         <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">parse_config</span>(<span class="ident">yaml</span>);
 
@@ -738,41 +743,47 @@ static:
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">parse_client</span>() {
-        <span class="kw">let</span> <span class="ident">yaml</span> <span class="op">=</span> <span class="string">&quot;
-version: v1alpha1
-static:
-  endpoints:
-    - address: 127.0.0.1:25999
-  &quot;</span>;
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">parse_config</span>(<span class="ident">yaml</span>);
+        <span class="kw">let</span> <span class="ident">config</span>: <span class="ident">Config</span> <span class="op">=</span> <span class="ident">serde_json::from_value</span>(<span class="macro">json!</span>({
+            <span class="string">&quot;version&quot;</span>: <span class="string">&quot;v1alpha1&quot;</span>,
+            <span class="string">&quot;endpoints&quot;</span>: [{
+                <span class="string">&quot;address&quot;</span>: <span class="string">&quot;127.0.0.1:25999&quot;</span>
+            }]
+        }))
+        .<span class="ident">unwrap</span>();
 
-        <span class="ident">assert_static_endpoints</span>(
-            <span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">source</span>,
-            <span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(<span class="string">&quot;127.0.0.1:25999&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>())],
+        <span class="macro">assert_eq!</span>(
+            <span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">config</span>.<span class="ident">endpoints</span>.<span class="ident">load</span>(),
+            <span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>((<span class="ident">std::net::Ipv4Addr::LOCALHOST</span>, <span class="number">25999</span>).<span class="ident">into</span>())],
         );
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">parse_server</span>() {
-        <span class="kw">let</span> <span class="ident">yaml</span> <span class="op">=</span> <span class="string">&quot;
----
-version: v1alpha1
-static:
-  endpoints:
-    - address: 127.0.0.1:26000
-      metadata:
-        quilkin.dev:
-          tokens:
-            - MXg3aWp5Ng== #1x7ijy6
-            - OGdqM3YyaQ== #8gj3v2i
-    - address: 127.0.0.1:26001
-      metadata:
-        quilkin.dev:
-          tokens:
-            - bmt1eTcweA== #nkuy70x&quot;</span>;
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">parse_config</span>(<span class="ident">yaml</span>);
-        <span class="ident">assert_static_endpoints</span>(
-            <span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">source</span>,
+        <span class="kw">let</span> <span class="ident">config</span>: <span class="ident">Config</span> <span class="op">=</span> <span class="ident">serde_json::from_value</span>(<span class="macro">json!</span>({
+            <span class="string">&quot;version&quot;</span>: <span class="string">&quot;v1alpha1&quot;</span>,
+            <span class="string">&quot;endpoints&quot;</span>: [
+                {
+                    <span class="string">&quot;address&quot;</span>: <span class="string">&quot;127.0.0.1:26000&quot;</span>,
+                    <span class="string">&quot;metadata&quot;</span>: {
+                        <span class="string">&quot;quilkin.dev&quot;</span>: {
+                            <span class="string">&quot;tokens&quot;</span>: [<span class="string">&quot;MXg3aWp5Ng==&quot;</span>, <span class="string">&quot;OGdqM3YyaQ==&quot;</span>],
+                        }
+                    }
+                },
+                {
+                    <span class="string">&quot;address&quot;</span>: <span class="string">&quot;127.0.0.1:26001&quot;</span>,
+                    <span class="string">&quot;metadata&quot;</span>: {
+                        <span class="string">&quot;quilkin.dev&quot;</span>: {
+                            <span class="string">&quot;tokens&quot;</span>: [<span class="string">&quot;bmt1eTcweA==&quot;</span>],
+                        }
+                    }
+                },
+            ]
+        }))
+        .<span class="ident">unwrap</span>();
+
+        <span class="macro">assert_eq!</span>(
+            <span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">config</span>.<span class="ident">endpoints</span>.<span class="ident">load</span>(),
             <span class="macro">vec!</span>[
                 <span class="ident">Endpoint::with_metadata</span>(
                     <span class="string">&quot;127.0.0.1:26000&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
@@ -794,27 +805,30 @@ static:
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">parse_dynamic_source</span>() {
-        <span class="kw">let</span> <span class="ident">yaml</span> <span class="op">=</span> <span class="string">&quot;
-version: v1alpha1
-dynamic:
-  filters:
-    - name: quilkin.core.v1.rate-limiter
-      config:
-        map: of arbitrary key value pairs
-        could:
-          - also
-          - be
-          - 27
-          - true
-  management_servers:
-    - address: 127.0.0.1:25999
-    - address: 127.0.0.1:30000
-  &quot;</span>;
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">parse_config</span>(<span class="ident">yaml</span>);
+    <span class="kw">fn</span> <span class="ident">parse_management_servers</span>() {
+        <span class="kw">let</span> <span class="ident">config</span>: <span class="ident">Config</span> <span class="op">=</span> <span class="ident">serde_json::from_value</span>(<span class="macro">json!</span>({
+            <span class="string">&quot;version&quot;</span>: <span class="string">&quot;v1alpha1&quot;</span>,
+            <span class="string">&quot;filters&quot;</span>: [{
+                <span class="string">&quot;name&quot;</span>: <span class="ident"><span class="kw">crate</span>::filters::LocalRateLimit::NAME</span>,
+                <span class="string">&quot;config&quot;</span>: {
+                    <span class="string">&quot;map&quot;</span>: <span class="string">&quot;of arbitrary key value pairs&quot;</span>,
+                    <span class="string">&quot;could&quot;</span>:[
+                        <span class="string">&quot;also&quot;</span>,
+                        <span class="string">&quot;be&quot;</span>,
+                        <span class="number">27u8</span>,
+                        <span class="bool-val">true</span>,
+                    ],
+                }
+            }],
+            <span class="string">&quot;management_servers&quot;</span>: [
+                { <span class="string">&quot;address&quot;</span>: <span class="string">&quot;127.0.0.1:25999&quot;</span> },
+                { <span class="string">&quot;address&quot;</span>: <span class="string">&quot;127.0.0.1:30000&quot;</span> },
+            ],
+        }))
+        .<span class="ident">unwrap</span>();
 
-        <span class="ident">assert_management_servers</span>(
-            <span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">source</span>,
+        <span class="macro">assert_eq!</span>(
+            <span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">config</span>.<span class="ident">management_servers</span>.<span class="ident">load</span>(),
             <span class="macro">vec!</span>[
                 <span class="ident">ManagementServer</span> {
                     <span class="ident">address</span>: <span class="string">&quot;127.0.0.1:25999&quot;</span>.<span class="ident">into</span>(),
@@ -832,9 +846,8 @@ dynamic:
             <span class="string">&quot;
 version: v1alpha1
 foo: bar
-static:
-  endpoints:
-    - address: 127.0.0.1:7001
+endpoints:
+  - address: 127.0.0.1:7001
 &quot;</span>,
             <span class="string">&quot;
 # proxy
@@ -843,9 +856,8 @@ proxy:
   foo: bar
   id: client-proxy
   port: 7000
-static:
-  endpoints:
-    - address: 127.0.0.1:7001
+endpoints:
+  - address: 127.0.0.1:7001
 &quot;</span>,
             <span class="string">&quot;
 # admin
@@ -857,19 +869,17 @@ admin:
             <span class="string">&quot;
 # static.endpoints
 version: v1alpha1
-static:
-  endpoints:
-    - address: 127.0.0.1:7001
-      connection_ids:
-      - Mxg3aWp5Ng==
+endpoints:
+  - address: 127.0.0.1:7001
+    connection_ids:
+    - Mxg3aWp5Ng==
 &quot;</span>,
             <span class="string">&quot;
 # static.filters
 version: v1alpha1
-static:
-  filters:
-    - name: quilkin.core.v1.rate-limiter
-      foo: bar
+filters:
+  - name: quilkin.core.v1.rate-limiter
+    foo: bar
 &quot;</span>,
             <span class="string">&quot;
 # dynamic.management_servers

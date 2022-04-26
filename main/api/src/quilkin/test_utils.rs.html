@@ -319,14 +319,6 @@
 <span id="317">317</span>
 <span id="318">318</span>
 <span id="319">319</span>
-<span id="320">320</span>
-<span id="321">321</span>
-<span id="322">322</span>
-<span id="323">323</span>
-<span id="324">324</span>
-<span id="325">325</span>
-<span id="326">326</span>
-<span id="327">327</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -358,7 +350,6 @@
     <span class="ident">endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">EndpointAddress</span>, <span class="ident">Endpoints</span>},
     <span class="ident">filters</span>::{<span class="ident">prelude</span>::<span class="kw-2">*</span>, <span class="ident">FilterRegistry</span>},
     <span class="ident">metadata::Value</span>,
-    <span class="ident">proxy</span>::{<span class="ident">Builder</span>, <span class="ident">PendingValidation</span>},
 };
 
 <span class="comment">// TestFilter is useful for testing that commands are executing filters appropriately.</span>
@@ -530,21 +521,17 @@
     <span class="doccomment">/// Run a proxy server with a supplied config.</span>
     <span class="doccomment">/// Admin is disabled for this method, as the majority of tests will not need it, and it makes it</span>
     <span class="doccomment">/// easier to avoid issues with port collisions.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_server_with_config</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">config</span>: <span class="ident">Config</span>) {
-        <span class="self">self</span>.<span class="ident">run_server_with_builder</span>(<span class="ident">Builder::from</span>(<span class="ident">Arc::new</span>(<span class="ident">config</span>)).<span class="ident">disable_admin</span>());
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_server_with_config</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="kw-2">mut</span> <span class="ident">config</span>: <span class="ident">Config</span>) {
+        <span class="ident">config</span>.<span class="ident">admin</span> <span class="op">=</span> <span class="prelude-val">None</span>;
+
+        <span class="self">self</span>.<span class="ident">run_server</span>(<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::try_from</span>(<span class="ident">config</span>).<span class="ident">unwrap</span>());
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_server_with_builder</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">builder</span>: <span class="ident">Builder</span><span class="op">&lt;</span><span class="ident">PendingValidation</span><span class="op">&gt;</span>) {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_server</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">server</span>: <span class="ident"><span class="kw">crate</span>::Server</span>) {
         <span class="kw">let</span> (<span class="ident">shutdown_tx</span>, <span class="ident">shutdown_rx</span>) <span class="op">=</span> <span class="ident">watch::channel</span>::<span class="op">&lt;</span>()<span class="op">&gt;</span>(());
         <span class="self">self</span>.<span class="ident">server_shutdown_tx</span>.<span class="ident">push</span>(<span class="prelude-val">Some</span>(<span class="ident">shutdown_tx</span>));
         <span class="ident">tokio::spawn</span>(<span class="kw">async</span> <span class="kw">move</span> {
-            <span class="ident">builder</span>
-                .<span class="ident">validate</span>()
-                .<span class="ident">unwrap</span>()
-                .<span class="ident">build</span>()
-                .<span class="ident">run</span>(<span class="ident">shutdown_rx</span>)
-                .<span class="kw">await</span>
-                .<span class="ident">unwrap</span>();
+            <span class="ident">server</span>.<span class="ident">run</span>(<span class="ident">shutdown_rx</span>).<span class="kw">await</span>.<span class="ident">unwrap</span>();
         });
     }
 
@@ -608,13 +595,10 @@
 }
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">config_with_dummy_endpoint</span>() -&gt; <span class="ident">ConfigBuilder</span> {
-    <span class="ident">ConfigBuilder::empty</span>().<span class="ident">with_static</span>(
-        <span class="macro">vec!</span>[],
-        <span class="macro">vec!</span>[<span class="ident">Endpoint</span> {
-            <span class="ident">address</span>: <span class="string">&quot;127.0.0.1:8080&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
-            ..<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>()
-        }],
-    )
+    <span class="ident">ConfigBuilder::default</span>().<span class="ident">endpoints</span>(<span class="macro">vec!</span>[<span class="ident">Endpoint</span> {
+        <span class="ident">address</span>: <span class="string">&quot;127.0.0.1:8080&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
+        ..<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>()
+    }])
 }
 <span class="doccomment">/// Creates a dummy endpoint with `id` as a suffix.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">ep</span>(<span class="ident">id</span>: <span class="ident">u8</span>) -&gt; <span class="ident">Endpoint</span> {

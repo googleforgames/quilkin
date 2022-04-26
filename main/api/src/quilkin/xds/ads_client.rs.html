@@ -611,7 +611,7 @@
         <span class="self">self</span>,
         <span class="ident">node_id</span>: <span class="ident">String</span>,
         <span class="ident">cluster</span>: <span class="ident">SharedCluster</span>,
-        <span class="ident">management_servers</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ManagementServer</span><span class="op">&gt;</span>,
+        <span class="ident">management_servers</span>: <span class="ident">std::sync::Arc</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ManagementServer</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">filter_chain</span>: <span class="ident"><span class="kw">crate</span>::filters::SharedFilterChain</span>,
         <span class="kw-2">mut</span> <span class="ident">shutdown_rx</span>: <span class="ident">watch::Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
@@ -1001,9 +1001,9 @@
         <span class="kw">let</span> <span class="ident">run</span> <span class="op">=</span> <span class="ident">AdsClient::new</span>().<span class="ident">unwrap</span>().<span class="ident">run</span>(
             <span class="string">&quot;test-id&quot;</span>.<span class="ident">into</span>(),
             <span class="ident">cluster</span>,
-            <span class="macro">vec!</span>[<span class="ident">ManagementServer</span> {
+            <span class="ident">std::sync::Arc::new</span>(<span class="macro">vec!</span>[<span class="ident">ManagementServer</span> {
                 <span class="ident">address</span>: <span class="string">&quot;localhost:18000&quot;</span>.<span class="ident">into</span>(),
-            }],
+            }]),
             <span class="ident">filter_chain</span>,
             <span class="ident">shutdown_rx</span>,
         );

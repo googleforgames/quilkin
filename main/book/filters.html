@@ -146,7 +146,7 @@
 <li>Do not forward (drop) the packet if its compressed length is over 512 bytes.</li>
 </ul>
 <p>We would create a filter corresponding to each step either by leveraging any <a href="#built-in-filters">existing filters</a>
-that do what we want or <a href="./filters/writing_custom_filters.html">writing one ourselves</a> and connect them to form the 
+that do what we want or <a href="./filters/writing_custom_filters.html">writing one ourselves</a> and connect them to form the
 following filter chain:</p>
 <pre><code class="language-bash">append | compress | drop
 </code></pre>
@@ -196,21 +196,20 @@ A packet received downstream will be fed into <code>append</code> and the result
 </span><span class="boring">async fn main() {
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
-static:
-  filters:
-    - name: quilkin.filters.debug.v1alpha1.Debug
-      config:
-        id: debug-1
-    - name: quilkin.filters.local_rate_limit.v1alpha1.LocalRateLimit
-      config:
-        max_packets: 10
-        period: 1
-  endpoints:
-    - address: 127.0.0.1:7001
+filters:
+  - name: quilkin.filters.debug.v1alpha1.Debug
+    config:
+      id: debug-1
+  - name: quilkin.filters.local_rate_limit.v1alpha1.LocalRateLimit
+    config:
+      max_packets: 10
+      period: 1
+endpoints:
+  - address: 127.0.0.1:7001
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-</span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 2);
-</span><span class="boring">quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
+</span><span class="boring">assert_eq!(config.filters.load().len(), 2);
+</span><span class="boring">quilkin::Server::try_from(config).unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>
 <p>We specify our filter chain in the <code>.filters</code> section of the proxy's configuration which has takes a sequence of <a href="#filter-config">FilterConfig</a> objects. Each object describes all information necessary to create a single filter.</p>

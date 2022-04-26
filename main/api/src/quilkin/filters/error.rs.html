@@ -161,13 +161,6 @@
 <span id="159">159</span>
 <span id="160">160</span>
 <span id="161">161</span>
-<span id="162">162</span>
-<span id="163">163</span>
-<span id="164">164</span>
-<span id="165">165</span>
-<span id="166">166</span>
-<span id="167">167</span>
-<span id="168">168</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -184,7 +177,6 @@
  * limitations under the License.
  */</span>
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::config::ValidationError</span>;
 <span class="kw">use</span> <span class="ident">prometheus::Error</span> <span class="kw">as</span> <span class="ident">MetricsError</span>;
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">doc</span>)]</span>
@@ -210,12 +202,6 @@
     <span class="ident">ConvertProtoConfig</span>(<span class="ident">ConvertProtoConfigError</span>),
     <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Infallible! This should never occur&quot;</span>)]</span>
     <span class="ident">Infallible</span>,
-}
-
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">Error</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ValidationError</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">error</span>: <span class="ident">Error</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident"><span class="self">Self</span>::FilterInvalid</span>(<span class="ident">error</span>)
-    }
 }
 
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">std::convert::Infallible</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Error</span> {

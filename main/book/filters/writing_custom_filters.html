@@ -212,17 +212,16 @@ tokio = { version = &quot;1&quot;, features = [&quot;full&quot;]}
 async fn main() {
     quilkin::run(
         quilkin::Config::builder()
-            .with_port(7001)
-            .with_static(
-                vec![quilkin::config::Filter {
-                    name: Greet::NAME.into(),
-                    config: None,
-                }],
-                vec![quilkin::endpoint::Endpoint::new(
-                    (std::net::Ipv4Addr::LOCALHOST, 4321).into(),
-                )],
-            )
-            .build(),
+            .port(7001)
+            .filters(vec![quilkin::config::Filter {
+                name: Greet::NAME.into(),
+                config: None,
+            }])
+            .endpoints(vec![quilkin::endpoint::Endpoint::new(
+                (std::net::Ipv4Addr::LOCALHOST, 4321).into(),
+            )])
+            .build()
+            .unwrap(),
         vec![Greet::factory()].into_iter(),
     )
     .await
@@ -236,10 +235,9 @@ at port 4321.</p>
 version: v1alpha1
 proxy:
   port: 7001
-static:
-  filters:
+filters:
   - name: greet.v1
-  endpoints:
+endpoints:
   - address: 127.0.0.1:4321
 </code></pre>
 <p>Next we to setup our network of services, for this example we're going to use
@@ -395,13 +393,12 @@ filter. Try it out with the following configuration:</p>
 version: v1alpha1
 proxy:
   port: 7001
-static:
-  filters:
-  - name: greet.v1
-    config:
-      greeting: Hey
-  endpoints:
-  - address: 127.0.0.1:4321
+filters:
+- name: greet.v1
+  config:
+    greeting: Hey
+endpoints:
+- address: 127.0.0.1:4321
 </code></pre>
 
                     </main>

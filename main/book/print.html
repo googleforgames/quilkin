@@ -190,9 +190,8 @@ depending on how deep an integration you wish for your system.</li>
 <p>Next, let's configure Quilkin, with a static configuration that points at the udp echo service we just started.</p>
 <p>Open a new terminal and copy the following to a file named <code>proxy.yaml</code>:</p>
 <pre><code class="language-yaml">version: v1alpha1
-static:
-  endpoints:
-    - address: 127.0.0.1:8000
+endpoints:
+  - address: 127.0.0.1:8000
 </code></pre>
 <p>This configuration will start Quilkin on the default port of 7000, and it will redirect all incoming UDP traffic to
 a single endpoint of 127.0.0.1, port 8000.</p>
@@ -432,15 +431,14 @@ Keys must be of type string otherwise the configuration is rejected.</p>
 <p>In fact, the tokens associated with an endpoint are simply a special piece of metadata well known to Quilkin and is used by the built-in <a href="./filters/token_router.html">TokenRouter</a> filter to route packets.
 Such well known values are placed within an object in the endpoint metadata, under the special key <code>quilkin.dev</code>. Currently, only the <code>tokens</code> entry is in use.</p>
 <p>As an example, the following shows the configuration for an endpoint with its metadata:</p>
-<pre><code class="language-yaml">static:
-  endpoints:
-    - address: 127.0.0.1:26000
-      metadata:
-        canary: false
-        quilkin.dev: # This object is extracted by Quilkin and is usually reserved for built-in features
-          tokens:
-            - MXg3aWp5Ng== # base64 for 1x7ijy6
-            - OGdqM3YyaQ== # base64 for 8gj3v2i
+<pre><code class="language-yaml">endpoints:
+  - address: 127.0.0.1:26000
+    metadata:
+      canary: false
+      quilkin.dev: # This object is extracted by Quilkin and is usually reserved for built-in features
+        tokens:
+          - MXg3aWp5Ng== # base64 for 1x7ijy6
+          - OGdqM3YyaQ== # base64 for 8gj3v2i
 </code></pre>
 <p>An endpoint's metadata can be specified alongside the endpoint in <a href="./proxy-configuration.html">static configuration</a> or using the <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint_components.proto#envoy-v3-api-field-config-endpoint-v3-lbendpoint-metadata">xDS endpoint metadata</a> field when using <a href="./xds.html">dynamic configuration</a> via xDS.</p>
 <h5 id="session-1"><a class="header" href="#session-1">Session</a></h5>
@@ -482,11 +480,13 @@ Not that packets reflected by this metric were dropped at an earlier stage befor
 </li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><p>Proxy Configuration</p>
-<p>The following is the schema and reference for a Quilkin proxy configuration file. See the <a href="https://github.com/googleforgames/quilkin/blob/main/examples">examples</a> folder for 
-example configuration files.</p>
-<p>By default Quilkin will look for a configuration file named <code>quilkin.yaml</code> in its current running directory first, 
-then if not present, in <code>/etc/quilkin/quilkin.yaml</code> on UNIX systems. This can be overridden with the 
-<code>-c/--config</code> command-line argument, or the <code>QUILKIN_FILENAME</code> environment variable.</p>
+<p>The following is the schema and reference for a Quilkin proxy configuration
+file. See the <a href="https://github.com/googleforgames/quilkin/blob/main/examples">examples</a> folder for example configuration files.</p>
+<p>By default Quilkin will look for a configuration file named <code>quilkin.yaml</code> in
+its current running directory first, then if not present, in
+<code>/etc/quilkin/quilkin.yaml</code> on UNIX systems. This can be overridden with the
+<code>-c/--config</code> command-line argument, or the <code>QUILKIN_FILENAME</code>
+environment variable.</p>
 <pre><code class="language-yaml">type: object
 properties:
   version:
@@ -520,48 +520,7 @@ properties:
       description: |
         Socket Address and port to bind the administration interface to.
       default: [::]:9091
-  static:
-    type: object
-    description: |
-      Static configuration of endpoints and filters.
-      NOTE: Exactly one of `static` or `dynamic` can be specified.
-    properties:
-      filter:
-        '$ref': '#/definitions/filterchain'
-      endpoints:
-        '$ref': '#/definitions/endpoints'
-    required:
-      - endpoints
-  dynamic:
-    type: object
-    description: |
-      Dynamic configuration of endpoints and filters.
-      NOTE: Exactly one of `static` or `dynamic` can be specified.
-    properties:
-      management_servers:
-        type: array
-        description: |
-          A list of XDS management servers to fetch configuration from.
-          Multiple servers can be provided for redundancy for the proxy to
-          fall back to upon error.
-        items:
-          type: object
-            description: |
-              Configuration for a management server.
-            properties:
-              address:
-                type: string
-                description: |
-                  Address of the management server. This must have the `http(s)` scheme prefix.
-                  Example: `http://example.com`
-    required:
-      - management_servers
-
-required:
-  - version
-
-definitions:
-  filterchain:
+  filters:
     type: array
     description: |
       A filter chain.
@@ -588,6 +547,22 @@ definitions:
                 Keys must be of type string otherwise the configuration is rejected.
       required:
         - address
+  management_servers:
+    type: array
+    description: |
+      A list of XDS management servers to fetch configuration from.
+      Multiple servers can be provided for redundancy for the proxy to
+      fall back to upon error.
+    items:
+      type: object
+        description: |
+          Configuration for a management server.
+        properties:
+          address:
+            type: string
+            description: |
+              Address of the management server. This must have the `http(s)` scheme prefix.
+              Example: `http://example.com`
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="filters"><a class="header" href="#filters">Filters</a></h1>
 <p>In most cases, we would like Quilkin to do some preprocessing of received packets before sending them off to their destination. Because this stage is entirely specific to the use case at hand and differs between Quilkin deployments, we must have a say over what tweaks to perform - this is where filters come in.</p>
@@ -601,7 +576,7 @@ definitions:
 <li>Do not forward (drop) the packet if its compressed length is over 512 bytes.</li>
 </ul>
 <p>We would create a filter corresponding to each step either by leveraging any <a href="filters.html#built-in-filters">existing filters</a>
-that do what we want or <a href="./filters/writing_custom_filters.html">writing one ourselves</a> and connect them to form the 
+that do what we want or <a href="./filters/writing_custom_filters.html">writing one ourselves</a> and connect them to form the
 following filter chain:</p>
 <pre><code class="language-bash">append | compress | drop
 </code></pre>
@@ -651,21 +626,20 @@ A packet received downstream will be fed into <code>append</code> and the result
 </span><span class="boring">async fn main() {
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
-static:
-  filters:
-    - name: quilkin.filters.debug.v1alpha1.Debug
-      config:
-        id: debug-1
-    - name: quilkin.filters.local_rate_limit.v1alpha1.LocalRateLimit
-      config:
-        max_packets: 10
-        period: 1
-  endpoints:
-    - address: 127.0.0.1:7001
+filters:
+  - name: quilkin.filters.debug.v1alpha1.Debug
+    config:
+      id: debug-1
+  - name: quilkin.filters.local_rate_limit.v1alpha1.LocalRateLimit
+    config:
+      max_packets: 10
+      period: 1
+endpoints:
+  - address: 127.0.0.1:7001
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-</span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 2);
-</span><span class="boring">quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
+</span><span class="boring">assert_eq!(config.filters.load().len(), 2);
+</span><span class="boring">quilkin::Server::try_from(config).unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>
 <p>We specify our filter chain in the <code>.filters</code> section of the proxy's configuration which has takes a sequence of <a href="filters.html#filter-config">FilterConfig</a> objects. Each object describes all information necessary to create a single filter.</p>
@@ -746,20 +720,19 @@ multiple matches.</p>
 </span><span class="boring">fn main() {
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
-static:
-  filters:
-    - name: quilkin.filters.capture.v1alpha1.Capture
-      config:
-          metadataKey: myapp.com/myownkey
-          prefix:
-            size: 3
-            remove: false
-  endpoints:
-    - address: 127.0.0.1:7001
+filters:
+  - name: quilkin.filters.capture.v1alpha1.Capture
+    config:
+      metadataKey: myapp.com/myownkey
+      prefix:
+      size: 3
+      remove: false
+endpoints:
+  - address: 127.0.0.1:7001
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-</span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 1);
-</span><span class="boring">quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
+</span><span class="boring">assert_eq!(config.filters.load().len(), 1);
+</span><span class="boring">quilkin::Server::try_from(config).unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>
 <h3 id="configuration-options-rust-doc"><a class="header" href="#configuration-options-rust-doc">Configuration Options (<a href="filters/../../api/quilkin/filters/capture/struct.Config.html">Rust Doc</a>)</a></h3>
@@ -852,19 +825,18 @@ and subsequent decompression of UDP data when sent between systems, such as a ga
 </span><span class="boring">fn main() {
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
-static:
-  filters:
-    - name: quilkin.filters.compress.v1alpha1.Compress
-      config:
-          on_read: COMPRESS
-          on_write: DECOMPRESS
-          mode: SNAPPY
-  endpoints:
-    - address: 127.0.0.1:7001
+filters:
+  - name: quilkin.filters.compress.v1alpha1.Compress
+    config:
+        on_read: COMPRESS
+        on_write: DECOMPRESS
+        mode: SNAPPY
+endpoints:
+  - address: 127.0.0.1:7001
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-</span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 1);
-</span><span class="boring">quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
+</span><span class="boring">assert_eq!(config.filters.load().len(), 1);
+</span><span class="boring">quilkin::Server::try_from(config).unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>
 <p>The above example shows a proxy that could be used with a typical game client, where the original client data is
@@ -949,19 +921,18 @@ through. This is commonly used to provide an auth token to each packet, so they 
 </span><span class="boring">fn main() {
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
-static:
-  filters:
-    - name: quilkin.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
-      config:
-          on_read: APPEND
-          on_write: DO_NOTHING
-          bytes: MXg3aWp5Ng==
-  endpoints:
-    - address: 127.0.0.1:7001
+filters:
+  - name: quilkin.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
+    config:
+        on_read: APPEND
+        on_write: DO_NOTHING
+        bytes: MXg3aWp5Ng==
+endpoints:
+  - address: 127.0.0.1:7001
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-</span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 1);
-</span><span class="boring">quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
+</span><span class="boring">assert_eq!(config.filters.load().len(), 1);
+</span><span class="boring">quilkin::Server::try_from(config).unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>
 <h3 id="configuration-options-rust-doc-2"><a class="header" href="#configuration-options-rust-doc-2">Configuration Options (<a href="filters/../../api/quilkin/filters/concatenate_bytes/struct.Config.html">Rust Doc</a>)</a></h3>
@@ -1011,17 +982,16 @@ definitions:
 </span><span class="boring">fn main() {
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
-static:
-  filters:
-    - name: quilkin.filters.debug.v1alpha1.Debug
-      config:
-        id: debug-1
-  endpoints:
-    - address: 127.0.0.1:7001
+filters:
+  - name: quilkin.filters.debug.v1alpha1.Debug
+    config:
+      id: debug-1
+endpoints:
+  - address: 127.0.0.1:7001
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-</span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 1);
-</span><span class="boring">quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
+</span><span class="boring">assert_eq!(config.filters.load().len(), 1);
+</span><span class="boring">quilkin::Server::try_from(config).unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>
 <h3 id="configuration-options-rust-doc-3"><a class="header" href="#configuration-options-rust-doc-3">Configuration Options (<a href="filters/../../api/quilkin/filters/debug/struct.Config.html">Rust Doc</a>)</a></h3>
@@ -1051,29 +1021,28 @@ combination with conditional flow filters like <a href="filters/./match.html"><c
 </span><span class="boring">fn main() {
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
-static:
-  endpoints:
-    - address: 127.0.0.1:26000
-    - address: 127.0.0.1:26001
-  filters:
-    - name: quilkin.filters.capture_bytes.v1alpha1.CaptureBytes
-      config:
-          strategy: PREFIX
+endpoints:
+  - address: 127.0.0.1:26000
+  - address: 127.0.0.1:26001
+filters:
+  - name: quilkin.filters.capture_bytes.v1alpha1.CaptureBytes
+    config:
+        strategy: PREFIX
+        metadataKey: myapp.com/token
+        size: 3
+        remove: false
+  - name: quilkin.filters.match.v1alpha1.Match
+    config:
+        on_read:
           metadataKey: myapp.com/token
-          size: 3
-          remove: false
-    - name: quilkin.filters.match.v1alpha1.Match
-      config:
-          on_read:
-            metadataKey: myapp.com/token
-            branches:
-                - value: abc
-                  filter: quilkin.filters.pass.v1alpha1.Pass
-            fallthrough: quilkin.filters.drop.v1alpha1.Drop
+          branches:
+              - value: abc
+                filter: quilkin.filters.pass.v1alpha1.Pass
+          fallthrough: quilkin.filters.drop.v1alpha1.Drop
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-</span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 2);
-</span><span class="boring">quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
+</span><span class="boring">assert_eq!(config.filters.load().len(), 2);
+</span><span class="boring">quilkin::Server::try_from(config).unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>
 <h3 id="configuration"><a class="header" href="#configuration">Configuration</a></h3>
@@ -1092,27 +1061,26 @@ the rules set on the Firewall filter.</p>
 </span><span class="boring">fn main() {
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
-static:
-  filters:
-    - name: quilkin.filters.firewall.v1alpha1.Firewall
-      config:
-        on_read:
-          - action: ALLOW
-            source: 192.168.51.0/24
-            ports:
-               - 10
-               - 1000-7000
-        on_write: 
-          - action: DENY
-            source: 192.168.51.0/24
-            ports:
-               - 7000
-  endpoints:
-    - address: 127.0.0.1:7001
+filters:
+  - name: quilkin.filters.firewall.v1alpha1.Firewall
+    config:
+      on_read:
+        - action: ALLOW
+          source: 192.168.51.0/24
+          ports:
+             - 10
+             - 1000-7000
+      on_write: 
+        - action: DENY
+          source: 192.168.51.0/24
+          ports:
+             - 7000
+endpoints:
+  - address: 127.0.0.1:7001
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-</span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 1);
-</span><span class="boring">quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
+</span><span class="boring">assert_eq!(config.filters.load().len(), 1);
+</span><span class="boring">quilkin::Server::try_from(config).unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>
 <h3 id="configuration-options-rust-doc-4"><a class="header" href="#configuration-options-rust-doc-4">Configuration Options (<a href="filters/../../api/quilkin/filters/firewall/struct.Config.html">Rust Doc</a>)</a></h3>
@@ -1202,17 +1170,16 @@ rule deciding if the request is allowed or denied:</p>
 </span><span class="boring">async fn main() {
 </span><span class="boring">  let yaml = &quot;
 </span>version: v1alpha1
-static:
-  filters:
-    - name: quilkin.filters.load_balancer.v1alpha1.LoadBalancer
-      config:
-        policy: ROUND_ROBIN
-  endpoints:
-    - address: 127.0.0.1:7001
+filters:
+  - name: quilkin.filters.load_balancer.v1alpha1.LoadBalancer
+    config:
+      policy: ROUND_ROBIN
+endpoints:
+  - address: 127.0.0.1:7001
 <span class="boring">&quot;;
 </span><span class="boring">  let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-</span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 1);
-</span><span class="boring">  quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
+</span><span class="boring">assert_eq!(config.filters.load().len(), 1);
+</span><span class="boring">quilkin::Server::try_from(config).unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>
 <p>The load balancing policy (the strategy to use to select what endpoint to send traffic to) is configurable.
@@ -1252,18 +1219,17 @@ Rate limiting is done independently per source (IP, Port) combination.</p>
 </span><span class="boring">async fn main() {
 </span><span class="boring">  let yaml = &quot;
 </span>version: v1alpha1
-static:
-  filters:
-    - name: quilkin.filters.local_rate_limit.v1alpha1.LocalRateLimit
-      config:
-        max_packets: 1000
-        period: 1
-  endpoints:
-    - address: 127.0.0.1:7001
+filters:
+  - name: quilkin.filters.local_rate_limit.v1alpha1.LocalRateLimit
+    config:
+      max_packets: 1000
+      period: 1
+endpoints:
+  - address: 127.0.0.1:7001
 <span class="boring">&quot;;
 </span><span class="boring">  let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-</span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 1);
-</span><span class="boring">  quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
+</span><span class="boring">assert_eq!(config.filters.load().len(), 1);
+</span><span class="boring">quilkin::Server::try_from(config).unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>
 <p>To configure a rate limiter, we specify the maximum rate at which the proxy is allowed to forward packets. In the example above, we configured the proxy to forward a maximum of 1000 packets per second).</p>
@@ -1316,29 +1282,28 @@ in Rust or <code>switch</code> statements in other languages.</p>
 </span><span class="boring">fn main() {
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
-static:
-  endpoints:
-    - address: 127.0.0.1:26000
-    - address: 127.0.0.1:26001
-  filters:
-    - name: quilkin.filters.capture_bytes.v1alpha1.CaptureBytes
-      config:
-          strategy: PREFIX
+endpoints:
+  - address: 127.0.0.1:26000
+  - address: 127.0.0.1:26001
+filters:
+  - name: quilkin.filters.capture_bytes.v1alpha1.CaptureBytes
+    config:
+        strategy: PREFIX
+        metadataKey: myapp.com/token
+        size: 3
+        remove: false
+  - name: quilkin.filters.match.v1alpha1.Match
+    config:
+        on_read:
           metadataKey: myapp.com/token
-          size: 3
-          remove: false
-    - name: quilkin.filters.match.v1alpha1.Match
-      config:
-          on_read:
-            metadataKey: myapp.com/token
-            branches:
-                - value: abc
-                  filter: quilkin.filters.pass.v1alpha1.Pass
-            fallthrough: quilkin.filters.drop.v1alpha1.Drop
+          branches:
+              - value: abc
+                filter: quilkin.filters.pass.v1alpha1.Pass
+          fallthrough: quilkin.filters.drop.v1alpha1.Drop
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-</span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 2);
-</span><span class="boring">quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
+</span><span class="boring">assert_eq!(config.filters.load().len(), 2);
+</span><span class="boring">quilkin::Server::try_from(config).unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>
 <!--  ANCHOR_END: example -->
@@ -1461,29 +1426,28 @@ combination with conditional flow filters like <a href="filters/./match.html"><c
 </span><span class="boring">fn main() {
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
-static:
-  endpoints:
-    - address: 127.0.0.1:26000
-    - address: 127.0.0.1:26001
-  filters:
-    - name: quilkin.filters.capture_bytes.v1alpha1.CaptureBytes
-      config:
-          strategy: PREFIX
+endpoints:
+  - address: 127.0.0.1:26000
+  - address: 127.0.0.1:26001
+filters:
+  - name: quilkin.filters.capture_bytes.v1alpha1.CaptureBytes
+    config:
+        strategy: PREFIX
+        metadataKey: myapp.com/token
+        size: 3
+        remove: false
+  - name: quilkin.filters.match.v1alpha1.Match
+    config:
+        on_read:
           metadataKey: myapp.com/token
-          size: 3
-          remove: false
-    - name: quilkin.filters.match.v1alpha1.Match
-      config:
-          on_read:
-            metadataKey: myapp.com/token
-            branches:
-                - value: abc
-                  filter: quilkin.filters.pass.v1alpha1.Pass
-            fallthrough: quilkin.filters.drop.v1alpha1.Drop
+          branches:
+              - value: abc
+                filter: quilkin.filters.pass.v1alpha1.Pass
+          fallthrough: quilkin.filters.drop.v1alpha1.Drop
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-</span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 2);
-</span><span class="boring">quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
+</span><span class="boring">assert_eq!(config.filters.load().len(), 2);
+</span><span class="boring">quilkin::Server::try_from(config).unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>
 <h3 id="configuration-1"><a class="header" href="#configuration-1">Configuration</a></h3>
@@ -1504,27 +1468,26 @@ static:
 </span><span class="boring">fn main() {
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
-static:
-  filters:
-    - name: quilkin.filters.token_router.v1alpha1.TokenRouter
-      config:
-          metadataKey: myapp.com/myownkey
-  endpoints: 
-    - address: 127.0.0.1:26000
-      metadata:
-        quilkin.dev:
-          tokens:
-            - MXg3aWp5Ng== # Authentication is provided by these ids, and matched against 
-            - OGdqM3YyaQ== # the value stored in Filter dynamic metadata
-    - address: 127.0.0.1:26001
-      metadata:
-        quilkin.dev:
-          tokens:
-            - bmt1eTcweA==
+filters:
+  - name: quilkin.filters.token_router.v1alpha1.TokenRouter
+    config:
+        metadataKey: myapp.com/myownkey
+endpoints:
+  - address: 127.0.0.1:26000
+    metadata:
+      quilkin.dev:
+        tokens:
+          - MXg3aWp5Ng== # Authentication is provided by these ids, and matched against
+          - OGdqM3YyaQ== # the value stored in Filter dynamic metadata
+  - address: 127.0.0.1:26001
+    metadata:
+      quilkin.dev:
+        tokens:
+          - bmt1eTcweA==
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-</span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 1);
-</span><span class="boring">quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
+</span><span class="boring">assert_eq!(config.filters.load().len(), 1);
+</span><span class="boring">quilkin::Server::try_from(config).unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>
 <p>View the <a href="filters/./capture.html">CaptureBytes</a> filter documentation for more details.</p>
@@ -1541,7 +1504,7 @@ properties:
 </code></pre>
 <h3 id="metrics-12"><a class="header" href="#metrics-12">Metrics</a></h3>
 <ul>
-<li><code>quilkin_filter_TokenRouter_packets_dropped</code><br />
+<li><code>quilkin_filter_TokenRouter_packets_dropped</code>
 A counter of the total number of packets that have been dropped. This is also provided with a <code>Reason</code> label, as there
 are differing reasons for packets to be dropped:
 <ul>
@@ -1559,7 +1522,7 @@ mechanism for all incoming packets.</p>
 <p>Capturing the authentication token from an incoming packet can be implemented via the <a href="filters/./capture.html">CaptureByte</a>
 filter, with an example outlined below, or any other filter that populates the configured dynamic metadata key for the
 authentication token to reside.</p>
-<p>It is assumed that the endpoint tokens that are used for authentication are generated by an external system, are 
+<p>It is assumed that the endpoint tokens that are used for authentication are generated by an external system, are
 appropriately cryptographically random and sent to each proxy securely.</p>
 <p>For example, a configuration would look like:</p>
 <pre><pre class="playground"><code class="language-rust">
@@ -1567,30 +1530,29 @@ appropriately cryptographically random and sent to each proxy securely.</p>
 </span><span class="boring">fn main() {
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
-static:
-  filters:
-    - name: quilkin.filters.capture.v1alpha1.Capture # Capture and remove the authentication token
-      config:
-        suffix:
-            size: 3
-            remove: true
-    - name: quilkin.filters.token_router.v1alpha1.TokenRouter
-  endpoints: 
-    - address: 127.0.0.1:26000
-      metadata:
-        quilkin.dev:
-          tokens:
-            - MXg3aWp5Ng== # Authentication is provided by these ids, and matched against 
-            - OGdqM3YyaQ== # the value stored in Filter dynamic metadata
-    - address: 127.0.0.1:26001
-      metadata:
-        quilkin.dev:
-          tokens:
-            - bmt1eTcweA==
+filters:
+  - name: quilkin.filters.capture.v1alpha1.Capture # Capture and remove the authentication token
+    config:
+      suffix:
+          size: 3
+          remove: true
+  - name: quilkin.filters.token_router.v1alpha1.TokenRouter
+endpoints:
+  - address: 127.0.0.1:26000
+    metadata:
+      quilkin.dev:
+        tokens:
+          - MXg3aWp5Ng== # Authentication is provided by these ids, and matched against
+          - OGdqM3YyaQ== # the value stored in Filter dynamic metadata
+  - address: 127.0.0.1:26001
+    metadata:
+      quilkin.dev:
+        tokens:
+          - bmt1eTcweA==
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-</span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 2);
-</span><span class="boring">quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
+</span><span class="boring">assert_eq!(config.filters.load().len(), 2);
+</span><span class="boring">quilkin::Server::try_from(config).unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>
 <p>On the game client side the <a href="filters/./concatenate_bytes.html">ConcatenateBytes</a> filter could also be used to add authentication
@@ -1673,17 +1635,16 @@ tokio = { version = &quot;1&quot;, features = [&quot;full&quot;]}
 async fn main() {
     quilkin::run(
         quilkin::Config::builder()
-            .with_port(7001)
-            .with_static(
-                vec![quilkin::config::Filter {
-                    name: Greet::NAME.into(),
-                    config: None,
-                }],
-                vec![quilkin::endpoint::Endpoint::new(
-                    (std::net::Ipv4Addr::LOCALHOST, 4321).into(),
-                )],
-            )
-            .build(),
+            .port(7001)
+            .filters(vec![quilkin::config::Filter {
+                name: Greet::NAME.into(),
+                config: None,
+            }])
+            .endpoints(vec![quilkin::endpoint::Endpoint::new(
+                (std::net::Ipv4Addr::LOCALHOST, 4321).into(),
+            )])
+            .build()
+            .unwrap(),
         vec![Greet::factory()].into_iter(),
     )
     .await
@@ -1697,10 +1658,9 @@ at port 4321.</p>
 version: v1alpha1
 proxy:
   port: 7001
-static:
-  filters:
+filters:
   - name: greet.v1
-  endpoints:
+endpoints:
   - address: 127.0.0.1:4321
 </code></pre>
 <p>Next we to setup our network of services, for this example we're going to use
@@ -1856,13 +1816,12 @@ filter. Try it out with the following configuration:</p>
 version: v1alpha1
 proxy:
   port: 7001
-static:
-  filters:
-  - name: greet.v1
-    config:
-      greeting: Hey
-  endpoints:
-  - address: 127.0.0.1:4321
+filters:
+- name: greet.v1
+  config:
+    greeting: Hey
+endpoints:
+- address: 127.0.0.1:4321
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="quilkin-integration-examples"><a class="header" href="#quilkin-integration-examples">Quilkin Integration Examples</a></h1>
 <p>The Quilkin proxy can be integrated with your dedicated game servers in several ways,

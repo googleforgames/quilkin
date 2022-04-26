@@ -148,29 +148,28 @@ in Rust or <code>switch</code> statements in other languages.</p>
 </span><span class="boring">fn main() {
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
-static:
-  endpoints:
-    - address: 127.0.0.1:26000
-    - address: 127.0.0.1:26001
-  filters:
-    - name: quilkin.filters.capture_bytes.v1alpha1.CaptureBytes
-      config:
-          strategy: PREFIX
+endpoints:
+  - address: 127.0.0.1:26000
+  - address: 127.0.0.1:26001
+filters:
+  - name: quilkin.filters.capture_bytes.v1alpha1.CaptureBytes
+    config:
+        strategy: PREFIX
+        metadataKey: myapp.com/token
+        size: 3
+        remove: false
+  - name: quilkin.filters.match.v1alpha1.Match
+    config:
+        on_read:
           metadataKey: myapp.com/token
-          size: 3
-          remove: false
-    - name: quilkin.filters.match.v1alpha1.Match
-      config:
-          on_read:
-            metadataKey: myapp.com/token
-            branches:
-                - value: abc
-                  filter: quilkin.filters.pass.v1alpha1.Pass
-            fallthrough: quilkin.filters.drop.v1alpha1.Drop
+          branches:
+              - value: abc
+                filter: quilkin.filters.pass.v1alpha1.Pass
+          fallthrough: quilkin.filters.drop.v1alpha1.Drop
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-</span><span class="boring">assert_eq!(config.source.get_static_filters().unwrap().len(), 2);
-</span><span class="boring">quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
+</span><span class="boring">assert_eq!(config.filters.load().len(), 2);
+</span><span class="boring">quilkin::Server::try_from(config).unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>
 <!--  ANCHOR_END: example -->
