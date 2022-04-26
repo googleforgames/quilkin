@@ -102,10 +102,9 @@ at port 4321.
 version: v1alpha1
 proxy:
   port: 7001
-static:
-  filters:
+filters:
   - name: greet.v1
-  endpoints:
+endpoints:
   - address: 127.0.0.1:4321
 ```
 

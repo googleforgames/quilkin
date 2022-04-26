@@ -41,7 +41,7 @@ test = true
 quilkin-macros = { version = "0.4.0-dev", path = "./macros" }
 
 # Crates.io
-arc-swap = "1.5.0"
+arc-swap = { version = "1.5.0", features = ["serde"] }
 base64 = "0.13.0"
 base64-serde = "0.6.1"
 bytes = { version = "1.1.0", features = ["serde"] }

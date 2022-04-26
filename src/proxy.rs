@@ -15,13 +15,11 @@
  */
 
 pub(crate) use admin::Admin;
-pub use builder::{Builder, PendingValidation, Validated};
 pub(crate) use health::Health;
 pub use server::Server;
 pub use sessions::SessionKey;
 
 mod admin;
-mod builder;
 mod config_dump;
 mod health;
 mod server;

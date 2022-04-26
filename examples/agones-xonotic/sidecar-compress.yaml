@@ -23,15 +23,14 @@ data:
     version: v1alpha1
     proxy:
       port: 26001
-    static:
-      filters:
-        - name: quilkin.extensions.filters.compress.v1alpha1.Compress
-          config:
-              on_read: DECOMPRESS
-              on_write: COMPRESS
-              mode: SNAPPY
-      endpoints:
-        - address: 127.0.0.1:26000
+    filters:
+      - name: quilkin.extensions.filters.compress.v1alpha1.Compress
+        config:
+            on_read: DECOMPRESS
+            on_write: COMPRESS
+            mode: SNAPPY
+    endpoints:
+      - address: 127.0.0.1:26000
 ---
 apiVersion: "agones.dev/v1"
 kind: Fleet

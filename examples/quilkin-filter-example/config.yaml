@@ -18,11 +18,10 @@
 version: v1alpha1
 proxy:
   port: 7001
-static:
-  filters:
-  - name: greet.v1
-    config:
-      greeting: Hey
-  endpoints:
-  - address: 127.0.0.1:4321
+filters:
+- name: greet.v1
+  config:
+    greeting: Hey
+endpoints:
+- address: 127.0.0.1:4321
 # ANCHOR_END: yaml

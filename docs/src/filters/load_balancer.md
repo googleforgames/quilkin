@@ -13,17 +13,16 @@ quilkin.filters.load_balancer.v1alpha1.LoadBalancer
 # async fn main() {
 #   let yaml = "
 version: v1alpha1
-static:
-  filters:
-    - name: quilkin.filters.load_balancer.v1alpha1.LoadBalancer
-      config:
-        policy: ROUND_ROBIN
-  endpoints:
-    - address: 127.0.0.1:7001
+filters:
+  - name: quilkin.filters.load_balancer.v1alpha1.LoadBalancer
+    config:
+      policy: ROUND_ROBIN
+endpoints:
+  - address: 127.0.0.1:7001
 # ";
 #   let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-# assert_eq!(config.source.get_static_filters().unwrap().len(), 1);
-#   quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
+# assert_eq!(config.filters.load().len(), 1);
+# quilkin::Server::try_from(config).unwrap();
 # }
 ```
 

@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-use crate::config::ValidationError;
 use prometheus::Error as MetricsError;
 
 #[cfg(doc)]
@@ -40,12 +39,6 @@ pub enum Error {
     ConvertProtoConfig(ConvertProtoConfigError),
     #[error("Infallible! This should never occur")]
     Infallible,
-}
-
-impl From<Error> for ValidationError {
-    fn from(error: Error) -> Self {
-        Self::FilterInvalid(error)
-    }
 }
 
 impl From<std::convert::Infallible> for Error {

@@ -14,15 +14,12 @@
  * limitations under the License.
  */
 
-use std::sync::Arc;
-
 use tokio::{signal, sync::watch};
 use tracing::{debug, info, span, Level};
 
 use crate::{
     config::Config,
     filters::{DynFilterFactory, FilterRegistry},
-    proxy::Builder,
     Result,
 };
 
@@ -39,7 +36,7 @@ pub async fn run(
     let _enter = span.enter();
 
     FilterRegistry::register(filter_factories);
-    let server = Builder::from(Arc::new(config)).validate()?.build();
+    let server = crate::Server::try_from(config)?;
 
     #[cfg(target_os = "linux")]
     let mut sig_term_fut = signal::unix::signal(signal::unix::SignalKind::terminate())?;

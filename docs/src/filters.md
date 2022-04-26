@@ -14,7 +14,7 @@ As an example, say we would like to perform the following steps in our processin
 * Do not forward (drop) the packet if its compressed length is over 512 bytes.
 
 We would create a filter corresponding to each step either by leveraging any [existing filters](#built-in-filters)
-that do what we want or [writing one ourselves](./filters/writing_custom_filters.md) and connect them to form the 
+that do what we want or [writing one ourselves](./filters/writing_custom_filters.md) and connect them to form the
 following filter chain:
 
 ```bash
@@ -53,21 +53,20 @@ There are a few things we note here:
 # async fn main() {
 # let yaml = "
 version: v1alpha1
-static:
-  filters:
-    - name: quilkin.filters.debug.v1alpha1.Debug
-      config:
-        id: debug-1
-    - name: quilkin.filters.local_rate_limit.v1alpha1.LocalRateLimit
-      config:
-        max_packets: 10
-        period: 1
-  endpoints:
-    - address: 127.0.0.1:7001
+filters:
+  - name: quilkin.filters.debug.v1alpha1.Debug
+    config:
+      id: debug-1
+  - name: quilkin.filters.local_rate_limit.v1alpha1.LocalRateLimit
+    config:
+      max_packets: 10
+      period: 1
+endpoints:
+  - address: 127.0.0.1:7001
 # ";
 # let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-# assert_eq!(config.source.get_static_filters().unwrap().len(), 2);
-# quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
+# assert_eq!(config.filters.load().len(), 2);
+# quilkin::Server::try_from(config).unwrap();
 # }
 ```
 

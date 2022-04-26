@@ -83,7 +83,7 @@ impl AdsClient {
         self,
         node_id: String,
         cluster: SharedCluster,
-        management_servers: Vec<ManagementServer>,
+        management_servers: std::sync::Arc<Vec<ManagementServer>>,
         filter_chain: crate::filters::SharedFilterChain,
         mut shutdown_rx: watch::Receiver<()>,
     ) -> Result<()> {
@@ -473,9 +473,9 @@ mod tests {
         let run = AdsClient::new().unwrap().run(
             "test-id".into(),
             cluster,
-            vec![ManagementServer {
+            std::sync::Arc::new(vec![ManagementServer {
                 address: "localhost:18000".into(),
-            }],
+            }]),
             filter_chain,
             shutdown_rx,
         );

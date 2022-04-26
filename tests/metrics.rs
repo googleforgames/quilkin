@@ -14,17 +14,9 @@
  * limitations under the License.
  */
 
-use std::{
-    net::{IpAddr, Ipv4Addr, SocketAddr},
-    sync::Arc,
-};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
-use quilkin::{
-    config::{Admin, Builder as ConfigBuilder},
-    endpoint::Endpoint,
-    test_utils::TestHelper,
-    Builder,
-};
+use quilkin::{config::Admin, endpoint::Endpoint, test_utils::TestHelper};
 
 #[tokio::test]
 async fn metrics_server() {
@@ -35,27 +27,26 @@ async fn metrics_server() {
 
     // create server configuration
     let server_port = 12346;
-    let server_config = ConfigBuilder::empty()
-        .with_port(server_port)
-        .with_static(vec![], vec![Endpoint::new(echo)])
-        .with_admin(Admin {
+    let server_config = quilkin::Server::builder()
+        .port(server_port)
+        .endpoints(vec![Endpoint::new(echo)])
+        .admin(Admin {
             address: "[::]:9092".parse().unwrap(),
         })
-        .build();
-    t.run_server_with_builder(Builder::from(Arc::new(server_config)));
+        .build()
+        .unwrap();
+    t.run_server(quilkin::Server::try_from(server_config).unwrap());
 
     // create a local client
     let client_port = 12347;
-    let client_config = ConfigBuilder::empty()
-        .with_port(client_port)
-        .with_static(
-            vec![],
-            vec![Endpoint::new(
-                (IpAddr::V4(Ipv4Addr::LOCALHOST), server_port).into(),
-            )],
-        )
-        .build();
-    t.run_server_with_builder(Builder::from(Arc::new(client_config)));
+    let client_config = quilkin::Server::builder()
+        .port(client_port)
+        .endpoints(vec![Endpoint::new(
+            (IpAddr::V4(Ipv4Addr::LOCALHOST), server_port).into(),
+        )])
+        .build()
+        .unwrap();
+    t.run_server_with_config(client_config);
 
     // let's send the packet
     let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
