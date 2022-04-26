@@ -68,7 +68,7 @@ pub use self::{
     write::{WriteContext, WriteResponse},
 };
 
-pub(crate) use self::chain::{Error as FilterChainError, FilterChain, SharedFilterChain};
+pub(crate) use self::chain::{FilterChain, SharedFilterChain};
 
 /// Statically safe version of [`Filter`], if you're writing a Rust filter, you
 /// should implement [`StaticFilter`] in addition to [`Filter`], as

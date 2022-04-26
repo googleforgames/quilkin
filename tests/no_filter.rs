@@ -21,7 +21,7 @@ use tokio::{
     time::{sleep, Duration},
 };
 
-use quilkin::{config::Builder as ConfigBuilder, endpoint::Endpoint, test_utils::TestHelper};
+use quilkin::{endpoint::Endpoint, test_utils::TestHelper};
 
 #[tokio::test]
 async fn echo() {
@@ -33,31 +33,30 @@ async fn echo() {
 
     // create server configuration
     let server_port = 12345;
-    let server_config = ConfigBuilder::empty()
-        .with_port(server_port)
-        .with_static(vec![], vec![Endpoint::new(server1), Endpoint::new(server2)])
-        .build();
+    let server_config = quilkin::Server::builder()
+        .port(server_port)
+        .endpoints(vec![Endpoint::new(server1), Endpoint::new(server2)])
+        .build()
+        .unwrap();
 
     t.run_server_with_config(server_config);
 
     // create a local client
     let client_port = 12344;
-    let client_config = ConfigBuilder::empty()
-        .with_port(client_port)
-        .with_static(
-            vec![],
-            vec![Endpoint::new(
-                (IpAddr::V4(Ipv4Addr::LOCALHOST), server_port).into(),
-            )],
-        )
-        .build();
+    let client_config = quilkin::Server::builder()
+        .port(client_port)
+        .endpoints(vec![Endpoint::new(
+            (IpAddr::V4(Ipv4Addr::LOCALHOST), server_port).into(),
+        )])
+        .build()
+        .unwrap();
     t.run_server_with_config(client_config);
 
     // let's send the packet
     let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
 
     // game_client
-    let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), client_port);
+    let local_addr = SocketAddr::from((Ipv4Addr::LOCALHOST, client_port));
     socket.send_to(b"hello", &local_addr).await.unwrap();
 
     assert_eq!("hello", recv_chan.recv().await.unwrap());

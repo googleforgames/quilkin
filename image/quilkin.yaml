@@ -15,6 +15,5 @@
 #
 
 version: v1alpha1
-static:
-  endpoints:
-    - address: 127.0.0.1:0
+endpoints:
+  - address: 127.0.0.1:0

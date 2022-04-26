@@ -15,7 +15,7 @@
  */
 
 use quilkin::{
-    config::{Builder, Filter},
+    config::Filter,
     endpoint::Endpoint,
     filters::{Firewall, StaticFilter},
     test_utils::TestHelper,
@@ -102,16 +102,15 @@ async fn test(t: &mut TestHelper, server_port: u16, yaml: &str) -> Receiver<Stri
         .replace("%2", echo.port().to_string().as_str());
     tracing::info!(config = yaml.as_str(), "Config");
 
-    let server_config = Builder::empty()
-        .with_port(server_port)
-        .with_static(
-            vec![Filter {
-                name: Firewall::factory().name().into(),
-                config: serde_yaml::from_str(yaml.as_str()).unwrap(),
-            }],
-            vec![Endpoint::new(echo)],
-        )
-        .build();
+    let server_config = quilkin::Server::builder()
+        .port(server_port)
+        .filters(vec![Filter {
+            name: Firewall::factory().name().into(),
+            config: serde_yaml::from_str(yaml.as_str()).unwrap(),
+        }])
+        .endpoints(vec![Endpoint::new(echo)])
+        .build()
+        .unwrap();
     t.run_server_with_config(server_config);
 
     let local_addr: SocketAddr = (std::net::Ipv4Addr::LOCALHOST, server_port).into();

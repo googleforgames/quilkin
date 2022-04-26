@@ -93,17 +93,16 @@ impl StaticFilter for Greet {
 async fn main() {
     quilkin::run(
         quilkin::Config::builder()
-            .with_port(7001)
-            .with_static(
-                vec![quilkin::config::Filter {
-                    name: Greet::NAME.into(),
-                    config: None,
-                }],
-                vec![quilkin::endpoint::Endpoint::new(
-                    (std::net::Ipv4Addr::LOCALHOST, 4321).into(),
-                )],
-            )
-            .build(),
+            .port(7001)
+            .filters(vec![quilkin::config::Filter {
+                name: Greet::NAME.into(),
+                config: None,
+            }])
+            .endpoints(vec![quilkin::endpoint::Endpoint::new(
+                (std::net::Ipv4Addr::LOCALHOST, 4321).into(),
+            )])
+            .build()
+            .unwrap(),
         vec![Greet::factory()].into_iter(),
     )
     .await

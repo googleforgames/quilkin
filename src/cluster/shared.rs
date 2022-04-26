@@ -57,6 +57,7 @@ impl SharedCluster {
     }
 
     /// Returns an empty [`SharedCluster`].
+    #[cfg(test)]
     pub fn empty() -> MetricsResult<Self> {
         Self::new(ClusterMap::default())
     }

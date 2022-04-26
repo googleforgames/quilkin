@@ -29,7 +29,6 @@ use crate::{
     endpoint::{Endpoint, EndpointAddress, Endpoints},
     filters::{prelude::*, FilterRegistry},
     metadata::Value,
-    proxy::{Builder, PendingValidation},
 };
 
 // TestFilter is useful for testing that commands are executing filters appropriately.
@@ -201,21 +200,17 @@ impl TestHelper {
     /// Run a proxy server with a supplied config.
     /// Admin is disabled for this method, as the majority of tests will not need it, and it makes it
     /// easier to avoid issues with port collisions.
-    pub fn run_server_with_config(&mut self, config: Config) {
-        self.run_server_with_builder(Builder::from(Arc::new(config)).disable_admin());
+    pub fn run_server_with_config(&mut self, mut config: Config) {
+        config.admin = None;
+
+        self.run_server(<_>::try_from(config).unwrap());
     }
 
-    pub fn run_server_with_builder(&mut self, builder: Builder<PendingValidation>) {
+    pub fn run_server(&mut self, server: crate::Server) {
         let (shutdown_tx, shutdown_rx) = watch::channel::<()>(());
         self.server_shutdown_tx.push(Some(shutdown_tx));
         tokio::spawn(async move {
-            builder
-                .validate()
-                .unwrap()
-                .build()
-                .run(shutdown_rx)
-                .await
-                .unwrap();
+            server.run(shutdown_rx).await.unwrap();
         });
     }
 
@@ -279,13 +274,10 @@ where
 }
 
 pub fn config_with_dummy_endpoint() -> ConfigBuilder {
-    ConfigBuilder::empty().with_static(
-        vec![],
-        vec![Endpoint {
-            address: "127.0.0.1:8080".parse().unwrap(),
-            ..<_>::default()
-        }],
-    )
+    ConfigBuilder::default().endpoints(vec![Endpoint {
+        address: "127.0.0.1:8080".parse().unwrap(),
+        ..<_>::default()
+    }])
 }
 /// Creates a dummy endpoint with `id` as a suffix.
 pub fn ep(id: u8) -> Endpoint {

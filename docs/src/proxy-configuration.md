@@ -1,11 +1,13 @@
 Proxy Configuration
 
-The following is the schema and reference for a Quilkin proxy configuration file. See the [examples] folder for 
-example configuration files.
+The following is the schema and reference for a Quilkin proxy configuration
+file. See the [examples] folder for example configuration files.
 
-By default Quilkin will look for a configuration file named `quilkin.yaml` in its current running directory first, 
-then if not present, in `/etc/quilkin/quilkin.yaml` on UNIX systems. This can be overridden with the 
-`-c/--config` command-line argument, or the `QUILKIN_FILENAME` environment variable.
+By default Quilkin will look for a configuration file named `quilkin.yaml` in
+its current running directory first, then if not present, in
+`/etc/quilkin/quilkin.yaml` on UNIX systems. This can be overridden with the
+`-c/--config` command-line argument, or the `QUILKIN_FILENAME`
+environment variable.
 
 ```yaml
 type: object
@@ -41,48 +43,7 @@ properties:
       description: |
         Socket Address and port to bind the administration interface to.
       default: [::]:9091
-  static:
-    type: object
-    description: |
-      Static configuration of endpoints and filters.
-      NOTE: Exactly one of `static` or `dynamic` can be specified.
-    properties:
-      filter:
-        '$ref': '#/definitions/filterchain'
-      endpoints:
-        '$ref': '#/definitions/endpoints'
-    required:
-      - endpoints
-  dynamic:
-    type: object
-    description: |
-      Dynamic configuration of endpoints and filters.
-      NOTE: Exactly one of `static` or `dynamic` can be specified.
-    properties:
-      management_servers:
-        type: array
-        description: |
-          A list of XDS management servers to fetch configuration from.
-          Multiple servers can be provided for redundancy for the proxy to
-          fall back to upon error.
-        items:
-          type: object
-            description: |
-              Configuration for a management server.
-            properties:
-              address:
-                type: string
-                description: |
-                  Address of the management server. This must have the `http(s)` scheme prefix.
-                  Example: `http://example.com`
-    required:
-      - management_servers
-
-required:
-  - version
-
-definitions:
-  filterchain:
+  filters:
     type: array
     description: |
       A filter chain.
@@ -109,6 +70,22 @@ definitions:
                 Keys must be of type string otherwise the configuration is rejected.
       required:
         - address
+  management_servers:
+    type: array
+    description: |
+      A list of XDS management servers to fetch configuration from.
+      Multiple servers can be provided for redundancy for the proxy to
+      fall back to upon error.
+    items:
+      type: object
+        description: |
+          Configuration for a management server.
+        properties:
+          address:
+            type: string
+            description: |
+              Address of the management server. This must have the `http(s)` scheme prefix.
+              Example: `http://example.com`
 ```
 
 [examples]: https://github.com/googleforgames/quilkin/blob/main/examples
