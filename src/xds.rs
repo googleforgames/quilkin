@@ -163,7 +163,7 @@ pub async fn manage(
     // TODO: change this to receive config as param
     spawn_admin_server(admin_port)?;
 
-    let server = AggregatedDiscoveryServiceServer::new(ControlPlane::from_arc(provider));
+    let server = AggregatedDiscoveryServiceServer::new(ControlPlane::from_arc(provider)?);
     let server = tonic::transport::Server::builder().add_service(server);
     Ok(server
         .serve((std::net::Ipv4Addr::UNSPECIFIED, port).into())

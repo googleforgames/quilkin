@@ -55,3 +55,46 @@ impl Metrics {
         })
     }
 }
+
+#[derive(Clone)]
+pub struct ServerMetrics {
+    pub total_active_connections: GenericGauge<AtomicU64>,
+    pub change_rate: GenericGauge<AtomicU64>,
+}
+
+impl ServerMetrics {
+    pub fn new() -> MetricsResult<Self> {
+        let subsystem = "xds_server";
+        Ok(Self {
+            total_active_connections: GenericGauge::with_opts(opts(
+                "total_active_connections",
+                subsystem,
+                "Total number of clients are connected to the xDS management server.",
+            ))?
+            .register_if_not_exists()?,
+
+            change_rate: GenericGauge::with_opts(opts(
+                "change_rate",
+                subsystem,
+                "Rate of changes sent when streaming",
+            ))?
+            .register_if_not_exists()?,
+        })
+    }
+}
+
+#[derive(Clone)]
+pub struct StreamConnectionMetrics(GenericGauge<AtomicU64>);
+
+impl StreamConnectionMetrics {
+    pub fn new(total_active_connections: GenericGauge<AtomicU64>) -> Self {
+        total_active_connections.inc();
+        Self(total_active_connections)
+    }
+}
+
+impl Drop for StreamConnectionMetrics {
+    fn drop(&mut self) {
+        self.0.dec();
+    }
+}

@@ -2,9 +2,12 @@ use std::{pin::Pin, sync::Arc};
 
 use cached::{Cached, CachedAsync};
 use futures::Stream;
+use prometheus::Error as PrometheusError;
 use tokio_stream::StreamExt;
+use tracing::{error, info, warn};
 
 use crate::xds::{
+    metrics::{ServerMetrics as Metrics, StreamConnectionMetrics},
     service::discovery::v3::{
         aggregated_discovery_service_server::AggregatedDiscoveryService, DeltaDiscoveryRequest,
         DeltaDiscoveryResponse, DiscoveryRequest, DiscoveryResponse,
@@ -13,21 +16,31 @@ use crate::xds::{
 };
 
 pub struct ControlPlane {
+    metrics: Metrics,
     provider: Arc<dyn DiscoveryServiceProvider>,
 }
 
 impl ControlPlane {
     /// Creates a new server for a [DiscoveryServiceProvider].
     pub fn new<P: DiscoveryServiceProvider + 'static>(provider: P) -> Self {
-        Self {
+        Self::try_new(provider).unwrap()
+    }
+
+    pub fn try_new<P: DiscoveryServiceProvider + 'static>(
+        provider: P,
+    ) -> Result<Self, PrometheusError> {
+        let metrics = Metrics::new()?;
+        Ok(Self {
+            metrics,
             provider: Arc::from(provider),
-        }
+        })
     }
 
     /// Creates a new server from a dynamic reference
     /// counted [DiscoveryServiceProvider].
-    pub fn from_arc(provider: Arc<dyn DiscoveryServiceProvider>) -> Self {
-        Self { provider }
+    pub fn from_arc(provider: Arc<dyn DiscoveryServiceProvider>) -> Result<Self, PrometheusError> {
+        let metrics = Metrics::new()?;
+        Ok(Self { metrics, provider })
     }
 
     /// Creates a new server for a [DiscoveryServiceProvider] with a cache.
@@ -42,20 +55,25 @@ impl ControlPlane {
         Pin<Box<dyn Stream<Item = Result<DiscoveryResponse, tonic::Status>> + Send>>,
         tonic::Status,
     > {
-        let message = streaming
-            .next()
-            .await
-            .ok_or_else(|| tonic::Status::invalid_argument("No message found"))??;
+        let message = streaming.next().await.ok_or_else(|| {
+            error!("No message found");
+            tonic::Status::invalid_argument("No message found")
+        })??;
 
         if message.node.is_none() {
+            error!("Node identifier was not found");
             return Err(tonic::Status::invalid_argument("Node identifier required"));
         }
 
         let node = message.node.clone().unwrap();
         let resource_type = ResourceType::try_from(&message.type_url)?;
         let provider = self.provider.clone();
+        let metrics = self.metrics.clone();
 
         Ok(Box::pin(async_stream::try_stream! {
+            let _conn_metrics = StreamConnectionMetrics::new(metrics.total_active_connections.clone());
+            let chage_rate_metrics = metrics.change_rate.clone();
+
             // Short cache for inflight requests that have yet to be ACKed.
             let mut inflight_cache = cached::TimedCache::with_lifespan(5);
             let mut resource_versions = std::collections::HashMap::<ResourceType, u64>::new();
@@ -72,7 +90,7 @@ impl ControlPlane {
                 let resource_type = ResourceType::try_from(&new_message.type_url)?;
                 let mut version: u64 = resource_versions.get(&resource_type).copied().unwrap_or_default();
                 let mut response = if let Some(error) = &new_message.error_detail {
-                    tracing::error!(error=&*error.message, "NACK");
+                    error!(node_id = &*node.id, ?resource_type, error=&*error.message, "Message NACK");
                     // Currently just resend previous discovery response.
                     let nonce = uuid::Uuid::parse_str(&new_message.response_nonce).map_err(|err| tonic::Status::invalid_argument(err.to_string()))?;
                     inflight_cache.try_get_or_set_with(nonce.clone(), ||{
@@ -81,16 +99,19 @@ impl ControlPlane {
                 } else {
                     if let Ok(uuid) = uuid::Uuid::parse_str(&new_message.response_nonce) {
                         if inflight_cache.cache_get(&uuid).is_some() {
-                            tracing::info!(version=&*new_message.version_info, "ACK");
+                            info!(node_id = &*node.id, ?resource_type, version=&*new_message.version_info, "Message ACK");
                             inflight_cache.cache_remove(&uuid);
                             continue;
                         } else {
+                            warn!(node_id = &*node.id, ?resource_type, version=&*new_message.version_info, "Unknown nonce: could not be found in cache");
                             Err(tonic::Status::invalid_argument("Unknown nonce"))?;
                             continue;
                         }
                     } else {
                         version += 1;
-                        provider.discovery_request(&node.id, version, resource_type, &new_message.resource_names).await?
+                        let provider = provider.discovery_request(&node.id, version, resource_type, &new_message.resource_names).await?;
+                        chage_rate_metrics.inc();
+                         provider
                     }
                 };
 
