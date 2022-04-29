@@ -50,9 +50,9 @@ The server can be run by a quilkin commmand name _manage_.
    > use, the server looks for the port named `default` and picks that as the endpoint's
    > port (otherwise it picks the first port in the port list).
 
-2. Filter chain is configurable on a per-proxy basis. By default an empty filter chain is used and from there the filter chain can configured using a configMap name `quilkin-config` on the proxy's pod.
+2. Filter chain is configurable on a per-proxy basis. By default an empty filter chain is used and from there the filter chain can configured using a configMap named `quilkin-config` on the proxy's pod.
 
-As an example, the following runs the server with subcommnad _agones_ against a cluster (using default kubeconfig configuration) where Quilkin pods run in the `quilkin` namespace and game-server pods run in the `gameservers` namespace:
+As an example, the following runs the server with subcommnad `manage agones` against a cluster (using default kubeconfig configuration) where Quilkin pods run in the `quilkin` namespace and game-server pods run in the `gameservers` namespace:
 
 ```sh
 quilkin manage --port 18000 agones --config-namespace quilkin --gameservers-namespace gameservers
@@ -64,52 +64,16 @@ quilkin manage --port 18000 agones --config-namespace quilkin --gameservers-name
 
 ### Filesystem
 
-The file server command is primarily an example and mostly suitable for demo purposes. As a result, some configuration options and features might be missing. This file implementation watches a configuration file on disk and sends updates to proxies whenever that file changes.
+The filesystem provider watches a configuration file on disk and sends updates to proxies whenever that file changes.
 
-It can be started with using subcommnad _file_ as the following:
+It can be started with using subcommnad `manage file` as the following:
 ```sh
 quilkin manage --port 18000 file --config-file-path config.yaml
 ```
 
 After running this command, any proxy that connects to port 18000 will receive updates as configured in `config.yaml` file.
+You can find the configuration file schema here in [Proxy Configuration][proxy-configuration].
 
-The configuration file schema is:
-```yaml
-# clusters contain a list of clusters.
-# Each entry represents a cluster configuration.
-clusters: [{
-  # Name of the cluster.
-  name: string
-
-  # List of endpoints belonging to the cluster.
-  # Each entry represents an upstream endpoint.
-  endpoints: [{
-    # The endpoint's IP address.
-    ip: int
-    # The endpoint's port.
-    port: int
-    # Opaque metadata that will be the endpoint's metadata.
-    metadata: {}
-  }]
-}]
-
-# filterchain represents the filter chain configuration.
-# It contains a list of filter configurations.
-filterchain: [{
-  # Name of the filter
-  name: string
-
-  # typed_config contains the filter's configuration.
-  typed_config: {
-    # @type must be equivalent to name - the name of the filter.
-    # It is an extra, required field.
-    '@type': string
-    # ...
-    # The rest of the body contains filter specific configuration or
-    # is empty if the filter has no configuration.
-  }
-}]
-```
 Example:
 ```yaml
 clusters:
@@ -121,20 +85,13 @@ clusters:
       'quilkin.dev':
          tokens:
          - "MXg3aWp5Ng=="
-filterchain:
+filters:
 - name: quilkin.filters.debug.v1alpha1.Debug
-  typed_config:
-    '@type': quilkin.filters.debug.v1alpha1.Debug
+  config:
     id: hello
 ```
 
-## Admin server
-
-In addition the gRPC server, a http server (configurable via `--admin-port`is also started to serve administrative functionality.
-The following endpoints are provided:
-- `/ready`: Readiness probe that returns a 5xx if communication with the Kubernetes api is problematic.
-- `/live`: Liveness probe that always returns a 200 response.
-- `/metrics`: Exposes Prometheus metrics.
+To add an HTTP admin server, check out the [Administration][admin] page.
 
 ## Metrics
 
@@ -224,3 +181,5 @@ The following metrics are exposed by the management server.
 [Kubernetes]: https://kubernetes.io/
 [Agones GameServers]: https://agones.dev/site/docs/getting-started/create-gameserver/
 [upstream-endpoint]: https://googleforgames.github.io/quilkin/main/book/proxy.html#upstream-endpoint
+[proxy-configuration]: https://googleforgames.github.io/quilkin/main/book/proxy-configuration.html
+[admin]: https://googleforgames.github.io/quilkin/main/book/admin.html
