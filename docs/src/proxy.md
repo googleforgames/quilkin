@@ -20,15 +20,14 @@ Such well known values are placed within an object in the endpoint metadata, und
 
 As an example, the following shows the configuration for an endpoint with its metadata:
 ```yaml
-static:
-  endpoints:
-    - address: 127.0.0.1:26000
-      metadata:
-        canary: false
-        quilkin.dev: # This object is extracted by Quilkin and is usually reserved for built-in features
-          tokens:
-            - MXg3aWp5Ng== # base64 for 1x7ijy6
-            - OGdqM3YyaQ== # base64 for 8gj3v2i
+endpoints:
+  - address: 127.0.0.1:26000
+    metadata:
+      canary: false
+      quilkin.dev: # This object is extracted by Quilkin and is usually reserved for built-in features
+        tokens:
+          - MXg3aWp5Ng== # base64 for 1x7ijy6
+          - OGdqM3YyaQ== # base64 for 8gj3v2i
 ```
 
 An endpoint's metadata can be specified alongside the endpoint in [static configuration][proxy-configuration] or using the [xDS endpoint metadata][xds-endpoint-metadata] field when using [dynamic configuration][dynamic-configuration-doc] via xDS.

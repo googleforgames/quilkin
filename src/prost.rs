@@ -17,11 +17,18 @@
 //! Extensions to `prost` and related crates.
 
 use prost_types::value::Kind;
-use serde_yaml::Value;
+use serde_json::Value;
 
-pub fn mapping_from_kind(kind: Kind) -> Option<serde_yaml::Mapping> {
+pub fn encode<M: prost::Message>(message: &M) -> Result<Vec<u8>, prost::EncodeError> {
+    let mut buf = Vec::new();
+    buf.reserve(message.encoded_len());
+    message.encode(&mut buf)?;
+    Ok(buf)
+}
+
+pub fn mapping_from_kind(kind: Kind) -> Option<serde_json::Map<String, serde_json::Value>> {
     match value_from_kind(kind) {
-        Value::Mapping(mapping) => Some(mapping),
+        Value::Object(mapping) => Some(mapping),
         _ => None,
     }
 }
@@ -30,20 +37,50 @@ pub fn value_from_kind(kind: Kind) -> Value {
     match kind {
         Kind::NullValue(_) => Value::Null,
         Kind::BoolValue(v) => Value::Bool(v),
-        Kind::NumberValue(v) => Value::Number(serde_yaml::Number::from(v)),
+        Kind::NumberValue(v) => Value::Number(serde_json::Number::from(v as i64)), // TODO: Call out in documentation or find solution
         Kind::StringValue(v) => Value::String(v),
-        Kind::ListValue(v) => Value::Sequence(
+        Kind::ListValue(v) => Value::Array(
             v.values
                 .into_iter()
                 .filter_map(|v| v.kind)
                 .map(value_from_kind)
                 .collect(),
         ),
-        Kind::StructValue(v) => Value::Mapping(
+        Kind::StructValue(v) => Value::Object(
             v.fields
                 .into_iter()
-                .filter_map(|(k, v)| v.kind.map(value_from_kind).map(|v| (k.into(), v)))
+                .filter_map(|(k, v)| v.kind.map(value_from_kind).map(|v| (k, v)))
                 .collect(),
         ),
+    }
+}
+
+pub fn struct_from_json(value: Value) -> Option<prost_types::Struct> {
+    match from_json(value) {
+        prost_types::Value {
+            kind: Some(Kind::StructValue(r#struct)),
+        } => Some(r#struct),
+        _ => None,
+    }
+}
+
+pub fn from_json(value: Value) -> prost_types::Value {
+    prost_types::Value {
+        kind: Some(match value {
+            Value::Null => Kind::NullValue(<_>::default()),
+            Value::Bool(v) => Kind::BoolValue(v),
+            // as_f64 never returns None, so unwrap is safe here.
+            Value::Number(v) => Kind::NumberValue(v.as_f64().unwrap()),
+            Value::String(v) => Kind::StringValue(v),
+            Value::Array(v) => Kind::ListValue(prost_types::ListValue {
+                values: v.into_iter().map(from_json).collect(),
+            }),
+            Value::Object(v) => Kind::StructValue(prost_types::Struct {
+                fields: v
+                    .into_iter()
+                    .map(|(key, value)| (key, from_json(value)))
+                    .collect(),
+            }),
+        }),
     }
 }

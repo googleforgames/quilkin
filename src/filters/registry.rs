@@ -50,6 +50,12 @@ impl FilterRegistry {
             Some(filter) => filter,
         }
     }
+
+    /// Returns a [`DynFilterFactory`] for a given `key`. Returning `None` if the
+    /// factory cannot be found.
+    pub fn get_factory(key: &str) -> Option<std::sync::Arc<DynFilterFactory>> {
+        REGISTRY.load().get(key).cloned()
+    }
 }
 
 #[cfg(test)]

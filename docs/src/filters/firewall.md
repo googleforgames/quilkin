@@ -12,27 +12,26 @@ quilkin.filters.firewall.v1alpha1.Firewall
 ```rust
 # let yaml = "
 version: v1alpha1
-static:
-  filters:
-    - name: quilkin.filters.firewall.v1alpha1.Firewall
-      config:
-        on_read:
-          - action: ALLOW
-            source: 192.168.51.0/24
-            ports:
-               - 10
-               - 1000-7000
-        on_write: 
-          - action: DENY
-            source: 192.168.51.0/24
-            ports:
-               - 7000
-  endpoints:
-    - address: 127.0.0.1:7001
+filters:
+  - name: quilkin.filters.firewall.v1alpha1.Firewall
+    config:
+      on_read:
+        - action: ALLOW
+          source: 192.168.51.0/24
+          ports:
+             - 10
+             - 1000-7000
+      on_write: 
+        - action: DENY
+          source: 192.168.51.0/24
+          ports:
+             - 7000
+endpoints:
+  - address: 127.0.0.1:7001
 # ";
 # let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-# assert_eq!(config.source.get_static_filters().unwrap().len(), 1);
-# quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
+# assert_eq!(config.filters.load().len(), 1);
+# quilkin::Server::try_from(config).unwrap();
 ```
 
 ### Configuration Options ([Rust Doc](../../api/quilkin/filters/firewall/struct.Config.html))

@@ -12,19 +12,18 @@ quilkin.filters.compress.v1alpha1.Compress
 ```rust
 # let yaml = "
 version: v1alpha1
-static:
-  filters:
-    - name: quilkin.filters.compress.v1alpha1.Compress
-      config:
-          on_read: COMPRESS
-          on_write: DECOMPRESS
-          mode: SNAPPY
-  endpoints:
-    - address: 127.0.0.1:7001
+filters:
+  - name: quilkin.filters.compress.v1alpha1.Compress
+    config:
+        on_read: COMPRESS
+        on_write: DECOMPRESS
+        mode: SNAPPY
+endpoints:
+  - address: 127.0.0.1:7001
 # ";
 # let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-# assert_eq!(config.source.get_static_filters().unwrap().len(), 1);
-# quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
+# assert_eq!(config.filters.load().len(), 1);
+# quilkin::Server::try_from(config).unwrap();
 ```
 
 The above example shows a proxy that could be used with a typical game client, where the original client data is

@@ -14,14 +14,12 @@
  * limitations under the License.
  */
 
-//! Filter for allowing/blocking traffic by IP and port.
-
 use tracing::debug;
 
 use crate::filters::firewall::metrics::Metrics;
 use crate::filters::prelude::*;
 
-use self::quilkin::filters::firewall::v1alpha1::Firewall as ProtoConfig;
+use self::quilkin::filters::firewall::v1alpha1 as proto;
 
 crate::include_proto!("quilkin.filters.firewall.v1alpha1");
 
@@ -30,43 +28,8 @@ mod metrics;
 
 pub use config::{Action, Config, PortRange, PortRangeError, Rule};
 
-pub const NAME: &str = "quilkin.filters.firewall.v1alpha1.Firewall";
-
-pub fn factory() -> DynFilterFactory {
-    Box::from(FirewallFactory::new())
-}
-
-struct FirewallFactory {}
-
-impl FirewallFactory {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
-
-impl FilterFactory for FirewallFactory {
-    fn name(&self) -> &'static str {
-        NAME
-    }
-
-    fn config_schema(&self) -> schemars::schema::RootSchema {
-        schemars::schema_for!(Config)
-    }
-
-    fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
-        let (config_json, config) = self
-            .require_config(args.config)?
-            .deserialize::<Config, ProtoConfig>(self.name())?;
-
-        let filter = Firewall::new(config, Metrics::new()?);
-        Ok(FilterInstance::new(
-            config_json,
-            Box::new(filter) as Box<dyn Filter>,
-        ))
-    }
-}
-
-struct Firewall {
+/// Filter for allowing/blocking traffic by IP and port.
+pub struct Firewall {
     metrics: Metrics,
     on_read: Vec<Rule>,
     on_write: Vec<Rule>,
@@ -79,6 +42,19 @@ impl Firewall {
             on_read: config.on_read,
             on_write: config.on_write,
         }
+    }
+}
+
+impl StaticFilter for Firewall {
+    const NAME: &'static str = "quilkin.filters.firewall.v1alpha1.Firewall";
+    type Configuration = Config;
+    type BinaryConfiguration = proto::Firewall;
+
+    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, Error> {
+        Ok(Firewall::new(
+            Self::ensure_config_exists(config)?,
+            Metrics::new()?,
+        ))
     }
 }
 
@@ -146,6 +122,7 @@ impl Filter for Firewall {
         None
     }
 }
+
 #[cfg(test)]
 mod tests {
     use std::net::Ipv4Addr;

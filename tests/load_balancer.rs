@@ -18,9 +18,9 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::{Arc, Mutex};
 
 use quilkin::{
-    config::{Builder as ConfigBuilder, Filter},
+    config::Filter,
     endpoint::Endpoint,
-    filters::load_balancer,
+    filters::{LoadBalancer, StaticFilter},
     test_utils::TestHelper,
 };
 
@@ -45,21 +45,15 @@ policy: ROUND_ROBIN
     }
 
     let server_port = 12346;
-    let server_config = ConfigBuilder::empty()
-        .with_port(server_port)
-        .with_static(
-            vec![Filter {
-                name: load_balancer::factory().name().into(),
-                config: serde_yaml::from_str(yaml).unwrap(),
-            }],
-            echo_addresses
-                .iter()
-                .enumerate()
-                .map(|(_, addr)| addr.clone())
-                .map(Endpoint::new)
-                .collect(),
-        )
-        .build();
+    let server_config = quilkin::Server::builder()
+        .port(server_port)
+        .filters(vec![Filter {
+            name: LoadBalancer::factory().name().into(),
+            config: serde_yaml::from_str(yaml).unwrap(),
+        }])
+        .endpoints(echo_addresses.iter().cloned().map(Endpoint::new).collect())
+        .build()
+        .unwrap();
     t.run_server_with_config(server_config);
     let server_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port);
 

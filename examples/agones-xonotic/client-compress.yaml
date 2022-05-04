@@ -15,12 +15,11 @@
 #
 
 version: v1alpha1
-static:
-  filters:
-    - name: quilkin.extensions.filters.compress.v1alpha1.Compress
-      config:
-        on_read: COMPRESS
-        on_write: DECOMPRESS
-        mode: SNAPPY
-  endpoints:
-    - address: ${GAMESERVER_IP}:${GAMESERVER_PORT}
+filters:
+  - name: quilkin.extensions.filters.compress.v1alpha1.Compress
+    config:
+      on_read: COMPRESS
+      on_write: DECOMPRESS
+      mode: SNAPPY
+endpoints:
+  - address: ${GAMESERVER_IP}:${GAMESERVER_PORT}

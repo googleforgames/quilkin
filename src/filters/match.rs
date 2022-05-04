@@ -1,17 +1,30 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+crate::include_proto!("quilkin.filters.matches.v1alpha1");
+
 mod config;
 mod metrics;
 
 use crate::{config::ConfigType, filters::prelude::*, metadata::Value};
 
+use self::quilkin::filters::matches::v1alpha1 as proto;
 use crate::filters::r#match::metrics::Metrics;
+
 pub use config::Config;
-
-pub const NAME: &str = "quilkin.filters.match.v1alpha1.Match";
-
-/// Creates a new factory for generating match filters.
-pub fn factory() -> DynFilterFactory {
-    Box::from(MatchFactory::new())
-}
 
 struct ConfigInstance {
     metadata_key: String,
@@ -42,19 +55,19 @@ impl ConfigInstance {
     }
 }
 
-struct MatchInstance {
+pub struct Match {
     metrics: Metrics,
     on_read_filters: Option<ConfigInstance>,
     on_write_filters: Option<ConfigInstance>,
 }
 
-impl MatchInstance {
+impl Match {
     fn new(config: Config, metrics: Metrics) -> Result<Self, Error> {
         let on_read_filters = config.on_read.map(ConfigInstance::new).transpose()?;
         let on_write_filters = config.on_write.map(ConfigInstance::new).transpose()?;
 
         if on_read_filters.is_none() && on_write_filters.is_none() {
-            return Err(Error::MissingConfig(NAME));
+            return Err(Error::MissingConfig(Self::NAME));
         }
 
         Ok(Self {
@@ -94,7 +107,7 @@ where
     }
 }
 
-impl Filter for MatchInstance {
+impl Filter for Match {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
     fn read(&self, ctx: ReadContext) -> Option<ReadResponse> {
         match_filter(
@@ -118,33 +131,13 @@ impl Filter for MatchInstance {
     }
 }
 
-struct MatchFactory;
+impl StaticFilter for Match {
+    const NAME: &'static str = "quilkin.filters.match.v1alpha1.Match";
+    type Configuration = Config;
+    type BinaryConfiguration = proto::Match;
 
-impl MatchFactory {
-    pub fn new() -> Self {
-        Self
-    }
-}
-
-impl FilterFactory for MatchFactory {
-    fn name(&self) -> &'static str {
-        NAME
-    }
-
-    fn config_schema(&self) -> schemars::schema::RootSchema {
-        schemars::schema_for!(Config)
-    }
-
-    fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
-        let (config_json, config) = self
-            .require_config(args.config)?
-            .deserialize::<Config, config::proto::Match>(self.name())?;
-
-        let filter = MatchInstance::new(config, Metrics::new()?)?;
-        Ok(FilterInstance::new(
-            config_json,
-            Box::new(filter) as Box<dyn Filter>,
-        ))
+    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, Error> {
+        Self::new(Self::ensure_config_exists(config)?, Metrics::new()?)
     }
 }
 
@@ -155,7 +148,7 @@ mod tests {
         filters::{
             r#match::{
                 config::{Branch, DirectionalConfig, Fallthrough, Filter as ConfigFilter},
-                Config, MatchInstance, Metrics,
+                Config, Match, Metrics,
             },
             Filter, ReadContext, WriteContext,
         },
@@ -177,7 +170,7 @@ mod tests {
             }),
             on_write: None,
         };
-        let filter = MatchInstance::new(config, metrics).unwrap();
+        let filter = Match::new(config, metrics).unwrap();
         let endpoint: Endpoint = Default::default();
         let contents = "hello".to_string().into_bytes();
 

@@ -20,9 +20,9 @@ use std::{net::Ipv4Addr, str::from_utf8};
 use tokio::time::{timeout, Duration};
 
 use quilkin::{
-    config::{Builder, Filter},
+    config::Filter,
     endpoint::Endpoint,
-    filters::{compress, concatenate_bytes},
+    filters::{Compress, ConcatenateBytes, StaticFilter},
     test_utils::TestHelper,
 };
 
@@ -55,28 +55,26 @@ on_write: DECOMPRESS
         .await;
 
     let server_port = 12346;
-    let server_config = Builder::empty()
-        .with_port(server_port)
-        .with_static(
-            vec![
-                Filter {
-                    name: concatenate_bytes::factory().name().into(),
-                    config: serde_yaml::from_str(yaml_concat_read).unwrap(),
-                },
-                Filter {
-                    name: concatenate_bytes::factory().name().into(),
-                    config: serde_yaml::from_str(yaml_concat_write).unwrap(),
-                },
-                Filter {
-                    name: compress::factory().name().into(),
-                    config: serde_yaml::from_str(yaml_compress).unwrap(),
-                },
-            ],
-            vec![Endpoint::new(echo)],
-        )
+    let server_config = quilkin::Server::builder()
+        .port(server_port)
+        .filters(vec![
+            Filter {
+                name: ConcatenateBytes::factory().name().into(),
+                config: serde_yaml::from_str(yaml_concat_read).unwrap(),
+            },
+            Filter {
+                name: ConcatenateBytes::factory().name().into(),
+                config: serde_yaml::from_str(yaml_concat_write).unwrap(),
+            },
+            Filter {
+                name: Compress::factory().name().into(),
+                config: serde_yaml::from_str(yaml_compress).unwrap(),
+            },
+        ])
+        .endpoints(vec![Endpoint::new(echo)])
         .build();
 
-    t.run_server_with_config(server_config);
+    t.run_server_with_config(server_config.unwrap());
 
     // let's send the packet
     let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;

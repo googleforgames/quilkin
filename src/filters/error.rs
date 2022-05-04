@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-use crate::config::ValidationError;
 use prometheus::Error as MetricsError;
 
 #[cfg(doc)]
@@ -26,6 +25,8 @@ use crate::filters::{Filter, FilterFactory};
 pub enum Error {
     #[error("filter `{}` not found", .0)]
     NotFound(String),
+    #[error("Expected <{}> message, received <{}> ", expected, actual)]
+    MismatchedTypes { expected: String, actual: String },
     #[error("filter `{}` requires configuration, but none provided", .0)]
     MissingConfig(&'static str),
     #[error("field `{}` is invalid, reason: {}", field, reason)]
@@ -36,17 +37,49 @@ pub enum Error {
     InitializeMetricsFailed(String),
     #[error("Protobuf error: {}", .0)]
     ConvertProtoConfig(ConvertProtoConfigError),
+    #[error("Infallible! This should never occur")]
+    Infallible,
 }
 
-impl From<Error> for ValidationError {
-    fn from(error: Error) -> Self {
-        Self::FilterInvalid(error)
+impl From<std::convert::Infallible> for Error {
+    fn from(_: std::convert::Infallible) -> Self {
+        Self::Infallible
     }
 }
 
 impl From<MetricsError> for Error {
     fn from(error: MetricsError) -> Self {
         Error::InitializeMetricsFailed(error.to_string())
+    }
+}
+
+impl From<serde_yaml::Error> for Error {
+    fn from(error: serde_yaml::Error) -> Self {
+        Self::DeserializeFailed(error.to_string())
+    }
+}
+
+impl From<serde_json::Error> for Error {
+    fn from(error: serde_json::Error) -> Self {
+        Self::DeserializeFailed(error.to_string())
+    }
+}
+
+impl From<prost::EncodeError> for Error {
+    fn from(error: prost::EncodeError) -> Self {
+        Self::ConvertProtoConfig(ConvertProtoConfigError::new(error, None))
+    }
+}
+
+impl From<prost::DecodeError> for Error {
+    fn from(error: prost::DecodeError) -> Self {
+        Self::ConvertProtoConfig(ConvertProtoConfigError::new(error, None))
+    }
+}
+
+impl From<ConvertProtoConfigError> for Error {
+    fn from(error: ConvertProtoConfigError) -> Self {
+        Self::ConvertProtoConfig(error)
     }
 }
 

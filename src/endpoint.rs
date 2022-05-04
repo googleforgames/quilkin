@@ -27,7 +27,7 @@ pub use address::EndpointAddress;
 type EndpointMetadata = crate::metadata::MetadataView<Metadata>;
 
 /// A destination endpoint with any associated metadata.
-#[derive(Debug, Deserialize, Serialize, PartialEq, Clone, PartialOrd, Eq)]
+#[derive(Debug, Deserialize, Serialize, PartialEq, Clone, Eq)]
 #[non_exhaustive]
 #[serde(deny_unknown_fields)]
 pub struct Endpoint {
@@ -72,6 +72,22 @@ impl std::str::FromStr for Endpoint {
             address: s.parse()?,
             ..Self::default()
         })
+    }
+}
+
+impl From<Endpoint> for crate::xds::config::endpoint::v3::LbEndpoint {
+    fn from(endpoint: Endpoint) -> Self {
+        use crate::xds::config::endpoint::v3::{
+            lb_endpoint::HostIdentifier, Endpoint as EnvoyEndpoint,
+        };
+        Self {
+            host_identifier: Some(HostIdentifier::Endpoint(EnvoyEndpoint {
+                address: Some(endpoint.address.into()),
+                ..<_>::default()
+            })),
+            metadata: Some(endpoint.metadata.into()),
+            ..<_>::default()
+        }
     }
 }
 
@@ -124,6 +140,28 @@ impl std::ops::Deref for Endpoints {
 pub struct Metadata {
     #[serde(with = "base64_set")]
     pub tokens: base64_set::Set,
+}
+
+impl From<Metadata> for prost_types::Struct {
+    fn from(metadata: Metadata) -> Self {
+        let tokens = prost_types::Value {
+            kind: Some(prost_types::value::Kind::ListValue(
+                prost_types::ListValue {
+                    values: metadata
+                        .tokens
+                        .into_iter()
+                        .map(base64::encode)
+                        .map(prost_types::value::Kind::StringValue)
+                        .map(|k| prost_types::Value { kind: Some(k) })
+                        .collect(),
+                },
+            )),
+        };
+
+        Self {
+            fields: <_>::from([("tokens".into(), tokens)]),
+        }
+    }
 }
 
 /// A module for providing base64 encoding for a `BTreeSet` at the `serde`

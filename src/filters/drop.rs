@@ -22,15 +22,10 @@ use serde::{Deserialize, Serialize};
 crate::include_proto!("quilkin.filters.drop.v1alpha1");
 use self::quilkin::filters::drop::v1alpha1 as proto;
 
+pub const NAME: &str = Drop::NAME;
+
 /// Always drops a packet, mostly useful in combination with other filters.
-struct Drop;
-
-pub const NAME: &str = "quilkin.filters.drop.v1alpha1.Drop";
-
-/// Creates a new factory for generating debug filters.
-pub fn factory() -> DynFilterFactory {
-    Box::from(DropFactory::new())
-}
+pub struct Drop;
 
 impl Drop {
     fn new() -> Self {
@@ -50,44 +45,25 @@ impl Filter for Drop {
     }
 }
 
-/// Factory for the Debug
-struct DropFactory;
+impl StaticFilter for Drop {
+    const NAME: &'static str = "quilkin.filters.drop.v1alpha1.Drop";
+    type Configuration = Config;
+    type BinaryConfiguration = proto::Drop;
 
-impl DropFactory {
-    pub fn new() -> Self {
-        Self
-    }
-}
-
-impl FilterFactory for DropFactory {
-    fn name(&self) -> &'static str {
-        NAME
-    }
-
-    fn config_schema(&self) -> schemars::schema::RootSchema {
-        schemars::schema_for!(Config)
-    }
-
-    fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
-        let config: Option<(_, Config)> = args
-            .config
-            .map(|config| config.deserialize::<Config, proto::Drop>(self.name()))
-            .transpose()?;
-
-        let (config_json, _) = config
-            .map(|(config_json, config)| (config_json, Some(config)))
-            .unwrap_or_else(|| (serde_json::Value::Null, None));
-
-        Ok(FilterInstance::new(
-            config_json,
-            Box::new(Drop::new()) as Box<dyn Filter>,
-        ))
+    fn try_from_config(_: Option<Self::Configuration>) -> Result<Self, Error> {
+        Ok(Drop::new())
     }
 }
 
 /// `pass` filter's configuration.
 #[derive(Serialize, Deserialize, Debug, schemars::JsonSchema)]
 pub struct Config;
+
+impl From<Config> for proto::Drop {
+    fn from(_config: Config) -> Self {
+        Self {}
+    }
+}
 
 impl TryFrom<proto::Drop> for Config {
     type Error = ConvertProtoConfigError;

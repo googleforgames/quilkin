@@ -15,46 +15,24 @@
  */
 
 /// Common utilities for testing
-use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
-use std::str::from_utf8;
-use std::sync::Arc;
+use std::{
+    net::{Ipv4Addr, SocketAddr, SocketAddrV4},
+    str::from_utf8,
+    sync::Arc,
+};
 
 use tokio::net::UdpSocket;
 use tokio::sync::{mpsc, oneshot, watch};
 
-use crate::config::{Builder as ConfigBuilder, Config};
-use crate::endpoint::{Endpoint, EndpointAddress, Endpoints};
-use crate::filters::{prelude::*, FilterRegistry};
-use crate::metadata::Value;
-use crate::proxy::{Builder, PendingValidation};
-
-pub struct TestFilterFactory;
-
-impl FilterFactory for TestFilterFactory {
-    fn name(&self) -> &'static str {
-        "TestFilter"
-    }
-
-    fn config_schema(&self) -> schemars::schema::RootSchema {
-        schemars::schema_for_value!(serde_json::Value::Null)
-    }
-
-    fn create_filter(&self, _: CreateFilterArgs) -> Result<FilterInstance, Error> {
-        Ok(Self::create_empty_filter())
-    }
-}
-
-impl TestFilterFactory {
-    pub(crate) fn create_empty_filter() -> FilterInstance {
-        FilterInstance::new(
-            serde_json::Value::Null,
-            Box::new(TestFilter {}) as Box<dyn Filter>,
-        )
-    }
-}
+use crate::{
+    config::{Builder as ConfigBuilder, Config},
+    endpoint::{Endpoint, EndpointAddress, Endpoints},
+    filters::{prelude::*, FilterRegistry},
+    metadata::Value,
+};
 
 // TestFilter is useful for testing that commands are executing filters appropriately.
-pub struct TestFilter {}
+pub struct TestFilter;
 
 impl Filter for TestFilter {
     fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
@@ -79,6 +57,16 @@ impl Filter for TestFilter {
         ctx.contents
             .append(&mut format!(":our:{}:{}", ctx.source, ctx.dest).into_bytes());
         Some(ctx.into())
+    }
+}
+
+impl StaticFilter for TestFilter {
+    const NAME: &'static str = "TestFilter";
+    type Configuration = ();
+    type BinaryConfiguration = ();
+
+    fn try_from_config(_: Option<Self::Configuration>) -> Result<Self, Error> {
+        Ok(Self)
     }
 }
 
@@ -212,21 +200,17 @@ impl TestHelper {
     /// Run a proxy server with a supplied config.
     /// Admin is disabled for this method, as the majority of tests will not need it, and it makes it
     /// easier to avoid issues with port collisions.
-    pub fn run_server_with_config(&mut self, config: Config) {
-        self.run_server_with_builder(Builder::from(Arc::new(config)).disable_admin());
+    pub fn run_server_with_config(&mut self, mut config: Config) {
+        config.admin = None;
+
+        self.run_server(<_>::try_from(config).unwrap());
     }
 
-    pub fn run_server_with_builder(&mut self, builder: Builder<PendingValidation>) {
+    pub fn run_server(&mut self, server: crate::Server) {
         let (shutdown_tx, shutdown_rx) = watch::channel::<()>(());
         self.server_shutdown_tx.push(Some(shutdown_tx));
         tokio::spawn(async move {
-            builder
-                .validate()
-                .unwrap()
-                .build()
-                .run(shutdown_rx)
-                .await
-                .unwrap();
+            server.run(shutdown_rx).await.unwrap();
         });
     }
 
@@ -290,13 +274,10 @@ where
 }
 
 pub fn config_with_dummy_endpoint() -> ConfigBuilder {
-    ConfigBuilder::empty().with_static(
-        vec![],
-        vec![Endpoint {
-            address: "127.0.0.1:8080".parse().unwrap(),
-            ..<_>::default()
-        }],
-    )
+    ConfigBuilder::default().endpoints(vec![Endpoint {
+        address: "127.0.0.1:8080".parse().unwrap(),
+        ..<_>::default()
+    }])
 }
 /// Creates a dummy endpoint with `id` as a suffix.
 pub fn ep(id: u8) -> Endpoint {
@@ -315,7 +296,7 @@ pub fn new_test_chain() -> crate::filters::SharedFilterChain {
 }
 
 pub fn load_test_filters() {
-    FilterRegistry::register([DynFilterFactory::from(Box::from(TestFilterFactory))]);
+    FilterRegistry::register([TestFilter::factory()]);
 }
 
 #[cfg(test)]

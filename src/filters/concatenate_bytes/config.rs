@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-crate::include_proto!("quilkin.filters.concatenate_bytes.v1alpha1");
-
 use std::convert::TryFrom;
 
 use base64_serde::base64_serde_type;
@@ -24,9 +22,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{filters::prelude::*, map_proto_enum};
 
-use self::quilkin::filters::concatenate_bytes::v1alpha1::concatenate_bytes::Strategy as ProtoStrategy;
-
-pub use self::quilkin::filters::concatenate_bytes::v1alpha1::ConcatenateBytes as ProtoConfig;
+use super::proto;
 
 base64_serde_type!(Base64Standard, base64::STANDARD);
 
@@ -43,6 +39,24 @@ pub enum Strategy {
 impl Default for Strategy {
     fn default() -> Self {
         Strategy::DoNothing
+    }
+}
+
+impl From<Strategy> for proto::concatenate_bytes::Strategy {
+    fn from(strategy: Strategy) -> Self {
+        match strategy {
+            Strategy::Append => Self::Append,
+            Strategy::Prepend => Self::Prepend,
+            Strategy::DoNothing => Self::DoNothing,
+        }
+    }
+}
+
+impl From<Strategy> for proto::concatenate_bytes::StrategyValue {
+    fn from(strategy: Strategy) -> Self {
+        Self {
+            value: proto::concatenate_bytes::Strategy::from(strategy) as i32,
+        }
     }
 }
 
@@ -64,17 +78,27 @@ pub struct Config {
     pub bytes: Vec<u8>,
 }
 
-impl TryFrom<ProtoConfig> for Config {
+impl From<Config> for proto::ConcatenateBytes {
+    fn from(config: Config) -> Self {
+        Self {
+            on_read: Some(config.on_read.into()),
+            on_write: Some(config.on_write.into()),
+            bytes: config.bytes,
+        }
+    }
+}
+
+impl TryFrom<proto::ConcatenateBytes> for Config {
     type Error = ConvertProtoConfigError;
 
-    fn try_from(p: ProtoConfig) -> Result<Self, Self::Error> {
+    fn try_from(p: proto::ConcatenateBytes) -> Result<Self, Self::Error> {
         let on_read = p
             .on_read
             .map(|strategy| {
                 map_proto_enum!(
                     value = strategy.value,
                     field = "on_read",
-                    proto_enum_type = ProtoStrategy,
+                    proto_enum_type = proto::concatenate_bytes::Strategy,
                     target_enum_type = Strategy,
                     variants = [DoNothing, Append, Prepend]
                 )
@@ -88,7 +112,7 @@ impl TryFrom<ProtoConfig> for Config {
                 map_proto_enum!(
                     value = strategy.value,
                     field = "on_write",
-                    proto_enum_type = ProtoStrategy,
+                    proto_enum_type = proto::concatenate_bytes::Strategy,
                     target_enum_type = Strategy,
                     variants = [DoNothing, Append, Prepend]
                 )

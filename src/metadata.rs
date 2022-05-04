@@ -118,6 +118,31 @@ impl PartialEq for Value {
     }
 }
 
+impl From<Value> for prost_types::Value {
+    fn from(value: Value) -> Self {
+        use prost_types::value::Kind;
+
+        Self {
+            kind: Some(match value {
+                Value::Number(number) => Kind::NumberValue(number as f64),
+                Value::String(string) => Kind::StringValue(string),
+                Value::Bool(value) => Kind::BoolValue(value),
+                Value::Bytes(bytes) => Kind::ListValue(prost_types::ListValue {
+                    values: bytes
+                        .into_iter()
+                        .map(|number| prost_types::Value {
+                            kind: Some(Kind::NumberValue(number as f64)),
+                        })
+                        .collect(),
+                }),
+                Value::List(list) => Kind::ListValue(prost_types::ListValue {
+                    values: list.into_iter().map(From::from).collect(),
+                }),
+            }),
+        }
+    }
+}
+
 impl TryFrom<prost_types::Value> for Value {
     type Error = eyre::Report;
 
@@ -148,9 +173,7 @@ impl TryFrom<prost_types::Value> for Value {
 /// Represents a view into the metadata object attached to another object. `T`
 /// represents metadata known to Quilkin under `quilkin.dev` (available under
 /// the [`KEY`] constant.)
-#[derive(
-    Default, Debug, serde::Deserialize, serde::Serialize, PartialEq, Clone, PartialOrd, Eq,
-)]
+#[derive(Default, Debug, serde::Deserialize, serde::Serialize, PartialEq, Clone, Eq)]
 #[non_exhaustive]
 pub struct MetadataView<T> {
     /// Known Quilkin metadata.
@@ -158,11 +181,14 @@ pub struct MetadataView<T> {
     pub known: T,
     /// User created metadata.
     #[serde(flatten)]
-    pub unknown: serde_yaml::Mapping,
+    pub unknown: serde_json::Map<String, serde_json::Value>,
 }
 
 impl<T> MetadataView<T> {
-    pub fn with_unknown(known: impl Into<T>, unknown: serde_yaml::Mapping) -> Self {
+    pub fn with_unknown(
+        known: impl Into<T>,
+        unknown: serde_json::Map<String, serde_json::Value>,
+    ) -> Self {
         Self {
             known: known.into(),
             unknown,
@@ -181,6 +207,24 @@ where
         Self {
             known,
             unknown: <_>::default(),
+        }
+    }
+}
+
+impl<T: Into<prost_types::Struct>> From<MetadataView<T>> for ProtoMetadata {
+    fn from(metadata: MetadataView<T>) -> Self {
+        let mut filter_metadata = HashMap::new();
+        filter_metadata.insert(String::from("quilkin.dev"), metadata.known.into());
+        filter_metadata.extend(
+            metadata
+                .unknown
+                .into_iter()
+                .filter_map(|(k, v)| crate::prost::struct_from_json(v).map(|v| (k, v))),
+        );
+
+        Self {
+            filter_metadata,
+            ..<_>::default()
         }
     }
 }

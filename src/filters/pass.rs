@@ -24,14 +24,7 @@ use self::quilkin::filters::pass::v1alpha1 as proto;
 
 /// Allows a packet to pass through, mostly useful in combination with
 /// other filters.
-struct Pass;
-
-pub const NAME: &str = "quilkin.filters.pass.v1alpha1.Pass";
-
-/// Creates a new factory for generating debug filters.
-pub fn factory() -> DynFilterFactory {
-    Box::from(PassFactory::new())
-}
+pub struct Pass;
 
 impl Pass {
     fn new() -> Self {
@@ -51,44 +44,25 @@ impl Filter for Pass {
     }
 }
 
-/// Factory for the Debug
-struct PassFactory;
+impl StaticFilter for Pass {
+    const NAME: &'static str = "quilkin.filters.pass.v1alpha1.Pass";
+    type Configuration = Config;
+    type BinaryConfiguration = proto::Pass;
 
-impl PassFactory {
-    pub fn new() -> Self {
-        Self
-    }
-}
-
-impl FilterFactory for PassFactory {
-    fn name(&self) -> &'static str {
-        NAME
-    }
-
-    fn config_schema(&self) -> schemars::schema::RootSchema {
-        schemars::schema_for!(Config)
-    }
-
-    fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
-        let config: Option<(_, Config)> = args
-            .config
-            .map(|config| config.deserialize::<Config, proto::Pass>(self.name()))
-            .transpose()?;
-
-        let (config_json, _) = config
-            .map(|(config_json, config)| (config_json, Some(config)))
-            .unwrap_or_else(|| (serde_json::Value::Null, None));
-
-        Ok(FilterInstance::new(
-            config_json,
-            Box::new(Pass::new()) as Box<dyn Filter>,
-        ))
+    fn try_from_config(_config: Option<Self::Configuration>) -> Result<Self, Error> {
+        Ok(Pass::new())
     }
 }
 
 /// `pass` filter's configuration.
 #[derive(Serialize, Deserialize, Debug, schemars::JsonSchema)]
 pub struct Config;
+
+impl From<Config> for proto::Pass {
+    fn from(_config: Config) -> Self {
+        Self {}
+    }
+}
 
 impl TryFrom<proto::Pass> for Config {
     type Error = ConvertProtoConfigError;

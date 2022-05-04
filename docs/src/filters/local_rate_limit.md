@@ -16,18 +16,17 @@ quilkin.filters.local_rate_limit.v1alpha1.LocalRateLimit
 # async fn main() {
 #   let yaml = "
 version: v1alpha1
-static:
-  filters:
-    - name: quilkin.filters.local_rate_limit.v1alpha1.LocalRateLimit
-      config:
-        max_packets: 1000
-        period: 1
-  endpoints:
-    - address: 127.0.0.1:7001
+filters:
+  - name: quilkin.filters.local_rate_limit.v1alpha1.LocalRateLimit
+    config:
+      max_packets: 1000
+      period: 1
+endpoints:
+  - address: 127.0.0.1:7001
 # ";
 #   let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-# assert_eq!(config.source.get_static_filters().unwrap().len(), 1);
-#   quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
+# assert_eq!(config.filters.load().len(), 1);
+# quilkin::Server::try_from(config).unwrap();
 # }
 ```
 To configure a rate limiter, we specify the maximum rate at which the proxy is allowed to forward packets. In the example above, we configured the proxy to forward a maximum of 1000 packets per second).

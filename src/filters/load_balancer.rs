@@ -14,26 +14,28 @@
  * limitations under the License.
  */
 
+crate::include_proto!("quilkin.filters.load_balancer.v1alpha1");
+
 mod config;
 mod endpoint_chooser;
 
-use crate::filters::{prelude::*, DynFilterFactory};
-
-use config::ProtoConfig;
+use self::quilkin::filters::load_balancer::v1alpha1 as proto;
+use crate::filters::prelude::*;
 use endpoint_chooser::EndpointChooser;
 
 pub use config::{Config, Policy};
 
-pub const NAME: &str = "quilkin.filters.load_balancer.v1alpha1.LoadBalancer";
-
-/// Returns a factory for creating load balancing filters.
-pub fn factory() -> DynFilterFactory {
-    Box::from(LoadBalancerFilterFactory)
+/// Balances packets over the upstream endpoints.
+pub struct LoadBalancer {
+    endpoint_chooser: Box<dyn EndpointChooser>,
 }
 
-/// Balances packets over the upstream endpoints.
-struct LoadBalancer {
-    endpoint_chooser: Box<dyn EndpointChooser>,
+impl LoadBalancer {
+    fn new(config: Config) -> Self {
+        Self {
+            endpoint_chooser: config.policy.as_endpoint_chooser(),
+        }
+    }
 }
 
 impl Filter for LoadBalancer {
@@ -43,28 +45,13 @@ impl Filter for LoadBalancer {
     }
 }
 
-struct LoadBalancerFilterFactory;
+impl StaticFilter for LoadBalancer {
+    const NAME: &'static str = "quilkin.filters.load_balancer.v1alpha1.LoadBalancer";
+    type Configuration = Config;
+    type BinaryConfiguration = proto::LoadBalancer;
 
-impl FilterFactory for LoadBalancerFilterFactory {
-    fn name(&self) -> &'static str {
-        NAME
-    }
-
-    fn config_schema(&self) -> schemars::schema::RootSchema {
-        schemars::schema_for!(Config)
-    }
-
-    fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
-        let (config_json, config) = self
-            .require_config(args.config)?
-            .deserialize::<Config, ProtoConfig>(self.name())?;
-        let filter = LoadBalancer {
-            endpoint_chooser: config.policy.as_endpoint_chooser(),
-        };
-        Ok(FilterInstance::new(
-            config_json,
-            Box::new(filter) as Box<dyn Filter>,
-        ))
+    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, Error> {
+        Ok(LoadBalancer::new(Self::ensure_config_exists(config)?))
     }
 }
 
@@ -72,23 +59,8 @@ impl FilterFactory for LoadBalancerFilterFactory {
 mod tests {
     use std::{collections::HashSet, net::Ipv4Addr};
 
-    use crate::{
-        endpoint::{Endpoint, EndpointAddress, Endpoints},
-        filters::{
-            load_balancer::LoadBalancerFilterFactory, CreateFilterArgs, Filter, FilterFactory,
-            ReadContext,
-        },
-    };
-
-    fn create_filter(config: &str) -> Box<dyn Filter> {
-        let factory = LoadBalancerFilterFactory;
-        factory
-            .create_filter(CreateFilterArgs::fixed(Some(
-                serde_yaml::from_str(config).unwrap(),
-            )))
-            .unwrap()
-            .filter
-    }
+    use super::*;
+    use crate::endpoint::{Endpoint, EndpointAddress, Endpoints};
 
     fn get_response_addresses(
         filter: &dyn Filter,
@@ -117,7 +89,7 @@ mod tests {
         ];
 
         let yaml = "policy: ROUND_ROBIN";
-        let filter = create_filter(yaml);
+        let filter = LoadBalancer::from_config(serde_yaml::from_str(yaml).unwrap());
 
         // Check that we repeat the same addresses in sequence forever.
         let expected_sequence = addresses
@@ -130,7 +102,7 @@ mod tests {
                 expected_sequence,
                 (0..addresses.len())
                     .map(|_| get_response_addresses(
-                        filter.as_ref(),
+                        &filter,
                         &addresses,
                         "127.0.0.1:8080".parse().unwrap()
                     ))
@@ -150,18 +122,14 @@ mod tests {
         let yaml = "
 policy: RANDOM
 ";
-        let filter = create_filter(yaml);
+        let filter = LoadBalancer::from_config(serde_yaml::from_str(yaml).unwrap());
 
         // Run a few selection rounds through the addresses.
         let mut result_sequences = vec![];
         for _ in 0..10 {
             let sequence = (0..addresses.len())
                 .map(|_| {
-                    get_response_addresses(
-                        filter.as_ref(),
-                        &addresses,
-                        "127.0.0.1:8080".parse().unwrap(),
-                    )
+                    get_response_addresses(&filter, &addresses, "127.0.0.1:8080".parse().unwrap())
                 })
                 .collect::<Vec<_>>();
             result_sequences.push(sequence);
@@ -197,21 +165,15 @@ policy: RANDOM
         let source_ips = vec![[127u8, 1, 1, 1], [127, 2, 2, 2], [127, 3, 3, 3]];
         let source_ports = vec![11111u16, 22222, 33333, 44444, 55555];
 
-        let yaml = "
-policy: HASH
-";
-        let filter = create_filter(yaml);
+        let yaml = "policy: HASH";
+        let filter = LoadBalancer::from_config(serde_yaml::from_str(yaml).unwrap());
 
         // Run a few selection rounds through the addresses.
         let mut result_sequences = vec![];
         for _ in 0..10 {
             let sequence = (0..addresses.len())
                 .map(|_| {
-                    get_response_addresses(
-                        filter.as_ref(),
-                        &addresses,
-                        (Ipv4Addr::LOCALHOST, 8080).into(),
-                    )
+                    get_response_addresses(&filter, &addresses, (Ipv4Addr::LOCALHOST, 8080).into())
                 })
                 .collect::<Vec<_>>();
             result_sequences.push(sequence);
@@ -234,11 +196,7 @@ policy: HASH
         for port in source_ports.iter().copied() {
             let sequence = (0..addresses.len())
                 .map(|_| {
-                    get_response_addresses(
-                        filter.as_ref(),
-                        &addresses,
-                        (Ipv4Addr::LOCALHOST, port).into(),
-                    )
+                    get_response_addresses(&filter, &addresses, (Ipv4Addr::LOCALHOST, port).into())
                 })
                 .collect::<Vec<_>>();
             result_sequences.push(sequence);
@@ -261,7 +219,7 @@ policy: HASH
         for ip in source_ips {
             for port in source_ports.iter().copied() {
                 let sequence = (0..addresses.len())
-                    .map(|_| get_response_addresses(filter.as_ref(), &addresses, (ip, port).into()))
+                    .map(|_| get_response_addresses(&filter, &addresses, (ip, port).into()))
                     .collect::<Vec<_>>();
                 result_sequences.push(sequence);
             }

@@ -29,10 +29,10 @@ use metrics::Metrics as ProxyMetrics;
 
 use crate::{
     cluster::SharedCluster,
+    config::Config,
     endpoint::{Endpoint, EndpointAddress},
     filters::{Filter, ReadContext, SharedFilterChain},
     proxy::{
-        builder::{ValidatedConfig, ValidatedSource},
         sessions::{
             metrics::Metrics as SessionMetrics, session_manager::SessionManager, Session,
             SessionArgs, SessionKey, UpstreamPacket, SESSION_TIMEOUT_SECONDS,
@@ -45,12 +45,20 @@ use crate::{
 
 /// Server is the UDP server main implementation
 pub struct Server {
-    // We use pub(super) to limit instantiation only to the Builder.
-    pub(super) config: Arc<ValidatedConfig>,
-    // Admin may be turned off, primarily for testing.
-    pub(super) admin: Option<Admin>,
-    pub(super) proxy_metrics: ProxyMetrics,
-    pub(super) session_metrics: SessionMetrics,
+    config: Arc<Config>,
+    proxy_metrics: ProxyMetrics,
+    session_metrics: SessionMetrics,
+}
+
+impl TryFrom<Config> for Server {
+    type Error = eyre::Error;
+    fn try_from(config: Config) -> Result<Self, Self::Error> {
+        Ok(Self {
+            config: Arc::from(config),
+            proxy_metrics: ProxyMetrics::new()?,
+            session_metrics: SessionMetrics::new()?,
+        })
+    }
 }
 
 /// Represents arguments to the `Server::run_recv_from` method.
@@ -98,6 +106,11 @@ struct ProcessDownstreamReceiveConfig {
 }
 
 impl Server {
+    /// Returns a builder for configuring a Quilkin Server.
+    pub fn builder() -> crate::config::Builder {
+        <_>::default()
+    }
+
     /// start the async processing of incoming UDP packets. Will block until an
     /// event is sent through the stop Receiver.
     pub async fn run(self, mut shutdown_rx: watch::Receiver<()>) -> Result<()> {
@@ -115,7 +128,8 @@ impl Server {
 
         let (cluster, filter_chain) = self.create_resource_managers(shutdown_rx.clone())?;
 
-        if let Some(admin) = &self.admin {
+        if let Some(admin) = self.config.admin.clone() {
+            let admin = Admin::from(admin);
             admin.run(cluster.clone(), filter_chain.clone(), shutdown_rx.clone());
         }
 
@@ -148,32 +162,24 @@ impl Server {
         &self,
         shutdown_rx: watch::Receiver<()>,
     ) -> Result<(SharedCluster, SharedFilterChain)> {
-        match &self.config.source {
-            ValidatedSource::Static {
-                filter_chain,
-                endpoints,
-            } => {
-                let cluster = SharedCluster::new_static_cluster(endpoints.to_vec())?;
-                let filter_chain = SharedFilterChain::try_from(&**filter_chain)?;
-                Ok((cluster, filter_chain))
-            }
-            ValidatedSource::Dynamic { management_servers } => {
-                let cluster = SharedCluster::empty()?;
-                let filter_chain = SharedFilterChain::empty();
+        let cluster = SharedCluster::new_static_cluster(self.config.endpoints.load().to_vec())?;
+        let filter_chain = SharedFilterChain::try_from(&***self.config.filters.load())?;
 
-                let client = crate::xds::AdsClient::new()?;
+        let management_servers = self.config.management_servers.load_full();
 
-                tokio::spawn(client.run(
-                    self.config.proxy.id.clone(),
-                    cluster.clone(),
-                    management_servers.clone(),
-                    filter_chain.clone(),
-                    shutdown_rx,
-                ));
+        if !management_servers.is_empty() {
+            let client = crate::xds::AdsClient::new()?;
 
-                Ok((cluster, filter_chain))
-            }
+            tokio::spawn(client.run(
+                self.config.proxy.id.clone(),
+                cluster.clone(),
+                management_servers,
+                filter_chain.clone(),
+                shutdown_rx,
+            ));
         }
+
+        Ok((cluster, filter_chain))
     }
 
     /// Spawns a background task that sits in a loop, receiving packets from the passed in socket.
@@ -468,7 +474,6 @@ impl Server {
 #[cfg(test)]
 mod tests {
     use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-    use std::sync::Arc;
     use std::time::{SystemTime, UNIX_EPOCH};
 
     use prometheus::{Histogram, HistogramOpts};
@@ -479,11 +484,10 @@ mod tests {
 
     use crate::{
         cluster::SharedCluster,
-        config::{self, Builder as ConfigBuilder},
+        config,
         endpoint::Endpoint,
         filters::SharedFilterChain,
         proxy::sessions::UpstreamPacket,
-        proxy::Builder,
         test_utils::{config_with_dummy_endpoint, load_test_filters, new_test_chain, TestHelper},
     };
 
@@ -497,16 +501,14 @@ mod tests {
         let endpoint2 = t.open_socket_and_recv_single_packet().await;
 
         let local_addr = (Ipv4Addr::UNSPECIFIED, 12358);
-        let config = ConfigBuilder::empty()
-            .with_port(local_addr.1)
-            .with_static(
-                vec![],
-                vec![
-                    Endpoint::new(endpoint1.socket.local_addr().unwrap().into()),
-                    Endpoint::new(endpoint2.socket.local_addr().unwrap().into()),
-                ],
-            )
-            .build();
+        let config = Server::builder()
+            .port(local_addr.1)
+            .endpoints(vec![
+                Endpoint::new(endpoint1.socket.local_addr().unwrap().into()),
+                Endpoint::new(endpoint2.socket.local_addr().unwrap().into()),
+            ])
+            .build()
+            .unwrap();
         t.run_server_with_config(config);
 
         let msg = "hello";
@@ -525,14 +527,14 @@ mod tests {
 
         let endpoint = t.open_socket_and_recv_single_packet().await;
 
-        let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12357);
-        let config = ConfigBuilder::empty()
-            .with_port(local_addr.port())
-            .with_static(
-                vec![],
-                vec![Endpoint::new(endpoint.socket.local_addr().unwrap().into())],
-            )
-            .build();
+        let local_addr = SocketAddr::from((Ipv4Addr::UNSPECIFIED, 12357));
+        let config = Server::builder()
+            .port(local_addr.port())
+            .endpoints(vec![Endpoint::new(
+                endpoint.socket.local_addr().unwrap().into(),
+            )])
+            .build()
+            .unwrap();
         t.run_server_with_config(config);
 
         let msg = "hello";
@@ -551,17 +553,18 @@ mod tests {
         load_test_filters();
         let endpoint = t.open_socket_and_recv_single_packet().await;
         let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 12367);
-        let config = ConfigBuilder::empty()
-            .with_port(local_addr.port())
-            .with_static(
-                vec![config::Filter {
-                    name: "TestFilter".to_string(),
-                    config: None,
-                }],
-                vec![Endpoint::new(endpoint.socket.local_addr().unwrap().into())],
-            )
-            .build();
-        t.run_server_with_builder(Builder::from(Arc::new(config)).disable_admin());
+        let config = Server::builder()
+            .port(local_addr.port())
+            .filters(vec![config::Filter {
+                name: "TestFilter".to_string(),
+                config: None,
+            }])
+            .endpoints(vec![Endpoint::new(
+                endpoint.socket.local_addr().unwrap().into(),
+            )])
+            .build()
+            .unwrap();
+        t.run_server_with_config(config);
 
         let msg = "hello";
         endpoint
@@ -741,8 +744,8 @@ mod tests {
         let session_manager = SessionManager::new(shutdown_rx.clone());
         let (send_packets, mut recv_packets) = mpsc::channel::<UpstreamPacket>(1);
 
-        let config = Arc::new(config_with_dummy_endpoint().build());
-        let server = Builder::from(config).validate().unwrap().build();
+        let config = config_with_dummy_endpoint().build().unwrap();
+        let server = Server::try_from(config).unwrap();
 
         server.run_recv_from(RunRecvFromArgs {
             cluster: SharedCluster::new_static_cluster(vec![Endpoint::new(
@@ -792,8 +795,8 @@ mod tests {
         {
             unreachable!("failed to send packet over channel");
         }
-        let config = Arc::new(config_with_dummy_endpoint().build());
-        let server = Builder::from(config).validate().unwrap().build();
+        let config = config_with_dummy_endpoint().build().unwrap();
+        let server = Server::try_from(config).unwrap();
         server.run_receive_packet(endpoint.socket, recv_packet);
         assert_eq!(msg, endpoint.packet_rx.await.unwrap());
         assert_eq!(

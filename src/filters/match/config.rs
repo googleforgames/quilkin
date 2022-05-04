@@ -14,15 +14,12 @@
  * limitations under the License.
  */
 
-crate::include_proto!("quilkin.filters.matches.v1alpha1");
-
-pub(crate) use self::quilkin::filters::matches::v1alpha1 as proto;
-
 use serde::{Deserialize, Serialize};
 
+use super::proto;
 use crate::{config::ConfigType, filters::ConvertProtoConfigError};
 
-/// Configuration for the [`factory`][crate::filters::match::factory].
+/// Configuration for [`Match`][super::Match].
 #[derive(Debug, Deserialize, Serialize, PartialEq, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
@@ -30,6 +27,17 @@ pub struct Config {
     pub on_read: Option<DirectionalConfig>,
     /// Configuration for [`Filter::write`][crate::filters::Filter::write].
     pub on_write: Option<DirectionalConfig>,
+}
+
+impl TryFrom<Config> for proto::Match {
+    type Error = crate::filters::Error;
+
+    fn try_from(config: Config) -> Result<Self, Self::Error> {
+        Ok(Self {
+            on_read: config.on_read.map(TryFrom::try_from).transpose()?,
+            on_write: config.on_write.map(TryFrom::try_from).transpose()?,
+        })
+    }
 }
 
 impl TryFrom<proto::Match> for Config {
@@ -68,6 +76,22 @@ pub struct DirectionalConfig {
     pub fallthrough: Fallthrough,
 }
 
+impl TryFrom<DirectionalConfig> for proto::r#match::Config {
+    type Error = crate::filters::Error;
+
+    fn try_from(config: DirectionalConfig) -> Result<Self, Self::Error> {
+        Ok(Self {
+            metadata_key: Some(config.metadata_key),
+            branches: config
+                .branches
+                .into_iter()
+                .map(TryFrom::try_from)
+                .collect::<Result<_, _>>()?,
+            fallthrough: config.fallthrough.try_into().map(Some)?,
+        })
+    }
+}
+
 impl TryFrom<proto::r#match::Config> for DirectionalConfig {
     type Error = eyre::Report;
 
@@ -99,6 +123,17 @@ pub struct Branch {
     /// The filter to run on successful matches.
     #[serde(flatten)]
     pub filter: Filter,
+}
+
+impl TryFrom<Branch> for proto::r#match::Branch {
+    type Error = crate::filters::Error;
+
+    fn try_from(branch: Branch) -> Result<Self, Self::Error> {
+        Ok(Self {
+            value: Some(branch.value.into()),
+            filter: branch.filter.try_into().map(Some)?,
+        })
+    }
 }
 
 impl TryFrom<proto::r#match::Branch> for Branch {
@@ -221,14 +256,23 @@ impl<'de> Deserialize<'de> for Filter {
     }
 }
 
-/// The behaviour when the none of branches match. Defaults to dropping packets.
-#[derive(Debug, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
-#[serde(transparent)]
-pub struct Fallthrough(pub Filter);
+impl TryFrom<Filter> for proto::r#match::Filter {
+    type Error = crate::filters::Error;
 
-impl Default for Fallthrough {
-    fn default() -> Self {
-        Self(Filter::new(crate::filters::drop::NAME))
+    fn try_from(filter: Filter) -> Result<Self, Self::Error> {
+        Ok(Self {
+            config: match filter.config {
+                Some(ConfigType::Dynamic(any)) => Some(any),
+                Some(ConfigType::Static(value)) => {
+                    crate::filters::FilterRegistry::get_factory(&filter.id)
+                        .ok_or_else(|| crate::filters::Error::NotFound(filter.id.clone()))?
+                        .encode_config_to_protobuf(value)
+                        .map(Some)?
+                }
+                None => None,
+            },
+            id: Some(filter.id),
+        })
     }
 }
 
@@ -244,6 +288,24 @@ impl TryFrom<proto::r#match::Filter> for Filter {
             id,
             config: filter.config.map(ConfigType::Dynamic),
         })
+    }
+}
+
+/// The behaviour when the none of branches match. Defaults to dropping packets.
+#[derive(Debug, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(transparent)]
+pub struct Fallthrough(pub Filter);
+
+impl Default for Fallthrough {
+    fn default() -> Self {
+        Self(Filter::new(crate::filters::drop::NAME))
+    }
+}
+
+impl TryFrom<Fallthrough> for proto::r#match::Filter {
+    type Error = crate::filters::Error;
+    fn try_from(fallthrough: Fallthrough) -> Result<Self, Self::Error> {
+        fallthrough.0.try_into()
     }
 }
 

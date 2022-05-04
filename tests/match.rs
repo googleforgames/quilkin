@@ -19,9 +19,9 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use tokio::time::{timeout, Duration};
 
 use quilkin::{
-    config::{Builder, Filter},
+    config::Filter,
     endpoint::Endpoint,
-    filters::{capture, r#match},
+    filters::{Capture, Match, StaticFilter},
     test_utils::TestHelper,
 };
 
@@ -57,22 +57,21 @@ on_read:
             bytes: YWJj # abc
 ";
     let server_port = 12348;
-    let server_config = Builder::empty()
-        .with_port(server_port)
-        .with_static(
-            vec![
-                Filter {
-                    name: capture::NAME.into(),
-                    config: serde_yaml::from_str(capture_yaml).unwrap(),
-                },
-                Filter {
-                    name: r#match::NAME.into(),
-                    config: serde_yaml::from_str(matches_yaml).unwrap(),
-                },
-            ],
-            vec![Endpoint::new(echo)],
-        )
-        .build();
+    let server_config = quilkin::Server::builder()
+        .port(server_port)
+        .filters(vec![
+            Filter {
+                name: Capture::NAME.into(),
+                config: serde_yaml::from_str(capture_yaml).unwrap(),
+            },
+            Filter {
+                name: Match::NAME.into(),
+                config: serde_yaml::from_str(matches_yaml).unwrap(),
+            },
+        ])
+        .endpoints(vec![Endpoint::new(echo)])
+        .build()
+        .unwrap();
     t.run_server_with_config(server_config);
 
     let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;

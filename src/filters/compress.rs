@@ -23,21 +23,14 @@ crate::include_proto!("quilkin.filters.compress.v1alpha1");
 use crate::{config::LOG_SAMPLING_RATE, filters::prelude::*};
 use tracing::warn;
 
-use self::quilkin::filters::compress::v1alpha1::Compress as ProtoConfig;
+use self::quilkin::filters::compress::v1alpha1 as proto;
 use compressor::Compressor;
 use metrics::Metrics;
 
 pub use config::{Action, Config, Mode};
 
-pub const NAME: &str = "quilkin.filters.compress.v1alpha1.Compress";
-
-/// Returns a factory for creating compression filters.
-pub fn factory() -> DynFilterFactory {
-    Box::from(CompressFactory::new())
-}
-
 /// Filter for compressing and decompressing packet data
-struct Compress {
+pub struct Compress {
     metrics: Metrics,
     compression_mode: Mode,
     on_read: Action,
@@ -145,60 +138,37 @@ impl Filter for Compress {
     }
 }
 
-struct CompressFactory {}
+impl StaticFilter for Compress {
+    const NAME: &'static str = "quilkin.filters.compress.v1alpha1.Compress";
+    type Configuration = Config;
+    type BinaryConfiguration = proto::Compress;
 
-impl CompressFactory {
-    pub fn new() -> Self {
-        CompressFactory {}
-    }
-}
-
-impl FilterFactory for CompressFactory {
-    fn name(&self) -> &'static str {
-        NAME
-    }
-
-    fn config_schema(&self) -> schemars::schema::RootSchema {
-        schemars::schema_for!(Config)
-    }
-
-    fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
-        let (config_json, config) = self
-            .require_config(args.config)?
-            .deserialize::<Config, ProtoConfig>(self.name())?;
-        let filter = Compress::new(config, Metrics::new()?);
-        Ok(FilterInstance::new(
-            config_json,
-            Box::new(filter) as Box<dyn Filter>,
+    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, Error> {
+        Ok(Compress::new(
+            Self::ensure_config_exists(config)?,
+            Metrics::new()?,
         ))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::convert::TryFrom;
-
-    use serde_yaml::{Mapping, Value};
     use tracing_test::traced_test;
 
-    use crate::endpoint::{Endpoint, Endpoints, UpstreamEndpoints};
-    use crate::filters::{
-        compress::{compressor::Snappy, Compressor},
-        CreateFilterArgs, Filter, FilterFactory, ReadContext, WriteContext,
+    use crate::{
+        endpoint::{Endpoint, Endpoints, UpstreamEndpoints},
+        filters::compress::compressor::Snappy,
     };
 
-    use super::quilkin::filters::compress::v1alpha1::{
-        compress::{Action as ProtoAction, ActionValue, Mode as ProtoMode, ModeValue},
-        Compress as ProtoConfig,
-    };
-    use super::{Action, Compress, CompressFactory, Config, Metrics, Mode};
+    use super::*;
+    use proto::compress::{Action as ProtoAction, ActionValue, Mode as ProtoMode, ModeValue};
 
     #[test]
     fn convert_proto_config() {
         let test_cases = vec![
             (
                 "should succeed when all valid values are provided",
-                ProtoConfig {
+                proto::Compress {
                     mode: Some(ModeValue {
                         value: ProtoMode::Snappy as i32,
                     }),
@@ -217,7 +187,7 @@ mod tests {
             ),
             (
                 "should fail when invalid mode is provided",
-                ProtoConfig {
+                proto::Compress {
                     mode: Some(ModeValue { value: 42 }),
                     on_read: Some(ActionValue {
                         value: ProtoAction::Compress as i32,
@@ -230,7 +200,7 @@ mod tests {
             ),
             (
                 "should fail when invalid on_read is provided",
-                ProtoConfig {
+                proto::Compress {
                     mode: Some(ModeValue {
                         value: ProtoMode::Snappy as i32,
                     }),
@@ -243,7 +213,7 @@ mod tests {
             ),
             (
                 "should fail when invalid on_write is provided",
-                ProtoConfig {
+                proto::Compress {
                     mode: Some(ModeValue {
                         value: ProtoMode::Snappy as i32,
                     }),
@@ -256,16 +226,12 @@ mod tests {
             ),
             (
                 "should use correct default values",
-                ProtoConfig {
+                proto::Compress {
                     mode: None,
                     on_read: None,
                     on_write: None,
                 },
-                Some(Config {
-                    mode: Mode::default(),
-                    on_read: Action::default(),
-                    on_write: Action::default(),
-                }),
+                Some(Config::default()),
             ),
         ];
         for (name, proto_config, expected) in test_cases {
@@ -284,44 +250,25 @@ mod tests {
 
     #[test]
     fn default_mode_factory() {
-        let factory = CompressFactory::new();
-        let mut map = Mapping::new();
-        map.insert(
-            Value::String("on_read".into()),
-            Value::String("DECOMPRESS".into()),
-        );
-        map.insert(
-            Value::String("on_write".into()),
-            Value::String("COMPRESS".into()),
-        );
-        let filter = factory
-            .create_filter(CreateFilterArgs::fixed(Some(Value::Mapping(map))))
-            .expect("should create a filter")
-            .filter;
-        assert_downstream(filter.as_ref());
+        let config = serde_json::json!({
+            "on_read": "DECOMPRESS".to_string(),
+            "on_write": "COMPRESS".to_string(),
+
+        });
+        let filter = Compress::from_config(Some(serde_json::from_value(config).unwrap()));
+        assert_downstream(&filter);
     }
 
     #[test]
     fn config_factory() {
-        let factory = CompressFactory::new();
-        let mut map = Mapping::new();
-        map.insert(Value::String("mode".into()), Value::String("SNAPPY".into()));
-        map.insert(
-            Value::String("on_read".into()),
-            Value::String("DECOMPRESS".into()),
-        );
-        map.insert(
-            Value::String("on_write".into()),
-            Value::String("COMPRESS".into()),
-        );
-        let config = Value::Mapping(map);
-        let args = CreateFilterArgs::fixed(Some(config));
+        let config = serde_json::json!({
+            "mode": "SNAPPY".to_string(),
+            "on_read": "DECOMPRESS".to_string(),
+            "on_write": "COMPRESS".to_string(),
 
-        let filter = factory
-            .create_filter(args)
-            .expect("should create a filter")
-            .filter;
-        assert_downstream(filter.as_ref());
+        });
+        let filter = Compress::from_config(Some(serde_json::from_value(config).unwrap()));
+        assert_downstream(&filter);
     }
 
     #[test]

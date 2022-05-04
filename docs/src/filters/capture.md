@@ -33,20 +33,19 @@ quilkin.filters.capture.v1alpha1.Capture
 ```rust
 # let yaml = "
 version: v1alpha1
-static:
-  filters:
-    - name: quilkin.filters.capture.v1alpha1.Capture
-      config:
-          metadataKey: myapp.com/myownkey
-          prefix:
-            size: 3
-            remove: false
-  endpoints:
-    - address: 127.0.0.1:7001
+filters:
+  - name: quilkin.filters.capture.v1alpha1.Capture
+    config:
+      metadataKey: myapp.com/myownkey
+      prefix:
+      size: 3
+      remove: false
+endpoints:
+  - address: 127.0.0.1:7001
 # ";
 # let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-# assert_eq!(config.source.get_static_filters().unwrap().len(), 1);
-# quilkin::Builder::from(std::sync::Arc::new(config)).validate().unwrap();
+# assert_eq!(config.filters.load().len(), 1);
+# quilkin::Server::try_from(config).unwrap();
 ```
 
 ### Configuration Options ([Rust Doc](../../api/quilkin/filters/capture/struct.Config.html))

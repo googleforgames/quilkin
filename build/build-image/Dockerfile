@@ -29,19 +29,10 @@ RUN set -eux && \
     apt-get install -y jq wget zip build-essential libssl-dev pkg-config python3-pip && \
     pip3 install live-server
 
-# Install Go
-WORKDIR /usr/local
-ENV GO_VERSION=1.17.2
-RUN wget -q https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz && \
-    tar -xzf go${GO_VERSION}.linux-amd64.tar.gz && rm go${GO_VERSION}.linux-amd64.tar.gz
-ENV PATH /usr/local/go/bin:$PATH
-
 # Install htmltest
 WORKDIR /tmp
-# TODO (markmandel): replace with official release once a 0.16.0 release is created.
-RUN git clone --depth=5 https://github.com/wjdp/htmltest.git && \
-    cd htmltest && ./build.sh && cp ./bin/htmltest /usr/local/bin/ && \
-    rm -r /tmp/htmltest
+RUN wget -O htmltest.tar.gz https://github.com/wjdp/htmltest/releases/download/v0.16.0/htmltest_0.16.0_linux_amd64.tar.gz && \
+     tar -xf htmltest.tar.gz && mv ./htmltest /usr/local/bin/ && rm htmltest.tar.gz
 
 # Install Rust
 RUN wget https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init && \
