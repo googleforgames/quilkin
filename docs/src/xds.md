@@ -170,7 +170,7 @@ The following metrics are exposed by the management server.
 [listener-resource]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto#config-listener-v3-listener
 [xds-filters]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener_components.proto#envoy-v3-api-msg-config-listener-v3-filter
 [xds-filter-chain]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener_components.proto#config-listener-v3-filterchain
-[DiscoveryRequest]: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/discovery.proto#envoy-api-msg-discoveryrequest
+[DiscoveryRequest]: https://www.envoyproxy.io/docs/envoy/v1.22.0/api-v3/service/discovery/v3/discovery.proto.html?highlight=discoveryrequest#service-discovery-v3-discoveryrequest
 [xds-variants]: https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol#variants-of-the-xds-transport-protocol
 [filter-protos]: https://github.com/googleforgames/quilkin/tree/main/proto/quilkin/filters
 [filters-doc]: ./filters.md
