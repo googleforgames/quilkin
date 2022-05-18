@@ -80,6 +80,8 @@ pub struct Proxy {
     pub id: String,
     #[serde(default = "default_proxy_port")]
     pub port: u16,
+    #[serde(default = "default_upstream_address")]
+    pub upstream_address: SocketAddr,
 }
 
 #[cfg(not(target_os = "linux"))]
@@ -96,11 +98,16 @@ fn default_proxy_port() -> u16 {
     7000
 }
 
+fn default_upstream_address() -> SocketAddr {
+    (std::net::Ipv4Addr::UNSPECIFIED, 0).into()
+}
+
 impl Default for Proxy {
     fn default() -> Self {
         Proxy {
             id: default_proxy_id(),
             port: default_proxy_port(),
+            upstream_address: default_upstream_address(),
         }
     }
 }
@@ -210,6 +217,7 @@ mod tests {
     fn deserialise_server() {
         let config = Builder::default()
             .port(7000)
+            .upstream_address((std::net::Ipv4Addr::LOCALHOST, 43164).into())
             .endpoints(vec![
                 Endpoint::new("127.0.0.1:26000".parse().unwrap()),
                 Endpoint::new("127.0.0.1:26001".parse().unwrap()),
@@ -230,6 +238,10 @@ mod tests {
         .unwrap();
 
         assert_eq!(config.proxy.port, 7000);
+        assert_eq!(
+            config.proxy.upstream_address,
+            (std::net::Ipv4Addr::UNSPECIFIED, 0).into()
+        );
         assert!(config.proxy.id.len() > 1);
     }
 
@@ -281,6 +293,7 @@ version: v1alpha1
 proxy:
   id: server-proxy
   port: 7000
+  upstream_address: 127.0.0.1:43164
 endpoints:
   - address: 127.0.0.1:25999
   ";
@@ -288,6 +301,10 @@ endpoints:
 
         assert_eq!(config.proxy.port, 7000);
         assert_eq!(config.proxy.id.as_str(), "server-proxy");
+        assert_eq!(
+            config.proxy.upstream_address,
+            (std::net::Ipv4Addr::LOCALHOST, 43164).into()
+        );
     }
 
     #[test]

@@ -16,6 +16,7 @@
 
 use prometheus::HistogramTimer;
 use std::{
+    net::SocketAddr,
     sync::{
         atomic::{AtomicU64, Ordering},
         Arc,
@@ -121,6 +122,7 @@ pub struct SessionArgs {
     pub dest: Endpoint,
     pub sender: mpsc::Sender<UpstreamPacket>,
     pub ttl: Duration,
+    pub upstream_address: SocketAddr,
 }
 
 impl SessionArgs {
@@ -134,8 +136,11 @@ impl SessionArgs {
 impl Session {
     /// internal constructor for a Session from SessionArgs
     async fn new(args: SessionArgs) -> Result<Self> {
-        let addr = (std::net::Ipv4Addr::UNSPECIFIED, 0);
-        let socket = Arc::new(UdpSocket::bind(addr).await.map_err(Error::BindUdpSocket)?);
+        let socket = Arc::new(
+            UdpSocket::bind(args.upstream_address)
+                .await
+                .map_err(Error::BindUdpSocket)?,
+        );
         let (shutdown_tx, shutdown_rx) = watch::channel::<()>(());
 
         let expiration = Arc::new(AtomicU64::new(0));
@@ -382,6 +387,7 @@ mod tests {
             dest: endpoint,
             sender: send_packet,
             ttl: Duration::from_secs(20),
+            upstream_address: (std::net::Ipv4Addr::UNSPECIFIED, 0).into(),
         })
         .await
         .unwrap();
@@ -431,6 +437,7 @@ mod tests {
             dest: endpoint.clone(),
             sender,
             ttl: Duration::from_millis(1000),
+            upstream_address: (std::net::Ipv4Addr::UNSPECIFIED, 0).into(),
         })
         .await
         .unwrap();
@@ -532,6 +539,7 @@ mod tests {
             dest: endpoint,
             sender: send_packet,
             ttl: Duration::from_secs(10),
+            upstream_address: (std::net::Ipv4Addr::UNSPECIFIED, 0).into(),
         })
         .await
         .unwrap();
@@ -555,6 +563,7 @@ mod tests {
             dest: Endpoint::new(addr),
             sender,
             ttl: Duration::from_secs(10),
+            upstream_address: (std::net::Ipv4Addr::UNSPECIFIED, 0).into(),
         })
         .await
         .unwrap();
@@ -579,6 +588,7 @@ mod tests {
             dest: Endpoint::new(addr),
             sender: send_packet,
             ttl: Duration::from_secs(10),
+            upstream_address: (std::net::Ipv4Addr::UNSPECIFIED, 0).into(),
         })
         .await
         .unwrap();

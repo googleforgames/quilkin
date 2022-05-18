@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-use std::{collections::HashSet, sync::Arc};
+use std::{collections::HashSet, net::SocketAddr, sync::Arc};
 
 use arc_swap::ArcSwap;
 
@@ -28,6 +28,8 @@ use crate::{
 #[derive(Debug)]
 pub struct Builder {
     pub port: u16,
+    //(todo nezdolik) group this with port into Proxy entity
+    pub upstream_address: SocketAddr,
     pub admin: Option<Admin>,
     pub endpoints: Vec<Endpoint>,
     pub filters: Vec<Filter>,
@@ -39,6 +41,7 @@ impl Default for Builder {
         Self {
             admin: Some(<_>::default()),
             port: <_>::default(),
+            upstream_address: (std::net::Ipv4Addr::UNSPECIFIED, 0).into(),
             endpoints: <_>::default(),
             filters: <_>::default(),
             management_servers: <_>::default(),
@@ -49,6 +52,13 @@ impl Default for Builder {
 impl Builder {
     pub fn port(self, port: u16) -> Self {
         Builder { port, ..self }
+    }
+
+    pub fn upstream_address(self, upstream_address: SocketAddr) -> Self {
+        Builder {
+            upstream_address,
+            ..self
+        }
     }
 
     pub fn filters(self, filters: Vec<Filter>) -> Self {
@@ -117,6 +127,7 @@ impl TryFrom<Builder> for Config {
             proxy: Proxy {
                 id: "test".into(),
                 port: builder.port,
+                upstream_address: builder.upstream_address,
             },
             admin: builder.admin,
             endpoints: Arc::from(ArcSwap::new(Arc::from(builder.endpoints))),

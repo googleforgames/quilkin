@@ -167,6 +167,7 @@ mod tests {
                 dest: endpoint.clone(),
                 sender: send,
                 ttl,
+                upstream_address: (std::net::Ipv4Addr::UNSPECIFIED, 0).into(),
             };
             sessions.insert(key.clone(), session_args.into_session().await.unwrap());
         }
@@ -221,6 +222,7 @@ mod tests {
                 dest: endpoint.clone(),
                 sender: send,
                 ttl,
+                upstream_address: (std::net::Ipv4Addr::UNSPECIFIED, 0).into(),
             };
             sessions.insert(key.clone(), session_args.into_session().await.unwrap());
         }

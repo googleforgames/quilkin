@@ -33,6 +33,10 @@ properties:
         description: |
           The listening port for the proxy.
         default: 7000
+      upstream_address:
+        type: string
+        description: |
+          Socket Address and port for Quilkin to bind to when proxying packets upstream.
   admin:
     type: object
     description: |

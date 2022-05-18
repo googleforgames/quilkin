@@ -16,7 +16,7 @@
 
 pub(super) mod metrics;
 
-use std::net::{Ipv4Addr, SocketAddrV4};
+use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::sync::Arc;
 
 use prometheus::HistogramTimer;
@@ -103,6 +103,7 @@ struct ProcessDownstreamReceiveConfig {
     session_manager: SessionManager,
     session_ttl: Duration,
     send_packets: mpsc::Sender<UpstreamPacket>,
+    upstream_address: SocketAddr,
 }
 
 impl Server {
@@ -215,6 +216,7 @@ impl Server {
                     session_manager: session_manager.clone(),
                     session_ttl: args.session_ttl,
                     send_packets: args.send_packets.clone(),
+                    upstream_address: self.config.proxy.upstream_address,
                 },
             })
         }
@@ -386,6 +388,7 @@ impl Server {
                     dest: endpoint.clone(),
                     sender: args.send_packets.clone(),
                     ttl: args.session_ttl,
+                    upstream_address: args.upstream_address,
                 };
                 match session_args.into_session().await {
                     Ok(session) => {
@@ -653,6 +656,7 @@ mod tests {
                         session_manager: session_manager.clone(),
                         session_ttl: Duration::from_secs(10),
                         send_packets: send_packets.clone(),
+                        upstream_address: (std::net::Ipv4Addr::UNSPECIFIED, 0).into(),
                     },
                 })
             }
