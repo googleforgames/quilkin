@@ -1,0 +1,24 @@
+{
+	"FileVersion" : 1,
+	"Version" : 1,
+	"VersionName" : "1.0",
+	"FriendlyName" : "Quilkin",
+	"Description" : "",
+	"Category" : "Online",
+	"CreatedBy" : "Embark Studios",
+	"CreatedByURL" : "http://embark.games",
+	"DocsURL" : "",
+	"MarketplaceURL" : "",
+	"SupportURL" : "",
+	"EnabledByDefault" : true,
+	"CanContainContent" : false,
+	"IsBetaVersion" : false,
+	"Installed" : false,
+	"Modules": [
+        {
+            "Name": "Quilkin",
+            "Type": "Runtime",
+            "LoadingPhase" : "Default"
+        }
+    ]
+}
