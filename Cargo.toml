@@ -69,7 +69,7 @@ socket2 = "0.4.4"
 snap = "1.0.5"
 stable-eyre = "0.2.2"
 thiserror = "1.0.30"
-tokio = { version = "1.17", features = ["rt-multi-thread", "signal", "test-util", "parking_lot"] }
+tokio = { version = "1.18.2", features = ["rt-multi-thread", "signal", "test-util", "parking_lot"] }
 tokio-stream = "0.1.8"
 tonic = "0.6.1"
 tracing = {version = "0.1.31" }

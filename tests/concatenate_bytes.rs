@@ -52,11 +52,9 @@ bytes: YWJj #abc
     let local_addr = (Ipv4Addr::LOCALHOST, server_port);
     socket.send_to(b"hello", &local_addr).await.unwrap();
 
-    assert_eq!(
-        "helloabc",
-        timeout(Duration::from_secs(5), recv_chan.recv())
-            .await
-            .expect("should have received a packet")
-            .unwrap()
-    );
+    timeout(Duration::from_secs(5), recv_chan.changed())
+        .await
+        .expect("should have received a packet")
+        .unwrap();
+    assert_eq!("helloabc", *recv_chan.borrow());
 }

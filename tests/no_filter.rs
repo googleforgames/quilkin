@@ -16,10 +16,8 @@
 
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
-use tokio::{
-    select,
-    time::{sleep, Duration},
-};
+use tokio::time::timeout;
+use tokio::time::Duration;
 
 use quilkin::{endpoint::Endpoint, test_utils::TestHelper};
 
@@ -59,14 +57,20 @@ async fn echo() {
     let local_addr = SocketAddr::from((Ipv4Addr::LOCALHOST, client_port));
     socket.send_to(b"hello", &local_addr).await.unwrap();
 
-    assert_eq!("hello", recv_chan.recv().await.unwrap());
-    assert_eq!("hello", recv_chan.recv().await.unwrap());
+    timeout(Duration::from_secs(5), recv_chan.changed())
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!("hello", *recv_chan.borrow());
+    timeout(Duration::from_secs(5), recv_chan.changed())
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!("hello", *recv_chan.borrow());
 
     // should only be two returned items
-    select! {
-        res = recv_chan.recv() => {
-            unreachable!("Should not receive a third packet: {}", res.unwrap());
-        }
-        _ = sleep(Duration::from_secs(2)) => {}
-    };
+    assert!(timeout(Duration::from_secs(2), recv_chan.changed())
+        .await
+        .unwrap()
+        .is_err());
 }

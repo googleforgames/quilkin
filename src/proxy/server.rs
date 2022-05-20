@@ -547,7 +547,7 @@ mod tests {
         let mut t = TestHelper::default();
 
         load_test_filters();
-        let mut endpoint = t.open_socket_and_recv_single_packet().await;
+        let endpoint = t.open_socket_and_recv_single_packet().await;
         let local_addr = get_local_addr();
         let config = Server::builder()
             .port(local_addr.port())
@@ -563,18 +563,24 @@ mod tests {
         t.run_server_with_config(config);
 
         let msg = "hello";
-        endpoint
-            .socket
-            .send_to(msg.as_bytes(), &local_addr)
-            .await
-            .unwrap();
 
-        // since we don't know what the session ephemeral port is, we'll just
+        tryhard::retry_fn(|| {
+            let mut rx = endpoint.packet_rx.clone();
+
+            async move {
+                // Use a standard socket in test utils as we only want to bind sockets to unused ports.
+                let socket = UdpSocket::bind((Ipv4Addr::UNSPECIFIED, 0)).await.unwrap();
+                socket.send_to(msg.as_bytes(), &local_addr).await.unwrap();
+                timeout(Duration::from_millis(100), rx.changed()).await
+            }
+        })
+        .retries(10)
+        .fixed_backoff(Duration::from_secs(1))
+        .await
+        .unwrap()
+        .unwrap();
+
         // search for the filter strings.
-        timeout(Duration::from_secs(1), endpoint.packet_rx.changed())
-            .await
-            .expect("should receive a packet")
-            .unwrap();
         let result = &*endpoint.packet_rx.borrow();
         assert!(result.contains(msg), "'{}' not found in '{}'", msg, result);
         assert!(result.contains(":odr:"), ":odr: not found in '{}'", result);

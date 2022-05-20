@@ -56,13 +56,17 @@ period: 1
     }
 
     for _ in 0..2 {
-        assert_eq!(recv_chan.recv().await.unwrap(), "hello");
+        timeout(Duration::from_secs(5), recv_chan.changed())
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!("hello", *recv_chan.borrow());
     }
 
     // Allow enough time to have received any response.
     tokio::time::sleep(Duration::from_millis(100)).await;
     // Check that we do not get any response.
-    assert!(timeout(Duration::from_secs(1), recv_chan.recv())
+    assert!(timeout(Duration::from_secs(1), recv_chan.changed())
         .await
         .is_err());
 }

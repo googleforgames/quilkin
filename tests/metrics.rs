@@ -56,7 +56,7 @@ async fn metrics_server() {
     tracing::info!(address = %local_addr, "Sending hello");
     socket.send_to(b"hello", &local_addr).await.unwrap();
 
-    let _ = recv_chan.recv().await.unwrap();
+    let _ = recv_chan.changed().await.unwrap();
     let client = hyper::Client::new();
 
     let resp = client

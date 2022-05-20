@@ -71,18 +71,16 @@ quilkin.dev:
     let msg = b"helloabc";
     socket.send_to(msg, &local_addr).await.unwrap();
 
-    assert_eq!(
-        "hello",
-        timeout(Duration::from_secs(5), recv_chan.recv())
-            .await
-            .expect("should have received a packet")
-            .unwrap()
-    );
+    timeout(Duration::from_secs(5), recv_chan.changed())
+        .await
+        .expect("should have received a packet")
+        .unwrap();
+    assert_eq!("hello", *recv_chan.borrow());
 
     // send an invalid packet
     let msg = b"helloxyz";
     socket.send_to(msg, &local_addr).await.unwrap();
 
-    let result = timeout(Duration::from_secs(3), recv_chan.recv()).await;
+    let result = timeout(Duration::from_secs(3), recv_chan.changed()).await;
     assert!(result.is_err(), "should not have received a packet");
 }

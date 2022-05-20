@@ -24,7 +24,7 @@ use std::{
 };
 
 use tokio::net::UdpSocket;
-use tokio::sync::{mpsc, watch};
+use tokio::sync::watch;
 
 use crate::{
     config::{Builder as ConfigBuilder, Config},
@@ -159,8 +159,8 @@ impl TestHelper {
     /// returned channel.
     pub async fn open_socket_and_recv_multiple_packets(
         &mut self,
-    ) -> (mpsc::Receiver<String>, Arc<UdpSocket>) {
-        let (packet_tx, packet_rx) = mpsc::channel::<String>(10);
+    ) -> (watch::Receiver<String>, Arc<UdpSocket>) {
+        let (packet_tx, packet_rx) = watch::channel::<String>("".into());
         let socket = Arc::new(self.create_socket().await);
         let mut shutdown_rx = self.get_shutdown_subscriber().await;
         let socket_recv = socket.clone();
@@ -171,7 +171,7 @@ impl TestHelper {
                     received = socket_recv.recv_from(&mut buf) => {
                         let (size, _) = received.unwrap();
                         let str = from_utf8(&buf[..size]).unwrap().to_string();
-                        match packet_tx.send(str).await {
+                        match packet_tx.send(str) {
                             Ok(_) => {}
                             Err(error) => {
                                 tracing::warn!(target: "recv_multiple_packets", %error, "recv_chan dropped");

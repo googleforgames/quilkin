@@ -73,10 +73,11 @@ async fn test_filter() {
     tracing::info!(address = %local_addr, "Sending hello");
     socket.send_to(b"hello", &local_addr).await.unwrap();
 
-    let result = timeout(Duration::from_secs(5), recv_chan.recv())
+    timeout(Duration::from_secs(5), recv_chan.changed())
         .await
         .unwrap()
         .unwrap();
+    let result = recv_chan.borrow();
     // since we don't know the ephemeral ip addresses in use, we'll search for
     // substrings for the results we expect that the TestFilter will inject in
     // the round-tripped packets.
@@ -84,13 +85,13 @@ async fn test_filter() {
         2,
         result.matches("odr").count(),
         "Should be 2 read calls in {}",
-        result
+        *result
     );
     assert_eq!(
         2,
         result.matches("our").count(),
         "Should be 2 write calls in {}",
-        result
+        *result
     );
 }
 
@@ -149,5 +150,9 @@ async fn debug_filter() {
     socket.send_to(b"hello", &local_addr).await.unwrap();
 
     // since the debug filter doesn't change the data, it should be exactly the same
-    assert_eq!("hello", recv_chan.recv().await.unwrap());
+    timeout(Duration::from_secs(5), recv_chan.changed())
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!("hello", *recv_chan.borrow());
 }

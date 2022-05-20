@@ -201,11 +201,8 @@ management_servers:
                     // If we time out, it could mean that we haven't applied any cluster update yet so we
                     // are dropping packets. In which case we can simply retry later.
                     // If its for any other reason, our assertion will fail later or we will time out.
-                    if let Ok(response) = time::timeout(Duration::from_millis(500), response_rx.recv()).await {
-                        let response = response.unwrap();
-                        if expected_response == response {
-                            break;
-                        }
+                    if time::timeout(Duration::from_millis(500), response_rx.changed()).await.is_ok() && expected_response == *response_rx.borrow() {
+                        break;
                     }
                 }
             }

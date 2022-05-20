@@ -82,47 +82,39 @@ on_read:
     let msg = b"helloabc";
     socket.send_to(msg, &local_addr).await.unwrap();
 
-    assert_eq!(
-        "helloxyz",
-        timeout(Duration::from_secs(5), recv_chan.recv())
-            .await
-            .expect("should have received a packet")
-            .unwrap()
-    );
+    timeout(Duration::from_secs(5), recv_chan.changed())
+        .await
+        .expect("should have received a packet")
+        .unwrap();
+    assert_eq!("helloxyz", *recv_chan.borrow());
 
     // send an xyz packet
     let msg = b"helloxyz";
     socket.send_to(msg, &local_addr).await.unwrap();
 
-    assert_eq!(
-        "helloabc",
-        timeout(Duration::from_secs(5), recv_chan.recv())
-            .await
-            .expect("should have received a packet")
-            .unwrap()
-    );
+    timeout(Duration::from_secs(5), recv_chan.changed())
+        .await
+        .expect("should have received a packet")
+        .unwrap();
+    assert_eq!("helloabc", *recv_chan.borrow());
 
     // fallthrough packet
     let msg = b"hellodef";
     socket.send_to(msg, &local_addr).await.unwrap();
 
-    assert_eq!(
-        "hellodef",
-        timeout(Duration::from_secs(5), recv_chan.recv())
-            .await
-            .expect("should have received a packet")
-            .unwrap()
-    );
+    timeout(Duration::from_secs(5), recv_chan.changed())
+        .await
+        .expect("should have received a packet")
+        .unwrap();
+    assert_eq!("hellodef", *recv_chan.borrow());
 
     // second fallthrough packet
     let msg = b"hellofgh";
     socket.send_to(msg, &local_addr).await.unwrap();
 
-    assert_eq!(
-        "hellodef",
-        timeout(Duration::from_secs(5), recv_chan.recv())
-            .await
-            .expect("should have received a packet")
-            .unwrap()
-    );
+    timeout(Duration::from_secs(5), recv_chan.changed())
+        .await
+        .expect("should have received a packet")
+        .unwrap();
+    assert_eq!("hellodef", *recv_chan.borrow());
 }

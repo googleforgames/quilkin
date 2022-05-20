@@ -70,18 +70,16 @@ async fn token_router() {
     let msg = b"helloabc";
     socket.send_to(msg, &local_addr).await.unwrap();
 
-    assert_eq!(
-        "helloabc",
-        timeout(Duration::from_secs(5), recv_chan.recv())
-            .await
-            .expect("should have received a packet")
-            .unwrap()
-    );
+    timeout(Duration::from_secs(5), recv_chan.changed())
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!("helloabc", *recv_chan.borrow());
 
     // send an invalid packet
     let msg = b"helloxyz";
     socket.send_to(msg, &local_addr).await.unwrap();
 
-    let result = timeout(Duration::from_secs(3), recv_chan.recv()).await;
+    let result = timeout(Duration::from_secs(3), recv_chan.changed()).await;
     assert!(result.is_err(), "should not have received a packet");
 }

@@ -76,9 +76,9 @@ on_write: DECOMPRESS
     tracing::info!(address = %local_addr, "Sending hello");
     tx.send_to(b"hello", &local_addr).await.unwrap();
 
-    let expected = timeout(Duration::from_secs(5), rx.recv())
+    timeout(Duration::from_secs(5), rx.changed())
         .await
         .expect("should have received a packet")
         .unwrap();
-    assert_eq!("hello", expected);
+    assert_eq!("hello", *rx.borrow());
 }
