@@ -28,7 +28,6 @@ use crate::{
 #[derive(Debug)]
 pub struct Builder {
     pub port: u16,
-    //(todo nezdolik) group this with port into Proxy entity
     pub upstream_address: SocketAddr,
     pub admin: Option<Admin>,
     pub endpoints: Vec<Endpoint>,
