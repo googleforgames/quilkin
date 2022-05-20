@@ -15,6 +15,8 @@
  */
 
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::time::Duration;
+use tokio::time::timeout;
 
 use quilkin::{
     config::Filter,
@@ -71,7 +73,10 @@ async fn test_filter() {
     tracing::info!(address = %local_addr, "Sending hello");
     socket.send_to(b"hello", &local_addr).await.unwrap();
 
-    let result = recv_chan.recv().await.unwrap();
+    let result = timeout(Duration::from_secs(5), recv_chan.recv())
+        .await
+        .unwrap()
+        .unwrap();
     // since we don't know the ephemeral ip addresses in use, we'll search for
     // substrings for the results we expect that the TestFilter will inject in
     // the round-tripped packets.
