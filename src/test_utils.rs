@@ -132,17 +132,10 @@ impl Drop for TestHelper {
 }
 
 impl TestHelper {
-    /// Opens a new socket bound to an ephemeral port
-    pub async fn create_socket(&self) -> UdpSocket {
-        let addr = SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, 0);
-        // Use a standard socket in test utils as we only want to bind sockets to unused ports.
-        UdpSocket::bind(addr).await.unwrap()
-    }
-
     /// Opens a socket, listening for a packet. Once a packet is received, it
     /// is forwarded over the returned channel.
     pub async fn open_socket_and_recv_single_packet(&self) -> OpenSocketRecvPacket {
-        let socket = Arc::new(self.create_socket().await);
+        let socket = Arc::new(create_socket().await);
         let (packet_tx, packet_rx) = watch::channel::<String>("".into());
         let socket_recv = socket.clone();
         tokio::spawn(async move {
@@ -161,7 +154,7 @@ impl TestHelper {
         &mut self,
     ) -> (watch::Receiver<String>, Arc<UdpSocket>) {
         let (packet_tx, packet_rx) = watch::channel::<String>("".into());
-        let socket = Arc::new(self.create_socket().await);
+        let socket = Arc::new(create_socket().await);
         let mut shutdown_rx = self.get_shutdown_subscriber().await;
         let socket_recv = socket.clone();
         tokio::spawn(async move {
@@ -201,7 +194,7 @@ impl TestHelper {
     where
         F: Fn(SocketAddr, &[u8], SocketAddr) + Send + 'static,
     {
-        let socket = self.create_socket().await;
+        let socket = create_socket().await;
         let addr = socket.local_addr().unwrap();
         let mut shutdown = self.get_shutdown_subscriber().await;
         let local_addr = addr;
@@ -298,6 +291,13 @@ where
         None => unreachable!("should return a result"),
         Some(response) => assert_eq!(contents, response.contents),
     }
+}
+
+/// Opens a new socket bound to an ephemeral port
+pub async fn create_socket() -> UdpSocket {
+    let addr = SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, 0);
+    // Use a standard socket in test utils as we only want to bind sockets to unused ports.
+    UdpSocket::bind(addr).await.unwrap()
 }
 
 pub fn config_with_dummy_endpoint() -> ConfigBuilder {

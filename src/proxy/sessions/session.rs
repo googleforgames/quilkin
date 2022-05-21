@@ -359,7 +359,7 @@ mod tests {
     use prometheus::{Histogram, HistogramOpts};
     use tokio::time::timeout;
 
-    use crate::test_utils::{new_test_chain, TestHelper};
+    use crate::test_utils::{create_socket, new_test_chain, TestHelper};
 
     use crate::endpoint::{Endpoint, EndpointAddress};
     use crate::filters::SharedFilterChain;
@@ -368,8 +368,7 @@ mod tests {
 
     #[tokio::test]
     async fn session_new() {
-        let t = TestHelper::default();
-        let socket = t.create_socket().await;
+        let socket = create_socket().await;
         let addr: EndpointAddress = socket.local_addr().unwrap().into();
         let endpoint = Endpoint::new(addr.clone());
         let (send_packet, mut recv_packet) = mpsc::channel::<UpstreamPacket>(5);

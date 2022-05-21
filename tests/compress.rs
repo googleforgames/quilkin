@@ -14,10 +14,9 @@
  *  limitations under the License.
  */
 
-use std::net::{Ipv4Addr, SocketAddr};
-
 use tokio::time::{timeout, Duration};
 
+use quilkin::test_utils::get_local_addr;
 use quilkin::{
     config::Filter,
     endpoint::Endpoint,
@@ -31,13 +30,13 @@ async fn client_and_server() {
     let echo = t.run_echo_server().await;
 
     // create server configuration as
-    let server_port = 12356;
+    let server_addr = get_local_addr();
     let yaml = "
 on_read: DECOMPRESS
 on_write: COMPRESS
 ";
     let server_config = quilkin::Server::builder()
-        .port(server_port)
+        .port(server_addr.port())
         .filters(vec![Filter {
             name: Compress::factory().name().into(),
             config: serde_yaml::from_str(yaml).unwrap(),
@@ -49,20 +48,18 @@ on_write: COMPRESS
     t.run_server_with_config(server_config);
 
     // create a local client
-    let client_port = 12357;
+    let client_addr = get_local_addr();
     let yaml = "
 on_read: COMPRESS
 on_write: DECOMPRESS
 ";
     let client_config = quilkin::Server::builder()
-        .port(client_port)
+        .port(client_addr.port())
         .filters(vec![Filter {
             name: Compress::factory().name().into(),
             config: serde_yaml::from_str(yaml).unwrap(),
         }])
-        .endpoints(vec![Endpoint::new(
-            (Ipv4Addr::LOCALHOST, server_port).into(),
-        )])
+        .endpoints(vec![Endpoint::new(server_addr.into())])
         .build()
         .unwrap();
     // Run client proxy.
@@ -70,15 +67,39 @@ on_write: DECOMPRESS
 
     // let's send the packet
     let (mut rx, tx) = t.open_socket_and_recv_multiple_packets().await;
+    tx.connect(client_addr).await.unwrap();
 
-    // game_client
-    let local_addr = SocketAddr::from((Ipv4Addr::LOCALHOST, client_port));
-    tracing::info!(address = %local_addr, "Sending hello");
-    tx.send_to(b"hello", &local_addr).await.unwrap();
+    for i in 0..10 {
+        tx.send(b"hello").await.unwrap();
+        if timeout(Duration::from_millis(100), rx.changed())
+            .await
+            .is_ok()
+        {
+            break;
+        } else {
+            if i >= 9 {
+                panic!("timed out");
+            }
+            println!("retrying: {i}");
+            tokio::time::sleep(Duration::from_secs(1)).await;
+        }
+    }
 
-    timeout(Duration::from_secs(5), rx.changed())
-        .await
-        .expect("should have received a packet")
-        .unwrap();
+    /*// game_client
+    tryhard::retry_fn(|| {
+        let mut rx = rx.clone();
+        let tx = tx.clone();
+        async move {
+            tracing::info!(address = %client_addr, "Sending hello");
+            tx.send(b"hello").await.unwrap();
+            timeout(Duration::from_millis(100), rx.changed()).await
+        }
+    })
+    .retries(10)
+    .fixed_backoff(Duration::from_secs(1))
+    .await
+    .unwrap()
+    .unwrap();*/
+
     assert_eq!("hello", *rx.borrow());
 }

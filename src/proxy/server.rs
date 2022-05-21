@@ -442,6 +442,7 @@ mod tests {
         time::{timeout, Duration},
     };
 
+    use crate::test_utils::create_socket;
     use crate::{
         cluster::SharedCluster,
         config,
@@ -590,7 +591,7 @@ mod tests {
     async fn spawn_downstream_receive_workers() {
         let t = TestHelper::default();
 
-        let socket = t.create_socket().await;
+        let socket = create_socket().await;
         let addr = socket.local_addr().unwrap();
         let (_shutdown_tx, shutdown_rx) = watch::channel(());
         let mut endpoint = t.open_socket_and_recv_single_packet().await;
@@ -618,7 +619,7 @@ mod tests {
 
         Server::spawn_downstream_receive_workers(vec![config]);
 
-        let socket = t.create_socket().await;
+        let socket = create_socket().await;
         socket.send_to(msg.as_bytes(), &addr).await.unwrap();
         timeout(Duration::from_secs(1), endpoint.packet_rx.changed())
             .await
@@ -657,7 +658,7 @@ mod tests {
             .await
             .unwrap();
 
-        let socket = t.create_socket().await;
+        let socket = create_socket().await;
         socket.send_to(msg.as_bytes(), &local_addr).await.unwrap();
 
         timeout(Duration::from_secs(1), endpoint.packet_rx.changed())
