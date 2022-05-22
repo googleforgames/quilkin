@@ -14,15 +14,16 @@
  * limitations under the License.
  */
 
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-
 use tokio::time::timeout;
 use tokio::time::Duration;
 
+use quilkin::test_utils::{get_local_addr, pretty_print};
 use quilkin::{endpoint::Endpoint, test_utils::TestHelper};
 
 #[tokio::test]
 async fn echo() {
+    pretty_print();
+
     let mut t = TestHelper::default();
 
     // create two echo servers as endpoints
@@ -30,31 +31,19 @@ async fn echo() {
     let server2 = t.run_echo_server().await;
 
     // create server configuration
-    let server_port = 12345;
+    let local_addr = get_local_addr();
     let server_config = quilkin::Server::builder()
-        .port(server_port)
+        .port(local_addr.port())
         .endpoints(vec![Endpoint::new(server1), Endpoint::new(server2)])
         .build()
         .unwrap();
 
     t.run_server_with_config(server_config);
 
-    // create a local client
-    let client_port = 12344;
-    let client_config = quilkin::Server::builder()
-        .port(client_port)
-        .endpoints(vec![Endpoint::new(
-            (IpAddr::V4(Ipv4Addr::LOCALHOST), server_port).into(),
-        )])
-        .build()
-        .unwrap();
-    t.run_server_with_config(client_config);
-
     // let's send the packet
     let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
 
     // game_client
-    let local_addr = SocketAddr::from((Ipv4Addr::LOCALHOST, client_port));
     socket.send_to(b"hello", &local_addr).await.unwrap();
 
     timeout(Duration::from_secs(5), recv_chan.changed())
@@ -71,6 +60,5 @@ async fn echo() {
     // should only be two returned items
     assert!(timeout(Duration::from_secs(2), recv_chan.changed())
         .await
-        .unwrap()
         .is_err());
 }

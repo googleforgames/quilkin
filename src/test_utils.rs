@@ -155,15 +155,18 @@ impl TestHelper {
     ) -> (watch::Receiver<String>, Arc<UdpSocket>) {
         let (packet_tx, packet_rx) = watch::channel::<String>("".into());
         let socket = Arc::new(create_socket().await);
+        let addr = socket.local_addr().unwrap();
         let mut shutdown_rx = self.get_shutdown_subscriber().await;
         let socket_recv = socket.clone();
         tokio::spawn(async move {
             let mut buf = vec![0; 1024];
             loop {
+                tracing::debug!(addr = ?addr, "Awaiting test packet");
                 tokio::select! {
                     received = socket_recv.recv_from(&mut buf) => {
                         let (size, _) = received.unwrap();
                         let str = from_utf8(&buf[..size]).unwrap().to_string();
+                        tracing::debug!(size, ?str, "Received test packet");
                         match packet_tx.send(str) {
                             Ok(_) => {}
                             Err(error) => {
