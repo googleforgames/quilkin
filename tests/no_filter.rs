@@ -18,7 +18,7 @@ use std::str::from_utf8;
 use tokio::time::timeout;
 use tokio::time::Duration;
 
-use quilkin::test_utils::{get_local_addr, pretty_print};
+use quilkin::test_utils::{available_addr, pretty_print};
 use quilkin::{endpoint::Endpoint, test_utils::TestHelper};
 
 #[tokio::test]
@@ -37,7 +37,7 @@ async fn echo() {
     let server2 = t.run_echo_server().await;
 
     // create server configuration
-    let local_addr = get_local_addr();
+    let local_addr = available_addr().await;
     let server_config = quilkin::Server::builder()
         .port(local_addr.port())
         .endpoints(vec![Endpoint::new(server1), Endpoint::new(server2)])

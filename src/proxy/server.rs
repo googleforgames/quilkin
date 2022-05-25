@@ -442,7 +442,6 @@ mod tests {
         time::{timeout, Duration},
     };
 
-    use crate::test_utils::create_socket;
     use crate::{
         cluster::SharedCluster,
         config,
@@ -452,7 +451,10 @@ mod tests {
             server::metrics::Metrics as ProxyMetrics, sessions::metrics::Metrics as SessionMetrics,
             sessions::UpstreamPacket,
         },
-        test_utils::{config_with_dummy_endpoint, get_local_addr, load_test_filters, TestHelper},
+        test_utils::{
+            available_addr, config_with_dummy_endpoint, create_socket, load_test_filters,
+            TestHelper,
+        },
     };
 
     use super::*;
@@ -464,7 +466,7 @@ mod tests {
         let endpoint1 = t.open_socket_and_recv_single_packet().await;
         let mut endpoint2 = t.open_socket_and_recv_single_packet().await;
 
-        let local_addr = get_local_addr();
+        let local_addr = available_addr().await;
         let config = Server::builder()
             .port(local_addr.port())
             .endpoints(vec![
@@ -507,7 +509,7 @@ mod tests {
 
         let endpoint = t.open_socket_and_recv_single_packet().await;
 
-        let local_addr = get_local_addr();
+        let local_addr = available_addr().await;
         let config = Server::builder()
             .port(local_addr.port())
             .endpoints(vec![Endpoint::new(
@@ -549,7 +551,7 @@ mod tests {
 
         load_test_filters();
         let endpoint = t.open_socket_and_recv_single_packet().await;
-        let local_addr = get_local_addr();
+        let local_addr = available_addr().await;
         let config = Server::builder()
             .port(local_addr.port())
             .filters(vec![config::Filter {
@@ -637,7 +639,7 @@ mod tests {
         let mut endpoint = t.open_socket_and_recv_single_packet().await;
         let session_manager = SessionManager::new(shutdown_rx.clone());
         let (send_packets, mut recv_packets) = mpsc::channel::<UpstreamPacket>(1);
-        let local_addr = get_local_addr();
+        let local_addr = available_addr().await;
         let mut config = config_with_dummy_endpoint().build().unwrap();
         config.proxy.port = local_addr.port();
 

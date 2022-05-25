@@ -14,15 +14,14 @@
  * limitations under the License.
  */
 
-use once_cell::sync::Lazy;
-use std::sync::atomic::Ordering;
 /// Common utilities for testing
 use std::{
     net::{Ipv4Addr, SocketAddr, SocketAddrV4},
     str::from_utf8,
-    sync::{atomic::AtomicU16, Arc},
+    sync::Arc,
 };
 
+use once_cell::sync::Lazy;
 use tokio::net::UdpSocket;
 use tokio::sync::watch;
 
@@ -33,8 +32,6 @@ use crate::{
     metadata::Value,
 };
 
-static PORT_COUNTER: Lazy<AtomicU16> = Lazy::new(|| AtomicU16::new(7000));
-
 static PRETTY_PRINT: Lazy<()> = Lazy::new(|| {
     tracing_subscriber::fmt()
         .pretty()
@@ -42,13 +39,11 @@ static PRETTY_PRINT: Lazy<()> = Lazy::new(|| {
         .init()
 });
 
-/// Returns a local address on a port that is atomically incremented on each request.
-/// This is an easy way to get an address/port that hasn't been assigned to another test.
-/// Starts at 7000 to avoid the higher ephemeral port range.
-pub fn get_local_addr() -> SocketAddr {
-    let port = (&*PORT_COUNTER).fetch_add(1, Ordering::SeqCst);
-    let addr = SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, port).into();
-    tracing::debug!(addr = ?addr, "test_util::get_local_addr");
+/// Returns a local address on a port that is not assigned to another test.
+pub async fn available_addr() -> SocketAddr {
+    let socket = create_socket().await;
+    let addr = socket.local_addr().unwrap();
+    tracing::debug!(addr = ?addr, "test_util::available_addr");
     addr
 }
 
@@ -331,9 +326,11 @@ pub fn load_test_filters() {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_utils::TestHelper;
     use std::time::Duration;
+
     use tokio::time::timeout;
+
+    use crate::test_utils::TestHelper;
 
     #[tokio::test]
     async fn test_echo_server() {

@@ -16,7 +16,7 @@
 
 use tokio::time::{timeout, Duration};
 
-use quilkin::test_utils::get_local_addr;
+use quilkin::test_utils::available_addr;
 use quilkin::{
     config::Filter,
     endpoint::Endpoint,
@@ -30,7 +30,7 @@ async fn client_and_server() {
     let echo = t.run_echo_server().await;
 
     // create server configuration as
-    let server_addr = get_local_addr();
+    let server_addr = available_addr().await;
     let yaml = "
 on_read: DECOMPRESS
 on_write: COMPRESS
@@ -48,7 +48,7 @@ on_write: COMPRESS
     t.run_server_with_config(server_config);
 
     // create a local client
-    let client_addr = get_local_addr();
+    let client_addr = available_addr().await;
     let yaml = "
 on_read: COMPRESS
 on_write: DECOMPRESS
