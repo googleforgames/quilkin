@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+use std::time::Duration;
 /// Common utilities for testing
 use std::{
     net::{Ipv4Addr, SocketAddr, SocketAddrV4},
@@ -24,6 +25,7 @@ use std::{
 use once_cell::sync::Lazy;
 use tokio::net::UdpSocket;
 use tokio::sync::watch;
+use tokio::time::timeout;
 
 use crate::{
     config::{Builder as ConfigBuilder, Config},
@@ -39,6 +41,11 @@ static PRETTY_PRINT: Lazy<()> = Lazy::new(|| {
         .init()
 });
 
+/// Put in a test to turn on pretty printing for `tracing` logging statements.
+pub fn pretty_print() {
+    Lazy::force(&PRETTY_PRINT);
+}
+
 /// Returns a local address on a port that is not assigned to another test.
 pub async fn available_addr() -> SocketAddr {
     let socket = create_socket().await;
@@ -47,9 +54,32 @@ pub async fn available_addr() -> SocketAddr {
     addr
 }
 
-/// Put in a test to turn on pretty printing for `tracing` logging statements.
-pub fn pretty_print() {
-    Lazy::force(&PRETTY_PRINT);
+pub async fn network_path_ready(source: SocketAddr, dest: SocketAddr) {
+    let t = TestHelper::default();
+    let rx = t
+        .socket_recv_single_packet(Arc::new(UdpSocket::bind(dest).await.unwrap()))
+        .await
+        .packet_rx;
+
+    let msg = "READY?";
+    let mut i = 0;
+    tryhard::retry_fn(|| {
+        let mut rx = rx.clone();
+        i += 1;
+
+        async move {
+            // Use a standard socket in test utils as we only want to bind sockets to unused ports.
+            let socket = UdpSocket::bind(source).await.unwrap();
+            tracing::debug!(?dest, ?source, "Checking if network path is ready");
+            socket.send_to(msg.as_bytes(), &dest).await.unwrap();
+            timeout(Duration::from_millis(100), rx.changed()).await
+        }
+    })
+    .retries(10)
+    .fixed_backoff(Duration::from_secs(1))
+    .await
+    .unwrap()
+    .unwrap();
 }
 
 // TestFilter is useful for testing that commands are executing filters appropriately.
@@ -131,6 +161,10 @@ impl TestHelper {
     /// is forwarded over the returned channel.
     pub async fn open_socket_and_recv_single_packet(&self) -> OpenSocketRecvPacket {
         let socket = Arc::new(create_socket().await);
+        self.socket_recv_single_packet(socket).await
+    }
+
+    async fn socket_recv_single_packet(&self, socket: Arc<UdpSocket>) -> OpenSocketRecvPacket {
         let (packet_tx, packet_rx) = watch::channel::<String>("".into());
         let socket_recv = socket.clone();
         tokio::spawn(async move {
@@ -182,7 +216,8 @@ impl TestHelper {
     /// Runs a simple UDP server that echos back payloads.
     /// Returns the server's address.
     pub async fn run_echo_server(&mut self) -> EndpointAddress {
-        self.run_echo_server_with_tap(|_, _, _| {}).await
+        self.echo_server_with_addr((Ipv4Addr::LOCALHOST, 0).into())
+            .await
     }
 
     /// Runs a simple UDP server that echos back payloads.
@@ -204,6 +239,29 @@ impl TestHelper {
                         let (size, sender) = recvd.unwrap();
                         let packet = &buf[..size];
                         tap(sender, packet, local_addr);
+                        socket.send_to(packet, sender).await.unwrap();
+                    },
+                    _ = shutdown.changed() => {
+                        return;
+                    }
+                }
+            }
+        });
+        addr.into()
+    }
+
+    // TOXO: clean this all up if it works.
+    pub async fn echo_server_with_addr(&mut self, addr: SocketAddr) -> EndpointAddress {
+        let socket = Arc::new(UdpSocket::bind(addr).await.unwrap());
+        let mut shutdown = self.get_shutdown_subscriber().await;
+        let addr = socket.local_addr().unwrap();
+        tokio::spawn(async move {
+            loop {
+                let mut buf = vec![0; 1024];
+                tokio::select! {
+                    recvd = socket.recv_from(&mut buf) => {
+                        let (size, sender) = recvd.unwrap();
+                        let packet = &buf[..size];
                         socket.send_to(packet, sender).await.unwrap();
                     },
                     _ = shutdown.changed() => {
