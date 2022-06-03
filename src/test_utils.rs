@@ -21,6 +21,7 @@ use std::{
     sync::Arc,
 };
 
+use once_cell::sync::Lazy;
 use tokio::net::UdpSocket;
 use tokio::sync::{mpsc, oneshot, watch};
 
@@ -30,6 +31,19 @@ use crate::{
     filters::{prelude::*, FilterRegistry},
     metadata::Value,
 };
+
+static ENABLE_LOG: Lazy<()> = Lazy::new(|| {
+    tracing_subscriber::fmt()
+        .pretty()
+        .with_max_level(tracing::Level::TRACE)
+        .init()
+});
+
+/// Call to safely enable `tracing` logging calls, at the TRACE level.
+/// This can be very useful when attempting to debug unit and integration tests.
+pub fn enable_tracing_log() {
+    Lazy::force(&ENABLE_LOG);
+}
 
 // TestFilter is useful for testing that commands are executing filters appropriately.
 pub struct TestFilter;
