@@ -14,15 +14,19 @@
  * limitations under the License.
  */
 
+use std::net::SocketAddr;
+
+use tokio::{
+    sync::oneshot,
+    time::{timeout, Duration},
+};
+
 use quilkin::{
     config::Filter,
     endpoint::Endpoint,
     filters::{Firewall, StaticFilter},
     test_utils::TestHelper,
 };
-use std::net::SocketAddr;
-use tokio::sync::oneshot::Receiver;
-use tokio::time::{timeout, Duration};
 
 #[tokio::test]
 async fn firewall_allow() {
@@ -92,7 +96,7 @@ on_write:
     assert!(result.is_err(), "should not have received a packet");
 }
 
-async fn test(t: &mut TestHelper, server_port: u16, yaml: &str) -> Receiver<String> {
+async fn test(t: &mut TestHelper, server_port: u16, yaml: &str) -> oneshot::Receiver<String> {
     let echo = t.run_echo_server().await;
 
     let recv = t.open_socket_and_recv_single_packet().await;
