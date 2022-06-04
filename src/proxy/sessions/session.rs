@@ -136,6 +136,15 @@ impl Session {
     async fn new(args: SessionArgs) -> Result<Self> {
         let addr = (std::net::Ipv4Addr::UNSPECIFIED, 0);
         let socket = Arc::new(UdpSocket::bind(addr).await.map_err(Error::BindUdpSocket)?);
+        socket
+            .connect(
+                args.dest
+                    .address
+                    .to_socket_addr()
+                    .map_err(Error::ToSocketAddr)?,
+            )
+            .await
+            .map_err(Error::BindUdpSocket)?;
         let (shutdown_tx, shutdown_rx) = watch::channel::<()>(());
 
         let expiration = Arc::new(AtomicU64::new(0));
@@ -321,7 +330,7 @@ impl Session {
     /// the number of bytes written.
     pub async fn do_send(&self, buf: &[u8]) -> crate::Result<usize> {
         self.socket
-            .send_to(buf, &self.dest.address.to_socket_addr()?)
+            .send(buf)
             .await
             .map_err(|error| eyre::eyre!(error))
     }
