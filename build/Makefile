@@ -30,7 +30,6 @@ package_version := $(shell grep version -m 1 $(project_path)/Cargo.toml | awk '{
 
 common_rust_args := -v $(project_path):/workspace -w /workspace \
 					-v $(CARGO_HOME)/registry:/usr/local/cargo/registry
-docker_in_docker := -v /var/run/docker.sock:/var/run/docker.sock
 
 #   _____                    _
 #  |_   _|_ _ _ __ __ _  ___| |_ ___
@@ -91,17 +90,17 @@ binary-archive: ensure-build-image build-all-binaries
 
 # Build release and debug binaries for x86_64-unknown-linux-gnu
 build-linux-binary: ensure-build-image
-	docker run --rm $(common_rust_args) $(docker_in_docker) \
- 		--entrypoint=cross $(BUILD_IMAGE_TAG) build --target x86_64-unknown-linux-gnu
-	docker run --rm $(common_rust_args) $(docker_in_docker) \
- 		--entrypoint=cross $(BUILD_IMAGE_TAG) build --target x86_64-unknown-linux-gnu --release
+	docker run --rm $(common_rust_args) \
+ 		--entrypoint=cargo $(BUILD_IMAGE_TAG) build --target x86_64-unknown-linux-gnu
+	docker run --rm $(common_rust_args) \
+ 		--entrypoint=cargo $(BUILD_IMAGE_TAG) build --target x86_64-unknown-linux-gnu --release
 
 # Build release and debug binaries for x86_64-pc-windows-gnu
 build-windows-binary: ensure-build-image
-	docker run --rm $(common_rust_args) $(docker_in_docker) \
- 		--entrypoint=cross $(BUILD_IMAGE_TAG) build --target x86_64-pc-windows-gnu
-	docker run --rm $(common_rust_args) $(docker_in_docker) \
- 		--entrypoint=cross $(BUILD_IMAGE_TAG) build --target x86_64-pc-windows-gnu --release
+	docker run --rm $(common_rust_args) \
+ 		--entrypoint=cargo $(BUILD_IMAGE_TAG) build --target x86_64-pc-windows-gnu
+	docker run --rm $(common_rust_args) \
+ 		--entrypoint=cargo $(BUILD_IMAGE_TAG) build --target x86_64-pc-windows-gnu --release
 
 # Build release and debug binaries for x86_64-apple-darwin
 build-macos-binary:
