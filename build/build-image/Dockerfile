@@ -26,7 +26,7 @@ ENV RUSTUP_HOME=/usr/local/rustup \
 # Install packages
 RUN set -eux && \
     apt-get update && \
-    apt-get install -y jq wget zip build-essential libssl-dev pkg-config python3-pip && \
+    apt-get install -y jq wget zip build-essential libssl-dev pkg-config python3-pip g++-mingw-w64-x86-64 && \
     pip3 install live-server
 
 # Install htmltest
@@ -41,10 +41,10 @@ RUN wget https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustu
     rm rustup-init && \
     chmod -R a+w $RUSTUP_HOME $CARGO_HOME && \
     rustup component add rustfmt clippy && \
-    cargo install cross cargo-watch mdbook && \
+    rustup target add x86_64-pc-windows-gnu && \
+    cargo install cargo-watch mdbook && \
     cargo install cargo-about && \
     cargo install --locked cargo-deny && \
     rustup --version && \
     cargo --version && \
-    rustc --version && \
-    cross --version
+    rustc --version
