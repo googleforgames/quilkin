@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::time::Duration;
 
-use tokio::time::{timeout, Duration};
+use tokio::time::timeout;
 
 use quilkin::{
     config::Filter,
     endpoint::Endpoint,
     filters::{LocalRateLimit, StaticFilter},
-    test_utils::TestHelper,
+    test_utils::{available_addr, TestHelper},
 };
 
 #[tokio::test]
@@ -35,9 +35,9 @@ period: 1
 ";
     let echo = t.run_echo_server().await;
 
-    let server_port = 12346;
+    let server_addr = available_addr().await;
     let server_config = quilkin::Server::builder()
-        .port(server_port)
+        .port(server_addr.port())
         .filters(vec![Filter {
             name: LocalRateLimit::factory().name().into(),
             config: serde_yaml::from_str(yaml).unwrap(),
@@ -47,22 +47,25 @@ period: 1
         .unwrap();
     t.run_server_with_config(server_config);
 
-    let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
-
-    let server_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port);
+    let msg = "hello";
+    let (mut rx, socket) = t.open_socket_and_recv_multiple_packets().await;
 
     for _ in 0..3 {
-        socket.send_to(b"hello", &server_addr).await.unwrap();
+        socket.send_to(msg.as_bytes(), &server_addr).await.unwrap();
     }
 
     for _ in 0..2 {
-        assert_eq!(recv_chan.recv().await.unwrap(), "hello");
+        assert_eq!(
+            msg,
+            timeout(Duration::from_secs(5), rx.recv())
+                .await
+                .unwrap()
+                .unwrap()
+        );
     }
 
     // Allow enough time to have received any response.
     tokio::time::sleep(Duration::from_millis(100)).await;
     // Check that we do not get any response.
-    assert!(timeout(Duration::from_secs(1), recv_chan.recv())
-        .await
-        .is_err());
+    assert!(timeout(Duration::from_secs(1), rx.recv()).await.is_err());
 }

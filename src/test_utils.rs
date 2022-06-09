@@ -22,8 +22,10 @@ use std::{
 };
 
 use once_cell::sync::Lazy;
-use tokio::net::UdpSocket;
-use tokio::sync::{mpsc, oneshot, watch};
+use tokio::{
+    net::UdpSocket,
+    sync::{mpsc, oneshot, watch},
+};
 
 use crate::{
     config::{Builder as ConfigBuilder, Config},
@@ -43,6 +45,14 @@ static ENABLE_LOG: Lazy<()> = Lazy::new(|| {
 /// This can be very useful when attempting to debug unit and integration tests.
 pub fn enable_tracing_log() {
     Lazy::force(&ENABLE_LOG);
+}
+
+/// Returns a local address on a port that is not assigned to another test.
+pub async fn available_addr() -> SocketAddr {
+    let socket = create_socket().await;
+    let addr = socket.local_addr().unwrap();
+    tracing::debug!(addr = ?addr, "test_util::available_addr");
+    addr
 }
 
 // TestFilter is useful for testing that commands are executing filters appropriately.
@@ -120,16 +130,10 @@ impl Drop for TestHelper {
 }
 
 impl TestHelper {
-    /// Opens a new socket bound to an ephemeral port
-    pub async fn create_socket(&self) -> Arc<UdpSocket> {
-        let addr = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 0);
-        Arc::new(UdpSocket::bind(addr).await.unwrap())
-    }
-
     /// Opens a socket, listening for a packet. Once a packet is received, it
     /// is forwarded over the returned channel.
     pub async fn open_socket_and_recv_single_packet(&self) -> OpenSocketRecvPacket {
-        let socket = self.create_socket().await;
+        let socket = Arc::new(create_socket().await);
         let (packet_tx, packet_rx) = oneshot::channel::<String>();
         let socket_recv = socket.clone();
         tokio::spawn(async move {
@@ -148,7 +152,7 @@ impl TestHelper {
         &mut self,
     ) -> (mpsc::Receiver<String>, Arc<UdpSocket>) {
         let (packet_tx, packet_rx) = mpsc::channel::<String>(10);
-        let socket = self.create_socket().await;
+        let socket = Arc::new(create_socket().await);
         let mut shutdown_rx = self.get_shutdown_subscriber().await;
         let socket_recv = socket.clone();
         tokio::spawn(async move {
@@ -188,7 +192,7 @@ impl TestHelper {
     where
         F: Fn(SocketAddr, &[u8], SocketAddr) + Send + 'static,
     {
-        let socket = self.create_socket().await;
+        let socket = create_socket().await;
         let addr = socket.local_addr().unwrap();
         let mut shutdown = self.get_shutdown_subscriber().await;
         let local_addr = addr;
@@ -287,6 +291,13 @@ where
     }
 }
 
+/// Opens a new socket bound to an ephemeral port
+pub async fn create_socket() -> UdpSocket {
+    let addr = SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, 0);
+    // Use a standard socket in test utils as we only want to bind sockets to unused ports.
+    UdpSocket::bind(addr).await.unwrap()
+}
+
 pub fn config_with_dummy_endpoint() -> ConfigBuilder {
     ConfigBuilder::default().endpoints(vec![Endpoint {
         address: "127.0.0.1:8080".parse().unwrap(),
@@ -315,6 +326,10 @@ pub fn load_test_filters() {
 
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+
+    use tokio::time::timeout;
+
     use crate::test_utils::TestHelper;
 
     #[tokio::test]
@@ -328,6 +343,12 @@ mod tests {
             .send_to(msg.as_bytes(), &echo_addr.to_socket_addr().unwrap())
             .await
             .unwrap();
-        assert_eq!(msg, endpoint.packet_rx.await.unwrap());
+        assert_eq!(
+            msg,
+            timeout(Duration::from_secs(5), endpoint.packet_rx)
+                .await
+                .expect("should not timeout")
+                .unwrap()
+        );
     }
 }

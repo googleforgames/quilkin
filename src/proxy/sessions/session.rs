@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-use prometheus::HistogramTimer;
 use std::{
     sync::{
         atomic::{AtomicU64, Ordering},
@@ -23,6 +22,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
+use prometheus::HistogramTimer;
 use tokio::{
     net::UdpSocket,
     select,
@@ -226,7 +226,7 @@ impl Session {
 
     /// expiration returns the current expiration Instant value
     pub fn expiration(&self) -> u64 {
-        self.expiration.load(std::sync::atomic::Ordering::Relaxed)
+        self.expiration.load(Ordering::Relaxed)
     }
 
     /// key returns the key to be used for this session in a SessionMap
@@ -363,22 +363,21 @@ mod tests {
         time::{Duration, SystemTime, UNIX_EPOCH},
     };
 
-    use super::{Metrics, ProxyMetrics, Session, UpstreamPacket};
-
     use prometheus::{Histogram, HistogramOpts};
-    use tokio::time::timeout;
+    use tokio::{sync::mpsc, time::timeout};
 
-    use crate::test_utils::{new_test_chain, TestHelper};
+    use crate::{
+        endpoint::{Endpoint, EndpointAddress},
+        filters::SharedFilterChain,
+        proxy::sessions::session::{ReceivedPacketContext, SessionArgs},
+        test_utils::{create_socket, new_test_chain, TestHelper},
+    };
 
-    use crate::endpoint::{Endpoint, EndpointAddress};
-    use crate::filters::SharedFilterChain;
-    use crate::proxy::sessions::session::{ReceivedPacketContext, SessionArgs};
-    use tokio::sync::mpsc;
+    use super::{Metrics, ProxyMetrics, Session, UpstreamPacket};
 
     #[tokio::test]
     async fn session_new() {
-        let t = TestHelper::default();
-        let socket = t.create_socket().await;
+        let socket = create_socket().await;
         let addr: EndpointAddress = socket.local_addr().unwrap().into();
         let endpoint = Endpoint::new(addr.clone());
         let (send_packet, mut recv_packet) = mpsc::channel::<UpstreamPacket>(5);
@@ -471,7 +470,7 @@ mod tests {
             Duration::from_secs(10),
             ReceivedPacketContext {
                 packet: msg.as_bytes(),
-                filter_chain: crate::filters::SharedFilterChain::empty(),
+                filter_chain: SharedFilterChain::empty(),
                 endpoint: &endpoint,
                 source: endpoint.address.clone(),
                 dest: dest.clone(),

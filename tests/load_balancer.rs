@@ -16,6 +16,8 @@
 
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
+use tokio::time::timeout;
 
 use quilkin::{
     config::Filter,
@@ -61,7 +63,11 @@ policy: ROUND_ROBIN
 
     for addr in echo_addresses {
         socket.send_to(b"hello", &server_addr).await.unwrap();
-        assert_eq!(recv_chan.recv().await.unwrap(), "hello");
+        let value = timeout(Duration::from_secs(5), recv_chan.recv())
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!("hello", value);
 
         assert_eq!(
             addr,

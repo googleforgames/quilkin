@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-pub(super) mod metrics;
-
 use std::net::{Ipv4Addr, SocketAddrV4};
 use std::sync::Arc;
 
@@ -42,6 +40,8 @@ use crate::{
     utils::debug,
     Result,
 };
+
+pub(super) mod metrics;
 
 /// Server is the UDP server main implementation
 pub struct Server {
@@ -488,7 +488,10 @@ mod tests {
         endpoint::Endpoint,
         filters::SharedFilterChain,
         proxy::sessions::UpstreamPacket,
-        test_utils::{config_with_dummy_endpoint, load_test_filters, new_test_chain, TestHelper},
+        test_utils::{
+            config_with_dummy_endpoint, create_socket, load_test_filters, new_test_chain,
+            TestHelper,
+        },
     };
 
     use super::*;
@@ -613,7 +616,7 @@ mod tests {
             let msg = "hello".to_string();
             let endpoint = t.open_socket_and_recv_single_packet().await;
 
-            let socket = t.create_socket().await;
+            let socket = create_socket().await;
             let mut receive_addr = socket.local_addr().unwrap();
             // need to switch to 127.0.0.1, as the request comes locally
             receive_addr.set_ip("127.0.0.1".parse().unwrap());
@@ -740,7 +743,7 @@ mod tests {
 
         let msg = "hello";
         let endpoint = t.open_socket_and_recv_single_packet().await;
-        let socket = t.create_socket().await;
+        let socket = Arc::new(create_socket().await);
         let session_manager = SessionManager::new(shutdown_rx.clone());
         let (send_packets, mut recv_packets) = mpsc::channel::<UpstreamPacket>(1);
 
