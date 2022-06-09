@@ -811,6 +811,9 @@
 <span id="806">806</span>
 <span id="807">807</span>
 <span id="808">808</span>
+<span id="809">809</span>
+<span id="810">810</span>
+<span id="811">811</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -826,8 +829,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */</span>
-
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">mod</span> <span class="ident">metrics</span>;
 
 <span class="kw">use</span> <span class="ident">std::net</span>::{<span class="ident">Ipv4Addr</span>, <span class="ident">SocketAddrV4</span>};
 <span class="kw">use</span> <span class="ident">std::sync::Arc</span>;
@@ -855,6 +856,8 @@
     <span class="ident">utils::debug</span>,
     <span class="prelude-ty">Result</span>,
 };
+
+<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">mod</span> <span class="ident">metrics</span>;
 
 <span class="doccomment">/// Server is the UDP server main implementation</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Server</span> {
@@ -1301,7 +1304,10 @@
         <span class="ident">endpoint::Endpoint</span>,
         <span class="ident">filters::SharedFilterChain</span>,
         <span class="ident">proxy::sessions::UpstreamPacket</span>,
-        <span class="ident">test_utils</span>::{<span class="ident">config_with_dummy_endpoint</span>, <span class="ident">load_test_filters</span>, <span class="ident">new_test_chain</span>, <span class="ident">TestHelper</span>},
+        <span class="ident">test_utils</span>::{
+            <span class="ident">config_with_dummy_endpoint</span>, <span class="ident">create_socket</span>, <span class="ident">load_test_filters</span>, <span class="ident">new_test_chain</span>,
+            <span class="ident">TestHelper</span>,
+        },
     };
 
     <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
@@ -1426,7 +1432,7 @@
             <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="string">&quot;hello&quot;</span>.<span class="ident">to_string</span>();
             <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="ident">t</span>.<span class="ident">open_socket_and_recv_single_packet</span>().<span class="kw">await</span>;
 
-            <span class="kw">let</span> <span class="ident">socket</span> <span class="op">=</span> <span class="ident">t</span>.<span class="ident">create_socket</span>().<span class="kw">await</span>;
+            <span class="kw">let</span> <span class="ident">socket</span> <span class="op">=</span> <span class="ident">create_socket</span>().<span class="kw">await</span>;
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">receive_addr</span> <span class="op">=</span> <span class="ident">socket</span>.<span class="ident">local_addr</span>().<span class="ident">unwrap</span>();
             <span class="comment">// need to switch to 127.0.0.1, as the request comes locally</span>
             <span class="ident">receive_addr</span>.<span class="ident">set_ip</span>(<span class="string">&quot;127.0.0.1&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>());
@@ -1553,7 +1559,7 @@
 
         <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="string">&quot;hello&quot;</span>;
         <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="ident">t</span>.<span class="ident">open_socket_and_recv_single_packet</span>().<span class="kw">await</span>;
-        <span class="kw">let</span> <span class="ident">socket</span> <span class="op">=</span> <span class="ident">t</span>.<span class="ident">create_socket</span>().<span class="kw">await</span>;
+        <span class="kw">let</span> <span class="ident">socket</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">create_socket</span>().<span class="kw">await</span>);
         <span class="kw">let</span> <span class="ident">session_manager</span> <span class="op">=</span> <span class="ident">SessionManager::new</span>(<span class="ident">shutdown_rx</span>.<span class="ident">clone</span>());
         <span class="kw">let</span> (<span class="ident">send_packets</span>, <span class="kw-2">mut</span> <span class="ident">recv_packets</span>) <span class="op">=</span> <span class="ident">mpsc::channel</span>::<span class="op">&lt;</span><span class="ident">UpstreamPacket</span><span class="op">&gt;</span>(<span class="number">1</span>);
 

@@ -336,6 +336,27 @@
 <span id="331">331</span>
 <span id="332">332</span>
 <span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
+<span id="343">343</span>
+<span id="344">344</span>
+<span id="345">345</span>
+<span id="346">346</span>
+<span id="347">347</span>
+<span id="348">348</span>
+<span id="349">349</span>
+<span id="350">350</span>
+<span id="351">351</span>
+<span id="352">352</span>
+<span id="353">353</span>
+<span id="354">354</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -360,8 +381,10 @@
 };
 
 <span class="kw">use</span> <span class="ident">once_cell::sync::Lazy</span>;
-<span class="kw">use</span> <span class="ident">tokio::net::UdpSocket</span>;
-<span class="kw">use</span> <span class="ident">tokio::sync</span>::{<span class="ident">mpsc</span>, <span class="ident">oneshot</span>, <span class="ident">watch</span>};
+<span class="kw">use</span> <span class="ident">tokio</span>::{
+    <span class="ident">net::UdpSocket</span>,
+    <span class="ident">sync</span>::{<span class="ident">mpsc</span>, <span class="ident">oneshot</span>, <span class="ident">watch</span>},
+};
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">config</span>::{<span class="ident">Builder</span> <span class="kw">as</span> <span class="ident">ConfigBuilder</span>, <span class="ident">Config</span>},
@@ -381,6 +404,14 @@
 <span class="doccomment">/// This can be very useful when attempting to debug unit and integration tests.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">enable_tracing_log</span>() {
     <span class="ident">Lazy::force</span>(<span class="kw-2">&amp;</span><span class="ident">ENABLE_LOG</span>);
+}
+
+<span class="doccomment">/// Returns a local address on a port that is not assigned to another test.</span>
+<span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">available_addr</span>() -&gt; <span class="ident">SocketAddr</span> {
+    <span class="kw">let</span> <span class="ident">socket</span> <span class="op">=</span> <span class="ident">create_socket</span>().<span class="kw">await</span>;
+    <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span> <span class="ident">socket</span>.<span class="ident">local_addr</span>().<span class="ident">unwrap</span>();
+    <span class="macro">tracing::debug!</span>(<span class="ident">addr</span> <span class="op">=</span> <span class="question-mark">?</span><span class="ident">addr</span>, <span class="string">&quot;test_util::available_addr&quot;</span>);
+    <span class="ident">addr</span>
 }
 
 <span class="comment">// TestFilter is useful for testing that commands are executing filters appropriately.</span>
@@ -458,16 +489,10 @@
 }
 
 <span class="kw">impl</span> <span class="ident">TestHelper</span> {
-    <span class="doccomment">/// Opens a new socket bound to an ephemeral port</span>
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">create_socket</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">UdpSocket</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span> <span class="ident">SocketAddrV4::new</span>(<span class="ident">Ipv4Addr::new</span>(<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>), <span class="number">0</span>);
-        <span class="ident">Arc::new</span>(<span class="ident">UdpSocket::bind</span>(<span class="ident">addr</span>).<span class="kw">await</span>.<span class="ident">unwrap</span>())
-    }
-
     <span class="doccomment">/// Opens a socket, listening for a packet. Once a packet is received, it</span>
     <span class="doccomment">/// is forwarded over the returned channel.</span>
     <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">open_socket_and_recv_single_packet</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">OpenSocketRecvPacket</span> {
-        <span class="kw">let</span> <span class="ident">socket</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">create_socket</span>().<span class="kw">await</span>;
+        <span class="kw">let</span> <span class="ident">socket</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">create_socket</span>().<span class="kw">await</span>);
         <span class="kw">let</span> (<span class="ident">packet_tx</span>, <span class="ident">packet_rx</span>) <span class="op">=</span> <span class="ident">oneshot::channel</span>::<span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>();
         <span class="kw">let</span> <span class="ident">socket_recv</span> <span class="op">=</span> <span class="ident">socket</span>.<span class="ident">clone</span>();
         <span class="ident">tokio::spawn</span>(<span class="kw">async</span> <span class="kw">move</span> {
@@ -486,7 +511,7 @@
         <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
     ) -&gt; (<span class="ident">mpsc::Receiver</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>, <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">UdpSocket</span><span class="op">&gt;</span>) {
         <span class="kw">let</span> (<span class="ident">packet_tx</span>, <span class="ident">packet_rx</span>) <span class="op">=</span> <span class="ident">mpsc::channel</span>::<span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>(<span class="number">10</span>);
-        <span class="kw">let</span> <span class="ident">socket</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">create_socket</span>().<span class="kw">await</span>;
+        <span class="kw">let</span> <span class="ident">socket</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">create_socket</span>().<span class="kw">await</span>);
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">shutdown_rx</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_shutdown_subscriber</span>().<span class="kw">await</span>;
         <span class="kw">let</span> <span class="ident">socket_recv</span> <span class="op">=</span> <span class="ident">socket</span>.<span class="ident">clone</span>();
         <span class="ident">tokio::spawn</span>(<span class="kw">async</span> <span class="kw">move</span> {
@@ -526,7 +551,7 @@
     <span class="kw">where</span>
         <span class="ident">F</span>: <span class="ident">Fn</span>(<span class="ident">SocketAddr</span>, <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">SocketAddr</span>) <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="lifetime">&#39;static</span>,
     {
-        <span class="kw">let</span> <span class="ident">socket</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">create_socket</span>().<span class="kw">await</span>;
+        <span class="kw">let</span> <span class="ident">socket</span> <span class="op">=</span> <span class="ident">create_socket</span>().<span class="kw">await</span>;
         <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span> <span class="ident">socket</span>.<span class="ident">local_addr</span>().<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">shutdown</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_shutdown_subscriber</span>().<span class="kw">await</span>;
         <span class="kw">let</span> <span class="ident">local_addr</span> <span class="op">=</span> <span class="ident">addr</span>;
@@ -625,6 +650,13 @@
     }
 }
 
+<span class="doccomment">/// Opens a new socket bound to an ephemeral port</span>
+<span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">create_socket</span>() -&gt; <span class="ident">UdpSocket</span> {
+    <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span> <span class="ident">SocketAddrV4::new</span>(<span class="ident">Ipv4Addr::UNSPECIFIED</span>, <span class="number">0</span>);
+    <span class="comment">// Use a standard socket in test utils as we only want to bind sockets to unused ports.</span>
+    <span class="ident">UdpSocket::bind</span>(<span class="ident">addr</span>).<span class="kw">await</span>.<span class="ident">unwrap</span>()
+}
+
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">config_with_dummy_endpoint</span>() -&gt; <span class="ident">ConfigBuilder</span> {
     <span class="ident">ConfigBuilder::default</span>().<span class="ident">endpoints</span>(<span class="macro">vec!</span>[<span class="ident">Endpoint</span> {
         <span class="ident">address</span>: <span class="string">&quot;127.0.0.1:8080&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
@@ -653,6 +685,10 @@
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span> {
+    <span class="kw">use</span> <span class="ident">std::time::Duration</span>;
+
+    <span class="kw">use</span> <span class="ident">tokio::time::timeout</span>;
+
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::test_utils::TestHelper</span>;
 
     <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
@@ -666,7 +702,13 @@
             .<span class="ident">send_to</span>(<span class="ident">msg</span>.<span class="ident">as_bytes</span>(), <span class="kw-2">&amp;</span><span class="ident">echo_addr</span>.<span class="ident">to_socket_addr</span>().<span class="ident">unwrap</span>())
             .<span class="kw">await</span>
             .<span class="ident">unwrap</span>();
-        <span class="macro">assert_eq!</span>(<span class="ident">msg</span>, <span class="ident">endpoint</span>.<span class="ident">packet_rx</span>.<span class="kw">await</span>.<span class="ident">unwrap</span>());
+        <span class="macro">assert_eq!</span>(
+            <span class="ident">msg</span>,
+            <span class="ident">timeout</span>(<span class="ident">Duration::from_secs</span>(<span class="number">5</span>), <span class="ident">endpoint</span>.<span class="ident">packet_rx</span>)
+                .<span class="kw">await</span>
+                .<span class="ident">expect</span>(<span class="string">&quot;should not timeout&quot;</span>)
+                .<span class="ident">unwrap</span>()
+        );
     }
 }
 </code></pre></div>
