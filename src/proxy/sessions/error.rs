@@ -20,6 +20,7 @@ use std::fmt::{self, Display, Formatter};
 pub enum Error {
     BindUdpSocket(tokio::io::Error),
     UpdateSessionExpiration(String),
+    ToSocketAddr(eyre::Report),
 }
 
 impl Display for Error {
@@ -30,6 +31,9 @@ impl Display for Error {
             }
             Error::UpdateSessionExpiration(reason) => {
                 write!(f, "failed to update session expiration time: {}", reason)
+            }
+            Error::ToSocketAddr(reason) => {
+                write!(f, "failed to convert endpoint to address: {}", reason)
             }
         }
     }
