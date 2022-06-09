@@ -41,6 +41,10 @@
 <span id="36">36</span>
 <span id="37">37</span>
 <span id="38">38</span>
+<span id="39">39</span>
+<span id="40">40</span>
+<span id="41">41</span>
+<span id="42">42</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -63,6 +67,7 @@
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Error</span> {
     <span class="ident">BindUdpSocket</span>(<span class="ident">tokio::io::Error</span>),
     <span class="ident">UpdateSessionExpiration</span>(<span class="ident">String</span>),
+    <span class="ident">ToSocketAddr</span>(<span class="ident">eyre::Report</span>),
 }
 
 <span class="kw">impl</span> <span class="ident">Display</span> <span class="kw">for</span> <span class="ident">Error</span> {
@@ -73,6 +78,9 @@
             }
             <span class="ident">Error::UpdateSessionExpiration</span>(<span class="ident">reason</span>) =&gt; {
                 <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;failed to update session expiration time: {}&quot;</span>, <span class="ident">reason</span>)
+            }
+            <span class="ident">Error::ToSocketAddr</span>(<span class="ident">reason</span>) =&gt; {
+                <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;failed to convert endpoint to address: {}&quot;</span>, <span class="ident">reason</span>)
             }
         }
     }
