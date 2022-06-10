@@ -110,12 +110,9 @@ impl SessionManager {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-    use std::ops::Add;
-    use std::sync::Arc;
-    use std::time::Duration;
+    use std::{collections::HashMap, ops::Add, sync::Arc, time::Duration};
 
-    use tokio::sync::{mpsc, watch, RwLock};
+    use tokio::sync::{watch, RwLock};
 
     use crate::{
         endpoint::{Endpoint, EndpointAddress},
@@ -124,9 +121,9 @@ mod tests {
             server::metrics::Metrics as ProxyMetrics,
             sessions::{
                 metrics::Metrics, session::SessionArgs, session_manager::Sessions, SessionKey,
-                UpstreamPacket,
             },
         },
+        test_utils::create_socket,
     };
 
     use super::SessionManager;
@@ -142,8 +139,8 @@ mod tests {
     async fn run_prune_sessions() {
         let sessions = Arc::new(RwLock::new(HashMap::new()));
         let (from, to) = address_pair();
-        let (send, _recv) = mpsc::channel::<UpstreamPacket>(1);
         let (_shutdown_tx, shutdown_rx) = watch::channel(());
+        let socket = Arc::new(create_socket().await);
 
         let endpoint = Endpoint::new(to.clone());
 
@@ -164,8 +161,8 @@ mod tests {
                 proxy_metrics: ProxyMetrics::new().unwrap(),
                 filter_chain: SharedFilterChain::empty(),
                 source: from,
+                downstream_socket: socket,
                 dest: endpoint.clone(),
-                sender: send,
                 ttl,
             };
             sessions.insert(key.clone(), session_args.into_session().await.unwrap());
@@ -205,8 +202,8 @@ mod tests {
     async fn prune_sessions() {
         let mut sessions: Sessions = Arc::new(RwLock::new(HashMap::new()));
         let (from, to) = address_pair();
-        let (send, _recv) = mpsc::channel::<UpstreamPacket>(1);
         let endpoint = Endpoint::new(to.clone());
+        let socket = Arc::new(create_socket().await);
 
         let key = SessionKey::from((from.clone(), to.clone()));
         let ttl = Duration::from_secs(1);
@@ -218,8 +215,8 @@ mod tests {
                 proxy_metrics: ProxyMetrics::new().unwrap(),
                 filter_chain: SharedFilterChain::empty(),
                 source: from,
+                downstream_socket: socket,
                 dest: endpoint.clone(),
-                sender: send,
                 ttl,
             };
             sessions.insert(key.clone(), session_args.into_session().await.unwrap());
