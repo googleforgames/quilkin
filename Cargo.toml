@@ -15,7 +15,7 @@
 #
 
 [workspace]
-members = [".", "./macros"]
+members = [".", "./macros", "./agones"]
 
 [package]
 name = "quilkin"
