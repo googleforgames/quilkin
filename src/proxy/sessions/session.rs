@@ -26,7 +26,7 @@ use prometheus::HistogramTimer;
 use tokio::{
     net::UdpSocket,
     select,
-    sync::{mpsc, watch},
+    sync::watch,
     time::{Duration, Instant},
 };
 
@@ -49,7 +49,8 @@ pub struct Session {
     filter_chain: SharedFilterChain,
     /// created_at is time at which the session was created
     created_at: Instant,
-    socket: Arc<UdpSocket>,
+    /// socket that sends and receives from and to the endpoint address
+    upstream_socket: Arc<UdpSocket>,
     /// dest is where to send data to
     dest: Endpoint,
     /// address of original sender
@@ -83,43 +84,13 @@ struct ReceivedPacketContext<'a> {
     timer: HistogramTimer,
 }
 
-/// Represents a data packet received by an Endpoint to this Session.
-pub struct UpstreamPacket {
-    dest: EndpointAddress,
-    contents: Vec<u8>,
-    timer: HistogramTimer,
-}
-
-impl UpstreamPacket {
-    pub fn new(dest: EndpointAddress, contents: Vec<u8>, timer: HistogramTimer) -> UpstreamPacket {
-        UpstreamPacket {
-            dest,
-            contents,
-            timer,
-        }
-    }
-
-    pub fn dest(&self) -> &EndpointAddress {
-        &self.dest
-    }
-
-    pub fn contents(&self) -> &[u8] {
-        &self.contents
-    }
-
-    /// stop and record the stored [HistogramTimer]
-    pub fn stop_and_record(self) {
-        self.timer.stop_and_record();
-    }
-}
-
 pub struct SessionArgs {
     pub metrics: Metrics,
     pub proxy_metrics: ProxyMetrics,
     pub filter_chain: SharedFilterChain,
     pub source: EndpointAddress,
+    pub downstream_socket: Arc<UdpSocket>,
     pub dest: Endpoint,
-    pub sender: mpsc::Sender<UpstreamPacket>,
     pub ttl: Duration,
 }
 
@@ -135,8 +106,8 @@ impl Session {
     /// internal constructor for a Session from SessionArgs
     async fn new(args: SessionArgs) -> Result<Self> {
         let addr = (std::net::Ipv4Addr::UNSPECIFIED, 0);
-        let socket = Arc::new(UdpSocket::bind(addr).await.map_err(Error::BindUdpSocket)?);
-        socket
+        let upstream_socket = Arc::new(UdpSocket::bind(addr).await.map_err(Error::BindUdpSocket)?);
+        upstream_socket
             .connect(
                 args.dest
                     .address
@@ -154,7 +125,7 @@ impl Session {
             metrics: args.metrics,
             proxy_metrics: args.proxy_metrics,
             filter_chain: args.filter_chain,
-            socket: socket.clone(),
+            upstream_socket,
             source: args.source,
             dest: args.dest,
             created_at: Instant::now(),
@@ -166,16 +137,16 @@ impl Session {
 
         s.metrics.sessions_total.inc();
         s.metrics.active_sessions.inc();
-        s.run(args.ttl, socket, args.sender, shutdown_rx);
+        s.run(args.ttl, args.downstream_socket, shutdown_rx);
         Ok(s)
     }
 
-    /// run starts processing received udp packets on its UdpSocket
+    /// run starts processing receiving upstream udp packets
+    /// and sending them back downstream
     fn run(
         &self,
         ttl: Duration,
-        socket: Arc<UdpSocket>,
-        mut sender: mpsc::Sender<UpstreamPacket>,
+        downstream_socket: Arc<UdpSocket>,
         mut shutdown_rx: watch::Receiver<()>,
     ) {
         let source = self.source.clone();
@@ -184,13 +155,14 @@ impl Session {
         let endpoint = self.dest.clone();
         let metrics = self.metrics.clone();
         let proxy_metrics = self.proxy_metrics.clone();
+        let upstream_socket = self.upstream_socket.clone();
         tokio::spawn(async move {
             let mut buf: Vec<u8> = vec![0; 65535];
             loop {
                 tracing::debug!(source = %source, dest = ?endpoint, "Awaiting incoming packet");
 
                 select! {
-                    received = socket.recv_from(&mut buf) => {
+                    received = upstream_socket.recv_from(&mut buf) => {
                         match received {
                             Err(error) => {
                                 metrics.rx_errors_total.inc();
@@ -201,7 +173,7 @@ impl Session {
                                 metrics.rx_packets_total.inc();
                                 Session::process_recv_packet(
                                     &metrics,
-                                    &mut sender,
+                                    &downstream_socket,
                                     &expiration,
                                     ttl,
                                     ReceivedPacketContext {
@@ -240,7 +212,7 @@ impl Session {
     /// process_recv_packet processes a packet that is received by this session.
     async fn process_recv_packet(
         metrics: &Metrics,
-        sender: &mut mpsc::Sender<UpstreamPacket>,
+        downstream_socket: &Arc<UdpSocket>,
         expiration: &Arc<AtomicU64>,
         ttl: Duration,
         packet_ctx: ReceivedPacketContext<'_>,
@@ -250,7 +222,7 @@ impl Session {
             filter_chain,
             endpoint,
             source: from,
-            dest: to,
+            dest,
             timer,
         } = packet_ctx;
 
@@ -260,22 +232,33 @@ impl Session {
             tracing::warn!(%error, "Error updating session expiration")
         }
 
-        let write_result: futures::future::OptionFuture<_> = filter_chain
-            .write(WriteContext::new(
-                endpoint,
-                from,
-                to.clone(),
-                packet.to_vec(),
-            ))
-            .map(|response| sender.send(UpstreamPacket::new(to, response.contents, timer)))
-            .into();
+        match filter_chain.write(WriteContext::new(
+            endpoint,
+            from,
+            dest.clone(),
+            packet.to_vec(),
+        )) {
+            None => metrics.packets_dropped_total.inc(),
+            Some(response) => {
+                let addr = match dest.to_socket_addr() {
+                    Ok(addr) => addr,
+                    Err(error) => {
+                        tracing::error!(%dest, %error, "Error resolving address");
+                        metrics.packets_dropped_total.inc();
+                        return;
+                    }
+                };
 
-        if let Some(Err(error)) = write_result.await {
-            metrics.rx_errors_total.inc();
-            tracing::error!(%error, "Error sending packet to channel");
-        } else {
-            metrics.packets_dropped_total.inc();
+                if let Err(error) = downstream_socket
+                    .send_to(response.contents.as_slice(), addr)
+                    .await
+                {
+                    metrics.rx_errors_total.inc();
+                    tracing::error!(%error, "Error sending packet");
+                }
+            }
         }
+        timer.stop_and_record();
     }
 
     /// update_expiration set the increments the expiration value by the session timeout
@@ -329,7 +312,7 @@ impl Session {
     /// Sends `buf` to the session's destination address. On success, returns
     /// the number of bytes written.
     pub async fn do_send(&self, buf: &[u8]) -> crate::Result<usize> {
-        self.socket
+        self.upstream_socket
             .send(buf)
             .await
             .map_err(|error| eyre::eyre!(error))
@@ -354,7 +337,6 @@ impl Drop for Session {
 #[cfg(test)]
 mod tests {
     use std::{
-        net::Ipv4Addr,
         str::from_utf8,
         sync::{
             atomic::{AtomicU64, Ordering},
@@ -364,31 +346,32 @@ mod tests {
     };
 
     use prometheus::{Histogram, HistogramOpts};
-    use tokio::{sync::mpsc, time::timeout};
+    use tokio::time::timeout;
 
     use crate::{
         endpoint::{Endpoint, EndpointAddress},
         filters::SharedFilterChain,
         proxy::sessions::session::{ReceivedPacketContext, SessionArgs},
-        test_utils::{create_socket, new_test_chain, TestHelper},
+        test_utils::{create_socket, load_test_filters, new_test_chain, TestHelper},
     };
 
-    use super::{Metrics, ProxyMetrics, Session, UpstreamPacket};
+    use super::{Metrics, ProxyMetrics, Session};
 
     #[tokio::test]
-    async fn session_new() {
-        let socket = create_socket().await;
-        let addr: EndpointAddress = socket.local_addr().unwrap().into();
+    async fn session_send_and_receive() {
+        let mut t = TestHelper::default();
+        let addr = t.run_echo_server().await;
         let endpoint = Endpoint::new(addr.clone());
-        let (send_packet, mut recv_packet) = mpsc::channel::<UpstreamPacket>(5);
+        let socket = Arc::new(create_socket().await);
+        let msg = "hello";
 
         let sess = Session::new(SessionArgs {
             metrics: Metrics::new().unwrap(),
             proxy_metrics: ProxyMetrics::new().unwrap(),
             filter_chain: SharedFilterChain::empty(),
             source: addr.clone(),
+            downstream_socket: socket.clone(),
             dest: endpoint,
-            sender: send_packet,
             ttl: Duration::from_secs(20),
         })
         .await
@@ -402,57 +385,26 @@ mod tests {
         let diff = initial_expiration_secs - now_secs;
         assert!((15..21).contains(&diff));
 
-        // echo the packet back again
-        tokio::spawn(async move {
-            let mut buf = vec![0; 1024];
-            let (size, recv_addr) = socket.recv_from(&mut buf).await.unwrap();
-            assert_eq!("hello", from_utf8(&buf[..size]).unwrap());
-            socket.send_to(&buf[..size], &recv_addr).await.unwrap();
-        });
+        sess.send(msg.as_bytes()).await.unwrap();
 
-        sess.send(b"hello").await.unwrap();
-
-        let packet = recv_packet
-            .recv()
+        let mut buf = vec![0; 1024];
+        let (size, recv_addr) = timeout(Duration::from_secs(5), socket.recv_from(&mut buf))
             .await
-            .expect("Should receive a packet 'hello'");
-        assert_eq!(String::from("hello").into_bytes(), packet.contents);
-        assert_eq!(addr, packet.dest);
-    }
-
-    #[tokio::test]
-    async fn session_send_to() {
-        let t = TestHelper::default();
-        let msg = "hello";
-
-        // without a filter
-        let (sender, _) = mpsc::channel::<UpstreamPacket>(1);
-        let ep = t.open_socket_and_recv_single_packet().await;
-        let addr: EndpointAddress = ep.socket.local_addr().unwrap().into();
-        let endpoint = Endpoint::new(addr.clone());
-
-        let session = Session::new(SessionArgs {
-            metrics: Metrics::new().unwrap(),
-            proxy_metrics: ProxyMetrics::new().unwrap(),
-            filter_chain: SharedFilterChain::empty(),
-            source: addr,
-            dest: endpoint.clone(),
-            sender,
-            ttl: Duration::from_millis(1000),
-        })
-        .await
-        .unwrap();
-        session.send(msg.as_bytes()).await.unwrap();
-        assert_eq!(msg, ep.packet_rx.await.unwrap());
+            .unwrap()
+            .unwrap();
+        let packet = &buf[..size];
+        assert_eq!(msg, from_utf8(packet).unwrap());
+        assert_eq!(addr.port(), recv_addr.port());
     }
 
     #[tokio::test]
     async fn process_recv_packet() {
+        load_test_filters();
         let histogram = Histogram::with_opts(HistogramOpts::new("test", "test")).unwrap();
 
+        let socket = Arc::new(create_socket().await);
         let endpoint = Endpoint::new("127.0.1.1:80".parse().unwrap());
-        let dest: EndpointAddress = (Ipv4Addr::LOCALHOST, 88).into();
-        let (mut sender, mut receiver) = mpsc::channel::<UpstreamPacket>(10);
+        let dest: EndpointAddress = socket.local_addr().unwrap().into();
         let expiration = Arc::new(AtomicU64::new(
             SystemTime::now()
                 .duration_since(UNIX_EPOCH)
@@ -465,7 +417,7 @@ mod tests {
         let msg = "hello";
         Session::process_recv_packet(
             &Metrics::new().unwrap(),
-            &mut sender,
+            &socket,
             &expiration,
             Duration::from_secs(10),
             ReceivedPacketContext {
@@ -480,12 +432,14 @@ mod tests {
         .await;
 
         assert!(initial_expiration < expiration.load(Ordering::Relaxed));
-        let p = timeout(Duration::from_secs(5), receiver.recv())
+
+        let mut buf = vec![0; 1024];
+        let (size, recv_addr) = timeout(Duration::from_secs(5), socket.recv_from(&mut buf))
             .await
             .expect("Should receive a packet")
             .unwrap();
-        assert_eq!(msg, from_utf8(p.contents.as_slice()).unwrap());
-        assert_eq!(dest, p.dest);
+        assert_eq!(msg, from_utf8(&buf[..size]).unwrap());
+        assert_eq!(dest.port(), recv_addr.port());
 
         let expiration = Arc::new(AtomicU64::new(
             SystemTime::now()
@@ -498,7 +452,7 @@ mod tests {
         let filter_chain = new_test_chain();
         Session::process_recv_packet(
             &Metrics::new().unwrap(),
-            &mut sender,
+            &socket,
             &expiration,
             Duration::from_secs(10),
             ReceivedPacketContext {
@@ -513,32 +467,32 @@ mod tests {
         .await;
 
         assert!(initial_expiration < expiration.load(Ordering::Relaxed));
-        let p = timeout(Duration::from_secs(5), receiver.recv())
+        let (size, recv_addr) = timeout(Duration::from_secs(5), socket.recv_from(&mut buf))
             .await
             .expect("Should receive a packet")
             .unwrap();
         assert_eq!(
             format!("{}:our:{}:{}", msg, endpoint.address, dest),
-            from_utf8(p.contents.as_slice()).unwrap()
+            from_utf8(&buf[..size]).unwrap()
         );
-        assert_eq!(dest, p.dest);
+        assert_eq!(dest.port(), recv_addr.port());
     }
 
     #[tokio::test]
-    async fn session_new_metrics() {
+    async fn metrics() {
         let t = TestHelper::default();
         let ep = t.open_socket_and_recv_single_packet().await;
         let addr: EndpointAddress = ep.socket.local_addr().unwrap().into();
         let endpoint = Endpoint::new(addr.clone());
-        let (send_packet, _) = mpsc::channel::<UpstreamPacket>(5);
+        let socket = Arc::new(create_socket().await);
 
         let session = Session::new(SessionArgs {
             metrics: Metrics::new().unwrap(),
             proxy_metrics: ProxyMetrics::new().unwrap(),
             filter_chain: SharedFilterChain::empty(),
             source: addr,
+            downstream_socket: socket,
             dest: endpoint,
-            sender: send_packet,
             ttl: Duration::from_secs(10),
         })
         .await
@@ -546,54 +500,18 @@ mod tests {
 
         assert_eq!(session.metrics.sessions_total.get(), 1);
         assert_eq!(session.metrics.active_sessions.get(), 1);
-    }
 
-    #[tokio::test]
-    async fn send_to_metrics() {
-        let t = TestHelper::default();
-
-        let (sender, _) = mpsc::channel::<UpstreamPacket>(1);
-        let endpoint = t.open_socket_and_recv_single_packet().await;
-        let addr: EndpointAddress = endpoint.socket.local_addr().unwrap().into();
-        let session = Session::new(SessionArgs {
-            metrics: Metrics::new().unwrap(),
-            proxy_metrics: ProxyMetrics::new().unwrap(),
-            filter_chain: SharedFilterChain::empty(),
-            source: addr.clone(),
-            dest: Endpoint::new(addr),
-            sender,
-            ttl: Duration::from_secs(10),
-        })
-        .await
-        .unwrap();
+        // send a packet
         session.send(b"hello").await.unwrap();
-        endpoint.packet_rx.await.unwrap();
+        timeout(Duration::from_secs(1), ep.packet_rx)
+            .await
+            .expect("should receive a packet")
+            .unwrap();
 
         assert_eq!(session.metrics.tx_bytes_total.get(), 5);
         assert_eq!(session.metrics.tx_packets_total.get(), 1);
-    }
 
-    #[tokio::test]
-    async fn session_drop_metrics() {
-        let t = TestHelper::default();
-        let (send_packet, _) = mpsc::channel::<UpstreamPacket>(5);
-        let endpoint = t.open_socket_and_recv_single_packet().await;
-        let addr: EndpointAddress = endpoint.socket.local_addr().unwrap().into();
-        let session = Session::new(SessionArgs {
-            metrics: Metrics::new().unwrap(),
-            proxy_metrics: ProxyMetrics::new().unwrap(),
-            filter_chain: SharedFilterChain::empty(),
-            source: addr.clone(),
-            dest: Endpoint::new(addr),
-            sender: send_packet,
-            ttl: Duration::from_secs(10),
-        })
-        .await
-        .unwrap();
-
-        assert_eq!(session.metrics.sessions_total.get(), 1);
-        assert_eq!(session.metrics.active_sessions.get(), 1);
-
+        // drop metrics
         let metrics = session.metrics.clone();
         drop(session);
         assert_eq!(metrics.sessions_total.get(), 1);
