@@ -46,6 +46,24 @@ impl Strategy {
     }
 }
 
+impl From<Prefix> for Strategy {
+    fn from(prefix: Prefix) -> Self {
+        Self::Prefix(prefix)
+    }
+}
+
+impl From<Suffix> for Strategy {
+    fn from(suffix: Suffix) -> Self {
+        Self::Suffix(suffix)
+    }
+}
+
+impl From<Regex> for Strategy {
+    fn from(regex: Regex) -> Self {
+        Self::Regex(regex)
+    }
+}
+
 #[derive(Debug, PartialEq, schemars::JsonSchema)]
 pub struct Config {
     /// The key to use when storing the captured value in the filter context.

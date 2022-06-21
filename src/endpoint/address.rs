@@ -30,7 +30,7 @@ use crate::xds::config::core::v3::{
 /// A valid socket address. This differs from `std::net::SocketAddr`, in that it
 /// it supports parsing Domain Names in addition to IP addresses. Domain Names
 /// are resolved when `ToSocketAddrs::to_socket_addrs` is called.
-#[derive(Debug, PartialEq, Clone, PartialOrd, Ord, Eq, Hash, Serialize)]
+#[derive(Debug, PartialEq, Clone, PartialOrd, Ord, Eq, Hash)]
 pub struct EndpointAddress {
     /// A valid name or IP address that resolves to a address.
     pub host: AddressKind,
@@ -158,6 +158,15 @@ impl From<(Ipv6Addr, u16)> for EndpointAddress {
     }
 }
 
+impl From<(String, u16)> for EndpointAddress {
+    fn from((ip, port): (String, u16)) -> Self {
+        Self {
+            host: ip.parse().unwrap_or(AddressKind::Name(ip)),
+            port: Some(port),
+        }
+    }
+}
+
 impl From<EndpointAddress> for EnvoySocketAddress {
     fn from(address: EndpointAddress) -> Self {
         use crate::xds::config::core::v3::socket_address::{PortSpecifier, Protocol};
@@ -216,6 +225,28 @@ impl TryFrom<EnvoyAddress> for EndpointAddress {
         match value {
             EnvoyAddress::SocketAddress(address) => address.try_into(),
             _ => Err(eyre::eyre!("Unsupported Envoy address type.")),
+        }
+    }
+}
+
+impl TryFrom<crate::xds::config::core::v3::Address> for EndpointAddress {
+    type Error = eyre::Error;
+
+    fn try_from(value: crate::xds::config::core::v3::Address) -> Result<Self, Self::Error> {
+        match value.address {
+            Some(address) => Self::try_from(address),
+            _ => Err(eyre::eyre!("No address found")),
+        }
+    }
+}
+
+impl TryFrom<crate::xds::config::endpoint::v3::Endpoint> for EndpointAddress {
+    type Error = eyre::Error;
+
+    fn try_from(value: crate::xds::config::endpoint::v3::Endpoint) -> Result<Self, Self::Error> {
+        match value.address {
+            Some(address) => Self::try_from(address),
+            _ => Err(eyre::eyre!("Missing address in endpoint")),
         }
     }
 }
@@ -280,5 +311,14 @@ impl fmt::Display for AddressKind {
             Self::Name(name) => name.fmt(f),
             Self::Ip(ip) => ip.fmt(f),
         }
+    }
+}
+
+impl Serialize for EndpointAddress {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
     }
 }

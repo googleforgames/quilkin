@@ -77,18 +77,18 @@ You can find the configuration file schema here in [Proxy Configuration][proxy-c
 Example:
 ```yaml
 clusters:
-- name: cluster-a
-  endpoints:
-  - ip: 123.0.0.1
-    port": 29
-    metadata:
-      'quilkin.dev':
-         tokens:
-         - "MXg3aWp5Ng=="
+    cluster-a:
+        localities:
+            - endpoints:
+                - address: 123.0.0.1:29
+                  metadata:
+                    'quilkin.dev':
+                      tokens:
+                        - "MXg3aWp5Ng=="
 filters:
-- name: quilkin.filters.debug.v1alpha1.Debug
-  config:
-    id: hello
+  - name: quilkin.filters.debug.v1alpha1.Debug
+    config:
+      id: hello
 ```
 
 To add an HTTP admin server, check out the [Administration][admin] page.

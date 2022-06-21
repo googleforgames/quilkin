@@ -20,7 +20,7 @@ use prometheus::{
 };
 
 use crate::metrics::{
-    filter_opts, CollectorExt, EVENT_LABEL, EVENT_READ_LABEL_VALUE, EVENT_WRITE_LABEL_VALUE,
+    filter_opts, CollectorExt, DIRECTION_LABEL, READ_DIRECTION_LABEL, WRITE_DIRECTION_LABEL,
 };
 
 /// Register and manage metrics for this filter
@@ -33,7 +33,7 @@ pub(super) struct Metrics {
 
 impl Metrics {
     pub(super) fn new() -> MetricsResult<Self> {
-        let event_labels = &[EVENT_LABEL];
+        let event_labels = &[DIRECTION_LABEL];
 
         let deny_metric = IntCounterVec::new(
             filter_opts(
@@ -57,13 +57,13 @@ impl Metrics {
 
         Ok(Metrics {
             packets_denied_read: deny_metric
-                .get_metric_with_label_values(&[EVENT_READ_LABEL_VALUE])?,
+                .get_metric_with_label_values(&[READ_DIRECTION_LABEL])?,
             packets_denied_write: deny_metric
-                .get_metric_with_label_values(&[EVENT_WRITE_LABEL_VALUE])?,
+                .get_metric_with_label_values(&[WRITE_DIRECTION_LABEL])?,
             packets_allowed_read: allow_metric
-                .get_metric_with_label_values(&[EVENT_READ_LABEL_VALUE])?,
+                .get_metric_with_label_values(&[READ_DIRECTION_LABEL])?,
             packets_allowed_write: allow_metric
-                .get_metric_with_label_values(&[EVENT_WRITE_LABEL_VALUE])?,
+                .get_metric_with_label_values(&[WRITE_DIRECTION_LABEL])?,
         })
     }
 }

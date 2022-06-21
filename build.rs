@@ -22,6 +22,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "proto/data-plane-api/envoy/config/accesslog/v3/accesslog.proto",
         "proto/data-plane-api/envoy/config/cluster/v3/cluster.proto",
         "proto/data-plane-api/envoy/config/listener/v3/listener.proto",
+        "proto/data-plane-api/envoy/config/listener/v3/listener_components.proto",
         "proto/data-plane-api/envoy/config/route/v3/route.proto",
         "proto/data-plane-api/envoy/service/cluster/v3/cds.proto",
         "proto/data-plane-api/envoy/service/discovery/v3/ads.proto",
@@ -80,6 +81,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for path in vec![proto_files, include_dirs].concat() {
         println!("cargo:rerun-if-changed={}", path.to_str().unwrap());
     }
+
+    built::write_built_file().expect("Failed to acquire build-time information");
 
     Ok(())
 }

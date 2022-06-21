@@ -18,6 +18,11 @@ use std::{collections::HashMap, convert::TryFrom, sync::Arc};
 
 use crate::xds::config::core::v3::Metadata as ProtoMetadata;
 
+#[doc(hidden)]
+pub mod build {
+    include!(concat!(env!("OUT_DIR"), "/built.rs"));
+}
+
 /// Shared state between [`Filter`][crate::filters::Filter]s during processing for a single packet.
 pub type DynamicMetadata = HashMap<Arc<String>, Value>;
 
@@ -106,6 +111,9 @@ impl PartialEq for Value {
             (Self::Bool(a), Self::Bool(b)) => a == b,
             (Self::Bool(_), _) => false,
             (Self::Number(a), Self::Number(b)) => a == b,
+            (Self::Number(num), Self::Bytes(bytes)) => {
+                bytes.len() == 1 && *num == u64::from(bytes[0])
+            }
             (Self::Number(_), _) => false,
             (Self::List(a), Self::List(b)) => a == b,
             (Self::List(_), _) => false,
@@ -173,9 +181,11 @@ impl TryFrom<prost_types::Value> for Value {
 /// Represents a view into the metadata object attached to another object. `T`
 /// represents metadata known to Quilkin under `quilkin.dev` (available under
 /// the [`KEY`] constant.)
-#[derive(Default, Debug, serde::Deserialize, serde::Serialize, PartialEq, Clone, Eq)]
+#[derive(
+    Default, Debug, serde::Deserialize, serde::Serialize, PartialEq, Clone, Eq, schemars::JsonSchema,
+)]
 #[non_exhaustive]
-pub struct MetadataView<T> {
+pub struct MetadataView<T: Default> {
     /// Known Quilkin metadata.
     #[serde(default, rename = "quilkin.dev")]
     pub known: T,
@@ -184,7 +194,14 @@ pub struct MetadataView<T> {
     pub unknown: serde_json::Map<String, serde_json::Value>,
 }
 
-impl<T> MetadataView<T> {
+impl<T: Default> MetadataView<T> {
+    pub fn new(known: impl Into<T>) -> Self {
+        Self {
+            known: known.into(),
+            unknown: <_>::default(),
+        }
+    }
+
     pub fn with_unknown(
         known: impl Into<T>,
         unknown: serde_json::Map<String, serde_json::Value>,
@@ -211,7 +228,7 @@ where
     }
 }
 
-impl<T: Into<prost_types::Struct>> From<MetadataView<T>> for ProtoMetadata {
+impl<T: Into<prost_types::Struct> + Default> From<MetadataView<T>> for ProtoMetadata {
     fn from(metadata: MetadataView<T>) -> Self {
         let mut filter_metadata = HashMap::new();
         filter_metadata.insert(String::from("quilkin.dev"), metadata.known.into());

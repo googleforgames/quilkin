@@ -14,35 +14,42 @@
  * limitations under the License.
  */
 
+use crate::xds as envoy;
+
 crate::include_proto!("quilkin.filters.matches.v1alpha1");
 
 mod config;
 mod metrics;
 
-use crate::{config::ConfigType, filters::prelude::*, metadata::Value};
+use crate::{filters::prelude::*, metadata::Value};
 
 use self::quilkin::filters::matches::v1alpha1 as proto;
 use crate::filters::r#match::metrics::Metrics;
 
-pub use config::Config;
+pub use self::config::{Branch, Config, DirectionalConfig, Fallthrough};
 
 struct ConfigInstance {
     metadata_key: String,
-    branches: Vec<(Value, FilterInstance)>,
-    fallthrough: FilterInstance,
+    branches: Vec<(Value, (String, FilterInstance))>,
+    fallthrough: (String, FilterInstance),
 }
 
 impl ConfigInstance {
     fn new(config: config::DirectionalConfig) -> Result<Self, Error> {
-        let map_to_instance = |filter: &str, config_type: Option<ConfigType>| {
-            crate::filters::FilterRegistry::get(filter, CreateFilterArgs::new(config_type))
-        };
+        let map_to_instance =
+            |filter: String, config_type: Option<serde_json::Value>| -> Result<_, Error> {
+                let instance = crate::filters::FilterRegistry::get(
+                    &filter,
+                    CreateFilterArgs::new(config_type.map(From::from)),
+                )?;
+                Ok((filter, instance))
+            };
 
         let branches = config
             .branches
-            .iter()
+            .into_iter()
             .map(|branch| {
-                map_to_instance(&branch.filter.id, branch.filter.config.clone())
+                map_to_instance(branch.filter.name, branch.filter.config.clone())
                     .map(|instance| (branch.value.clone(), instance))
             })
             .collect::<Result<_, _>>()?;
@@ -50,7 +57,7 @@ impl ConfigInstance {
         Ok(Self {
             metadata_key: config.metadata_key,
             branches,
-            fallthrough: map_to_instance(&config.fallthrough.0.id, config.fallthrough.0.config)?,
+            fallthrough: map_to_instance(config.fallthrough.0.name, config.fallthrough.0.config)?,
         })
     }
 }
@@ -93,13 +100,19 @@ where
             let value = (get_metadata)(&ctx, &config.metadata_key)?;
 
             match config.branches.iter().find(|(key, _)| key == value) {
-                Some((_, instance)) => {
+                Some((value, instance)) => {
+                    tracing::trace!(key=&*config.metadata_key, value=?value, filter=&*instance.0, "Matched against branch");
                     metrics.packets_matched_total.inc();
-                    (and_then)(ctx, instance)
+                    (and_then)(ctx, &instance.1)
                 }
                 None => {
+                    tracing::trace!(
+                        key = &*config.metadata_key,
+                        fallthrough = &*config.fallthrough.0,
+                        "No match found, calling fallthrough"
+                    );
                     metrics.packets_fallthrough_total.inc();
-                    (and_then)(ctx, &config.fallthrough)
+                    (and_then)(ctx, &config.fallthrough.1)
                 }
             }
         }
@@ -110,6 +123,7 @@ where
 impl Filter for Match {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
     fn read(&self, ctx: ReadContext) -> Option<ReadResponse> {
+        tracing::trace!(metadata=?ctx.metadata);
         match_filter(
             &self.on_read_filters,
             &self.metrics,
@@ -143,16 +157,9 @@ impl StaticFilter for Match {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        endpoint::{Endpoint, Endpoints, UpstreamEndpoints},
-        filters::{
-            r#match::{
-                config::{Branch, DirectionalConfig, Fallthrough, Filter as ConfigFilter},
-                Config, Match, Metrics,
-            },
-            Filter, ReadContext, WriteContext,
-        },
-    };
+    use super::*;
+
+    use crate::{endpoint::Endpoint, filters::*};
     use std::sync::Arc;
 
     #[test]
@@ -164,9 +171,9 @@ mod tests {
                 metadata_key: key.into(),
                 branches: vec![Branch {
                     value: "abc".into(),
-                    filter: ConfigFilter::new("quilkin.filters.pass.v1alpha1.Pass"),
+                    filter: Pass::as_filter_config(None).unwrap(),
                 }],
-                fallthrough: Fallthrough(ConfigFilter::new("quilkin.filters.drop.v1alpha1.Drop")),
+                fallthrough: <_>::default(),
             }),
             on_write: None,
         };
@@ -189,7 +196,7 @@ mod tests {
 
         // config so we can test match and fallthrough.
         let mut ctx = ReadContext::new(
-            UpstreamEndpoints::from(Endpoints::new(vec![Default::default()])),
+            vec![Default::default()],
             ([127, 0, 0, 1], 7000).into(),
             contents.clone(),
         );
@@ -200,7 +207,7 @@ mod tests {
         assert_eq!(0, filter.metrics.packets_fallthrough_total.get());
 
         let mut ctx = ReadContext::new(
-            UpstreamEndpoints::from(Endpoints::new(vec![Default::default()])),
+            vec![Default::default()],
             ([127, 0, 0, 1], 7000).into(),
             contents,
         );

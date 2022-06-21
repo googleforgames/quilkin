@@ -32,11 +32,8 @@ use tokio::{
 
 use crate::{
     endpoint::{Endpoint, EndpointAddress},
-    filters::{Filter, SharedFilterChain, WriteContext},
-    proxy::{
-        server::metrics::Metrics as ProxyMetrics,
-        sessions::{error::Error, metrics::Metrics},
-    },
+    filters::{Filter, WriteContext},
+    proxy::sessions::{error::Error, metrics::Metrics},
     utils::debug,
 };
 
@@ -44,9 +41,8 @@ type Result<T> = std::result::Result<T, Error>;
 
 /// Session encapsulates a UDP stream session
 pub struct Session {
+    config: Arc<crate::Config>,
     metrics: Metrics,
-    proxy_metrics: ProxyMetrics,
-    filter_chain: SharedFilterChain,
     /// created_at is time at which the session was created
     created_at: Instant,
     /// socket that sends and receives from and to the endpoint address
@@ -77,7 +73,7 @@ impl From<(EndpointAddress, EndpointAddress)> for SessionKey {
 /// ReceivedPacketContext contains state needed to process a received packet.
 struct ReceivedPacketContext<'a> {
     packet: &'a [u8],
-    filter_chain: SharedFilterChain,
+    config: Arc<crate::Config>,
     endpoint: &'a Endpoint,
     source: EndpointAddress,
     dest: EndpointAddress,
@@ -85,9 +81,8 @@ struct ReceivedPacketContext<'a> {
 }
 
 pub struct SessionArgs {
+    pub config: Arc<crate::Config>,
     pub metrics: Metrics,
-    pub proxy_metrics: ProxyMetrics,
-    pub filter_chain: SharedFilterChain,
     pub source: EndpointAddress,
     pub downstream_socket: Arc<UdpSocket>,
     pub dest: Endpoint,
@@ -104,6 +99,7 @@ impl SessionArgs {
 
 impl Session {
     /// internal constructor for a Session from SessionArgs
+    #[tracing::instrument(skip_all)]
     async fn new(args: SessionArgs) -> Result<Self> {
         let addr = (std::net::Ipv4Addr::UNSPECIFIED, 0);
         let upstream_socket = Arc::new(UdpSocket::bind(addr).await.map_err(Error::BindUdpSocket)?);
@@ -123,8 +119,7 @@ impl Session {
 
         let s = Session {
             metrics: args.metrics,
-            proxy_metrics: args.proxy_metrics,
-            filter_chain: args.filter_chain,
+            config: args.config.clone(),
             upstream_socket,
             source: args.source,
             dest: args.dest,
@@ -132,7 +127,6 @@ impl Session {
             expiration,
             shutdown_tx,
         };
-
         tracing::debug!(source = %s.source, dest = ?s.dest, "Session created");
 
         s.metrics.sessions_total.inc();
@@ -151,11 +145,11 @@ impl Session {
     ) {
         let source = self.source.clone();
         let expiration = self.expiration.clone();
-        let filter_chain = self.filter_chain.clone();
+        let config = self.config.clone();
         let endpoint = self.dest.clone();
         let metrics = self.metrics.clone();
-        let proxy_metrics = self.proxy_metrics.clone();
         let upstream_socket = self.upstream_socket.clone();
+
         tokio::spawn(async move {
             let mut buf: Vec<u8> = vec![0; 65535];
             loop {
@@ -169,20 +163,20 @@ impl Session {
                                 tracing::error!(%error, %source, dest = ?endpoint, "Error receiving packet");
                             },
                             Ok((size, recv_addr)) => {
-                                metrics.rx_bytes_total.inc_by(size as u64);
-                                metrics.rx_packets_total.inc();
+                                crate::metrics::PACKETS_SIZE.with_label_values(&[crate::metrics::WRITE_DIRECTION_LABEL]).inc_by(size as f64);
+                                crate::metrics::PACKETS_TOTAL.with_label_values(&[crate::metrics::WRITE_DIRECTION_LABEL]).inc();
                                 Session::process_recv_packet(
                                     &metrics,
                                     &downstream_socket,
                                     &expiration,
                                     ttl,
                                     ReceivedPacketContext {
-                                        filter_chain: filter_chain.clone(),
+                                        config: config.clone(),
                                         packet: &buf[..size],
                                         endpoint: &endpoint,
                                         source: recv_addr.into(),
                                         dest: source.clone(),
-                                        timer: proxy_metrics.write_processing_time_seconds.start_timer(),
+                                        timer: crate::metrics::PROCESSING_TIME.with_label_values(&[crate::metrics::WRITE_DIRECTION_LABEL]).start_timer(),
                                     }).await
                             }
                         };
@@ -219,7 +213,7 @@ impl Session {
     ) {
         let ReceivedPacketContext {
             packet,
-            filter_chain,
+            config,
             endpoint,
             source: from,
             dest,
@@ -232,7 +226,7 @@ impl Session {
             tracing::warn!(%error, "Error updating session expiration")
         }
 
-        match filter_chain.write(WriteContext::new(
+        match config.filters.load().write(WriteContext::new(
             endpoint,
             from,
             dest.clone(),
@@ -258,6 +252,7 @@ impl Session {
                 }
             }
         }
+
         timer.stop_and_record();
     }
 
@@ -345,17 +340,16 @@ mod tests {
         time::{Duration, SystemTime, UNIX_EPOCH},
     };
 
+    use super::{Metrics, Session};
+
     use prometheus::{Histogram, HistogramOpts};
     use tokio::time::timeout;
 
     use crate::{
         endpoint::{Endpoint, EndpointAddress},
-        filters::SharedFilterChain,
         proxy::sessions::session::{ReceivedPacketContext, SessionArgs},
-        test_utils::{create_socket, load_test_filters, new_test_chain, TestHelper},
+        test_utils::{create_socket, new_test_config, TestHelper},
     };
-
-    use super::{Metrics, ProxyMetrics, Session};
 
     #[tokio::test]
     async fn session_send_and_receive() {
@@ -366,9 +360,8 @@ mod tests {
         let msg = "hello";
 
         let sess = Session::new(SessionArgs {
+            config: <_>::default(),
             metrics: Metrics::new().unwrap(),
-            proxy_metrics: ProxyMetrics::new().unwrap(),
-            filter_chain: SharedFilterChain::empty(),
             source: addr.clone(),
             downstream_socket: socket.clone(),
             dest: endpoint,
@@ -399,7 +392,7 @@ mod tests {
 
     #[tokio::test]
     async fn process_recv_packet() {
-        load_test_filters();
+        crate::test_utils::load_test_filters();
         let histogram = Histogram::with_opts(HistogramOpts::new("test", "test")).unwrap();
 
         let socket = Arc::new(create_socket().await);
@@ -421,8 +414,8 @@ mod tests {
             &expiration,
             Duration::from_secs(10),
             ReceivedPacketContext {
+                config: <_>::default(),
                 packet: msg.as_bytes(),
-                filter_chain: SharedFilterChain::empty(),
                 endpoint: &endpoint,
                 source: endpoint.address.clone(),
                 dest: dest.clone(),
@@ -449,14 +442,14 @@ mod tests {
         ));
         let initial_expiration = expiration.load(Ordering::Relaxed);
         // add filter
-        let filter_chain = new_test_chain();
+        let config = Arc::new(new_test_config());
         Session::process_recv_packet(
             &Metrics::new().unwrap(),
             &socket,
             &expiration,
             Duration::from_secs(10),
             ReceivedPacketContext {
-                filter_chain,
+                config,
                 packet: msg.as_bytes(),
                 endpoint: &endpoint,
                 source: endpoint.address.clone(),
@@ -487,9 +480,8 @@ mod tests {
         let socket = Arc::new(create_socket().await);
 
         let session = Session::new(SessionArgs {
+            config: <_>::default(),
             metrics: Metrics::new().unwrap(),
-            proxy_metrics: ProxyMetrics::new().unwrap(),
-            filter_chain: SharedFilterChain::empty(),
             source: addr,
             downstream_socket: socket,
             dest: endpoint,

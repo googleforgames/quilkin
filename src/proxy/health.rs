@@ -21,6 +21,7 @@ use std::panic;
 use std::sync::atomic::Ordering::Relaxed;
 use std::sync::Arc;
 
+#[derive(Clone)]
 pub struct Health {
     healthy: Arc<AtomicBool>,
 }

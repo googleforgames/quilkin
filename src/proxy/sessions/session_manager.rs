@@ -116,12 +116,8 @@ mod tests {
 
     use crate::{
         endpoint::{Endpoint, EndpointAddress},
-        filters::SharedFilterChain,
-        proxy::{
-            server::metrics::Metrics as ProxyMetrics,
-            sessions::{
-                metrics::Metrics, session::SessionArgs, session_manager::Sessions, SessionKey,
-            },
+        proxy::sessions::{
+            metrics::Metrics, session::SessionArgs, session_manager::Sessions, SessionKey,
         },
         test_utils::create_socket,
     };
@@ -158,8 +154,7 @@ mod tests {
             let mut sessions = sessions.write().await;
             let session_args = SessionArgs {
                 metrics: Metrics::new().unwrap(),
-                proxy_metrics: ProxyMetrics::new().unwrap(),
-                filter_chain: SharedFilterChain::empty(),
+                config: <_>::default(),
                 source: from,
                 downstream_socket: socket,
                 dest: endpoint.clone(),
@@ -212,8 +207,7 @@ mod tests {
             let mut sessions = sessions.write().await;
             let session_args = SessionArgs {
                 metrics: Metrics::new().unwrap(),
-                proxy_metrics: ProxyMetrics::new().unwrap(),
-                filter_chain: SharedFilterChain::empty(),
+                config: <_>::default(),
                 source: from,
                 downstream_socket: socket,
                 dest: endpoint.clone(),

@@ -35,15 +35,15 @@ policy: ROUND_ROBIN
 ";
     let selected_endpoint = Arc::new(Mutex::new(None::<SocketAddr>));
 
-    let mut echo_addresses = vec![];
+    let mut echo_addresses = std::collections::BTreeSet::new();
     for _ in 0..2 {
         let selected_endpoint = selected_endpoint.clone();
-        echo_addresses.push(
+        echo_addresses.insert(
             t.run_echo_server_with_tap(move |_, _, echo_addr| {
                 let _ = selected_endpoint.lock().unwrap().replace(echo_addr);
             })
             .await,
-        )
+        );
     }
 
     let server_port = 12346;
@@ -53,7 +53,13 @@ policy: ROUND_ROBIN
             name: LoadBalancer::factory().name().into(),
             config: serde_yaml::from_str(yaml).unwrap(),
         }])
-        .endpoints(echo_addresses.iter().cloned().map(Endpoint::new).collect())
+        .endpoints(
+            echo_addresses
+                .iter()
+                .cloned()
+                .map(Endpoint::new)
+                .collect::<Vec<_>>(),
+        )
         .build()
         .unwrap();
     t.run_server_with_config(server_config);

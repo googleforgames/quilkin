@@ -15,7 +15,10 @@
 #
 
 [advisories]
-ignore = []
+ignore = [
+    # time 0.1 vulnerability, we don't use any affected APIs
+    "RUSTSEC-2020-0071"
+]
 
 # This section is considered when running `cargo deny check licenses`
 # More documentation for the licenses section can be found here:
@@ -27,4 +30,11 @@ default = "allow"
 exceptions = [
     # Each entry is the crate and version constraint, and its specific allow
     # list
+]
+
+[[licenses.clarify]]
+name = "ring"
+expression = "MIT AND ISC AND OpenSSL"
+license-files = [
+    { path = "LICENSE", hash = 0xbd0eed23 }
 ]

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Google LLC
+ * Copyright 2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ use prometheus::{
     IntGauge, Result as MetricsResult,
 };
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(super) struct Metrics {
     pub active_clusters: GenericGauge<AtomicI64>,
     pub active_endpoints: GenericGauge<AtomicI64>,
@@ -43,5 +43,11 @@ impl Metrics {
             ))?
             .register_if_not_exists()?,
         })
+    }
+}
+
+impl Default for Metrics {
+    fn default() -> Self {
+        Self::new().unwrap()
     }
 }

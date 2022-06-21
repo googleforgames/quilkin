@@ -217,11 +217,7 @@ mod tests {
     use tokio::time;
 
     use super::*;
-    use crate::{
-        config::ConfigType,
-        endpoint::{Endpoint, Endpoints},
-        test_utils::assert_write_no_change,
-    };
+    use crate::{config::ConfigType, test_utils::assert_write_no_change};
 
     fn rate_limiter(config: Config) -> LocalRateLimit {
         LocalRateLimit::new(config, Metrics::new().unwrap()).unwrap()
@@ -236,9 +232,11 @@ mod tests {
 
     /// Send a packet to the filter and assert whether or not it was processed.
     fn read(r: &LocalRateLimit, address: &EndpointAddress, should_succeed: bool) {
-        let endpoints = Endpoints::new(vec![Endpoint::new((Ipv4Addr::LOCALHOST, 8089).into())]);
+        let endpoints = vec![crate::endpoint::Endpoint::new(
+            (Ipv4Addr::LOCALHOST, 8089).into(),
+        )];
 
-        let result = r.read(ReadContext::new(endpoints.into(), address.clone(), vec![9]));
+        let result = r.read(ReadContext::new(endpoints, address.clone(), vec![9]));
 
         if should_succeed {
             assert_eq!(result.unwrap().contents, vec![9]);
