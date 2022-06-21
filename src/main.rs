@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 
 use tracing::info;
 
@@ -59,6 +59,32 @@ enum Commands {
         )]
         filter_ids: Vec<String>,
     },
+    Manage {
+        #[clap(subcommand)]
+        provider: ProviderCommands,
+    },
+}
+
+#[derive(clap::Subcommand)]
+enum ProviderCommands {
+    Agones {
+        #[clap(
+            short,
+            long,
+            default_value = "quilkin",
+            help = "Namespace under which the proxies run."
+        )]
+        config_namespace: String,
+        #[clap(
+            short,
+            long,
+            default_value = "gameservers",
+            help = "Namespace under which the game servers run."
+        )]
+        gameservers_namespace: String,
+    },
+
+    File,
 }
 
 #[tokio::main]
@@ -73,24 +99,55 @@ async fn main() -> quilkin::Result<()> {
     let cli = <Cli as clap::Parser>::parse();
 
     if !cli.quiet {
-        tracing_subscriber::fmt().json().with_target(false).init();
+        let env_filter = tracing_subscriber::EnvFilter::builder()
+            .with_default_directive(tracing_subscriber::filter::LevelFilter::INFO.into())
+            .from_env_lossy();
+        tracing_subscriber::fmt()
+            .json()
+            .with_env_filter(env_filter)
+            .init();
     }
 
-    info!(version = &*version, "Starting Quilkin");
-    match cli.command {
-        Commands::Run => {
-            let config = std::fs::File::open(cli.config)
-                .or_else(|error| {
-                    if cfg!(unix) {
-                        std::fs::File::open("/etc/quilkin/quilkin.yaml")
-                    } else {
-                        Err(error)
-                    }
-                })
-                .map_err(eyre::Error::from)
-                .and_then(|file| quilkin::Config::from_reader(file).map_err(From::from))?;
+    let config = std::fs::File::open(&cli.config)
+        .or_else(|error| {
+            if cfg!(unix) {
+                std::fs::File::open("/etc/quilkin/quilkin.yaml")
+            } else {
+                Err(error)
+            }
+        })
+        .map_err(eyre::Error::from)
+        .and_then(|file| quilkin::Config::from_reader(file).map_err(From::from))
+        .unwrap();
 
-            quilkin::run(config, vec![]).await
+    info!(
+        version = &*version,
+        commit = quilkin::metadata::build::GIT_COMMIT_HASH,
+        "Starting Quilkin"
+    );
+
+    match cli.command {
+        Commands::Run => quilkin::run(config, vec![]).await,
+        Commands::Manage { provider } => {
+            let config = Arc::new(config);
+            let provider_task = match provider {
+                ProviderCommands::Agones {
+                    gameservers_namespace,
+                    config_namespace,
+                } => tokio::spawn(quilkin::config::watch::agones(
+                    gameservers_namespace,
+                    config_namespace,
+                    config.clone(),
+                )),
+                ProviderCommands::File => {
+                    tokio::spawn(quilkin::config::watch::fs(config.clone(), cli.config))
+                }
+            };
+
+            tokio::select! {
+                result = quilkin::manage(config) => result,
+                result = provider_task => result?,
+            }
         }
 
         Commands::GenerateConfigSchema {

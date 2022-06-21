@@ -17,7 +17,7 @@
 #[cfg(doc)]
 use crate::filters::Filter;
 use crate::{
-    endpoint::{EndpointAddress, UpstreamEndpoints},
+    endpoint::{Endpoint, EndpointAddress},
     metadata::DynamicMetadata,
 };
 
@@ -25,7 +25,7 @@ use crate::{
 #[non_exhaustive]
 pub struct ReadContext {
     /// The upstream endpoints that the packet will be forwarded to.
-    pub endpoints: UpstreamEndpoints,
+    pub endpoints: Vec<Endpoint>,
     /// The source of the received packet.
     pub source: EndpointAddress,
     /// Contents of the received packet.
@@ -36,7 +36,7 @@ pub struct ReadContext {
 
 impl ReadContext {
     /// Creates a new [`ReadContext`].
-    pub fn new(endpoints: UpstreamEndpoints, source: EndpointAddress, contents: Vec<u8>) -> Self {
+    pub fn new(endpoints: Vec<Endpoint>, source: EndpointAddress, contents: Vec<u8>) -> Self {
         Self {
             endpoints,
             source,
@@ -80,7 +80,7 @@ impl From<ReadContext> for ReadResponse {
 #[non_exhaustive]
 pub struct ReadResponse {
     /// The upstream endpoints that the packet should be forwarded to.
-    pub endpoints: UpstreamEndpoints,
+    pub endpoints: Vec<Endpoint>,
     /// Contents of the packet to be forwarded.
     pub contents: Vec<u8>,
     /// Arbitrary values that can be passed from one filter to another

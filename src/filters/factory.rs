@@ -25,17 +25,18 @@ use crate::{
 pub type DynFilterFactory = Box<dyn FilterFactory>;
 
 /// The value returned by [`FilterFactory::create_filter`].
+#[derive(Clone)]
 #[non_exhaustive]
 pub struct FilterInstance {
     /// The configuration used to create the filter.
     pub config: Arc<serde_json::Value>,
     /// The created filter.
-    pub filter: Box<dyn Filter>,
+    pub filter: Arc<dyn Filter>,
 }
 
 impl FilterInstance {
     /// Constructs a [`FilterInstance`].
-    pub fn new(config: serde_json::Value, filter: Box<dyn Filter>) -> FilterInstance {
+    pub fn new(config: serde_json::Value, filter: Arc<dyn Filter>) -> FilterInstance {
         FilterInstance {
             config: Arc::new(config),
             filter,
@@ -104,7 +105,7 @@ where
 
         Ok(FilterInstance::new(
             config_json,
-            Box::from(F::try_from_config(config)?) as Box<dyn Filter>,
+            Arc::from(F::try_from_config(config)?),
         ))
     }
 

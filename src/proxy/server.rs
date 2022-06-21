@@ -14,36 +14,29 @@
  * limitations under the License.
  */
 
-use std::net::{Ipv4Addr, SocketAddrV4};
-use std::sync::Arc;
+use std::{
+    net::{Ipv4Addr, SocketAddrV4},
+    sync::Arc,
+};
 
 use prometheus::HistogramTimer;
 use tokio::{net::UdpSocket, sync::watch, time::Duration};
 
-use metrics::Metrics as ProxyMetrics;
-
 use crate::{
-    cluster::SharedCluster,
-    config::Config,
     endpoint::{Endpoint, EndpointAddress},
-    filters::{Filter, ReadContext, SharedFilterChain},
-    proxy::{
-        sessions::{
-            metrics::Metrics as SessionMetrics, session_manager::SessionManager, Session,
-            SessionArgs, SessionKey, SESSION_TIMEOUT_SECONDS,
-        },
-        Admin,
+    filters::{Filter, ReadContext},
+    proxy::sessions::{
+        metrics::Metrics as SessionMetrics, session_manager::SessionManager, Session, SessionArgs,
+        SessionKey, SESSION_TIMEOUT_SECONDS,
     },
     utils::{debug, net},
-    Result,
+    xds::ResourceType,
+    Config, Result,
 };
-
-pub(super) mod metrics;
 
 /// Server is the UDP server main implementation
 pub struct Server {
     config: Arc<Config>,
-    proxy_metrics: ProxyMetrics,
     session_metrics: SessionMetrics,
 }
 
@@ -52,7 +45,6 @@ impl TryFrom<Config> for Server {
     fn try_from(config: Config) -> Result<Self, Self::Error> {
         Ok(Self {
             config: Arc::from(config),
-            proxy_metrics: ProxyMetrics::new()?,
             session_metrics: SessionMetrics::new()?,
         })
     }
@@ -60,8 +52,6 @@ impl TryFrom<Config> for Server {
 
 /// Represents arguments to the `Server::run_recv_from` method.
 struct RunRecvFromArgs {
-    cluster: SharedCluster,
-    filter_chain: SharedFilterChain,
     session_manager: SessionManager,
     session_ttl: Duration,
     shutdown_rx: watch::Receiver<()>,
@@ -91,10 +81,8 @@ struct DownstreamReceiveWorkerConfig {
 /// Contains arguments to process a received downstream packet, through the
 /// filter chain and session pipeline.
 struct ProcessDownstreamReceiveConfig {
-    proxy_metrics: ProxyMetrics,
+    config: Arc<Config>,
     session_metrics: SessionMetrics,
-    cluster: SharedCluster,
-    filter_chain: SharedFilterChain,
     session_manager: SessionManager,
     session_ttl: Duration,
     socket: Arc<UdpSocket>,
@@ -109,25 +97,30 @@ impl Server {
     /// start the async processing of incoming UDP packets. Will block until an
     /// event is sent through the stop Receiver.
     pub async fn run(self, mut shutdown_rx: watch::Receiver<()>) -> Result<()> {
-        tracing::info!(
-            port = self.config.proxy.port,
-            proxy_id = &*self.config.proxy.id,
-            "Starting"
-        );
+        let proxy = self.config.proxy.load();
+
+        tracing::info!(port = proxy.port, proxy_id = &*proxy.id, "Starting");
 
         let session_manager = SessionManager::new(shutdown_rx.clone());
         let session_ttl = Duration::from_secs(SESSION_TIMEOUT_SECONDS);
 
-        let (cluster, filter_chain) = self.create_resource_managers(shutdown_rx.clone())?;
+        let management_servers = self.config.management_servers.load();
+        let _xds_stream = if !management_servers.is_empty() {
+            let client = crate::xds::Client::connect(self.config.clone()).await?;
+            let mut stream = client.stream().await?;
 
-        if let Some(admin) = self.config.admin.clone() {
-            let admin = Admin::from(admin);
-            admin.run(cluster.clone(), filter_chain.clone(), shutdown_rx.clone());
+            stream.send(ResourceType::Endpoint, &[]).await?;
+            stream.send(ResourceType::Listener, &[]).await?;
+            Some(stream)
+        } else {
+            None
+        };
+
+        if self.config.admin.is_some() {
+            tokio::spawn(crate::admin::server(self.config.clone()));
         }
 
         self.run_recv_from(RunRecvFromArgs {
-            cluster,
-            filter_chain,
             session_manager,
             session_ttl,
             shutdown_rx: shutdown_rx.clone(),
@@ -141,36 +134,13 @@ impl Server {
             .map_err(|error| eyre::eyre!(error))
     }
 
-    fn create_resource_managers(
-        &self,
-        shutdown_rx: watch::Receiver<()>,
-    ) -> Result<(SharedCluster, SharedFilterChain)> {
-        let cluster = SharedCluster::new_static_cluster(self.config.endpoints.load().to_vec())?;
-        let filter_chain = SharedFilterChain::try_from(&***self.config.filters.load())?;
-
-        let management_servers = self.config.management_servers.load_full();
-
-        if !management_servers.is_empty() {
-            let client = crate::xds::AdsClient::new()?;
-
-            tokio::spawn(client.run(
-                self.config.proxy.id.clone(),
-                cluster.clone(),
-                management_servers,
-                filter_chain.clone(),
-                shutdown_rx,
-            ));
-        }
-
-        Ok((cluster, filter_chain))
-    }
-
-    /// Spawns sockets with a reused port with an accompanying set of worker tasks responsible
-    /// for consuming packets off that socket, processing them through the filter chain and
-    /// sending the packet upstream.
+    /// Spawns a background task that sits in a loop, receiving packets from the passed in socket.
+    /// Each received packet is placed on a queue to be processed by a worker task.
+    /// This function also spawns the set of worker tasks responsible for consuming packets
+    /// off the aforementioned queue and processing them through the filter chain and session
+    /// pipeline.
     async fn run_recv_from(&self, args: RunRecvFromArgs) -> Result<()> {
         let session_manager = args.session_manager;
-        let proxy_metrics = self.proxy_metrics.clone();
         let session_metrics = self.session_metrics.clone();
 
         // The number of worker tasks to spawn. Each task gets a dedicated queue to
@@ -180,16 +150,14 @@ impl Server {
         // Contains config for each worker task.
         let mut worker_configs = vec![];
         for worker_id in 0..num_workers {
-            let socket = Arc::new(self.bind().await?);
+            let socket = Arc::new(self.bind(self.config.proxy.load().port)?);
             worker_configs.push(DownstreamReceiveWorkerConfig {
                 worker_id,
                 socket: socket.clone(),
                 shutdown_rx: args.shutdown_rx.clone(),
                 receive_config: ProcessDownstreamReceiveConfig {
-                    proxy_metrics: proxy_metrics.clone(),
+                    config: self.config.clone(),
                     session_metrics: session_metrics.clone(),
-                    cluster: args.cluster.clone(),
-                    filter_chain: args.filter_chain.clone(),
                     session_manager: session_manager.clone(),
                     session_ttl: args.session_ttl,
                     socket,
@@ -226,7 +194,7 @@ impl Server {
                     );
                     tokio::select! {
                         recv = socket.recv_from(&mut buf) => {
-                            let timer = receive_config.proxy_metrics.read_processing_time_seconds.start_timer();
+                            let timer = crate::metrics::PROCESSING_TIME.with_label_values(&[crate::metrics::READ_DIRECTION_LABEL]).start_timer();
                             match recv {
                                 Ok((size, source)) => {
                                     tracing::debug!(id = worker_id, size = size, source = %source, "Received packet");
@@ -264,15 +232,20 @@ impl Server {
             "Packet Received"
         );
 
-        let endpoints = match args.cluster.endpoints() {
-            Some(endpoints) => endpoints,
-            None => {
-                args.proxy_metrics.packets_dropped_no_endpoints.inc();
-                return;
-            }
-        };
+        let clusters = args.config.clusters.load();
 
-        let result = args.filter_chain.read(ReadContext::new(
+        tracing::trace!(?clusters, "Clusters available");
+
+        let endpoints: Vec<_> = clusters.endpoints().collect();
+        if endpoints.is_empty() {
+            tracing::trace!("dropping packet, no upstream endpoints available");
+            crate::metrics::PACKETS_DROPPED
+                .with_label_values(&[crate::metrics::READ_DIRECTION_LABEL, "NoEndpointsAvailable"])
+                .inc();
+            return;
+        }
+
+        let result = args.config.filters.load().read(ReadContext::new(
             endpoints,
             packet.source.clone(),
             packet.contents,
@@ -289,10 +262,12 @@ impl Server {
                 .await;
             }
         }
+
         packet.timer.stop_and_record();
     }
 
     /// Send a packet received from `recv_addr` to an endpoint.
+    #[tracing::instrument(skip_all, fields(source = %recv_addr, dest = %endpoint.address))]
     async fn session_send_packet(
         packet: &[u8],
         recv_addr: EndpointAddress,
@@ -324,15 +299,16 @@ impl Server {
             // managed to create the session in-between our dropping the read
             // lock and grabbing the write lock.
             if let Some(session) = guard.get(&session_key) {
+                tracing::trace!("Reusing previous session");
                 // If the session now exists then we have less work to do,
                 // simply send the packet.
                 Self::session_send_packet_helper(session, packet, args.session_ttl).await;
             } else {
+                tracing::trace!("Creating new session");
                 // Otherwise, create the session and insert into the map.
                 let session_args = SessionArgs {
+                    config: args.config.clone(),
                     metrics: args.session_metrics.clone(),
-                    proxy_metrics: args.proxy_metrics.clone(),
-                    filter_chain: args.filter_chain.clone(),
                     source: session_key.source.clone(),
                     downstream_socket: args.socket.clone(),
                     dest: endpoint.clone(),
@@ -381,31 +357,23 @@ impl Server {
     }
 
     /// binds the local configured port with port and address reuse applied.
-    async fn bind(&self) -> Result<UdpSocket> {
-        let addr = SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, self.config.proxy.port);
+    fn bind(&self, port: u16) -> Result<UdpSocket> {
+        let addr = SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, port);
         net::socket_with_reuse(addr.into())
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     use tokio::time::{timeout, Duration};
 
     use crate::{
-        cluster::SharedCluster,
         config,
         endpoint::Endpoint,
-        filters::SharedFilterChain,
-        proxy::{
-            server::metrics::Metrics as ProxyMetrics, sessions::metrics::Metrics as SessionMetrics,
-        },
-        test_utils::{
-            available_addr, config_with_dummy_endpoint, create_socket, load_test_filters,
-            TestHelper,
-        },
+        test_utils::{available_addr, create_socket, load_test_filters, TestHelper},
     };
-
-    use super::*;
 
     #[tokio::test]
     async fn run_server() {
@@ -529,13 +497,13 @@ mod tests {
             worker_id: 1,
             socket: socket.clone(),
             receive_config: ProcessDownstreamReceiveConfig {
-                proxy_metrics: ProxyMetrics::new().unwrap(),
+                config: Arc::new(
+                    Config::builder()
+                        .endpoints(&[endpoint.socket.local_addr().unwrap().into()][..])
+                        .build()
+                        .unwrap(),
+                ),
                 session_metrics: SessionMetrics::new().unwrap(),
-                cluster: SharedCluster::new_static_cluster(vec![Endpoint::new(
-                    endpoint.socket.local_addr().unwrap().into(),
-                )])
-                .unwrap(),
-                filter_chain: SharedFilterChain::empty(),
                 session_manager: SessionManager::new(shutdown_rx.clone()),
                 session_ttl: Duration::from_secs(10),
                 socket,
@@ -566,18 +534,15 @@ mod tests {
         let endpoint = t.open_socket_and_recv_single_packet().await;
         let session_manager = SessionManager::new(shutdown_rx.clone());
         let local_addr = available_addr().await;
-        let mut config = config_with_dummy_endpoint().build().unwrap();
-        config.proxy.port = local_addr.port();
-
+        let config = Config::builder()
+            .port(local_addr.port())
+            .endpoints(&[Endpoint::from(endpoint.socket.local_addr().unwrap())][..])
+            .build()
+            .unwrap();
         let server = Server::try_from(config).unwrap();
 
         server
             .run_recv_from(RunRecvFromArgs {
-                cluster: SharedCluster::new_static_cluster(vec![Endpoint::new(
-                    endpoint.socket.local_addr().unwrap().into(),
-                )])
-                .unwrap(),
-                filter_chain: SharedFilterChain::empty(),
                 session_manager: session_manager.clone(),
                 session_ttl: Duration::from_secs(10),
                 shutdown_rx,

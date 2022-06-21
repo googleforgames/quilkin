@@ -15,5 +15,8 @@
 #
 
 version: v1alpha1
-endpoints:
-  - address: 127.0.0.1:0
+clusters:
+  default:
+    localities:
+      - endpoints:
+          - address: 127.0.0.1:0

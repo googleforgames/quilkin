@@ -40,18 +40,18 @@ suffix:
 on_read:
     metadataKey: quilkin.dev/capture
     fallthrough:
-        id: quilkin.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
+        name: quilkin.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
         config:
             on_read: APPEND
             bytes: ZGVm
     branches:
         - value: abc
-          id: quilkin.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
+          name: quilkin.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
           config:
             on_read: APPEND
             bytes: eHl6 # xyz
         - value: xyz
-          id: quilkin.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
+          name: quilkin.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
           config:
             on_read: APPEND
             bytes: YWJj # abc

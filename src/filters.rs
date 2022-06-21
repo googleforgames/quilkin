@@ -68,7 +68,7 @@ pub use self::{
     write::{WriteContext, WriteResponse},
 };
 
-pub(crate) use self::chain::{FilterChain, SharedFilterChain};
+pub(crate) use self::chain::FilterChain;
 
 /// Statically safe version of [`Filter`], if you're writing a Rust filter, you
 /// should implement [`StaticFilter`] in addition to [`Filter`], as
@@ -152,6 +152,18 @@ where
         config: Option<Self::Configuration>,
     ) -> Result<Self::Configuration, Error> {
         config.ok_or(Error::MissingConfig(Self::NAME))
+    }
+
+    fn as_filter_config(
+        config: impl Into<Option<Self::Configuration>>,
+    ) -> Result<crate::config::Filter, Error> {
+        Ok(crate::config::Filter {
+            name: Self::NAME.into(),
+            config: config
+                .into()
+                .map(|config| serde_json::to_value(&config))
+                .transpose()?,
+        })
     }
 }
 

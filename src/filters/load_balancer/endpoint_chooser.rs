@@ -47,10 +47,8 @@ impl RoundRobinEndpointChooser {
 impl EndpointChooser for RoundRobinEndpointChooser {
     fn choose_endpoints(&self, ctx: &mut ReadContext) {
         let count = self.next_endpoint.fetch_add(1, Ordering::Relaxed);
-        // Note: Unwrap is safe here because the index is guaranteed to be in range.
-        let num_endpoints = ctx.endpoints.size();
-        ctx.endpoints.keep(count % num_endpoints)
-            .expect("BUG: unwrap should have been safe because index into endpoints list should be in range");
+        // Note: The index is guaranteed to be in range.
+        ctx.endpoints = vec![ctx.endpoints[count % ctx.endpoints.len()].clone()];
     }
 }
 
@@ -59,10 +57,9 @@ pub struct RandomEndpointChooser;
 
 impl EndpointChooser for RandomEndpointChooser {
     fn choose_endpoints(&self, ctx: &mut ReadContext) {
-        // Note: Unwrap is safe here because the index is guaranteed to be in range.
-        let idx = (&mut thread_rng()).gen_range(0..ctx.endpoints.size());
-        ctx.endpoints.keep(idx)
-            .expect("BUG: unwrap should have been safe because index into endpoints list should be in range");
+        // The index is guaranteed to be in range.
+        let index = (&mut thread_rng()).gen_range(0..ctx.endpoints.len());
+        ctx.endpoints = vec![ctx.endpoints[index].clone()];
     }
 }
 
@@ -71,10 +68,8 @@ pub struct HashEndpointChooser;
 
 impl EndpointChooser for HashEndpointChooser {
     fn choose_endpoints(&self, ctx: &mut ReadContext) {
-        let num_endpoints = ctx.endpoints.size();
         let mut hasher = DefaultHasher::new();
         ctx.source.hash(&mut hasher);
-        ctx.endpoints.keep(hasher.finish() as usize % num_endpoints)
-            .expect("BUG: unwrap should have been safe because index into endpoints list should be in range");
+        ctx.endpoints = vec![ctx.endpoints[hasher.finish() as usize % ctx.endpoints.len()].clone()];
     }
 }

@@ -60,7 +60,7 @@ mod tests {
     use std::{collections::HashSet, net::Ipv4Addr};
 
     use super::*;
-    use crate::endpoint::{Endpoint, EndpointAddress, Endpoints};
+    use crate::endpoint::{Endpoint, EndpointAddress};
 
     fn get_response_addresses(
         filter: &dyn Filter,
@@ -69,7 +69,7 @@ mod tests {
     ) -> Vec<EndpointAddress> {
         filter
             .read(ReadContext::new(
-                Endpoints::new(input_addresses.iter().cloned().map(Endpoint::new).collect()).into(),
+                input_addresses.iter().cloned().map(Endpoint::new).collect(),
                 source,
                 vec![],
             ))

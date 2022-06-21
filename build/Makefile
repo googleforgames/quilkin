@@ -102,7 +102,7 @@ test-docs: ensure-build-image
 build: binary-archive build-image
 
 # Build all debug and release binaries
-build-all-binaries: ensure-build-image build-linux-binary build-windows-binary build-macos-binary
+build-all-binaries: ensure-build-image build-linux-binary build-macos-binary
 
 # Build an archive all debug and release binaries
 binary-archive: ensure-build-image build-all-binaries
@@ -127,8 +127,9 @@ build-windows-binary: ensure-build-image
 build-macos-binary:
 	docker run --rm -v $(project_path):/workspace -w /workspace \
 		-v $(CARGO_HOME)/registry:/root/.cargo/registry \
-		joseluisq/rust-linux-darwin-builder:$(rust_toolchain) \
-			sh -c "rustup target add x86_64-apple-darwin && cargo build --target x86_64-apple-darwin && cargo build --release --target x86_64-apple-darwin"
+		-e "CC=o64-clang" -e "CXX=o64-clang++" \
+        joseluisq/rust-linux-darwin-builder:$(rust_toolchain) \
+        	sh -c "rustup target add x86_64-apple-darwin && cargo build --target x86_64-apple-darwin && cargo build --release --target x86_64-apple-darwin"
 
 # Build release and debug container images.
 # Use either `REPOSITORY` to specify a container repository (defaults to blank/none), or use `IMAGE_TAG` argument to specify

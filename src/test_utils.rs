@@ -28,8 +28,9 @@ use tokio::{
 };
 
 use crate::{
+    cluster::Cluster,
     config::{Builder as ConfigBuilder, Config},
-    endpoint::{Endpoint, EndpointAddress, Endpoints},
+    endpoint::{Endpoint, EndpointAddress, LocalityEndpoints},
     filters::{prelude::*, FilterRegistry},
     metadata::Value,
 };
@@ -218,8 +219,8 @@ impl TestHelper {
     /// Run a proxy server with a supplied config.
     /// Admin is disabled for this method, as the majority of tests will not need it, and it makes it
     /// easier to avoid issues with port collisions.
-    pub fn run_server_with_config(&mut self, mut config: Config) {
-        config.admin = None;
+    pub fn run_server_with_config(&mut self, config: Config) {
+        config.admin.remove();
 
         self.run_server(<_>::try_from(config).unwrap());
     }
@@ -257,16 +258,13 @@ where
     let contents = "hello".to_string().into_bytes();
 
     match filter.read(ReadContext::new(
-        Endpoints::new(endpoints.clone()).into(),
+        endpoints.clone(),
         source,
         contents.clone(),
     )) {
         None => unreachable!("should return a result"),
         Some(response) => {
-            assert_eq!(
-                endpoints,
-                response.endpoints.iter().cloned().collect::<Vec<_>>()
-            );
+            assert_eq!(endpoints, response.endpoints);
             assert_eq!(contents, response.contents);
         }
     }
@@ -299,9 +297,18 @@ pub async fn create_socket() -> UdpSocket {
 }
 
 pub fn config_with_dummy_endpoint() -> ConfigBuilder {
-    ConfigBuilder::default().endpoints(vec![Endpoint {
-        address: "127.0.0.1:8080".parse().unwrap(),
-        ..<_>::default()
+    ConfigBuilder::default().clusters([Cluster {
+        name: "default".into(),
+        localities: vec![LocalityEndpoints {
+            locality: None,
+            endpoints: [Endpoint {
+                address: (std::net::Ipv4Addr::LOCALHOST, 8080).into(),
+                ..<_>::default()
+            }]
+            .into(),
+        }]
+        .into_iter()
+        .collect(),
     }])
 }
 /// Creates a dummy endpoint with `id` as a suffix.
@@ -312,12 +319,14 @@ pub fn ep(id: u8) -> Endpoint {
     }
 }
 
-pub fn new_test_chain() -> crate::filters::SharedFilterChain {
-    <_>::try_from([crate::config::Filter {
-        name: "TestFilter".into(),
-        config: None,
-    }])
-    .unwrap()
+pub fn new_test_config() -> crate::Config {
+    crate::Config::builder()
+        .filters(vec![crate::config::Filter {
+            name: "TestFilter".into(),
+            config: None,
+        }])
+        .build()
+        .unwrap()
 }
 
 pub fn load_test_filters() {

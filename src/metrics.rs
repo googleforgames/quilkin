@@ -15,19 +15,21 @@
  */
 
 use once_cell::sync::Lazy;
+use prometheus::{
+    core::Collector, GaugeVec, HistogramOpts, HistogramVec, IntCounterVec, Opts, Registry,
+    DEFAULT_BUCKETS,
+};
 
-use prometheus::core::Collector;
 pub use prometheus::Result;
-use prometheus::{HistogramOpts, Opts, Registry, DEFAULT_BUCKETS};
 
 /// "event" is used as a label for Metrics that can apply to both Filter
 /// `read` and `write` executions.
-pub const EVENT_LABEL: &str = "event";
+pub const DIRECTION_LABEL: &str = "event";
 
-/// Label value for [EVENT_LABEL] for `read` events
-pub const EVENT_READ_LABEL_VALUE: &str = "read";
-/// Label value for [EVENT_LABEL] for `write` events
-pub const EVENT_WRITE_LABEL_VALUE: &str = "write";
+/// Label value for [DIRECTION_LABEL] for `read` events
+pub const READ_DIRECTION_LABEL: &str = "read";
+/// Label value for [DIRECTION_LABEL] for `write` events
+pub const WRITE_DIRECTION_LABEL: &str = "write";
 
 /// Returns the [prometheus::Registry] containing all the metrics
 /// registered in Quilkin.
@@ -36,6 +38,67 @@ pub fn registry() -> &'static Registry {
 
     &*REGISTRY
 }
+
+/// Start the histogram bucket at a quarter of a millisecond, as number below a millisecond are
+/// what we are aiming for, but some granularity below a millisecond is useful for performance
+/// profiling.
+const BUCKET_START: f64 = 0.00025;
+
+const BUCKET_FACTOR: f64 = 2.0;
+
+/// At an exponential factor of 2.0 (BUCKET_FACTOR), 13 iterations gets us to just over 1 second.
+/// Any processing that occurs over a second is far too long, so we end bucketing there as we don't
+/// care about granularity past 1 second.
+const BUCKET_COUNT: usize = 13;
+
+pub(crate) static PROCESSING_TIME: Lazy<HistogramVec> = Lazy::new(|| {
+    prometheus::register_histogram_vec_with_registry! {
+        prometheus::histogram_opts! {
+            "packets_processing_duration_seconds",
+            "Total processing time for a packet",
+            prometheus::exponential_buckets(BUCKET_START, BUCKET_FACTOR, BUCKET_COUNT).unwrap(),
+        },
+        &[DIRECTION_LABEL],
+        registry(),
+    }
+    .unwrap()
+});
+
+pub(crate) static PACKETS_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
+    prometheus::register_int_counter_vec_with_registry! {
+        prometheus::opts! {
+            "packets_total",
+            "Total number of packets",
+        },
+        &[DIRECTION_LABEL],
+        registry(),
+    }
+    .unwrap()
+});
+
+pub(crate) static PACKETS_SIZE: Lazy<GaugeVec> = Lazy::new(|| {
+    prometheus::register_gauge_vec_with_registry! {
+        prometheus::opts! {
+            "packets_size",
+            "The size of a packet",
+        },
+        &[DIRECTION_LABEL],
+        registry(),
+    }
+    .unwrap()
+});
+
+pub(crate) static PACKETS_DROPPED: Lazy<IntCounterVec> = Lazy::new(|| {
+    prometheus::register_int_counter_vec_with_registry! {
+        prometheus::opts! {
+            "packets_dropped",
+            "Total number of dropped packets",
+        },
+        &[DIRECTION_LABEL, "reason"],
+        registry(),
+    }
+    .unwrap()
+});
 
 /// Create a generic metrics options.
 /// Use [filter_opts] instead if the intended target is a filter.

@@ -25,15 +25,13 @@ use std::sync::Arc;
 
 use crate::{filters::prelude::*, metadata::Value};
 
-use self::{
+use self::{metrics::Metrics, quilkin::filters::capture::v1alpha1 as proto};
+
+pub use self::{
     affix::{Prefix, Suffix},
-    metrics::Metrics,
+    config::{Config, Strategy},
     regex::Regex,
 };
-
-use self::quilkin::filters::capture::v1alpha1 as proto;
-
-pub use config::{Config, Strategy};
 
 /// Trait to implement different strategies for capturing packet data.
 pub trait CaptureStrategy {
@@ -69,9 +67,11 @@ impl Filter for Capture {
             .insert(self.is_present_key.clone(), Value::Bool(capture.is_some()));
 
         if let Some(value) = capture {
+            tracing::trace!(key=&**self.metadata_key, value=?value, "captured value");
             ctx.metadata.insert(self.metadata_key.clone(), value);
             Some(ctx.into())
         } else {
+            tracing::trace!(key = &**self.metadata_key, "No value captured");
             None
         }
     }
@@ -95,9 +95,7 @@ mod tests {
     use std::sync::Arc;
 
     use crate::{
-        endpoint::{Endpoint, Endpoints},
-        filters::metadata::CAPTURED_BYTES,
-        metadata::Value,
+        endpoint::Endpoint, filters::metadata::CAPTURED_BYTES, metadata::Value,
         test_utils::assert_write_no_change,
     };
 
@@ -166,7 +164,7 @@ mod tests {
         let filter = Capture::from_config(config.into());
         let endpoints = vec![Endpoint::new("127.0.0.1:81".parse().unwrap())];
         let response = filter.read(ReadContext::new(
-            Endpoints::new(endpoints).into(),
+            endpoints,
             (std::net::Ipv4Addr::LOCALHOST, 80).into(),
             "abc".to_string().into_bytes(),
         ));
@@ -247,7 +245,7 @@ mod tests {
         let endpoints = vec![Endpoint::new("127.0.0.1:81".parse().unwrap())];
         let response = filter
             .read(ReadContext::new(
-                Endpoints::new(endpoints).into(),
+                endpoints,
                 "127.0.0.1:80".parse().unwrap(),
                 "helloabc".to_string().into_bytes(),
             ))
