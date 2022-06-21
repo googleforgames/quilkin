@@ -523,88 +523,6 @@
 <span id="518">518</span>
 <span id="519">519</span>
 <span id="520">520</span>
-<span id="521">521</span>
-<span id="522">522</span>
-<span id="523">523</span>
-<span id="524">524</span>
-<span id="525">525</span>
-<span id="526">526</span>
-<span id="527">527</span>
-<span id="528">528</span>
-<span id="529">529</span>
-<span id="530">530</span>
-<span id="531">531</span>
-<span id="532">532</span>
-<span id="533">533</span>
-<span id="534">534</span>
-<span id="535">535</span>
-<span id="536">536</span>
-<span id="537">537</span>
-<span id="538">538</span>
-<span id="539">539</span>
-<span id="540">540</span>
-<span id="541">541</span>
-<span id="542">542</span>
-<span id="543">543</span>
-<span id="544">544</span>
-<span id="545">545</span>
-<span id="546">546</span>
-<span id="547">547</span>
-<span id="548">548</span>
-<span id="549">549</span>
-<span id="550">550</span>
-<span id="551">551</span>
-<span id="552">552</span>
-<span id="553">553</span>
-<span id="554">554</span>
-<span id="555">555</span>
-<span id="556">556</span>
-<span id="557">557</span>
-<span id="558">558</span>
-<span id="559">559</span>
-<span id="560">560</span>
-<span id="561">561</span>
-<span id="562">562</span>
-<span id="563">563</span>
-<span id="564">564</span>
-<span id="565">565</span>
-<span id="566">566</span>
-<span id="567">567</span>
-<span id="568">568</span>
-<span id="569">569</span>
-<span id="570">570</span>
-<span id="571">571</span>
-<span id="572">572</span>
-<span id="573">573</span>
-<span id="574">574</span>
-<span id="575">575</span>
-<span id="576">576</span>
-<span id="577">577</span>
-<span id="578">578</span>
-<span id="579">579</span>
-<span id="580">580</span>
-<span id="581">581</span>
-<span id="582">582</span>
-<span id="583">583</span>
-<span id="584">584</span>
-<span id="585">585</span>
-<span id="586">586</span>
-<span id="587">587</span>
-<span id="588">588</span>
-<span id="589">589</span>
-<span id="590">590</span>
-<span id="591">591</span>
-<span id="592">592</span>
-<span id="593">593</span>
-<span id="594">594</span>
-<span id="595">595</span>
-<span id="596">596</span>
-<span id="597">597</span>
-<span id="598">598</span>
-<span id="599">599</span>
-<span id="600">600</span>
-<span id="601">601</span>
-<span id="602">602</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -633,7 +551,7 @@
 <span class="kw">use</span> <span class="ident">tokio</span>::{
     <span class="ident">net::UdpSocket</span>,
     <span class="ident">select</span>,
-    <span class="ident">sync</span>::{<span class="ident">mpsc</span>, <span class="ident">watch</span>},
+    <span class="ident">sync::watch</span>,
     <span class="ident">time</span>::{<span class="ident">Duration</span>, <span class="ident">Instant</span>},
 };
 
@@ -656,7 +574,8 @@
     <span class="ident">filter_chain</span>: <span class="ident">SharedFilterChain</span>,
     <span class="doccomment">/// created_at is time at which the session was created</span>
     <span class="ident">created_at</span>: <span class="ident">Instant</span>,
-    <span class="ident">socket</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">UdpSocket</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// socket that sends and receives from and to the endpoint address</span>
+    <span class="ident">upstream_socket</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">UdpSocket</span><span class="op">&gt;</span>,
     <span class="doccomment">/// dest is where to send data to</span>
     <span class="ident">dest</span>: <span class="ident">Endpoint</span>,
     <span class="doccomment">/// address of original sender</span>
@@ -690,43 +609,13 @@
     <span class="ident">timer</span>: <span class="ident">HistogramTimer</span>,
 }
 
-<span class="doccomment">/// Represents a data packet received by an Endpoint to this Session.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">UpstreamPacket</span> {
-    <span class="ident">dest</span>: <span class="ident">EndpointAddress</span>,
-    <span class="ident">contents</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-    <span class="ident">timer</span>: <span class="ident">HistogramTimer</span>,
-}
-
-<span class="kw">impl</span> <span class="ident">UpstreamPacket</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">dest</span>: <span class="ident">EndpointAddress</span>, <span class="ident">contents</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">timer</span>: <span class="ident">HistogramTimer</span>) -&gt; <span class="ident">UpstreamPacket</span> {
-        <span class="ident">UpstreamPacket</span> {
-            <span class="ident">dest</span>,
-            <span class="ident">contents</span>,
-            <span class="ident">timer</span>,
-        }
-    }
-
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">dest</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">EndpointAddress</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">dest</span>
-    }
-
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">contents</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[<span class="ident">u8</span>] {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">contents</span>
-    }
-
-    <span class="doccomment">/// stop and record the stored [HistogramTimer]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">stop_and_record</span>(<span class="self">self</span>) {
-        <span class="self">self</span>.<span class="ident">timer</span>.<span class="ident">stop_and_record</span>();
-    }
-}
-
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SessionArgs</span> {
     <span class="kw">pub</span> <span class="ident">metrics</span>: <span class="ident">Metrics</span>,
     <span class="kw">pub</span> <span class="ident">proxy_metrics</span>: <span class="ident">ProxyMetrics</span>,
     <span class="kw">pub</span> <span class="ident">filter_chain</span>: <span class="ident">SharedFilterChain</span>,
     <span class="kw">pub</span> <span class="ident">source</span>: <span class="ident">EndpointAddress</span>,
+    <span class="kw">pub</span> <span class="ident">downstream_socket</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">UdpSocket</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">dest</span>: <span class="ident">Endpoint</span>,
-    <span class="kw">pub</span> <span class="ident">sender</span>: <span class="ident">mpsc::Sender</span><span class="op">&lt;</span><span class="ident">UpstreamPacket</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">ttl</span>: <span class="ident">Duration</span>,
 }
 
@@ -742,8 +631,8 @@
     <span class="doccomment">/// internal constructor for a Session from SessionArgs</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">args</span>: <span class="ident">SessionArgs</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span> (<span class="ident">std::net::Ipv4Addr::UNSPECIFIED</span>, <span class="number">0</span>);
-        <span class="kw">let</span> <span class="ident">socket</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">UdpSocket::bind</span>(<span class="ident">addr</span>).<span class="kw">await</span>.<span class="ident">map_err</span>(<span class="ident">Error::BindUdpSocket</span>)<span class="question-mark">?</span>);
-        <span class="ident">socket</span>
+        <span class="kw">let</span> <span class="ident">upstream_socket</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">UdpSocket::bind</span>(<span class="ident">addr</span>).<span class="kw">await</span>.<span class="ident">map_err</span>(<span class="ident">Error::BindUdpSocket</span>)<span class="question-mark">?</span>);
+        <span class="ident">upstream_socket</span>
             .<span class="ident">connect</span>(
                 <span class="ident">args</span>.<span class="ident">dest</span>
                     .<span class="ident">address</span>
@@ -761,7 +650,7 @@
             <span class="ident">metrics</span>: <span class="ident">args</span>.<span class="ident">metrics</span>,
             <span class="ident">proxy_metrics</span>: <span class="ident">args</span>.<span class="ident">proxy_metrics</span>,
             <span class="ident">filter_chain</span>: <span class="ident">args</span>.<span class="ident">filter_chain</span>,
-            <span class="ident">socket</span>: <span class="ident">socket</span>.<span class="ident">clone</span>(),
+            <span class="ident">upstream_socket</span>,
             <span class="ident">source</span>: <span class="ident">args</span>.<span class="ident">source</span>,
             <span class="ident">dest</span>: <span class="ident">args</span>.<span class="ident">dest</span>,
             <span class="ident">created_at</span>: <span class="ident">Instant::now</span>(),
@@ -773,16 +662,16 @@
 
         <span class="ident">s</span>.<span class="ident">metrics</span>.<span class="ident">sessions_total</span>.<span class="ident">inc</span>();
         <span class="ident">s</span>.<span class="ident">metrics</span>.<span class="ident">active_sessions</span>.<span class="ident">inc</span>();
-        <span class="ident">s</span>.<span class="ident">run</span>(<span class="ident">args</span>.<span class="ident">ttl</span>, <span class="ident">socket</span>, <span class="ident">args</span>.<span class="ident">sender</span>, <span class="ident">shutdown_rx</span>);
+        <span class="ident">s</span>.<span class="ident">run</span>(<span class="ident">args</span>.<span class="ident">ttl</span>, <span class="ident">args</span>.<span class="ident">downstream_socket</span>, <span class="ident">shutdown_rx</span>);
         <span class="prelude-val">Ok</span>(<span class="ident">s</span>)
     }
 
-    <span class="doccomment">/// run starts processing received udp packets on its UdpSocket</span>
+    <span class="doccomment">/// run starts processing receiving upstream udp packets</span>
+    <span class="doccomment">/// and sending them back downstream</span>
     <span class="kw">fn</span> <span class="ident">run</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">ttl</span>: <span class="ident">Duration</span>,
-        <span class="ident">socket</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">UdpSocket</span><span class="op">&gt;</span>,
-        <span class="kw-2">mut</span> <span class="ident">sender</span>: <span class="ident">mpsc::Sender</span><span class="op">&lt;</span><span class="ident">UpstreamPacket</span><span class="op">&gt;</span>,
+        <span class="ident">downstream_socket</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">UdpSocket</span><span class="op">&gt;</span>,
         <span class="kw-2">mut</span> <span class="ident">shutdown_rx</span>: <span class="ident">watch::Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
     ) {
         <span class="kw">let</span> <span class="ident">source</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">source</span>.<span class="ident">clone</span>();
@@ -791,13 +680,14 @@
         <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">dest</span>.<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">metrics</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">proxy_metrics</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">proxy_metrics</span>.<span class="ident">clone</span>();
+        <span class="kw">let</span> <span class="ident">upstream_socket</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">upstream_socket</span>.<span class="ident">clone</span>();
         <span class="ident">tokio::spawn</span>(<span class="kw">async</span> <span class="kw">move</span> {
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buf</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="number">0</span>; <span class="number">65535</span>];
             <span class="kw">loop</span> {
                 <span class="macro">tracing::debug!</span>(<span class="ident">source</span> <span class="op">=</span> <span class="op">%</span><span class="ident">source</span>, <span class="ident">dest</span> <span class="op">=</span> <span class="question-mark">?</span><span class="ident">endpoint</span>, <span class="string">&quot;Awaiting incoming packet&quot;</span>);
 
                 <span class="macro">select!</span> {
-                    <span class="ident">received</span> <span class="op">=</span> <span class="ident">socket</span>.<span class="ident">recv_from</span>(<span class="kw-2">&amp;mut</span> <span class="ident">buf</span>) =&gt; {
+                    <span class="ident">received</span> <span class="op">=</span> <span class="ident">upstream_socket</span>.<span class="ident">recv_from</span>(<span class="kw-2">&amp;mut</span> <span class="ident">buf</span>) =&gt; {
                         <span class="kw">match</span> <span class="ident">received</span> {
                             <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; {
                                 <span class="ident">metrics</span>.<span class="ident">rx_errors_total</span>.<span class="ident">inc</span>();
@@ -808,7 +698,7 @@
                                 <span class="ident">metrics</span>.<span class="ident">rx_packets_total</span>.<span class="ident">inc</span>();
                                 <span class="ident">Session::process_recv_packet</span>(
                                     <span class="kw-2">&amp;</span><span class="ident">metrics</span>,
-                                    <span class="kw-2">&amp;mut</span> <span class="ident">sender</span>,
+                                    <span class="kw-2">&amp;</span><span class="ident">downstream_socket</span>,
                                     <span class="kw-2">&amp;</span><span class="ident">expiration</span>,
                                     <span class="ident">ttl</span>,
                                     <span class="ident">ReceivedPacketContext</span> {
@@ -847,7 +737,7 @@
     <span class="doccomment">/// process_recv_packet processes a packet that is received by this session.</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_recv_packet</span>(
         <span class="ident">metrics</span>: <span class="kw-2">&amp;</span><span class="ident">Metrics</span>,
-        <span class="ident">sender</span>: <span class="kw-2">&amp;mut</span> <span class="ident">mpsc::Sender</span><span class="op">&lt;</span><span class="ident">UpstreamPacket</span><span class="op">&gt;</span>,
+        <span class="ident">downstream_socket</span>: <span class="kw-2">&amp;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">UdpSocket</span><span class="op">&gt;</span>,
         <span class="ident">expiration</span>: <span class="kw-2">&amp;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">AtomicU64</span><span class="op">&gt;</span>,
         <span class="ident">ttl</span>: <span class="ident">Duration</span>,
         <span class="ident">packet_ctx</span>: <span class="ident">ReceivedPacketContext</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>,
@@ -857,7 +747,7 @@
             <span class="ident">filter_chain</span>,
             <span class="ident">endpoint</span>,
             <span class="ident">source</span>: <span class="ident">from</span>,
-            <span class="ident">dest</span>: <span class="ident">to</span>,
+            <span class="ident">dest</span>,
             <span class="ident">timer</span>,
         } <span class="op">=</span> <span class="ident">packet_ctx</span>;
 
@@ -867,22 +757,33 @@
             <span class="macro">tracing::warn!</span>(<span class="op">%</span><span class="ident">error</span>, <span class="string">&quot;Error updating session expiration&quot;</span>)
         }
 
-        <span class="kw">let</span> <span class="ident">write_result</span>: <span class="ident">futures::future::OptionFuture</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">filter_chain</span>
-            .<span class="ident">write</span>(<span class="ident">WriteContext::new</span>(
-                <span class="ident">endpoint</span>,
-                <span class="ident">from</span>,
-                <span class="ident">to</span>.<span class="ident">clone</span>(),
-                <span class="ident">packet</span>.<span class="ident">to_vec</span>(),
-            ))
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">response</span><span class="op">|</span> <span class="ident">sender</span>.<span class="ident">send</span>(<span class="ident">UpstreamPacket::new</span>(<span class="ident">to</span>, <span class="ident">response</span>.<span class="ident">contents</span>, <span class="ident">timer</span>)))
-            .<span class="ident">into</span>();
+        <span class="kw">match</span> <span class="ident">filter_chain</span>.<span class="ident">write</span>(<span class="ident">WriteContext::new</span>(
+            <span class="ident">endpoint</span>,
+            <span class="ident">from</span>,
+            <span class="ident">dest</span>.<span class="ident">clone</span>(),
+            <span class="ident">packet</span>.<span class="ident">to_vec</span>(),
+        )) {
+            <span class="prelude-val">None</span> =&gt; <span class="ident">metrics</span>.<span class="ident">packets_dropped_total</span>.<span class="ident">inc</span>(),
+            <span class="prelude-val">Some</span>(<span class="ident">response</span>) =&gt; {
+                <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">dest</span>.<span class="ident">to_socket_addr</span>() {
+                    <span class="prelude-val">Ok</span>(<span class="ident">addr</span>) =&gt; <span class="ident">addr</span>,
+                    <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; {
+                        <span class="macro">tracing::error!</span>(<span class="op">%</span><span class="ident">dest</span>, <span class="op">%</span><span class="ident">error</span>, <span class="string">&quot;Error resolving address&quot;</span>);
+                        <span class="ident">metrics</span>.<span class="ident">packets_dropped_total</span>.<span class="ident">inc</span>();
+                        <span class="kw">return</span>;
+                    }
+                };
 
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="prelude-val">Err</span>(<span class="ident">error</span>)) <span class="op">=</span> <span class="ident">write_result</span>.<span class="kw">await</span> {
-            <span class="ident">metrics</span>.<span class="ident">rx_errors_total</span>.<span class="ident">inc</span>();
-            <span class="macro">tracing::error!</span>(<span class="op">%</span><span class="ident">error</span>, <span class="string">&quot;Error sending packet to channel&quot;</span>);
-        } <span class="kw">else</span> {
-            <span class="ident">metrics</span>.<span class="ident">packets_dropped_total</span>.<span class="ident">inc</span>();
+                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">error</span>) <span class="op">=</span> <span class="ident">downstream_socket</span>
+                    .<span class="ident">send_to</span>(<span class="ident">response</span>.<span class="ident">contents</span>.<span class="ident">as_slice</span>(), <span class="ident">addr</span>)
+                    .<span class="kw">await</span>
+                {
+                    <span class="ident">metrics</span>.<span class="ident">rx_errors_total</span>.<span class="ident">inc</span>();
+                    <span class="macro">tracing::error!</span>(<span class="op">%</span><span class="ident">error</span>, <span class="string">&quot;Error sending packet&quot;</span>);
+                }
+            }
         }
+        <span class="ident">timer</span>.<span class="ident">stop_and_record</span>();
     }
 
     <span class="doccomment">/// update_expiration set the increments the expiration value by the session timeout</span>
@@ -936,7 +837,7 @@
     <span class="doccomment">/// Sends `buf` to the session&#39;s destination address. On success, returns</span>
     <span class="doccomment">/// the number of bytes written.</span>
     <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">do_send</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">buf</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="ident"><span class="kw">crate</span>::Result</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">socket</span>
+        <span class="self">self</span>.<span class="ident">upstream_socket</span>
             .<span class="ident">send</span>(<span class="ident">buf</span>)
             .<span class="kw">await</span>
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">eyre::eyre!</span>(<span class="ident">error</span>))
@@ -961,7 +862,6 @@
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span> {
     <span class="kw">use</span> <span class="ident">std</span>::{
-        <span class="ident">net::Ipv4Addr</span>,
         <span class="ident">str::from_utf8</span>,
         <span class="ident">sync</span>::{
             <span class="ident">atomic</span>::{<span class="ident">AtomicU64</span>, <span class="ident">Ordering</span>},
@@ -971,31 +871,32 @@
     };
 
     <span class="kw">use</span> <span class="ident">prometheus</span>::{<span class="ident">Histogram</span>, <span class="ident">HistogramOpts</span>};
-    <span class="kw">use</span> <span class="ident">tokio</span>::{<span class="ident">sync::mpsc</span>, <span class="ident">time::timeout</span>};
+    <span class="kw">use</span> <span class="ident">tokio::time::timeout</span>;
 
     <span class="kw">use</span> <span class="kw">crate</span>::{
         <span class="ident">endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">EndpointAddress</span>},
         <span class="ident">filters::SharedFilterChain</span>,
         <span class="ident">proxy::sessions::session</span>::{<span class="ident">ReceivedPacketContext</span>, <span class="ident">SessionArgs</span>},
-        <span class="ident">test_utils</span>::{<span class="ident">create_socket</span>, <span class="ident">new_test_chain</span>, <span class="ident">TestHelper</span>},
+        <span class="ident">test_utils</span>::{<span class="ident">create_socket</span>, <span class="ident">load_test_filters</span>, <span class="ident">new_test_chain</span>, <span class="ident">TestHelper</span>},
     };
 
-    <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">Metrics</span>, <span class="ident">ProxyMetrics</span>, <span class="ident">Session</span>, <span class="ident">UpstreamPacket</span>};
+    <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">Metrics</span>, <span class="ident">ProxyMetrics</span>, <span class="ident">Session</span>};
 
     <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">session_new</span>() {
-        <span class="kw">let</span> <span class="ident">socket</span> <span class="op">=</span> <span class="ident">create_socket</span>().<span class="kw">await</span>;
-        <span class="kw">let</span> <span class="ident">addr</span>: <span class="ident">EndpointAddress</span> <span class="op">=</span> <span class="ident">socket</span>.<span class="ident">local_addr</span>().<span class="ident">unwrap</span>().<span class="ident">into</span>();
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">session_send_and_receive</span>() {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">t</span> <span class="op">=</span> <span class="ident">TestHelper::default</span>();
+        <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span> <span class="ident">t</span>.<span class="ident">run_echo_server</span>().<span class="kw">await</span>;
         <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="ident">Endpoint::new</span>(<span class="ident">addr</span>.<span class="ident">clone</span>());
-        <span class="kw">let</span> (<span class="ident">send_packet</span>, <span class="kw-2">mut</span> <span class="ident">recv_packet</span>) <span class="op">=</span> <span class="ident">mpsc::channel</span>::<span class="op">&lt;</span><span class="ident">UpstreamPacket</span><span class="op">&gt;</span>(<span class="number">5</span>);
+        <span class="kw">let</span> <span class="ident">socket</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">create_socket</span>().<span class="kw">await</span>);
+        <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="string">&quot;hello&quot;</span>;
 
         <span class="kw">let</span> <span class="ident">sess</span> <span class="op">=</span> <span class="ident">Session::new</span>(<span class="ident">SessionArgs</span> {
             <span class="ident">metrics</span>: <span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>(),
             <span class="ident">proxy_metrics</span>: <span class="ident">ProxyMetrics::new</span>().<span class="ident">unwrap</span>(),
             <span class="ident">filter_chain</span>: <span class="ident">SharedFilterChain::empty</span>(),
             <span class="ident">source</span>: <span class="ident">addr</span>.<span class="ident">clone</span>(),
+            <span class="ident">downstream_socket</span>: <span class="ident">socket</span>.<span class="ident">clone</span>(),
             <span class="ident">dest</span>: <span class="ident">endpoint</span>,
-            <span class="ident">sender</span>: <span class="ident">send_packet</span>,
             <span class="ident">ttl</span>: <span class="ident">Duration::from_secs</span>(<span class="number">20</span>),
         })
         .<span class="kw">await</span>
@@ -1009,57 +910,26 @@
         <span class="kw">let</span> <span class="ident">diff</span> <span class="op">=</span> <span class="ident">initial_expiration_secs</span> <span class="op">-</span> <span class="ident">now_secs</span>;
         <span class="macro">assert!</span>((<span class="number">15</span>..<span class="number">21</span>).<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">diff</span>));
 
-        <span class="comment">// echo the packet back again</span>
-        <span class="ident">tokio::spawn</span>(<span class="kw">async</span> <span class="kw">move</span> {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buf</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="number">0</span>; <span class="number">1024</span>];
-            <span class="kw">let</span> (<span class="ident">size</span>, <span class="ident">recv_addr</span>) <span class="op">=</span> <span class="ident">socket</span>.<span class="ident">recv_from</span>(<span class="kw-2">&amp;mut</span> <span class="ident">buf</span>).<span class="kw">await</span>.<span class="ident">unwrap</span>();
-            <span class="macro">assert_eq!</span>(<span class="string">&quot;hello&quot;</span>, <span class="ident">from_utf8</span>(<span class="kw-2">&amp;</span><span class="ident">buf</span>[..<span class="ident">size</span>]).<span class="ident">unwrap</span>());
-            <span class="ident">socket</span>.<span class="ident">send_to</span>(<span class="kw-2">&amp;</span><span class="ident">buf</span>[..<span class="ident">size</span>], <span class="kw-2">&amp;</span><span class="ident">recv_addr</span>).<span class="kw">await</span>.<span class="ident">unwrap</span>();
-        });
+        <span class="ident">sess</span>.<span class="ident">send</span>(<span class="ident">msg</span>.<span class="ident">as_bytes</span>()).<span class="kw">await</span>.<span class="ident">unwrap</span>();
 
-        <span class="ident">sess</span>.<span class="ident">send</span>(<span class="string">b&quot;hello&quot;</span>).<span class="kw">await</span>.<span class="ident">unwrap</span>();
-
-        <span class="kw">let</span> <span class="ident">packet</span> <span class="op">=</span> <span class="ident">recv_packet</span>
-            .<span class="ident">recv</span>()
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buf</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="number">0</span>; <span class="number">1024</span>];
+        <span class="kw">let</span> (<span class="ident">size</span>, <span class="ident">recv_addr</span>) <span class="op">=</span> <span class="ident">timeout</span>(<span class="ident">Duration::from_secs</span>(<span class="number">5</span>), <span class="ident">socket</span>.<span class="ident">recv_from</span>(<span class="kw-2">&amp;mut</span> <span class="ident">buf</span>))
             .<span class="kw">await</span>
-            .<span class="ident">expect</span>(<span class="string">&quot;Should receive a packet &#39;hello&#39;&quot;</span>);
-        <span class="macro">assert_eq!</span>(<span class="ident">String::from</span>(<span class="string">&quot;hello&quot;</span>).<span class="ident">into_bytes</span>(), <span class="ident">packet</span>.<span class="ident">contents</span>);
-        <span class="macro">assert_eq!</span>(<span class="ident">addr</span>, <span class="ident">packet</span>.<span class="ident">dest</span>);
-    }
-
-    <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">session_send_to</span>() {
-        <span class="kw">let</span> <span class="ident">t</span> <span class="op">=</span> <span class="ident">TestHelper::default</span>();
-        <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="string">&quot;hello&quot;</span>;
-
-        <span class="comment">// without a filter</span>
-        <span class="kw">let</span> (<span class="ident">sender</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">mpsc::channel</span>::<span class="op">&lt;</span><span class="ident">UpstreamPacket</span><span class="op">&gt;</span>(<span class="number">1</span>);
-        <span class="kw">let</span> <span class="ident">ep</span> <span class="op">=</span> <span class="ident">t</span>.<span class="ident">open_socket_and_recv_single_packet</span>().<span class="kw">await</span>;
-        <span class="kw">let</span> <span class="ident">addr</span>: <span class="ident">EndpointAddress</span> <span class="op">=</span> <span class="ident">ep</span>.<span class="ident">socket</span>.<span class="ident">local_addr</span>().<span class="ident">unwrap</span>().<span class="ident">into</span>();
-        <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="ident">Endpoint::new</span>(<span class="ident">addr</span>.<span class="ident">clone</span>());
-
-        <span class="kw">let</span> <span class="ident">session</span> <span class="op">=</span> <span class="ident">Session::new</span>(<span class="ident">SessionArgs</span> {
-            <span class="ident">metrics</span>: <span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>(),
-            <span class="ident">proxy_metrics</span>: <span class="ident">ProxyMetrics::new</span>().<span class="ident">unwrap</span>(),
-            <span class="ident">filter_chain</span>: <span class="ident">SharedFilterChain::empty</span>(),
-            <span class="ident">source</span>: <span class="ident">addr</span>,
-            <span class="ident">dest</span>: <span class="ident">endpoint</span>.<span class="ident">clone</span>(),
-            <span class="ident">sender</span>,
-            <span class="ident">ttl</span>: <span class="ident">Duration::from_millis</span>(<span class="number">1000</span>),
-        })
-        .<span class="kw">await</span>
-        .<span class="ident">unwrap</span>();
-        <span class="ident">session</span>.<span class="ident">send</span>(<span class="ident">msg</span>.<span class="ident">as_bytes</span>()).<span class="kw">await</span>.<span class="ident">unwrap</span>();
-        <span class="macro">assert_eq!</span>(<span class="ident">msg</span>, <span class="ident">ep</span>.<span class="ident">packet_rx</span>.<span class="kw">await</span>.<span class="ident">unwrap</span>());
+            .<span class="ident">unwrap</span>()
+            .<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="ident">packet</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">buf</span>[..<span class="ident">size</span>];
+        <span class="macro">assert_eq!</span>(<span class="ident">msg</span>, <span class="ident">from_utf8</span>(<span class="ident">packet</span>).<span class="ident">unwrap</span>());
+        <span class="macro">assert_eq!</span>(<span class="ident">addr</span>.<span class="ident">port</span>(), <span class="ident">recv_addr</span>.<span class="ident">port</span>());
     }
 
     <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_recv_packet</span>() {
+        <span class="ident">load_test_filters</span>();
         <span class="kw">let</span> <span class="ident">histogram</span> <span class="op">=</span> <span class="ident">Histogram::with_opts</span>(<span class="ident">HistogramOpts::new</span>(<span class="string">&quot;test&quot;</span>, <span class="string">&quot;test&quot;</span>)).<span class="ident">unwrap</span>();
 
+        <span class="kw">let</span> <span class="ident">socket</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">create_socket</span>().<span class="kw">await</span>);
         <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="ident">Endpoint::new</span>(<span class="string">&quot;127.0.1.1:80&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>());
-        <span class="kw">let</span> <span class="ident">dest</span>: <span class="ident">EndpointAddress</span> <span class="op">=</span> (<span class="ident">Ipv4Addr::LOCALHOST</span>, <span class="number">88</span>).<span class="ident">into</span>();
-        <span class="kw">let</span> (<span class="kw-2">mut</span> <span class="ident">sender</span>, <span class="kw-2">mut</span> <span class="ident">receiver</span>) <span class="op">=</span> <span class="ident">mpsc::channel</span>::<span class="op">&lt;</span><span class="ident">UpstreamPacket</span><span class="op">&gt;</span>(<span class="number">10</span>);
+        <span class="kw">let</span> <span class="ident">dest</span>: <span class="ident">EndpointAddress</span> <span class="op">=</span> <span class="ident">socket</span>.<span class="ident">local_addr</span>().<span class="ident">unwrap</span>().<span class="ident">into</span>();
         <span class="kw">let</span> <span class="ident">expiration</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">AtomicU64::new</span>(
             <span class="ident">SystemTime::now</span>()
                 .<span class="ident">duration_since</span>(<span class="ident">UNIX_EPOCH</span>)
@@ -1072,7 +942,7 @@
         <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="string">&quot;hello&quot;</span>;
         <span class="ident">Session::process_recv_packet</span>(
             <span class="kw-2">&amp;</span><span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>(),
-            <span class="kw-2">&amp;mut</span> <span class="ident">sender</span>,
+            <span class="kw-2">&amp;</span><span class="ident">socket</span>,
             <span class="kw-2">&amp;</span><span class="ident">expiration</span>,
             <span class="ident">Duration::from_secs</span>(<span class="number">10</span>),
             <span class="ident">ReceivedPacketContext</span> {
@@ -1087,12 +957,14 @@
         .<span class="kw">await</span>;
 
         <span class="macro">assert!</span>(<span class="ident">initial_expiration</span> <span class="op">&lt;</span> <span class="ident">expiration</span>.<span class="ident">load</span>(<span class="ident">Ordering::Relaxed</span>));
-        <span class="kw">let</span> <span class="ident">p</span> <span class="op">=</span> <span class="ident">timeout</span>(<span class="ident">Duration::from_secs</span>(<span class="number">5</span>), <span class="ident">receiver</span>.<span class="ident">recv</span>())
+
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buf</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="number">0</span>; <span class="number">1024</span>];
+        <span class="kw">let</span> (<span class="ident">size</span>, <span class="ident">recv_addr</span>) <span class="op">=</span> <span class="ident">timeout</span>(<span class="ident">Duration::from_secs</span>(<span class="number">5</span>), <span class="ident">socket</span>.<span class="ident">recv_from</span>(<span class="kw-2">&amp;mut</span> <span class="ident">buf</span>))
             .<span class="kw">await</span>
             .<span class="ident">expect</span>(<span class="string">&quot;Should receive a packet&quot;</span>)
             .<span class="ident">unwrap</span>();
-        <span class="macro">assert_eq!</span>(<span class="ident">msg</span>, <span class="ident">from_utf8</span>(<span class="ident">p</span>.<span class="ident">contents</span>.<span class="ident">as_slice</span>()).<span class="ident">unwrap</span>());
-        <span class="macro">assert_eq!</span>(<span class="ident">dest</span>, <span class="ident">p</span>.<span class="ident">dest</span>);
+        <span class="macro">assert_eq!</span>(<span class="ident">msg</span>, <span class="ident">from_utf8</span>(<span class="kw-2">&amp;</span><span class="ident">buf</span>[..<span class="ident">size</span>]).<span class="ident">unwrap</span>());
+        <span class="macro">assert_eq!</span>(<span class="ident">dest</span>.<span class="ident">port</span>(), <span class="ident">recv_addr</span>.<span class="ident">port</span>());
 
         <span class="kw">let</span> <span class="ident">expiration</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">AtomicU64::new</span>(
             <span class="ident">SystemTime::now</span>()
@@ -1105,7 +977,7 @@
         <span class="kw">let</span> <span class="ident">filter_chain</span> <span class="op">=</span> <span class="ident">new_test_chain</span>();
         <span class="ident">Session::process_recv_packet</span>(
             <span class="kw-2">&amp;</span><span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>(),
-            <span class="kw-2">&amp;mut</span> <span class="ident">sender</span>,
+            <span class="kw-2">&amp;</span><span class="ident">socket</span>,
             <span class="kw-2">&amp;</span><span class="ident">expiration</span>,
             <span class="ident">Duration::from_secs</span>(<span class="number">10</span>),
             <span class="ident">ReceivedPacketContext</span> {
@@ -1120,32 +992,32 @@
         .<span class="kw">await</span>;
 
         <span class="macro">assert!</span>(<span class="ident">initial_expiration</span> <span class="op">&lt;</span> <span class="ident">expiration</span>.<span class="ident">load</span>(<span class="ident">Ordering::Relaxed</span>));
-        <span class="kw">let</span> <span class="ident">p</span> <span class="op">=</span> <span class="ident">timeout</span>(<span class="ident">Duration::from_secs</span>(<span class="number">5</span>), <span class="ident">receiver</span>.<span class="ident">recv</span>())
+        <span class="kw">let</span> (<span class="ident">size</span>, <span class="ident">recv_addr</span>) <span class="op">=</span> <span class="ident">timeout</span>(<span class="ident">Duration::from_secs</span>(<span class="number">5</span>), <span class="ident">socket</span>.<span class="ident">recv_from</span>(<span class="kw-2">&amp;mut</span> <span class="ident">buf</span>))
             .<span class="kw">await</span>
             .<span class="ident">expect</span>(<span class="string">&quot;Should receive a packet&quot;</span>)
             .<span class="ident">unwrap</span>();
         <span class="macro">assert_eq!</span>(
             <span class="macro">format!</span>(<span class="string">&quot;{}:our:{}:{}&quot;</span>, <span class="ident">msg</span>, <span class="ident">endpoint</span>.<span class="ident">address</span>, <span class="ident">dest</span>),
-            <span class="ident">from_utf8</span>(<span class="ident">p</span>.<span class="ident">contents</span>.<span class="ident">as_slice</span>()).<span class="ident">unwrap</span>()
+            <span class="ident">from_utf8</span>(<span class="kw-2">&amp;</span><span class="ident">buf</span>[..<span class="ident">size</span>]).<span class="ident">unwrap</span>()
         );
-        <span class="macro">assert_eq!</span>(<span class="ident">dest</span>, <span class="ident">p</span>.<span class="ident">dest</span>);
+        <span class="macro">assert_eq!</span>(<span class="ident">dest</span>.<span class="ident">port</span>(), <span class="ident">recv_addr</span>.<span class="ident">port</span>());
     }
 
     <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">session_new_metrics</span>() {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">metrics</span>() {
         <span class="kw">let</span> <span class="ident">t</span> <span class="op">=</span> <span class="ident">TestHelper::default</span>();
         <span class="kw">let</span> <span class="ident">ep</span> <span class="op">=</span> <span class="ident">t</span>.<span class="ident">open_socket_and_recv_single_packet</span>().<span class="kw">await</span>;
         <span class="kw">let</span> <span class="ident">addr</span>: <span class="ident">EndpointAddress</span> <span class="op">=</span> <span class="ident">ep</span>.<span class="ident">socket</span>.<span class="ident">local_addr</span>().<span class="ident">unwrap</span>().<span class="ident">into</span>();
         <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="ident">Endpoint::new</span>(<span class="ident">addr</span>.<span class="ident">clone</span>());
-        <span class="kw">let</span> (<span class="ident">send_packet</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">mpsc::channel</span>::<span class="op">&lt;</span><span class="ident">UpstreamPacket</span><span class="op">&gt;</span>(<span class="number">5</span>);
+        <span class="kw">let</span> <span class="ident">socket</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">create_socket</span>().<span class="kw">await</span>);
 
         <span class="kw">let</span> <span class="ident">session</span> <span class="op">=</span> <span class="ident">Session::new</span>(<span class="ident">SessionArgs</span> {
             <span class="ident">metrics</span>: <span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>(),
             <span class="ident">proxy_metrics</span>: <span class="ident">ProxyMetrics::new</span>().<span class="ident">unwrap</span>(),
             <span class="ident">filter_chain</span>: <span class="ident">SharedFilterChain::empty</span>(),
             <span class="ident">source</span>: <span class="ident">addr</span>,
+            <span class="ident">downstream_socket</span>: <span class="ident">socket</span>,
             <span class="ident">dest</span>: <span class="ident">endpoint</span>,
-            <span class="ident">sender</span>: <span class="ident">send_packet</span>,
             <span class="ident">ttl</span>: <span class="ident">Duration::from_secs</span>(<span class="number">10</span>),
         })
         .<span class="kw">await</span>
@@ -1153,54 +1025,18 @@
 
         <span class="macro">assert_eq!</span>(<span class="ident">session</span>.<span class="ident">metrics</span>.<span class="ident">sessions_total</span>.<span class="ident">get</span>(), <span class="number">1</span>);
         <span class="macro">assert_eq!</span>(<span class="ident">session</span>.<span class="ident">metrics</span>.<span class="ident">active_sessions</span>.<span class="ident">get</span>(), <span class="number">1</span>);
-    }
 
-    <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">send_to_metrics</span>() {
-        <span class="kw">let</span> <span class="ident">t</span> <span class="op">=</span> <span class="ident">TestHelper::default</span>();
-
-        <span class="kw">let</span> (<span class="ident">sender</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">mpsc::channel</span>::<span class="op">&lt;</span><span class="ident">UpstreamPacket</span><span class="op">&gt;</span>(<span class="number">1</span>);
-        <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="ident">t</span>.<span class="ident">open_socket_and_recv_single_packet</span>().<span class="kw">await</span>;
-        <span class="kw">let</span> <span class="ident">addr</span>: <span class="ident">EndpointAddress</span> <span class="op">=</span> <span class="ident">endpoint</span>.<span class="ident">socket</span>.<span class="ident">local_addr</span>().<span class="ident">unwrap</span>().<span class="ident">into</span>();
-        <span class="kw">let</span> <span class="ident">session</span> <span class="op">=</span> <span class="ident">Session::new</span>(<span class="ident">SessionArgs</span> {
-            <span class="ident">metrics</span>: <span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>(),
-            <span class="ident">proxy_metrics</span>: <span class="ident">ProxyMetrics::new</span>().<span class="ident">unwrap</span>(),
-            <span class="ident">filter_chain</span>: <span class="ident">SharedFilterChain::empty</span>(),
-            <span class="ident">source</span>: <span class="ident">addr</span>.<span class="ident">clone</span>(),
-            <span class="ident">dest</span>: <span class="ident">Endpoint::new</span>(<span class="ident">addr</span>),
-            <span class="ident">sender</span>,
-            <span class="ident">ttl</span>: <span class="ident">Duration::from_secs</span>(<span class="number">10</span>),
-        })
-        .<span class="kw">await</span>
-        .<span class="ident">unwrap</span>();
+        <span class="comment">// send a packet</span>
         <span class="ident">session</span>.<span class="ident">send</span>(<span class="string">b&quot;hello&quot;</span>).<span class="kw">await</span>.<span class="ident">unwrap</span>();
-        <span class="ident">endpoint</span>.<span class="ident">packet_rx</span>.<span class="kw">await</span>.<span class="ident">unwrap</span>();
+        <span class="ident">timeout</span>(<span class="ident">Duration::from_secs</span>(<span class="number">1</span>), <span class="ident">ep</span>.<span class="ident">packet_rx</span>)
+            .<span class="kw">await</span>
+            .<span class="ident">expect</span>(<span class="string">&quot;should receive a packet&quot;</span>)
+            .<span class="ident">unwrap</span>();
 
         <span class="macro">assert_eq!</span>(<span class="ident">session</span>.<span class="ident">metrics</span>.<span class="ident">tx_bytes_total</span>.<span class="ident">get</span>(), <span class="number">5</span>);
         <span class="macro">assert_eq!</span>(<span class="ident">session</span>.<span class="ident">metrics</span>.<span class="ident">tx_packets_total</span>.<span class="ident">get</span>(), <span class="number">1</span>);
-    }
 
-    <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">session_drop_metrics</span>() {
-        <span class="kw">let</span> <span class="ident">t</span> <span class="op">=</span> <span class="ident">TestHelper::default</span>();
-        <span class="kw">let</span> (<span class="ident">send_packet</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">mpsc::channel</span>::<span class="op">&lt;</span><span class="ident">UpstreamPacket</span><span class="op">&gt;</span>(<span class="number">5</span>);
-        <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="ident">t</span>.<span class="ident">open_socket_and_recv_single_packet</span>().<span class="kw">await</span>;
-        <span class="kw">let</span> <span class="ident">addr</span>: <span class="ident">EndpointAddress</span> <span class="op">=</span> <span class="ident">endpoint</span>.<span class="ident">socket</span>.<span class="ident">local_addr</span>().<span class="ident">unwrap</span>().<span class="ident">into</span>();
-        <span class="kw">let</span> <span class="ident">session</span> <span class="op">=</span> <span class="ident">Session::new</span>(<span class="ident">SessionArgs</span> {
-            <span class="ident">metrics</span>: <span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>(),
-            <span class="ident">proxy_metrics</span>: <span class="ident">ProxyMetrics::new</span>().<span class="ident">unwrap</span>(),
-            <span class="ident">filter_chain</span>: <span class="ident">SharedFilterChain::empty</span>(),
-            <span class="ident">source</span>: <span class="ident">addr</span>.<span class="ident">clone</span>(),
-            <span class="ident">dest</span>: <span class="ident">Endpoint::new</span>(<span class="ident">addr</span>),
-            <span class="ident">sender</span>: <span class="ident">send_packet</span>,
-            <span class="ident">ttl</span>: <span class="ident">Duration::from_secs</span>(<span class="number">10</span>),
-        })
-        .<span class="kw">await</span>
-        .<span class="ident">unwrap</span>();
-
-        <span class="macro">assert_eq!</span>(<span class="ident">session</span>.<span class="ident">metrics</span>.<span class="ident">sessions_total</span>.<span class="ident">get</span>(), <span class="number">1</span>);
-        <span class="macro">assert_eq!</span>(<span class="ident">session</span>.<span class="ident">metrics</span>.<span class="ident">active_sessions</span>.<span class="ident">get</span>(), <span class="number">1</span>);
-
+        <span class="comment">// drop metrics</span>
         <span class="kw">let</span> <span class="ident">metrics</span> <span class="op">=</span> <span class="ident">session</span>.<span class="ident">metrics</span>.<span class="ident">clone</span>();
         <span class="ident">drop</span>(<span class="ident">session</span>);
         <span class="macro">assert_eq!</span>(<span class="ident">metrics</span>.<span class="ident">sessions_total</span>.<span class="ident">get</span>(), <span class="number">1</span>);
