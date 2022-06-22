@@ -4,8 +4,8 @@ This folder containers the integration tests for Quilkin and Agones integration.
 
 ## Requirements
 
-* A Kubernetes cluster with [Agones](https://agones.dev) installed
-* Local authentication to the cluster via `kubectl`
+* A Kubernetes cluster with [Agones](https://agones.dev) installed.
+* Local authentication to the cluster via `kubectl`.
 
 ## Running Tests
 
@@ -18,7 +18,21 @@ registry to test against. This can be done through the `QUILKIN_IMAGE` environme
 QUILKIN_IMAGE=us-docker.pkg.dev/my-project-name/dev/quilkin:0.4.0-dev cargo test
 ```
 
-## Creating a Agones GKE cluster with Terraform
+## Creating an Agones Minikube Cluster
+
+If you want to test locally, you can use a tool such a [minikube](https://github.com/kubernetes/minikube) to create 
+a cluster, and install Agones on it.
+
+Because of the virtualisation layers that are required with various drivers of Minikube,  only certain combinations of 
+OS's and drivers can provide direct UDP connectivity, therefore it's worth following the 
+[Agones documentation on setting up Minikube](https://agones.dev/site/docs/installation/creating-cluster/minikube/) 
+to set up a known working combination.
+
+Then follow either the YAML or Helm install options in the 
+[Agones installation documentation](https://agones.dev/site/docs/installation/install-agones/) depoending on your 
+preference.
+
+## Creating an Agones GKE Cluster with Terraform
 
 The following is a convenience tool for setting up a cluster for end-to-end testing.
 
