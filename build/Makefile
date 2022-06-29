@@ -31,6 +31,13 @@ package_version := $(shell grep version -m 1 $(project_path)/Cargo.toml | awk '{
 common_rust_args := -v $(project_path):/workspace -w /workspace \
 					-v $(CARGO_HOME)/registry:/usr/local/cargo/registry
 
+KUBECONFIG ?= ~/.kube/config
+kubeconfig_path := $(dir $(KUBECONFIG))
+helm_config := ~/.config/helm
+helm_cache := ~/.cache/helm
+
+kube_mount_args := -v $(kubeconfig_path):/root/.kube -v $(helm_config):/root/.config/helm -v $(helm_cache):/root/.cache/helm
+
 #   _____                    _
 #  |_   _|_ _ _ __ __ _  ___| |_ ___
 #    | |/ _` | '__/ _` |/ _ \ __/ __|
@@ -76,6 +83,19 @@ test-docs: ensure-build-image
 			cp -r /workspace/target/doc /tmp/docs/api && \
 			rm /tmp/docs/book/print.html && \
 			htmltest -c /workspace/docs/htmltest.yaml /tmp/docs'
+
+# Run e2e tests against an Agones Kubernetes cluster
+# Not part of `test` as it requires a Kubernetes cluster to be provisioned and running.
+# Use QUILKIN_IMAGE to specify which container image to use in the tests
+test-agones: ensure-kube-dirs ensure-build-image
+test-agones: QUILKIN_IMAGE ?= us-docker.pkg.dev/quilkin/release/quilkin:0.3.0
+test-agones:
+	docker run --rm $(common_rust_args) -w /workspace/agones  \
+    		--entrypoint=cargo $(BUILD_IMAGE_TAG) clippy --tests -- -D warnings
+	docker run --rm $(common_rust_args) -w /workspace/agones \
+		--entrypoint=cargo $(BUILD_IMAGE_TAG) fmt -- --check
+	docker run --rm $(common_rust_args) $(kube_mount_args) -w /workspace/agones -e "QUILKIN_IMAGE=${QUILKIN_IMAGE}" \
+    		--entrypoint=cargo $(BUILD_IMAGE_TAG) test
 
 # Build all binaries, images and related artifacts
 build: binary-archive build-image
@@ -133,13 +153,19 @@ docs: ensure-build-image
 			cargo watch -s "cargo doc --workspace --no-deps && cd docs && mdbook build --dest-dir /tmp/docs/book"'
 
 # Start an interactive shell inside the build image
-# Useful for testing, or adhoc cargo commands
-shell: ensure-build-image
+# Useful for testing, or adhoc cargo, gcloud, kubectl or terraform commands
+shell: ensure-kube-dirs ensure-build-image
+	-mkdir -p $(build_path)/.gcloud
 	docker run --rm -it $(common_rust_args) \
-		--entrypoint=bash $(BUILD_IMAGE_TAG)
+		-v $(build_path)/.config/gcloud:/root/.config/gcloud $(kube_mount_args) \
+		 --entrypoint=bash $(BUILD_IMAGE_TAG)
 
 ensure-build-image: ensure-cargo-registry
 	docker build $(BUILD_IMAGE_ARG) --build-arg RUST_TOOLCHAIN=$(rust_toolchain) --tag=$(BUILD_IMAGE_TAG) $(build_path)/build-image/
 
 ensure-cargo-registry:
 	-mkdir -p $(CARGO_HOME)/registry
+
+ensure-kube-dirs:
+	-mkdir -p ~/.config/helm
+	-mkdir -p ~/.kube
