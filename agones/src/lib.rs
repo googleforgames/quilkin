@@ -32,7 +32,7 @@ mod pod;
 #[allow(dead_code)]
 static CLIENT: OnceCell<Client> = OnceCell::const_new();
 #[allow(dead_code)]
-const QUILKIN_IMAGE: &str = "QUILKIN_IMAGE";
+const IMAGE_TAG: &str = "IMAGE_TAG";
 
 pub struct Client {
     /// The Kubernetes client
@@ -48,7 +48,7 @@ impl Client {
     /// Executes the setup required:
     /// * Creates a test namespace for this test
     /// * Removes previous test namespaces
-    /// * Retrieves the QUILKIN_IMAGE to test from env vars, and defaults it if not available.
+    /// * Retrieves the IMAGE_TAG to test from env vars, and panics if it if not available.
     pub async fn new() -> &'static Client {
         CLIENT
             .get_or_init(|| async {
@@ -59,10 +59,7 @@ impl Client {
                 Client {
                     kubernetes: client.clone(),
                     namespace: setup_namespace(client).await,
-                    quilkin_image: env::var_os(QUILKIN_IMAGE)
-                        .unwrap_or_else(|| "us-docker.pkg.dev/quilkin/release/quilkin:0.3.0".into())
-                        .into_string()
-                        .unwrap(),
+                    quilkin_image: env::var_os(IMAGE_TAG).unwrap().into_string().unwrap(),
                 }
             })
             .await

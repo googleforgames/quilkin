@@ -53,6 +53,8 @@ To test dependency licences and security advisories:
 
 `cargo deny check`
 
+See the [agones](../agones) folder for the [Agones](https://agones.dev) integration testing tooling.
+
 ### Developing with Make + Docker 
 
 There are a few reasons you may want to use the [Make](https://www.gnu.org/software/make/)
@@ -70,10 +72,13 @@ To use the tooling for Make + Docker testing and development, you will need:
 
 #### Run tests
 
-`make test` will run all tests for this project.
+`make test` will run all tests for this project, except the [Agones](https:/agones.dev) integration tests.
 
 This can be useful if continuous integration is failing, but you are unable to reproduce the issue using 
 your local Rust tooling
+
+See the [agones](../agones) folder for the `make` targets to build, push and run the [Agones](https://agones.dev) 
+integration testing tooling.
 
 #### Build everything
 

@@ -30,7 +30,7 @@ steps:
     args:
       - BUILD_IMAGE_TAG=${_BUILD_IMAGE_TAG}
       - BUILD_IMAGE_ARG=--cache-from ${_BUILD_IMAGE_TAG}
-      - IMAGE_NAME=${_IMAGE_TAG}
+      - REPOSITORY=${_REPOSITORY}
       - build
     id: build
   - name: us-docker.pkg.dev/$PROJECT_ID/ci/make-docker
@@ -40,7 +40,8 @@ steps:
       - '-c'
       - 'make version > ../version'
     id: output-version
-  - name: ferrarimarco/github-changelog-generator:1.15.2
+    waitFor: ['-']
+  - name: githubchangeloggenerator/github-changelog-generator:latest # have to use latest, there is no 1.16.4 tag
     id: changelog
     entrypoint: sh
     args:
@@ -48,6 +49,8 @@ steps:
       - 'github_changelog_generator --user=googleforgames --project=quilkin --bug-labels=kind/bug --enhancement-labels=kind/feature --breaking-labels=kind/breaking --security-labels=area/security --exclude-labels=duplicate,question,invalid,wontfix,priority/wontfix --future-release "v$(cat ./version)" --release-branch=main --token $$GH_TOKEN'
     secretEnv:
       - GH_TOKEN
+    waitFor:
+      - output-version
 artifacts:
   objects:
     location: '$_STORAGE'
@@ -56,16 +59,17 @@ artifacts:
       - 'license.html'
       - 'CHANGELOG.md'
   images:
-    - $_IMAGE_TAG
+    - ${_REPOSITORY}quilkin
 options:
   env:
     - "CARGO_HOME=/workspace/.cargo"
     - "RUST_BACKTRACE=1"
+    - "QUILKIN_RELEASE=1"
   machineType: E2_HIGHCPU_32
   dynamic_substitutions: true
 substitutions:
   _BUILD_IMAGE_TAG: us-docker.pkg.dev/${PROJECT_ID}/ci/build-image
-  _IMAGE_TAG: us-docker.pkg.dev/${PROJECT_ID}/release/quilkin
+  _REPOSITORY: us-docker.pkg.dev/${PROJECT_ID}/release/
   _STORAGE: gs://${PROJECT_ID}-quilkin-releases
 availableSecrets:
   secretManager:

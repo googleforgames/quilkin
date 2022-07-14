@@ -14,14 +14,39 @@
 # limitations under the License.
 #
 
+*.TAG
+*.hbs
+*.md
+*.png
+*.sh
+*.toml
+*.yaml
+*.zip
+*.iml
 .*
-target/*/deps
-target/*/incremental
-target/*/build
+/agones
+/benches
+/build
+/docs
+/examples
+/macros
+/proto
+/sdks
+/src
+/tests
+target/debug
+target/release
+target/**.d
+target/*/*/build
 target/*/*/deps
 target/*/*/incremental
-target/*/*/build
+target/criterion
+target/doc
+target/tmp
 
 # windows files
 *.exe
 *.rlib
+
+!dependencies-src.zip
+!image/quilkin.yaml
