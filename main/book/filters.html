@@ -228,12 +228,13 @@ On the other hand, the built-in <a href="./filters/token_router.html">TokenRoute
 Consequently, we can build a filter chain with a [CaptureBytes] filter preceeding a <a href="./filters/token_router.html">TokenRouter</a> filter, both configured to write and read the same key in the dynamic metadata entry. The effect would be that packets are routed to upstream endpoints based on token information extracted from their contents.</p>
 <h4 id="well-known-dynamic-metadata"><a class="header" href="#well-known-dynamic-metadata">Well Known Dynamic Metadata</a></h4>
 <p>The following metadata are currently used by Quilkin core and built-in filters.</p>
-<table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
 <tr><td><code>quilkin.dev/captured</code></td><td><code>Bytes</code></td><td>The default key under which the <a href="./filters/capture.html">Capture</a> filter puts the byte slices it extracts from each packet.</td></tr>
 </tbody></table>
+</div>
 <h3 id="built-in-filters"><a class="header" href="#built-in-filters">Built-in filters <a name="built-in-filters"></a></a></h3>
 <p>Quilkin includes several filters out of the box.</p>
-<table><thead><tr><th>Filter</th><th>Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th>Filter</th><th>Description</th></tr></thead><tbody>
 <tr><td><a href="./filters/capture.html">Capture</a></td><td>Capture specific bytes from a packet and store them in <a href="#filter-dynamic-metadata">filter dynamic metadata</a>.</td></tr>
 <tr><td><a href="./filters/compress.html">Compress</a></td><td>Compress and decompress packets data.</td></tr>
 <tr><td><a href="./filters/concatenate_bytes.html">ConcatenateBytes</a></td><td>Add authentication tokens to packets.</td></tr>
@@ -246,6 +247,7 @@ Consequently, we can build a filter chain with a [CaptureBytes] filter preceedin
 <tr><td><a href="./filters/pass.html">Pass</a></td><td>Allow all packets through</td></tr>
 <tr><td><a href="./filters/token_router.html">TokenRouter</a></td><td>Send packets to endpoints based on metadata.</td></tr>
 </tbody></table>
+</div>
 <h3 id="filterconfig"><a class="header" href="#filterconfig">FilterConfig <a name="filter-config"></a></a></h3>
 <p>Represents configuration for a filter instance.</p>
 <pre><code class="language-yaml">properties:

@@ -658,12 +658,13 @@ On the other hand, the built-in <a href="./filters/token_router.html">TokenRoute
 Consequently, we can build a filter chain with a [CaptureBytes] filter preceeding a <a href="./filters/token_router.html">TokenRouter</a> filter, both configured to write and read the same key in the dynamic metadata entry. The effect would be that packets are routed to upstream endpoints based on token information extracted from their contents.</p>
 <h4 id="well-known-dynamic-metadata"><a class="header" href="#well-known-dynamic-metadata">Well Known Dynamic Metadata</a></h4>
 <p>The following metadata are currently used by Quilkin core and built-in filters.</p>
-<table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
 <tr><td><code>quilkin.dev/captured</code></td><td><code>Bytes</code></td><td>The default key under which the <a href="./filters/capture.html">Capture</a> filter puts the byte slices it extracts from each packet.</td></tr>
 </tbody></table>
+</div>
 <h3 id="built-in-filters"><a class="header" href="#built-in-filters">Built-in filters <a name="built-in-filters"></a></a></h3>
 <p>Quilkin includes several filters out of the box.</p>
-<table><thead><tr><th>Filter</th><th>Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th>Filter</th><th>Description</th></tr></thead><tbody>
 <tr><td><a href="./filters/capture.html">Capture</a></td><td>Capture specific bytes from a packet and store them in <a href="filters.html#filter-dynamic-metadata">filter dynamic metadata</a>.</td></tr>
 <tr><td><a href="./filters/compress.html">Compress</a></td><td>Compress and decompress packets data.</td></tr>
 <tr><td><a href="./filters/concatenate_bytes.html">ConcatenateBytes</a></td><td>Add authentication tokens to packets.</td></tr>
@@ -676,6 +677,7 @@ Consequently, we can build a filter chain with a [CaptureBytes] filter preceedin
 <tr><td><a href="./filters/pass.html">Pass</a></td><td>Allow all packets through</td></tr>
 <tr><td><a href="./filters/token_router.html">TokenRouter</a></td><td>Send packets to endpoints based on metadata.</td></tr>
 </tbody></table>
+</div>
 <h3 id="filterconfig"><a class="header" href="#filterconfig">FilterConfig <a name="filter-config"></a></a></h3>
 <p>Represents configuration for a filter instance.</p>
 <pre><code class="language-yaml">properties:
@@ -715,8 +717,7 @@ multiple matches.</p>
 <pre><code class="language-text">quilkin.filters.capture.v1alpha1.Capture
 </code></pre>
 <h3 id="configuration-examples-1"><a class="header" href="#configuration-examples-1">Configuration Examples</a></h3>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
@@ -820,8 +821,7 @@ and subsequent decompression of UDP data when sent between systems, such as a ga
 <pre><code class="language-text">quilkin.filters.compress.v1alpha1.Compress
 </code></pre>
 <h3 id="configuration-examples-2"><a class="header" href="#configuration-examples-2">Configuration Examples</a></h3>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
@@ -916,8 +916,7 @@ through. This is commonly used to provide an auth token to each packet, so they 
 <pre><code class="language-text">quilkin.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
 </code></pre>
 <h3 id="configuration-examples-3"><a class="header" href="#configuration-examples-3">Configuration Examples</a></h3>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
@@ -977,8 +976,7 @@ definitions:
 <pre><code class="language-text">quilkin.filters.debug_filter.v1alpha1.Debug
 </code></pre>
 <h3 id="configuration-examples-4"><a class="header" href="#configuration-examples-4">Configuration Examples</a></h3>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
@@ -1016,8 +1014,7 @@ combination with conditional flow filters like <a href="filters/./match.html"><c
 <pre><code class="language-text">quilkin.filters.drop.v1alpha1.Drop
 </code></pre>
 <h3 id="configuration-examples-5"><a class="header" href="#configuration-examples-5">Configuration Examples</a></h3>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
@@ -1056,8 +1053,7 @@ the rules set on the Firewall filter.</p>
 <pre><code class="language-text">quilkin.filters.firewall.v1alpha1.Firewall
 </code></pre>
 <h3 id="configuration-examples-6"><a class="header" href="#configuration-examples-6">Configuration Examples</a></h3>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
@@ -1277,8 +1273,7 @@ in Rust or <code>switch</code> statements in other languages.</p>
 </code></pre>
 <h3 id="configuration-examples-9"><a class="header" href="#configuration-examples-9">Configuration Examples</a></h3>
 <!-- ANCHOR: example -->
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
@@ -1421,8 +1416,7 @@ combination with conditional flow filters like <a href="filters/./match.html"><c
 <pre><code class="language-text">quilkin.filters.pass.v1alpha1.Pass
 </code></pre>
 <h3 id="configuration-examples-10"><a class="header" href="#configuration-examples-10">Configuration Examples</a></h3>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
@@ -1463,8 +1457,7 @@ filters:
 <pre><code class="language-text">quilkin.filters.token_router.v1alpha1.TokenRouter
 </code></pre>
 <h3 id="configuration-examples-11"><a class="header" href="#configuration-examples-11">Configuration Examples</a></h3>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
@@ -1525,8 +1518,7 @@ authentication token to reside.</p>
 <p>It is assumed that the endpoint tokens that are used for authentication are generated by an external system, are
 appropriately cryptographically random and sent to each proxy securely.</p>
 <p>For example, a configuration would look like:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
