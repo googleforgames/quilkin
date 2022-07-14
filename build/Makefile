@@ -58,13 +58,13 @@ test: ensure-build-image test-quilkin test-examples test-docs
 # test only the quilkin crate
 test-quilkin: ensure-build-image
 	docker run --rm $(common_rust_args) \
-     		--entrypoint=cargo $(BUILD_IMAGE_TAG) deny check
+			--entrypoint=cargo $(BUILD_IMAGE_TAG) deny check
 	docker run --rm $(common_rust_args) \
- 		--entrypoint=cargo $(BUILD_IMAGE_TAG) clippy --tests -- -D warnings
+		--entrypoint=cargo $(BUILD_IMAGE_TAG) clippy --tests -- -D warnings
 	docker run --rm $(common_rust_args) \
- 		--entrypoint=cargo $(BUILD_IMAGE_TAG) fmt -- --check
+		--entrypoint=cargo $(BUILD_IMAGE_TAG) fmt -- --check
 	docker run --rm $(common_rust_args) \
-     		--entrypoint=cargo $(BUILD_IMAGE_TAG) test
+			--entrypoint=cargo $(BUILD_IMAGE_TAG) test
 
 # Run tests against the examples
 test-examples: ensure-build-image
@@ -77,7 +77,7 @@ test-examples: ensure-build-image
 test-docs: ensure-build-image
 	docker run --rm $(common_rust_args) \
 		--entrypoint=bash $(BUILD_IMAGE_TAG) -c \
-		 	'export RUSTDOCFLAGS="-Dwarnings" && mkdir /tmp/docs && \
+			'export RUSTDOCFLAGS="-Dwarnings" && mkdir /tmp/docs && \
 			mkdir -p ./target/doc; \
 			cargo doc --workspace --no-deps && cd docs && mdbook build --dest-dir /tmp/docs/book && \
 			cp -r /workspace/target/doc /tmp/docs/api && \
@@ -91,11 +91,11 @@ test-agones: ensure-kube-dirs ensure-build-image
 test-agones: QUILKIN_IMAGE ?= us-docker.pkg.dev/quilkin/release/quilkin:0.3.0
 test-agones:
 	docker run --rm $(common_rust_args) -w /workspace/agones  \
-    		--entrypoint=cargo $(BUILD_IMAGE_TAG) clippy --tests -- -D warnings
+			--entrypoint=cargo $(BUILD_IMAGE_TAG) clippy --tests -- -D warnings
 	docker run --rm $(common_rust_args) -w /workspace/agones \
 		--entrypoint=cargo $(BUILD_IMAGE_TAG) fmt -- --check
 	docker run --rm $(common_rust_args) $(kube_mount_args) -w /workspace/agones -e "QUILKIN_IMAGE=${QUILKIN_IMAGE}" \
-    		--entrypoint=cargo $(BUILD_IMAGE_TAG) test
+			--entrypoint=cargo $(BUILD_IMAGE_TAG) test
 
 # Build all binaries, images and related artifacts
 build: binary-archive build-image
@@ -106,28 +106,28 @@ build-all-binaries: ensure-build-image build-linux-binary build-windows-binary b
 # Build an archive all debug and release binaries
 binary-archive: ensure-build-image build-all-binaries
 	docker run --rm $(common_rust_args) \
-    		--entrypoint=bash $(BUILD_IMAGE_TAG) -c 'zip quilkin-$(package_version).zip ./target/*/*/quilkin ./target/*/*/quilkin.exe'
+			--entrypoint=bash $(BUILD_IMAGE_TAG) -c 'zip quilkin-$(package_version).zip ./target/*/*/quilkin ./target/*/*/quilkin.exe'
 
 # Build release and debug binaries for x86_64-unknown-linux-gnu
 build-linux-binary: ensure-build-image
 	docker run --rm $(common_rust_args) \
- 		--entrypoint=cargo $(BUILD_IMAGE_TAG) build --target x86_64-unknown-linux-gnu
+		--entrypoint=cargo $(BUILD_IMAGE_TAG) build --target x86_64-unknown-linux-gnu
 	docker run --rm $(common_rust_args) \
- 		--entrypoint=cargo $(BUILD_IMAGE_TAG) build --target x86_64-unknown-linux-gnu --release
+		--entrypoint=cargo $(BUILD_IMAGE_TAG) build --target x86_64-unknown-linux-gnu --release
 
 # Build release and debug binaries for x86_64-pc-windows-gnu
 build-windows-binary: ensure-build-image
 	docker run --rm $(common_rust_args) \
- 		--entrypoint=cargo $(BUILD_IMAGE_TAG) build --target x86_64-pc-windows-gnu
+		--entrypoint=cargo $(BUILD_IMAGE_TAG) build --target x86_64-pc-windows-gnu
 	docker run --rm $(common_rust_args) \
- 		--entrypoint=cargo $(BUILD_IMAGE_TAG) build --target x86_64-pc-windows-gnu --release
+		--entrypoint=cargo $(BUILD_IMAGE_TAG) build --target x86_64-pc-windows-gnu --release
 
 # Build release and debug binaries for x86_64-apple-darwin
 build-macos-binary:
 	docker run --rm -v $(project_path):/workspace -w /workspace \
 		-v $(CARGO_HOME)/registry:/root/.cargo/registry \
-        joseluisq/rust-linux-darwin-builder:$(rust_toolchain) \
-        	sh -c "rustup target add x86_64-apple-darwin && cargo build --target x86_64-apple-darwin && cargo build --release --target x86_64-apple-darwin"
+		joseluisq/rust-linux-darwin-builder:$(rust_toolchain) \
+			sh -c "rustup target add x86_64-apple-darwin && cargo build --target x86_64-apple-darwin && cargo build --release --target x86_64-apple-darwin"
 
 # Build release and debug container images.
 # Use IMAGE_NAME argument to specify the container registry and image name. Defaults to 'quilkin'.
@@ -148,7 +148,7 @@ docs: ensure-build-image
 	@echo "📭 Open browser to http://localhost:3000/book/index.html or http://localhost:3000/api/quilkin/index.html (the .html extension is required for hot reload)"
 	docker run -it --rm $(common_rust_args) -p 3000:3000 \
 		--entrypoint=bash $(BUILD_IMAGE_TAG) -c \
-		 	'mkdir /tmp/docs && (live-server -p 3000 /tmp/docs &) && \
+			'mkdir /tmp/docs && (live-server -p 3000 /tmp/docs &) && \
 			mkdir -p ./target/doc; ln -s $$(pwd)/target/doc /tmp/docs/api && \
 			cargo watch -s "cargo doc --workspace --no-deps && cd docs && mdbook build --dest-dir /tmp/docs/book"'
 
