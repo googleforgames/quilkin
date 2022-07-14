@@ -19,13 +19,6 @@ steps:
   - name: gcr.io/cloud-builders/docker
     args: [ pull, "${_BUILD_IMAGE_TAG}" ]
     id: pull-build-image
-  - name: golangci/golangci-lint
-    dir: xds
-    args: [ "golangci-lint", "run", "-c", "ci/.golangci.yaml", "./..." ]
-  - name: golang
-    dir: xds
-    args: [ "go", "test", "./..." ]
-    id: go-test
   - name: us-docker.pkg.dev/$PROJECT_ID/ci/make-docker
     dir: ./build
     args:
