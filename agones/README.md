@@ -7,17 +7,6 @@ This folder containers the integration tests for Quilkin and Agones integration.
 * A Kubernetes cluster with [Agones](https://agones.dev) installed.
 * Local authentication to the cluster via `kubectl`.
 
-## Running Tests
-
-To run the tests, run `cargo test` in this folder. This will run the e2e to tests with the default Quilkin image.
-
-When writing new tests for new features, you will want to specify a development image hosted on a container 
-registry to test against. This can be done through the `QUILKIN_IMAGE` environment variable like so:
-
-```shell
-QUILKIN_IMAGE=us-docker.pkg.dev/my-project-name/dev/quilkin:0.4.0-dev cargo test
-```
-
 ## Creating an Agones Minikube Cluster
 
 If you want to test locally, you can use a tool such a [minikube](https://github.com/kubernetes/minikube) to create 
@@ -54,6 +43,68 @@ gcloud auth application-default login
 terraform apply -var project="<YOUR_GCP_ProjectID>"
 gcloud container clusters get-credentials --zone us-west1-c agones
 ```
+
+## Running Tests
+
+To run the Agones integration tests with a Quilkin image, you will need to specify the image 
+to be used along with the `cargo test` command and ensure that is available on the currently authenticated Kubernetes 
+cluster.
+
+This can be done through the `IMAGE_TAG` environment variable like so:
+
+```shell
+IMAGE_TAG=us-docker.pkg.dev/my-project-name/dev/quilkin:0.4.0-auyz cargo test
+```
+
+### Build, Push and Test in one Go 💪
+
+The [`build/Makefile`](../build/Makefile) provides a targets that can be executed to build a development image, 
+push it a appropriate location, and run the set of Agones integration tests, depending on where you Kubernetes 
+cluster is set up. 
+
+#### Minikube
+
+This target assumes that you have a [working minikube cluster](#creating-an-agones-minikube-cluster),
+under the profile `quilkin`, with Agones installed, and the local `.kube` configuration is currently
+authenticated against it.
+
+To build, push and run the tests:
+
+```shell
+make minikube-test-agones
+```
+
+To change from the default profile of `quilkin`, use the variable `MINIKUBE_PROFILE` to do so.
+
+To pass extra arguments to `cargo test`, to run only a single test, for example, use the `ARGS` variable
+to pass through those options.
+
+#### Hosted Kubernetes Cluster
+
+This target assumes that you have a
+[working hosted Kubernetes cluster, such as GKE](#creating-an-agones-gke-cluster-with-terraform),
+with Agones installed, the local `.kube` configuration is currently authenticated against it,
+and a hosted [docker repository](https://docs.docker.com/docker-hub/repos/) such as
+[Artifact Registry](https://cloud.google.com/artifact-registry) has been provisioned.
+
+To build, push and run the tests:
+
+```shell
+REPOSITORY=us-docker.pkg.dev/my-project/repository-name/ make test-agones
+```
+
+Where `REPOSITORY` is the provisioned Docker repository to push the development image to, and utilise in the 
+integration tests.
+
+> Note: The REPOSITORY variable will need to end with a trailing slash: /.
+
+To pass extra arguments to `cargo test`, to run only a single test, for example, use the `ARGS` variable
+to pass through those options.
+
+### Troubleshooting
+
+If you ever have authentication issues sending commands to the cluster from the e2e test, run a `kubectl` 
+command (e.g. `kubectl get pods`) against the designated cluster to refresh the authentication token and try again. 
 
 ## Licence
 

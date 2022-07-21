@@ -26,7 +26,19 @@ project_path := $(realpath $(build_path)/..)
 CARGO_HOME ?= ~/.cargo
 BUILD_IMAGE_TAG := quilkin-build
 rust_toolchain := $(shell grep channel $(project_path)/rust-toolchain.toml | awk '{ print $$3 }')
-package_version := $(shell grep version -m 1 $(project_path)/Cargo.toml | awk '{print $$3}')
+
+# if this is a release, don't put the sha, otherwise, leave it off.
+ifdef QUILKIN_RELEASE
+	package_version := $(shell grep version -m 1 $(project_path)/Cargo.toml | awk '{print $$3}')
+else
+	git_sha := $(shell git rev-parse --short=7 HEAD)
+	package_version := $(shell grep version -m 1 $(project_path)/Cargo.toml | awk '{print $$3}')-${git_sha}
+endif
+
+# Set this value if you want to use an external registry
+REPOSITORY ?= ""
+IMAGE_TAG ?= ${REPOSITORY}quilkin:$(package_version)
+MINIKUBE_PROFILE ?= quilkin
 
 common_rust_args := -v $(project_path):/workspace -w /workspace \
 					-v $(CARGO_HOME)/registry:/usr/local/cargo/registry
@@ -37,6 +49,8 @@ helm_config := ~/.config/helm
 helm_cache := ~/.cache/helm
 
 kube_mount_args := -v $(kubeconfig_path):/root/.kube -v $(helm_config):/root/.config/helm -v $(helm_cache):/root/.cache/helm
+
+minikube_args := --network=host -v ~/.minikube:$(HOME)/.minikube
 
 #   _____                    _
 #  |_   _|_ _ _ __ __ _  ___| |_ ___
@@ -84,19 +98,6 @@ test-docs: ensure-build-image
 			rm /tmp/docs/book/print.html && \
 			htmltest -c /workspace/docs/htmltest.yaml /tmp/docs'
 
-# Run e2e tests against an Agones Kubernetes cluster
-# Not part of `test` as it requires a Kubernetes cluster to be provisioned and running.
-# Use QUILKIN_IMAGE to specify which container image to use in the tests
-test-agones: ensure-kube-dirs ensure-build-image
-test-agones: QUILKIN_IMAGE ?= us-docker.pkg.dev/quilkin/release/quilkin:0.3.0
-test-agones:
-	docker run --rm $(common_rust_args) -w /workspace/agones  \
-			--entrypoint=cargo $(BUILD_IMAGE_TAG) clippy --tests -- -D warnings
-	docker run --rm $(common_rust_args) -w /workspace/agones \
-		--entrypoint=cargo $(BUILD_IMAGE_TAG) fmt -- --check
-	docker run --rm $(common_rust_args) $(kube_mount_args) -w /workspace/agones -e "QUILKIN_IMAGE=${QUILKIN_IMAGE}" \
-			--entrypoint=cargo $(BUILD_IMAGE_TAG) test
-
 # Build all binaries, images and related artifacts
 build: binary-archive build-image
 
@@ -130,16 +131,57 @@ build-macos-binary:
 			sh -c "rustup target add x86_64-apple-darwin && cargo build --target x86_64-apple-darwin && cargo build --release --target x86_64-apple-darwin"
 
 # Build release and debug container images.
-# Use IMAGE_NAME argument to specify the container registry and image name. Defaults to 'quilkin'.
+# Use either `REPOSITORY` to specify a container repository (defaults to blank/none), or use `IMAGE_TAG` argument to specify
+# the entire image name and tag. Defaults to `quilkin:${version}-${git-sha}`.
 build-image: ensure-build-image build-linux-binary
-build-image: IMAGE_NAME := quilkin
 build-image:
 	docker run --rm $(common_rust_args) \
 		--entrypoint=bash $(BUILD_IMAGE_TAG) -c 'cargo about generate license.html.hbs > license.html'
 	docker run --rm $(common_rust_args) \
 		--entrypoint=bash $(BUILD_IMAGE_TAG) -c './image/archive_dependencies.sh'
-	docker build -t $(IMAGE_NAME):$(package_version)-debug --build-arg PROFILE=debug -f $(project_path)/image/Dockerfile $(project_path)
-	docker build -t $(IMAGE_NAME):$(package_version) --build-arg PROFILE=release -f $(project_path)/image/Dockerfile $(project_path)
+	docker build -t $(IMAGE_TAG)-debug --build-arg PROFILE=debug -f $(project_path)/image/Dockerfile $(project_path)
+	docker build -t $(IMAGE_TAG) --build-arg PROFILE=release -f $(project_path)/image/Dockerfile $(project_path)
+
+# Builds Quilkin, pushes it to a repository (use REPOSITORY arg to set value)
+# and then runs the Agones integration tests. See targets `build-images` and `push` for more options and details.
+# Not part of `test` as it requires a Kubernetes cluster to be provisioned and running.
+# To pass extra arguments to `cargo test`, to run only a single test, for example, use the `ARGS` variable
+# to set those options.
+test-agones: push
+test-agones:
+	$(MAKE) run-test-agones
+
+run-test-agones: ensure-kube-dirs
+run-test-agones:
+	docker run --rm $(DOCKER_RUN_ARGS) $(common_rust_args) -w /workspace/agones  \
+			--entrypoint=cargo $(BUILD_IMAGE_TAG) clippy --tests -- -D warnings
+	docker run --rm $(DOCKER_RUN_ARGS) $(common_rust_args) -w /workspace/agones \
+		--entrypoint=cargo $(BUILD_IMAGE_TAG) fmt -- --check
+	# Confirm access to K8s, and force refresh of the auth token for the kube context
+	docker run --rm $(DOCKER_RUN_ARGS) $(common_rust_args) $(kube_mount_args) -w /workspace/agones \
+		--entrypoint=kubectl $(BUILD_IMAGE_TAG) get ns
+	docker run --rm $(DOCKER_RUN_ARGS) $(common_rust_args) $(kube_mount_args) -w /workspace/agones \
+			-e "IMAGE_TAG=${IMAGE_TAG}" --entrypoint=cargo $(BUILD_IMAGE_TAG) test $(ARGS)
+
+# Convenience target to build and push quilkin images to a repository.
+# Use `REPOSITORY` arg to specify the repository to push to.
+# See `build-image` for more details.
+push: build-image
+	docker push $(IMAGE_TAG)-debug
+	docker push $(IMAGE_TAG)
+
+# Convenience target to build and push quilkin images into a minikube instance
+# Use `MINIKUBE_PROFILE` to specify the profile. Defaults to `quilkin`.
+minikube-push: build-image
+	minikube image load $(IMAGE_TAG) -p $(MINIKUBE_PROFILE)
+
+# Builds Quilkin, pushes it to a minikube instance (use `MINIKUBE_PROFILE` to specify the profile. Defaults to `quilkin`)
+# and then runs the Agones integration tests. See targets `build-images` and `minikube-push` for more options and details.
+# Not part of `test` as it requires a Kubernetes cluster to be provisioned and running.
+# To pass extra arguments to `cargo test`, to run only a single test, for example, use the `ARGS` variable
+# to set those options.
+minikube-test-agones: minikube-push
+	$(MAKE) DOCKER_RUN_ARGS="$(minikube_args)" run-test-agones
 
 # Runs mdbook and cargo doc in the same directory structure as what is hosted on Github pages.
 # Open http://localhost:3000/book/index.html or http://localhost:3000/api/quilkin/index.html after running. Pages will live reload on change.
@@ -156,7 +198,7 @@ docs: ensure-build-image
 # Useful for testing, or adhoc cargo, gcloud, kubectl or terraform commands
 shell: ensure-kube-dirs ensure-build-image
 	-mkdir -p $(build_path)/.gcloud
-	docker run --rm -it $(common_rust_args) \
+	docker run --rm -it $(DOCKER_RUN_ARGS) $(common_rust_args) \
 		-v $(build_path)/.config/gcloud:/root/.config/gcloud $(kube_mount_args) \
 		 --entrypoint=bash $(BUILD_IMAGE_TAG)
 

@@ -19,5 +19,5 @@ accepted = [
     "BSD-2-Clause",
     "BSD-3-Clause",
     "MIT",
-    "Unicode-DFS-2016",
+    "Unicode-DFS-2016"
 ]
