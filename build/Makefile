@@ -49,8 +49,8 @@ helm_config := ~/.config/helm
 helm_cache := ~/.cache/helm
 
 kube_mount_args := -v $(kubeconfig_path):/root/.kube -v $(helm_config):/root/.config/helm -v $(helm_cache):/root/.cache/helm
-
 minikube_args := --network=host -v ~/.minikube:$(HOME)/.minikube
+gcloud_mount_args := -v $(build_path)/.config/gcloud:/root/.config/gcloud
 
 #   _____                    _
 #  |_   _|_ _ _ __ __ _  ___| |_ ___
@@ -165,8 +165,12 @@ run-test-agones:
 
 # Convenience target to build and push quilkin images to a repository.
 # Use `REPOSITORY` arg to specify the repository to push to.
+# USe `SKIP_BUILD_IMAGE` if you want to skip building the image if it has been already built.
 # See `build-image` for more details.
+push:
+ifndef SKIP_BUILD_IMAGE
 push: build-image
+endif
 	docker push $(IMAGE_TAG)-debug
 	docker push $(IMAGE_TAG)
 
@@ -196,10 +200,9 @@ docs: ensure-build-image
 
 # Start an interactive shell inside the build image
 # Useful for testing, or adhoc cargo, gcloud, kubectl or terraform commands
-shell: ensure-kube-dirs ensure-build-image
-	-mkdir -p $(build_path)/.gcloud
+shell: ensure-gcloud-dirs ensure-kube-dirs ensure-build-image
 	docker run --rm -it $(DOCKER_RUN_ARGS) $(common_rust_args) \
-		-v $(build_path)/.config/gcloud:/root/.config/gcloud $(kube_mount_args) \
+		$(gcloud_mount_args) $(kube_mount_args) \
 		 --entrypoint=bash $(BUILD_IMAGE_TAG)
 
 ensure-build-image: ensure-cargo-registry
@@ -208,6 +211,14 @@ ensure-build-image: ensure-cargo-registry
 ensure-cargo-registry:
 	-mkdir -p $(CARGO_HOME)/registry
 
+ensure-gcloud-dirs:
+	-mkdir -p $(build_path)/.gcloud
+
 ensure-kube-dirs:
 	-mkdir -p ~/.config/helm
 	-mkdir -p ~/.kube
+
+ci-gcloud-auth-cluster:
+	# Internal CI target. Used to authenticate against the integration test cluster.
+	docker run --rm $(DOCKER_RUN_ARGS) $(common_rust_args) $(kube_mount_args) --network=cloudbuild \
+		   -e "USE_GKE_GCLOUD_AUTH_PLUGIN=True" --entrypoint=gcloud $(BUILD_IMAGE_TAG) container clusters get-credentials agones --zone us-west1-c

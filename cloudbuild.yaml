@@ -16,35 +16,34 @@ steps:
   - name: gcr.io/cloud-builders/git
     args: [ submodule, update, --init, --recursive ]
     id: fetch-git-submodules
+    waitFor:
+      - "-"
   - name: gcr.io/cloud-builders/docker
     args: [ pull, "${_BUILD_IMAGE_TAG}" ]
     id: pull-build-image
+    waitFor:
+      - "-"
   - name: us-docker.pkg.dev/$PROJECT_ID/ci/make-docker
     dir: ./build
     args:
-      - BUILD_IMAGE_TAG=${_BUILD_IMAGE_TAG}
-      - BUILD_IMAGE_ARG=--cache-from ${_BUILD_IMAGE_TAG}
       - test-quilkin
     id: test-quilkin
+    waitFor:
+      - fetch-git-submodules
+      - pull-build-image
   - name: us-docker.pkg.dev/$PROJECT_ID/ci/make-docker
     dir: ./build
     args:
-      - BUILD_IMAGE_TAG=${_BUILD_IMAGE_TAG}
-      - BUILD_IMAGE_ARG=--cache-from ${_BUILD_IMAGE_TAG}
       - test-examples
     id: test-examples
   - name: us-docker.pkg.dev/$PROJECT_ID/ci/make-docker
     dir: ./build
     args:
-      - BUILD_IMAGE_TAG=${_BUILD_IMAGE_TAG}
-      - BUILD_IMAGE_ARG=--cache-from ${_BUILD_IMAGE_TAG}
       - test-docs
     id: test-docs
   - name: us-docker.pkg.dev/$PROJECT_ID/ci/make-docker
     dir: ./build
     args:
-      - BUILD_IMAGE_TAG=${_BUILD_IMAGE_TAG}
-      - BUILD_IMAGE_ARG=--cache-from ${_BUILD_IMAGE_TAG}
       - build
     id: build
   # Run the built images for 5 seconds to make sure that the entrypoint and default config works out of the box
@@ -53,21 +52,47 @@ steps:
     entrypoint: bash
     args:
       - '-c'
-      - 'timeout --signal=INT --preserve-status 5s docker run --rm quilkin:$(make version)'
+      - 'timeout --signal=INT --preserve-status 5s docker run --rm ${_REPOSITORY}quilkin:$(make version)'
     id: test-quilkin-debug
+    waitFor:
+      - build
   - name: gcr.io/cloud-builders/docker
     dir: ./build
     entrypoint: bash
     args:
       - '-c'
-      - 'timeout --signal=INT --preserve-status 5s docker run --rm quilkin:$(make version)-debug'
+      - 'timeout --signal=INT --preserve-status 5s docker run --rm ${_REPOSITORY}quilkin:$(make version)-debug'
     id: test-quilkin-release
+    waitFor:
+      - build
+  - name: us-docker.pkg.dev/$PROJECT_ID/ci/make-docker
+    dir: ./build
+    args:
+      - ci-gcloud-auth-cluster
+    id: gcloud-auth-cluster
+    waitFor:
+      - test-quilkin
+  - name: us-docker.pkg.dev/$PROJECT_ID/ci/make-docker
+    dir: ./build
+    args:
+      - SKIP_BUILD_IMAGE=1
+      - DELETE_DELAY_SECONDS=3600
+      - DOCKER_RUN_ARGS=--network=cloudbuild
+      - test-agones
+    id: test-agones
+    waitFor:
+      - gcloud-auth-cluster
+      - build
 options:
   env:
     - "CARGO_HOME=/workspace/.cargo"
+    - "REPOSITORY=${_REPOSITORY}"
+    - "BUILD_IMAGE_TAG=${_BUILD_IMAGE_TAG}"
+    - "BUILD_IMAGE_ARG=--cache-from ${_BUILD_IMAGE_TAG}"
   machineType: E2_HIGHCPU_32
   dynamic_substitutions: true
 timeout: 7200s
 substitutions:
   _BUILD_IMAGE_TAG: us-docker.pkg.dev/${PROJECT_ID}/ci/build-image
+  _REPOSITORY: us-docker.pkg.dev/${PROJECT_ID}/ci/
 logsBucket: "gs://quilkin-build-logs"
