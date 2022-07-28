@@ -22,7 +22,7 @@ steps:
     args: [ pull, "${_BUILD_IMAGE_TAG}" ]
     id: pull-build-image
     waitFor:
-      - "-"
+      - "-" # Run immediately, don't wait for any previous steps
   - name: us-docker.pkg.dev/$PROJECT_ID/ci/make-docker
     dir: ./build
     args:

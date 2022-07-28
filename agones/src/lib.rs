@@ -62,7 +62,7 @@ impl Client {
                 Client {
                     kubernetes: client.clone(),
                     namespace: setup_namespace(client).await,
-                    quilkin_image: env::var_os(IMAGE_TAG).unwrap().into_string().unwrap(),
+                    quilkin_image: env::var(IMAGE_TAG).unwrap(),
                 }
             })
             .await
@@ -79,8 +79,10 @@ async fn setup_namespace(client: kube::Client) -> String {
     let nss = namespaces.list(&lp).await.unwrap();
     let dp = DeleteParams::default();
 
-    let delay = env::var_os(DELETE_DELAY_SECONDS)
-        .map(|value| chrono::Duration::seconds(value.into_string().unwrap().parse().unwrap()));
+    let delay = env::var(DELETE_DELAY_SECONDS)
+        .ok()
+        .and_then(|s| s.parse::<i64>().ok())
+        .map(chrono::Duration::seconds);
 
     for ns in nss {
         let name = ns.name();
