@@ -24,7 +24,7 @@ build_path := $(dir $(mkfile_path))
 project_path := $(realpath $(build_path)/..)
 
 CARGO_HOME ?= ~/.cargo
-BUILD_IMAGE_TAG := quilkin-build
+BUILD_IMAGE_TAG ?= quilkin-build
 rust_toolchain := $(shell grep channel $(project_path)/rust-toolchain.toml | awk '{ print $$3 }')
 
 # if this is a release, don't put the sha, otherwise, leave it off.
