@@ -68,7 +68,7 @@ module "agones_cluster" {
 module "helm_agones" {
   source = "git::https://github.com/googleforgames/agones.git//install/terraform/modules/helm3/?ref=release-1.24.0"
 
-  agones_version         = "1.23.0"
+  agones_version         = "1.24.0"
   values_file            = ""
   chart                  = "agones"
   host                   = module.agones_cluster.host

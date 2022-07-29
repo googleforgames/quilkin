@@ -20,7 +20,9 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use k8s_openapi::{api::core::v1::Namespace, apimachinery::pkg::apis::meta::v1::ObjectMeta};
+use k8s_openapi::{
+    api::core::v1::Namespace, apimachinery::pkg::apis::meta::v1::ObjectMeta, chrono,
+};
 use kube::{
     api::{DeleteParams, ListParams, PostParams},
     Api, ResourceExt,
@@ -33,6 +35,7 @@ mod pod;
 static CLIENT: OnceCell<Client> = OnceCell::const_new();
 #[allow(dead_code)]
 const IMAGE_TAG: &str = "IMAGE_TAG";
+const DELETE_DELAY_SECONDS: &str = "DELETE_DELAY_SECONDS";
 
 pub struct Client {
     /// The Kubernetes client
@@ -59,7 +62,7 @@ impl Client {
                 Client {
                     kubernetes: client.clone(),
                     namespace: setup_namespace(client).await,
-                    quilkin_image: env::var_os(IMAGE_TAG).unwrap().into_string().unwrap(),
+                    quilkin_image: env::var(IMAGE_TAG).unwrap(),
                 }
             })
             .await
@@ -75,10 +78,25 @@ async fn setup_namespace(client: kube::Client) -> String {
     let lp = ListParams::default().labels("owner=quilkin-test");
     let nss = namespaces.list(&lp).await.unwrap();
     let dp = DeleteParams::default();
+
+    let delay = env::var(DELETE_DELAY_SECONDS)
+        .ok()
+        .and_then(|s| s.parse::<i64>().ok())
+        .map(chrono::Duration::seconds);
+
     for ns in nss {
         let name = ns.name();
-        if let Err(err) = namespaces.delete(name.as_str(), &dp).await {
-            println!("Failure attempting to deleted namespace: {:?}, {err}", name);
+
+        let delete = delay
+            .and_then(|duration| {
+                let expiry = ns.creation_timestamp()?.0 + duration;
+                Some(chrono::Utc::now() > expiry)
+            })
+            .unwrap_or(true);
+        if delete {
+            if let Err(err) = namespaces.delete(name.as_str(), &dp).await {
+                println!("Failure attempting to deleted namespace: {:?}, {err}", name);
+            }
         }
     }
 
