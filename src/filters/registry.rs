@@ -65,7 +65,7 @@ mod tests {
     use crate::test_utils::load_test_filters;
 
     use super::*;
-    use crate::endpoint::{Endpoint, EndpointAddress, Endpoints};
+    use crate::endpoint::{Endpoint, EndpointAddress};
     use crate::filters::{
         Filter, FilterRegistry, ReadContext, ReadResponse, WriteContext, WriteResponse,
     };
@@ -105,7 +105,7 @@ mod tests {
 
         assert!(filter
             .read(ReadContext::new(
-                Endpoints::new(vec![endpoint.clone()]).into(),
+                vec![endpoint.clone()],
                 addr.clone(),
                 vec![]
             ))

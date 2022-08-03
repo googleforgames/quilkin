@@ -14,24 +14,28 @@ quilkin.filters.match.v1alpha1.Match
 ```rust
 # let yaml = "
 version: v1alpha1
-endpoints:
-  - address: 127.0.0.1:26000
-  - address: 127.0.0.1:26001
+clusters: 
+  default:
+    localities:
+      - endpoints:
+        - address: 127.0.0.1:26000
+        - address: 127.0.0.1:26001
 filters:
-  - name: quilkin.filters.capture_bytes.v1alpha1.CaptureBytes
+  - name: quilkin.filters.capture.v1alpha1.Capture
     config:
-        strategy: PREFIX
-        metadataKey: myapp.com/token
+      metadataKey: myapp.com/token
+      prefix:
         size: 3
         remove: false
   - name: quilkin.filters.match.v1alpha1.Match
     config:
-        on_read:
-          metadataKey: myapp.com/token
-          branches:
-              - value: abc
-                filter: quilkin.filters.pass.v1alpha1.Pass
-          fallthrough: quilkin.filters.drop.v1alpha1.Drop
+      on_read:
+        metadataKey: myapp.com/token
+        branches:
+          - value: abc
+            name: quilkin.filters.pass.v1alpha1.Pass
+        fallthrough:
+          name: quilkin.filters.drop.v1alpha1.Drop
 # ";
 # let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 # assert_eq!(config.filters.load().len(), 2);

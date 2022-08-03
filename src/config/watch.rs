@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Google LLC
+ * Copyright 2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,7 @@
  * limitations under the License.
  */
 
-pub(crate) use health::Health;
-pub use server::Server;
-pub use sessions::SessionKey;
+mod agones;
+mod fs;
 
-mod health;
-mod server;
-mod sessions;
+pub use self::{agones::watch as agones, fs::watch as fs};

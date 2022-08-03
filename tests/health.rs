@@ -16,7 +16,8 @@
 use std::panic;
 
 use hyper::{Client, Uri};
-use quilkin::{config::Admin, endpoint::Endpoint, test_utils::TestHelper, Server};
+
+use quilkin::{config::Admin, endpoint::Endpoint, test_utils::TestHelper};
 
 const LIVE_ADDRESS: &str = "http://localhost:9093/live";
 
@@ -34,7 +35,7 @@ async fn health_server() {
         })
         .build()
         .unwrap();
-    t.run_server(Server::try_from(server_config).unwrap());
+    t.run_server(<_>::try_from(server_config).unwrap());
 
     let client = Client::new();
     let resp = client

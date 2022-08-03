@@ -127,7 +127,7 @@ impl Filter for Firewall {
 mod tests {
     use std::net::Ipv4Addr;
 
-    use crate::endpoint::{Endpoint, Endpoints, UpstreamEndpoints};
+    use crate::endpoint::Endpoint;
     use crate::filters::firewall::config::PortRange;
     use tracing_test::traced_test;
 
@@ -148,9 +148,7 @@ mod tests {
 
         let local_ip = [192, 168, 75, 20];
         let ctx = ReadContext::new(
-            UpstreamEndpoints::from(Endpoints::new(vec![Endpoint::new(
-                (Ipv4Addr::LOCALHOST, 8080).into(),
-            )])),
+            vec![Endpoint::new((Ipv4Addr::LOCALHOST, 8080).into())],
             (local_ip, 80).into(),
             vec![],
         );
@@ -159,9 +157,7 @@ mod tests {
         assert_eq!(0, firewall.metrics.packets_denied_read.get());
 
         let ctx = ReadContext::new(
-            UpstreamEndpoints::from(Endpoints::new(vec![Endpoint::new(
-                (Ipv4Addr::LOCALHOST, 8080).into(),
-            )])),
+            vec![Endpoint::new((Ipv4Addr::LOCALHOST, 8080).into())],
             (local_ip, 2000).into(),
             vec![],
         );

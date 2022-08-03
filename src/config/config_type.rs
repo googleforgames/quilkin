@@ -122,6 +122,12 @@ impl<'de> serde::Serialize for ConfigType {
     }
 }
 
+impl From<serde_json::Value> for ConfigType {
+    fn from(value: serde_json::Value) -> Self {
+        Self::Static(value)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::ConfigType;

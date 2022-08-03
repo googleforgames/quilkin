@@ -17,8 +17,11 @@ filters:
   - name: quilkin.filters.load_balancer.v1alpha1.LoadBalancer
     config:
       policy: ROUND_ROBIN
-endpoints:
-  - address: 127.0.0.1:7001
+clusters:
+  default:
+    localities:
+        - endpoints:
+            - address: 127.0.0.1:7001
 # ";
 #   let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 # assert_eq!(config.filters.load().len(), 1);

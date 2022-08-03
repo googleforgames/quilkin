@@ -17,7 +17,10 @@
 use serde::{Deserialize, Serialize};
 
 use super::proto;
-use crate::{config::ConfigType, filters::ConvertProtoConfigError};
+use crate::{
+    config::Filter,
+    filters::{ConvertProtoConfigError, StaticFilter},
+};
 
 /// Configuration for [`Match`][super::Match].
 #[derive(Debug, Deserialize, Serialize, PartialEq, schemars::JsonSchema)]
@@ -154,143 +157,6 @@ impl TryFrom<proto::r#match::Branch> for Branch {
     }
 }
 
-#[derive(Debug, PartialEq, Serialize, schemars::JsonSchema)]
-pub struct Filter {
-    /// The identifier for the filter to run.
-    pub id: String,
-    /// The configuration for the filter to run, if any.
-    pub config: Option<ConfigType>,
-}
-
-impl Filter {
-    pub fn new<I: Into<String>>(id: I) -> Self {
-        Self {
-            id: id.into(),
-            config: None,
-        }
-    }
-
-    pub fn with_config<I: Into<String>, C: Into<ConfigType>>(id: I, config: C) -> Self {
-        Self {
-            id: id.into(),
-            config: Some(config.into()),
-        }
-    }
-}
-
-impl From<String> for Filter {
-    fn from(id: String) -> Self {
-        Self::new(id)
-    }
-}
-
-impl From<&'static str> for Filter {
-    fn from(id: &'static str) -> Self {
-        Self::new(id)
-    }
-}
-
-impl<'de> Deserialize<'de> for Filter {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        struct FilterVisitor;
-
-        impl<'de> serde::de::Visitor<'de> for FilterVisitor {
-            type Value = Filter;
-
-            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-                formatter.write_str("string or map")
-            }
-
-            fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                Ok(Filter::new(value))
-            }
-
-            fn visit_string<E>(self, id: String) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                Ok(Filter::new(id))
-            }
-
-            fn visit_map<M>(self, mut map: M) -> Result<Self::Value, M::Error>
-            where
-                M: serde::de::MapAccess<'de>,
-            {
-                const ID_KEY: &str = "id";
-                const CONFIG_KEY: &str = "config";
-                const KEYS: &[&str] = &[ID_KEY, CONFIG_KEY];
-                let mut id: Option<String> = None;
-                let mut config: Option<ConfigType> = None;
-
-                while let Some(key) = map.next_key::<String>()? {
-                    match &*key {
-                        ID_KEY => match id {
-                            Some(_) => return Err(serde::de::Error::duplicate_field(ID_KEY)),
-                            None => {
-                                id.replace(map.next_value()?);
-                            }
-                        },
-                        CONFIG_KEY => match config {
-                            Some(_) => return Err(serde::de::Error::duplicate_field(CONFIG_KEY)),
-                            None => {
-                                config.replace(map.next_value()?);
-                            }
-                        },
-                        key => return Err(serde::de::Error::unknown_field(key, KEYS)),
-                    };
-                }
-
-                let id = id.ok_or_else(|| serde::de::Error::missing_field("id"))?;
-
-                Ok(Filter { id, config })
-            }
-        }
-
-        deserializer.deserialize_any(FilterVisitor)
-    }
-}
-
-impl TryFrom<Filter> for proto::r#match::Filter {
-    type Error = crate::filters::Error;
-
-    fn try_from(filter: Filter) -> Result<Self, Self::Error> {
-        Ok(Self {
-            config: match filter.config {
-                Some(ConfigType::Dynamic(any)) => Some(any),
-                Some(ConfigType::Static(value)) => {
-                    crate::filters::FilterRegistry::get_factory(&filter.id)
-                        .ok_or_else(|| crate::filters::Error::NotFound(filter.id.clone()))?
-                        .encode_config_to_protobuf(value)
-                        .map(Some)?
-                }
-                None => None,
-            },
-            id: Some(filter.id),
-        })
-    }
-}
-
-impl TryFrom<proto::r#match::Filter> for Filter {
-    type Error = eyre::Report;
-
-    fn try_from(filter: proto::r#match::Filter) -> Result<Self, Self::Error> {
-        let id: String = filter
-            .id
-            .ok_or_else(|| eyre::eyre!("missing `filter` field in Fallthrough configuration"))?;
-
-        Ok(Self {
-            id,
-            config: filter.config.map(ConfigType::Dynamic),
-        })
-    }
-}
-
 /// The behaviour when the none of branches match. Defaults to dropping packets.
 #[derive(Debug, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(transparent)]
@@ -298,11 +164,11 @@ pub struct Fallthrough(pub Filter);
 
 impl Default for Fallthrough {
     fn default() -> Self {
-        Self(Filter::new(crate::filters::drop::NAME))
+        Self(crate::filters::Drop::as_filter_config(None).unwrap())
     }
 }
 
-impl TryFrom<Fallthrough> for proto::r#match::Filter {
+impl TryFrom<Fallthrough> for crate::xds::config::listener::v3::Filter {
     type Error = crate::filters::Error;
     fn try_from(fallthrough: Fallthrough) -> Result<Self, Self::Error> {
         fallthrough.0.try_into()
@@ -320,7 +186,7 @@ on_read:
     metadataKey: quilkin.dev/captured_bytes
     branches:
         - value: abc
-          id: quilkin.filters.debug.v1alpha1.Debug
+          name: quilkin.filters.debug.v1alpha1.Debug
         ";
 
         let config = serde_yaml::from_str::<Config>(matches_yaml).unwrap();
@@ -332,7 +198,7 @@ on_read:
                     metadata_key: "quilkin.dev/captured_bytes".into(),
                     branches: vec![Branch {
                         value: String::from("abc").into(),
-                        filter: "quilkin.filters.debug.v1alpha1.Debug".into(),
+                        filter: crate::filters::Debug::as_filter_config(None).unwrap(),
                     }],
                     fallthrough: <_>::default(),
                 }),

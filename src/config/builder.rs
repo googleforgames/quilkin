@@ -14,14 +14,12 @@
  *  limitations under the License.
  */
 
-use std::{collections::HashSet, sync::Arc};
-
-use arc_swap::ArcSwap;
+use std::collections::HashSet;
 
 use super::{Config, Filter};
 use crate::{
+    cluster::ClusterMap,
     config::{Admin, ManagementServer, Proxy, ValidationError, Version},
-    endpoint::Endpoint,
 };
 
 /// Builder for a [`Config`]
@@ -29,7 +27,7 @@ use crate::{
 pub struct Builder {
     pub port: u16,
     pub admin: Option<Admin>,
-    pub endpoints: Vec<Endpoint>,
+    pub clusters: ClusterMap,
     pub filters: Vec<Filter>,
     pub management_servers: Vec<ManagementServer>,
 }
@@ -39,7 +37,7 @@ impl Default for Builder {
         Self {
             admin: Some(<_>::default()),
             port: <_>::default(),
-            endpoints: <_>::default(),
+            clusters: <_>::default(),
             filters: <_>::default(),
             management_servers: <_>::default(),
         }
@@ -51,12 +49,30 @@ impl Builder {
         Builder { port, ..self }
     }
 
-    pub fn filters(self, filters: Vec<Filter>) -> Self {
-        Self { filters, ..self }
+    pub fn filters(self, filters: impl Into<Vec<Filter>>) -> Self {
+        Self {
+            filters: filters.into(),
+            ..self
+        }
     }
 
-    pub fn endpoints(self, endpoints: Vec<Endpoint>) -> Self {
-        Self { endpoints, ..self }
+    pub fn clusters(self, clusters: impl Into<ClusterMap>) -> Self {
+        Self {
+            clusters: clusters.into(),
+            ..self
+        }
+    }
+
+    pub fn endpoints(self, endpoints: impl Into<Vec<crate::endpoint::Endpoint>>) -> Self {
+        Self {
+            clusters: ClusterMap::new_with_default_cluster(
+                endpoints
+                    .into()
+                    .into_iter()
+                    .collect::<std::collections::BTreeSet<_>>(),
+            ),
+            ..self
+        }
     }
 
     pub fn management_servers(self, management_servers: impl IntoIterator<Item = String>) -> Self {
@@ -86,17 +102,8 @@ impl TryFrom<Builder> for Config {
     type Error = ValidationError;
 
     fn try_from(builder: Builder) -> Result<Self, Self::Error> {
-        if builder
-            .endpoints
-            .iter()
-            .map(|ep| ep.address.clone())
-            .collect::<HashSet<_>>()
-            .len()
-            != builder.endpoints.len()
-        {
-            return Err(ValidationError::NotUnique(
-                "static.endpoints.address".to_string(),
-            ));
+        if !builder.clusters.contains_only_unique_endpoints() {
+            return Err(ValidationError::NotUnique("clusters".into()));
         }
 
         if builder
@@ -113,15 +120,17 @@ impl TryFrom<Builder> for Config {
         }
 
         Ok(Self {
-            version: Version::V1Alpha1,
+            version: Version::V1Alpha1.into(),
             proxy: Proxy {
                 id: "test".into(),
                 port: builder.port,
-            },
-            admin: builder.admin,
-            endpoints: Arc::from(ArcSwap::new(Arc::from(builder.endpoints))),
-            filters: Arc::from(ArcSwap::new(Arc::from(builder.filters))),
-            management_servers: Arc::from(ArcSwap::new(Arc::from(builder.management_servers))),
+            }
+            .into(),
+            admin: builder.admin.into(),
+            clusters: builder.clusters.into(),
+            filters: crate::filters::FilterChain::try_from(builder.filters)?.into(),
+            management_servers: builder.management_servers.into(),
+            metrics: <_>::default(),
         })
     }
 }

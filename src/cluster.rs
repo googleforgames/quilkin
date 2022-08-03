@@ -14,61 +14,156 @@
  * limitations under the License.
  */
 
-mod metrics;
-mod shared;
-
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::endpoint::Endpoint;
+use crate::endpoint::{Endpoint, EndpointAddress, LocalityEndpoints};
 
-pub(crate) use shared::SharedCluster;
+const DEFAULT_CLUSTER_NAME: &str = "default";
 
-pub type ClusterLocalities = HashMap<Option<Locality>, LocalityEndpoints>;
-
-#[derive(Clone, Debug, Hash, Eq, PartialEq)]
-pub struct Locality {
-    pub region: String,
-    pub zone: String,
-    pub sub_zone: String,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct LocalityEndpoints {
-    pub endpoints: Vec<Endpoint>,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Default, Debug, Eq, PartialEq, Deserialize, Serialize, JsonSchema)]
 pub struct Cluster {
-    pub localities: ClusterLocalities,
+    #[serde(skip, default = "default_cluster_name")]
+    pub name: String,
+    pub localities: Vec<LocalityEndpoints>,
 }
 
 impl Cluster {
-    pub fn new_static_cluster(endpoints: Vec<Endpoint>) -> Self {
-        let endpoints = LocalityEndpoints { endpoints };
-
-        Self {
-            localities: [(None, endpoints)].into_iter().collect(),
-        }
+    /// Creates a new `Cluster` called `name` containing `localities`.
+    pub fn new(name: String, localities: Vec<LocalityEndpoints>) -> Self {
+        Self { name, localities }
     }
 
+    /// Creates a new `Cluster` called `"default"` containing `endpoints`.
+    pub fn new_default(endpoints: Vec<LocalityEndpoints>) -> Self {
+        Self::new("default".into(), endpoints)
+    }
+
+    pub fn push(&mut self, endpoints: impl Into<LocalityEndpoints>) {
+        self.localities.push(endpoints.into());
+    }
+
+    /// Provides a flat iterator over the list of endpoints.
     pub fn endpoints(&self) -> impl Iterator<Item = &Endpoint> + '_ {
-        self.localities.values().flat_map(|l| l.endpoints.iter())
+        self.localities
+            .iter()
+            .flat_map(|locality| locality.endpoints.iter())
     }
 }
 
+fn default_cluster_name() -> String {
+    DEFAULT_CLUSTER_NAME.into()
+}
+
 /// Represents a full snapshot of all clusters.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Default, Debug, Serialize, PartialEq, Eq, JsonSchema)]
 pub struct ClusterMap(HashMap<String, Cluster>);
 
 impl ClusterMap {
-    pub fn endpoints(&self) -> impl Iterator<Item = &Endpoint> + '_ {
-        self.0.values().flat_map(|cluster| cluster.endpoints())
+    /// Creates a new `Cluster` called `name` containing `endpoints`.
+    pub fn new_with_default_cluster(localities: impl Into<LocalityEndpoints>) -> Self {
+        Self::from_iter([Cluster::new_default(vec![localities.into()])])
+    }
+
+    pub fn insert(&mut self, cluster: Cluster) -> Option<Cluster> {
+        self.0.insert(cluster.name.clone(), cluster)
+    }
+
+    pub fn get(&self, key: &str) -> Option<&Cluster> {
+        self.0.get(key)
+    }
+
+    pub fn get_mut(&mut self, key: &str) -> Option<&mut Cluster> {
+        self.0.get_mut(key)
+    }
+
+    pub fn get_default(&self) -> Option<&Cluster> {
+        self.get(DEFAULT_CLUSTER_NAME)
+    }
+
+    pub fn get_default_mut(&mut self) -> Option<&mut Cluster> {
+        self.get_mut(DEFAULT_CLUSTER_NAME)
+    }
+
+    pub fn insert_default(&mut self, cluster: impl Into<LocalityEndpoints>) {
+        self.0.insert(
+            DEFAULT_CLUSTER_NAME.into(),
+            Cluster::new_default(vec![cluster.into()]),
+        );
+    }
+
+    pub fn default_cluster_mut(&mut self) -> &mut Cluster {
+        let entry = self.0.entry(DEFAULT_CLUSTER_NAME.into()).or_default();
+        entry
+            .name
+            .is_empty()
+            .then(|| entry.name = DEFAULT_CLUSTER_NAME.into());
+        entry
+    }
+
+    pub fn localities(&self) -> impl Iterator<Item = &LocalityEndpoints> + '_ {
+        self.0
+            .values()
+            .flat_map(|cluster| cluster.localities.iter())
+    }
+
+    pub fn endpoints(&self) -> impl Iterator<Item = Endpoint> + '_ {
+        self.localities()
+            .flat_map(|locality| locality.endpoints.clone())
+    }
+
+    pub fn contains_only_unique_endpoints(&self) -> bool {
+        self.endpoints()
+            .collect::<std::collections::BTreeSet<_>>()
+            .len()
+            == self.endpoints().count()
+    }
+}
+
+impl<'de> Deserialize<'de> for ClusterMap {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let mut map = HashMap::<String, Cluster>::deserialize(deserializer)?;
+
+        for (key, value) in map.iter_mut() {
+            value.name = key.clone();
+        }
+
+        Ok(Self(map))
     }
 }
 
 impl From<HashMap<String, Cluster>> for ClusterMap {
     fn from(value: HashMap<String, Cluster>) -> Self {
         Self(value)
+    }
+}
+
+impl From<Cluster> for ClusterMap {
+    fn from(value: Cluster) -> Self {
+        Self::from([value])
+    }
+}
+
+impl<const N: usize> From<[Cluster; N]> for ClusterMap {
+    fn from(value: [Cluster; N]) -> Self {
+        Self::from_iter(value)
+    }
+}
+
+impl FromIterator<Cluster> for ClusterMap {
+    fn from_iter<T>(iter: T) -> Self
+    where
+        T: IntoIterator<Item = Cluster>,
+    {
+        Self(
+            iter.into_iter()
+                .map(|cluster| (cluster.name.clone(), cluster))
+                .collect(),
+        )
     }
 }
 
@@ -98,5 +193,97 @@ impl FromIterator<(String, Cluster)> for ClusterMap {
         T: IntoIterator<Item = (String, Cluster)>,
     {
         Self(iter.into_iter().collect())
+    }
+}
+
+impl From<Cluster> for crate::xds::config::endpoint::v3::ClusterLoadAssignment {
+    fn from(cluster: Cluster) -> Self {
+        Self {
+            cluster_name: cluster.name,
+            endpoints: cluster.localities.into_iter().map(From::from).collect(),
+            ..Self::default()
+        }
+    }
+}
+
+impl From<&'_ Cluster> for crate::xds::config::cluster::v3::Cluster {
+    fn from(cluster: &Cluster) -> Self {
+        Self {
+            name: cluster.name.clone(),
+            load_assignment: Some(cluster.into()),
+            ..Self::default()
+        }
+    }
+}
+
+impl From<&'_ Cluster> for crate::xds::config::endpoint::v3::ClusterLoadAssignment {
+    fn from(cluster: &Cluster) -> Self {
+        Self {
+            cluster_name: cluster.name.clone(),
+            endpoints: cluster.localities.iter().cloned().map(From::from).collect(),
+            ..Self::default()
+        }
+    }
+}
+
+impl TryFrom<crate::xds::config::endpoint::v3::ClusterLoadAssignment> for Cluster {
+    type Error = eyre::Error;
+
+    fn try_from(
+        mut cla: crate::xds::config::endpoint::v3::ClusterLoadAssignment,
+    ) -> Result<Self, Self::Error> {
+        use crate::xds::config::endpoint::v3::lb_endpoint;
+
+        let localities = cla
+            .endpoints
+            .into_iter()
+            .map(|locality| {
+                let endpoints = locality
+                    .lb_endpoints
+                    .into_iter()
+                    .map(|endpoint| {
+                        let metadata = endpoint.metadata;
+                        let endpoint = match endpoint.host_identifier {
+                            Some(lb_endpoint::HostIdentifier::Endpoint(endpoint)) => Ok(endpoint),
+                            Some(lb_endpoint::HostIdentifier::EndpointName(name_reference)) => {
+                                match cla.named_endpoints.remove(&name_reference) {
+                                    Some(endpoint) => Ok(endpoint),
+                                    None => Err(eyre::eyre!(
+                                        "no endpoint found name reference {}",
+                                        name_reference
+                                    )),
+                                }
+                            }
+                            None => Err(eyre::eyre!("no host found for endpoint")),
+                        }?;
+
+                        // Extract the endpoint's address.
+                        let address: EndpointAddress = endpoint
+                            .address
+                            .and_then(|address| address.address)
+                            .ok_or_else(|| eyre::eyre!("No address provided."))?
+                            .try_into()?;
+
+                        let endpoint = Endpoint::with_metadata(
+                            address,
+                            metadata
+                                .map(crate::metadata::MetadataView::try_from)
+                                .transpose()?
+                                .unwrap_or_default(),
+                        );
+                        Ok(endpoint)
+                    })
+                    .collect::<Result<_, eyre::Error>>()?;
+
+                let locality = locality.locality.map(From::from);
+
+                Ok(LocalityEndpoints::new(endpoints).with_locality(locality))
+            })
+            .collect::<Result<_, eyre::Error>>()?;
+
+        Ok(Cluster {
+            name: cla.cluster_name,
+            localities,
+        })
     }
 }

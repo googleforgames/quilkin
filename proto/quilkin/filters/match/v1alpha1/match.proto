@@ -21,22 +21,18 @@ package quilkin.filters.matches.v1alpha1;
 import "google/protobuf/wrappers.proto";
 import "google/protobuf/struct.proto";
 import "google/protobuf/any.proto";
+import "envoy/config/listener/v3/listener_components.proto";
 
 message Match {
     message Branch {
         google.protobuf.Value value = 1;
-        Filter filter = 2;
+        envoy.config.listener.v3.Filter filter = 2;
     }
 
     message Config {
         google.protobuf.StringValue metadata_key = 1;
         repeated Branch branches = 2;
-        Filter fallthrough = 4;
-    }
-
-    message Filter {
-        google.protobuf.StringValue id = 1;
-        optional google.protobuf.Any config = 2;
+        envoy.config.listener.v3.Filter fallthrough = 4;
     }
 
     optional Config on_read = 1;

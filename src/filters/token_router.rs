@@ -22,11 +22,8 @@ use std::convert::TryFrom;
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
-use tracing::error;
 
 use crate::{
-    config::LOG_SAMPLING_RATE,
-    endpoint::RetainedItems,
     filters::{metadata::CAPTURED_BYTES, prelude::*},
     metadata::Value,
 };
@@ -65,39 +62,42 @@ impl StaticFilter for TokenRouter {
 }
 
 impl Filter for TokenRouter {
-    #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
     fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
         match ctx.metadata.get(self.metadata_key.as_ref()) {
             None => {
-                if self.metrics.packets_dropped_no_token_found.get() % LOG_SAMPLING_RATE == 0 {
-                    error!(
-                        count = ?self.metrics.packets_dropped_no_token_found.get(),
-                        metadata_key = ?self.metadata_key.clone(),
-                        "Packets are being dropped as no routing token was found in filter dynamic metadata"
-                    );
-                }
+                tracing::trace!(
+                    metadata_key = %self.metadata_key,
+                    "Dropping packet, no routing token was found"
+                );
                 self.metrics.packets_dropped_no_token_found.inc();
                 None
             }
             Some(value) => match value {
-                Value::Bytes(token) => match ctx
-                    .endpoints
-                    .retain(|e| e.metadata.known.tokens.contains(&**token))
-                {
-                    RetainedItems::None => {
+                Value::Bytes(token) => {
+                    ctx.endpoints.retain(|endpoint| {
+                        if endpoint.metadata.known.tokens.contains(&**token) {
+                            tracing::trace!(%endpoint.address, token = &*base64::encode(token), "Endpoint matched");
+                            true
+                        } else {
+                            false
+                        }
+                    });
+
+                    if ctx.endpoints.is_empty() {
+                        let token: &[u8] = &**token;
+                        tracing::trace!(?token, "No endpoint matched token");
                         self.metrics.packets_dropped_no_endpoint_match.inc();
                         None
+                    } else {
+                        Some(ctx.into())
                     }
-                    _ => Some(ctx.into()),
-                },
+                }
                 _ => {
-                    if self.metrics.packets_dropped_invalid_token.get() % LOG_SAMPLING_RATE == 0 {
-                        error!(
-                            count = ?self.metrics.packets_dropped_invalid_token.get(),
-                            metadata_key = ?self.metadata_key.clone(),
-                            "Packets are being dropped as routing token has invalid type: expected Value::Bytes"
-                        );
-                    }
+                    tracing::trace!(
+                        count = ?self.metrics.packets_dropped_invalid_token.get(),
+                        metadata_key = ?self.metadata_key.clone(),
+                        "Packets are being dropped as routing token has invalid type: expected Value::Bytes"
+                    );
                     self.metrics.packets_dropped_invalid_token.inc();
                     None
                 }
@@ -154,7 +154,7 @@ mod tests {
     use std::sync::Arc;
 
     use crate::{
-        endpoint::{Endpoint, Endpoints, Metadata},
+        endpoint::{Endpoint, Metadata},
         metadata::Value,
         test_utils::assert_write_no_change,
     };
@@ -289,7 +289,7 @@ mod tests {
         );
 
         ReadContext::new(
-            Endpoints::new(vec![endpoint1, endpoint2]).into(),
+            vec![endpoint1, endpoint2],
             "127.0.0.1:100".parse().unwrap(),
             b"hello".to_vec(),
         )
@@ -302,6 +302,5 @@ mod tests {
         let result = filter.read(ctx).unwrap();
 
         assert_eq!(b"hello".to_vec(), result.contents);
-        assert_eq!(1, result.endpoints.size());
     }
 }
