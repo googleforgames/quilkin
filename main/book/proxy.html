@@ -147,14 +147,17 @@ Keys must be of type string otherwise the configuration is rejected.</p>
 <p>In fact, the tokens associated with an endpoint are simply a special piece of metadata well known to Quilkin and is used by the built-in <a href="./filters/token_router.html">TokenRouter</a> filter to route packets.
 Such well known values are placed within an object in the endpoint metadata, under the special key <code>quilkin.dev</code>. Currently, only the <code>tokens</code> entry is in use.</p>
 <p>As an example, the following shows the configuration for an endpoint with its metadata:</p>
-<pre><code class="language-yaml">endpoints:
-  - address: 127.0.0.1:26000
-    metadata:
-      canary: false
-      quilkin.dev: # This object is extracted by Quilkin and is usually reserved for built-in features
-        tokens:
-          - MXg3aWp5Ng== # base64 for 1x7ijy6
-          - OGdqM3YyaQ== # base64 for 8gj3v2i
+<pre><code class="language-yaml">clusters:
+  default:
+    localities:
+      - endpoints:
+        - address: 127.0.0.1:26000
+          metadata:
+            canary: false
+            quilkin.dev: # This object is extracted by Quilkin and is usually reserved for built-in features
+                tokens:
+                - MXg3aWp5Ng== # base64 for 1x7ijy6
+                - OGdqM3YyaQ== # base64 for 8gj3v2i
 </code></pre>
 <p>An endpoint's metadata can be specified alongside the endpoint in <a href="./proxy-configuration.html">static configuration</a> or using the <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint_components.proto#envoy-v3-api-field-config-endpoint-v3-lbendpoint-metadata">xDS endpoint metadata</a> field when using <a href="./xds.html">dynamic configuration</a> via xDS.</p>
 <h5 id="session"><a class="header" href="#session">Session</a></h5>

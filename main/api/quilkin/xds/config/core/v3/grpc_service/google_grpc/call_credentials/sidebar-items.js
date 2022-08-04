@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["CredentialSpecifier",""]],"mod":[["metadata_credentials_from_plugin","Nested message and enum types in `MetadataCredentialsFromPlugin`."]],"struct":[["GoogleIamCredentials",""],["MetadataCredentialsFromPlugin",""],["ServiceAccountJwtAccessCredentials",""],["StsService",""]]});

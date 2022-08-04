@@ -78,11 +78,6 @@
 <span id="73">73</span>
 <span id="74">74</span>
 <span id="75">75</span>
-<span id="76">76</span>
-<span id="77">77</span>
-<span id="78">78</span>
-<span id="79">79</span>
-<span id="80">80</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -132,10 +127,8 @@
 <span class="kw">impl</span> <span class="ident">EndpointChooser</span> <span class="kw">for</span> <span class="ident">RoundRobinEndpointChooser</span> {
     <span class="kw">fn</span> <span class="ident">choose_endpoints</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ReadContext</span>) {
         <span class="kw">let</span> <span class="ident">count</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">next_endpoint</span>.<span class="ident">fetch_add</span>(<span class="number">1</span>, <span class="ident">Ordering::Relaxed</span>);
-        <span class="comment">// Note: Unwrap is safe here because the index is guaranteed to be in range.</span>
-        <span class="kw">let</span> <span class="ident">num_endpoints</span> <span class="op">=</span> <span class="ident">ctx</span>.<span class="ident">endpoints</span>.<span class="ident">size</span>();
-        <span class="ident">ctx</span>.<span class="ident">endpoints</span>.<span class="ident">keep</span>(<span class="ident">count</span> <span class="op">%</span> <span class="ident">num_endpoints</span>)
-            .<span class="ident">expect</span>(<span class="string">&quot;BUG: unwrap should have been safe because index into endpoints list should be in range&quot;</span>);
+        <span class="comment">// Note: The index is guaranteed to be in range.</span>
+        <span class="ident">ctx</span>.<span class="ident">endpoints</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">ctx</span>.<span class="ident">endpoints</span>[<span class="ident">count</span> <span class="op">%</span> <span class="ident">ctx</span>.<span class="ident">endpoints</span>.<span class="ident">len</span>()].<span class="ident">clone</span>()];
     }
 }
 
@@ -144,10 +137,9 @@
 
 <span class="kw">impl</span> <span class="ident">EndpointChooser</span> <span class="kw">for</span> <span class="ident">RandomEndpointChooser</span> {
     <span class="kw">fn</span> <span class="ident">choose_endpoints</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ReadContext</span>) {
-        <span class="comment">// Note: Unwrap is safe here because the index is guaranteed to be in range.</span>
-        <span class="kw">let</span> <span class="ident">idx</span> <span class="op">=</span> (<span class="kw-2">&amp;mut</span> <span class="ident">thread_rng</span>()).<span class="ident">gen_range</span>(<span class="number">0</span>..<span class="ident">ctx</span>.<span class="ident">endpoints</span>.<span class="ident">size</span>());
-        <span class="ident">ctx</span>.<span class="ident">endpoints</span>.<span class="ident">keep</span>(<span class="ident">idx</span>)
-            .<span class="ident">expect</span>(<span class="string">&quot;BUG: unwrap should have been safe because index into endpoints list should be in range&quot;</span>);
+        <span class="comment">// The index is guaranteed to be in range.</span>
+        <span class="kw">let</span> <span class="ident">index</span> <span class="op">=</span> (<span class="kw-2">&amp;mut</span> <span class="ident">thread_rng</span>()).<span class="ident">gen_range</span>(<span class="number">0</span>..<span class="ident">ctx</span>.<span class="ident">endpoints</span>.<span class="ident">len</span>());
+        <span class="ident">ctx</span>.<span class="ident">endpoints</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">ctx</span>.<span class="ident">endpoints</span>[<span class="ident">index</span>].<span class="ident">clone</span>()];
     }
 }
 
@@ -156,11 +148,9 @@
 
 <span class="kw">impl</span> <span class="ident">EndpointChooser</span> <span class="kw">for</span> <span class="ident">HashEndpointChooser</span> {
     <span class="kw">fn</span> <span class="ident">choose_endpoints</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ReadContext</span>) {
-        <span class="kw">let</span> <span class="ident">num_endpoints</span> <span class="op">=</span> <span class="ident">ctx</span>.<span class="ident">endpoints</span>.<span class="ident">size</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">hasher</span> <span class="op">=</span> <span class="ident">DefaultHasher::new</span>();
         <span class="ident">ctx</span>.<span class="ident">source</span>.<span class="ident">hash</span>(<span class="kw-2">&amp;mut</span> <span class="ident">hasher</span>);
-        <span class="ident">ctx</span>.<span class="ident">endpoints</span>.<span class="ident">keep</span>(<span class="ident">hasher</span>.<span class="ident">finish</span>() <span class="kw">as</span> <span class="ident">usize</span> <span class="op">%</span> <span class="ident">num_endpoints</span>)
-            .<span class="ident">expect</span>(<span class="string">&quot;BUG: unwrap should have been safe because index into endpoints list should be in range&quot;</span>);
+        <span class="ident">ctx</span>.<span class="ident">endpoints</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">ctx</span>.<span class="ident">endpoints</span>[<span class="ident">hasher</span>.<span class="ident">finish</span>() <span class="kw">as</span> <span class="ident">usize</span> <span class="op">%</span> <span class="ident">ctx</span>.<span class="ident">endpoints</span>.<span class="ident">len</span>()].<span class="ident">clone</span>()];
     }
 }
 </code></pre></div>

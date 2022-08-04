@@ -164,10 +164,13 @@ filters:
     config:
       metadataKey: myapp.com/myownkey
       prefix:
-      size: 3
-      remove: false
-endpoints:
-  - address: 127.0.0.1:7001
+        size: 3
+        remove: false
+clusters:
+  default:
+    localities:
+        - endpoints:
+            - address: 127.0.0.1:7001
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 1);
@@ -175,76 +178,7 @@ endpoints:
 </span><span class="boring">}
 </span></code></pre></pre>
 <h3 id="configuration-options-rust-doc"><a class="header" href="#configuration-options-rust-doc">Configuration Options (<a href="../../api/quilkin/filters/capture/struct.Config.html">Rust Doc</a>)</a></h3>
-<pre><code class="language-yaml">---
-$schema: &quot;http://json-schema.org/draft-07/schema#&quot;
-title: Config
-type: object
-required:
-  - metadata_key
-  - strategy
-properties:
-  metadata_key:
-    description: &quot;The key to use when storing the captured value in the filter context. If a match was found it is available under `{{metadata_key}}/is_present`.&quot;
-    type: string
-  strategy:
-    description: The capture strategy.
-    allOf:
-      - $ref: &quot;#/definitions/Strategy&quot;
-definitions:
-  Strategy:
-    description: Strategy to apply for acquiring a set of bytes in the UDP packet
-    oneOf:
-      - description: Looks for the set of bytes at the beginning of the packet
-        type: object
-        required:
-          - kind
-          - size
-        properties:
-          kind:
-            type: string
-            enum:
-              - PREFIX
-          remove:
-            description: Whether captured bytes are removed from the original packet.
-            default: false
-            type: boolean
-          size:
-            description: The number of bytes to capture.
-            type: integer
-            format: uint32
-            minimum: 0.0
-      - description: Look for the set of bytes at the end of the packet
-        type: object
-        required:
-          - kind
-          - size
-        properties:
-          kind:
-            type: string
-            enum:
-              - SUFFIX
-          remove:
-            description: The number of bytes to capture.
-            default: false
-            type: boolean
-          size:
-            description: Whether captured bytes are removed from the original packet.
-            type: integer
-            format: uint32
-            minimum: 0.0
-      - description: Look for the set of bytes at the end of the packet
-        type: object
-        required:
-          - kind
-          - pattern
-        properties:
-          kind:
-            type: string
-            enum:
-              - REGEX
-          pattern:
-            description: The regular expression to use for capture.
-            type: string
+<pre><code class="language-yaml">{{#include ../../../target/quilkin.filters.capture.v1alpha1.yaml}}
 </code></pre>
 <h3 id="metrics"><a class="header" href="#metrics">Metrics</a></h3>
 <ul>

@@ -1,0 +1,1 @@
+initSidebarItems({"mod":[["path_segment","Nested message and enum types in `PathSegment`."]],"struct":[["PathSegment",""]]});

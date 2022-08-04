@@ -250,12 +250,6 @@
 <span id="245">245</span>
 <span id="246">246</span>
 <span id="247">247</span>
-<span id="248">248</span>
-<span id="249">249</span>
-<span id="250">250</span>
-<span id="251">251</span>
-<span id="252">252</span>
-<span id="253">253</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -374,12 +368,8 @@
 
     <span class="kw">use</span> <span class="kw">crate</span>::{
         <span class="ident">endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">EndpointAddress</span>},
-        <span class="ident">filters::SharedFilterChain</span>,
-        <span class="ident">proxy</span>::{
-            <span class="ident">server::metrics::Metrics</span> <span class="kw">as</span> <span class="ident">ProxyMetrics</span>,
-            <span class="ident">sessions</span>::{
-                <span class="ident">metrics::Metrics</span>, <span class="ident">session::SessionArgs</span>, <span class="ident">session_manager::Sessions</span>, <span class="ident">SessionKey</span>,
-            },
+        <span class="ident">proxy::sessions</span>::{
+            <span class="ident">metrics::Metrics</span>, <span class="ident">session::SessionArgs</span>, <span class="ident">session_manager::Sessions</span>, <span class="ident">SessionKey</span>,
         },
         <span class="ident">test_utils::create_socket</span>,
     };
@@ -416,8 +406,7 @@
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">sessions</span> <span class="op">=</span> <span class="ident">sessions</span>.<span class="ident">write</span>().<span class="kw">await</span>;
             <span class="kw">let</span> <span class="ident">session_args</span> <span class="op">=</span> <span class="ident">SessionArgs</span> {
                 <span class="ident">metrics</span>: <span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>(),
-                <span class="ident">proxy_metrics</span>: <span class="ident">ProxyMetrics::new</span>().<span class="ident">unwrap</span>(),
-                <span class="ident">filter_chain</span>: <span class="ident">SharedFilterChain::empty</span>(),
+                <span class="ident">config</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
                 <span class="ident">source</span>: <span class="ident">from</span>,
                 <span class="ident">downstream_socket</span>: <span class="ident">socket</span>,
                 <span class="ident">dest</span>: <span class="ident">endpoint</span>.<span class="ident">clone</span>(),
@@ -470,8 +459,7 @@
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">sessions</span> <span class="op">=</span> <span class="ident">sessions</span>.<span class="ident">write</span>().<span class="kw">await</span>;
             <span class="kw">let</span> <span class="ident">session_args</span> <span class="op">=</span> <span class="ident">SessionArgs</span> {
                 <span class="ident">metrics</span>: <span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>(),
-                <span class="ident">proxy_metrics</span>: <span class="ident">ProxyMetrics::new</span>().<span class="ident">unwrap</span>(),
-                <span class="ident">filter_chain</span>: <span class="ident">SharedFilterChain::empty</span>(),
+                <span class="ident">config</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
                 <span class="ident">source</span>: <span class="ident">from</span>,
                 <span class="ident">downstream_socket</span>: <span class="ident">socket</span>,
                 <span class="ident">dest</span>: <span class="ident">endpoint</span>.<span class="ident">clone</span>(),

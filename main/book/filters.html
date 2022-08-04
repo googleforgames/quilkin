@@ -204,8 +204,11 @@ filters:
     config:
       max_packets: 10
       period: 1
-endpoints:
-  - address: 127.0.0.1:7001
+clusters: 
+  default:
+    localities:
+      - endpoints:
+        - address: 127.0.0.1:7001
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 2);

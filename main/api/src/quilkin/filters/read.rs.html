@@ -110,7 +110,7 @@
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">doc</span>)]</span>
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters::Filter</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">endpoint</span>::{<span class="ident">EndpointAddress</span>, <span class="ident">UpstreamEndpoints</span>},
+    <span class="ident">endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">EndpointAddress</span>},
     <span class="ident">metadata::DynamicMetadata</span>,
 };
 
@@ -118,7 +118,7 @@
 <span class="attribute">#[<span class="ident">non_exhaustive</span>]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ReadContext</span> {
     <span class="doccomment">/// The upstream endpoints that the packet will be forwarded to.</span>
-    <span class="kw">pub</span> <span class="ident">endpoints</span>: <span class="ident">UpstreamEndpoints</span>,
+    <span class="kw">pub</span> <span class="ident">endpoints</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Endpoint</span><span class="op">&gt;</span>,
     <span class="doccomment">/// The source of the received packet.</span>
     <span class="kw">pub</span> <span class="ident">source</span>: <span class="ident">EndpointAddress</span>,
     <span class="doccomment">/// Contents of the received packet.</span>
@@ -129,7 +129,7 @@
 
 <span class="kw">impl</span> <span class="ident">ReadContext</span> {
     <span class="doccomment">/// Creates a new [`ReadContext`].</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">endpoints</span>: <span class="ident">UpstreamEndpoints</span>, <span class="ident">source</span>: <span class="ident">EndpointAddress</span>, <span class="ident">contents</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">endpoints</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Endpoint</span><span class="op">&gt;</span>, <span class="ident">source</span>: <span class="ident">EndpointAddress</span>, <span class="ident">contents</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">endpoints</span>,
             <span class="ident">source</span>,
@@ -173,7 +173,7 @@
 <span class="attribute">#[<span class="ident">non_exhaustive</span>]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ReadResponse</span> {
     <span class="doccomment">/// The upstream endpoints that the packet should be forwarded to.</span>
-    <span class="kw">pub</span> <span class="ident">endpoints</span>: <span class="ident">UpstreamEndpoints</span>,
+    <span class="kw">pub</span> <span class="ident">endpoints</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Endpoint</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Contents of the packet to be forwarded.</span>
     <span class="kw">pub</span> <span class="ident">contents</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Arbitrary values that can be passed from one filter to another</span>

@@ -1,0 +1,1 @@
+initSidebarItems({"mod":[["call_credentials","Nested message and enum types in `CallCredentials`."],["channel_args","Nested message and enum types in `ChannelArgs`."],["channel_credentials","Nested message and enum types in `ChannelCredentials`."]],"struct":[["CallCredentials",""],["ChannelArgs",""],["ChannelCredentials",""],["GoogleLocalCredentials",""],["SslCredentials",""]]});

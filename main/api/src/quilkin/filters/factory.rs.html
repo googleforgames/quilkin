@@ -164,6 +164,7 @@
 <span id="159">159</span>
 <span id="160">160</span>
 <span id="161">161</span>
+<span id="162">162</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -191,17 +192,18 @@
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">DynFilterFactory</span> <span class="op">=</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">FilterFactory</span><span class="op">&gt;</span>;
 
 <span class="doccomment">/// The value returned by [`FilterFactory::create_filter`].</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
 <span class="attribute">#[<span class="ident">non_exhaustive</span>]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">FilterInstance</span> {
     <span class="doccomment">/// The configuration used to create the filter.</span>
     <span class="kw">pub</span> <span class="ident">config</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">serde_json::Value</span><span class="op">&gt;</span>,
     <span class="doccomment">/// The created filter.</span>
-    <span class="kw">pub</span> <span class="ident">filter</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Filter</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">filter</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Filter</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">FilterInstance</span> {
     <span class="doccomment">/// Constructs a [`FilterInstance`].</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">config</span>: <span class="ident">serde_json::Value</span>, <span class="ident">filter</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Filter</span><span class="op">&gt;</span>) -&gt; <span class="ident">FilterInstance</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">config</span>: <span class="ident">serde_json::Value</span>, <span class="ident">filter</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Filter</span><span class="op">&gt;</span>) -&gt; <span class="ident">FilterInstance</span> {
         <span class="ident">FilterInstance</span> {
             <span class="ident">config</span>: <span class="ident">Arc::new</span>(<span class="ident">config</span>),
             <span class="ident">filter</span>,
@@ -270,7 +272,7 @@
 
         <span class="prelude-val">Ok</span>(<span class="ident">FilterInstance::new</span>(
             <span class="ident">config_json</span>,
-            <span class="ident">Box::from</span>(<span class="ident">F::try_from_config</span>(<span class="ident">config</span>)<span class="question-mark">?</span>) <span class="kw">as</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Filter</span><span class="op">&gt;</span>,
+            <span class="ident">Arc::from</span>(<span class="ident">F::try_from_config</span>(<span class="ident">config</span>)<span class="question-mark">?</span>),
         ))
     }
 

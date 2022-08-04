@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["Config","Configuration for [`Match`][super::Match]."],["Match",""]]});
+initSidebarItems({"struct":[["Branch","A specific match branch. The filter is run when `value` matches the value defined in `metadata_key`."],["Config","Configuration for [`Match`][super::Match]."],["DirectionalConfig","Configuration for a specific direction."],["Fallthrough","The behaviour when the none of branches match. Defaults to dropping packets."],["Match",""]]});

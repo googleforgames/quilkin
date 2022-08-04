@@ -237,8 +237,11 @@ proxy:
   port: 7001
 filters:
   - name: greet.v1
-endpoints:
-  - address: 127.0.0.1:4321
+clusters:
+  default:
+    localities:
+        - endpoints:
+            - address: 127.0.0.1:7001
 </code></pre>
 <p>Next we to setup our network of services, for this example we're going to use
 the <code>netcat</code> tool to spawn a UDP echo server and interactive client for us to

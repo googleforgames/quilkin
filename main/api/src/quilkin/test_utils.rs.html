@@ -357,6 +357,15 @@
 <span id="352">352</span>
 <span id="353">353</span>
 <span id="354">354</span>
+<span id="355">355</span>
+<span id="356">356</span>
+<span id="357">357</span>
+<span id="358">358</span>
+<span id="359">359</span>
+<span id="360">360</span>
+<span id="361">361</span>
+<span id="362">362</span>
+<span id="363">363</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -387,8 +396,9 @@
 };
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
+    <span class="ident">cluster::Cluster</span>,
     <span class="ident">config</span>::{<span class="ident">Builder</span> <span class="kw">as</span> <span class="ident">ConfigBuilder</span>, <span class="ident">Config</span>},
-    <span class="ident">endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">EndpointAddress</span>, <span class="ident">Endpoints</span>},
+    <span class="ident">endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">EndpointAddress</span>, <span class="ident">LocalityEndpoints</span>},
     <span class="ident">filters</span>::{<span class="ident">prelude</span>::<span class="kw-2">*</span>, <span class="ident">FilterRegistry</span>},
     <span class="ident">metadata::Value</span>,
 };
@@ -577,8 +587,8 @@
     <span class="doccomment">/// Run a proxy server with a supplied config.</span>
     <span class="doccomment">/// Admin is disabled for this method, as the majority of tests will not need it, and it makes it</span>
     <span class="doccomment">/// easier to avoid issues with port collisions.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_server_with_config</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="kw-2">mut</span> <span class="ident">config</span>: <span class="ident">Config</span>) {
-        <span class="ident">config</span>.<span class="ident">admin</span> <span class="op">=</span> <span class="prelude-val">None</span>;
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_server_with_config</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">config</span>: <span class="ident">Config</span>) {
+        <span class="ident">config</span>.<span class="ident">admin</span>.<span class="ident">remove</span>();
 
         <span class="self">self</span>.<span class="ident">run_server</span>(<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::try_from</span>(<span class="ident">config</span>).<span class="ident">unwrap</span>());
     }
@@ -616,16 +626,13 @@
     <span class="kw">let</span> <span class="ident">contents</span> <span class="op">=</span> <span class="string">&quot;hello&quot;</span>.<span class="ident">to_string</span>().<span class="ident">into_bytes</span>();
 
     <span class="kw">match</span> <span class="ident">filter</span>.<span class="ident">read</span>(<span class="ident">ReadContext::new</span>(
-        <span class="ident">Endpoints::new</span>(<span class="ident">endpoints</span>.<span class="ident">clone</span>()).<span class="ident">into</span>(),
+        <span class="ident">endpoints</span>.<span class="ident">clone</span>(),
         <span class="ident">source</span>,
         <span class="ident">contents</span>.<span class="ident">clone</span>(),
     )) {
         <span class="prelude-val">None</span> =&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;should return a result&quot;</span>),
         <span class="prelude-val">Some</span>(<span class="ident">response</span>) =&gt; {
-            <span class="macro">assert_eq!</span>(
-                <span class="ident">endpoints</span>,
-                <span class="ident">response</span>.<span class="ident">endpoints</span>.<span class="ident">iter</span>().<span class="ident">cloned</span>().<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
-            );
+            <span class="macro">assert_eq!</span>(<span class="ident">endpoints</span>, <span class="ident">response</span>.<span class="ident">endpoints</span>);
             <span class="macro">assert_eq!</span>(<span class="ident">contents</span>, <span class="ident">response</span>.<span class="ident">contents</span>);
         }
     }
@@ -658,9 +665,18 @@
 }
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">config_with_dummy_endpoint</span>() -&gt; <span class="ident">ConfigBuilder</span> {
-    <span class="ident">ConfigBuilder::default</span>().<span class="ident">endpoints</span>(<span class="macro">vec!</span>[<span class="ident">Endpoint</span> {
-        <span class="ident">address</span>: <span class="string">&quot;127.0.0.1:8080&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
-        ..<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>()
+    <span class="ident">ConfigBuilder::default</span>().<span class="ident">clusters</span>([<span class="ident">Cluster</span> {
+        <span class="ident">name</span>: <span class="string">&quot;default&quot;</span>.<span class="ident">into</span>(),
+        <span class="ident">localities</span>: <span class="macro">vec!</span>[<span class="ident">LocalityEndpoints</span> {
+            <span class="ident">locality</span>: <span class="prelude-val">None</span>,
+            <span class="ident">endpoints</span>: [<span class="ident">Endpoint</span> {
+                <span class="ident">address</span>: (<span class="ident">std::net::Ipv4Addr::LOCALHOST</span>, <span class="number">8080</span>).<span class="ident">into</span>(),
+                ..<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>()
+            }]
+            .<span class="ident">into</span>(),
+        }]
+        .<span class="ident">into_iter</span>()
+        .<span class="ident">collect</span>(),
     }])
 }
 <span class="doccomment">/// Creates a dummy endpoint with `id` as a suffix.</span>
@@ -671,12 +687,14 @@
     }
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_test_chain</span>() -&gt; <span class="ident"><span class="kw">crate</span>::filters::SharedFilterChain</span> {
-    <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::try_from</span>([<span class="ident"><span class="kw">crate</span>::config::Filter</span> {
-        <span class="ident">name</span>: <span class="string">&quot;TestFilter&quot;</span>.<span class="ident">into</span>(),
-        <span class="ident">config</span>: <span class="prelude-val">None</span>,
-    }])
-    .<span class="ident">unwrap</span>()
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_test_config</span>() -&gt; <span class="ident"><span class="kw">crate</span>::Config</span> {
+    <span class="ident"><span class="kw">crate</span>::Config::builder</span>()
+        .<span class="ident">filters</span>(<span class="macro">vec!</span>[<span class="ident"><span class="kw">crate</span>::config::Filter</span> {
+            <span class="ident">name</span>: <span class="string">&quot;TestFilter&quot;</span>.<span class="ident">into</span>(),
+            <span class="ident">config</span>: <span class="prelude-val">None</span>,
+        }])
+        .<span class="ident">build</span>()
+        .<span class="ident">unwrap</span>()
 }
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">load_test_filters</span>() {

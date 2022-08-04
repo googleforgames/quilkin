@@ -159,8 +159,11 @@ filters:
           source: 192.168.51.0/24
           ports:
              - 7000
-endpoints:
-  - address: 127.0.0.1:7001
+clusters:
+  default:
+    localities:
+        - endpoints:
+            - address: 127.0.0.1:7001
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 1);
@@ -168,65 +171,7 @@ endpoints:
 </span><span class="boring">}
 </span></code></pre></pre>
 <h3 id="configuration-options-rust-doc"><a class="header" href="#configuration-options-rust-doc">Configuration Options (<a href="../../api/quilkin/filters/firewall/struct.Config.html">Rust Doc</a>)</a></h3>
-<pre><code class="language-yaml">---
-$schema: &quot;http://json-schema.org/draft-07/schema#&quot;
-title: Config
-description: Represents how a Firewall filter is configured for read and write operations.
-type: object
-required:
-  - on_read
-  - on_write
-properties:
-  on_read:
-    type: array
-    items:
-      $ref: &quot;#/definitions/Rule&quot;
-  on_write:
-    type: array
-    items:
-      $ref: &quot;#/definitions/Rule&quot;
-definitions:
-  Action:
-    description: &quot;Whether or not a matching [Rule] should Allow or Deny access&quot;
-    type: string
-    enum:
-      - ALLOW
-      - DENY
-  PortRange:
-    description: &quot;Range of matching ports that are configured against a [Rule].&quot;
-    allOf:
-      - $ref: &quot;#/definitions/Range_of_uint16&quot;
-  Range_of_uint16:
-    type: object
-    required:
-      - end
-      - start
-    properties:
-      end:
-        type: integer
-        format: uint16
-        minimum: 0.0
-      start:
-        type: integer
-        format: uint16
-        minimum: 0.0
-  Rule:
-    description: &quot;Combination of CIDR range, port range and action to take.&quot;
-    type: object
-    required:
-      - action
-      - ports
-      - source
-    properties:
-      action:
-        $ref: &quot;#/definitions/Action&quot;
-      ports:
-        type: array
-        items:
-          $ref: &quot;#/definitions/PortRange&quot;
-      source:
-        description: ipv4 or ipv6 CIDR address.
-        type: string
+<pre><code class="language-yaml">{{#include ../../../target/quilkin.filters.firewall.v1alpha1.yaml}}
 </code></pre>
 <h4 id="rule-evaluation"><a class="header" href="#rule-evaluation">Rule Evaluation</a></h4>
 <p>The Firewall filter supports DENY and ALLOW actions for access control. When multiple DENY and ALLOW actions are used 

@@ -213,18 +213,18 @@ port (otherwise it picks the first port in the port list).</p>
 You can find the configuration file schema here in <a href="https://googleforgames.github.io/quilkin/main/book/proxy-configuration.html">Proxy Configuration</a>.</p>
 <p>Example:</p>
 <pre><code class="language-yaml">clusters:
-- name: cluster-a
-  endpoints:
-  - ip: 123.0.0.1
-    port&quot;: 29
-    metadata:
-      'quilkin.dev':
-         tokens:
-         - &quot;MXg3aWp5Ng==&quot;
+    cluster-a:
+        localities:
+            - endpoints:
+                - address: 123.0.0.1:29
+                  metadata:
+                    'quilkin.dev':
+                      tokens:
+                        - &quot;MXg3aWp5Ng==&quot;
 filters:
-- name: quilkin.filters.debug.v1alpha1.Debug
-  config:
-    id: hello
+  - name: quilkin.filters.debug.v1alpha1.Debug
+    config:
+      id: hello
 </code></pre>
 <p>To add an HTTP admin server, check out the <a href="https://googleforgames.github.io/quilkin/main/book/admin.html">Administration</a> page.</p>
 <h2 id="metrics"><a class="header" href="#metrics">Metrics</a></h2>

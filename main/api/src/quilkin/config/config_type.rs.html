@@ -154,6 +154,12 @@
 <span id="149">149</span>
 <span id="150">150</span>
 <span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -275,6 +281,12 @@
                 <span class="string">&quot;Protobuf configs can&#39;t be serialized.&quot;</span>,
             )),
         }
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">serde_json::Value</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ConfigType</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">value</span>: <span class="ident">serde_json::Value</span>) -&gt; <span class="self">Self</span> {
+        <span class="ident"><span class="self">Self</span>::Static</span>(<span class="ident">value</span>)
     }
 }
 

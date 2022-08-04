@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["MatchType",""]],"mod":[["single_predicate","Nested message and enum types in `SinglePredicate`."]],"struct":[["PredicateList",""],["SinglePredicate",""]]});

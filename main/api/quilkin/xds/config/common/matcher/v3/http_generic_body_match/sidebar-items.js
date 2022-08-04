@@ -1,0 +1,1 @@
+initSidebarItems({"mod":[["generic_text_match","Nested message and enum types in `GenericTextMatch`."]],"struct":[["GenericTextMatch",""]]});

@@ -282,6 +282,24 @@
 <span id="277">277</span>
 <span id="278">278</span>
 <span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC All Rights Reserved.
  *
@@ -327,6 +345,24 @@
             <span class="ident"><span class="self">Self</span>::Suffix</span>(<span class="ident">value</span>) =&gt; <span class="ident">Box::from</span>(<span class="ident">value</span>),
             <span class="ident"><span class="self">Self</span>::Regex</span>(<span class="ident">value</span>) =&gt; <span class="ident">Box::from</span>(<span class="ident">value</span>),
         }
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">Prefix</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Strategy</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">prefix</span>: <span class="ident">Prefix</span>) -&gt; <span class="self">Self</span> {
+        <span class="ident"><span class="self">Self</span>::Prefix</span>(<span class="ident">prefix</span>)
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">Suffix</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Strategy</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">suffix</span>: <span class="ident">Suffix</span>) -&gt; <span class="self">Self</span> {
+        <span class="ident"><span class="self">Self</span>::Suffix</span>(<span class="ident">suffix</span>)
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">Regex</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Strategy</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">regex</span>: <span class="ident">Regex</span>) -&gt; <span class="self">Self</span> {
+        <span class="ident"><span class="self">Self</span>::Regex</span>(<span class="ident">regex</span>)
     }
 }
 

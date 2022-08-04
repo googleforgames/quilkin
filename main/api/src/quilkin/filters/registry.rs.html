@@ -187,7 +187,7 @@
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::test_utils::load_test_filters</span>;
 
     <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">EndpointAddress</span>, <span class="ident">Endpoints</span>};
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">EndpointAddress</span>};
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters</span>::{
         <span class="ident">Filter</span>, <span class="ident">FilterRegistry</span>, <span class="ident">ReadContext</span>, <span class="ident">ReadResponse</span>, <span class="ident">WriteContext</span>, <span class="ident">WriteResponse</span>,
     };
@@ -227,7 +227,7 @@
 
         <span class="macro">assert!</span>(<span class="ident">filter</span>
             .<span class="ident">read</span>(<span class="ident">ReadContext::new</span>(
-                <span class="ident">Endpoints::new</span>(<span class="macro">vec!</span>[<span class="ident">endpoint</span>.<span class="ident">clone</span>()]).<span class="ident">into</span>(),
+                <span class="macro">vec!</span>[<span class="ident">endpoint</span>.<span class="ident">clone</span>()],
                 <span class="ident">addr</span>.<span class="ident">clone</span>(),
                 <span class="macro">vec!</span>[]
             ))

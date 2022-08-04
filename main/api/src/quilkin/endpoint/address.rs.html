@@ -287,6 +287,46 @@
 <span id="282">282</span>
 <span id="283">283</span>
 <span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -319,7 +359,7 @@
 <span class="doccomment">/// A valid socket address. This differs from `std::net::SocketAddr`, in that it</span>
 <span class="doccomment">/// it supports parsing Domain Names in addition to IP addresses. Domain Names</span>
 <span class="doccomment">/// are resolved when `ToSocketAddrs::to_socket_addrs` is called.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Clone</span>, <span class="ident">PartialOrd</span>, <span class="ident">Ord</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>, <span class="ident">Serialize</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Clone</span>, <span class="ident">PartialOrd</span>, <span class="ident">Ord</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">EndpointAddress</span> {
     <span class="doccomment">/// A valid name or IP address that resolves to a address.</span>
     <span class="kw">pub</span> <span class="ident">host</span>: <span class="ident">AddressKind</span>,
@@ -447,6 +487,15 @@
     }
 }
 
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span>(<span class="ident">String</span>, <span class="ident">u16</span>)<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">EndpointAddress</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>((<span class="ident">ip</span>, <span class="ident">port</span>): (<span class="ident">String</span>, <span class="ident">u16</span>)) -&gt; <span class="self">Self</span> {
+        <span class="self">Self</span> {
+            <span class="ident">host</span>: <span class="ident">ip</span>.<span class="ident">parse</span>().<span class="ident">unwrap_or</span>(<span class="ident">AddressKind::Name</span>(<span class="ident">ip</span>)),
+            <span class="ident">port</span>: <span class="prelude-val">Some</span>(<span class="ident">port</span>),
+        }
+    }
+}
+
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">EndpointAddress</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">EnvoySocketAddress</span> {
     <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">address</span>: <span class="ident">EndpointAddress</span>) -&gt; <span class="self">Self</span> {
         <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::xds::config::core::v3::socket_address</span>::{<span class="ident">PortSpecifier</span>, <span class="ident">Protocol</span>};
@@ -505,6 +554,28 @@
         <span class="kw">match</span> <span class="ident">value</span> {
             <span class="ident">EnvoyAddress::SocketAddress</span>(<span class="ident">address</span>) =&gt; <span class="ident">address</span>.<span class="ident">try_into</span>(),
             <span class="kw">_</span> =&gt; <span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">&quot;Unsupported Envoy address type.&quot;</span>)),
+        }
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident"><span class="kw">crate</span>::xds::config::core::v3::Address</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">EndpointAddress</span> {
+    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">eyre::Error</span>;
+
+    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">value</span>: <span class="ident"><span class="kw">crate</span>::xds::config::core::v3::Address</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident"><span class="self">Self</span>::Error</span><span class="op">&gt;</span> {
+        <span class="kw">match</span> <span class="ident">value</span>.<span class="ident">address</span> {
+            <span class="prelude-val">Some</span>(<span class="ident">address</span>) =&gt; <span class="ident"><span class="self">Self</span>::try_from</span>(<span class="ident">address</span>),
+            <span class="kw">_</span> =&gt; <span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">&quot;No address found&quot;</span>)),
+        }
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident"><span class="kw">crate</span>::xds::config::endpoint::v3::Endpoint</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">EndpointAddress</span> {
+    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">eyre::Error</span>;
+
+    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">value</span>: <span class="ident"><span class="kw">crate</span>::xds::config::endpoint::v3::Endpoint</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident"><span class="self">Self</span>::Error</span><span class="op">&gt;</span> {
+        <span class="kw">match</span> <span class="ident">value</span>.<span class="ident">address</span> {
+            <span class="prelude-val">Some</span>(<span class="ident">address</span>) =&gt; <span class="ident"><span class="self">Self</span>::try_from</span>(<span class="ident">address</span>),
+            <span class="kw">_</span> =&gt; <span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">&quot;Missing address in endpoint&quot;</span>)),
         }
     }
 }
@@ -569,6 +640,15 @@
             <span class="ident"><span class="self">Self</span>::Name</span>(<span class="ident">name</span>) =&gt; <span class="ident">name</span>.<span class="ident">fmt</span>(<span class="ident">f</span>),
             <span class="ident"><span class="self">Self</span>::Ip</span>(<span class="ident">ip</span>) =&gt; <span class="ident">ip</span>.<span class="ident">fmt</span>(<span class="ident">f</span>),
         }
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">Serialize</span> <span class="kw">for</span> <span class="ident">EndpointAddress</span> {
+    <span class="kw">fn</span> <span class="ident">serialize</span><span class="op">&lt;</span><span class="ident">S</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">serializer</span>: <span class="ident">S</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">S::Ok</span>, <span class="ident">S::Error</span><span class="op">&gt;</span>
+    <span class="kw">where</span>
+        <span class="ident">S</span>: <span class="ident">serde::Serializer</span>,
+    {
+        <span class="ident">serializer</span>.<span class="ident">serialize_str</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">to_string</span>())
     }
 }
 </code></pre></div>

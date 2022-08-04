@@ -147,24 +147,28 @@ in Rust or <code>switch</code> statements in other languages.</p>
 </span><span class="boring">fn main() {
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
-endpoints:
-  - address: 127.0.0.1:26000
-  - address: 127.0.0.1:26001
+clusters: 
+  default:
+    localities:
+      - endpoints:
+        - address: 127.0.0.1:26000
+        - address: 127.0.0.1:26001
 filters:
-  - name: quilkin.filters.capture_bytes.v1alpha1.CaptureBytes
+  - name: quilkin.filters.capture.v1alpha1.Capture
     config:
-        strategy: PREFIX
-        metadataKey: myapp.com/token
+      metadataKey: myapp.com/token
+      prefix:
         size: 3
         remove: false
   - name: quilkin.filters.match.v1alpha1.Match
     config:
-        on_read:
-          metadataKey: myapp.com/token
-          branches:
-              - value: abc
-                filter: quilkin.filters.pass.v1alpha1.Pass
-          fallthrough: quilkin.filters.drop.v1alpha1.Drop
+      on_read:
+        metadataKey: myapp.com/token
+        branches:
+          - value: abc
+            name: quilkin.filters.pass.v1alpha1.Pass
+        fallthrough:
+          name: quilkin.filters.drop.v1alpha1.Drop
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 2);
@@ -173,103 +177,7 @@ filters:
 </span></code></pre></pre>
 <!--  ANCHOR_END: example -->
 <h3 id="configuration-options-rust-doc"><a class="header" href="#configuration-options-rust-doc">Configuration Options (<a href="../../api/quilkin/filters/match/struct.Config.html">Rust Doc</a>)</a></h3>
-<pre><code class="language-yaml">---
-$schema: &quot;http://json-schema.org/draft-07/schema#&quot;
-title: Config
-description: &quot;Configuration for [`Match`][super::Match].&quot;
-type: object
-properties:
-  on_read:
-    description: &quot;Configuration for [`Filter::read`][crate::filters::Filter::read].&quot;
-    anyOf:
-      - $ref: &quot;#/definitions/DirectionalConfig&quot;
-      - type: &quot;null&quot;
-  on_write:
-    description: &quot;Configuration for [`Filter::write`][crate::filters::Filter::write].&quot;
-    anyOf:
-      - $ref: &quot;#/definitions/DirectionalConfig&quot;
-      - type: &quot;null&quot;
-additionalProperties: false
-definitions:
-  Branch:
-    description: &quot;A specific match branch. The filter is run when `value` matches the value defined in `metadata_key`.&quot;
-    type: object
-    required:
-      - id
-      - value
-    properties:
-      config:
-        description: &quot;The configuration for the filter to run, if any.&quot;
-        anyOf:
-          - $ref: &quot;#/definitions/ConfigType&quot;
-          - type: &quot;null&quot;
-      id:
-        description: The identifier for the filter to run.
-        type: string
-      value:
-        description: The value to compare against the dynamic metadata.
-        allOf:
-          - $ref: &quot;#/definitions/Value&quot;
-  ConfigType:
-    description: &quot;The configuration of a [`Filter`][crate::filters::Filter] from either a static or dynamic source.&quot;
-    oneOf:
-      - description: Static configuration from YAML.
-        type: object
-        required:
-          - Static
-        properties:
-          Static: true
-        additionalProperties: false
-  DirectionalConfig:
-    description: Configuration for a specific direction.
-    type: object
-    required:
-      - branches
-      - metadataKey
-    properties:
-      branches:
-        description: List of filters to compare and potentially run if any match.
-        type: array
-        items:
-          $ref: &quot;#/definitions/Branch&quot;
-      fallthrough:
-        description: &quot;The behaviour for when none of the `branches` match.&quot;
-        default:
-          config: ~
-          id: quilkin.filters.drop.v1alpha1.Drop
-        allOf:
-          - $ref: &quot;#/definitions/Filter&quot;
-      metadataKey:
-        description: The key for the metadata to compare against.
-        type: string
-  Filter:
-    type: object
-    required:
-      - id
-    properties:
-      config:
-        description: &quot;The configuration for the filter to run, if any.&quot;
-        anyOf:
-          - $ref: &quot;#/definitions/ConfigType&quot;
-          - type: &quot;null&quot;
-      id:
-        description: The identifier for the filter to run.
-        type: string
-  Value:
-    anyOf:
-      - type: boolean
-      - type: integer
-        format: uint64
-        minimum: 0.0
-      - type: array
-        items:
-          $ref: &quot;#/definitions/Value&quot;
-      - type: string
-      - type: array
-        items:
-          type: integer
-          format: uint8
-          minimum: 0.0
+<pre><code class="language-yaml">{{#include ../../../target/quilkin.filters.match.v1alpha1.yaml}}
 </code></pre>
 <p>View the <a href="../../api/quilkin/filters/match/struct.Config.html">Match</a> filter documentation for more details.</p>
 <h3 id="metrics"><a class="header" href="#metrics">Metrics</a></h3>

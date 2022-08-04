@@ -149,8 +149,11 @@ filters:
   - name: quilkin.filters.debug.v1alpha1.Debug
     config:
       id: debug-1
-endpoints:
-  - address: 127.0.0.1:7001
+clusters:
+  default:
+    localities:
+        - endpoints:
+            - address: 127.0.0.1:7001
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 1);
@@ -158,17 +161,7 @@ endpoints:
 </span><span class="boring">}
 </span></code></pre></pre>
 <h3 id="configuration-options-rust-doc"><a class="header" href="#configuration-options-rust-doc">Configuration Options (<a href="../../api/quilkin/filters/debug/struct.Config.html">Rust Doc</a>)</a></h3>
-<pre><code class="language-yaml">---
-$schema: &quot;http://json-schema.org/draft-07/schema#&quot;
-title: Config
-description: &quot;A Debug filter's configuration.&quot;
-type: object
-properties:
-  id:
-    description: Identifier that will be optionally included with each log message.
-    type:
-      - string
-      - &quot;null&quot;
+<pre><code class="language-yaml">{{#include ../../../target/quilkin.filters.debug.v1alpha1.yaml}}
 </code></pre>
 <h3 id="metrics"><a class="header" href="#metrics">Metrics</a></h3>
 <p>This filter currently exports no metrics.</p>

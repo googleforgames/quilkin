@@ -1,0 +1,1 @@
+initSidebarItems({"mod":[["predicate","Nested message and enum types in `Predicate`."]],"struct":[["FieldMatcher",""],["Predicate",""]]});

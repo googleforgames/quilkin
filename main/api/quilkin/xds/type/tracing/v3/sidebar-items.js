@@ -1,0 +1,1 @@
+initSidebarItems({"mod":[["custom_tag","Nested message and enum types in `CustomTag`."]],"struct":[["CustomTag",""]]});

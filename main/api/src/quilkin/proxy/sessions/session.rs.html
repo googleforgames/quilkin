@@ -515,14 +515,6 @@
 <span id="510">510</span>
 <span id="511">511</span>
 <span id="512">512</span>
-<span id="513">513</span>
-<span id="514">514</span>
-<span id="515">515</span>
-<span id="516">516</span>
-<span id="517">517</span>
-<span id="518">518</span>
-<span id="519">519</span>
-<span id="520">520</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -557,11 +549,8 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">EndpointAddress</span>},
-    <span class="ident">filters</span>::{<span class="ident">Filter</span>, <span class="ident">SharedFilterChain</span>, <span class="ident">WriteContext</span>},
-    <span class="ident">proxy</span>::{
-        <span class="ident">server::metrics::Metrics</span> <span class="kw">as</span> <span class="ident">ProxyMetrics</span>,
-        <span class="ident">sessions</span>::{<span class="ident">error::Error</span>, <span class="ident">metrics::Metrics</span>},
-    },
+    <span class="ident">filters</span>::{<span class="ident">Filter</span>, <span class="ident">WriteContext</span>},
+    <span class="ident">proxy::sessions</span>::{<span class="ident">error::Error</span>, <span class="ident">metrics::Metrics</span>},
     <span class="ident">utils::debug</span>,
 };
 
@@ -569,9 +558,8 @@
 
 <span class="doccomment">/// Session encapsulates a UDP stream session</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Session</span> {
+    <span class="ident">config</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident"><span class="kw">crate</span>::Config</span><span class="op">&gt;</span>,
     <span class="ident">metrics</span>: <span class="ident">Metrics</span>,
-    <span class="ident">proxy_metrics</span>: <span class="ident">ProxyMetrics</span>,
-    <span class="ident">filter_chain</span>: <span class="ident">SharedFilterChain</span>,
     <span class="doccomment">/// created_at is time at which the session was created</span>
     <span class="ident">created_at</span>: <span class="ident">Instant</span>,
     <span class="doccomment">/// socket that sends and receives from and to the endpoint address</span>
@@ -602,7 +590,7 @@
 <span class="doccomment">/// ReceivedPacketContext contains state needed to process a received packet.</span>
 <span class="kw">struct</span> <span class="ident">ReceivedPacketContext</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
     <span class="ident">packet</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> [<span class="ident">u8</span>],
-    <span class="ident">filter_chain</span>: <span class="ident">SharedFilterChain</span>,
+    <span class="ident">config</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident"><span class="kw">crate</span>::Config</span><span class="op">&gt;</span>,
     <span class="ident">endpoint</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Endpoint</span>,
     <span class="ident">source</span>: <span class="ident">EndpointAddress</span>,
     <span class="ident">dest</span>: <span class="ident">EndpointAddress</span>,
@@ -610,9 +598,8 @@
 }
 
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SessionArgs</span> {
+    <span class="kw">pub</span> <span class="ident">config</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident"><span class="kw">crate</span>::Config</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">metrics</span>: <span class="ident">Metrics</span>,
-    <span class="kw">pub</span> <span class="ident">proxy_metrics</span>: <span class="ident">ProxyMetrics</span>,
-    <span class="kw">pub</span> <span class="ident">filter_chain</span>: <span class="ident">SharedFilterChain</span>,
     <span class="kw">pub</span> <span class="ident">source</span>: <span class="ident">EndpointAddress</span>,
     <span class="kw">pub</span> <span class="ident">downstream_socket</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">UdpSocket</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">dest</span>: <span class="ident">Endpoint</span>,
@@ -629,6 +616,7 @@
 
 <span class="kw">impl</span> <span class="ident">Session</span> {
     <span class="doccomment">/// internal constructor for a Session from SessionArgs</span>
+    <span class="attribute">#[<span class="ident">tracing::instrument</span>(<span class="ident">skip_all</span>)]</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">args</span>: <span class="ident">SessionArgs</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span> (<span class="ident">std::net::Ipv4Addr::UNSPECIFIED</span>, <span class="number">0</span>);
         <span class="kw">let</span> <span class="ident">upstream_socket</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">UdpSocket::bind</span>(<span class="ident">addr</span>).<span class="kw">await</span>.<span class="ident">map_err</span>(<span class="ident">Error::BindUdpSocket</span>)<span class="question-mark">?</span>);
@@ -648,8 +636,7 @@
 
         <span class="kw">let</span> <span class="ident">s</span> <span class="op">=</span> <span class="ident">Session</span> {
             <span class="ident">metrics</span>: <span class="ident">args</span>.<span class="ident">metrics</span>,
-            <span class="ident">proxy_metrics</span>: <span class="ident">args</span>.<span class="ident">proxy_metrics</span>,
-            <span class="ident">filter_chain</span>: <span class="ident">args</span>.<span class="ident">filter_chain</span>,
+            <span class="ident">config</span>: <span class="ident">args</span>.<span class="ident">config</span>.<span class="ident">clone</span>(),
             <span class="ident">upstream_socket</span>,
             <span class="ident">source</span>: <span class="ident">args</span>.<span class="ident">source</span>,
             <span class="ident">dest</span>: <span class="ident">args</span>.<span class="ident">dest</span>,
@@ -657,7 +644,6 @@
             <span class="ident">expiration</span>,
             <span class="ident">shutdown_tx</span>,
         };
-
         <span class="macro">tracing::debug!</span>(<span class="ident">source</span> <span class="op">=</span> <span class="op">%</span><span class="ident">s</span>.<span class="ident">source</span>, <span class="ident">dest</span> <span class="op">=</span> <span class="question-mark">?</span><span class="ident">s</span>.<span class="ident">dest</span>, <span class="string">&quot;Session created&quot;</span>);
 
         <span class="ident">s</span>.<span class="ident">metrics</span>.<span class="ident">sessions_total</span>.<span class="ident">inc</span>();
@@ -676,11 +662,11 @@
     ) {
         <span class="kw">let</span> <span class="ident">source</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">source</span>.<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">expiration</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">expiration</span>.<span class="ident">clone</span>();
-        <span class="kw">let</span> <span class="ident">filter_chain</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">filter_chain</span>.<span class="ident">clone</span>();
+        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">dest</span>.<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">metrics</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">clone</span>();
-        <span class="kw">let</span> <span class="ident">proxy_metrics</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">proxy_metrics</span>.<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">upstream_socket</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">upstream_socket</span>.<span class="ident">clone</span>();
+
         <span class="ident">tokio::spawn</span>(<span class="kw">async</span> <span class="kw">move</span> {
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buf</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="number">0</span>; <span class="number">65535</span>];
             <span class="kw">loop</span> {
@@ -694,20 +680,20 @@
                                 <span class="macro">tracing::error!</span>(<span class="op">%</span><span class="ident">error</span>, <span class="op">%</span><span class="ident">source</span>, <span class="ident">dest</span> <span class="op">=</span> <span class="question-mark">?</span><span class="ident">endpoint</span>, <span class="string">&quot;Error receiving packet&quot;</span>);
                             },
                             <span class="prelude-val">Ok</span>((<span class="ident">size</span>, <span class="ident">recv_addr</span>)) =&gt; {
-                                <span class="ident">metrics</span>.<span class="ident">rx_bytes_total</span>.<span class="ident">inc_by</span>(<span class="ident">size</span> <span class="kw">as</span> <span class="ident">u64</span>);
-                                <span class="ident">metrics</span>.<span class="ident">rx_packets_total</span>.<span class="ident">inc</span>();
+                                <span class="ident"><span class="kw">crate</span>::metrics::PACKETS_SIZE</span>.<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident"><span class="kw">crate</span>::metrics::WRITE_DIRECTION_LABEL</span>]).<span class="ident">inc_by</span>(<span class="ident">size</span> <span class="kw">as</span> <span class="ident">f64</span>);
+                                <span class="ident"><span class="kw">crate</span>::metrics::PACKETS_TOTAL</span>.<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident"><span class="kw">crate</span>::metrics::WRITE_DIRECTION_LABEL</span>]).<span class="ident">inc</span>();
                                 <span class="ident">Session::process_recv_packet</span>(
                                     <span class="kw-2">&amp;</span><span class="ident">metrics</span>,
                                     <span class="kw-2">&amp;</span><span class="ident">downstream_socket</span>,
                                     <span class="kw-2">&amp;</span><span class="ident">expiration</span>,
                                     <span class="ident">ttl</span>,
                                     <span class="ident">ReceivedPacketContext</span> {
-                                        <span class="ident">filter_chain</span>: <span class="ident">filter_chain</span>.<span class="ident">clone</span>(),
+                                        <span class="ident">config</span>: <span class="ident">config</span>.<span class="ident">clone</span>(),
                                         <span class="ident">packet</span>: <span class="kw-2">&amp;</span><span class="ident">buf</span>[..<span class="ident">size</span>],
                                         <span class="ident">endpoint</span>: <span class="kw-2">&amp;</span><span class="ident">endpoint</span>,
                                         <span class="ident">source</span>: <span class="ident">recv_addr</span>.<span class="ident">into</span>(),
                                         <span class="ident">dest</span>: <span class="ident">source</span>.<span class="ident">clone</span>(),
-                                        <span class="ident">timer</span>: <span class="ident">proxy_metrics</span>.<span class="ident">write_processing_time_seconds</span>.<span class="ident">start_timer</span>(),
+                                        <span class="ident">timer</span>: <span class="ident"><span class="kw">crate</span>::metrics::PROCESSING_TIME</span>.<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident"><span class="kw">crate</span>::metrics::WRITE_DIRECTION_LABEL</span>]).<span class="ident">start_timer</span>(),
                                     }).<span class="kw">await</span>
                             }
                         };
@@ -744,7 +730,7 @@
     ) {
         <span class="kw">let</span> <span class="ident">ReceivedPacketContext</span> {
             <span class="ident">packet</span>,
-            <span class="ident">filter_chain</span>,
+            <span class="ident">config</span>,
             <span class="ident">endpoint</span>,
             <span class="ident">source</span>: <span class="ident">from</span>,
             <span class="ident">dest</span>,
@@ -757,7 +743,7 @@
             <span class="macro">tracing::warn!</span>(<span class="op">%</span><span class="ident">error</span>, <span class="string">&quot;Error updating session expiration&quot;</span>)
         }
 
-        <span class="kw">match</span> <span class="ident">filter_chain</span>.<span class="ident">write</span>(<span class="ident">WriteContext::new</span>(
+        <span class="kw">match</span> <span class="ident">config</span>.<span class="ident">filters</span>.<span class="ident">load</span>().<span class="ident">write</span>(<span class="ident">WriteContext::new</span>(
             <span class="ident">endpoint</span>,
             <span class="ident">from</span>,
             <span class="ident">dest</span>.<span class="ident">clone</span>(),
@@ -783,6 +769,7 @@
                 }
             }
         }
+
         <span class="ident">timer</span>.<span class="ident">stop_and_record</span>();
     }
 
@@ -870,17 +857,16 @@
         <span class="ident">time</span>::{<span class="ident">Duration</span>, <span class="ident">SystemTime</span>, <span class="ident">UNIX_EPOCH</span>},
     };
 
+    <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">Metrics</span>, <span class="ident">Session</span>};
+
     <span class="kw">use</span> <span class="ident">prometheus</span>::{<span class="ident">Histogram</span>, <span class="ident">HistogramOpts</span>};
     <span class="kw">use</span> <span class="ident">tokio::time::timeout</span>;
 
     <span class="kw">use</span> <span class="kw">crate</span>::{
         <span class="ident">endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">EndpointAddress</span>},
-        <span class="ident">filters::SharedFilterChain</span>,
         <span class="ident">proxy::sessions::session</span>::{<span class="ident">ReceivedPacketContext</span>, <span class="ident">SessionArgs</span>},
-        <span class="ident">test_utils</span>::{<span class="ident">create_socket</span>, <span class="ident">load_test_filters</span>, <span class="ident">new_test_chain</span>, <span class="ident">TestHelper</span>},
+        <span class="ident">test_utils</span>::{<span class="ident">create_socket</span>, <span class="ident">new_test_config</span>, <span class="ident">TestHelper</span>},
     };
-
-    <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">Metrics</span>, <span class="ident">ProxyMetrics</span>, <span class="ident">Session</span>};
 
     <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">session_send_and_receive</span>() {
@@ -891,9 +877,8 @@
         <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="string">&quot;hello&quot;</span>;
 
         <span class="kw">let</span> <span class="ident">sess</span> <span class="op">=</span> <span class="ident">Session::new</span>(<span class="ident">SessionArgs</span> {
+            <span class="ident">config</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
             <span class="ident">metrics</span>: <span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>(),
-            <span class="ident">proxy_metrics</span>: <span class="ident">ProxyMetrics::new</span>().<span class="ident">unwrap</span>(),
-            <span class="ident">filter_chain</span>: <span class="ident">SharedFilterChain::empty</span>(),
             <span class="ident">source</span>: <span class="ident">addr</span>.<span class="ident">clone</span>(),
             <span class="ident">downstream_socket</span>: <span class="ident">socket</span>.<span class="ident">clone</span>(),
             <span class="ident">dest</span>: <span class="ident">endpoint</span>,
@@ -924,7 +909,7 @@
 
     <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_recv_packet</span>() {
-        <span class="ident">load_test_filters</span>();
+        <span class="ident"><span class="kw">crate</span>::test_utils::load_test_filters</span>();
         <span class="kw">let</span> <span class="ident">histogram</span> <span class="op">=</span> <span class="ident">Histogram::with_opts</span>(<span class="ident">HistogramOpts::new</span>(<span class="string">&quot;test&quot;</span>, <span class="string">&quot;test&quot;</span>)).<span class="ident">unwrap</span>();
 
         <span class="kw">let</span> <span class="ident">socket</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">create_socket</span>().<span class="kw">await</span>);
@@ -946,8 +931,8 @@
             <span class="kw-2">&amp;</span><span class="ident">expiration</span>,
             <span class="ident">Duration::from_secs</span>(<span class="number">10</span>),
             <span class="ident">ReceivedPacketContext</span> {
+                <span class="ident">config</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
                 <span class="ident">packet</span>: <span class="ident">msg</span>.<span class="ident">as_bytes</span>(),
-                <span class="ident">filter_chain</span>: <span class="ident">SharedFilterChain::empty</span>(),
                 <span class="ident">endpoint</span>: <span class="kw-2">&amp;</span><span class="ident">endpoint</span>,
                 <span class="ident">source</span>: <span class="ident">endpoint</span>.<span class="ident">address</span>.<span class="ident">clone</span>(),
                 <span class="ident">dest</span>: <span class="ident">dest</span>.<span class="ident">clone</span>(),
@@ -974,14 +959,14 @@
         ));
         <span class="kw">let</span> <span class="ident">initial_expiration</span> <span class="op">=</span> <span class="ident">expiration</span>.<span class="ident">load</span>(<span class="ident">Ordering::Relaxed</span>);
         <span class="comment">// add filter</span>
-        <span class="kw">let</span> <span class="ident">filter_chain</span> <span class="op">=</span> <span class="ident">new_test_chain</span>();
+        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">new_test_config</span>());
         <span class="ident">Session::process_recv_packet</span>(
             <span class="kw-2">&amp;</span><span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>(),
             <span class="kw-2">&amp;</span><span class="ident">socket</span>,
             <span class="kw-2">&amp;</span><span class="ident">expiration</span>,
             <span class="ident">Duration::from_secs</span>(<span class="number">10</span>),
             <span class="ident">ReceivedPacketContext</span> {
-                <span class="ident">filter_chain</span>,
+                <span class="ident">config</span>,
                 <span class="ident">packet</span>: <span class="ident">msg</span>.<span class="ident">as_bytes</span>(),
                 <span class="ident">endpoint</span>: <span class="kw-2">&amp;</span><span class="ident">endpoint</span>,
                 <span class="ident">source</span>: <span class="ident">endpoint</span>.<span class="ident">address</span>.<span class="ident">clone</span>(),
@@ -1012,9 +997,8 @@
         <span class="kw">let</span> <span class="ident">socket</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">create_socket</span>().<span class="kw">await</span>);
 
         <span class="kw">let</span> <span class="ident">session</span> <span class="op">=</span> <span class="ident">Session::new</span>(<span class="ident">SessionArgs</span> {
+            <span class="ident">config</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
             <span class="ident">metrics</span>: <span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>(),
-            <span class="ident">proxy_metrics</span>: <span class="ident">ProxyMetrics::new</span>().<span class="ident">unwrap</span>(),
-            <span class="ident">filter_chain</span>: <span class="ident">SharedFilterChain::empty</span>(),
             <span class="ident">source</span>: <span class="ident">addr</span>,
             <span class="ident">downstream_socket</span>: <span class="ident">socket</span>,
             <span class="ident">dest</span>: <span class="ident">endpoint</span>,

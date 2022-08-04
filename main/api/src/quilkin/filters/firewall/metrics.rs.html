@@ -94,7 +94,7 @@
 };
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::metrics</span>::{
-    <span class="ident">filter_opts</span>, <span class="ident">CollectorExt</span>, <span class="ident">EVENT_LABEL</span>, <span class="ident">EVENT_READ_LABEL_VALUE</span>, <span class="ident">EVENT_WRITE_LABEL_VALUE</span>,
+    <span class="ident">filter_opts</span>, <span class="ident">CollectorExt</span>, <span class="ident">DIRECTION_LABEL</span>, <span class="ident">READ_DIRECTION_LABEL</span>, <span class="ident">WRITE_DIRECTION_LABEL</span>,
 };
 
 <span class="doccomment">/// Register and manage metrics for this filter</span>
@@ -107,7 +107,7 @@
 
 <span class="kw">impl</span> <span class="ident">Metrics</span> {
     <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">new</span>() -&gt; <span class="ident">MetricsResult</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">event_labels</span> <span class="op">=</span> <span class="kw-2">&amp;</span>[<span class="ident">EVENT_LABEL</span>];
+        <span class="kw">let</span> <span class="ident">event_labels</span> <span class="op">=</span> <span class="kw-2">&amp;</span>[<span class="ident">DIRECTION_LABEL</span>];
 
         <span class="kw">let</span> <span class="ident">deny_metric</span> <span class="op">=</span> <span class="ident">IntCounterVec::new</span>(
             <span class="ident">filter_opts</span>(
@@ -131,13 +131,13 @@
 
         <span class="prelude-val">Ok</span>(<span class="ident">Metrics</span> {
             <span class="ident">packets_denied_read</span>: <span class="ident">deny_metric</span>
-                .<span class="ident">get_metric_with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident">EVENT_READ_LABEL_VALUE</span>])<span class="question-mark">?</span>,
+                .<span class="ident">get_metric_with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident">READ_DIRECTION_LABEL</span>])<span class="question-mark">?</span>,
             <span class="ident">packets_denied_write</span>: <span class="ident">deny_metric</span>
-                .<span class="ident">get_metric_with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident">EVENT_WRITE_LABEL_VALUE</span>])<span class="question-mark">?</span>,
+                .<span class="ident">get_metric_with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident">WRITE_DIRECTION_LABEL</span>])<span class="question-mark">?</span>,
             <span class="ident">packets_allowed_read</span>: <span class="ident">allow_metric</span>
-                .<span class="ident">get_metric_with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident">EVENT_READ_LABEL_VALUE</span>])<span class="question-mark">?</span>,
+                .<span class="ident">get_metric_with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident">READ_DIRECTION_LABEL</span>])<span class="question-mark">?</span>,
             <span class="ident">packets_allowed_write</span>: <span class="ident">allow_metric</span>
-                .<span class="ident">get_metric_with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident">EVENT_WRITE_LABEL_VALUE</span>])<span class="question-mark">?</span>,
+                .<span class="ident">get_metric_with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident">WRITE_DIRECTION_LABEL</span>])<span class="question-mark">?</span>,
         })
     }
 }

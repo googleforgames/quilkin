@@ -271,8 +271,6 @@
 <span id="266">266</span>
 <span id="267">267</span>
 <span id="268">268</span>
-<span id="269">269</span>
-<span id="270">270</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -300,15 +298,13 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">filters::prelude</span>::<span class="kw-2">*</span>, <span class="ident">metadata::Value</span>};
 
-<span class="kw">use</span> <span class="self">self</span>::{
+<span class="kw">use</span> <span class="self">self</span>::{<span class="ident">metrics::Metrics</span>, <span class="ident">quilkin::filters::capture::v1alpha1</span> <span class="kw">as</span> <span class="ident">proto</span>};
+
+<span class="kw">pub</span> <span class="kw">use</span> <span class="self">self</span>::{
     <span class="ident">affix</span>::{<span class="ident">Prefix</span>, <span class="ident">Suffix</span>},
-    <span class="ident">metrics::Metrics</span>,
+    <span class="ident">config</span>::{<span class="ident">Config</span>, <span class="ident">Strategy</span>},
     <span class="ident">regex::Regex</span>,
 };
-
-<span class="kw">use</span> <span class="ident"><span class="self">self</span>::quilkin::filters::capture::v1alpha1</span> <span class="kw">as</span> <span class="ident">proto</span>;
-
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">config</span>::{<span class="ident">Config</span>, <span class="ident">Strategy</span>};
 
 <span class="doccomment">/// Trait to implement different strategies for capturing packet data.</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">CaptureStrategy</span> {
@@ -344,9 +340,11 @@
             .<span class="ident">insert</span>(<span class="self">self</span>.<span class="ident">is_present_key</span>.<span class="ident">clone</span>(), <span class="ident">Value::Bool</span>(<span class="ident">capture</span>.<span class="ident">is_some</span>()));
 
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">value</span>) <span class="op">=</span> <span class="ident">capture</span> {
+            <span class="macro">tracing::trace!</span>(<span class="ident">key</span><span class="op">=</span><span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="self">self</span>.<span class="ident">metadata_key</span>, <span class="op">%</span><span class="ident">value</span>, <span class="string">&quot;captured value&quot;</span>);
             <span class="ident">ctx</span>.<span class="ident">metadata</span>.<span class="ident">insert</span>(<span class="self">self</span>.<span class="ident">metadata_key</span>.<span class="ident">clone</span>(), <span class="ident">value</span>);
             <span class="prelude-val">Some</span>(<span class="ident">ctx</span>.<span class="ident">into</span>())
         } <span class="kw">else</span> {
+            <span class="macro">tracing::trace!</span>(<span class="ident">key</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="self">self</span>.<span class="ident">metadata_key</span>, <span class="string">&quot;No value captured&quot;</span>);
             <span class="prelude-val">None</span>
         }
     }
@@ -370,9 +368,7 @@
     <span class="kw">use</span> <span class="ident">std::sync::Arc</span>;
 
     <span class="kw">use</span> <span class="kw">crate</span>::{
-        <span class="ident">endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">Endpoints</span>},
-        <span class="ident">filters::metadata::CAPTURED_BYTES</span>,
-        <span class="ident">metadata::Value</span>,
+        <span class="ident">endpoint::Endpoint</span>, <span class="ident">filters::metadata::CAPTURED_BYTES</span>, <span class="ident">metadata::Value</span>,
         <span class="ident">test_utils::assert_write_no_change</span>,
     };
 
@@ -441,7 +437,7 @@
         <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">Capture::from_config</span>(<span class="ident">config</span>.<span class="ident">into</span>());
         <span class="kw">let</span> <span class="ident">endpoints</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(<span class="string">&quot;127.0.0.1:81&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>())];
         <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">filter</span>.<span class="ident">read</span>(<span class="ident">ReadContext::new</span>(
-            <span class="ident">Endpoints::new</span>(<span class="ident">endpoints</span>).<span class="ident">into</span>(),
+            <span class="ident">endpoints</span>,
             (<span class="ident">std::net::Ipv4Addr::LOCALHOST</span>, <span class="number">80</span>).<span class="ident">into</span>(),
             <span class="string">&quot;abc&quot;</span>.<span class="ident">to_string</span>().<span class="ident">into_bytes</span>(),
         ));
@@ -522,7 +518,7 @@
         <span class="kw">let</span> <span class="ident">endpoints</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(<span class="string">&quot;127.0.0.1:81&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>())];
         <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">filter</span>
             .<span class="ident">read</span>(<span class="ident">ReadContext::new</span>(
-                <span class="ident">Endpoints::new</span>(<span class="ident">endpoints</span>).<span class="ident">into</span>(),
+                <span class="ident">endpoints</span>,
                 <span class="string">&quot;127.0.0.1:80&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
                 <span class="string">&quot;helloabc&quot;</span>.<span class="ident">to_string</span>().<span class="ident">into_bytes</span>(),
             ))

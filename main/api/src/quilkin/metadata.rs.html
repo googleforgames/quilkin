@@ -269,6 +269,49 @@
 <span id="264">264</span>
 <span id="265">265</span>
 <span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
+<span id="270">270</span>
+<span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -288,6 +331,11 @@
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections::HashMap</span>, <span class="ident">convert::TryFrom</span>, <span class="ident">sync::Arc</span>};
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::xds::config::core::v3::Metadata</span> <span class="kw">as</span> <span class="ident">ProtoMetadata</span>;
+
+<span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">build</span> {
+    <span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/built.rs&quot;</span>));
+}
 
 <span class="doccomment">/// Shared state between [`Filter`][crate::filters::Filter]s during processing for a single packet.</span>
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">DynamicMetadata</span> <span class="op">=</span> <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>, <span class="ident">Value</span><span class="op">&gt;</span>;
@@ -335,6 +383,32 @@
     }
 }
 
+<span class="kw">impl</span> <span class="ident">std::fmt::Display</span> <span class="kw">for</span> <span class="ident">Value</span> {
+    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;mut</span> <span class="ident">std::fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="ident">std::fmt::Result</span> {
+        <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="self">self</span> {
+            <span class="ident"><span class="self">Self</span>::Bool</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>.<span class="ident">fmt</span>(<span class="ident">f</span>),
+            <span class="ident"><span class="self">Self</span>::Number</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>.<span class="ident">fmt</span>(<span class="ident">f</span>),
+            <span class="ident"><span class="self">Self</span>::String</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>.<span class="ident">fmt</span>(<span class="ident">f</span>),
+            <span class="ident"><span class="self">Self</span>::Bytes</span>(<span class="ident">value</span>) =&gt; <span class="ident">base64::encode</span>(<span class="ident">value</span>).<span class="ident">fmt</span>(<span class="ident">f</span>),
+            <span class="ident"><span class="self">Self</span>::List</span>(<span class="ident">values</span>) =&gt; {
+                <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;[&quot;</span>)<span class="question-mark">?</span>;
+                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">first</span> <span class="op">=</span> <span class="bool-val">true</span>;
+                <span class="kw">for</span> <span class="ident">value</span> <span class="kw">in</span> <span class="ident">values</span> {
+                    <span class="kw">if</span> <span class="ident">first</span> {
+                        <span class="ident">first</span> <span class="op">=</span> <span class="bool-val">false</span>;
+                    } <span class="kw">else</span> {
+                        <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;,&quot;</span>)<span class="question-mark">?</span>;
+                    }
+
+                    <span class="ident">value</span>.<span class="ident">fmt</span>(<span class="ident">f</span>)<span class="question-mark">?</span>;
+                }
+
+                <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;]&quot;</span>)
+            }
+        }
+    }
+}
+
 <span class="doccomment">/// Convenience macro for generating From&lt;T&gt; implementations.</span>
 <span class="macro">macro_rules!</span> <span class="ident">from_value</span> {
     ((<span class="macro-nonterminal">$</span><span class="macro-nonterminal">name</span>:<span class="ident">ident</span>) { $(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">typ</span>:<span class="ident">ty</span> =&gt; <span class="macro-nonterminal">$</span><span class="macro-nonterminal">ex</span>:<span class="ident">expr</span>),<span class="op">+</span> $(,)<span class="question-mark">?</span> }) =&gt; {
@@ -377,6 +451,9 @@
             (<span class="ident"><span class="self">Self</span>::Bool</span>(<span class="ident">a</span>), <span class="ident"><span class="self">Self</span>::Bool</span>(<span class="ident">b</span>)) =&gt; <span class="ident">a</span> <span class="op">==</span> <span class="ident">b</span>,
             (<span class="ident"><span class="self">Self</span>::Bool</span>(<span class="kw">_</span>), <span class="kw">_</span>) =&gt; <span class="bool-val">false</span>,
             (<span class="ident"><span class="self">Self</span>::Number</span>(<span class="ident">a</span>), <span class="ident"><span class="self">Self</span>::Number</span>(<span class="ident">b</span>)) =&gt; <span class="ident">a</span> <span class="op">==</span> <span class="ident">b</span>,
+            (<span class="ident"><span class="self">Self</span>::Number</span>(<span class="ident">num</span>), <span class="ident"><span class="self">Self</span>::Bytes</span>(<span class="ident">bytes</span>)) =&gt; {
+                <span class="ident">bytes</span>.<span class="ident">len</span>() <span class="op">==</span> <span class="number">1</span> <span class="op">&amp;&amp;</span> <span class="kw-2">*</span><span class="ident">num</span> <span class="op">==</span> <span class="ident">u64::from</span>(<span class="ident">bytes</span>[<span class="number">0</span>])
+            }
             (<span class="ident"><span class="self">Self</span>::Number</span>(<span class="kw">_</span>), <span class="kw">_</span>) =&gt; <span class="bool-val">false</span>,
             (<span class="ident"><span class="self">Self</span>::List</span>(<span class="ident">a</span>), <span class="ident"><span class="self">Self</span>::List</span>(<span class="ident">b</span>)) =&gt; <span class="ident">a</span> <span class="op">==</span> <span class="ident">b</span>,
             (<span class="ident"><span class="self">Self</span>::List</span>(<span class="kw">_</span>), <span class="kw">_</span>) =&gt; <span class="bool-val">false</span>,
@@ -444,9 +521,11 @@
 <span class="doccomment">/// Represents a view into the metadata object attached to another object. `T`</span>
 <span class="doccomment">/// represents metadata known to Quilkin under `quilkin.dev` (available under</span>
 <span class="doccomment">/// the [`KEY`] constant.)</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Default</span>, <span class="ident">Debug</span>, <span class="ident">serde::Deserialize</span>, <span class="ident">serde::Serialize</span>, <span class="ident">PartialEq</span>, <span class="ident">Clone</span>, <span class="ident">Eq</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(
+    <span class="ident">Default</span>, <span class="ident">Debug</span>, <span class="ident">serde::Deserialize</span>, <span class="ident">serde::Serialize</span>, <span class="ident">PartialEq</span>, <span class="ident">Clone</span>, <span class="ident">Eq</span>, <span class="ident">schemars::JsonSchema</span>,
+)]</span>
 <span class="attribute">#[<span class="ident">non_exhaustive</span>]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">MetadataView</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">MetadataView</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Default</span><span class="op">&gt;</span> {
     <span class="doccomment">/// Known Quilkin metadata.</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;quilkin.dev&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">known</span>: <span class="ident">T</span>,
@@ -455,7 +534,14 @@
     <span class="kw">pub</span> <span class="ident">unknown</span>: <span class="ident">serde_json::Map</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">serde_json::Value</span><span class="op">&gt;</span>,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">MetadataView</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Default</span><span class="op">&gt;</span> <span class="ident">MetadataView</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">known</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
+        <span class="self">Self</span> {
+            <span class="ident">known</span>: <span class="ident">known</span>.<span class="ident">into</span>(),
+            <span class="ident">unknown</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
+        }
+    }
+
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_unknown</span>(
         <span class="ident">known</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
         <span class="ident">unknown</span>: <span class="ident">serde_json::Map</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">serde_json::Value</span><span class="op">&gt;</span>,
@@ -482,7 +568,7 @@
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">prost_types::Struct</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">MetadataView</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ProtoMetadata</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">prost_types::Struct</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Default</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">MetadataView</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ProtoMetadata</span> {
     <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">metadata</span>: <span class="ident">MetadataView</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">filter_metadata</span> <span class="op">=</span> <span class="ident">HashMap::new</span>();
         <span class="ident">filter_metadata</span>.<span class="ident">insert</span>(<span class="ident">String::from</span>(<span class="string">&quot;quilkin.dev&quot;</span>), <span class="ident">metadata</span>.<span class="ident">known</span>.<span class="ident">into</span>());
