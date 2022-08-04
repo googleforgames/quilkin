@@ -101,7 +101,7 @@ where
 
             match config.branches.iter().find(|(key, _)| key == value) {
                 Some((value, instance)) => {
-                    tracing::trace!(key=&*config.metadata_key, value=?value, filter=&*instance.0, "Matched against branch");
+                    tracing::trace!(key=&*config.metadata_key, %value, filter=&*instance.0, "Matched against branch");
                     metrics.packets_matched_total.inc();
                     (and_then)(ctx, &instance.1)
                 }

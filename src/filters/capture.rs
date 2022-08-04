@@ -67,7 +67,7 @@ impl Filter for Capture {
             .insert(self.is_present_key.clone(), Value::Bool(capture.is_some()));
 
         if let Some(value) = capture {
-            tracing::trace!(key=&**self.metadata_key, value=?value, "captured value");
+            tracing::trace!(key=&**self.metadata_key, %value, "captured value");
             ctx.metadata.insert(self.metadata_key.clone(), value);
             Some(ctx.into())
         } else {

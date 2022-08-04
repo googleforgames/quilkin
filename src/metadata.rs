@@ -69,6 +69,32 @@ impl Value {
     }
 }
 
+impl std::fmt::Display for Value {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self {
+            Self::Bool(value) => value.fmt(f),
+            Self::Number(value) => value.fmt(f),
+            Self::String(value) => value.fmt(f),
+            Self::Bytes(value) => base64::encode(value).fmt(f),
+            Self::List(values) => {
+                write!(f, "[")?;
+                let mut first = true;
+                for value in values {
+                    if first {
+                        first = false;
+                    } else {
+                        write!(f, ",")?;
+                    }
+
+                    value.fmt(f)?;
+                }
+
+                write!(f, "]")
+            }
+        }
+    }
+}
+
 /// Convenience macro for generating From<T> implementations.
 macro_rules! from_value {
     (($name:ident) { $($typ:ty => $ex:expr),+ $(,)? }) => {
