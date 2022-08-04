@@ -55,7 +55,7 @@ impl<'de> serde::Deserialize<'de> for GameServer {
 
         serde_json::from_value::<Inner>(value.clone())
             .map_err(|error| {
-                tracing::trace!(%error, ?value, "gameserver failed");
+                tracing::trace!(%error, %value, "gameserver failed");
                 Error::custom(error)
             })
             .map(
