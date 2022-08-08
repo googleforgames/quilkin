@@ -19,20 +19,15 @@
 *.md
 *.png
 *.sh
-*.toml
 *.yaml
 *.zip
 *.iml
 .*
-/agones
 /benches
 /build
 /docs
 /examples
-/macros
-/proto
 /sdks
-/src
 /tests
 /target
 
