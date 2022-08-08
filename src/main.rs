@@ -14,12 +14,16 @@
  * limitations under the License.
  */
 
-use std::{path::PathBuf, sync::Arc};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use quilkin::Config;
 use tracing::info;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
+const ETC_CONFIG_PATH: &str = "/etc/quilkin/quilkin.yaml";
 
 #[derive(clap::Parser)]
 struct Cli {
@@ -116,9 +120,9 @@ async fn main() -> quilkin::Result<()> {
     );
 
     match cli.command {
-        Commands::Run => quilkin::run(read_config(&cli.config), vec![]).await,
+        Commands::Run => quilkin::run(read_config(&cli.config)?, vec![]).await,
         Commands::Manage { provider } => {
-            let config = Arc::new(read_config(&cli.config));
+            let config = Arc::new(read_config(&cli.config)?);
             let provider_task = match provider {
                 ProviderCommands::Agones {
                     gameservers_namespace,
@@ -180,17 +184,28 @@ async fn main() -> quilkin::Result<()> {
     }
 }
 
-/// Searches for the configuration file, and panics if not found.
-fn read_config(path: &PathBuf) -> Config {
-    std::fs::File::open(path)
-        .or_else(|error| {
-            if cfg!(unix) {
-                std::fs::File::open("/etc/quilkin/quilkin.yaml")
-            } else {
-                Err(error)
+/// Reads `Config` from path, if not found, will attempt to read from the
+/// `/etc` config path on unix, if neither is found, then the default
+/// configuration is returned.
+///
+/// # Errors
+/// If the file present but inaccessible, or the data doesn't match `Config`'s
+/// schema.
+fn read_config<A: AsRef<Path>>(path: A) -> Result<Config, eyre::Error> {
+    let from_reader = |file| Config::from_reader(file).map_err(From::from);
+
+    match std::fs::File::open(path) {
+        Ok(file) => (from_reader)(file),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            match cfg!(unix).then(|| std::fs::File::open(ETC_CONFIG_PATH)) {
+                Some(Ok(file)) => (from_reader)(file),
+                Some(Err(error)) if error.kind() == std::io::ErrorKind::NotFound => {
+                    Ok(Config::default())
+                }
+                Some(Err(error)) => Err(error.into()),
+                None => Ok(Config::default()),
             }
-        })
-        .map_err(eyre::Error::from)
-        .and_then(|file| quilkin::Config::from_reader(file).map_err(From::from))
-        .unwrap()
+        }
+        Err(error) => Err(error.into()),
+    }
 }

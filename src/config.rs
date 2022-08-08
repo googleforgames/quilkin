@@ -51,7 +51,7 @@ base64_serde_type!(Base64Standard, base64::STANDARD);
 pub(crate) const LOG_SAMPLING_RATE: u64 = 1000;
 
 /// Config is the configuration of a proxy
-#[derive(Clone, Debug, Default, Deserialize, Serialize, JsonSchema)]
+#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct Config {
@@ -192,6 +192,20 @@ impl Config {
 
         self.metrics.active_clusters.set((endpoints == 0) as i64);
         self.metrics.active_endpoints.set(endpoints as i64);
+    }
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            admin: Slot::with_default(),
+            clusters: <_>::default(),
+            filters: <_>::default(),
+            management_servers: <_>::default(),
+            proxy: <_>::default(),
+            version: <_>::default(),
+            metrics: <_>::default(),
+        }
     }
 }
 

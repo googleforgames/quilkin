@@ -13,9 +13,14 @@ has debug level logging enabled.
 The release binary can be downloaded from the 
 [Github releases page](https://github.com/googleforgames/quilkin/releases).
 
-Quilkin needs to be run with an accompanying [configuration file](./proxy-configuration.md), like so:
+Quilkin can be run with an accompanying [configuration file](./proxy-configuration.md), like so:
 
-`quilkin --config="configuration.yaml" run`
+```
+quilkin --config=quilkin.yaml run
+```
+
+By default quilkin will check both the current directory and `/etc/quilkin`
+for `quilkin.yaml`.
 
 To view debug output, run the same command with the `quilkin-debug` binary.
 
