@@ -27,8 +27,6 @@
 <span id="22">22</span>
 <span id="23">23</span>
 <span id="24">24</span>
-<span id="25">25</span>
-<span id="26">26</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -51,9 +49,7 @@
 <span class="doccomment">/// Attempt to convert a packet into a string, if it is one, otherwise return some human</span>
 <span class="doccomment">/// readable details about the packet.</span>
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">bytes_to_string</span>(<span class="ident">bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="ident">String</span> {
-    <span class="ident">std::str::from_utf8</span>(<span class="ident">bytes</span>)
-        .<span class="ident">map</span>(<span class="ident">str::to_string</span>)
-        .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;&lt;raw bytes :: len: {}&gt;&quot;</span>, <span class="ident">bytes</span>.<span class="ident">len</span>()))
+    <span class="ident">base64::encode</span>(<span class="ident">bytes</span>)
 }
 </code></pre></div>
 </section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.61.0 (fe5b13d68 2022-05-18)" ></div>

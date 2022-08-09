@@ -514,7 +514,6 @@
 <span id="509">509</span>
 <span id="510">510</span>
 <span id="511">511</span>
-<span id="512">512</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -737,7 +736,7 @@
             <span class="ident">timer</span>,
         } <span class="op">=</span> <span class="ident">packet_ctx</span>;
 
-        <span class="macro">tracing::trace!</span>(<span class="op">%</span><span class="ident">from</span>, <span class="ident">dest</span> <span class="op">=</span> <span class="op">%</span><span class="ident">endpoint</span>.<span class="ident">address</span>, <span class="ident">contents</span> <span class="op">=</span> <span class="op">%</span><span class="ident">debug::bytes_to_string</span>(<span class="ident">packet</span>), <span class="string">&quot;Received packet&quot;</span>);
+        <span class="macro">tracing::trace!</span>(<span class="op">%</span><span class="ident">from</span>, <span class="ident">dest</span> <span class="op">=</span> <span class="op">%</span><span class="ident">endpoint</span>.<span class="ident">address</span>, <span class="ident">contents</span> <span class="op">=</span> <span class="op">%</span><span class="ident">debug::bytes_to_string</span>(<span class="ident">packet</span>), <span class="string">&quot;received packet from upstream&quot;</span>);
 
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">error</span>) <span class="op">=</span> <span class="ident">Session::do_update_expiration</span>(<span class="ident">expiration</span>, <span class="ident">ttl</span>) {
             <span class="macro">tracing::warn!</span>(<span class="op">%</span><span class="ident">error</span>, <span class="string">&quot;Error updating session expiration&quot;</span>)
@@ -745,7 +744,7 @@
 
         <span class="kw">match</span> <span class="ident">config</span>.<span class="ident">filters</span>.<span class="ident">load</span>().<span class="ident">write</span>(<span class="ident">WriteContext::new</span>(
             <span class="ident">endpoint</span>,
-            <span class="ident">from</span>,
+            <span class="ident">from</span>.<span class="ident">clone</span>(),
             <span class="ident">dest</span>.<span class="ident">clone</span>(),
             <span class="ident">packet</span>.<span class="ident">to_vec</span>(),
         )) {
@@ -760,10 +759,9 @@
                     }
                 };
 
-                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">error</span>) <span class="op">=</span> <span class="ident">downstream_socket</span>
-                    .<span class="ident">send_to</span>(<span class="ident">response</span>.<span class="ident">contents</span>.<span class="ident">as_slice</span>(), <span class="ident">addr</span>)
-                    .<span class="kw">await</span>
-                {
+                <span class="kw">let</span> <span class="ident">packet</span> <span class="op">=</span> <span class="ident">response</span>.<span class="ident">contents</span>.<span class="ident">as_slice</span>();
+                <span class="macro">tracing::trace!</span>(<span class="op">%</span><span class="ident">from</span>, <span class="ident">dest</span> <span class="op">=</span> <span class="op">%</span><span class="ident">addr</span>, <span class="ident">contents</span> <span class="op">=</span> <span class="op">%</span><span class="ident">debug::bytes_to_string</span>(<span class="ident">packet</span>), <span class="string">&quot;sending packet downstream&quot;</span>);
+                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">error</span>) <span class="op">=</span> <span class="ident">downstream_socket</span>.<span class="ident">send_to</span>(<span class="ident">packet</span>, <span class="ident">addr</span>).<span class="kw">await</span> {
                     <span class="ident">metrics</span>.<span class="ident">rx_errors_total</span>.<span class="ident">inc</span>();
                     <span class="macro">tracing::error!</span>(<span class="op">%</span><span class="ident">error</span>, <span class="string">&quot;Error sending packet&quot;</span>);
                 }
@@ -806,7 +804,7 @@
         <span class="macro">tracing::trace!</span>(
         <span class="ident">dest_address</span> <span class="op">=</span> <span class="op">%</span><span class="self">self</span>.<span class="ident">dest</span>.<span class="ident">address</span>,
         <span class="ident">contents</span> <span class="op">=</span> <span class="op">%</span><span class="ident">debug::bytes_to_string</span>(<span class="ident">buf</span>),
-        <span class="string">&quot;Sending packet&quot;</span>);
+        <span class="string">&quot;sending packet upstream&quot;</span>);
 
         <span class="self">self</span>.<span class="ident">do_send</span>(<span class="ident">buf</span>)
             .<span class="kw">await</span>
