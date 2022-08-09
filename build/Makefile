@@ -39,10 +39,10 @@ endif
 REPOSITORY ?= ""
 IMAGE_TAG ?= ${REPOSITORY}quilkin:$(package_version)
 MINIKUBE_PROFILE ?= quilkin
-
+CARGO_TARGET_DIR ?= /workspace/target/build-image
 common_rust_args := -v $(project_path):/workspace -w /workspace \
 					-v $(CARGO_HOME)/registry:/usr/local/cargo/registry \
-					-e "CARGO_TARGET_DIR=/workspace/target/build-image"
+					-e "CARGO_TARGET_DIR=$(CARGO_TARGET_DIR)"
 
 KUBECONFIG ?= ~/.kube/config
 kubeconfig_path := $(dir $(KUBECONFIG))
@@ -93,9 +93,9 @@ test-docs: ensure-build-image
 	docker run --rm $(common_rust_args) \
 		--entrypoint=bash $(BUILD_IMAGE_TAG) -c \
 			'export RUSTDOCFLAGS="-Dwarnings" && mkdir /tmp/docs && \
-			mkdir -p ./target/doc; \
+			mkdir -p "$(CARGO_TARGET_DIR)/doc"; \
 			cargo doc --workspace --no-deps && cd docs && mdbook build --dest-dir /tmp/docs/book && \
-			cp -r /workspace/target/doc /tmp/docs/api && \
+			cp -r "$(CARGO_TARGET_DIR)/doc" /tmp/docs/api && \
 			rm /tmp/docs/book/print.html && \
 			htmltest -c /workspace/docs/htmltest.yaml /tmp/docs'
 
@@ -107,7 +107,7 @@ build-all-binaries: ensure-build-image build-linux-binary build-macos-binary bui
 
 # Build an archive all binaries
 binary-archive: ensure-build-image build-all-binaries
-	docker run --rm $(common_rust_args) -w /workspace/target/build-image \
+	docker run --rm $(common_rust_args) -w $(CARGO_TARGET_DIR) \
 			--entrypoint=bash $(BUILD_IMAGE_TAG) -c 'zip ../../quilkin-$(package_version).zip ./*/*/quilkin ./*/*/quilkin.exe'
 
 # Build binary for x86_64-unknown-linux-gnu
@@ -124,7 +124,7 @@ build-windows-binary: ensure-build-image
 build-macos-binary:
 	docker run --rm -v $(project_path):/workspace -w /workspace \
 		-v $(CARGO_HOME)/registry:/root/.cargo/registry \
-		-e "CARGO_TARGET_DIR=/workspace/target/build-image" \
+		-e "CARGO_TARGET_DIR=$(CARGO_TARGET_DIR)" \
 		-e "CC=o64-clang" -e "CXX=o64-clang++" \
         joseluisq/rust-linux-darwin-builder:$(rust_toolchain) \
         	sh -c "rustup target add x86_64-apple-darwin && cargo build --release --target x86_64-apple-darwin"
@@ -192,7 +192,7 @@ docs: ensure-build-image
 	docker run -it --rm $(common_rust_args) -p 3000:3000 \
 		--entrypoint=bash $(BUILD_IMAGE_TAG) -c \
 			'mkdir /tmp/docs && (live-server -p 3000 /tmp/docs &) && \
-			mkdir -p ./target/doc; ln -s $$(pwd)/target/doc /tmp/docs/api && \
+			mkdir -p "$(CARGO_TARGET_DIR)/doc"; ln -s "$(CARGO_TARGET_DIR)/doc" /tmp/docs/api && \
 			cargo watch -s "cargo doc --workspace --no-deps && cd docs && mdbook build --dest-dir /tmp/docs/book"'
 
 # Start an interactive shell inside the build image
