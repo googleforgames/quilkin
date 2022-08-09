@@ -220,7 +220,7 @@ impl Session {
             timer,
         } = packet_ctx;
 
-        tracing::trace!(%from, dest = %endpoint.address, contents = %debug::bytes_to_string(packet), "Received packet");
+        tracing::trace!(%from, dest = %endpoint.address, contents = %debug::bytes_to_string(packet), "received packet from upstream");
 
         if let Err(error) = Session::do_update_expiration(expiration, ttl) {
             tracing::warn!(%error, "Error updating session expiration")
@@ -228,7 +228,7 @@ impl Session {
 
         match config.filters.load().write(WriteContext::new(
             endpoint,
-            from,
+            from.clone(),
             dest.clone(),
             packet.to_vec(),
         )) {
@@ -243,10 +243,9 @@ impl Session {
                     }
                 };
 
-                if let Err(error) = downstream_socket
-                    .send_to(response.contents.as_slice(), addr)
-                    .await
-                {
+                let packet = response.contents.as_slice();
+                tracing::trace!(%from, dest = %addr, contents = %debug::bytes_to_string(packet), "sending packet downstream");
+                if let Err(error) = downstream_socket.send_to(packet, addr).await {
                     metrics.rx_errors_total.inc();
                     tracing::error!(%error, "Error sending packet");
                 }
@@ -289,7 +288,7 @@ impl Session {
         tracing::trace!(
         dest_address = %self.dest.address,
         contents = %debug::bytes_to_string(buf),
-        "Sending packet");
+        "sending packet upstream");
 
         self.do_send(buf)
             .await
