@@ -1,4 +1,6 @@
 FROM lukemathwalker/cargo-chef:latest-rust-1.61.0 AS chef
+COPY rust-toolchain.toml rust-toolchain.toml
+RUN rustup check
 WORKDIR app
 
 FROM chef AS planner
@@ -7,7 +9,6 @@ RUN cargo chef prepare --recipe-path recipe.json
 
 FROM chef AS builder
 COPY --from=planner /app/recipe.json recipe.json
-COPY rust-toolchain.toml rust-toolchain.toml
 # Build dependencies - this is the caching Docker layer!
 RUN cargo chef cook -p quilkin --release --recipe-path recipe.json
 # Build application
@@ -18,4 +19,4 @@ RUN cargo build --release --bin quilkin
 FROM debian:bookworm-slim AS runtime
 WORKDIR app
 COPY --from=builder /app/target/release/quilkin /usr/local/bin
-ENTRYPOINT ["/usr/local/bin/quilkin"]
+ENTRYPOINT ["/usr/local/bin/quilkin", "run"]
