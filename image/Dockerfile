@@ -12,20 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG PROFILE
-
 FROM gcr.io/distroless/cc:nonroot as base
 WORKDIR /
 COPY ./license.html .
 COPY ./dependencies-src.zip .
 COPY --chown=nonroot:nonroot ./image/quilkin.yaml /etc/quilkin/quilkin.yaml
+COPY ./target/build-image/x86_64-unknown-linux-gnu/release/quilkin .
 
-FROM base as release
-COPY ./target/x86_64-unknown-linux-gnu/release/quilkin .
-
-FROM base as debug
-COPY ./target/x86_64-unknown-linux-gnu/debug/quilkin .
-
-FROM $PROFILE
 USER nonroot:nonroot
 ENTRYPOINT ["/quilkin", "--config", "/etc/quilkin/quilkin.yaml", "run"]

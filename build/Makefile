@@ -39,9 +39,10 @@ endif
 REPOSITORY ?= ""
 IMAGE_TAG ?= ${REPOSITORY}quilkin:$(package_version)
 MINIKUBE_PROFILE ?= quilkin
-
+CARGO_TARGET_DIR ?= /workspace/target/build-image
 common_rust_args := -v $(project_path):/workspace -w /workspace \
-					-v $(CARGO_HOME)/registry:/usr/local/cargo/registry
+					-v $(CARGO_HOME)/registry:/usr/local/cargo/registry \
+					-e "CARGO_TARGET_DIR=$(CARGO_TARGET_DIR)"
 
 KUBECONFIG ?= ~/.kube/config
 kubeconfig_path := $(dir $(KUBECONFIG))
@@ -92,46 +93,43 @@ test-docs: ensure-build-image
 	docker run --rm $(common_rust_args) \
 		--entrypoint=bash $(BUILD_IMAGE_TAG) -c \
 			'export RUSTDOCFLAGS="-Dwarnings" && mkdir /tmp/docs && \
-			mkdir -p ./target/doc; \
+			mkdir -p "$(CARGO_TARGET_DIR)/doc"; \
 			cargo doc --workspace --no-deps && cd docs && mdbook build --dest-dir /tmp/docs/book && \
-			cp -r /workspace/target/doc /tmp/docs/api && \
+			cp -r "$(CARGO_TARGET_DIR)/doc" /tmp/docs/api && \
 			rm /tmp/docs/book/print.html && \
 			htmltest -c /workspace/docs/htmltest.yaml /tmp/docs'
 
 # Build all binaries, images and related artifacts
 build: binary-archive build-image
 
-# Build all debug and release binaries
-build-all-binaries: ensure-build-image build-linux-binary build-macos-binary
+# Build all binaries
+build-all-binaries: ensure-build-image build-linux-binary build-macos-binary build-windows-binary
 
-# Build an archive all debug and release binaries
+# Build an archive all binaries
 binary-archive: ensure-build-image build-all-binaries
-	docker run --rm $(common_rust_args) \
-			--entrypoint=bash $(BUILD_IMAGE_TAG) -c 'zip quilkin-$(package_version).zip ./target/*/*/quilkin ./target/*/*/quilkin.exe'
+	docker run --rm $(common_rust_args) -w $(CARGO_TARGET_DIR) \
+			--entrypoint=bash $(BUILD_IMAGE_TAG) -c 'zip ../../quilkin-$(package_version).zip ./*/*/quilkin ./*/*/quilkin.exe'
 
-# Build release and debug binaries for x86_64-unknown-linux-gnu
+# Build binary for x86_64-unknown-linux-gnu
 build-linux-binary: ensure-build-image
-	docker run --rm $(common_rust_args) \
-		--entrypoint=cargo $(BUILD_IMAGE_TAG) build --target x86_64-unknown-linux-gnu
 	docker run --rm $(common_rust_args) \
 		--entrypoint=cargo $(BUILD_IMAGE_TAG) build --target x86_64-unknown-linux-gnu --release
 
-# Build release and debug binaries for x86_64-pc-windows-gnu
+# Build binary for x86_64-pc-windows-gnu
 build-windows-binary: ensure-build-image
-	docker run --rm $(common_rust_args) \
-		--entrypoint=cargo $(BUILD_IMAGE_TAG) build --target x86_64-pc-windows-gnu
 	docker run --rm $(common_rust_args) \
 		--entrypoint=cargo $(BUILD_IMAGE_TAG) build --target x86_64-pc-windows-gnu --release
 
-# Build release and debug binaries for x86_64-apple-darwin
+# Build binary for x86_64-apple-darwin
 build-macos-binary:
 	docker run --rm -v $(project_path):/workspace -w /workspace \
 		-v $(CARGO_HOME)/registry:/root/.cargo/registry \
+		-e "CARGO_TARGET_DIR=$(CARGO_TARGET_DIR)" \
 		-e "CC=o64-clang" -e "CXX=o64-clang++" \
         joseluisq/rust-linux-darwin-builder:$(rust_toolchain) \
-        	sh -c "rustup target add x86_64-apple-darwin && cargo build --target x86_64-apple-darwin && cargo build --release --target x86_64-apple-darwin"
+        	sh -c "rustup target add x86_64-apple-darwin && cargo build --release --target x86_64-apple-darwin"
 
-# Build release and debug container images.
+# Build container image.
 # Use either `REPOSITORY` to specify a container repository (defaults to blank/none), or use `IMAGE_TAG` argument to specify
 # the entire image name and tag. Defaults to `quilkin:${version}-${git-sha}`.
 build-image: ensure-build-image build-linux-binary
@@ -140,8 +138,7 @@ build-image:
 		--entrypoint=bash $(BUILD_IMAGE_TAG) -c 'cargo about generate license.html.hbs > license.html'
 	docker run --rm $(common_rust_args) \
 		--entrypoint=bash $(BUILD_IMAGE_TAG) -c './image/archive_dependencies.sh'
-	docker build -t $(IMAGE_TAG)-debug --build-arg PROFILE=debug -f $(project_path)/image/Dockerfile $(project_path)
-	docker build -t $(IMAGE_TAG) --build-arg PROFILE=release -f $(project_path)/image/Dockerfile $(project_path)
+	docker build -t $(IMAGE_TAG) -f $(project_path)/image/Dockerfile $(project_path)
 
 # Builds Quilkin, pushes it to a repository (use REPOSITORY arg to set value)
 # and then runs the Agones integration tests. See targets `build-images` and `push` for more options and details.
@@ -172,7 +169,6 @@ push:
 ifndef SKIP_BUILD_IMAGE
 push: build-image
 endif
-	docker push $(IMAGE_TAG)-debug
 	docker push $(IMAGE_TAG)
 
 # Convenience target to build and push quilkin images into a minikube instance
@@ -196,7 +192,7 @@ docs: ensure-build-image
 	docker run -it --rm $(common_rust_args) -p 3000:3000 \
 		--entrypoint=bash $(BUILD_IMAGE_TAG) -c \
 			'mkdir /tmp/docs && (live-server -p 3000 /tmp/docs &) && \
-			mkdir -p ./target/doc; ln -s $$(pwd)/target/doc /tmp/docs/api && \
+			mkdir -p "$(CARGO_TARGET_DIR)/doc"; ln -s "$(CARGO_TARGET_DIR)/doc" /tmp/docs/api && \
 			cargo watch -s "cargo doc --workspace --no-deps && cd docs && mdbook build --dest-dir /tmp/docs/book"'
 
 # Start an interactive shell inside the build image

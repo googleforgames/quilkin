@@ -53,16 +53,7 @@ steps:
     args:
       - '-c'
       - 'timeout --signal=INT --preserve-status 5s docker run --rm ${_REPOSITORY}quilkin:$(make version)'
-    id: test-quilkin-debug
-    waitFor:
-      - build
-  - name: gcr.io/cloud-builders/docker
-    dir: ./build
-    entrypoint: bash
-    args:
-      - '-c'
-      - 'timeout --signal=INT --preserve-status 5s docker run --rm ${_REPOSITORY}quilkin:$(make version)-debug'
-    id: test-quilkin-release
+    id: test-quilkin-image
     waitFor:
       - build
   - name: us-docker.pkg.dev/$PROJECT_ID/ci/make-docker
