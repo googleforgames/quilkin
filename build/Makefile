@@ -53,6 +53,10 @@ kube_mount_args := -v $(kubeconfig_path):/root/.kube -v $(helm_config):/root/.co
 minikube_args := --network=host -v ~/.minikube:$(HOME)/.minikube
 gcloud_mount_args := -v $(build_path)/.config/gcloud:/root/.config/gcloud
 
+cargo_build_x86_64_linux := build --release --target x86_64-unknown-linux-gnu
+cargo_build_x86_64_apple := build --release --target x86_64-apple-darwin
+cargo_build_x86_64_windows := build --release --target x86_64-pc-windows-gnu
+
 #   _____                    _
 #  |_   _|_ _ _ __ __ _  ___| |_ ___
 #    | |/ _` | '__/ _` |/ _ \ __/ __|
@@ -108,32 +112,54 @@ build-all-binaries: ensure-build-image build-linux-binary build-macos-binary bui
 # Build an archive all binaries
 binary-archive: ensure-build-image build-all-binaries
 	docker run --rm $(common_rust_args) -w $(CARGO_TARGET_DIR) \
-			--entrypoint=bash $(BUILD_IMAGE_TAG) -c 'zip ../../quilkin-$(package_version).zip ./*/*/quilkin ./*/*/quilkin.exe'
+			--entrypoint=bash $(BUILD_IMAGE_TAG) -c 'zip ../../quilkin-$(package_version).zip ./*/release/quilkin ./*/release/quilkin.exe'
 
-# Build binary for x86_64-unknown-linux-gnu
+# Build binary for x86_64-unknown-linux-gnu.
+# Use BUILD_LOCAL=1 to build through local cargo rather than through the build container.
 build-linux-binary: ensure-build-image
+ifdef BUILD_LOCAL
+	cargo $(cargo_build_x86_64_linux)
+else
 	docker run --rm $(common_rust_args) \
-		--entrypoint=cargo $(BUILD_IMAGE_TAG) build --target x86_64-unknown-linux-gnu --release
+		--entrypoint=cargo $(BUILD_IMAGE_TAG) $(cargo_build_x86_64_linux)
+endif
 
 # Build binary for x86_64-pc-windows-gnu
+# Use BUILD_LOCAL=1 to build through local cargo rather than through the build container.
 build-windows-binary: ensure-build-image
+ifdef BUILD_LOCAL
+	cargo $(cargo_build_x86_64_windows)
+else
 	docker run --rm $(common_rust_args) \
-		--entrypoint=cargo $(BUILD_IMAGE_TAG) build --target x86_64-pc-windows-gnu --release
+		--entrypoint=cargo $(BUILD_IMAGE_TAG) $(cargo_build_x86_64_windows)
+endif
 
 # Build binary for x86_64-apple-darwin
+# Use BUILD_LOCAL=1 to build through local cargo rather than through the build container.
 build-macos-binary:
+ifdef BUILD_LOCAL
+	cargo $(cargo_build_x86_64_apple)
+else
 	docker run --rm -v $(project_path):/workspace -w /workspace \
 		-v $(CARGO_HOME)/registry:/root/.cargo/registry \
 		-e "CARGO_TARGET_DIR=$(CARGO_TARGET_DIR)" \
 		-e "CC=o64-clang" -e "CXX=o64-clang++" \
         joseluisq/rust-linux-darwin-builder:$(rust_toolchain) \
-        	sh -c "rustup target add x86_64-apple-darwin && cargo build --release --target x86_64-apple-darwin"
+        	sh -c "rustup target add x86_64-apple-darwin && cargo $(cargo_build_x86_64_apple)"
+endif
 
 # Build container image.
 # Use either `REPOSITORY` to specify a container repository (defaults to blank/none), or use `IMAGE_TAG` argument to specify
 # the entire image name and tag. Defaults to `quilkin:${version}-${git-sha}`.
+# Use BUILD_LOCAL=1 to build the binary through local cargo rather than through the build container.
 build-image: ensure-build-image build-linux-binary
 build-image:
+	-mkdir -p "$(project_path)/target/image/"
+ifdef BUILD_LOCAL
+	cp "$(project_path)/target/x86_64-unknown-linux-gnu/release/quilkin" "$(project_path)/target/image/"
+else
+	cp "$(project_path)/target/build-image/x86_64-unknown-linux-gnu/release/quilkin" "$(project_path)/target/image/"
+endif
 	docker run --rm $(common_rust_args) \
 		--entrypoint=bash $(BUILD_IMAGE_TAG) -c 'cargo about generate license.html.hbs > license.html'
 	docker run --rm $(common_rust_args) \

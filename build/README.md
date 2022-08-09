@@ -85,6 +85,27 @@ integration testing tooling.
 To build all operating system binaries, as well as the container image for your current development version of 
 Quilkin, run `make build`.
 
+#### Escape with BUILD_LOCAL
+
+Depending on your OS and setup, running everything through a Docker container may have a performance impact (Hi WSL! 👋).
+
+If you have `cargo` installed locally, you can use the `BUILD_LOCAL` env variable to force the `Make` system use 
+your local `cargo` configuration rather than build in our Docker image, which can result in a faster iterative 
+development loop for some platforms.
+
+For example:
+
+```shell
+# Builds the quilkin container image through our build image
+$ make build-image 
+```
+```shell
+# Builds the quilkin binary locally first, before building the Quilkin container image. 
+$ BUILD_LOCAL=1 make build-image
+```
+
+See `make help` for all the targets this applies to.
+
 #### Show all commands
 
 There are more targets available than just the above.
