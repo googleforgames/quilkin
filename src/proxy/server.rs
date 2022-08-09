@@ -197,10 +197,11 @@ impl Server {
                             let timer = crate::metrics::PROCESSING_TIME.with_label_values(&[crate::metrics::READ_DIRECTION_LABEL]).start_timer();
                             match recv {
                                 Ok((size, source)) => {
-                                    tracing::debug!(id = worker_id, size = size, source = %source, "Received packet");
+                                    let contents = (&buf[..size]).to_vec();
+                                    tracing::trace!(id = worker_id, size = size, source = %source, contents=&*debug::bytes_to_string(&contents), "received packet from downstream");
                                     let packet = DownstreamPacket {
                                         source: source.into(),
-                                        contents: (&buf[..size]).to_vec(),
+                                        contents,
                                         timer,
                                     };
                                     Self::process_downstream_received_packet(packet, &receive_config).await
@@ -226,12 +227,6 @@ impl Server {
         packet: DownstreamPacket,
         args: &ProcessDownstreamReceiveConfig,
     ) {
-        tracing::trace!(
-            source = %packet.source,
-            contents = %debug::bytes_to_string(&packet.contents),
-            "Packet Received"
-        );
-
         let clusters = args.config.clusters.load();
 
         tracing::trace!(?clusters, "Clusters available");
