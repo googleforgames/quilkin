@@ -300,9 +300,14 @@ mod tests {
         .map(Arc::new)
         .unwrap();
 
-        tokio::spawn(manage(config.clone()));
+        let handle = tokio::spawn(manage(config.clone()));
         let client = Client::connect(config.clone()).await.unwrap();
         let mut stream = client.stream().await.unwrap();
+
+        // Test that the client can handle the manager dropping out.
+        handle.abort();
+        tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+        tokio::spawn(manage(config.clone()));
 
         // Each time, we create a new upstream endpoint and send a cluster update for it.
         let concat_bytes = vec![("b", "c,"), ("d", "e")];

@@ -76,7 +76,7 @@ stable-eyre = "0.2.2"
 tempdir = "0.3"
 thiserror = "1.0.30"
 tokio = { version = "1.19.2", features = ["rt-multi-thread", "fs", "signal", "test-util", "parking_lot", "tracing"] }
-tokio-stream = "0.1.8"
+tokio-stream = { version = "0.1.8", features = ["sync"] }
 tonic = "0.6.1"
 tracing = "0.1.31"
 tracing-subscriber = { version = "0.3.9", features = ["json", "env-filter"] }
