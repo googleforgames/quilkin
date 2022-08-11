@@ -306,7 +306,7 @@ mod tests {
 
         // Test that the client can handle the manager dropping out.
         handle.abort();
-        tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         tokio::spawn(manage(config.clone()));
 
         // Each time, we create a new upstream endpoint and send a cluster update for it.
