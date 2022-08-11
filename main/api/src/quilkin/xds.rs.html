@@ -679,7 +679,7 @@
 
         <span class="comment">// Test that the client can handle the manager dropping out.</span>
         <span class="ident">handle</span>.<span class="ident">abort</span>();
-        <span class="ident">tokio::time::sleep</span>(<span class="ident">std::time::Duration::from_millis</span>(<span class="number">5</span>)).<span class="kw">await</span>;
+        <span class="ident">tokio::time::sleep</span>(<span class="ident">std::time::Duration::from_millis</span>(<span class="number">50</span>)).<span class="kw">await</span>;
         <span class="ident">tokio::spawn</span>(<span class="ident">manage</span>(<span class="ident">config</span>.<span class="ident">clone</span>()));
 
         <span class="comment">// Each time, we create a new upstream endpoint and send a cluster update for it.</span>
