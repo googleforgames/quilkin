@@ -169,7 +169,13 @@ impl Stream {
                         .await?
                         .into_inner();
 
-                    while let Some(response) = responses.message().await? {
+                    while let Some(response) = responses
+                        .message()
+                        .await
+                        .map_err(|error| tracing::error!(%error, "Error from xDS server"))
+                        .ok()
+                        .flatten()
+                    {
                         let identifier = response
                             .control_plane
                             .as_ref()
@@ -217,6 +223,7 @@ impl Stream {
                         requests.send(request)?;
                     }
 
+                    tracing::info!("Lost connection to xDS, retrying");
                     // If we've reached here, something has gone wrong with the
                     // connection, so we just create a new client and restart.
                     client = Client::new_ads_client(&config).await?;
