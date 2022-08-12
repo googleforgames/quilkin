@@ -252,12 +252,11 @@ impl TryFrom<GameServer> for Endpoint {
         };
 
         let address = status.address.clone();
-        let port = server
-            .spec
+        let port = status
             .ports
-            .first()
-            .ok_or_else(|| tonic::Status::internal("No port found for game server"))?
-            .container_port;
+            .as_ref()
+            .and_then(|ports| ports.first().map(|status| status.port))
+            .ok_or_else(|| tonic::Status::internal("No port found for game server"))?;
         let filter_metadata = crate::endpoint::Metadata { tokens };
         Ok(Self::with_metadata((address, port).into(), filter_metadata))
     }
