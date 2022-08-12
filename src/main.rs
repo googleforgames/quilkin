@@ -16,6 +16,7 @@
 
 use std::{path::PathBuf, sync::Arc};
 
+use quilkin::Config;
 use tracing::info;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -108,18 +109,6 @@ async fn main() -> quilkin::Result<()> {
             .init();
     }
 
-    let config = std::fs::File::open(&cli.config)
-        .or_else(|error| {
-            if cfg!(unix) {
-                std::fs::File::open("/etc/quilkin/quilkin.yaml")
-            } else {
-                Err(error)
-            }
-        })
-        .map_err(eyre::Error::from)
-        .and_then(|file| quilkin::Config::from_reader(file).map_err(From::from))
-        .unwrap();
-
     info!(
         version = &*version,
         commit = quilkin::metadata::build::GIT_COMMIT_HASH,
@@ -127,9 +116,9 @@ async fn main() -> quilkin::Result<()> {
     );
 
     match cli.command {
-        Commands::Run => quilkin::run(config, vec![]).await,
+        Commands::Run => quilkin::run(read_config(&cli.config), vec![]).await,
         Commands::Manage { provider } => {
-            let config = Arc::new(config);
+            let config = Arc::new(read_config(&cli.config));
             let provider_task = match provider {
                 ProviderCommands::Agones {
                     gameservers_namespace,
@@ -189,4 +178,19 @@ async fn main() -> quilkin::Result<()> {
             Ok(())
         }
     }
+}
+
+/// Searches for the configuration file, and panics if not found.
+fn read_config(path: &PathBuf) -> Config {
+    std::fs::File::open(path)
+        .or_else(|error| {
+            if cfg!(unix) {
+                std::fs::File::open("/etc/quilkin/quilkin.yaml")
+            } else {
+                Err(error)
+            }
+        })
+        .map_err(eyre::Error::from)
+        .and_then(|file| quilkin::Config::from_reader(file).map_err(From::from))
+        .unwrap()
 }
