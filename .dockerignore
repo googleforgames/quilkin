@@ -40,6 +40,6 @@
 *.exe
 *.rlib
 
-!target/build-image/x86_64-unknown-linux-gnu/release/quilkin
+!target/image/quilkin
 !dependencies-src.zip
 !image/quilkin.yaml

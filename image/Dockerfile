@@ -17,7 +17,7 @@ WORKDIR /
 COPY ./license.html .
 COPY ./dependencies-src.zip .
 COPY --chown=nonroot:nonroot ./image/quilkin.yaml /etc/quilkin/quilkin.yaml
-COPY ./target/build-image/x86_64-unknown-linux-gnu/release/quilkin .
+COPY ./target/image/quilkin .
 
 USER nonroot:nonroot
 ENTRYPOINT ["/quilkin", "--config", "/etc/quilkin/quilkin.yaml", "run"]
