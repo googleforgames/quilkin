@@ -371,6 +371,7 @@
 <span id="366">366</span>
 <span id="367">367</span>
 <span id="368">368</span>
+<span id="369">369</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -662,6 +663,7 @@
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">basic</span>() {
         <span class="kw">let</span> <span class="ident">config</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Config</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">serde_json::from_value</span>(<span class="macro">serde_json::json!</span>({
             <span class="string">&quot;version&quot;</span>: <span class="string">&quot;v1alpha1&quot;</span>,
+            <span class="string">&quot;admin&quot;</span>: <span class="ident">null</span>,
             <span class="string">&quot;proxy&quot;</span>: {
                 <span class="string">&quot;id&quot;</span>: <span class="string">&quot;test-proxy&quot;</span>,
                 <span class="string">&quot;port&quot;</span>: <span class="number">23456u16</span>,

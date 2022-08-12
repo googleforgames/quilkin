@@ -180,7 +180,7 @@
         });
 
         <span class="ident">std::fs::write</span>(<span class="kw-2">&amp;</span><span class="ident">file_path</span>, <span class="ident">serde_yaml::to_string</span>(<span class="kw-2">&amp;</span><span class="ident">source</span>).<span class="ident">unwrap</span>()).<span class="ident">unwrap</span>();
-        <span class="ident">tokio::time::sleep</span>(<span class="ident">std::time::Duration::from_millis</span>(<span class="number">250</span>)).<span class="kw">await</span>;
+        <span class="ident">tokio::time::sleep</span>(<span class="ident">std::time::Duration::from_millis</span>(<span class="number">500</span>)).<span class="kw">await</span>;
 
         <span class="macro">assert_eq!</span>(<span class="ident">source</span>, <span class="ident">dest</span>);
     }
