@@ -177,7 +177,85 @@ filters:
 </span></code></pre></pre>
 <!--  ANCHOR_END: example -->
 <h3 id="configuration-options-rust-doc"><a class="header" href="#configuration-options-rust-doc">Configuration Options (<a href="../../api/quilkin/filters/match/struct.Config.html">Rust Doc</a>)</a></h3>
-<pre><code class="language-yaml">{{#include ../../../target/quilkin.filters.match.v1alpha1.yaml}}
+<pre><code class="language-yaml">---
+$schema: &quot;http://json-schema.org/draft-07/schema#&quot;
+title: Config
+description: &quot;Configuration for [`Match`][super::Match].&quot;
+type: object
+properties:
+  on_read:
+    description: &quot;Configuration for [`Filter::read`][crate::filters::Filter::read].&quot;
+    anyOf:
+      - $ref: &quot;#/definitions/DirectionalConfig&quot;
+      - type: &quot;null&quot;
+  on_write:
+    description: &quot;Configuration for [`Filter::write`][crate::filters::Filter::write].&quot;
+    anyOf:
+      - $ref: &quot;#/definitions/DirectionalConfig&quot;
+      - type: &quot;null&quot;
+additionalProperties: false
+definitions:
+  Branch:
+    description: &quot;A specific match branch. The filter is run when `value` matches the value defined in `metadata_key`.&quot;
+    type: object
+    required:
+      - name
+      - value
+    properties:
+      config: true
+      name:
+        type: string
+      value:
+        description: The value to compare against the dynamic metadata.
+        allOf:
+          - $ref: &quot;#/definitions/Value&quot;
+  DirectionalConfig:
+    description: Configuration for a specific direction.
+    type: object
+    required:
+      - branches
+      - metadataKey
+    properties:
+      branches:
+        description: List of filters to compare and potentially run if any match.
+        type: array
+        items:
+          $ref: &quot;#/definitions/Branch&quot;
+      fallthrough:
+        description: &quot;The behaviour for when none of the `branches` match.&quot;
+        default:
+          name: quilkin.filters.drop.v1alpha1.Drop
+          config: ~
+        allOf:
+          - $ref: &quot;#/definitions/Filter&quot;
+      metadataKey:
+        description: The key for the metadata to compare against.
+        type: string
+  Filter:
+    description: Filter is the configuration for a single filter
+    type: object
+    required:
+      - name
+    properties:
+      config: true
+      name:
+        type: string
+    additionalProperties: false
+  Value:
+    anyOf:
+      - type: boolean
+      - type: integer
+        format: uint64
+        minimum: 0.0
+      - type: array
+        items:
+          $ref: &quot;#/definitions/Value&quot;
+      - type: string
+      - type: array
+        items:
+          type: integer
+          format: uint8
+          minimum: 0.0
 </code></pre>
 <p>View the <a href="../../api/quilkin/filters/match/struct.Config.html">Match</a> filter documentation for more details.</p>
 <h3 id="metrics"><a class="header" href="#metrics">Metrics</a></h3>
