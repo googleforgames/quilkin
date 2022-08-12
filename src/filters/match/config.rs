@@ -23,7 +23,7 @@ use crate::{
 };
 
 /// Configuration for [`Match`][super::Match].
-#[derive(Debug, Deserialize, Serialize, PartialEq, schemars::JsonSchema)]
+#[derive(Debug, Deserialize, Serialize, Eq, PartialEq, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
     /// Configuration for [`Filter::read`][crate::filters::Filter::read].
@@ -67,7 +67,7 @@ impl TryFrom<proto::Match> for Config {
 }
 
 /// Configuration for a specific direction.
-#[derive(Debug, Deserialize, Serialize, PartialEq, schemars::JsonSchema)]
+#[derive(Debug, Deserialize, Serialize, Eq, PartialEq, schemars::JsonSchema)]
 pub struct DirectionalConfig {
     /// The key for the metadata to compare against.
     #[serde(rename = "metadataKey")]
@@ -119,7 +119,7 @@ impl TryFrom<proto::r#match::Config> for DirectionalConfig {
 
 /// A specific match branch. The filter is run when `value` matches the value
 /// defined in `metadata_key`.
-#[derive(Debug, Deserialize, Serialize, PartialEq, schemars::JsonSchema)]
+#[derive(Debug, Deserialize, Serialize, Eq, PartialEq, schemars::JsonSchema)]
 pub struct Branch {
     /// The value to compare against the dynamic metadata.
     pub value: crate::metadata::Value,
@@ -158,7 +158,7 @@ impl TryFrom<proto::r#match::Branch> for Branch {
 }
 
 /// The behaviour when the none of branches match. Defaults to dropping packets.
-#[derive(Debug, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[derive(Debug, Eq, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(transparent)]
 pub struct Fallthrough(pub Filter);
 

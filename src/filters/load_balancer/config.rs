@@ -26,7 +26,7 @@ use super::proto;
 use crate::{filters::ConvertProtoConfigError, map_proto_enum};
 
 /// The configuration for [`load_balancer`][super].
-#[derive(Serialize, Deserialize, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq, JsonSchema)]
 #[non_exhaustive]
 pub struct Config {
     #[serde(default)]

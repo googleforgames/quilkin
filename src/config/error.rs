@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-#[derive(Debug, PartialEq, thiserror::Error)]
+#[derive(Debug, Eq, PartialEq, thiserror::Error)]
 #[error("{field} has invalid value{clarification}{examples}",
     clarification = clarification
                     .as_ref()
