@@ -84,7 +84,7 @@ mod tests {
         });
 
         std::fs::write(&file_path, serde_yaml::to_string(&source).unwrap()).unwrap();
-        tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 
         assert_eq!(source, dest);
     }

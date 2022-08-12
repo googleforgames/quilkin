@@ -289,6 +289,7 @@ mod tests {
     async fn basic() {
         let config: Arc<Config> = serde_json::from_value(serde_json::json!({
             "version": "v1alpha1",
+            "admin": null,
             "proxy": {
                 "id": "test-proxy",
                 "port": 23456u16,
