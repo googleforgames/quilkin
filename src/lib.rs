@@ -17,12 +17,12 @@
 #![deny(unused_must_use)]
 
 mod admin;
+mod cli;
 mod cluster;
 pub mod metadata;
 pub(crate) mod metrics;
 pub(crate) mod prost;
 mod proxy;
-mod runner;
 pub(crate) mod ttl_map;
 pub(crate) mod utils;
 
@@ -37,7 +37,7 @@ pub mod xds;
 pub type Result<T, E = eyre::Error> = std::result::Result<T, E>;
 
 #[doc(inline)]
-pub use self::{config::Config, proxy::Server, runner::run, xds::manage};
+pub use self::{cli::Cli, config::Config, proxy::Server};
 
 pub use quilkin_macros::include_proto;
 

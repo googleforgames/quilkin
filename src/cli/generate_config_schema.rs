@@ -1,0 +1,70 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#[derive(clap::Args)]
+pub struct GenerateConfigSchema {
+    #[clap(
+        short,
+        long,
+        default_value = ".",
+        help = "The directory to write configuration files."
+    )]
+    output_directory: std::path::PathBuf,
+    #[clap(
+        min_values = 1,
+        default_value = "all",
+        help = "A list of one or more filter IDs to generate or 'all' to generate all available filter schemas."
+    )]
+    filter_ids: Vec<String>,
+}
+
+impl GenerateConfigSchema {
+    pub fn generate_config_schema(&self) -> crate::Result<()> {
+        let set = crate::filters::FilterSet::default();
+        type SchemaIterator<'r> =
+            Box<dyn Iterator<Item = (&'static str, schemars::schema::RootSchema)> + 'r>;
+
+        let schemas = (self.filter_ids.len() == 1 && self.filter_ids[0].to_lowercase() == "all")
+            .then(|| {
+                Box::new(
+                    set.iter()
+                        .map(|factory| (factory.name(), factory.config_schema())),
+                ) as SchemaIterator
+            })
+            .unwrap_or_else(|| {
+                Box::new(self.filter_ids.iter().filter_map(|id| {
+                    let item = set.get(id);
+
+                    if item.is_none() {
+                        tracing::error!("{id} not found in filter set.");
+                    }
+
+                    item.map(|item| (item.name(), item.config_schema()))
+                })) as SchemaIterator
+            });
+
+        for (id, schema) in schemas {
+            let mut path = self.output_directory.join(id);
+            path.set_extension("yaml");
+
+            tracing::info!("Writing {id} schema to {}", path.display());
+
+            std::fs::write(path, serde_yaml::to_string(&schema)?)?;
+        }
+
+        Ok(())
+    }
+}
