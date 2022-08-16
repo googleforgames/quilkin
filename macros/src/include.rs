@@ -42,15 +42,15 @@ impl ToTokens for IncludeProto {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let id = &self.id;
 
-        let tonic_include_proto: syn::Stmt = syn::parse_quote!(tonic::include_proto!(#id););
+        let tonic_include_proto: syn::Stmt =
+            syn::parse_quote!(tonic::include_proto!(#id););
         let items: Vec<syn::Item> =
             vec![syn::Item::Verbatim(tonic_include_proto.to_token_stream())];
 
         let module = id.split('.').rev().fold::<Vec<_>, _>(items, |acc, module| {
             let module = syn::Ident::new(module, Span::mixed_site());
             let result: syn::ItemMod = syn::parse_quote! {
-                #[allow(clippy::all)]
-                pub(crate) mod #module { #(#acc)* }
+                #[allow(warnings, clippy::all)] pub(crate) mod #module { #(#acc)* }
             };
 
             vec![syn::Item::Mod(result)]
