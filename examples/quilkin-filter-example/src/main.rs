@@ -91,21 +91,25 @@ impl StaticFilter for Greet {
 // ANCHOR: run
 #[tokio::main]
 async fn main() {
-    quilkin::run(
-        quilkin::Config::builder()
-            .port(7001)
-            .filters(vec![quilkin::config::Filter {
-                name: Greet::NAME.into(),
-                config: None,
-            }])
-            .endpoints(vec![quilkin::endpoint::Endpoint::new(
-                (std::net::Ipv4Addr::LOCALHOST, 4321).into(),
-            )])
-            .build()
-            .unwrap(),
-        vec![Greet::factory()].into_iter(),
-    )
-    .await
-    .unwrap();
+    quilkin::filters::FilterRegistry::register(vec![Greet::factory()].into_iter());
+
+    let config = quilkin::Config::builder()
+        .port(7001)
+        .filters(vec![quilkin::config::Filter {
+            name: Greet::NAME.into(),
+            config: None,
+        }])
+        .endpoints(vec![quilkin::endpoint::Endpoint::new(
+            (std::net::Ipv4Addr::LOCALHOST, 4321).into(),
+        )])
+        .build()
+        .unwrap();
+
+    let (_shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(());
+    quilkin::Server::try_from(config)
+        .unwrap()
+        .run(shutdown_rx)
+        .await
+        .unwrap()
 }
 // ANCHOR_END: run
