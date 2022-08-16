@@ -77,7 +77,7 @@ We can run the proxy using [`Server::TryFrom`][Server::TryFrom] function. Let's
 add a main function that does that. Quilkin relies on the [Tokio] async
 runtime, so we need to import that crate and wrap our main function with it.
 
-We can also register custom filters in quilkin using [`FilterRegistry::register`][filters::FilterRegistry::register]
+We can also register custom filters in quilkin using [`FilterRegistry::register`][FilterRegistry::register]
 
 Add Tokio as a dependency in `Cargo.toml`.
 
@@ -242,8 +242,8 @@ filter. Try it out with the following configuration:
 [FilterFactory]: ../../api/quilkin/filters/trait.FilterFactory.html
 [filter-factory-name]: ../../api/quilkin/filters/trait.FilterFactory.html#tymethod.name
 [FilterRegistry]: ../../api/quilkin/filters/struct.FilterRegistry.html
-[filters::FilterRegistry::register]: ../../api/quilkin/filters/struct.FilterRegistry.html#tymethod.register
-[Cli::drive]: ../../api/quilkin/struct.Cli.html#tymethod.drive
+[FilterRegistry::register]: ../../api/quilkin/filters/struct.FilterRegistry.html#method.register
+[Server::try_from]: ../../api/struct.Server.html#impl-TryFrom%3CConfig%3E
 [CreateFilterArgs::config]: ../../api/quilkin/filters/prelude/struct.CreateFilterArgs.html#structfield.config
 [ConfigType::dynamic]: ../../api/quilkin/config/enum.ConfigType.html#variant.Dynamic
 [ConfigType::static]: ../../api/quilkin/config/enum.ConfigType.html#variant.Static

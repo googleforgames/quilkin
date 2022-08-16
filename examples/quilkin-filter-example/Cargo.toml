@@ -21,7 +21,7 @@ name = "quilkin-filter-example"
 version = "0.1.0"
 homepage = "https://github.com/googleforgames/quilkin"
 repository = "https://github.com/googleforgames/quilkin"
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 # If lifting this example, you will want to be explicit about the Quilkin version, e.g.
