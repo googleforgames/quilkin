@@ -66,10 +66,10 @@ mod tests {
         let dest = Arc::new(crate::Config::default());
         let tmp_dir = tempdir::TempDir::new("path").unwrap();
         let file_path = tmp_dir.into_path().join("config.yaml");
-        tokio::spawn(watch(dest.clone(), file_path.clone()));
         tokio::fs::write(&file_path, serde_yaml::to_string(&source).unwrap())
             .await
             .unwrap();
+        let _handle = tokio::spawn(watch(dest.clone(), file_path.clone()));
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
         source.clusters.modify(|clusters| {
@@ -83,8 +83,11 @@ mod tests {
                 ));
         });
 
-        std::fs::write(&file_path, serde_yaml::to_string(&source).unwrap()).unwrap();
-        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        tokio::fs::write(&file_path, serde_yaml::to_string(&source).unwrap())
+            .await
+            .unwrap();
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
         assert_eq!(source, dest);
     }

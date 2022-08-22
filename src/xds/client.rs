@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-use std::{sync::Arc, time::Duration};
+use std::{collections::HashSet, sync::Arc, time::Duration};
 
 use futures::StreamExt;
 use rand::Rng;
-use tokio::sync::broadcast;
+use tokio::sync::{broadcast, Mutex};
 use tonic::transport::{channel::Channel as TonicChannel, Error as TonicError};
 use tracing::Instrument;
 use tryhard::{
@@ -139,11 +139,14 @@ impl Client {
     }
 }
 
+type SubscribedResources = Arc<Mutex<HashSet<(ResourceType, Vec<String>)>>>;
+
 /// An active xDS gRPC management stream.
 pub struct Stream {
     config: Arc<Config>,
     requests: broadcast::Sender<DiscoveryRequest>,
     handle_discovery_response: tokio::task::JoinHandle<Result<()>>,
+    subscribed_resources: SubscribedResources,
 }
 
 impl Stream {
@@ -151,10 +154,12 @@ impl Stream {
     async fn connect(xds: Client) -> Result<Self> {
         let (requests, mut rx) = broadcast::channel(12);
         let Client { mut client, config } = xds;
+        let subscribed_resources: SubscribedResources = <_>::default();
 
         let handle_discovery_response = tokio::spawn({
             let config = config.clone();
-            let requests = requests.clone();
+            let mut requests = requests.clone();
+            let subscribed_resources = subscribed_resources.clone();
             async move {
                 loop {
                     let mut responses = client
@@ -228,6 +233,10 @@ impl Stream {
                     // connection, so we just create a new client and restart.
                     client = Client::new_ads_client(&config).await?;
                     rx = requests.subscribe();
+
+                    for (resource, names) in subscribed_resources.lock().await.iter() {
+                        Self::send_without_cache(&config, &mut requests, *resource, names)?;
+                    }
                 }
             }
             .instrument(tracing::trace_span!("handle_discovery_response"))
@@ -237,14 +246,28 @@ impl Stream {
             config,
             requests,
             handle_discovery_response,
+            subscribed_resources,
         })
     }
 
     #[tracing::instrument(skip(self))]
     pub async fn send(&mut self, resource_type: ResourceType, names: &[String]) -> Result<()> {
+        self.subscribed_resources
+            .lock()
+            .await
+            .insert((resource_type, names.to_vec()));
+        Self::send_without_cache(&self.config, &mut self.requests, resource_type, names)
+    }
+
+    fn send_without_cache(
+        config: &Config,
+        requests: &mut broadcast::Sender<DiscoveryRequest>,
+        resource_type: ResourceType,
+        names: &[String],
+    ) -> Result<()> {
         let request = DiscoveryRequest {
             node: Some(Node {
-                id: self.config.proxy.load().id.clone(),
+                id: config.proxy.load().id.clone(),
                 user_agent_name: "quilkin".into(),
                 ..Node::default()
             }),
@@ -253,8 +276,8 @@ impl Stream {
             ..DiscoveryRequest::default()
         };
 
-        tracing::trace!("sending discovery request");
-        self.requests.send(request).map_err(From::from).map(drop)
+        tracing::trace!(r#type=%resource_type, ?names, "sending discovery request");
+        requests.send(request).map_err(From::from).map(drop)
     }
 }
 
