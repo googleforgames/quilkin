@@ -26,7 +26,7 @@ use super::proto;
 
 base64_serde_type!(Base64Standard, base64::STANDARD);
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq, JsonSchema)]
 pub enum Strategy {
     #[serde(rename = "APPEND")]
     Append,
@@ -61,7 +61,7 @@ impl From<Strategy> for proto::concatenate_bytes::StrategyValue {
 }
 
 /// Config represents a `ConcatenateBytes` filter configuration.
-#[derive(Serialize, Deserialize, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq, JsonSchema)]
 #[non_exhaustive]
 pub struct Config {
     /// Whether or not to `append` or `prepend` or `do nothing` on Filter `Read`

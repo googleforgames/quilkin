@@ -206,7 +206,7 @@ impl PartialEq for Config {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema, PartialEq, Eq)]
+#[derive(Clone, Debug, Deserialize, Eq, Serialize, JsonSchema, PartialEq)]
 pub enum Version {
     #[serde(rename = "v1alpha1")]
     V1Alpha1,
@@ -218,7 +218,7 @@ impl Default for Version {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, Serialize, JsonSchema, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct Proxy {
     #[serde(default = "default_proxy_id")]
@@ -250,7 +250,7 @@ impl Default for Proxy {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, Serialize, JsonSchema, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct Admin {
     pub address: SocketAddr,
@@ -264,14 +264,14 @@ impl Default for Admin {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, JsonSchema)]
+#[derive(Clone, Debug, Deserialize, Eq, Serialize, PartialEq, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ManagementServer {
     pub address: String,
 }
 
 /// Filter is the configuration for a single filter
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
+#[derive(Clone, Debug, Deserialize, Eq, Serialize, PartialEq, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Filter {
     pub name: String,

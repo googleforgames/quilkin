@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#[allow(warnings, clippy::all)]
 // ANCHOR: include_proto
 mod proto {
     tonic::include_proto!("greet");

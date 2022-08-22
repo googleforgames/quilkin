@@ -27,7 +27,7 @@ use super::quilkin::filters::compress::v1alpha1::{
 use crate::{filters::ConvertProtoConfigError, map_proto_enum};
 
 /// The library to use when compressing.
-#[derive(Clone, Copy, Deserialize, Debug, PartialEq, Serialize, JsonSchema)]
+#[derive(Clone, Copy, Deserialize, Debug, Eq, PartialEq, Serialize, JsonSchema)]
 #[non_exhaustive]
 pub enum Mode {
     // we only support one mode for now, but adding in the config option to
@@ -67,7 +67,7 @@ impl From<Mode> for ModeValue {
 }
 
 /// Whether to do nothing, compress or decompress the packet.
-#[derive(Clone, Copy, Deserialize, Debug, PartialEq, Serialize, JsonSchema)]
+#[derive(Clone, Copy, Deserialize, Debug, Eq, PartialEq, Serialize, JsonSchema)]
 pub enum Action {
     #[serde(rename = "DO_NOTHING")]
     DoNothing,
@@ -101,7 +101,7 @@ impl From<Action> for ActionValue {
     }
 }
 
-#[derive(Clone, Copy, Default, Deserialize, Debug, PartialEq, Serialize, JsonSchema)]
+#[derive(Clone, Copy, Default, Deserialize, Debug, Eq, PartialEq, Serialize, JsonSchema)]
 #[non_exhaustive]
 pub struct Config {
     #[serde(default)]

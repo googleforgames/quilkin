@@ -21,7 +21,7 @@ use crate::filters::{Filter, FilterFactory};
 
 /// An error that occurred when attempting to create a [`Filter`] from
 /// a [`FilterFactory`].
-#[derive(Debug, PartialEq, thiserror::Error)]
+#[derive(Debug, Eq, PartialEq, thiserror::Error)]
 pub enum Error {
     #[error("filter `{}` not found", .0)]
     NotFound(String),
@@ -85,7 +85,7 @@ impl From<ConvertProtoConfigError> for Error {
 
 /// An error representing failure to convert a filter's protobuf configuration
 /// to its static representation.
-#[derive(Debug, PartialEq, thiserror::Error)]
+#[derive(Debug, Eq, PartialEq, thiserror::Error)]
 #[error(
     "{}failed to convert protobuf config: {}",
     self.field.as_ref().map(|f| format!("Field `{f}`")).unwrap_or_default(),

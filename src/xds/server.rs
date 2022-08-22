@@ -209,10 +209,10 @@ impl ControlPlane {
                         };
 
                         tracing::trace!(%id, %resource_type, "new request");
-                        metrics::DISCOVERY_REQUESTS.with_label_values(&[&*id, resource_type.type_url()]).inc();
+                        metrics::DISCOVERY_REQUESTS.with_label_values(&[id, resource_type.type_url()]).inc();
 
                         if let Some(error) = &new_message.error_detail {
-                            metrics::NACKS.with_label_values(&[&*id, resource_type.type_url()]).inc();
+                            metrics::NACKS.with_label_values(&[id, resource_type.type_url()]).inc();
                             tracing::error!(%id, %resource_type, nonce = %new_message.response_nonce, ?error, "NACK");
                             // Currently just resend previous discovery response.
                         } else if uuid::Uuid::parse_str(&new_message.response_nonce).is_ok() {

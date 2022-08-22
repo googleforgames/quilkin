@@ -108,7 +108,7 @@ impl<'de> serde::Deserialize<'de> for ConfigType {
     }
 }
 
-impl<'de> serde::Serialize for ConfigType {
+impl serde::Serialize for ConfigType {
     fn serialize<S>(&self, ser: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,

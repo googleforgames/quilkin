@@ -175,7 +175,7 @@ impl StaticFilter for LocalRateLimit {
 }
 
 /// Config represents a [self]'s configuration.
-#[derive(Serialize, Deserialize, Debug, PartialEq, schemars::JsonSchema)]
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq, schemars::JsonSchema)]
 pub struct Config {
     /// The maximum number of packets allowed to be forwarded by the rate
     /// limiter in a given duration.
