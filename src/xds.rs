@@ -130,25 +130,11 @@ mod metrics;
 mod resource;
 pub(crate) mod server;
 
-use service::discovery::v3::aggregated_discovery_service_server::AggregatedDiscoveryServiceServer;
-
 pub use client::Client;
 pub use resource::{Resource, ResourceType};
 pub use server::ControlPlane;
 pub use service::discovery::v3::aggregated_discovery_service_client::AggregatedDiscoveryServiceClient;
 pub use xds::*;
-
-#[tracing::instrument(skip_all)]
-pub async fn manage(config: std::sync::Arc<crate::Config>) -> crate::Result<()> {
-    let port = config.proxy.load().port;
-
-    let server = AggregatedDiscoveryServiceServer::new(ControlPlane::from_arc(config));
-    let server = tonic::transport::Server::builder().add_service(server);
-    tracing::info!("Serving management server at {}", port);
-    Ok(server
-        .serve((std::net::Ipv4Addr::UNSPECIFIED, port).into())
-        .await?)
-}
 
 #[cfg(test)]
 mod tests {
@@ -201,13 +187,22 @@ mod tests {
         .unwrap();
 
         // Test that the client can handle the manager dropping out.
-        let handle = tokio::spawn(manage(xds_config.clone()));
+        let handle = tokio::spawn(server::spawn(xds_config.clone()));
+
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-        tokio::spawn(crate::runner::run(client_config, []));
+        let (_shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(());
+        tokio::spawn(server::spawn(xds_config.clone()));
+        tokio::spawn(
+            crate::Server::try_from(client_config)
+                .unwrap()
+                .run(shutdown_rx),
+        );
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         handle.abort();
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-        tokio::spawn(manage(xds_config.clone()));
+        tokio::spawn(server::spawn(xds_config.clone()));
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
         const VERSION_KEY: &str = "quilkin.dev/load_balancer/version";
@@ -264,7 +259,6 @@ mod tests {
             .unwrap(),
         ));
 
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         let client = tokio::net::UdpSocket::bind((std::net::Ipv4Addr::UNSPECIFIED, 0))
             .await
             .unwrap();
@@ -309,7 +303,7 @@ mod tests {
         .map(Arc::new)
         .unwrap();
 
-        tokio::spawn(manage(config.clone()));
+        tokio::spawn(server::spawn(config.clone()));
         let client = Client::connect(config.clone()).await.unwrap();
         let mut stream = client.stream().await.unwrap();
 

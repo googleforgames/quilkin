@@ -26,12 +26,26 @@ use crate::{
     xds::{
         metrics,
         service::discovery::v3::{
-            aggregated_discovery_service_server::AggregatedDiscoveryService, DeltaDiscoveryRequest,
-            DeltaDiscoveryResponse, DiscoveryRequest, DiscoveryResponse,
+            aggregated_discovery_service_server::{
+                AggregatedDiscoveryService, AggregatedDiscoveryServiceServer,
+            },
+            DeltaDiscoveryRequest, DeltaDiscoveryResponse, DiscoveryRequest, DiscoveryResponse,
         },
         ResourceType,
     },
 };
+
+#[tracing::instrument(skip_all)]
+pub async fn spawn(config: std::sync::Arc<crate::Config>) -> crate::Result<()> {
+    let port = config.proxy.load().port;
+
+    let server = AggregatedDiscoveryServiceServer::new(ControlPlane::from_arc(config));
+    let server = tonic::transport::Server::builder().add_service(server);
+    tracing::info!("Serving management server at {}", port);
+    Ok(server
+        .serve((std::net::Ipv4Addr::UNSPECIFIED, port).into())
+        .await?)
+}
 
 #[derive(Clone)]
 pub struct ControlPlane {
