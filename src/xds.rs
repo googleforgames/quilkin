@@ -156,7 +156,7 @@ mod tests {
         let localities = crate::endpoint::LocalityEndpoints::from(address.clone());
 
         let xds_port = crate::test_utils::available_addr().await.port();
-        let xds_config: Config = serde_json::from_value(serde_json::json!({
+        let xds_config: Arc<Config> = serde_json::from_value(serde_json::json!({
             "admin": null,
             "version": "v1alpha1",
             "proxy": {
@@ -169,6 +169,7 @@ mod tests {
                 }
             },
         }))
+        .map(Arc::new)
         .unwrap();
 
         let client_addr = crate::test_utils::available_addr().await;
@@ -184,6 +185,25 @@ mod tests {
             }]
         }))
         .unwrap();
+
+        // Test that the client can handle the manager dropping out.
+        let handle = tokio::spawn(server::spawn(xds_config.clone()));
+
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        let (_shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(());
+        tokio::spawn(server::spawn(Arc::new(xds_config)));
+        tokio::spawn(
+            crate::Server::try_from(client_config)
+                .unwrap()
+                .run(shutdown_rx),
+        );
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        handle.abort();
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        tokio::spawn(server::spawn(xds_config.clone()));
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
         const VERSION_KEY: &str = "quilkin.dev/load_balancer/version";
         const TOKEN_KEY: &str = "quilkin.dev/load_balancer/token";
@@ -239,15 +259,6 @@ mod tests {
             .unwrap(),
         ));
 
-        let (_shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(());
-        tokio::spawn(server::spawn(Arc::new(xds_config)));
-        tokio::spawn(
-            crate::Server::try_from(client_config)
-                .unwrap()
-                .run(shutdown_rx),
-        );
-        tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
-
         let client = tokio::net::UdpSocket::bind((std::net::Ipv4Addr::UNSPECIFIED, 0))
             .await
             .unwrap();
@@ -292,14 +303,9 @@ mod tests {
         .map(Arc::new)
         .unwrap();
 
-        let handle = tokio::spawn(server::spawn(config.clone()));
+        tokio::spawn(server::spawn(config.clone()));
         let client = Client::connect(config.clone()).await.unwrap();
         let mut stream = client.stream().await.unwrap();
-
-        // Test that the client can handle the manager dropping out.
-        handle.abort();
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-        tokio::spawn(server::spawn(config.clone()));
 
         // Each time, we create a new upstream endpoint and send a cluster update for it.
         let concat_bytes = vec![("b", "c,"), ("d", "e")];
