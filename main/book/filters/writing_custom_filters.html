@@ -197,10 +197,10 @@ configuration, for now we can use <code>()</code> as we have no configuration cu
 }
 </code></pre>
 <h2 id="running"><a class="header" href="#running">Running</a></h2>
-<p>We can run the proxy in the exact manner as the default Quilkin binary using the
-<a href="../../api/quilkin/runner/fn.run.html">run</a> function, passing in our custom <a href="../../api/quilkin/filters/trait.FilterFactory.html">FilterFactory</a>. Let's add a
-main function that does that. Quilkin relies on the <a href="https://docs.rs/tokio">Tokio</a> async runtime, so we
-need to import that crate and wrap our main function with it.</p>
+<p>We can run the proxy using [<code>Server::TryFrom</code>][Server::TryFrom] function. Let's
+add a main function that does that. Quilkin relies on the <a href="https://docs.rs/tokio">Tokio</a> async
+runtime, so we need to import that crate and wrap our main function with it.</p>
+<p>We can also register custom filters in quilkin using <a href="../../api/quilkin/filters/struct.FilterRegistry.html#method.register"><code>FilterRegistry::register</code></a></p>
 <p>Add Tokio as a dependency in <code>Cargo.toml</code>.</p>
 <pre><code class="language-toml">[dependencies]
 quilkin = &quot;0.2.0&quot;
@@ -209,23 +209,23 @@ tokio = { version = &quot;1&quot;, features = [&quot;full&quot;]}
 <p>Add a main function that starts the proxy.</p>
 <pre><code class="language-rust no_run noplayground ignore">// src/main.rs
 #[tokio::main]
-async fn main() {
-    quilkin::run(
-        quilkin::Config::builder()
-            .port(7001)
-            .filters(vec![quilkin::config::Filter {
-                name: Greet::NAME.into(),
-                config: None,
-            }])
-            .endpoints(vec![quilkin::endpoint::Endpoint::new(
-                (std::net::Ipv4Addr::LOCALHOST, 4321).into(),
-            )])
-            .build()
-            .unwrap(),
-        vec![Greet::factory()].into_iter(),
-    )
-    .await
-    .unwrap();
+async fn main() -&gt; quilkin::Result&lt;()&gt; {
+    quilkin::filters::FilterRegistry::register(vec![Greet::factory()].into_iter());
+
+    let (_shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(());
+    let server: quilkin::Server = quilkin::Config::builder()
+        .port(7001)
+        .filters(vec![quilkin::config::Filter {
+            name: Greet::NAME.into(),
+            config: None,
+        }])
+        .endpoints(vec![quilkin::endpoint::Endpoint::new(
+            (std::net::Ipv4Addr::LOCALHOST, 4321).into(),
+        )])
+        .build()?
+        .try_into()?;
+
+    server.run(shutdown_rx).await
 }
 </code></pre>
 <p>Now, let's try out the proxy. The following configuration starts our extended
