@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["MatchPattern",""]]});
+window.SIDEBAR_ITEMS = {"enum":[["MatchPattern",""]]};

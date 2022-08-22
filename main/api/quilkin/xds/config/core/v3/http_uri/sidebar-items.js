@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["HttpUpstreamType",""]]});
+window.SIDEBAR_ITEMS = {"enum":[["HttpUpstreamType",""]]};

@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["EnabledSpecifier",""]]});
+window.SIDEBAR_ITEMS = {"enum":[["EnabledSpecifier",""]]};

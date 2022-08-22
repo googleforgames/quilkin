@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["HeaderFormat",""]],"struct":[["ProperCaseWords",""]]});
+window.SIDEBAR_ITEMS = {"enum":[["HeaderFormat",""]],"struct":[["ProperCaseWords",""]]};

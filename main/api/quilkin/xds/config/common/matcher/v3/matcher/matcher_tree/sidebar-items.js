@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["TreeType",""]],"struct":[["MatchMap",""]]});
+window.SIDEBAR_ITEMS = {"enum":[["TreeType",""]],"struct":[["MatchMap",""]]};

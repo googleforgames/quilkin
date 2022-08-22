@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["policy","Nested message and enum types in `Policy`."]],"struct":[["Policy",""]]});
+window.SIDEBAR_ITEMS = {"mod":[["policy","Nested message and enum types in `Policy`."]],"struct":[["Policy",""]]};

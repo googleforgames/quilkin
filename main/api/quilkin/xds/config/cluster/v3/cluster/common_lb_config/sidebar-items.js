@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["LocalityConfigSpecifier",""]],"struct":[["ConsistentHashingLbConfig",""],["LocalityWeightedLbConfig",""],["ZoneAwareLbConfig",""]]});
+window.SIDEBAR_ITEMS = {"enum":[["LocalityConfigSpecifier",""]],"struct":[["ConsistentHashingLbConfig",""],["LocalityWeightedLbConfig",""],["ZoneAwareLbConfig",""]]};

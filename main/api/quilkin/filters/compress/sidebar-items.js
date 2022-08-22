@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["Action","Whether to do nothing, compress or decompress the packet."],["Mode","The library to use when compressing."]],"struct":[["Compress","Filter for compressing and decompressing packet data"],["Config",""]]});
+window.SIDEBAR_ITEMS = {"enum":[["Action","Whether to do nothing, compress or decompress the packet."],["Mode","The library to use when compressing."]],"struct":[["Compress","Filter for compressing and decompressing packet data"],["Config",""]]};

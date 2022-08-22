@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["Segment",""]]});
+window.SIDEBAR_ITEMS = {"enum":[["Segment",""]]};

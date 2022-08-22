@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["cluster",""],["discovery",""]]});
+window.SIDEBAR_ITEMS = {"mod":[["cluster",""],["discovery",""]]};

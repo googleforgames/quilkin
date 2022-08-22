@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["OnDemandConfiguration",""]]});
+window.SIDEBAR_ITEMS = {"struct":[["OnDemandConfiguration",""]]};

@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["UserAgentVersionType",""]]});
+window.SIDEBAR_ITEMS = {"enum":[["UserAgentVersionType",""]]};

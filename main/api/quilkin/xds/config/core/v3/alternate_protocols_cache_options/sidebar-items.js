@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["AlternateProtocolsCacheEntry",""]]});
+window.SIDEBAR_ITEMS = {"struct":[["AlternateProtocolsCacheEntry",""]]};

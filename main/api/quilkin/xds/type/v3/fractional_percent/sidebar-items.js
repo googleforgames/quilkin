@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["DenominatorType",""]]});
+window.SIDEBAR_ITEMS = {"enum":[["DenominatorType",""]]};

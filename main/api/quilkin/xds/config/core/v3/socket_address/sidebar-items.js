@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["PortSpecifier",""],["Protocol",""]]});
+window.SIDEBAR_ITEMS = {"enum":[["PortSpecifier",""],["Protocol",""]]};

@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["PolicySpecifier",""]],"struct":[["ConnectionProperties",""],["Cookie",""],["FilterState",""],["Header",""],["QueryParameter",""]]});
+window.SIDEBAR_ITEMS = {"enum":[["PolicySpecifier",""]],"struct":[["ConnectionProperties",""],["Cookie",""],["FilterState",""],["Header",""],["QueryParameter",""]]};

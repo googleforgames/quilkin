@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["LbConfig",""]],"struct":[["LbEndpointList",""]]});
+window.SIDEBAR_ITEMS = {"enum":[["LbConfig",""]],"struct":[["LbEndpointList",""]]};

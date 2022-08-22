@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["ClusterDiscoveryServiceClient","Return list of all clusters this proxy will load balance to."]]});
+window.SIDEBAR_ITEMS = {"struct":[["ClusterDiscoveryServiceClient","Return list of all clusters this proxy will load balance to."]]};

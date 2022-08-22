@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["ConnectionSourceType",""]]});
+window.SIDEBAR_ITEMS = {"enum":[["ConnectionSourceType",""]]};

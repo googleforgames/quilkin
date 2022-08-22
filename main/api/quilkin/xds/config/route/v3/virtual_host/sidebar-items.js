@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["TlsRequirementType",""]]});
+window.SIDEBAR_ITEMS = {"enum":[["TlsRequirementType",""]]};

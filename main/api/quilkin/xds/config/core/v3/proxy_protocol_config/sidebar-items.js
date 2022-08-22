@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["Version",""]]});
+window.SIDEBAR_ITEMS = {"enum":[["Version",""]]};

@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["path_segment","Nested message and enum types in `PathSegment`."]],"struct":[["PathSegment",""]]});
+window.SIDEBAR_ITEMS = {"mod":[["path_segment","Nested message and enum types in `PathSegment`."]],"struct":[["PathSegment",""]]};

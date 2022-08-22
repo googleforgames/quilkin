@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["CacheControl",""]]});
+window.SIDEBAR_ITEMS = {"struct":[["CacheControl",""]]};

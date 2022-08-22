@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["ClusterDiscoveryServiceServer","Return list of all clusters this proxy will load balance to."]],"trait":[["ClusterDiscoveryService","Generated trait containing gRPC methods that should be implemented for use with ClusterDiscoveryServiceServer."]]});
+window.SIDEBAR_ITEMS = {"struct":[["ClusterDiscoveryServiceServer","Return list of all clusters this proxy will load balance to."]],"trait":[["ClusterDiscoveryService","Generated trait containing gRPC methods that should be implemented for use with ClusterDiscoveryServiceServer."]]};

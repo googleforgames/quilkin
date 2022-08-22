@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["HashFunction",""]]});
+window.SIDEBAR_ITEMS = {"enum":[["HashFunction",""]]};

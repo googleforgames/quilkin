@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["AddressNameSpecifier",""]]});
+window.SIDEBAR_ITEMS = {"enum":[["AddressNameSpecifier",""]]};

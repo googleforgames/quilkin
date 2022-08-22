@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["accesslog",""],["cluster",""],["common",""],["core",""],["endpoint",""],["listener",""],["route",""]]});
+window.SIDEBAR_ITEMS = {"mod":[["accesslog",""],["cluster",""],["common",""],["core",""],["endpoint",""],["listener",""],["route",""]]};

@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["RetryBudget",""]]});
+window.SIDEBAR_ITEMS = {"struct":[["RetryBudget",""]]};

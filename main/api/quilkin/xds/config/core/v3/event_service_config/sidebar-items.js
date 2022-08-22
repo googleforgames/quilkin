@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["ConfigSourceSpecifier",""]]});
+window.SIDEBAR_ITEMS = {"enum":[["ConfigSourceSpecifier",""]]};

@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["SettingsParameter",""]]});
+window.SIDEBAR_ITEMS = {"struct":[["SettingsParameter",""]]};
