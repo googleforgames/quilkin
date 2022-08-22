@@ -42,8 +42,7 @@ impl ToTokens for IncludeProto {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let id = &self.id;
 
-        let tonic_include_proto: syn::Stmt =
-            syn::parse_quote!(tonic::include_proto!(#id););
+        let tonic_include_proto: syn::Stmt = syn::parse_quote!(tonic::include_proto!(#id););
         let items: Vec<syn::Item> =
             vec![syn::Item::Verbatim(tonic_include_proto.to_token_stream())];
 
