@@ -14,55 +14,62 @@
  * limitations under the License.
  */
 
-use tokio::{signal, sync::watch};
-use tracing::{debug, info, span, Level};
+use std::net::SocketAddr;
 
 #[cfg(doc)]
 use crate::filters::FilterFactory;
 
 #[derive(clap::Args)]
-pub struct Run {}
+pub struct Run {
+    #[clap(
+        short,
+        long,
+        env = "QUILKIN_PORT",
+        help = "The port to listen on"
+    )]
+    port: Option<u16>,
+    #[clap(
+        short,
+        long,
+        env = "QUILKIN_DEST",
+        required(true),
+        help = "One or more socket addresses to forward packets to"
+    )]
+    to: Vec<SocketAddr>,
+    #[clap(
+        short,
+        long,
+        env = "QUILKIN_MANAGEMENT_SERVER",
+        required(true),
+        conflicts_with("to"),
+        help = "One or more `quilkin manage` endpoints to listen to for config changes"
+    )]
+    management_server: Vec<String>
+}
 
 impl Run {
     /// Start and run a proxy. Any passed in [`FilterFactory`]s are included
     /// alongside the default filter factories.
-    pub async fn run(&self, cli: &crate::Cli) -> crate::Result<()> {
-        let config = cli.read_config();
-        let span = span!(Level::INFO, "source::run");
-        let _enter = span.enter();
-
-        let server = crate::Proxy::try_from(config)?;
-
-        #[cfg(target_os = "linux")]
-        let mut sig_term_fut = signal::unix::signal(signal::unix::SignalKind::terminate())?;
-
-        let (shutdown_tx, shutdown_rx) = watch::channel::<()>(());
-        tokio::spawn(async move {
-            #[cfg(target_os = "linux")]
-            let sig_term = sig_term_fut.recv();
-            #[cfg(not(target_os = "linux"))]
-            let sig_term = std::future::pending();
-
-            tokio::select! {
-                _ = signal::ctrl_c() => {
-                    debug!("Received SIGINT")
-                }
-                _ = sig_term => {
-                    debug!("Received SIGTERM")
-                }
-            }
-
-            info!("Shutting down");
-            // Don't unwrap in order to ensure that we execute
-            // any subsequent shutdown tasks.
-            shutdown_tx.send(()).ok();
-        });
-
-        if let Err(err) = server.run(shutdown_rx).await {
-            info! (error = %err, "Shutting down with error");
-            Err(err)
-        } else {
-            Ok(())
+    pub async fn run(&self, config: std::sync::Arc<crate::Config>, shutdown_rx: tokio::sync::watch::Receiver<()>) -> crate::Result<()> {
+        if let Some(port) = self.port {
+            config.proxy.modify(|proxy| proxy.port = port);
         }
+
+        if !self.to.is_empty() {
+            config.clusters.modify(|clusters| {
+                clusters.default_cluster_mut().localities = vec![self.to.clone().into()];
+            });
+        }
+
+        if !self.management_server.is_empty() {
+            config.management_servers.modify(|servers| {
+                *servers = self.management_server.iter().map(ToOwned::to_owned).map(|address| crate::config::ManagementServer { address }).collect();
+            });
+        } else if config.clusters.load().endpoints().count() == 0 && config.management_servers.load().is_empty() {
+            return Err(eyre::eyre!("`quilkin run` requires at least one `to` address or `management_server` endpoint."))
+        }
+
+        let server = crate::Server::try_from(config)?;
+        server.run(shutdown_rx).await
     }
 }

@@ -39,12 +39,13 @@ enum Providers {
         gameservers_namespace: String,
     },
 
-    File,
+    File {
+        path: std::path::PathBuf,
+    },
 }
 
 impl Manage {
-    pub async fn manage(&self, cli: &crate::Cli) -> crate::Result<()> {
-        let config = std::sync::Arc::new(cli.read_config());
+    pub async fn manage(&self, config: std::sync::Arc<crate::Config>) -> crate::Result<()> {
 
         let provider_task = match &self.provider {
             Providers::Agones {
@@ -55,8 +56,8 @@ impl Manage {
                 config_namespace.clone(),
                 config.clone(),
             )),
-            Providers::File => {
-                tokio::spawn(crate::config::watch::fs(config.clone(), cli.config.clone()))
+            Providers::File { path } => {
+                tokio::spawn(crate::config::watch::fs(config.clone(), path.clone()))
             }
         };
 
