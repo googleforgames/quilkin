@@ -21,12 +21,7 @@ use crate::filters::FilterFactory;
 
 #[derive(clap::Args)]
 pub struct Run {
-    #[clap(
-        short,
-        long,
-        env = "QUILKIN_PORT",
-        help = "The port to listen on"
-    )]
+    #[clap(short, long, env = "QUILKIN_PORT", help = "The port to listen on")]
     port: Option<u16>,
     #[clap(
         short,
@@ -44,13 +39,17 @@ pub struct Run {
         conflicts_with("to"),
         help = "One or more `quilkin manage` endpoints to listen to for config changes"
     )]
-    management_server: Vec<String>
+    management_server: Vec<String>,
 }
 
 impl Run {
     /// Start and run a proxy. Any passed in [`FilterFactory`]s are included
     /// alongside the default filter factories.
-    pub async fn run(&self, config: std::sync::Arc<crate::Config>, shutdown_rx: tokio::sync::watch::Receiver<()>) -> crate::Result<()> {
+    pub async fn run(
+        &self,
+        config: std::sync::Arc<crate::Config>,
+        shutdown_rx: tokio::sync::watch::Receiver<()>,
+    ) -> crate::Result<()> {
         if let Some(port) = self.port {
             config.proxy.modify(|proxy| proxy.port = port);
         }
@@ -63,10 +62,19 @@ impl Run {
 
         if !self.management_server.is_empty() {
             config.management_servers.modify(|servers| {
-                *servers = self.management_server.iter().map(ToOwned::to_owned).map(|address| crate::config::ManagementServer { address }).collect();
+                *servers = self
+                    .management_server
+                    .iter()
+                    .map(ToOwned::to_owned)
+                    .map(|address| crate::config::ManagementServer { address })
+                    .collect();
             });
-        } else if config.clusters.load().endpoints().count() == 0 && config.management_servers.load().is_empty() {
-            return Err(eyre::eyre!("`quilkin run` requires at least one `to` address or `management_server` endpoint."))
+        } else if config.clusters.load().endpoints().count() == 0
+            && config.management_servers.load().is_empty()
+        {
+            return Err(eyre::eyre!(
+                "`quilkin run` requires at least one `to` address or `management_server` endpoint."
+            ));
         }
 
         let server = crate::Server::try_from(config)?;

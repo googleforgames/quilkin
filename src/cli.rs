@@ -18,7 +18,10 @@ mod generate_config_schema;
 mod manage;
 mod run;
 
-use std::{path::{Path, PathBuf}, sync::Arc};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use tokio::{signal, sync::watch};
 
@@ -37,17 +40,9 @@ pub struct Cli {
         help = "The YAML configuration file."
     )]
     config: PathBuf,
-    #[clap(
-        long,
-        env,
-        help = "The port to bind for the admin server"
-    )]
+    #[clap(long, env, help = "The port to bind for the admin server")]
     admin_address: Option<std::net::SocketAddr>,
-    #[clap(
-        long,
-        env,
-        help = "Whether to spawn the admin server"
-    )]
+    #[clap(long, env, help = "Whether to spawn the admin server")]
     no_admin: bool,
     #[clap(
         short,
@@ -99,7 +94,9 @@ impl Cli {
             None
         } else {
             if let Some(address) = self.admin_address {
-                config.admin.store(Arc::new(crate::config::Admin { address }));
+                config
+                    .admin
+                    .store(Arc::new(crate::config::Admin { address }));
             }
             Some(tokio::spawn(crate::admin::server(config.clone())))
         };

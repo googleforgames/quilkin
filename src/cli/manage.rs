@@ -46,7 +46,6 @@ enum Providers {
 
 impl Manage {
     pub async fn manage(&self, config: std::sync::Arc<crate::Config>) -> crate::Result<()> {
-
         let provider_task = match &self.provider {
             Providers::Agones {
                 gameservers_namespace,
