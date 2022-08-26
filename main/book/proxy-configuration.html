@@ -171,37 +171,53 @@ properties:
       Configuration of proxy admin HTTP interface.
     properties:
       address:
-      type: string
-      description: |
-        Socket Address and port to bind the administration interface to.
-      default: [::]:9091
+        type: string
+        description: |
+          Socket Address and port to bind the administration interface to.
+        default: &quot;[::]:9091&quot;
   filters:
     type: array
     description: |
       A filter chain.
     items:
       '$ref': {} # Refer to the Filter documentation for a filter configuration schema.
-  endpoints:
-    type: array
+  clusters:
+    type: object
     description: |
-      A list of upstream endpoints to forward packets to.
-    items:
+      grouping of clusters, each with a key for a name
+    additionalProperties:
       type: object
-        description: |
-          An upstream endpoint
-        properties:
-          address:
-            type: string
-            description: |
-              Socket address of the endpoint. This must be of the ´IP:Port` form e.g `192.168.1.1:7001`
-            metadata:
-              type: object
-              description: |
-                Arbitrary key value pairs that is associated with the endpoint.
-                These are visible to Filters when processing packets and can be used to provide more context about endpoints (e.g whether or not to route a packet to an endpoint).
-                Keys must be of type string otherwise the configuration is rejected.
-      required:
-        - address
+      description: |
+        An individual cluster
+      properties:
+        localities:          
+          type: array
+          description: |
+            grouping of endpoints, per cluster.
+          items:
+            type: object
+            properties:
+              endpoints:
+                type: array
+                description: |
+                  A list of upstream endpoints to forward packets to.
+                items:
+                  type: object
+                  description: |
+                    An upstream endpoint
+                  properties:
+                    address:
+                      type: string
+                      description: |
+                        Socket address of the endpoint. This must be of the ´IP:Port` form e.g `192.168.1.1:7001`
+                      metadata:
+                        type: object
+                        description: |
+                          Arbitrary key value pairs that is associated with the endpoint.
+                          These are visible to Filters when processing packets and can be used to provide more context about endpoints (e.g whether or not to route a packet to an endpoint).
+                          Keys must be of type string otherwise the configuration is rejected.
+                  required:
+                    - address
   management_servers:
     type: array
     description: |
@@ -210,14 +226,14 @@ properties:
       fall back to upon error.
     items:
       type: object
+      description: |
+        Configuration for a management server.
+    properties:
+      address:
+        type: string
         description: |
-          Configuration for a management server.
-        properties:
-          address:
-            type: string
-            description: |
-              Address of the management server. This must have the `http(s)` scheme prefix.
-              Example: `http://example.com`
+          Address of the management server. This must have the `http(s)` scheme prefix.
+          Example: `http://example.com`
 </code></pre>
 
                     </main>
