@@ -159,7 +159,7 @@ clusters:
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 1);
-</span><span class="boring">quilkin::Server::try_from(config).unwrap();
+</span><span class="boring">quilkin::Proxy::try_from(config).unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>
 <p>The above example shows a proxy that could be used with a typical game client, where the original client data is

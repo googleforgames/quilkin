@@ -565,7 +565,7 @@
         <span class="kw">let</span> (<span class="ident">_shutdown_tx</span>, <span class="ident">shutdown_rx</span>) <span class="op">=</span> <span class="ident">tokio::sync::watch::channel</span>(());
         <span class="ident">tokio::spawn</span>(<span class="ident">server::spawn</span>(<span class="ident">xds_config</span>.<span class="ident">clone</span>()));
         <span class="ident">tokio::spawn</span>(
-            <span class="ident"><span class="kw">crate</span>::Server::try_from</span>(<span class="ident">client_config</span>)
+            <span class="ident"><span class="kw">crate</span>::Proxy::try_from</span>(<span class="ident">client_config</span>)
                 .<span class="ident">unwrap</span>()
                 .<span class="ident">run</span>(<span class="ident">shutdown_rx</span>),
         );

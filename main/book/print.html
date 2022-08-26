@@ -663,7 +663,7 @@ clusters:
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 2);
-</span><span class="boring">quilkin::Server::try_from(config).unwrap();
+</span><span class="boring">quilkin::Proxy::try_from(config).unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>
 <p>We specify our filter chain in the <code>.filters</code> section of the proxy's configuration which has takes a sequence of <a href="filters.html#filter-config">FilterConfig</a> objects. Each object describes all information necessary to create a single filter.</p>
@@ -760,7 +760,7 @@ clusters:
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 1);
-</span><span class="boring">quilkin::Server::try_from(config).unwrap();
+</span><span class="boring">quilkin::Proxy::try_from(config).unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>
 <h3 id="configuration-options-rust-doc"><a class="header" href="#configuration-options-rust-doc">Configuration Options (<a href="filters/../../api/quilkin/filters/capture/struct.Config.html">Rust Doc</a>)</a></h3>
@@ -866,7 +866,7 @@ clusters:
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 1);
-</span><span class="boring">quilkin::Server::try_from(config).unwrap();
+</span><span class="boring">quilkin::Proxy::try_from(config).unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>
 <p>The above example shows a proxy that could be used with a typical game client, where the original client data is
@@ -964,7 +964,7 @@ clusters:
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 1);
-</span><span class="boring">quilkin::Server::try_from(config).unwrap();
+</span><span class="boring">quilkin::Proxy::try_from(config).unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>
 <h3 id="configuration-options-rust-doc-2"><a class="header" href="#configuration-options-rust-doc-2">Configuration Options (<a href="filters/../../api/quilkin/filters/concatenate_bytes/struct.Config.html">Rust Doc</a>)</a></h3>
@@ -1025,7 +1025,7 @@ clusters:
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 1);
-</span><span class="boring">quilkin::Server::try_from(config).unwrap();
+</span><span class="boring">quilkin::Proxy::try_from(config).unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>
 <h3 id="configuration-options-rust-doc-3"><a class="header" href="#configuration-options-rust-doc-3">Configuration Options (<a href="filters/../../api/quilkin/filters/debug/struct.Config.html">Rust Doc</a>)</a></h3>
@@ -1079,7 +1079,7 @@ filters:
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 2);
-</span><span class="boring">quilkin::Server::try_from(config).unwrap();
+</span><span class="boring">quilkin::Proxy::try_from(config).unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>
 <h3 id="configuration"><a class="header" href="#configuration">Configuration</a></h3>
@@ -1119,7 +1119,7 @@ clusters:
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 1);
-</span><span class="boring">quilkin::Server::try_from(config).unwrap();
+</span><span class="boring">quilkin::Proxy::try_from(config).unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>
 <h3 id="configuration-options-rust-doc-4"><a class="header" href="#configuration-options-rust-doc-4">Configuration Options (<a href="filters/../../api/quilkin/filters/firewall/struct.Config.html">Rust Doc</a>)</a></h3>
@@ -1221,7 +1221,7 @@ clusters:
 <span class="boring">&quot;;
 </span><span class="boring">  let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 1);
-</span><span class="boring">quilkin::Server::try_from(config).unwrap();
+</span><span class="boring">quilkin::Proxy::try_from(config).unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>
 <p>The load balancing policy (the strategy to use to select what endpoint to send traffic to) is configurable.
@@ -1274,7 +1274,7 @@ clusters:
 <span class="boring">&quot;;
 </span><span class="boring">  let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 1);
-</span><span class="boring">quilkin::Server::try_from(config).unwrap();
+</span><span class="boring">quilkin::Proxy::try_from(config).unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>
 <p>To configure a rate limiter, we specify the maximum rate at which the proxy is allowed to forward packets. In the example above, we configured the proxy to forward a maximum of 1000 packets per second).</p>
@@ -1351,7 +1351,7 @@ filters:
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 2);
-</span><span class="boring">quilkin::Server::try_from(config).unwrap();
+</span><span class="boring">quilkin::Proxy::try_from(config).unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>
 <!--  ANCHOR_END: example -->
@@ -1480,7 +1480,7 @@ filters:
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 2);
-</span><span class="boring">quilkin::Server::try_from(config).unwrap();
+</span><span class="boring">quilkin::Proxy::try_from(config).unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>
 <h3 id="configuration-1"><a class="header" href="#configuration-1">Configuration</a></h3>
@@ -1522,7 +1522,7 @@ clusters:
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 1);
-</span><span class="boring">quilkin::Server::try_from(config).unwrap();
+</span><span class="boring">quilkin::Proxy::try_from(config).unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>
 <p>View the <a href="filters/./capture.html">CaptureBytes</a> filter documentation for more details.</p>
@@ -1589,7 +1589,7 @@ clusters:
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 2);
-</span><span class="boring">quilkin::Server::try_from(config).unwrap();
+</span><span class="boring">quilkin::Proxy::try_from(config).unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>
 <p>On the game client side the <a href="filters/./concatenate_bytes.html">ConcatenateBytes</a> filter could also be used to add authentication
@@ -1657,7 +1657,7 @@ configuration, for now we can use <code>()</code> as we have no configuration cu
 }
 </code></pre>
 <h2 id="running"><a class="header" href="#running">Running</a></h2>
-<p>We can run the proxy using [<code>Server::TryFrom</code>][Server::TryFrom] function. Let's
+<p>We can run the proxy using [<code>Proxy::TryFrom</code>][Proxy::TryFrom] function. Let's
 add a main function that does that. Quilkin relies on the <a href="https://docs.rs/tokio">Tokio</a> async
 runtime, so we need to import that crate and wrap our main function with it.</p>
 <p>We can also register custom filters in quilkin using <a href="filters/../../api/quilkin/filters/struct.FilterRegistry.html#method.register"><code>FilterRegistry::register</code></a></p>
@@ -1673,7 +1673,7 @@ async fn main() -&gt; quilkin::Result&lt;()&gt; {
     quilkin::filters::FilterRegistry::register(vec![Greet::factory()].into_iter());
 
     let (_shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(());
-    let server: quilkin::Server = quilkin::Config::builder()
+    let server: quilkin::Proxy = quilkin::Config::builder()
         .port(7001)
         .filters(vec![quilkin::config::Filter {
             name: Greet::NAME.into(),

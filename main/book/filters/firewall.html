@@ -167,7 +167,7 @@ clusters:
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 1);
-</span><span class="boring">quilkin::Server::try_from(config).unwrap();
+</span><span class="boring">quilkin::Proxy::try_from(config).unwrap();
 </span><span class="boring">}
 </span></code></pre></pre>
 <h3 id="configuration-options-rust-doc"><a class="header" href="#configuration-options-rust-doc">Configuration Options (<a href="../../api/quilkin/filters/firewall/struct.Config.html">Rust Doc</a>)</a></h3>
