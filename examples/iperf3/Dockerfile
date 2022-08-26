@@ -19,5 +19,5 @@ ARG install_args="--git https://github.com/googleforgames/quilkin quilkin"
 RUN apt update && apt install -y iperf3 socat
 RUN cargo install $install_args
 COPY ./run.sh /app
-COPY ./proxy.yaml /app/quilkin.yaml
+COPY ./proxy.yaml /etc/quilkin/quilkin.yaml
 CMD ["/app/run.sh"]

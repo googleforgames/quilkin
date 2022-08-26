@@ -23,8 +23,11 @@ data:
     version: v1alpha1
     proxy:
       port: 26001
-    endpoints:
-      - address: 127.0.0.1:26000
+    clusters:
+      default:
+        localities:
+          - endpoints:
+              - address: 127.0.0.1:26000
 ---
 apiVersion: "agones.dev/v1"
 kind: Fleet
@@ -53,7 +56,7 @@ spec:
             - name: xonotic
               image: gcr.io/agones-images/xonotic-example:0.8
             - name: quilkin
-              image: us-docker.pkg.dev/quilkin/release/quilkin:0.1.0
+              image: us-docker.pkg.dev/quilkin/release/quilkin:0.4.0
               volumeMounts:
                 - name: config
                   mountPath: "/etc/quilkin"
