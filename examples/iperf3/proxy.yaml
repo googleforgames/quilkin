@@ -22,6 +22,8 @@ version: v1alpha1
 proxy:
   id: iperf3
   port: 8000
-static:
-  endpoints:
-    - address: 127.0.0.1:8001
+clusters:
+  default:
+    localities:
+      - endpoints:
+          - address: 127.0.0.1:8001

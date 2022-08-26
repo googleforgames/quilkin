@@ -24,13 +24,16 @@ data:
     proxy:
       port: 26001
     filters:
-      - name: quilkin.extensions.filters.compress.v1alpha1.Compress
+      - name: quilkin.filters.compress.v1alpha1.Compress
         config:
-            on_read: DECOMPRESS
-            on_write: COMPRESS
-            mode: SNAPPY
-    endpoints:
-      - address: 127.0.0.1:26000
+          on_read: DECOMPRESS
+          on_write: COMPRESS
+          mode: SNAPPY
+    clusters:
+      default:
+        localities:
+          - endpoints:
+              - address: 127.0.0.1:26000
 ---
 apiVersion: "agones.dev/v1"
 kind: Fleet
@@ -59,7 +62,7 @@ spec:
             - name: xonotic
               image: gcr.io/agones-images/xonotic-example:0.8
             - name: quilkin
-              image: us-docker.pkg.dev/quilkin/release/quilkin:0.1.0
+              image: us-docker.pkg.dev/quilkin/release/quilkin:0.4.0
               volumeMounts:
                 - name: config
                   mountPath: "/etc/quilkin"
