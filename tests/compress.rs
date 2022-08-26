@@ -35,7 +35,7 @@ async fn client_and_server() {
 on_read: DECOMPRESS
 on_write: COMPRESS
 ";
-    let server_config = quilkin::Server::builder()
+    let server_config = quilkin::Config::builder()
         .port(server_addr.port())
         .filters(vec![Filter {
             name: Compress::factory().name().into(),
@@ -53,7 +53,7 @@ on_write: COMPRESS
 on_read: COMPRESS
 on_write: DECOMPRESS
 ";
-    let client_config = quilkin::Server::builder()
+    let client_config = quilkin::Config::builder()
         .port(client_addr.port())
         .filters(vec![Filter {
             name: Compress::factory().name().into(),

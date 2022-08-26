@@ -25,7 +25,7 @@ clusters:
 # ";
 # let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 # assert_eq!(config.filters.load().len(), 1);
-# quilkin::Server::try_from(config).unwrap();
+# quilkin::Proxy::try_from(config).unwrap();
 ```
 
 ### Configuration Options ([Rust Doc](../../api/quilkin/filters/debug/struct.Config.html))

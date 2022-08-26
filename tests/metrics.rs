@@ -27,7 +27,7 @@ async fn metrics_server() {
 
     // create server configuration
     let server_port = 12346;
-    let server_config = quilkin::Server::builder()
+    let server_config = quilkin::Config::builder()
         .port(server_port)
         .endpoints(vec![Endpoint::new(echo)])
         .admin(Admin {
@@ -35,11 +35,11 @@ async fn metrics_server() {
         })
         .build()
         .unwrap();
-    t.run_server(quilkin::Server::try_from(server_config).unwrap());
+    t.run_server(quilkin::Proxy::try_from(server_config).unwrap());
 
     // create a local client
     let client_port = 12347;
-    let client_config = quilkin::Server::builder()
+    let client_config = quilkin::Config::builder()
         .port(client_port)
         .endpoints(vec![Endpoint::new(
             (IpAddr::V4(Ipv4Addr::LOCALHOST), server_port).into(),

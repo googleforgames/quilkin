@@ -95,7 +95,7 @@ async fn main() -> quilkin::Result<()> {
     quilkin::filters::FilterRegistry::register(vec![Greet::factory()].into_iter());
 
     let (_shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(());
-    let server: quilkin::Server = quilkin::Config::builder()
+    let server: quilkin::Proxy = quilkin::Config::builder()
         .port(7001)
         .filters(vec![quilkin::config::Filter {
             name: Greet::NAME.into(),

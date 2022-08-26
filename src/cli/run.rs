@@ -31,7 +31,7 @@ impl Run {
         let span = span!(Level::INFO, "source::run");
         let _enter = span.enter();
 
-        let server = crate::Server::try_from(config)?;
+        let server = crate::Proxy::try_from(config)?;
 
         #[cfg(target_os = "linux")]
         let mut sig_term_fut = signal::unix::signal(signal::unix::SignalKind::terminate())?;

@@ -30,7 +30,7 @@ async fn echo() {
 
     // create server configuration
     let local_addr = available_addr().await;
-    let server_config = quilkin::Server::builder()
+    let server_config = quilkin::Config::builder()
         .port(local_addr.port())
         .endpoints(vec![Endpoint::new(server1), Endpoint::new(server2)])
         .build()

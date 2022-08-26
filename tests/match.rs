@@ -57,7 +57,7 @@ on_read:
             bytes: YWJj # abc
 ";
     let server_port = 12348;
-    let server_config = quilkin::Server::builder()
+    let server_config = quilkin::Config::builder()
         .port(server_port)
         .filters(vec![
             Filter {

@@ -35,7 +35,7 @@ bytes: YWJj #abc
     let echo = t.run_echo_server().await;
 
     let server_port = 12346;
-    let server_config = quilkin::Server::builder()
+    let server_config = quilkin::Config::builder()
         .port(server_port)
         .filters(vec![Filter {
             name: ConcatenateBytes::factory().name().into(),

@@ -225,7 +225,7 @@ impl TestHelper {
         self.run_server(<_>::try_from(config).unwrap());
     }
 
-    pub fn run_server(&mut self, server: crate::Server) {
+    pub fn run_server(&mut self, server: crate::Proxy) {
         let (shutdown_tx, shutdown_rx) = watch::channel::<()>(());
         self.server_shutdown_tx.push(Some(shutdown_tx));
         tokio::spawn(async move {
