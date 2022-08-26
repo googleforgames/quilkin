@@ -73,7 +73,7 @@ impl StaticFilter for Greet {
 
 ## Running
 
-We can run the proxy using [`Server::TryFrom`][Server::TryFrom] function. Let's
+We can run the proxy using [`Proxy::TryFrom`][Proxy::TryFrom] function. Let's
 add a main function that does that. Quilkin relies on the [Tokio] async
 runtime, so we need to import that crate and wrap our main function with it.
 
@@ -243,7 +243,7 @@ filter. Try it out with the following configuration:
 [filter-factory-name]: ../../api/quilkin/filters/trait.FilterFactory.html#tymethod.name
 [FilterRegistry]: ../../api/quilkin/filters/struct.FilterRegistry.html
 [FilterRegistry::register]: ../../api/quilkin/filters/struct.FilterRegistry.html#method.register
-[Server::try_from]: ../../api/struct.Server.html#impl-TryFrom%3CConfig%3E
+[Proxy::try_from]: ../../api/struct.Proxy.html#impl-TryFrom%3CConfig%3E
 [CreateFilterArgs::config]: ../../api/quilkin/filters/prelude/struct.CreateFilterArgs.html#structfield.config
 [ConfigType::dynamic]: ../../api/quilkin/config/enum.ConfigType.html#variant.Dynamic
 [ConfigType::static]: ../../api/quilkin/config/enum.ConfigType.html#variant.Static

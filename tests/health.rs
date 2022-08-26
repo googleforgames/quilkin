@@ -27,7 +27,7 @@ async fn health_server() {
 
     // create server configuration
     let server_port = 12349;
-    let server_config = quilkin::Server::builder()
+    let server_config = quilkin::Config::builder()
         .port(server_port)
         .endpoints(vec!["127.0.0.1:0".parse::<Endpoint>().unwrap()])
         .admin(Admin {

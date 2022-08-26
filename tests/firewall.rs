@@ -106,7 +106,7 @@ async fn test(t: &mut TestHelper, server_port: u16, yaml: &str) -> oneshot::Rece
         .replace("%2", echo.port().to_string().as_str());
     tracing::info!(config = yaml.as_str(), "Config");
 
-    let server_config = quilkin::Server::builder()
+    let server_config = quilkin::Config::builder()
         .port(server_port)
         .filters(vec![Filter {
             name: Firewall::factory().name().into(),

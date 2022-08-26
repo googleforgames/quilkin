@@ -193,7 +193,7 @@ mod tests {
         let (_shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(());
         tokio::spawn(server::spawn(xds_config.clone()));
         tokio::spawn(
-            crate::Server::try_from(client_config)
+            crate::Proxy::try_from(client_config)
                 .unwrap()
                 .run(shutdown_rx),
         );

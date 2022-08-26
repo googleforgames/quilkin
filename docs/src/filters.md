@@ -69,7 +69,7 @@ clusters:
 # ";
 # let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 # assert_eq!(config.filters.load().len(), 2);
-# quilkin::Server::try_from(config).unwrap();
+# quilkin::Proxy::try_from(config).unwrap();
 # }
 ```
 

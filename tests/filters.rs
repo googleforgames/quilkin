@@ -37,7 +37,7 @@ async fn test_filter() {
 
     // create server configuration
     let server_port = 12346;
-    let server_config = quilkin::Server::builder()
+    let server_config = quilkin::Config::builder()
         .port(server_port)
         .filters(vec![Filter {
             name: "TestFilter".to_string(),
@@ -52,7 +52,7 @@ async fn test_filter() {
 
     // create a local client
     let client_port = 12347;
-    let client_config = quilkin::Server::builder()
+    let client_config = quilkin::Config::builder()
         .port(client_port)
         .filters(vec![Filter {
             name: "TestFilter".to_string(),
@@ -112,7 +112,7 @@ async fn debug_filter() {
     });
     // create server configuration
     let server_port = 12247;
-    let server_config = quilkin::Server::builder()
+    let server_config = quilkin::Config::builder()
         .port(server_port)
         .filters(vec![Filter {
             name: factory.name().into(),
@@ -129,7 +129,7 @@ async fn debug_filter() {
 
     // create a local client
     let client_port = 12248;
-    let client_config = quilkin::Server::builder()
+    let client_config = quilkin::Config::builder()
         .port(client_port)
         .filters(vec![Filter {
             name: factory.name().into(),

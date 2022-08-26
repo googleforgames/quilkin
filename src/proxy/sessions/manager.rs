@@ -116,9 +116,7 @@ mod tests {
 
     use crate::{
         endpoint::{Endpoint, EndpointAddress},
-        proxy::sessions::{
-            metrics::Metrics, session::SessionArgs, session_manager::Sessions, SessionKey,
-        },
+        proxy::sessions::{manager::Sessions, metrics::Metrics, SessionArgs, SessionKey},
         test_utils::create_socket,
     };
 

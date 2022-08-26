@@ -36,7 +36,7 @@ period: 1
     let echo = t.run_echo_server().await;
 
     let server_addr = available_addr().await;
-    let server_config = quilkin::Server::builder()
+    let server_config = quilkin::Config::builder()
         .port(server_addr.port())
         .filters(vec![Filter {
             name: LocalRateLimit::factory().name().into(),

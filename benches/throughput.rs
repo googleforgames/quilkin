@@ -29,7 +29,7 @@ const PACKETS: &[&[u8]] = &[
 fn run_quilkin(port: u16, endpoint: SocketAddr) {
     std::thread::spawn(move || {
         let runtime = tokio::runtime::Runtime::new().unwrap();
-        let config = quilkin::Server::builder()
+        let config = quilkin::Config::builder()
             .port(port)
             .admin(Admin {
                 address: "[::]:0".parse().unwrap(),
@@ -38,7 +38,7 @@ fn run_quilkin(port: u16, endpoint: SocketAddr) {
             .build()
             .unwrap();
 
-        let server = quilkin::Server::try_from(config).unwrap();
+        let server = quilkin::Proxy::try_from(config).unwrap();
         runtime.block_on(async move {
             let (_shutdown_tx, shutdown_rx) = tokio::sync::watch::channel::<()>(());
             server.run(shutdown_rx).await.unwrap();
