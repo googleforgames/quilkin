@@ -54,6 +54,16 @@ impl TryFrom<Config> for Proxy {
     }
 }
 
+impl TryFrom<Arc<Config>> for Proxy {
+    type Error = eyre::Error;
+    fn try_from(config: Arc<Config>) -> Result<Self, Self::Error> {
+        Ok(Self {
+            config,
+            session_metrics: SessionMetrics::new()?,
+        })
+    }
+}
+
 /// Represents arguments to the `Proxy::run_recv_from` method.
 struct RunRecvFromArgs {
     session_manager: SessionManager,

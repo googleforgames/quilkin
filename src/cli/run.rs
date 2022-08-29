@@ -77,7 +77,6 @@ impl Run {
             ));
         }
 
-        let server = crate::Server::try_from(config)?;
-        server.run(shutdown_rx).await
+        crate::Proxy::try_from(config)?.run(shutdown_rx).await
     }
 }
