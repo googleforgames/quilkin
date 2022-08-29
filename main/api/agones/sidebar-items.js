@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["Client",""]]};
+window.SIDEBAR_ITEMS = {"constant":[["GAMESERVER_IMAGE","A simple udp server that returns packets that are sent to it. See: https://github.com/googleforgames/agones/tree/main/examples/simple-game-server for more details."]],"fn":[["game_server","Returns a test GameServer with the UDP test binary that is used for Agones e2e tests."],["is_gameserver_ready","Condition to wait for a GameServer to become Ready."]],"struct":[["Client",""]]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":[["watch",""]],"mod":[["crd",""]],"struct":[["Watcher",""]]};

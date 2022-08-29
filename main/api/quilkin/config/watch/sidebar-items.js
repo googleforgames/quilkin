@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["agones",""],["fs",""]]};
+window.SIDEBAR_ITEMS = {"fn":[["fs",""]],"mod":[["agones",""]]};

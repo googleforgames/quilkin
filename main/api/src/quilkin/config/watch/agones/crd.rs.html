@@ -469,6 +469,40 @@
 <span id="463">463</span>
 <span id="464">464</span>
 <span id="465">465</span>
+<span id="466">466</span>
+<span id="467">467</span>
+<span id="468">468</span>
+<span id="469">469</span>
+<span id="470">470</span>
+<span id="471">471</span>
+<span id="472">472</span>
+<span id="473">473</span>
+<span id="474">474</span>
+<span id="475">475</span>
+<span id="476">476</span>
+<span id="477">477</span>
+<span id="478">478</span>
+<span id="479">479</span>
+<span id="480">480</span>
+<span id="481">481</span>
+<span id="482">482</span>
+<span id="483">483</span>
+<span id="484">484</span>
+<span id="485">485</span>
+<span id="486">486</span>
+<span id="487">487</span>
+<span id="488">488</span>
+<span id="489">489</span>
+<span id="490">490</span>
+<span id="491">491</span>
+<span id="492">492</span>
+<span id="493">493</span>
+<span id="494">494</span>
+<span id="495">495</span>
+<span id="496">496</span>
+<span id="497">497</span>
+<span id="498">498</span>
+<span id="499">499</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -505,9 +539,9 @@
 <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;camelCase&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GameServer</span> {
     <span class="attribute">#[<span class="ident">schemars</span>(<span class="ident">skip</span>)]</span>
-    <span class="ident">metadata</span>: <span class="ident">ObjectMeta</span>,
-    <span class="ident">spec</span>: <span class="ident">GameServerSpec</span>,
-    <span class="ident">status</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">GameServerStatus</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">metadata</span>: <span class="ident">ObjectMeta</span>,
+    <span class="kw">pub</span> <span class="ident">spec</span>: <span class="ident">GameServerSpec</span>,
+    <span class="kw">pub</span> <span class="ident">status</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">GameServerStatus</span><span class="op">&gt;</span>,
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">schemars::JsonSchema</span>)]</span>
@@ -684,18 +718,31 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GameServerSpec</span> {
     <span class="doccomment">/// Container specifies which Pod container is the game server. Only</span>
     <span class="doccomment">/// required if there is more than one container defined.</span>
-    <span class="ident">container</span>: <span class="ident">String</span>,
+    <span class="kw">pub</span> <span class="ident">container</span>: <span class="ident">String</span>,
     <span class="doccomment">/// Ports are the array of ports that can be exposed via the game server</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
-    <span class="ident">ports</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">GameServerPort</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">ports</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">GameServerPort</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Configures health checking</span>
-    <span class="ident">health</span>: <span class="ident">Health</span>,
+    <span class="kw">pub</span> <span class="ident">health</span>: <span class="ident">Health</span>,
     <span class="doccomment">/// Scheduling strategy. Defaults to &quot;Packed&quot;</span>
-    <span class="ident">scheduling</span>: <span class="ident">SchedulingStrategy</span>,
+    <span class="kw">pub</span> <span class="ident">scheduling</span>: <span class="ident">SchedulingStrategy</span>,
     <span class="doccomment">/// Specifies parameters for the Agones SDK Server sidecar container.</span>
-    <span class="ident">sdk_server</span>: <span class="ident">SdkServer</span>,
+    <span class="kw">pub</span> <span class="ident">sdk_server</span>: <span class="ident">SdkServer</span>,
     <span class="doccomment">/// Describes the Pod that will be created for the [`GameServer`].</span>
-    <span class="ident">template</span>: <span class="ident">k8s_openapi::api::core::v1::PodTemplateSpec</span>,
+    <span class="kw">pub</span> <span class="ident">template</span>: <span class="ident">k8s_openapi::api::core::v1::PodTemplateSpec</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">GameServerSpec</span> {
+    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
+        <span class="self">Self</span> {
+            <span class="ident">container</span>: <span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>(),
+            <span class="ident">ports</span>: <span class="macro">vec!</span>[],
+            <span class="ident">health</span>: <span class="ident">Default::default</span>(),
+            <span class="ident">scheduling</span>: <span class="ident">SchedulingStrategy::Packed</span>,
+            <span class="ident">sdk_server</span>: <span class="ident">Default::default</span>(),
+            <span class="ident">template</span>: <span class="ident">Default::default</span>(),
+        }
+    }
 }
 
 <span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident">GameServer</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Endpoint</span> {
@@ -746,7 +793,7 @@
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>, <span class="ident">JsonSchema</span>)]</span>
-<span class="kw">struct</span> <span class="ident">Health</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Health</span> {
     <span class="doccomment">/// Whether health checking is disabled or not</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
     <span class="ident">disabled</span>: <span class="ident">bool</span>,
@@ -774,41 +821,52 @@
     <span class="number">5</span>
 }
 
+<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">Health</span> {
+    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
+        <span class="self">Self</span> {
+            <span class="ident">disabled</span>: <span class="bool-val">false</span>,
+            <span class="ident">period_seconds</span>: <span class="ident">default_period_seconds</span>(),
+            <span class="ident">failure_threshold</span>: <span class="ident">default_failure_threshold</span>(),
+            <span class="ident">initial_delay_seconds</span>: <span class="ident">default_failure_threshold</span>(),
+        }
+    }
+}
+
 <span class="doccomment">/// Defines a set of Ports that are to be exposed via the [`GameServer`].</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>, <span class="ident">JsonSchema</span>)]</span>
 <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;camelCase&quot;</span>)]</span>
-<span class="kw">struct</span> <span class="ident">GameServerPort</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GameServerPort</span> {
     <span class="doccomment">/// Name is the descriptive name of the port</span>
-    <span class="ident">name</span>: <span class="ident">String</span>,
+    <span class="kw">pub</span> <span class="ident">name</span>: <span class="ident">String</span>,
     <span class="doccomment">/// PortPolicy defines the policy for how the HostPort is populated.</span>
     <span class="doccomment">/// Dynamic port will allocate a HostPort within the selected MIN_PORT and MAX_PORT range passed to the controller</span>
     <span class="doccomment">/// at installation time.</span>
     <span class="doccomment">/// When `Static` portPolicy is specified, `HostPort` is required, to specify the port that game clients will</span>
     <span class="doccomment">/// connect to</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
-    <span class="ident">port_policy</span>: <span class="ident">PortPolicy</span>,
+    <span class="kw">pub</span> <span class="ident">port_policy</span>: <span class="ident">PortPolicy</span>,
     <span class="doccomment">/// The name of the container on which to open the port. Defaults to the</span>
     <span class="doccomment">/// game server container.</span>
-    <span class="ident">container</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">container</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
     <span class="doccomment">/// The port that is being opened on the specified container&#39;s process</span>
-    <span class="ident">container_port</span>: <span class="ident">u16</span>,
+    <span class="kw">pub</span> <span class="ident">container_port</span>: <span class="ident">u16</span>,
     <span class="doccomment">/// The port exposed on the host for clients to connect to</span>
-    <span class="ident">host_port</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">host_port</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Protocol is the network protocol being used. Defaults to UDP. TCP and TCPUDP are other options.</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
-    <span class="ident">protocol</span>: <span class="ident">Protocol</span>,
+    <span class="kw">pub</span> <span class="ident">protocol</span>: <span class="ident">Protocol</span>,
 }
 
 <span class="doccomment">/// The status for a [`GameServer`] resource.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>, <span class="ident">JsonSchema</span>)]</span>
 <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;camelCase&quot;</span>)]</span>
-<span class="kw">struct</span> <span class="ident">GameServerStatus</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GameServerStatus</span> {
     <span class="doccomment">/// The current state of a [`GameServer`].</span>
-    <span class="ident">state</span>: <span class="ident">GameServerState</span>,
-    <span class="ident">ports</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">GameServerStatusPort</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">address</span>: <span class="ident">String</span>,
-    <span class="ident">node_name</span>: <span class="ident">String</span>,
-    <span class="ident">reserved_until</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">k8s_openapi::apimachinery::pkg::apis::meta::v1::Time</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">state</span>: <span class="ident">GameServerState</span>,
+    <span class="kw">pub</span> <span class="ident">ports</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">GameServerStatusPort</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">address</span>: <span class="ident">String</span>,
+    <span class="kw">pub</span> <span class="ident">node_name</span>: <span class="ident">String</span>,
+    <span class="kw">pub</span> <span class="ident">reserved_until</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">k8s_openapi::apimachinery::pkg::apis::meta::v1::Time</span><span class="op">&gt;</span>,
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>, <span class="ident">JsonSchema</span>)]</span>
@@ -852,13 +910,13 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SdkServer</span> {
     <span class="doccomment">/// LogLevel for SDK server (sidecar) logs. Defaults to &quot;Info&quot;</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
-    <span class="ident">log_level</span>: <span class="ident">SdkServerLogLevel</span>,
+    <span class="kw">pub</span> <span class="ident">log_level</span>: <span class="ident">SdkServerLogLevel</span>,
     <span class="doccomment">/// GRPCPort is the port on which the SDK Server binds the gRPC server to accept incoming connections</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span> <span class="op">=</span> <span class="string">&quot;default_sdk_grpc_port&quot;</span>)]</span>
-    <span class="ident">grpc_port</span>: <span class="ident">u16</span>,
+    <span class="kw">pub</span> <span class="ident">grpc_port</span>: <span class="ident">u16</span>,
     <span class="doccomment">/// HTTPPort is the port on which the SDK Server binds the HTTP gRPC gateway server to accept incoming connections</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span> <span class="op">=</span> <span class="string">&quot;default_sdk_http_port&quot;</span>)]</span>
-    <span class="ident">http_port</span>: <span class="ident">u16</span>,
+    <span class="kw">pub</span> <span class="ident">http_port</span>: <span class="ident">u16</span>,
 }
 
 <span class="kw">fn</span> <span class="ident">default_sdk_grpc_port</span>() -&gt; <span class="ident">u16</span> {
@@ -866,6 +924,16 @@
 }
 <span class="kw">fn</span> <span class="ident">default_sdk_http_port</span>() -&gt; <span class="ident">u16</span> {
     <span class="number">9358</span>
+}
+
+<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">SdkServer</span> {
+    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
+        <span class="self">Self</span> {
+            <span class="ident">log_level</span>: <span class="ident">Default::default</span>(),
+            <span class="ident">grpc_port</span>: <span class="ident">default_sdk_grpc_port</span>(),
+            <span class="ident">http_port</span>: <span class="ident">default_sdk_http_port</span>(),
+        }
+    }
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>, <span class="ident">JsonSchema</span>)]</span>
