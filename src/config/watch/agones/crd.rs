@@ -34,9 +34,9 @@ const QUILKIN_TOKEN_LABEL: &str = "quilkin.dev/tokens";
 #[serde(rename_all = "camelCase")]
 pub struct GameServer {
     #[schemars(skip)]
-    metadata: ObjectMeta,
-    spec: GameServerSpec,
-    status: Option<GameServerStatus>,
+    pub metadata: ObjectMeta,
+    pub spec: GameServerSpec,
+    pub status: Option<GameServerStatus>,
 }
 
 #[derive(Clone, Debug, Deserialize, schemars::JsonSchema)]
@@ -213,18 +213,31 @@ impl kube::core::object::HasSpec for GameServer {
 pub struct GameServerSpec {
     /// Container specifies which Pod container is the game server. Only
     /// required if there is more than one container defined.
-    container: String,
+    pub container: String,
     /// Ports are the array of ports that can be exposed via the game server
     #[serde(default)]
-    ports: Vec<GameServerPort>,
+    pub ports: Vec<GameServerPort>,
     /// Configures health checking
-    health: Health,
+    pub health: Health,
     /// Scheduling strategy. Defaults to "Packed"
-    scheduling: SchedulingStrategy,
+    pub scheduling: SchedulingStrategy,
     /// Specifies parameters for the Agones SDK Server sidecar container.
-    sdk_server: SdkServer,
+    pub sdk_server: SdkServer,
     /// Describes the Pod that will be created for the [`GameServer`].
-    template: k8s_openapi::api::core::v1::PodTemplateSpec,
+    pub template: k8s_openapi::api::core::v1::PodTemplateSpec,
+}
+
+impl Default for GameServerSpec {
+    fn default() -> Self {
+        Self {
+            container: "".to_string(),
+            ports: vec![],
+            health: Default::default(),
+            scheduling: SchedulingStrategy::Packed,
+            sdk_server: Default::default(),
+            template: Default::default(),
+        }
+    }
 }
 
 impl TryFrom<GameServer> for Endpoint {
@@ -275,7 +288,7 @@ impl TryFrom<Vec<GameServer>> for crate::endpoint::LocalityEndpoints {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
-struct Health {
+pub struct Health {
     /// Whether health checking is disabled or not
     #[serde(default)]
     disabled: bool,
@@ -303,41 +316,52 @@ fn default_failure_threshold() -> i32 {
     5
 }
 
+impl Default for Health {
+    fn default() -> Self {
+        Self {
+            disabled: false,
+            period_seconds: default_period_seconds(),
+            failure_threshold: default_failure_threshold(),
+            initial_delay_seconds: default_failure_threshold(),
+        }
+    }
+}
+
 /// Defines a set of Ports that are to be exposed via the [`GameServer`].
 #[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
-struct GameServerPort {
+pub struct GameServerPort {
     /// Name is the descriptive name of the port
-    name: String,
+    pub name: String,
     /// PortPolicy defines the policy for how the HostPort is populated.
     /// Dynamic port will allocate a HostPort within the selected MIN_PORT and MAX_PORT range passed to the controller
     /// at installation time.
     /// When `Static` portPolicy is specified, `HostPort` is required, to specify the port that game clients will
     /// connect to
     #[serde(default)]
-    port_policy: PortPolicy,
+    pub port_policy: PortPolicy,
     /// The name of the container on which to open the port. Defaults to the
     /// game server container.
-    container: Option<String>,
+    pub container: Option<String>,
     /// The port that is being opened on the specified container's process
-    container_port: u16,
+    pub container_port: u16,
     /// The port exposed on the host for clients to connect to
-    host_port: Option<u16>,
+    pub host_port: Option<u16>,
     /// Protocol is the network protocol being used. Defaults to UDP. TCP and TCPUDP are other options.
     #[serde(default)]
-    protocol: Protocol,
+    pub protocol: Protocol,
 }
 
 /// The status for a [`GameServer`] resource.
 #[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
-struct GameServerStatus {
+pub struct GameServerStatus {
     /// The current state of a [`GameServer`].
-    state: GameServerState,
-    ports: Option<Vec<GameServerStatusPort>>,
-    address: String,
-    node_name: String,
-    reserved_until: Option<k8s_openapi::apimachinery::pkg::apis::meta::v1::Time>,
+    pub state: GameServerState,
+    pub ports: Option<Vec<GameServerStatusPort>>,
+    pub address: String,
+    pub node_name: String,
+    pub reserved_until: Option<k8s_openapi::apimachinery::pkg::apis::meta::v1::Time>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
@@ -381,13 +405,13 @@ pub struct GameServerStatusPort {
 pub struct SdkServer {
     /// LogLevel for SDK server (sidecar) logs. Defaults to "Info"
     #[serde(default)]
-    log_level: SdkServerLogLevel,
+    pub log_level: SdkServerLogLevel,
     /// GRPCPort is the port on which the SDK Server binds the gRPC server to accept incoming connections
     #[serde(default = "default_sdk_grpc_port")]
-    grpc_port: u16,
+    pub grpc_port: u16,
     /// HTTPPort is the port on which the SDK Server binds the HTTP gRPC gateway server to accept incoming connections
     #[serde(default = "default_sdk_http_port")]
-    http_port: u16,
+    pub http_port: u16,
 }
 
 fn default_sdk_grpc_port() -> u16 {
@@ -395,6 +419,16 @@ fn default_sdk_grpc_port() -> u16 {
 }
 fn default_sdk_http_port() -> u16 {
     9358
+}
+
+impl Default for SdkServer {
+    fn default() -> Self {
+        Self {
+            log_level: Default::default(),
+            grpc_port: default_sdk_grpc_port(),
+            http_port: default_sdk_http_port(),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]

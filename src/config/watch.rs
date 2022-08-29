@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-mod agones;
+pub mod agones;
 mod fs;
 
 pub use self::{agones::watch as agones, fs::watch as fs};
