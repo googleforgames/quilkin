@@ -18,16 +18,13 @@ use std::sync::Arc;
 
 use arc_swap::ArcSwapOption;
 use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 
 use crate::filters::prelude::*;
 
 /// A mutable memory location with atomic storage rules.
-#[derive(Default, Clone, Deserialize, Serialize)]
-#[serde(transparent)]
+#[derive(Clone)]
 pub struct Slot<T> {
     inner: Arc<ArcSwapOption<T>>,
-    #[serde(skip)]
     #[allow(clippy::type_complexity)]
     watcher: Arc<ArcSwapOption<Box<dyn Fn(&T) + Send + Sync>>>,
 }
@@ -119,6 +116,15 @@ impl<T: Clone + Default> Slot<T> {
     }
 }
 
+impl<T> Default for Slot<T> {
+    fn default() -> Self {
+        Self {
+            inner: <_>::default(),
+            watcher: <_>::default(),
+        }
+    }
+}
+
 impl<T: std::fmt::Debug> std::fmt::Debug for Slot<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         self.inner.load().fmt(f)
@@ -140,6 +146,24 @@ impl<T: Default> From<T> for Slot<T> {
 impl<T: Default> From<Option<T>> for Slot<T> {
     fn from(data: Option<T>) -> Self {
         Self::new(data)
+    }
+}
+
+impl<T: serde::Serialize> serde::Serialize for Slot<T> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.inner.load().serialize(serializer)
+    }
+}
+
+impl<'de, T: serde::Deserialize<'de>> serde::Deserialize<'de> for Slot<T> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        <Option<T>>::deserialize(deserializer).map(Slot::new)
     }
 }
 
