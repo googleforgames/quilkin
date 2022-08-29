@@ -17,7 +17,7 @@
 #[cfg(test)]
 mod tests {
     use k8s_openapi::{
-        api::core::v1::{Container, Pod, PodSpec},
+        api::core::v1::{Pod, PodSpec},
         apimachinery::pkg::apis::meta::v1::ObjectMeta,
     };
     use kube::{
@@ -28,7 +28,7 @@ mod tests {
     use std::time::Duration;
     use tokio::time::timeout;
 
-    use crate::Client;
+    use crate::{quilkin_container, Client};
 
     #[tokio::test]
     async fn create_quilkin_pod() {
@@ -41,11 +41,7 @@ mod tests {
                 ..Default::default()
             },
             spec: Some(PodSpec {
-                containers: vec![Container {
-                    name: "quilkin".into(),
-                    image: Some(client.quilkin_image.clone()),
-                    ..Default::default()
-                }],
+                containers: vec![quilkin_container(&client, None)],
                 ..Default::default()
             }),
             status: None,
