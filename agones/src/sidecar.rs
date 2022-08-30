@@ -16,13 +16,14 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::{game_server, is_gameserver_ready, Client};
-    use kube::api::PostParams;
-    use kube::runtime::wait::await_condition;
-    use kube::{Api, ResourceExt};
-    use quilkin::config::watch::agones::crd::GameServer;
-    use quilkin::test_utils::TestHelper;
-    use std::time::Duration;
+    use crate::{game_server, is_gameserver_ready, quilkin_container, Client};
+    use k8s_openapi::{
+        api::core::v1::{ConfigMap, ConfigMapVolumeSource, Volume},
+        apimachinery::pkg::apis::meta::v1::ObjectMeta,
+    };
+    use kube::{api::PostParams, runtime::wait::await_condition, Api, ResourceExt};
+    use quilkin::{config::watch::agones::crd::GameServer, test_utils::TestHelper};
+    use std::{collections::BTreeMap, time::Duration};
     use tokio::time::timeout;
 
     #[tokio::test]
@@ -49,8 +50,7 @@ mod tests {
 
         let t = TestHelper::default();
         let recv = t.open_socket_and_recv_single_packet().await;
-        let status = gs.status.unwrap();
-        let address = format!("{}:{}", status.address, status.ports.unwrap()[0].port);
+        let address = crate::gameserver_address(&gs);
         recv.socket
             .send_to("hello".as_bytes(), address)
             .await
@@ -61,5 +61,92 @@ mod tests {
             .expect("should receive packet")
             .unwrap();
         assert_eq!("ACK: hello\n", response);
+    }
+
+    #[tokio::test]
+    /// Testing Quilkin running as a sidecar next to a GameServer
+    async fn gameserver_sidecar() {
+        let client = Client::new().await;
+        let config_maps: Api<ConfigMap> =
+            Api::namespaced(client.kubernetes.clone(), client.namespace.as_str());
+        let gameservers: Api<GameServer> =
+            Api::namespaced(client.kubernetes.clone(), client.namespace.as_str());
+        let pp = PostParams::default();
+
+        // We'll append "sidecar", to prove the packet goes through the sidecar.
+        let config = r#"
+version: v1alpha1
+filters:
+  - name: quilkin.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
+    config:
+        on_read: APPEND
+        on_write: DO_NOTHING
+        bytes: c2lkZWNhcg== # sidecar
+clusters:
+  default:
+    localities:
+      - endpoints:
+          - address: 127.0.0.1:7654
+"#;
+
+        let config_map = ConfigMap {
+            metadata: ObjectMeta {
+                generate_name: Some("quilkin-config-".into()),
+                ..Default::default()
+            },
+            data: Some(BTreeMap::from([(
+                "quilkin.yaml".to_string(),
+                config.to_string(),
+            )])),
+            ..Default::default()
+        };
+
+        let config_map = config_maps.create(&pp, &config_map).await.unwrap();
+        let mut gs = game_server();
+
+        // reset ports to point at the Quilkin sidecar
+        gs.spec.ports[0].container_port = 7000;
+        gs.spec.ports[0].container = Some("quilkin".into());
+
+        // set the gameserver container to the simple-game-server container.
+        let mut template = gs.spec.template.spec.as_mut().unwrap();
+        gs.spec.container = template.containers[0].name.clone();
+
+        let mount_name = "config".to_string();
+        template
+            .containers
+            .push(quilkin_container(&client, Some(mount_name.clone())));
+
+        template.volumes = Some(vec![Volume {
+            name: mount_name,
+            config_map: Some(ConfigMapVolumeSource {
+                name: Some(config_map.name()),
+                ..Default::default()
+            }),
+            ..Default::default()
+        }]);
+
+        let gs = gameservers.create(&pp, &gs).await.unwrap();
+        let name = gs.name();
+        let ready = await_condition(gameservers.clone(), name.as_str(), is_gameserver_ready());
+        timeout(Duration::from_secs(30), ready)
+            .await
+            .expect("GameServer should be ready")
+            .unwrap();
+        let gs = gameservers.get(name.as_str()).await.unwrap();
+
+        let t = TestHelper::default();
+        let recv = t.open_socket_and_recv_single_packet().await;
+        let address = crate::gameserver_address(&gs);
+        recv.socket
+            .send_to("hello".as_bytes(), address)
+            .await
+            .unwrap();
+
+        let response = timeout(Duration::from_secs(30), recv.packet_rx)
+            .await
+            .expect("should receive packet")
+            .unwrap();
+        assert_eq!("ACK: hellosidecar\n", response);
     }
 }

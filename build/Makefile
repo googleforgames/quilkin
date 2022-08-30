@@ -185,7 +185,7 @@ run-test-agones:
 	docker run --rm $(DOCKER_RUN_ARGS) $(common_rust_args) $(kube_mount_args) -w /workspace/agones \
 		--entrypoint=kubectl $(BUILD_IMAGE_TAG) get ns
 	docker run --rm $(DOCKER_RUN_ARGS) $(common_rust_args) $(kube_mount_args) -w /workspace/agones \
-			-e "IMAGE_TAG=${IMAGE_TAG}" --entrypoint=cargo $(BUILD_IMAGE_TAG) test $(ARGS)
+			-e "RUST_BACKTRACE=1" -e "IMAGE_TAG=${IMAGE_TAG}" --entrypoint=cargo $(BUILD_IMAGE_TAG) test $(ARGS)
 
 # Convenience target to build and push quilkin images to a repository.
 # Use `REPOSITORY` arg to specify the repository to push to.

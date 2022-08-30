@@ -23,11 +23,14 @@ use std::{
 use k8s_openapi::{
     api::{
         core::v1::{
-            Container, Namespace, PodSpec, PodTemplateSpec, ResourceRequirements, ServiceAccount,
+            Container, HTTPGetAction, Namespace, PodSpec, PodTemplateSpec, Probe,
+            ResourceRequirements, ServiceAccount, VolumeMount,
         },
         rbac::v1::{RoleBinding, RoleRef, Subject},
     },
-    apimachinery::pkg::{api::resource::Quantity, apis::meta::v1::ObjectMeta},
+    apimachinery::pkg::{
+        api::resource::Quantity, apis::meta::v1::ObjectMeta, util::intstr::IntOrString,
+    },
     chrono,
 };
 use kube::{
@@ -54,6 +57,7 @@ const DELETE_DELAY_SECONDS: &str = "DELETE_DELAY_SECONDS";
 /// for more details.
 pub const GAMESERVER_IMAGE: &str = "gcr.io/agones-images/simple-game-server:0.13";
 
+#[derive(Clone)]
 pub struct Client {
     /// The Kubernetes client
     pub kubernetes: kube::Client,
@@ -64,13 +68,13 @@ pub struct Client {
 }
 
 impl Client {
-    /// Thread safe way to create a Client once and only once across multiple tests.
+    /// Thread safe way to create a Clients across multiple tests.
     /// Executes the setup required:
     /// * Creates a test namespace for this test
     /// * Removes previous test namespaces
     /// * Retrieves the IMAGE_TAG to test from env vars, and panics if it if not available.
-    pub async fn new() -> &'static Client {
-        CLIENT
+    pub async fn new() -> Client {
+        let mut client = CLIENT
             .get_or_init(|| async {
                 let client = kube::Client::try_default()
                     .await
@@ -83,6 +87,14 @@ impl Client {
                 }
             })
             .await
+            .clone();
+
+        // create a new client on each invocation, as the client can close
+        // at the end of each test.
+        client.kubernetes = kube::Client::try_default()
+            .await
+            .expect("Kubernetes client to be created");
+        client
     }
 }
 
@@ -239,4 +251,44 @@ pub fn is_gameserver_ready() -> impl Condition<GameServer> {
             .map(|status| matches!(status.state, GameServerState::Ready))
             .unwrap_or(false)
     }
+}
+
+/// Returns a container for Quilkin, with an optional volume mount name
+pub fn quilkin_container(client: &Client, volume_mount: Option<String>) -> Container {
+    let mut container = Container {
+        name: "quilkin".into(),
+        image: Some(client.quilkin_image.clone()),
+        liveness_probe: Some(Probe {
+            http_get: Some(HTTPGetAction {
+                path: Some("/live".into()),
+                port: IntOrString::Int(9091),
+                ..Default::default()
+            }),
+            initial_delay_seconds: Some(3),
+            period_seconds: Some(2),
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+
+    if let Some(name) = volume_mount {
+        container.volume_mounts = Some(vec![VolumeMount {
+            name,
+            mount_path: "/etc/quilkin".into(),
+            ..Default::default()
+        }])
+    };
+
+    container
+}
+
+/// Convenience function to return the address with the first port of GameServer
+pub fn gameserver_address(gs: &GameServer) -> String {
+    let status = gs.status.as_ref().unwrap();
+    let address = format!(
+        "{}:{}",
+        status.address,
+        status.ports.as_ref().unwrap()[0].port
+    );
+    address
 }
