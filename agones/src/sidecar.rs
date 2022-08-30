@@ -16,14 +16,11 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::{game_server, is_gameserver_ready, quilkin_container, Client};
-    use k8s_openapi::{
-        api::core::v1::{ConfigMap, ConfigMapVolumeSource, Volume},
-        apimachinery::pkg::apis::meta::v1::ObjectMeta,
-    };
+    use crate::{game_server, is_gameserver_ready, quilkin_config_map, quilkin_container, Client};
+    use k8s_openapi::api::core::v1::{ConfigMap, ConfigMapVolumeSource, Volume};
     use kube::{api::PostParams, runtime::wait::await_condition, Api, ResourceExt};
     use quilkin::{config::watch::agones::crd::GameServer, test_utils::TestHelper};
-    use std::{collections::BTreeMap, time::Duration};
+    use std::time::Duration;
     use tokio::time::timeout;
 
     #[tokio::test]
@@ -32,8 +29,7 @@ mod tests {
     /// as a firewall settings, or an issue with Agones itself.
     async fn gameserver_no_sidecar() {
         let client = Client::new().await;
-        let gameservers: Api<GameServer> =
-            Api::namespaced(client.kubernetes.clone(), client.namespace.as_str());
+        let gameservers: Api<GameServer> = client.namespaced_api();
 
         let gs = game_server();
 
@@ -67,10 +63,8 @@ mod tests {
     /// Testing Quilkin running as a sidecar next to a GameServer
     async fn gameserver_sidecar() {
         let client = Client::new().await;
-        let config_maps: Api<ConfigMap> =
-            Api::namespaced(client.kubernetes.clone(), client.namespace.as_str());
-        let gameservers: Api<GameServer> =
-            Api::namespaced(client.kubernetes.clone(), client.namespace.as_str());
+        let config_maps: Api<ConfigMap> = client.namespaced_api();
+        let gameservers: Api<GameServer> = client.namespaced_api();
         let pp = PostParams::default();
 
         // We'll append "sidecar", to prove the packet goes through the sidecar.
@@ -89,19 +83,10 @@ clusters:
           - address: 127.0.0.1:7654
 "#;
 
-        let config_map = ConfigMap {
-            metadata: ObjectMeta {
-                generate_name: Some("quilkin-config-".into()),
-                ..Default::default()
-            },
-            data: Some(BTreeMap::from([(
-                "quilkin.yaml".to_string(),
-                config.to_string(),
-            )])),
-            ..Default::default()
-        };
-
-        let config_map = config_maps.create(&pp, &config_map).await.unwrap();
+        let config_map = config_maps
+            .create(&pp, &quilkin_config_map(config))
+            .await
+            .unwrap();
         let mut gs = game_server();
 
         // reset ports to point at the Quilkin sidecar
@@ -110,7 +95,7 @@ clusters:
 
         // set the gameserver container to the simple-game-server container.
         let mut template = gs.spec.template.spec.as_mut().unwrap();
-        gs.spec.container = template.containers[0].name.clone();
+        gs.spec.container = Some(template.containers[0].name.clone());
 
         let mount_name = "config".to_string();
         template

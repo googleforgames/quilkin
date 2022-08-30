@@ -24,6 +24,7 @@ description = "End to end integration tests to be run against a Kubernetes clust
 readme = "README.md"
 
 [dependencies]
+base64 = "0.13.0"
 k8s-openapi = { version = "0.15.0", features = ["v1_22"] }
 kube = { version = "0.73.1", features = ["runtime", "derive"] }
 quilkin = { path = "../" }
