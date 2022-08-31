@@ -1,4 +1,4 @@
-FROM lukemathwalker/cargo-chef:latest-rust-1.61.0 AS chef
+FROM lukemathwalker/cargo-chef:latest-rust-1.63.0 AS chef
 COPY rust-toolchain.toml rust-toolchain.toml
 RUN rustup check
 WORKDIR app
@@ -19,4 +19,4 @@ RUN cargo build --release --bin quilkin
 FROM debian:bookworm-slim AS runtime
 WORKDIR app
 COPY --from=builder /app/target/release/quilkin /usr/local/bin
-ENTRYPOINT ["/usr/local/bin/quilkin", "run"]
+ENTRYPOINT ["quilkin"]
