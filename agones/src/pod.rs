@@ -34,7 +34,7 @@ mod tests {
     async fn create_quilkin_pod() {
         let client = Client::new().await;
 
-        let pods: Api<Pod> = Api::namespaced(client.kubernetes.clone(), client.namespace.as_str());
+        let pods: Api<Pod> = client.namespaced_api();
         let pod = Pod {
             metadata: ObjectMeta {
                 generate_name: Some("quilkin-".into()),

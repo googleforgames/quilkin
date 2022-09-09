@@ -22,9 +22,10 @@ use std::{
 
 use k8s_openapi::{
     api::{
+        apps::v1::Deployment,
         core::v1::{
-            Container, HTTPGetAction, Namespace, PodSpec, PodTemplateSpec, Probe,
-            ResourceRequirements, ServiceAccount, VolumeMount,
+            ConfigMap, Container, EnvVar, HTTPGetAction, Namespace, PodSpec, PodTemplateSpec,
+            Probe, ResourceRequirements, ServiceAccount, VolumeMount,
         },
         rbac::v1::{RoleBinding, RoleRef, Subject},
     },
@@ -36,16 +37,18 @@ use k8s_openapi::{
 use kube::{
     api::{DeleteParams, ListParams, PostParams},
     runtime::wait::Condition,
-    Api, ResourceExt,
+    Api, Resource, ResourceExt,
 };
 use tokio::sync::OnceCell;
 
 use quilkin::config::watch::agones::crd::{
-    GameServer, GameServerPort, GameServerSpec, GameServerState,
+    Fleet, FleetSpec, GameServer, GameServerPort, GameServerSpec, GameServerState,
+    GameServerTemplateSpec,
 };
 
 mod pod;
 mod sidecar;
+mod xds;
 
 #[allow(dead_code)]
 static CLIENT: OnceCell<Client> = OnceCell::const_new();
@@ -95,6 +98,14 @@ impl Client {
             .await
             .expect("Kubernetes client to be created");
         client
+    }
+
+    /// Returns a typed API client for this client in this test namespace.
+    pub fn namespaced_api<K: Resource>(&self) -> Api<K>
+    where
+        <K as Resource>::DynamicType: Default,
+    {
+        Api::namespaced(self.kubernetes.clone(), self.namespace.as_str())
     }
 }
 
@@ -244,6 +255,26 @@ pub fn game_server() -> GameServer {
     }
 }
 
+/// Returns a Fleet of 3 replicas of the UDP testing GameServer
+pub fn fleet() -> Fleet {
+    let gs = game_server();
+    Fleet {
+        metadata: ObjectMeta {
+            generate_name: Some("fleet-".into()),
+            ..Default::default()
+        },
+        spec: FleetSpec {
+            replicas: Some(3),
+            template: GameServerTemplateSpec {
+                metadata: None,
+                spec: gs.spec,
+            },
+            ..Default::default()
+        },
+        status: None,
+    }
+}
+
 /// Condition to wait for a GameServer to become Ready.
 pub fn is_gameserver_ready() -> impl Condition<GameServer> {
     |obj: Option<&GameServer>| {
@@ -253,11 +284,50 @@ pub fn is_gameserver_ready() -> impl Condition<GameServer> {
     }
 }
 
+/// Condition to wait for a Deployment to have all the replicas it is expecting to be ready.
+pub fn is_deployment_ready() -> impl Condition<Deployment> {
+    |obj: Option<&Deployment>| {
+        if let Some(deployment) = obj {
+            let expected = deployment.spec.as_ref().unwrap().replicas.as_ref().unwrap();
+
+            return deployment
+                .status
+                .as_ref()
+                .and_then(|status| status.ready_replicas)
+                .map(|replicas| &replicas == expected)
+                .unwrap_or(false);
+        }
+        false
+    }
+}
+
+/// Condition to wait for a Fleet to have all the replicas it is expecting to be ready.
+pub fn is_fleet_ready() -> impl Condition<Fleet> {
+    |obj: Option<&Fleet>| {
+        if let Some(fleet) = obj {
+            let expected = fleet.spec.replicas.as_ref().unwrap();
+
+            return fleet
+                .status
+                .as_ref()
+                .and_then(|status| status.ready_replicas)
+                .map(|replicas| &replicas == expected)
+                .unwrap_or(false);
+        }
+        false
+    }
+}
+
 /// Returns a container for Quilkin, with an optional volume mount name
 pub fn quilkin_container(client: &Client, volume_mount: Option<String>) -> Container {
     let mut container = Container {
         name: "quilkin".into(),
         image: Some(client.quilkin_image.clone()),
+        env: Some(vec![EnvVar {
+            name: "RUST_LOG".to_string(),
+            value: Some("trace".into()),
+            value_from: None,
+        }]),
         liveness_probe: Some(Probe {
             http_get: Some(HTTPGetAction {
                 path: Some("/live".into()),
@@ -280,6 +350,22 @@ pub fn quilkin_container(client: &Client, volume_mount: Option<String>) -> Conta
     };
 
     container
+}
+
+/// Return a ConfigMap in the format that Quilkin expects it to be able to
+/// consume the config yaml.
+pub fn quilkin_config_map(config: &str) -> ConfigMap {
+    ConfigMap {
+        metadata: ObjectMeta {
+            generate_name: Some("quilkin-config-".into()),
+            ..Default::default()
+        },
+        data: Some(BTreeMap::from([(
+            "quilkin.yaml".to_string(),
+            config.to_string(),
+        )])),
+        ..Default::default()
+    }
 }
 
 /// Convenience function to return the address with the first port of GameServer
