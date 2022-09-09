@@ -16,7 +16,7 @@ FROM gcr.io/distroless/cc:nonroot as base
 WORKDIR /
 COPY ./license.html .
 COPY ./dependencies-src.zip .
-COPY ./target/image/quilkin /usr/local/bin
+COPY ./target/image/quilkin .
 
 USER nonroot:nonroot
-ENTRYPOINT ["quilkin"]
+ENTRYPOINT ["/quilkin"]
