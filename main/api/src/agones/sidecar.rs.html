@@ -141,21 +141,6 @@
 <span id="135">135</span>
 <span id="136">136</span>
 <span id="137">137</span>
-<span id="138">138</span>
-<span id="139">139</span>
-<span id="140">140</span>
-<span id="141">141</span>
-<span id="142">142</span>
-<span id="143">143</span>
-<span id="144">144</span>
-<span id="145">145</span>
-<span id="146">146</span>
-<span id="147">147</span>
-<span id="148">148</span>
-<span id="149">149</span>
-<span id="150">150</span>
-<span id="151">151</span>
-<span id="152">152</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -174,14 +159,11 @@
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">game_server</span>, <span class="ident">is_gameserver_ready</span>, <span class="ident">quilkin_container</span>, <span class="ident">Client</span>};
-    <span class="kw">use</span> <span class="ident">k8s_openapi</span>::{
-        <span class="ident">api::core::v1</span>::{<span class="ident">ConfigMap</span>, <span class="ident">ConfigMapVolumeSource</span>, <span class="ident">Volume</span>},
-        <span class="ident">apimachinery::pkg::apis::meta::v1::ObjectMeta</span>,
-    };
+    <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">game_server</span>, <span class="ident">is_gameserver_ready</span>, <span class="ident">quilkin_config_map</span>, <span class="ident">quilkin_container</span>, <span class="ident">Client</span>};
+    <span class="kw">use</span> <span class="ident">k8s_openapi::api::core::v1</span>::{<span class="ident">ConfigMap</span>, <span class="ident">ConfigMapVolumeSource</span>, <span class="ident">Volume</span>};
     <span class="kw">use</span> <span class="ident">kube</span>::{<span class="ident">api::PostParams</span>, <span class="ident">runtime::wait::await_condition</span>, <span class="ident">Api</span>, <span class="ident">ResourceExt</span>};
     <span class="kw">use</span> <span class="ident">quilkin</span>::{<span class="ident">config::watch::agones::crd::GameServer</span>, <span class="ident">test_utils::TestHelper</span>};
-    <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections::BTreeMap</span>, <span class="ident">time::Duration</span>};
+    <span class="kw">use</span> <span class="ident">std::time::Duration</span>;
     <span class="kw">use</span> <span class="ident">tokio::time::timeout</span>;
 
     <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
@@ -190,8 +172,7 @@
     <span class="doccomment">/// as a firewall settings, or an issue with Agones itself.</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">gameserver_no_sidecar</span>() {
         <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">Client::new</span>().<span class="kw">await</span>;
-        <span class="kw">let</span> <span class="ident">gameservers</span>: <span class="ident">Api</span><span class="op">&lt;</span><span class="ident">GameServer</span><span class="op">&gt;</span> <span class="op">=</span>
-            <span class="ident">Api::namespaced</span>(<span class="ident">client</span>.<span class="ident">kubernetes</span>.<span class="ident">clone</span>(), <span class="ident">client</span>.<span class="ident">namespace</span>.<span class="ident">as_str</span>());
+        <span class="kw">let</span> <span class="ident">gameservers</span>: <span class="ident">Api</span><span class="op">&lt;</span><span class="ident">GameServer</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">client</span>.<span class="ident">namespaced_api</span>();
 
         <span class="kw">let</span> <span class="ident">gs</span> <span class="op">=</span> <span class="ident">game_server</span>();
 
@@ -225,10 +206,8 @@
     <span class="doccomment">/// Testing Quilkin running as a sidecar next to a GameServer</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">gameserver_sidecar</span>() {
         <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">Client::new</span>().<span class="kw">await</span>;
-        <span class="kw">let</span> <span class="ident">config_maps</span>: <span class="ident">Api</span><span class="op">&lt;</span><span class="ident">ConfigMap</span><span class="op">&gt;</span> <span class="op">=</span>
-            <span class="ident">Api::namespaced</span>(<span class="ident">client</span>.<span class="ident">kubernetes</span>.<span class="ident">clone</span>(), <span class="ident">client</span>.<span class="ident">namespace</span>.<span class="ident">as_str</span>());
-        <span class="kw">let</span> <span class="ident">gameservers</span>: <span class="ident">Api</span><span class="op">&lt;</span><span class="ident">GameServer</span><span class="op">&gt;</span> <span class="op">=</span>
-            <span class="ident">Api::namespaced</span>(<span class="ident">client</span>.<span class="ident">kubernetes</span>.<span class="ident">clone</span>(), <span class="ident">client</span>.<span class="ident">namespace</span>.<span class="ident">as_str</span>());
+        <span class="kw">let</span> <span class="ident">config_maps</span>: <span class="ident">Api</span><span class="op">&lt;</span><span class="ident">ConfigMap</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">client</span>.<span class="ident">namespaced_api</span>();
+        <span class="kw">let</span> <span class="ident">gameservers</span>: <span class="ident">Api</span><span class="op">&lt;</span><span class="ident">GameServer</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">client</span>.<span class="ident">namespaced_api</span>();
         <span class="kw">let</span> <span class="ident">pp</span> <span class="op">=</span> <span class="ident">PostParams::default</span>();
 
         <span class="comment">// We&#39;ll append &quot;sidecar&quot;, to prove the packet goes through the sidecar.</span>
@@ -247,19 +226,10 @@ clusters:
           - address: 127.0.0.1:7654
 &quot;#</span>;
 
-        <span class="kw">let</span> <span class="ident">config_map</span> <span class="op">=</span> <span class="ident">ConfigMap</span> {
-            <span class="ident">metadata</span>: <span class="ident">ObjectMeta</span> {
-                <span class="ident">generate_name</span>: <span class="prelude-val">Some</span>(<span class="string">&quot;quilkin-config-&quot;</span>.<span class="ident">into</span>()),
-                ..<span class="ident">Default::default</span>()
-            },
-            <span class="ident">data</span>: <span class="prelude-val">Some</span>(<span class="ident">BTreeMap::from</span>([(
-                <span class="string">&quot;quilkin.yaml&quot;</span>.<span class="ident">to_string</span>(),
-                <span class="ident">config</span>.<span class="ident">to_string</span>(),
-            )])),
-            ..<span class="ident">Default::default</span>()
-        };
-
-        <span class="kw">let</span> <span class="ident">config_map</span> <span class="op">=</span> <span class="ident">config_maps</span>.<span class="ident">create</span>(<span class="kw-2">&amp;</span><span class="ident">pp</span>, <span class="kw-2">&amp;</span><span class="ident">config_map</span>).<span class="kw">await</span>.<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="ident">config_map</span> <span class="op">=</span> <span class="ident">config_maps</span>
+            .<span class="ident">create</span>(<span class="kw-2">&amp;</span><span class="ident">pp</span>, <span class="kw-2">&amp;</span><span class="ident">quilkin_config_map</span>(<span class="ident">config</span>))
+            .<span class="kw">await</span>
+            .<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">gs</span> <span class="op">=</span> <span class="ident">game_server</span>();
 
         <span class="comment">// reset ports to point at the Quilkin sidecar</span>
@@ -268,7 +238,7 @@ clusters:
 
         <span class="comment">// set the gameserver container to the simple-game-server container.</span>
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">template</span> <span class="op">=</span> <span class="ident">gs</span>.<span class="ident">spec</span>.<span class="ident">template</span>.<span class="ident">spec</span>.<span class="ident">as_mut</span>().<span class="ident">unwrap</span>();
-        <span class="ident">gs</span>.<span class="ident">spec</span>.<span class="ident">container</span> <span class="op">=</span> <span class="ident">template</span>.<span class="ident">containers</span>[<span class="number">0</span>].<span class="ident">name</span>.<span class="ident">clone</span>();
+        <span class="ident">gs</span>.<span class="ident">spec</span>.<span class="ident">container</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">template</span>.<span class="ident">containers</span>[<span class="number">0</span>].<span class="ident">name</span>.<span class="ident">clone</span>());
 
         <span class="kw">let</span> <span class="ident">mount_name</span> <span class="op">=</span> <span class="string">&quot;config&quot;</span>.<span class="ident">to_string</span>();
         <span class="ident">template</span>

@@ -503,6 +503,102 @@
 <span id="497">497</span>
 <span id="498">498</span>
 <span id="499">499</span>
+<span id="500">500</span>
+<span id="501">501</span>
+<span id="502">502</span>
+<span id="503">503</span>
+<span id="504">504</span>
+<span id="505">505</span>
+<span id="506">506</span>
+<span id="507">507</span>
+<span id="508">508</span>
+<span id="509">509</span>
+<span id="510">510</span>
+<span id="511">511</span>
+<span id="512">512</span>
+<span id="513">513</span>
+<span id="514">514</span>
+<span id="515">515</span>
+<span id="516">516</span>
+<span id="517">517</span>
+<span id="518">518</span>
+<span id="519">519</span>
+<span id="520">520</span>
+<span id="521">521</span>
+<span id="522">522</span>
+<span id="523">523</span>
+<span id="524">524</span>
+<span id="525">525</span>
+<span id="526">526</span>
+<span id="527">527</span>
+<span id="528">528</span>
+<span id="529">529</span>
+<span id="530">530</span>
+<span id="531">531</span>
+<span id="532">532</span>
+<span id="533">533</span>
+<span id="534">534</span>
+<span id="535">535</span>
+<span id="536">536</span>
+<span id="537">537</span>
+<span id="538">538</span>
+<span id="539">539</span>
+<span id="540">540</span>
+<span id="541">541</span>
+<span id="542">542</span>
+<span id="543">543</span>
+<span id="544">544</span>
+<span id="545">545</span>
+<span id="546">546</span>
+<span id="547">547</span>
+<span id="548">548</span>
+<span id="549">549</span>
+<span id="550">550</span>
+<span id="551">551</span>
+<span id="552">552</span>
+<span id="553">553</span>
+<span id="554">554</span>
+<span id="555">555</span>
+<span id="556">556</span>
+<span id="557">557</span>
+<span id="558">558</span>
+<span id="559">559</span>
+<span id="560">560</span>
+<span id="561">561</span>
+<span id="562">562</span>
+<span id="563">563</span>
+<span id="564">564</span>
+<span id="565">565</span>
+<span id="566">566</span>
+<span id="567">567</span>
+<span id="568">568</span>
+<span id="569">569</span>
+<span id="570">570</span>
+<span id="571">571</span>
+<span id="572">572</span>
+<span id="573">573</span>
+<span id="574">574</span>
+<span id="575">575</span>
+<span id="576">576</span>
+<span id="577">577</span>
+<span id="578">578</span>
+<span id="579">579</span>
+<span id="580">580</span>
+<span id="581">581</span>
+<span id="582">582</span>
+<span id="583">583</span>
+<span id="584">584</span>
+<span id="585">585</span>
+<span id="586">586</span>
+<span id="587">587</span>
+<span id="588">588</span>
+<span id="589">589</span>
+<span id="590">590</span>
+<span id="591">591</span>
+<span id="592">592</span>
+<span id="593">593</span>
+<span id="594">594</span>
+<span id="595">595</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -524,9 +620,9 @@
         <span class="ident">CustomResourceDefinition</span>, <span class="ident">CustomResourceDefinitionNames</span>, <span class="ident">CustomResourceDefinitionSpec</span>,
         <span class="ident">CustomResourceDefinitionVersion</span>, <span class="ident">CustomResourceValidation</span>,
     },
-    <span class="ident">apimachinery::pkg::apis::meta::v1::ObjectMeta</span>,
+    <span class="ident">apimachinery::pkg</span>::{<span class="ident">apis::meta::v1::ObjectMeta</span>, <span class="ident">util::intstr::IntOrString</span>},
 };
-<span class="kw">use</span> <span class="ident">kube::core::Resource</span>;
+<span class="kw">use</span> <span class="ident">kube</span>::{<span class="ident">core::Resource</span>, <span class="ident">CustomResource</span>};
 <span class="kw">use</span> <span class="ident">schemars::JsonSchema</span>;
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
 
@@ -718,7 +814,8 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GameServerSpec</span> {
     <span class="doccomment">/// Container specifies which Pod container is the game server. Only</span>
     <span class="doccomment">/// required if there is more than one container defined.</span>
-    <span class="kw">pub</span> <span class="ident">container</span>: <span class="ident">String</span>,
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">skip_serializing_if</span> <span class="op">=</span> <span class="string">&quot;Option::is_none&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">container</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Ports are the array of ports that can be exposed via the game server</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
     <span class="kw">pub</span> <span class="ident">ports</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">GameServerPort</span><span class="op">&gt;</span>,
@@ -735,7 +832,7 @@
 <span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">GameServerSpec</span> {
     <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
         <span class="self">Self</span> {
-            <span class="ident">container</span>: <span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>(),
+            <span class="ident">container</span>: <span class="prelude-val">None</span>,
             <span class="ident">ports</span>: <span class="macro">vec!</span>[],
             <span class="ident">health</span>: <span class="ident">Default::default</span>(),
             <span class="ident">scheduling</span>: <span class="ident">SchedulingStrategy::Packed</span>,
@@ -847,10 +944,12 @@
     <span class="kw">pub</span> <span class="ident">port_policy</span>: <span class="ident">PortPolicy</span>,
     <span class="doccomment">/// The name of the container on which to open the port. Defaults to the</span>
     <span class="doccomment">/// game server container.</span>
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">skip_serializing_if</span> <span class="op">=</span> <span class="string">&quot;Option::is_none&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">container</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
     <span class="doccomment">/// The port that is being opened on the specified container&#39;s process</span>
     <span class="kw">pub</span> <span class="ident">container_port</span>: <span class="ident">u16</span>,
     <span class="doccomment">/// The port exposed on the host for clients to connect to</span>
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">skip_serializing_if</span> <span class="op">=</span> <span class="string">&quot;Option::is_none&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">host_port</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Protocol is the network protocol being used. Defaults to UDP. TCP and TCPUDP are other options.</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
@@ -1001,6 +1100,99 @@
     <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
         <span class="ident"><span class="self">Self</span>::Udp</span>
     }
+}
+
+<span class="doccomment">/// FleetSpec is the spec for a Fleet. More info: &lt;https://agones.dev/site/docs/reference/agones_crd_api_reference/#agones.dev/v1.Fleet&gt;</span>
+<span class="doccomment">/// Fleet CRD mostly autogenerated with &lt;https://github.com/kube-rs/kopium&gt;</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">CustomResource</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">JsonSchema</span>, <span class="ident">Default</span>)]</span>
+<span class="attribute">#[<span class="ident">kube</span>(
+    <span class="ident">group</span> <span class="op">=</span> <span class="string">&quot;agones.dev&quot;</span>,
+    <span class="ident">version</span> <span class="op">=</span> <span class="string">&quot;v1&quot;</span>,
+    <span class="ident">kind</span> <span class="op">=</span> <span class="string">&quot;Fleet&quot;</span>,
+    <span class="ident">plural</span> <span class="op">=</span> <span class="string">&quot;fleets&quot;</span>
+)]</span>
+<span class="attribute">#[<span class="ident">kube</span>(<span class="ident">namespaced</span>)]</span>
+<span class="attribute">#[<span class="ident">kube</span>(<span class="ident">status</span> <span class="op">=</span> <span class="string">&quot;FleetStatus&quot;</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">FleetSpec</span> {
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">skip_serializing_if</span> <span class="op">=</span> <span class="string">&quot;Option::is_none&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">replicas</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">i64</span><span class="op">&gt;</span>,
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">skip_serializing_if</span> <span class="op">=</span> <span class="string">&quot;Option::is_none&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">scheduling</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">FleetScheduling</span><span class="op">&gt;</span>,
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">skip_serializing_if</span> <span class="op">=</span> <span class="string">&quot;Option::is_none&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">strategy</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">FleetStrategy</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// GameServer is the data structure for a GameServer resource.</span>
+    <span class="kw">pub</span> <span class="ident">template</span>: <span class="ident">GameServerTemplateSpec</span>,
+}
+
+<span class="doccomment">/// FleetSpec is the spec for a Fleet. More info: &lt;https://agones.dev/site/docs/reference/agones_crd_api_reference/#agones.dev/v1.Fleet&gt;</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">JsonSchema</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">FleetScheduling</span> {
+    <span class="ident">Packed</span>,
+    <span class="ident">Distributed</span>,
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">JsonSchema</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">FleetStrategy</span> {
+    <span class="attribute">#[<span class="ident">serde</span>(
+        <span class="ident">default</span>,
+        <span class="ident">skip_serializing_if</span> <span class="op">=</span> <span class="string">&quot;Option::is_none&quot;</span>,
+        <span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;rollingUpdate&quot;</span>
+    )]</span>
+    <span class="kw">pub</span> <span class="ident">rolling_update</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">FleetStrategyRollingUpdate</span><span class="op">&gt;</span>,
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">skip_serializing_if</span> <span class="op">=</span> <span class="string">&quot;Option::is_none&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">r#type</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">FleetStrategyType</span><span class="op">&gt;</span>,
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">JsonSchema</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">FleetStrategyRollingUpdate</span> {
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">skip_serializing_if</span> <span class="op">=</span> <span class="string">&quot;Option::is_none&quot;</span>, <span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;maxSurge&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">max_surge</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">IntOrString</span><span class="op">&gt;</span>,
+    <span class="attribute">#[<span class="ident">serde</span>(
+        <span class="ident">default</span>,
+        <span class="ident">skip_serializing_if</span> <span class="op">=</span> <span class="string">&quot;Option::is_none&quot;</span>,
+        <span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;maxUnavailable&quot;</span>
+    )]</span>
+    <span class="kw">pub</span> <span class="ident">max_unavailable</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">IntOrString</span><span class="op">&gt;</span>,
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">JsonSchema</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">FleetStrategyType</span> {
+    <span class="ident">Recreate</span>,
+    <span class="ident">RollingUpdate</span>,
+}
+
+<span class="doccomment">/// GameServer is the data structure for a GameServer resource.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">JsonSchema</span>, <span class="ident">Default</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GameServerTemplateSpec</span> {
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">skip_serializing_if</span> <span class="op">=</span> <span class="string">&quot;Option::is_none&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">metadata</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ObjectMeta</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// GameServerSpec is the spec for a GameServer resource. More info: &lt;https://agones.dev/site/docs/reference/agones_crd_api_reference/#agones.dev/v1.GameServer&gt;</span>
+    <span class="kw">pub</span> <span class="ident">spec</span>: <span class="ident">GameServerSpec</span>,
+}
+
+<span class="doccomment">/// FleetStatus is the status of a Fleet. More info: &lt;https://agones.dev/site/docs/reference/agones_crd_api_reference/#agones.dev/v1.Fleet&gt;</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">JsonSchema</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">FleetStatus</span> {
+    <span class="attribute">#[<span class="ident">serde</span>(
+        <span class="ident">default</span>,
+        <span class="ident">skip_serializing_if</span> <span class="op">=</span> <span class="string">&quot;Option::is_none&quot;</span>,
+        <span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;allocatedReplicas&quot;</span>
+    )]</span>
+    <span class="kw">pub</span> <span class="ident">allocated_replicas</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">i64</span><span class="op">&gt;</span>,
+    <span class="attribute">#[<span class="ident">serde</span>(
+        <span class="ident">default</span>,
+        <span class="ident">skip_serializing_if</span> <span class="op">=</span> <span class="string">&quot;Option::is_none&quot;</span>,
+        <span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;readyReplicas&quot;</span>
+    )]</span>
+    <span class="kw">pub</span> <span class="ident">ready_replicas</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">i64</span><span class="op">&gt;</span>,
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">skip_serializing_if</span> <span class="op">=</span> <span class="string">&quot;Option::is_none&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">replicas</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">i64</span><span class="op">&gt;</span>,
+    <span class="attribute">#[<span class="ident">serde</span>(
+        <span class="ident">default</span>,
+        <span class="ident">skip_serializing_if</span> <span class="op">=</span> <span class="string">&quot;Option::is_none&quot;</span>,
+        <span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;reservedReplicas&quot;</span>
+    )]</span>
+    <span class="kw">pub</span> <span class="ident">reserved_replicas</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">i64</span><span class="op">&gt;</span>,
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0 (4b91a6ea7 2022-08-08)" ></div>

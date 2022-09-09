@@ -102,7 +102,7 @@
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">create_quilkin_pod</span>() {
         <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">Client::new</span>().<span class="kw">await</span>;
 
-        <span class="kw">let</span> <span class="ident">pods</span>: <span class="ident">Api</span><span class="op">&lt;</span><span class="ident">Pod</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Api::namespaced</span>(<span class="ident">client</span>.<span class="ident">kubernetes</span>.<span class="ident">clone</span>(), <span class="ident">client</span>.<span class="ident">namespace</span>.<span class="ident">as_str</span>());
+        <span class="kw">let</span> <span class="ident">pods</span>: <span class="ident">Api</span><span class="op">&lt;</span><span class="ident">Pod</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">client</span>.<span class="ident">namespaced_api</span>();
         <span class="kw">let</span> <span class="ident">pod</span> <span class="op">=</span> <span class="ident">Pod</span> {
             <span class="ident">metadata</span>: <span class="ident">ObjectMeta</span> {
                 <span class="ident">generate_name</span>: <span class="prelude-val">Some</span>(<span class="string">&quot;quilkin-&quot;</span>.<span class="ident">into</span>()),
