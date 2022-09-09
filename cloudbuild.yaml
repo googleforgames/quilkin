@@ -46,16 +46,6 @@ steps:
     args:
       - build
     id: build
-  # Run the built images for 5 seconds to make sure that the entrypoint and default config works out of the box
-  - name: gcr.io/cloud-builders/docker
-    dir: ./build
-    entrypoint: bash
-    args:
-      - '-c'
-      - 'timeout --signal=INT --preserve-status 5s docker run --rm ${_REPOSITORY}quilkin:$(make version) -- help'
-    id: test-quilkin-image
-    waitFor:
-      - build
   - name: us-docker.pkg.dev/$PROJECT_ID/ci/make-docker
     dir: ./build
     args:
