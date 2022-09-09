@@ -52,7 +52,7 @@ steps:
     entrypoint: bash
     args:
       - '-c'
-      - 'timeout --signal=INT --preserve-status 5s docker run --rm ${_REPOSITORY}quilkin:$(make version)'
+      - 'timeout --signal=INT --preserve-status 5s docker run --rm ${_REPOSITORY}quilkin:$(make version) -- --help'
     id: test-quilkin-image
     waitFor:
       - build
