@@ -7,8 +7,11 @@ usage examples.
 > from the dropdown, as the API surface for Quilkin is still under development.
 
 Examples include:
-* Quilkin running as a sidecar while hosted on [Agones](https://agones.dev/).
+* Quilkin running as a sidecar while hosted on [Agones].
+* Quilkin running as an [xDS](./xds.md) [Agones] provider for Quilkin proxies. 
 * [iperf3](https://iperf.fr/) throughput.
 * [Grafana](https://grafana.com/) dashboards.
 
 ...and more!
+
+[Agones]: https://agones.dev/
