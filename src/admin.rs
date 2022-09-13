@@ -14,13 +14,16 @@
  *  limitations under the License.
  */
 
+mod health;
+
 use std::convert::Infallible;
 use std::sync::Arc;
 
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Method, Request, Response, Server as HyperServer, StatusCode};
 
-use crate::{config::Config, proxy::Health};
+use self::health::Health;
+use crate::config::Config;
 
 pub fn server(config: Arc<Config>) -> tokio::task::JoinHandle<Result<(), hyper::Error>> {
     let address = config.admin.load().address;
@@ -47,7 +50,8 @@ pub fn server(config: Arc<Config>) -> tokio::task::JoinHandle<Result<(), hyper::
 fn handle_request(request: Request<Body>, config: Arc<Config>, health: Health) -> Response<Body> {
     match (request.method(), request.uri().path()) {
         (&Method::GET, "/metrics") => collect_metrics(),
-        (&Method::GET, "/live") => health.check_healthy(),
+        (&Method::GET, "/live" | "/livez") => health.check_healthy(),
+        (&Method::GET, "/ready" | "/readyz") => check_readiness(&config),
         (&Method::GET, "/config") => match serde_json::to_string(&config) {
             Ok(body) => Response::builder()
                 .status(StatusCode::OK)
@@ -68,6 +72,16 @@ fn handle_request(request: Request<Body>, config: Arc<Config>, health: Health) -
             response
         }
     }
+}
+
+fn check_readiness(config: &Config) -> Response<Body> {
+    if config.clusters.load().endpoints().count() > 0 {
+        return Response::new("ok".into());
+    }
+
+    let mut response = Response::new(Body::empty());
+    *response.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
+    response
 }
 
 fn collect_metrics() -> Response<Body> {

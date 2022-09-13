@@ -14,10 +14,8 @@
  * limitations under the License.
  */
 
-mod health;
 mod sessions;
 
-pub(crate) use health::Health;
 pub use sessions::SessionKey;
 
 use std::{
