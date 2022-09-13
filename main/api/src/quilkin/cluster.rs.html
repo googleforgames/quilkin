@@ -293,6 +293,109 @@
 <span id="287">287</span>
 <span id="288">288</span>
 <span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
+<span id="343">343</span>
+<span id="344">344</span>
+<span id="345">345</span>
+<span id="346">346</span>
+<span id="347">347</span>
+<span id="348">348</span>
+<span id="349">349</span>
+<span id="350">350</span>
+<span id="351">351</span>
+<span id="352">352</span>
+<span id="353">353</span>
+<span id="354">354</span>
+<span id="355">355</span>
+<span id="356">356</span>
+<span id="357">357</span>
+<span id="358">358</span>
+<span id="359">359</span>
+<span id="360">360</span>
+<span id="361">361</span>
+<span id="362">362</span>
+<span id="363">363</span>
+<span id="364">364</span>
+<span id="365">365</span>
+<span id="366">366</span>
+<span id="367">367</span>
+<span id="368">368</span>
+<span id="369">369</span>
+<span id="370">370</span>
+<span id="371">371</span>
+<span id="372">372</span>
+<span id="373">373</span>
+<span id="374">374</span>
+<span id="375">375</span>
+<span id="376">376</span>
+<span id="377">377</span>
+<span id="378">378</span>
+<span id="379">379</span>
+<span id="380">380</span>
+<span id="381">381</span>
+<span id="382">382</span>
+<span id="383">383</span>
+<span id="384">384</span>
+<span id="385">385</span>
+<span id="386">386</span>
+<span id="387">387</span>
+<span id="388">388</span>
+<span id="389">389</span>
+<span id="390">390</span>
+<span id="391">391</span>
+<span id="392">392</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -313,7 +416,7 @@
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
 <span class="kw">use</span> <span class="ident">std::collections::HashMap</span>;
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">EndpointAddress</span>, <span class="ident">LocalityEndpoints</span>};
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">EndpointAddress</span>, <span class="ident">Locality</span>, <span class="ident">LocalityEndpoints</span>};
 
 <span class="kw">const</span> <span class="ident">DEFAULT_CLUSTER_NAME</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;default&quot;</span>;
 
@@ -321,22 +424,26 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Cluster</span> {
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">skip</span>, <span class="ident">default</span> <span class="op">=</span> <span class="string">&quot;default_cluster_name&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">name</span>: <span class="ident">String</span>,
-    <span class="kw">pub</span> <span class="ident">localities</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">LocalityEndpoints</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">localities</span>: <span class="ident">LocalitySet</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">Cluster</span> {
     <span class="doccomment">/// Creates a new `Cluster` called `name` containing `localities`.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">name</span>: <span class="ident">String</span>, <span class="ident">localities</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">LocalityEndpoints</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> { <span class="ident">name</span>, <span class="ident">localities</span> }
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">name</span>: <span class="ident">String</span>, <span class="ident">localities</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">LocalitySet</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
+        <span class="self">Self</span> {
+            <span class="ident">name</span>,
+            <span class="ident">localities</span>: <span class="ident">localities</span>.<span class="ident">into</span>(),
+        }
     }
 
     <span class="doccomment">/// Creates a new `Cluster` called `&quot;default&quot;` containing `endpoints`.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_default</span>(<span class="ident">endpoints</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">LocalityEndpoints</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_default</span>(<span class="ident">endpoints</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">LocalitySet</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
         <span class="ident"><span class="self">Self</span>::new</span>(<span class="string">&quot;default&quot;</span>.<span class="ident">into</span>(), <span class="ident">endpoints</span>)
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">push</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">endpoints</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">LocalityEndpoints</span><span class="op">&gt;</span>) {
-        <span class="self">self</span>.<span class="ident">localities</span>.<span class="ident">push</span>(<span class="ident">endpoints</span>.<span class="ident">into</span>());
+    <span class="doccomment">/// Adds a new set of endpoints to the cluster.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">insert</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">endpoints</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">LocalityEndpoints</span><span class="op">&gt;</span>) {
+        <span class="self">self</span>.<span class="ident">localities</span>.<span class="ident">insert</span>(<span class="ident">endpoints</span>.<span class="ident">into</span>());
     }
 
     <span class="doccomment">/// Provides a flat iterator over the list of endpoints.</span>
@@ -580,6 +687,105 @@
             <span class="ident">name</span>: <span class="ident">cla</span>.<span class="ident">cluster_name</span>,
             <span class="ident">localities</span>,
         })
+    }
+}
+
+<span class="doccomment">/// Set around [`LocalityEndpoints`] to ensure that all unique localities are</span>
+<span class="doccomment">/// different entries. Any duplicate localities provided are merged.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Default</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">LocalitySet</span>(<span class="ident">HashMap</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Locality</span><span class="op">&gt;</span>, <span class="ident">LocalityEndpoints</span><span class="op">&gt;</span>);
+
+<span class="kw">impl</span> <span class="ident">LocalitySet</span> {
+    <span class="doccomment">/// Creates a new set from the provided localities.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">set</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">LocalityEndpoints</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
+        <span class="ident"><span class="self">Self</span>::from_iter</span>(<span class="ident">set</span>)
+    }
+
+    <span class="doccomment">/// Inserts a new locality of endpoints.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">insert</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="kw-2">mut</span> <span class="ident">locality</span>: <span class="ident">LocalityEndpoints</span>) {
+        <span class="self">self</span>.<span class="number">0</span>
+            .<span class="ident">entry</span>(<span class="ident">locality</span>.<span class="ident">locality</span>)
+            .<span class="ident">or_default</span>()
+            .<span class="ident">endpoints</span>
+            .<span class="ident">append</span>(<span class="kw-2">&amp;mut</span> <span class="ident">locality</span>.<span class="ident">endpoints</span>);
+    }
+
+    <span class="doccomment">/// Removes all localities.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">clear</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) {
+        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">clear</span>();
+    }
+
+    <span class="doccomment">/// Returns an iterator over the set of localities.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">iter</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">LocalityEndpoints</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;_</span> {
+        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">values</span>()
+    }
+
+    <span class="doccomment">/// Returns a mutable iterator over the set of localities.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">iter_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;mut</span> <span class="ident">LocalityEndpoints</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;_</span> {
+        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">values_mut</span>()
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">Serialize</span> <span class="kw">for</span> <span class="ident">LocalitySet</span> {
+    <span class="kw">fn</span> <span class="ident">serialize</span><span class="op">&lt;</span><span class="ident">S</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">serializer</span>: <span class="ident">S</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">S::Ok</span>, <span class="ident">S::Error</span><span class="op">&gt;</span>
+    <span class="kw">where</span>
+        <span class="ident">S</span>: <span class="ident">serde::Serializer</span>,
+    {
+        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">values</span>().<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>().<span class="ident">serialize</span>(<span class="ident">serializer</span>)
+    }
+}
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span> <span class="ident">Deserialize</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">LocalitySet</span> {
+    <span class="kw">fn</span> <span class="ident">deserialize</span><span class="op">&lt;</span><span class="ident">D</span><span class="op">&gt;</span>(<span class="ident">deserializer</span>: <span class="ident">D</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">D::Error</span><span class="op">&gt;</span>
+    <span class="kw">where</span>
+        <span class="ident">D</span>: <span class="ident">serde::Deserializer</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span>,
+    {
+        <span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">LocalityEndpoints</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::deserialize</span>(<span class="ident">deserializer</span>).<span class="ident">map</span>(<span class="ident"><span class="self">Self</span>::new</span>)
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">schemars::JsonSchema</span> <span class="kw">for</span> <span class="ident">LocalitySet</span> {
+    <span class="kw">fn</span> <span class="ident">schema_name</span>() -&gt; <span class="ident">String</span> {
+        <span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">LocalityEndpoints</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::schema_name</span>()
+    }
+    <span class="kw">fn</span> <span class="ident">json_schema</span>(<span class="ident">gen</span>: <span class="kw-2">&amp;mut</span> <span class="ident">schemars::gen::SchemaGenerator</span>) -&gt; <span class="ident">schemars::schema::Schema</span> {
+        <span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">LocalityEndpoints</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::json_schema</span>(<span class="ident">gen</span>)
+    }
+
+    <span class="kw">fn</span> <span class="ident">is_referenceable</span>() -&gt; <span class="ident">bool</span> {
+        <span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">LocalityEndpoints</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::is_referenceable</span>()
+    }
+}
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">LocalitySet</span>
+<span class="kw">where</span>
+    <span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">LocalityEndpoints</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+{
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">value</span>: <span class="ident">T</span>) -&gt; <span class="self">Self</span> {
+        <span class="ident"><span class="self">Self</span>::new</span>(<span class="ident">value</span>.<span class="ident">into</span>())
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">FromIterator</span><span class="op">&lt;</span><span class="ident">LocalityEndpoints</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">LocalitySet</span> {
+    <span class="kw">fn</span> <span class="ident">from_iter</span><span class="op">&lt;</span><span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">LocalityEndpoints</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="ident">iter</span>: <span class="ident">I</span>) -&gt; <span class="self">Self</span> {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">map</span> <span class="op">=</span> <span class="self">Self</span>(<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>());
+
+        <span class="kw">for</span> <span class="ident">locality</span> <span class="kw">in</span> <span class="ident">iter</span> {
+            <span class="ident">map</span>.<span class="ident">insert</span>(<span class="ident">locality</span>);
+        }
+
+        <span class="ident">map</span>
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">IntoIterator</span> <span class="kw">for</span> <span class="ident">LocalitySet</span> {
+    <span class="kw">type</span> <span class="ident">Item</span> <span class="op">=</span> <span class="ident">LocalityEndpoints</span>;
+    <span class="kw">type</span> <span class="ident">IntoIter</span> <span class="op">=</span> <span class="ident">std::vec::IntoIter</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Item</span><span class="op">&gt;</span>;
+
+    <span class="kw">fn</span> <span class="ident">into_iter</span>(<span class="self">self</span>) -&gt; <span class="ident"><span class="self">Self</span>::IntoIter</span> {
+        <span class="comment">// Have to convert to vec to avoid `Values`&#39;s lifetime parameter.</span>
+        <span class="comment">// Remove once GAT&#39;s are stable.</span>
+        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">into_values</span>().<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>().<span class="ident">into_iter</span>()
     }
 }
 </code></pre></div>
