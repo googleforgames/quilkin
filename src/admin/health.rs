@@ -57,9 +57,9 @@ impl Health {
 
 #[cfg(test)]
 mod tests {
-    use crate::proxy::health::Health;
+    use super::*;
+
     use hyper::StatusCode;
-    use std::panic;
 
     #[test]
     fn panic_hook() {
@@ -68,7 +68,7 @@ mod tests {
         let response = health.check_healthy();
         assert_eq!(response.status(), StatusCode::OK);
 
-        let _ = panic::catch_unwind(|| {
+        let _ = std::panic::catch_unwind(|| {
             panic!("oh no!");
         });
 
