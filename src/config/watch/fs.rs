@@ -75,7 +75,7 @@ mod tests {
         source.clusters.modify(|clusters| {
             clusters
                 .default_cluster_mut()
-                .push(crate::endpoint::Endpoint::with_metadata(
+                .insert(crate::endpoint::Endpoint::with_metadata(
                     (std::net::Ipv4Addr::LOCALHOST, 4321).into(),
                     crate::endpoint::Metadata {
                         tokens: <_>::from([Vec::from(*b"1x7ijy6")]),

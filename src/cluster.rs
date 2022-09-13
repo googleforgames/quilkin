@@ -18,7 +18,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::endpoint::{Endpoint, EndpointAddress, LocalityEndpoints};
+use crate::endpoint::{Endpoint, EndpointAddress, Locality, LocalityEndpoints};
 
 const DEFAULT_CLUSTER_NAME: &str = "default";
 
@@ -26,22 +26,26 @@ const DEFAULT_CLUSTER_NAME: &str = "default";
 pub struct Cluster {
     #[serde(skip, default = "default_cluster_name")]
     pub name: String,
-    pub localities: Vec<LocalityEndpoints>,
+    pub localities: LocalitySet,
 }
 
 impl Cluster {
     /// Creates a new `Cluster` called `name` containing `localities`.
-    pub fn new(name: String, localities: Vec<LocalityEndpoints>) -> Self {
-        Self { name, localities }
+    pub fn new(name: String, localities: impl Into<LocalitySet>) -> Self {
+        Self {
+            name,
+            localities: localities.into(),
+        }
     }
 
     /// Creates a new `Cluster` called `"default"` containing `endpoints`.
-    pub fn new_default(endpoints: Vec<LocalityEndpoints>) -> Self {
+    pub fn new_default(endpoints: impl Into<LocalitySet>) -> Self {
         Self::new("default".into(), endpoints)
     }
 
-    pub fn push(&mut self, endpoints: impl Into<LocalityEndpoints>) {
-        self.localities.push(endpoints.into());
+    /// Adds a new set of endpoints to the cluster.
+    pub fn insert(&mut self, endpoints: impl Into<LocalityEndpoints>) {
+        self.localities.insert(endpoints.into());
     }
 
     /// Provides a flat iterator over the list of endpoints.
@@ -285,5 +289,104 @@ impl TryFrom<crate::xds::config::endpoint::v3::ClusterLoadAssignment> for Cluste
             name: cla.cluster_name,
             localities,
         })
+    }
+}
+
+/// Set around [`LocalityEndpoints`] to ensure that all unique localities are
+/// different entries. Any duplicate localities provided are merged.
+#[derive(Clone, Default, Debug, Eq, PartialEq)]
+pub struct LocalitySet(HashMap<Option<Locality>, LocalityEndpoints>);
+
+impl LocalitySet {
+    /// Creates a new set from the provided localities.
+    pub fn new(set: Vec<LocalityEndpoints>) -> Self {
+        Self::from_iter(set)
+    }
+
+    /// Inserts a new locality of endpoints.
+    pub fn insert(&mut self, mut locality: LocalityEndpoints) {
+        self.0
+            .entry(locality.locality)
+            .or_default()
+            .endpoints
+            .append(&mut locality.endpoints);
+    }
+
+    /// Removes all localities.
+    pub fn clear(&mut self) {
+        self.0.clear();
+    }
+
+    /// Returns an iterator over the set of localities.
+    pub fn iter(&self) -> impl Iterator<Item = &LocalityEndpoints> + '_ {
+        self.0.values()
+    }
+
+    /// Returns a mutable iterator over the set of localities.
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut LocalityEndpoints> + '_ {
+        self.0.values_mut()
+    }
+}
+
+impl Serialize for LocalitySet {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.0.values().collect::<Vec<_>>().serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for LocalitySet {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        <Vec<LocalityEndpoints>>::deserialize(deserializer).map(Self::new)
+    }
+}
+
+impl schemars::JsonSchema for LocalitySet {
+    fn schema_name() -> String {
+        <Vec<LocalityEndpoints>>::schema_name()
+    }
+    fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+        <Vec<LocalityEndpoints>>::json_schema(gen)
+    }
+
+    fn is_referenceable() -> bool {
+        <Vec<LocalityEndpoints>>::is_referenceable()
+    }
+}
+
+impl<T> From<T> for LocalitySet
+where
+    T: Into<Vec<LocalityEndpoints>>,
+{
+    fn from(value: T) -> Self {
+        Self::new(value.into())
+    }
+}
+
+impl FromIterator<LocalityEndpoints> for LocalitySet {
+    fn from_iter<I: IntoIterator<Item = LocalityEndpoints>>(iter: I) -> Self {
+        let mut map = Self(<_>::default());
+
+        for locality in iter {
+            map.insert(locality);
+        }
+
+        map
+    }
+}
+
+impl IntoIterator for LocalitySet {
+    type Item = LocalityEndpoints;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        // Have to convert to vec to avoid `Values`'s lifetime parameter.
+        // Remove once GAT's are stable.
+        self.0.into_values().collect::<Vec<_>>().into_iter()
     }
 }

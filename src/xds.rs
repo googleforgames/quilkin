@@ -316,7 +316,7 @@ mod tests {
             config.clusters.modify(|clusters| {
                 let cluster = clusters.default_cluster_mut();
                 cluster.localities.clear();
-                cluster.push(Endpoint::new(local_addr.clone()))
+                cluster.insert(Endpoint::new(local_addr.clone()))
             });
 
             let filters = crate::filters::FilterChain::try_from(vec![

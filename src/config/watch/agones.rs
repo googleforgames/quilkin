@@ -134,7 +134,7 @@ impl Watcher {
                 let endpoint = Endpoint::try_from(server)?;
                 tracing::trace!(?endpoint, "Adding endpoint");
                 self.config.clusters.modify(|clusters| {
-                    clusters.default_cluster_mut().push(endpoint.clone());
+                    clusters.default_cluster_mut().insert(endpoint.clone());
                 });
             }
 
@@ -158,7 +158,7 @@ impl Watcher {
                 let endpoint = Endpoint::try_from(server)?;
                 tracing::trace!(?endpoint, "Deleting endpoint");
                 self.config.clusters.modify(|clusters| {
-                    for locality in &mut clusters.default_cluster_mut().localities {
+                    for locality in clusters.default_cluster_mut().localities.iter_mut() {
                         locality.remove(&endpoint);
                     }
                 });
