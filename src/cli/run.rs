@@ -27,12 +27,7 @@ pub struct Run {
     #[clap(short, long, env = "QUILKIN_PORT")]
     pub port: Option<u16>,
     /// One or more socket addresses to forward packets to.
-    #[clap(
-        short,
-        long,
-        env = "QUILKIN_DEST",
-        required(true),
-    )]
+    #[clap(short, long, env = "QUILKIN_DEST", required(true))]
     pub to: Vec<SocketAddr>,
     /// One or more `quilkin manage` endpoints to listen to for config changes
     #[clap(
@@ -40,7 +35,7 @@ pub struct Run {
         long,
         env = "QUILKIN_MANAGEMENT_SERVER",
         required(true),
-        conflicts_with("to"),
+        conflicts_with("to")
     )]
     pub management_server: Vec<String>,
 }

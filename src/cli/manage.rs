@@ -30,18 +30,10 @@ pub enum Providers {
     /// and for a `ConfigMap` that specifies the filter configuration.
     Agones {
         /// The namespace under which the configmap is stored.
-        #[clap(
-            short,
-            long,
-            default_value = "default",
-        )]
+        #[clap(short, long, default_value = "default")]
         config_namespace: String,
         /// The namespace under which the game servers run.
-        #[clap(
-            short,
-            long,
-            default_value = "default",
-        )]
+        #[clap(short, long, default_value = "default")]
         gameservers_namespace: String,
     },
 

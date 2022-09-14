@@ -30,7 +30,7 @@ use crate::Config;
 pub use self::{
     generate_config_schema::GenerateConfigSchema,
     manage::{Manage, Providers},
-    run::Run
+    run::Run,
 };
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -41,18 +41,13 @@ const ETC_CONFIG_PATH: &str = "/etc/quilkin/quilkin.yaml";
 #[non_exhaustive]
 pub struct Cli {
     /// The path to the configuration file for the Quilkin instance.
-    #[clap(
-        short,
-        long,
-        env = "QUILKIN_CONFIG",
-        default_value = "quilkin.yaml",
-    )]
+    #[clap(short, long, env = "QUILKIN_CONFIG", default_value = "quilkin.yaml")]
     pub config: PathBuf,
     /// The port to bind for the admin server
-    #[clap(long, env="QUILKIN_ADMIN_ADDRESS")]
+    #[clap(long, env = "QUILKIN_ADMIN_ADDRESS")]
     pub admin_address: Option<std::net::SocketAddr>,
     /// Whether to spawn the admin server or not.
-    #[clap(long, env="QUILKIN_NO_ADMIN")]
+    #[clap(long, env = "QUILKIN_NO_ADMIN")]
     pub no_admin: bool,
     /// Whether Quilkin will report any results to stdout/stderr.
     #[clap(short, long, env)]

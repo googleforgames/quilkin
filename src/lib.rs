@@ -18,9 +18,9 @@
 
 mod admin;
 mod cluster;
-mod proxy;
 pub(crate) mod metrics;
 pub(crate) mod prost;
+mod proxy;
 pub(crate) mod ttl_map;
 pub(crate) mod utils;
 
