@@ -27,39 +27,46 @@ use tokio::{signal, sync::watch};
 
 use crate::Config;
 
+pub use self::{
+    generate_config_schema::GenerateConfigSchema,
+    manage::{Manage, Providers},
+    run::Run
+};
+
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const ETC_CONFIG_PATH: &str = "/etc/quilkin/quilkin.yaml";
 
+/// The Command-Line Interface for Quilkin.
 #[derive(clap::Parser)]
+#[non_exhaustive]
 pub struct Cli {
+    /// The path to the configuration file for the Quilkin instance.
     #[clap(
         short,
         long,
         env = "QUILKIN_CONFIG",
         default_value = "quilkin.yaml",
-        help = "The YAML configuration file."
     )]
-    config: PathBuf,
-    #[clap(long, env, help = "The port to bind for the admin server")]
-    admin_address: Option<std::net::SocketAddr>,
-    #[clap(long, env, help = "Whether to spawn the admin server")]
-    no_admin: bool,
-    #[clap(
-        short,
-        long,
-        env,
-        help = "Whether Quilkin will report any results to stdout/stderr."
-    )]
-    quiet: bool,
+    pub config: PathBuf,
+    /// The port to bind for the admin server
+    #[clap(long, env="QUILKIN_ADMIN_ADDRESS")]
+    pub admin_address: Option<std::net::SocketAddr>,
+    /// Whether to spawn the admin server or not.
+    #[clap(long, env="QUILKIN_NO_ADMIN")]
+    pub no_admin: bool,
+    /// Whether Quilkin will report any results to stdout/stderr.
+    #[clap(short, long, env)]
+    pub quiet: bool,
     #[clap(subcommand)]
-    command: Commands,
+    pub command: Commands,
 }
 
+/// The various Quilkin commands.
 #[derive(clap::Subcommand)]
-enum Commands {
-    Run(run::Run),
-    GenerateConfigSchema(generate_config_schema::GenerateConfigSchema),
-    Manage(manage::Manage),
+pub enum Commands {
+    Run(Run),
+    GenerateConfigSchema(GenerateConfigSchema),
+    Manage(Manage),
 }
 
 impl Cli {

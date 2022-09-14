@@ -21,31 +21,19 @@ This routes all UDP packets that `ncat` receives to the local `cat` process, whi
 
 ## 2. Start Quilkin
 
-Next, let's configure Quilkin, with a static configuration that points at the udp echo service we just started.
-
-Open a new terminal and copy the following to a file named `proxy.yaml`:
-
-```yaml
-version: v1alpha1
-clusters:
-    default:
-        - endpoints:
-            - address: 127.0.0.1:8000
-```
-
-This configuration will start Quilkin on the default port of 7000, and it will redirect all incoming UDP traffic to
-a single endpoint of 127.0.0.1, port 8000.
-
-Let's start Quilkin with the above configuration:
+Next let's configure Quilkin to with a static configuration that points at the
+UDP echo service we just started.
 
 ```shell
-quilkin --config proxy.yaml run
+quilkin run --to localhost:8000
 ```
+
+This configuration will start Quilkin on the default port of 7000, and it will
+redirect all incoming UDP traffic to a single endpoint of 127.0.0.1, port 8000.
 
 You should see an output like the following:
 
 ```shell
-$ quilkin --config proxy.yaml run
 {"msg":"Starting Quilkin","level":"INFO","ts":"2021-04-25T19:27:22.535174615-07:00","source":"run","version":"0.1.0-dev"}
 {"msg":"Starting","level":"INFO","ts":"2021-04-25T19:27:22.535315827-07:00","source":"server::Server","port":7000}
 {"msg":"Starting admin endpoint","level":"INFO","ts":"2021-04-25T19:27:22.535550572-07:00","source":"proxy::Admin","address":"[::]:9091"}

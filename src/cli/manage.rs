@@ -14,32 +14,40 @@
  * limitations under the License.
  */
 
+/// Runs Quilkin as a xDS management server, using `provider` as
+/// a configuration source.
 #[derive(clap::Args)]
 pub struct Manage {
+    /// The configuration source for a management server.
     #[clap(subcommand)]
-    provider: Providers,
+    pub provider: Providers,
 }
 
+/// The available xDS source providers.
 #[derive(clap::Subcommand)]
-enum Providers {
+pub enum Providers {
+    /// Watches Agones' game server CRDs for `Allocated` game server endpoints,
+    /// and for a `ConfigMap` that specifies the filter configuration.
     Agones {
+        /// The namespace under which the configmap is stored.
         #[clap(
             short,
             long,
             default_value = "default",
-            help = "Namespace under which the proxies run."
         )]
         config_namespace: String,
+        /// The namespace under which the game servers run.
         #[clap(
             short,
             long,
             default_value = "default",
-            help = "Namespace under which the game servers run."
         )]
         gameservers_namespace: String,
     },
 
+    /// Watches for changes to the file located at `path`.
     File {
+        /// The path to the source config.
         path: std::path::PathBuf,
     },
 }

@@ -19,32 +19,34 @@ use std::net::SocketAddr;
 #[cfg(doc)]
 use crate::filters::FilterFactory;
 
+/// Run Quilkin as a UDP reverse proxy.
 #[derive(clap::Args)]
+#[non_exhaustive]
 pub struct Run {
-    #[clap(short, long, env = "QUILKIN_PORT", help = "The port to listen on")]
-    port: Option<u16>,
+    /// The port to listen on.
+    #[clap(short, long, env = "QUILKIN_PORT")]
+    pub port: Option<u16>,
+    /// One or more socket addresses to forward packets to.
     #[clap(
         short,
         long,
         env = "QUILKIN_DEST",
         required(true),
-        help = "One or more socket addresses to forward packets to"
     )]
-    to: Vec<SocketAddr>,
+    pub to: Vec<SocketAddr>,
+    /// One or more `quilkin manage` endpoints to listen to for config changes
     #[clap(
         short,
         long,
         env = "QUILKIN_MANAGEMENT_SERVER",
         required(true),
         conflicts_with("to"),
-        help = "One or more `quilkin manage` endpoints to listen to for config changes"
     )]
-    management_server: Vec<String>,
+    pub management_server: Vec<String>,
 }
 
 impl Run {
-    /// Start and run a proxy. Any passed in [`FilterFactory`]s are included
-    /// alongside the default filter factories.
+    /// Start and run a proxy.
     pub async fn run(
         &self,
         config: std::sync::Arc<crate::Config>,
