@@ -26,7 +26,7 @@ ENV RUSTUP_HOME=/usr/local/rustup \
 # Install packages
 RUN set -eux && \
     apt-get update && \
-    apt-get install -y jq wget zip build-essential libssl-dev pkg-config python3-pip bash-completion && \
+    apt-get install -y jq wget zip build-essential libssl-dev pkg-config python3-pip bash-completion g++-mingw-w64-x86-64 && \
     pip3 install live-server && \
     echo "source /etc/bash_completion" >> /root/.bashrc
 
@@ -55,7 +55,7 @@ RUN wget --quiet -O htmltest.tar.gz https://github.com/wjdp/htmltest/releases/do
      tar -xf htmltest.tar.gz && mv ./htmltest /usr/local/bin/ && rm htmltest.tar.gz
 
 # Install Rust
-RUN wget --quiet https://static.rust-lang.org/rustup/dist/aarch64-unknown-linux-gnu/rustup-init && \
+RUN wget --quiet https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init && \
     chmod +x rustup-init && \
     ./rustup-init -y --no-modify-path --default-toolchain $RUST_TOOLCHAIN && \
     rm rustup-init && \

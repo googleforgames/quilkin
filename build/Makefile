@@ -53,7 +53,7 @@ kube_mount_args := -v $(kubeconfig_path):/root/.kube -v $(helm_config):/root/.co
 minikube_args := --network=host -v ~/.minikube:$(HOME)/.minikube
 gcloud_mount_args := -v $(build_path)/.config/gcloud:/root/.config/gcloud
 
-cargo_build_x86_64_linux := build --release --target aarch64-unknown-linux-gnu
+cargo_build_x86_64_linux := build --release --target x86_64-unknown-linux-gnu
 cargo_build_x86_64_apple := build --release --target x86_64-apple-darwin
 cargo_build_x86_64_windows := build --release --target x86_64-pc-windows-gnu
 
