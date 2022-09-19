@@ -34,7 +34,7 @@ pub const WRITE_DIRECTION_LABEL: &str = "write";
 /// Returns the [prometheus::Registry] containing all the metrics
 /// registered in Quilkin.
 pub fn registry() -> &'static Registry {
-    static REGISTRY: Lazy<Registry> = Lazy::new(Registry::default);
+    static REGISTRY: Lazy<Registry> = Lazy::new(|| Registry::new_custom(Some("quilkin".into()), None).unwrap());
 
     &*REGISTRY
 }
@@ -104,7 +104,6 @@ pub(crate) static PACKETS_DROPPED: Lazy<IntCounterVec> = Lazy::new(|| {
 /// Use [filter_opts] instead if the intended target is a filter.
 pub fn opts(name: &str, subsystem: &str, description: &str) -> Opts {
     Opts::new(name, description)
-        .namespace("quilkin")
         .subsystem(subsystem)
 }
 
