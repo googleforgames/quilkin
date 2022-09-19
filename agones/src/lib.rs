@@ -323,7 +323,6 @@ pub fn quilkin_container(client: &Client, volume_mount: Option<String>) -> Conta
     let mut container = Container {
         name: "quilkin".into(),
         image: Some(client.quilkin_image.clone()),
-        args: Some(vec!["run".into(), "-d=127.0.0.1:0".into()]),
         env: Some(vec![EnvVar {
             name: "RUST_LOG".to_string(),
             value: Some("trace".into()),

@@ -97,7 +97,7 @@ clusters:
         let mut template = gs.spec.template.spec.as_mut().unwrap();
         gs.spec.container = Some(template.containers[0].name.clone());
 
-        let mount_name = "quilkin.yaml".to_string();
+        let mount_name = "config".to_string();
         template
             .containers
             .push(quilkin_container(&client, Some(mount_name.clone())));

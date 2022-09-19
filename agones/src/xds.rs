@@ -230,8 +230,9 @@ filters:
             container_port: 7000,
             ..Default::default()
         }]);
-        container.args = Some(
+        container.command = Some(
             [
+                "/quilkin",
                 "manage",
                 "agones",
                 "--config-namespace",
