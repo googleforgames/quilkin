@@ -151,10 +151,6 @@ impl Watcher {
             }
 
             Event::Deleted(server) => {
-                if !server.is_allocated() {
-                    return Ok(());
-                }
-
                 let endpoint = Endpoint::try_from(server)?;
                 tracing::trace!(?endpoint, "Deleting endpoint");
                 self.config.clusters.modify(|clusters| {
