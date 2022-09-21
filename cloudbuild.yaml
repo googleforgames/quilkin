@@ -86,4 +86,7 @@ timeout: 7200s
 substitutions:
   _BUILD_IMAGE_TAG: us-docker.pkg.dev/${PROJECT_ID}/ci/build-image
   _REPOSITORY: us-docker.pkg.dev/${PROJECT_ID}/ci/
+artifacts:
+  images:
+    - ${_REPOSITORY}quilkin
 logsBucket: "gs://quilkin-build-logs"
