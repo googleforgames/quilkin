@@ -107,6 +107,10 @@ func (g *githubNotifier) SendNotification(ctx context.Context, build *cloudbuild
 
 	// if builds fail, exit, as it's our fault, and there is no point in retrying.
 	body := new(bytes.Buffer)
+
+	// hack to allow backticks in multiline strings
+	build.Substitutions["_DELIM"] = "`"
+
 	if build.Status == cloudbuild.Build_SUCCESS {
 		if err := g.successTemplate.Execute(body, build); err != nil {
 			log.Errorf("Error executing success template: %v, in build %s", err, build.Id)
@@ -135,7 +139,7 @@ func (g *githubNotifier) SendNotification(ctx context.Context, build *cloudbuild
 func (g *githubNotifier) clearBotComments(ctx context.Context, pr int) error {
 	comments, _, err := g.client.Issues.ListComments(ctx, owner, repo, pr, &github.IssueListCommentsOptions{})
 	if err != nil {
-		log.Errorf("Error retrieving comment history: %v on PR with id: %s", err, pr)
+		log.Errorf("Error retrieving comment history: %v on PR with id: %d", err, pr)
 		return nil
 	}
 
@@ -154,6 +158,11 @@ const successTemplate = `
 
 _Build Id: {{ .Id }}_
 
+The following development images have been built, and will exist for the next 30 days:
+{{ range .Results.Images }}
+* [{{ .Name }}](https://{{ .Name }})
+{{ end }}
+
 To build this version:
 ` + "```" + `
 git fetch git@github.com:googleforgames/quilkin.git pull/{{ $pr }}/head:pr_{{ $pr }} && git checkout pr_{{ $pr }}
@@ -161,6 +170,10 @@ cargo build
 ` + "```"
 
 const failureTemplate = `
+{{ $sha := .Substitutions.SHORT_SHA }}
+{{ $delim := .Substitutions._DELIM }}
+{{ $repo := .Substitutions._REPOSITORY }}
+
 **Build Failed :sob:**
 
 _Build Id: {{ .Id }}_
@@ -170,5 +183,9 @@ Status: {{ .StatusDetail }}
  - [Cloud Build view]({{.LogUrl}})
  - [Cloud Build log download](https://storage.googleapis.com/quilkin-build-logs/log-{{ .Id }}.txt)
 
-To get permission to view the Cloud Build view, join the [quilkin-discuss](https://groups.google.com/forum/#!forum/quilkin-discuss) Google Group. 
+To get permission to view the Cloud Build view, join the [quilkin-discuss](https://groups.google.com/forum/#!forum/quilkin-discuss) Google Group.
+
+Filter with the Git Commit {{ $delim }}{{ $sha }}{{ $delim }} within [{{ $repo }}/quilkin](https://{{ $repo }}/quilkin) to see if a development image is available from this build, and can be used for debugging purposes.
+
+Development images are retained for at least 30 days.
 `
