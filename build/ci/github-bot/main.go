@@ -159,8 +159,8 @@ const successTemplate = `
 _Build Id: {{ .Id }}_
 
 The following development images have been built, and will exist for the next 30 days:
-{{ range .Artifacts.Images }}
-* [{{ . }}](https://{{ . }})
+{{ range .Results.Images }}
+* [{{ .Name }}](https://{{ .Name }})
 {{ end }}
 
 To build this version:
