@@ -5,44 +5,36 @@ There are two choices for running Quilkin:
 * Binary
 * Container image
 
-For each version there is both a release version, which is optimised for production usage, and a debug version that 
-has debug level logging enabled.
-
 ## Binary
 
 The release binary can be downloaded from the 
 [Github releases page](https://github.com/googleforgames/quilkin/releases).
 
-Quilkin needs to be run with an accompanying [configuration file](./proxy-configuration.md), like so:
-
-`quilkin --config="configuration.yaml" run`
-
-To view debug output, run the same command with the `quilkin-debug` binary.
-
-You can also use the shorthand of `-c` instead of `--config` if you so desire.
-
 ## Container Image
 
-For each release, there are both a release and debug container image built and hosted on Google Cloud 
-[Artifact Registry](https://cloud.google.com/artifact-registry) listed for 
-each [release](https://github.com/googleforgames/quilkin/releases).
+For each [release](https://github.com/googleforgames/quilkin/releases), there is a container image built and
+hosted on Google Cloud [Artifact Registry](https://cloud.google.com/artifact-registry).
 
 The production release can be found under the tag: 
 
-`us-docker.pkg.dev/quilkin/release/quilkin:{version}`
+```
+us-docker.pkg.dev/quilkin/release/quilkin:{version}
+```
 
-Whereas, if you need debugging logging, use the following tag:
+Which can be browsed as [us-docker.pkg.dev/quilkin/release/quilkin](https://us-docker.pkg.dev/quilkin/release/quilkin).
 
-`us-docker.pkg.dev/quilkin/release/quilkin:{version}-debug`
+## Command-Line Interface
 
-Mount your [configuration file](./proxy-configuration.md) at `/etc/quilkin/quilkin.yaml` to configure the Quilkin 
-instance inside the container.
+Quilkin provides a variety of different commands depending on your use-case.
+The primary entrypoint of the process is `run`, which runs Quilkin as a reverse
+UDP proxy.  To see a basic usage of the command-line interface run through the
+[netcat with Quilkin quickstart](./quickstart-netcat.md). For more advanced
+usage, checkout the [`quilkin::Cli`] documentation.
 
-A [default configuration](https://github.com/googleforgames/quilkin/blob/main/image/quilkin.yaml)
-is provided, such the container will start without a new configuration file, but it is configured to point to 
-`127.0.0.1:0` as a no-op configuration.
+## Logging
+By default Quilkin will log `INFO` level events, you can change this by setting
+the `RUST_LOG` environment variable. See [`log` documentation][log-docs] for
+more advanced usage.
 
-What's next:
-
-* Run through the [netcat with Quilkin quickstart](./quickstart-netcat.md)
-* Review our [example integration architectures](./integrations.md)
+[log-docs]: https://docs.rs/env_logger/0.9.0/env_logger/#enabling-logging
+[`quilkin::Cli`]: ../api/quilkin/struct.Cli.html

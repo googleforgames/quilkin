@@ -18,38 +18,50 @@ mod generate_config_schema;
 mod manage;
 mod run;
 
-use std::path::PathBuf;
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
+
+use tokio::{signal, sync::watch};
 
 use crate::Config;
 
-const VERSION: &str = env!("CARGO_PKG_VERSION");
+pub use self::{
+    generate_config_schema::GenerateConfigSchema,
+    manage::{Manage, Providers},
+    run::Run,
+};
 
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+const ETC_CONFIG_PATH: &str = "/etc/quilkin/quilkin.yaml";
+
+/// The Command-Line Interface for Quilkin.
 #[derive(clap::Parser)]
+#[non_exhaustive]
 pub struct Cli {
-    #[clap(
-        short,
-        long,
-        env = "QUILKIN_CONFIG",
-        default_value = "quilkin.yaml",
-        help = "The YAML configuration file."
-    )]
-    config: PathBuf,
-    #[clap(
-        short,
-        long,
-        env,
-        help = "Whether Quilkin will report any results to stdout/stderr."
-    )]
-    quiet: bool,
+    /// The path to the configuration file for the Quilkin instance.
+    #[clap(short, long, env = "QUILKIN_CONFIG", default_value = "quilkin.yaml")]
+    pub config: PathBuf,
+    /// The port to bind for the admin server
+    #[clap(long, env = "QUILKIN_ADMIN_ADDRESS")]
+    pub admin_address: Option<std::net::SocketAddr>,
+    /// Whether to spawn the admin server or not.
+    #[clap(long, env = "QUILKIN_NO_ADMIN")]
+    pub no_admin: bool,
+    /// Whether Quilkin will report any results to stdout/stderr.
+    #[clap(short, long, env)]
+    pub quiet: bool,
     #[clap(subcommand)]
-    command: Commands,
+    pub command: Commands,
 }
 
+/// The various Quilkin commands.
 #[derive(clap::Subcommand)]
-enum Commands {
-    Run(run::Run),
-    GenerateConfigSchema(generate_config_schema::GenerateConfigSchema),
-    Manage(manage::Manage),
+pub enum Commands {
+    Run(Run),
+    GenerateConfigSchema(GenerateConfigSchema),
+    Manage(Manage),
 }
 
 impl Cli {
@@ -78,25 +90,64 @@ impl Cli {
             "Starting Quilkin"
         );
 
+        let config = Arc::new(Self::read_config(self.config)?);
+        if self.no_admin {
+            config.admin.remove();
+        } else if let Some(address) = self.admin_address {
+            config
+                .admin
+                .store(Arc::new(crate::config::Admin { address }));
+        };
+
+        let (shutdown_tx, shutdown_rx) = watch::channel::<()>(());
+
+        #[cfg(target_os = "linux")]
+        let mut sig_term_fut = signal::unix::signal(signal::unix::SignalKind::terminate())?;
+
+        tokio::spawn(async move {
+            #[cfg(target_os = "linux")]
+            let sig_term = sig_term_fut.recv();
+            #[cfg(not(target_os = "linux"))]
+            let sig_term = std::future::pending();
+
+            let signal = tokio::select! {
+                _ = signal::ctrl_c() => "SIGINT",
+                _ = sig_term => "SIGTERM",
+            };
+
+            tracing::info!(%signal, "shutting down from signal");
+            // Don't unwrap in order to ensure that we execute
+            // any subsequent shutdown tasks.
+            shutdown_tx.send(()).ok();
+        });
+
         match &self.command {
-            Commands::Run(runner) => runner.run(&self).await,
-            Commands::Manage(manager) => manager.manage(&self).await,
+            Commands::Run(runner) => runner.run(config, shutdown_rx.clone()).await,
+            Commands::Manage(manager) => manager.manage(config).await,
             Commands::GenerateConfigSchema(generator) => generator.generate_config_schema(),
         }
     }
 
     /// Searches for the configuration file, and panics if not found.
-    fn read_config(&self) -> Config {
-        std::fs::File::open(&self.config)
-            .or_else(|error| {
-                if cfg!(unix) {
-                    std::fs::File::open("/etc/quilkin/quilkin.yaml")
-                } else {
-                    Err(error)
+    fn read_config<A: AsRef<Path>>(path: A) -> Result<Config, eyre::Error> {
+        let path = path.as_ref();
+        let from_reader = |file| Config::from_reader(file).map_err(From::from);
+
+        match std::fs::File::open(path) {
+            Ok(file) => (from_reader)(file),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                tracing::debug!(path=%path.display(), "provided path not found");
+                match cfg!(unix).then(|| std::fs::File::open(ETC_CONFIG_PATH)) {
+                    Some(Ok(file)) => (from_reader)(file),
+                    Some(Err(error)) if error.kind() == std::io::ErrorKind::NotFound => {
+                        tracing::debug!(path=%path.display(), "/etc path not found");
+                        Ok(Config::default())
+                    }
+                    Some(Err(error)) => Err(error.into()),
+                    None => Ok(Config::default()),
                 }
-            })
-            .map_err(eyre::Error::from)
-            .and_then(|file| Config::from_reader(file).map_err(From::from))
-            .unwrap()
+            }
+            Err(error) => Err(error.into()),
+        }
     }
 }

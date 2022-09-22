@@ -101,6 +101,15 @@ impl From<Vec<Endpoint>> for LocalityEndpoints {
     }
 }
 
+impl From<Vec<std::net::SocketAddr>> for LocalityEndpoints {
+    fn from(endpoints: Vec<std::net::SocketAddr>) -> Self {
+        Self {
+            endpoints: endpoints.into_iter().map(From::from).collect(),
+            ..Self::default()
+        }
+    }
+}
+
 impl From<BTreeSet<Endpoint>> for LocalityEndpoints {
     fn from(endpoints: BTreeSet<Endpoint>) -> Self {
         Self {

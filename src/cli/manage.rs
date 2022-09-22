@@ -14,38 +14,38 @@
  * limitations under the License.
  */
 
+/// Runs Quilkin as a xDS management server, using `provider` as
+/// a configuration source.
 #[derive(clap::Args)]
 pub struct Manage {
+    /// The configuration source for a management server.
     #[clap(subcommand)]
-    provider: Providers,
+    pub provider: Providers,
 }
 
+/// The available xDS source providers.
 #[derive(clap::Subcommand)]
-enum Providers {
+pub enum Providers {
+    /// Watches Agones' game server CRDs for `Allocated` game server endpoints,
+    /// and for a `ConfigMap` that specifies the filter configuration.
     Agones {
-        #[clap(
-            short,
-            long,
-            default_value = "default",
-            help = "Namespace under which the proxies run."
-        )]
+        /// The namespace under which the configmap is stored.
+        #[clap(short, long, default_value = "default")]
         config_namespace: String,
-        #[clap(
-            short,
-            long,
-            default_value = "default",
-            help = "Namespace under which the game servers run."
-        )]
+        /// The namespace under which the game servers run.
+        #[clap(short, long, default_value = "default")]
         gameservers_namespace: String,
     },
 
-    File,
+    /// Watches for changes to the file located at `path`.
+    File {
+        /// The path to the source config.
+        path: std::path::PathBuf,
+    },
 }
 
 impl Manage {
-    pub async fn manage(&self, cli: &crate::Cli) -> crate::Result<()> {
-        let config = std::sync::Arc::new(cli.read_config());
-
+    pub async fn manage(&self, config: std::sync::Arc<crate::Config>) -> crate::Result<()> {
         let provider_task = match &self.provider {
             Providers::Agones {
                 gameservers_namespace,
@@ -55,8 +55,8 @@ impl Manage {
                 config_namespace.clone(),
                 config.clone(),
             )),
-            Providers::File => {
-                tokio::spawn(crate::config::watch::fs(config.clone(), cli.config.clone()))
+            Providers::File { path } => {
+                tokio::spawn(crate::config::watch::fs(config.clone(), path.clone()))
             }
         };
 

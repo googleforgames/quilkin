@@ -17,22 +17,22 @@
 #![deny(unused_must_use)]
 
 mod admin;
-mod cli;
 mod cluster;
-pub mod metadata;
 pub(crate) mod metrics;
 pub(crate) mod prost;
 mod proxy;
 pub(crate) mod ttl_map;
 pub(crate) mod utils;
 
+pub mod cli;
 pub mod config;
 pub mod endpoint;
 pub mod filters;
+pub mod metadata;
+pub mod xds;
 
 #[doc(hidden)]
 pub mod test_utils;
-pub mod xds;
 
 pub type Result<T, E = eyre::Error> = std::result::Result<T, E>;
 

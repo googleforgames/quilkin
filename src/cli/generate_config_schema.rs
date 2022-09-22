@@ -14,21 +14,16 @@
  * limitations under the License.
  */
 
+/// Generates JSON schema files for known filters.
 #[derive(clap::Args)]
 pub struct GenerateConfigSchema {
-    #[clap(
-        short,
-        long,
-        default_value = ".",
-        help = "The directory to write configuration files."
-    )]
-    output_directory: std::path::PathBuf,
-    #[clap(
-        min_values = 1,
-        default_value = "all",
-        help = "A list of one or more filter IDs to generate or 'all' to generate all available filter schemas."
-    )]
-    filter_ids: Vec<String>,
+    /// The directory to write configuration files.
+    #[clap(short, long, default_value = ".")]
+    pub output_directory: std::path::PathBuf,
+    /// A list of one or more filter IDs to generate or 'all' to generate all
+    /// available filter schemas.
+    #[clap(min_values = 1, default_value = "all")]
+    pub filter_ids: Vec<String>,
 }
 
 impl GenerateConfigSchema {
