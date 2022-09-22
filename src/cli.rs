@@ -91,16 +91,12 @@ impl Cli {
         );
 
         let config = Arc::new(Self::read_config(self.config)?);
-        let _admin_task = if self.no_admin {
+        if self.no_admin {
             config.admin.remove();
-            None
-        } else {
-            if let Some(address) = self.admin_address {
-                config
-                    .admin
-                    .store(Arc::new(crate::config::Admin { address }));
-            }
-            Some(tokio::spawn(crate::admin::server(config.clone())))
+        } else if let Some(address) = self.admin_address {
+            config
+                .admin
+                .store(Arc::new(crate::config::Admin { address }));
         };
 
         let (shutdown_tx, shutdown_rx) = watch::channel::<()>(());

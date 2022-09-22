@@ -116,10 +116,10 @@ impl<T: Clone + Default> Slot<T> {
     }
 }
 
-impl<T> Default for Slot<T> {
+impl<T: Default> Default for Slot<T> {
     fn default() -> Self {
         Self {
-            inner: <_>::default(),
+            inner: Arc::new(ArcSwapOption::new(Some(Default::default()))),
             watcher: <_>::default(),
         }
     }
