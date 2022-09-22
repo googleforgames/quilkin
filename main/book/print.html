@@ -187,22 +187,14 @@ depending on how deep an integration you wish for your system.</li>
 </code></pre>
 <p>This routes all UDP packets that <code>ncat</code> receives to the local <code>cat</code> process, which echoes it back.</p>
 <h2 id="2-start-quilkin"><a class="header" href="#2-start-quilkin">2. Start Quilkin</a></h2>
-<p>Next, let's configure Quilkin, with a static configuration that points at the udp echo service we just started.</p>
-<p>Open a new terminal and copy the following to a file named <code>proxy.yaml</code>:</p>
-<pre><code class="language-yaml">version: v1alpha1
-clusters:
-    default:
-        - endpoints:
-            - address: 127.0.0.1:8000
+<p>Next let's configure Quilkin to with a static configuration that points at the
+UDP echo service we just started.</p>
+<pre><code class="language-shell">quilkin run --to localhost:8000
 </code></pre>
-<p>This configuration will start Quilkin on the default port of 7000, and it will redirect all incoming UDP traffic to
-a single endpoint of 127.0.0.1, port 8000.</p>
-<p>Let's start Quilkin with the above configuration:</p>
-<pre><code class="language-shell">quilkin --config proxy.yaml run
-</code></pre>
+<p>This configuration will start Quilkin on the default port of 7000, and it will
+redirect all incoming UDP traffic to a single endpoint of 127.0.0.1, port 8000.</p>
 <p>You should see an output like the following:</p>
-<pre><code class="language-shell">$ quilkin --config proxy.yaml run
-{&quot;msg&quot;:&quot;Starting Quilkin&quot;,&quot;level&quot;:&quot;INFO&quot;,&quot;ts&quot;:&quot;2021-04-25T19:27:22.535174615-07:00&quot;,&quot;source&quot;:&quot;run&quot;,&quot;version&quot;:&quot;0.1.0-dev&quot;}
+<pre><code class="language-shell">{&quot;msg&quot;:&quot;Starting Quilkin&quot;,&quot;level&quot;:&quot;INFO&quot;,&quot;ts&quot;:&quot;2021-04-25T19:27:22.535174615-07:00&quot;,&quot;source&quot;:&quot;run&quot;,&quot;version&quot;:&quot;0.1.0-dev&quot;}
 {&quot;msg&quot;:&quot;Starting&quot;,&quot;level&quot;:&quot;INFO&quot;,&quot;ts&quot;:&quot;2021-04-25T19:27:22.535315827-07:00&quot;,&quot;source&quot;:&quot;server::Server&quot;,&quot;port&quot;:7000}
 {&quot;msg&quot;:&quot;Starting admin endpoint&quot;,&quot;level&quot;:&quot;INFO&quot;,&quot;ts&quot;:&quot;2021-04-25T19:27:22.535550572-07:00&quot;,&quot;source&quot;:&quot;proxy::Admin&quot;,&quot;address&quot;:&quot;[::]:9091&quot;}
 </code></pre>
@@ -327,33 +319,26 @@ edit either!</p>
 <li>Binary</li>
 <li>Container image</li>
 </ul>
-<p>For each version there is both a release version, which is optimised for production usage, and a debug version that 
-has debug level logging enabled.</p>
 <h2 id="binary"><a class="header" href="#binary">Binary</a></h2>
 <p>The release binary can be downloaded from the 
 <a href="https://github.com/googleforgames/quilkin/releases">Github releases page</a>.</p>
-<p>Quilkin needs to be run with an accompanying <a href="./proxy-configuration.html">configuration file</a>, like so:</p>
-<p><code>quilkin --config=&quot;configuration.yaml&quot; run</code></p>
-<p>To view debug output, run the same command with the <code>quilkin-debug</code> binary.</p>
-<p>You can also use the shorthand of <code>-c</code> instead of <code>--config</code> if you so desire.</p>
 <h2 id="container-image"><a class="header" href="#container-image">Container Image</a></h2>
-<p>For each release, there are both a release and debug container image built and hosted on Google Cloud 
-<a href="https://cloud.google.com/artifact-registry">Artifact Registry</a> listed for 
-each <a href="https://github.com/googleforgames/quilkin/releases">release</a>.</p>
+<p>For each <a href="https://github.com/googleforgames/quilkin/releases">release</a>, there is a container image built and
+hosted on Google Cloud <a href="https://cloud.google.com/artifact-registry">Artifact Registry</a>.</p>
 <p>The production release can be found under the tag: </p>
-<p><code>us-docker.pkg.dev/quilkin/release/quilkin:{version}</code></p>
-<p>Whereas, if you need debugging logging, use the following tag:</p>
-<p><code>us-docker.pkg.dev/quilkin/release/quilkin:{version}-debug</code></p>
-<p>Mount your <a href="./proxy-configuration.html">configuration file</a> at <code>/etc/quilkin/quilkin.yaml</code> to configure the Quilkin 
-instance inside the container.</p>
-<p>A <a href="https://github.com/googleforgames/quilkin/blob/main/image/quilkin.yaml">default configuration</a>
-is provided, such the container will start without a new configuration file, but it is configured to point to 
-<code>127.0.0.1:0</code> as a no-op configuration.</p>
-<p>What's next:</p>
-<ul>
-<li>Run through the <a href="./quickstart-netcat.html">netcat with Quilkin quickstart</a></li>
-<li>Review our <a href="./integrations.html">example integration architectures</a></li>
-</ul>
+<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:{version}
+</code></pre>
+<p>Which can be browsed as <a href="https://us-docker.pkg.dev/quilkin/release/quilkin">us-docker.pkg.dev/quilkin/release/quilkin</a>.</p>
+<h2 id="command-line-interface"><a class="header" href="#command-line-interface">Command-Line Interface</a></h2>
+<p>Quilkin provides a variety of different commands depending on your use-case.
+The primary entrypoint of the process is <code>run</code>, which runs Quilkin as a reverse
+UDP proxy.  To see a basic usage of the command-line interface run through the
+<a href="./quickstart-netcat.html">netcat with Quilkin quickstart</a>. For more advanced
+usage, checkout the <a href="../api/quilkin/struct.Cli.html"><code>quilkin::Cli</code></a> documentation.</p>
+<h2 id="logging"><a class="header" href="#logging">Logging</a></h2>
+<p>By default Quilkin will log <code>INFO</code> level events, you can change this by setting
+the <code>RUST_LOG</code> environment variable. See <a href="https://docs.rs/env_logger/0.9.0/env_logger/#enabling-logging"><code>log</code> documentation</a> for
+more advanced usage.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="examples"><a class="header" href="#examples">Examples</a></h1>
 <p>See the <a href="https://github.com/googleforgames/quilkin/tree/main/examples">examples</a> folder on Github for configuration and 
 usage examples.</p>

@@ -577,6 +577,12 @@
 <span id="571">571</span>
 <span id="572">572</span>
 <span id="573">573</span>
+<span id="574">574</span>
+<span id="575">575</span>
+<span id="576">576</span>
+<span id="577">577</span>
+<span id="578">578</span>
+<span id="579">579</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -1148,6 +1154,12 @@ dynamic:
             <span class="macro">println!</span>(<span class="string">&quot;here: {}&quot;</span>, <span class="ident">error</span>);
             <span class="macro">assert!</span>(<span class="macro">format!</span>(<span class="string">&quot;{error:?}&quot;</span>).<span class="ident">contains</span>(<span class="string">&quot;unknown field&quot;</span>));
         }
+    }
+
+    <span class="attribute">#[<span class="ident">test</span>]</span>
+    <span class="kw">fn</span> <span class="ident">config_default</span>() {
+        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">Config::default</span>();
+        <span class="macro">assert!</span>(<span class="ident">config</span>.<span class="ident">admin</span>.<span class="ident">is_some</span>());
     }
 }
 </code></pre></div>

@@ -159,6 +159,15 @@
 <span id="153">153</span>
 <span id="154">154</span>
 <span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -257,6 +266,15 @@
     <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">endpoints</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Endpoint</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">endpoints</span>: <span class="ident">endpoints</span>.<span class="ident">into_iter</span>().<span class="ident">collect</span>(),
+            ..<span class="ident"><span class="self">Self</span>::default</span>()
+        }
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">std::net::SocketAddr</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">LocalityEndpoints</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">endpoints</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">std::net::SocketAddr</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
+        <span class="self">Self</span> {
+            <span class="ident">endpoints</span>: <span class="ident">endpoints</span>.<span class="ident">into_iter</span>().<span class="ident">map</span>(<span class="ident">From::from</span>).<span class="ident">collect</span>(),
             ..<span class="ident"><span class="self">Self</span>::default</span>()
         }
     }

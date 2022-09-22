@@ -69,11 +69,6 @@
 <span id="63">63</span>
 <span id="64">64</span>
 <span id="65">65</span>
-<span id="66">66</span>
-<span id="67">67</span>
-<span id="68">68</span>
-<span id="69">69</span>
-<span id="70">70</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -90,21 +85,16 @@
  * limitations under the License.
  */</span>
 
+<span class="doccomment">/// Generates JSON schema files for known filters.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">clap::Args</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GenerateConfigSchema</span> {
-    <span class="attribute">#[<span class="ident">clap</span>(
-        <span class="ident">short</span>,
-        <span class="ident">long</span>,
-        <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;.&quot;</span>,
-        <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;The directory to write configuration files.&quot;</span>
-    )]</span>
-    <span class="ident">output_directory</span>: <span class="ident">std::path::PathBuf</span>,
-    <span class="attribute">#[<span class="ident">clap</span>(
-        <span class="ident">min_values</span> <span class="op">=</span> <span class="number">1</span>,
-        <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;all&quot;</span>,
-        <span class="ident">help</span> <span class="op">=</span> <span class="string">&quot;A list of one or more filter IDs to generate or &#39;all&#39; to generate all available filter schemas.&quot;</span>
-    )]</span>
-    <span class="ident">filter_ids</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// The directory to write configuration files.</span>
+    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">short</span>, <span class="ident">long</span>, <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;.&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">output_directory</span>: <span class="ident">std::path::PathBuf</span>,
+    <span class="doccomment">/// A list of one or more filter IDs to generate or &#39;all&#39; to generate all</span>
+    <span class="doccomment">/// available filter schemas.</span>
+    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">min_values</span> <span class="op">=</span> <span class="number">1</span>, <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;all&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">filter_ids</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">GenerateConfigSchema</span> {
