@@ -43,13 +43,13 @@ A session represents ongoing communication flow between a client and an [Upstrea
 
 The proxy exposes the following general metrics (See the metrics sub-sections for metrics specific to other Quilkin components, e.g for metrics related to packet flow see [sessions metrics][session-metrics], or metrics exported by individual filters can be found in the documentation for each filter):
 
-- `quilkin_proxy_packet_processing_duration_seconds{event}` (Histogram)
+- `quilkin_packet_processing_duration_seconds{event}` (Histogram)
 The total duration of time in seconds that it took to process a packet.
   * The `event` label is either:
       * `read`: when the proxy receives data from a downstream connection on the listening port.
       * `write`: when the proxy sends data to a downstream connection via the listening port.
 
-- `quilkin_proxy_packets_dropped_total{reason}` (Counter)
+- `quilkin_packets_dropped_total{reason}` (Counter)
 
   The total number of packets (not associated with any session) that were dropped by proxy.
   Not that packets reflected by this metric were dropped at an earlier stage before they were associated with any session. For session based metrics, see the list of [session metrics][session-metrics] instead.

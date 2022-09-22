@@ -384,7 +384,7 @@ data:
             },
             {
               "exemplar": true,
-              "expr": "sum(rate(quilkin_proxy_packets_dropped_total[$__rate_interval]))",
+              "expr": "sum(rate(quilkin_packets_dropped_total[$__rate_interval]))",
               "hide": false,
               "interval": "",
               "legendFormat": "dropped packet rate",
@@ -714,14 +714,14 @@ data:
           "targets": [
             {
               "exemplar": true,
-              "expr": "histogram_quantile(0.5,sum(rate(quilkin_proxy_packet_processing_duration_seconds_bucket[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.5,sum(rate(quilkin_packet_processing_duration_seconds_bucket[$__rate_interval])) by (le))",
               "interval": "",
               "legendFormat": "(total) 50%",
               "refId": "A"
             },
             {
               "exemplar": true,
-              "expr": "histogram_quantile(0.9,sum(rate(quilkin_proxy_packet_processing_duration_seconds_bucket[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.9,sum(rate(quilkin_packet_processing_duration_seconds_bucket[$__rate_interval])) by (le))",
               "format": "time_series",
               "hide": false,
               "interval": "",
@@ -730,7 +730,7 @@ data:
             },
             {
               "exemplar": true,
-              "expr": "histogram_quantile(0.99,sum(rate(quilkin_proxy_packet_processing_duration_seconds_bucket[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.99,sum(rate(quilkin_packet_processing_duration_seconds_bucket[$__rate_interval])) by (le))",
               "hide": false,
               "interval": "",
               "legendFormat": "(total) 99%",
@@ -738,7 +738,7 @@ data:
             },
             {
               "exemplar": true,
-              "expr": "histogram_quantile(0.5,sum(rate(quilkin_proxy_packet_processing_duration_seconds_bucket{event=\"read\"}[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.5,sum(rate(quilkin_packet_processing_duration_seconds_bucket{event=\"read\"}[$__rate_interval])) by (le))",
               "hide": false,
               "interval": "",
               "legendFormat": "(read) 50%",
@@ -746,7 +746,7 @@ data:
             },
             {
               "exemplar": true,
-              "expr": "histogram_quantile(0.9,sum(rate(quilkin_proxy_packet_processing_duration_seconds_bucket{event=\"read\"}[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.9,sum(rate(quilkin_packet_processing_duration_seconds_bucket{event=\"read\"}[$__rate_interval])) by (le))",
               "hide": false,
               "interval": "",
               "legendFormat": "(read) 90%",
@@ -754,7 +754,7 @@ data:
             },
             {
               "exemplar": true,
-              "expr": "histogram_quantile(0.99,sum(rate(quilkin_proxy_packet_processing_duration_seconds_bucket{event=\"read\"}[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.99,sum(rate(quilkin_packet_processing_duration_seconds_bucket{event=\"read\"}[$__rate_interval])) by (le))",
               "hide": false,
               "interval": "",
               "legendFormat": "(read) 99%",
@@ -762,7 +762,7 @@ data:
             },
             {
               "exemplar": true,
-              "expr": "histogram_quantile(0.5,sum(rate(quilkin_proxy_packet_processing_duration_seconds_bucket{event=\"write\"}[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.5,sum(rate(quilkin_packet_processing_duration_seconds_bucket{event=\"write\"}[$__rate_interval])) by (le))",
               "hide": false,
               "interval": "",
               "legendFormat": "(write) 50%",
@@ -770,7 +770,7 @@ data:
             },
             {
               "exemplar": true,
-              "expr": "histogram_quantile(0.9,sum(rate(quilkin_proxy_packet_processing_duration_seconds_bucket{event=\"write\"}[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.9,sum(rate(quilkin_packet_processing_duration_seconds_bucket{event=\"write\"}[$__rate_interval])) by (le))",
               "hide": false,
               "interval": "",
               "legendFormat": "(write) 90%",
@@ -778,7 +778,7 @@ data:
             },
             {
               "exemplar": true,
-              "expr": "histogram_quantile(0.99,sum(rate(quilkin_proxy_packet_processing_duration_seconds_bucket{event=\"write\"}[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.99,sum(rate(quilkin_packet_processing_duration_seconds_bucket{event=\"write\"}[$__rate_interval])) by (le))",
               "hide": false,
               "interval": "",
               "legendFormat": "(write) 99%",
