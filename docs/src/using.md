@@ -12,15 +12,16 @@ The release binary can be downloaded from the
 
 ## Container Image
 
-For each release, there are both a release and debug container image built and
-hosted on Google Cloud [Artifact Registry](https://cloud.google.com/artifact-registry)
-listed for each [release](https://github.com/googleforgames/quilkin/releases).
+For each [release](https://github.com/googleforgames/quilkin/releases), there is a container image built and
+hosted on Google Cloud [Artifact Registry](https://cloud.google.com/artifact-registry).
 
 The production release can be found under the tag: 
 
 ```
 us-docker.pkg.dev/quilkin/release/quilkin:{version}
 ```
+
+Which can be browsed as [us-docker.pkg.dev/quilkin/release/quilkin](https://us-docker.pkg.dev/quilkin/release/quilkin).
 
 ## Command-Line Interface
 

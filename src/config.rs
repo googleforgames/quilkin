@@ -570,4 +570,10 @@ dynamic:
             assert!(format!("{error:?}").contains("unknown field"));
         }
     }
+
+    #[test]
+    fn config_default() {
+        let config = Config::default();
+        assert!(config.admin.is_some());
+    }
 }
