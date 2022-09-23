@@ -25,7 +25,17 @@ use hyper::{Body, Method, Request, Response, Server as HyperServer, StatusCode};
 use self::health::Health;
 use crate::config::Config;
 
-pub fn server(config: Arc<Config>) -> tokio::task::JoinHandle<Result<(), hyper::Error>> {
+/// Define which mode Quilkin is in.
+#[derive(Copy, Clone, Debug)]
+pub enum Mode {
+    Proxy,
+    Xds,
+}
+
+pub fn server(
+    mode: Mode,
+    config: Arc<Config>,
+) -> tokio::task::JoinHandle<Result<(), hyper::Error>> {
     let address = config.admin.load().address;
     let health = Health::new();
     tracing::info!(address = %address, "Starting admin endpoint");
@@ -39,7 +49,7 @@ pub fn server(config: Arc<Config>) -> tokio::task::JoinHandle<Result<(), hyper::
             Ok::<_, Infallible>(service_fn(move |req| {
                 let config = config.clone();
                 let health = health.clone();
-                async move { Ok::<_, Infallible>(handle_request(req, config, health)) }
+                async move { Ok::<_, Infallible>(handle_request(req, mode, config, health)) }
             }))
         }
     });
@@ -47,11 +57,19 @@ pub fn server(config: Arc<Config>) -> tokio::task::JoinHandle<Result<(), hyper::
     tokio::spawn(HyperServer::bind(&address).serve(make_svc))
 }
 
-fn handle_request(request: Request<Body>, config: Arc<Config>, health: Health) -> Response<Body> {
+fn handle_request(
+    request: Request<Body>,
+    mode: Mode,
+    config: Arc<Config>,
+    health: Health,
+) -> Response<Body> {
     match (request.method(), request.uri().path()) {
         (&Method::GET, "/metrics") => collect_metrics(),
         (&Method::GET, "/live" | "/livez") => health.check_healthy(),
-        (&Method::GET, "/ready" | "/readyz") => check_readiness(&config),
+        (&Method::GET, "/ready" | "/readyz") => match mode {
+            Mode::Proxy => check_proxy_readiness(&config),
+            Mode::Xds => health.check_healthy(),
+        },
         (&Method::GET, "/config") => match serde_json::to_string(&config) {
             Ok(body) => Response::builder()
                 .status(StatusCode::OK)
@@ -74,7 +92,7 @@ fn handle_request(request: Request<Body>, config: Arc<Config>, health: Health) -
     }
 }
 
-fn check_readiness(config: &Config) -> Response<Body> {
+fn check_proxy_readiness(config: &Config) -> Response<Body> {
     if config.clusters.load().endpoints().count() > 0 {
         return Response::new("ok".into());
     }
@@ -111,9 +129,30 @@ fn collect_metrics() -> Response<Body> {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use crate::cluster::ClusterMap;
+    use crate::endpoint::Endpoint;
+
     #[tokio::test]
     async fn collect_metrics() {
         let response = super::collect_metrics();
         assert_eq!(response.status(), hyper::StatusCode::OK);
+    }
+
+    #[test]
+    fn check_proxy_readiness() {
+        let config = Config::default();
+        assert_eq!(config.clusters.load().endpoints().count(), 0);
+
+        let response = super::check_proxy_readiness(&config);
+        assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+
+        let cluster = ClusterMap::new_with_default_cluster(vec![Endpoint::new(
+            (std::net::Ipv4Addr::LOCALHOST, 25999).into(),
+        )]);
+        config.clusters.store(Arc::new(cluster));
+
+        let response = super::check_proxy_readiness(&config);
+        assert_eq!(response.status(), StatusCode::OK);
     }
 }
