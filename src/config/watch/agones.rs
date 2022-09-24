@@ -132,10 +132,11 @@ impl Watcher {
                 }
 
                 let endpoint = Endpoint::try_from(server)?;
-                tracing::trace!(?endpoint, "Adding endpoint");
+                tracing::trace!(endpoint=%serde_json::to_value(&endpoint).unwrap(), "Adding endpoint");
                 self.config.clusters.modify(|clusters| {
                     clusters.default_cluster_mut().insert(endpoint.clone());
                 });
+                tracing::trace!(clusters=%serde_json::to_value(&self.config.clusters.load()).unwrap(), "current clusters");
             }
 
             Event::Restarted(servers) => {

@@ -150,7 +150,7 @@ impl Config {
                 return;
             }
 
-            tracing::trace!(endpoints = ?cluster.endpoints().map(|e| e.address.to_string()).collect::<Vec<_>>(), "applying new endpoints");
+            tracing::trace!(endpoints = %serde_json::to_value(&cluster).unwrap(), "applying new endpoints");
             self.clusters.modify(|clusters| {
                 clusters.insert(cluster.clone());
             });
