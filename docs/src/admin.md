@@ -21,6 +21,24 @@ This provides a liveness probe endpoint, most commonly used in
 
 Will return an HTTP status of 200 when all health checks pass.
 
+## /ready
+
+This provides a readiness probe endpoint, most commonly used in 
+[Kubernetes based systems](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes).
+
+Depending on whether Quilkin is run in Proxy mode i.e. `quilkin run`, vs an xDS provider mode, such as `quilkin 
+manage agones`, will dictate how readiness is calculated: 
+
+### Proxy Mode:
+
+Will return an HTTP status of 200 when there is at least one endpoint to send data to. This is primarily to ensure 
+that new proxies that have yet to get configuration information from an [xDS server](./xds.md) aren't send data 
+until they are fully populated. 
+
+### xDS Provider Mode:
+
+Will return an HTTP status of 200 when all health checks pass.
+
 ## /metrics
 
 Outputs [Prometheus](https://prometheus.io/) formatted metrics for this proxy.
