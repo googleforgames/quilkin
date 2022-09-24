@@ -62,10 +62,6 @@
 <span id="56">56</span>
 <span id="57">57</span>
 <span id="58">58</span>
-<span id="59">59</span>
-<span id="60">60</span>
-<span id="61">61</span>
-<span id="62">62</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -88,15 +84,11 @@
         <span class="ident">api::core::v1</span>::{<span class="ident">Pod</span>, <span class="ident">PodSpec</span>},
         <span class="ident">apimachinery::pkg::apis::meta::v1::ObjectMeta</span>,
     };
-    <span class="kw">use</span> <span class="ident">kube</span>::{
-        <span class="ident">api::PostParams</span>,
-        <span class="ident">runtime::wait</span>::{<span class="ident">await_condition</span>, <span class="ident">conditions</span>},
-        <span class="ident">Api</span>, <span class="ident">ResourceExt</span>,
-    };
+    <span class="kw">use</span> <span class="ident">kube</span>::{<span class="ident">api::PostParams</span>, <span class="ident">runtime::wait::await_condition</span>, <span class="ident">Api</span>, <span class="ident">ResourceExt</span>};
     <span class="kw">use</span> <span class="ident">std::time::Duration</span>;
     <span class="kw">use</span> <span class="ident">tokio::time::timeout</span>;
 
-    <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">quilkin_container</span>, <span class="ident">Client</span>};
+    <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">is_pod_ready</span>, <span class="ident">quilkin_container</span>, <span class="ident">Client</span>};
 
     <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">create_quilkin_pod</span>() {
@@ -121,7 +113,7 @@
 
         <span class="comment">// now wait for it be become ready.</span>
         <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">pod</span>.<span class="ident">name</span>();
-        <span class="kw">let</span> <span class="ident">running</span> <span class="op">=</span> <span class="ident">await_condition</span>(<span class="ident">pods</span>, <span class="ident">name</span>.<span class="ident">as_str</span>(), <span class="ident">conditions::is_pod_running</span>());
+        <span class="kw">let</span> <span class="ident">running</span> <span class="op">=</span> <span class="ident">await_condition</span>(<span class="ident">pods</span>, <span class="ident">name</span>.<span class="ident">as_str</span>(), <span class="ident">is_pod_ready</span>());
         <span class="ident">timeout</span>(<span class="ident">Duration::from_secs</span>(<span class="number">30</span>), <span class="ident">running</span>)
             .<span class="kw">await</span>
             .<span class="ident">expect</span>(<span class="string">&quot;Pod should be running&quot;</span>)

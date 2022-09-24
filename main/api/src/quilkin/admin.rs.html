@@ -123,6 +123,45 @@
 <span id="117">117</span>
 <span id="118">118</span>
 <span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
+<span id="123">123</span>
+<span id="124">124</span>
+<span id="125">125</span>
+<span id="126">126</span>
+<span id="127">127</span>
+<span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
+<span id="131">131</span>
+<span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -150,7 +189,17 @@
 <span class="kw">use</span> <span class="ident"><span class="self">self</span>::health::Health</span>;
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::config::Config</span>;
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">server</span>(<span class="ident">config</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Config</span><span class="op">&gt;</span>) -&gt; <span class="ident">tokio::task::JoinHandle</span><span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">hyper::Error</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+<span class="doccomment">/// Define which mode Quilkin is in.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Mode</span> {
+    <span class="ident">Proxy</span>,
+    <span class="ident">Xds</span>,
+}
+
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">server</span>(
+    <span class="ident">mode</span>: <span class="ident">Mode</span>,
+    <span class="ident">config</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Config</span><span class="op">&gt;</span>,
+) -&gt; <span class="ident">tokio::task::JoinHandle</span><span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">hyper::Error</span><span class="op">&gt;</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">address</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">admin</span>.<span class="ident">load</span>().<span class="ident">address</span>;
     <span class="kw">let</span> <span class="ident">health</span> <span class="op">=</span> <span class="ident">Health::new</span>();
     <span class="macro">tracing::info!</span>(<span class="ident">address</span> <span class="op">=</span> <span class="op">%</span><span class="ident">address</span>, <span class="string">&quot;Starting admin endpoint&quot;</span>);
@@ -164,7 +213,7 @@
             <span class="prelude-val">Ok</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="ident">Infallible</span><span class="op">&gt;</span>(<span class="ident">service_fn</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">req</span><span class="op">|</span> {
                 <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">clone</span>();
                 <span class="kw">let</span> <span class="ident">health</span> <span class="op">=</span> <span class="ident">health</span>.<span class="ident">clone</span>();
-                <span class="kw">async</span> <span class="kw">move</span> { <span class="prelude-val">Ok</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="ident">Infallible</span><span class="op">&gt;</span>(<span class="ident">handle_request</span>(<span class="ident">req</span>, <span class="ident">config</span>, <span class="ident">health</span>)) }
+                <span class="kw">async</span> <span class="kw">move</span> { <span class="prelude-val">Ok</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="ident">Infallible</span><span class="op">&gt;</span>(<span class="ident">handle_request</span>(<span class="ident">req</span>, <span class="ident">mode</span>, <span class="ident">config</span>, <span class="ident">health</span>)) }
             }))
         }
     });
@@ -172,11 +221,19 @@
     <span class="ident">tokio::spawn</span>(<span class="ident">HyperServer::bind</span>(<span class="kw-2">&amp;</span><span class="ident">address</span>).<span class="ident">serve</span>(<span class="ident">make_svc</span>))
 }
 
-<span class="kw">fn</span> <span class="ident">handle_request</span>(<span class="ident">request</span>: <span class="ident">Request</span><span class="op">&lt;</span><span class="ident">Body</span><span class="op">&gt;</span>, <span class="ident">config</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Config</span><span class="op">&gt;</span>, <span class="ident">health</span>: <span class="ident">Health</span>) -&gt; <span class="ident">Response</span><span class="op">&lt;</span><span class="ident">Body</span><span class="op">&gt;</span> {
+<span class="kw">fn</span> <span class="ident">handle_request</span>(
+    <span class="ident">request</span>: <span class="ident">Request</span><span class="op">&lt;</span><span class="ident">Body</span><span class="op">&gt;</span>,
+    <span class="ident">mode</span>: <span class="ident">Mode</span>,
+    <span class="ident">config</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Config</span><span class="op">&gt;</span>,
+    <span class="ident">health</span>: <span class="ident">Health</span>,
+) -&gt; <span class="ident">Response</span><span class="op">&lt;</span><span class="ident">Body</span><span class="op">&gt;</span> {
     <span class="kw">match</span> (<span class="ident">request</span>.<span class="ident">method</span>(), <span class="ident">request</span>.<span class="ident">uri</span>().<span class="ident">path</span>()) {
         (<span class="kw-2">&amp;</span><span class="ident">Method::GET</span>, <span class="string">&quot;/metrics&quot;</span>) =&gt; <span class="ident">collect_metrics</span>(),
         (<span class="kw-2">&amp;</span><span class="ident">Method::GET</span>, <span class="string">&quot;/live&quot;</span> <span class="op">|</span> <span class="string">&quot;/livez&quot;</span>) =&gt; <span class="ident">health</span>.<span class="ident">check_healthy</span>(),
-        (<span class="kw-2">&amp;</span><span class="ident">Method::GET</span>, <span class="string">&quot;/ready&quot;</span> <span class="op">|</span> <span class="string">&quot;/readyz&quot;</span>) =&gt; <span class="ident">check_readiness</span>(<span class="kw-2">&amp;</span><span class="ident">config</span>),
+        (<span class="kw-2">&amp;</span><span class="ident">Method::GET</span>, <span class="string">&quot;/ready&quot;</span> <span class="op">|</span> <span class="string">&quot;/readyz&quot;</span>) =&gt; <span class="kw">match</span> <span class="ident">mode</span> {
+            <span class="ident">Mode::Proxy</span> =&gt; <span class="ident">check_proxy_readiness</span>(<span class="kw-2">&amp;</span><span class="ident">config</span>),
+            <span class="ident">Mode::Xds</span> =&gt; <span class="ident">health</span>.<span class="ident">check_healthy</span>(),
+        },
         (<span class="kw-2">&amp;</span><span class="ident">Method::GET</span>, <span class="string">&quot;/config&quot;</span>) =&gt; <span class="kw">match</span> <span class="ident">serde_json::to_string</span>(<span class="kw-2">&amp;</span><span class="ident">config</span>) {
             <span class="prelude-val">Ok</span>(<span class="ident">body</span>) =&gt; <span class="ident">Response::builder</span>()
                 .<span class="ident">status</span>(<span class="ident">StatusCode::OK</span>)
@@ -199,7 +256,7 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">check_readiness</span>(<span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">Config</span>) -&gt; <span class="ident">Response</span><span class="op">&lt;</span><span class="ident">Body</span><span class="op">&gt;</span> {
+<span class="kw">fn</span> <span class="ident">check_proxy_readiness</span>(<span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">Config</span>) -&gt; <span class="ident">Response</span><span class="op">&lt;</span><span class="ident">Body</span><span class="op">&gt;</span> {
     <span class="kw">if</span> <span class="ident">config</span>.<span class="ident">clusters</span>.<span class="ident">load</span>().<span class="ident">endpoints</span>().<span class="ident">count</span>() <span class="op">&gt;</span> <span class="number">0</span> {
         <span class="kw">return</span> <span class="ident">Response::new</span>(<span class="string">&quot;ok&quot;</span>.<span class="ident">into</span>());
     }
@@ -236,10 +293,31 @@
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span> {
+    <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::cluster::ClusterMap</span>;
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::endpoint::Endpoint</span>;
+
     <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">collect_metrics</span>() {
         <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident"><span class="kw">super</span>::collect_metrics</span>();
         <span class="macro">assert_eq!</span>(<span class="ident">response</span>.<span class="ident">status</span>(), <span class="ident">hyper::StatusCode::OK</span>);
+    }
+
+    <span class="attribute">#[<span class="ident">test</span>]</span>
+    <span class="kw">fn</span> <span class="ident">check_proxy_readiness</span>() {
+        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">Config::default</span>();
+        <span class="macro">assert_eq!</span>(<span class="ident">config</span>.<span class="ident">clusters</span>.<span class="ident">load</span>().<span class="ident">endpoints</span>().<span class="ident">count</span>(), <span class="number">0</span>);
+
+        <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident"><span class="kw">super</span>::check_proxy_readiness</span>(<span class="kw-2">&amp;</span><span class="ident">config</span>);
+        <span class="macro">assert_eq!</span>(<span class="ident">response</span>.<span class="ident">status</span>(), <span class="ident">StatusCode::INTERNAL_SERVER_ERROR</span>);
+
+        <span class="kw">let</span> <span class="ident">cluster</span> <span class="op">=</span> <span class="ident">ClusterMap::new_with_default_cluster</span>(<span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(
+            (<span class="ident">std::net::Ipv4Addr::LOCALHOST</span>, <span class="number">25999</span>).<span class="ident">into</span>(),
+        )]);
+        <span class="ident">config</span>.<span class="ident">clusters</span>.<span class="ident">store</span>(<span class="ident">Arc::new</span>(<span class="ident">cluster</span>));
+
+        <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident"><span class="kw">super</span>::check_proxy_readiness</span>(<span class="kw-2">&amp;</span><span class="ident">config</span>);
+        <span class="macro">assert_eq!</span>(<span class="ident">response</span>.<span class="ident">status</span>(), <span class="ident">StatusCode::OK</span>);
     }
 }
 </code></pre></div>

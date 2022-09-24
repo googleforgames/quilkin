@@ -576,6 +576,7 @@
 <span id="570">570</span>
 <span id="571">571</span>
 <span id="572">572</span>
+<span id="573">573</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -605,6 +606,7 @@
 <span class="kw">use</span> <span class="ident">tokio</span>::{<span class="ident">net::UdpSocket</span>, <span class="ident">sync::watch</span>, <span class="ident">time::Duration</span>};
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
+    <span class="ident">admin</span>,
     <span class="ident">endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">EndpointAddress</span>},
     <span class="ident">filters</span>::{<span class="ident">Filter</span>, <span class="ident">ReadContext</span>},
     <span class="ident">proxy::sessions</span>::{
@@ -709,7 +711,7 @@
         };
 
         <span class="kw">if</span> <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">admin</span>.<span class="ident">is_some</span>() {
-            <span class="ident">tokio::spawn</span>(<span class="ident"><span class="kw">crate</span>::admin::server</span>(<span class="self">self</span>.<span class="ident">config</span>.<span class="ident">clone</span>()));
+            <span class="ident">tokio::spawn</span>(<span class="ident">admin::server</span>(<span class="ident">admin::Mode::Proxy</span>, <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">clone</span>()));
         }
 
         <span class="self">self</span>.<span class="ident">run_recv_from</span>(<span class="ident">RunRecvFromArgs</span> {

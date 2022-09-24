@@ -1995,6 +1995,16 @@ balanced via the Client Proxy to multiple Server Proxies for even greater redund
 <p>This provides a liveness probe endpoint, most commonly used in 
 <a href="https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-command">Kubernetes based systems</a>.</p>
 <p>Will return an HTTP status of 200 when all health checks pass.</p>
+<h2 id="ready"><a class="header" href="#ready">/ready</a></h2>
+<p>This provides a readiness probe endpoint, most commonly used in 
+<a href="https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes">Kubernetes based systems</a>.</p>
+<p>Depending on whether Quilkin is run in Proxy mode i.e. <code>quilkin run</code>, vs an xDS provider mode, such as <code>quilkin  manage agones</code>, will dictate how readiness is calculated: </p>
+<h3 id="proxy-mode"><a class="header" href="#proxy-mode">Proxy Mode:</a></h3>
+<p>Will return an HTTP status of 200 when there is at least one endpoint to send data to. This is primarily to ensure 
+that new proxies that have yet to get configuration information from an <a href="./xds.html">xDS server</a> aren't send data 
+until they are fully populated. </p>
+<h3 id="xds-provider-mode"><a class="header" href="#xds-provider-mode">xDS Provider Mode:</a></h3>
+<p>Will return an HTTP status of 200 when all health checks pass.</p>
 <h2 id="metrics-13"><a class="header" href="#metrics-13">/metrics</a></h2>
 <p>Outputs <a href="https://prometheus.io/">Prometheus</a> formatted metrics for this proxy.</p>
 <p>See the <a href="./proxy.html#metrics">Proxy Metrics</a> documentation for what metrics are available.</p>
