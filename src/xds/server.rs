@@ -19,7 +19,7 @@ use std::{pin::Pin, sync::Arc};
 use cached::Cached;
 use futures::Stream;
 use tokio_stream::StreamExt;
-use tracing::Instrument;
+use tracing_futures::Instrument;
 
 use crate::{
     admin,
@@ -54,10 +54,18 @@ pub struct ControlPlane {
     watchers: Arc<crate::xds::resource::ResourceMap<Watchers>>,
 }
 
-#[derive(Default)]
 struct Watchers {
-    channels: parking_lot::Mutex<Vec<tokio::sync::watch::Sender<()>>>,
+    sender: tokio::sync::watch::Sender<()>,
     version: std::sync::atomic::AtomicU64,
+}
+
+impl Default for Watchers {
+    fn default() -> Self {
+        Self {
+            sender: tokio::sync::watch::channel(()).0,
+            version: <_>::default(),
+        }
+    }
 }
 
 impl ControlPlane {
@@ -99,19 +107,8 @@ impl ControlPlane {
         watchers
             .version
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        let mut channels = watchers.channels.lock();
-        tracing::trace!(%resource_type, watchers = channels.len(), "pushing update");
-        let mut i = 0;
-        while i < channels.len() {
-            if channels[i].send(()).is_err() {
-                tracing::trace!("removing channel");
-                channels.swap_remove(i);
-                i = i.saturating_sub(1);
-            } else {
-                tracing::trace!("sending channel update");
-                i += 1;
-            }
-        }
+        tracing::trace!(%resource_type, watchers=watchers.sender.receiver_count(), "pushing update");
+        let _ = watchers.sender.send(());
     }
 
     fn discovery_response(
@@ -166,26 +163,24 @@ impl ControlPlane {
 
         let node = message.node.clone().unwrap();
         let resource_type: ResourceType = message.type_url.parse()?;
-        tracing::trace!(id = %node.id, %resource_type, "new request");
+        tracing::trace!(id = %node.id, %resource_type, "initial request");
         metrics::DISCOVERY_REQUESTS
             .with_label_values(&[&*node.id, resource_type.type_url()])
             .inc();
-        let (tx, rx) = tokio::sync::watch::channel(());
-        self.watchers[resource_type].channels.lock().push(tx);
+        let mut rx = self.watchers[resource_type].sender.subscribe();
         let mut pending_acks = cached::TimedCache::with_lifespan(1);
         let this = Self::clone(self);
         let response = this.discovery_response(&node.id, resource_type, &message.resource_names)?;
         pending_acks.cache_set(response.nonce.clone(), ());
 
+        let id = node.id.clone();
         Ok(Box::pin(async_stream::try_stream! {
             yield response;
-            tokio::pin!(rx);
-            tokio::pin!(streaming);
 
             loop {
                 tokio::select! {
                     _ = rx.changed() => {
-                        yield this.discovery_response(&node.id, resource_type, &message.resource_names).map(|response| {
+                        yield this.discovery_response(&id, resource_type, &message.resource_names).map(|response| {
                             pending_acks.cache_set(response.nonce.clone(), ());
                             response
                         })?;
@@ -200,7 +195,7 @@ impl ControlPlane {
                             }
                         };
 
-                        let id = new_message.node.as_ref().map(|node| &*node.id).unwrap_or_default();
+                        let id = new_message.node.as_ref().map(|node| &*node.id).unwrap_or(&*id);
                         let resource_type = match new_message.type_url.parse::<ResourceType>() {
                             Ok(value) => value,
                             Err(error) => {
@@ -209,32 +204,33 @@ impl ControlPlane {
                             }
                         };
 
-                        tracing::trace!(%id, %resource_type, "new request");
+                        tracing::trace!("new request");
                         metrics::DISCOVERY_REQUESTS.with_label_values(&[id, resource_type.type_url()]).inc();
 
                         if let Some(error) = &new_message.error_detail {
                             metrics::NACKS.with_label_values(&[id, resource_type.type_url()]).inc();
-                            tracing::error!(%id, %resource_type, nonce = %new_message.response_nonce, ?error, "NACK");
+                            tracing::error!(nonce = %new_message.response_nonce, ?error, "NACK");
                             // Currently just resend previous discovery response.
                         } else if uuid::Uuid::parse_str(&new_message.response_nonce).is_ok() {
                             if pending_acks.cache_get(&new_message.response_nonce).is_some() {
-                                tracing::info!(%id, %resource_type, nonce = %new_message.response_nonce, "ACK");
+                                tracing::info!(nonce = %new_message.response_nonce, "ACK");
                                 continue
                             } else {
-                                tracing::trace!(%id, %resource_type, nonce = %new_message.response_nonce, "Unknown nonce: could not be found in cache");
+                                tracing::trace!(nonce = %new_message.response_nonce, "Unknown nonce: could not be found in cache");
                                 continue
                             }
                         }
 
-                        yield this.discovery_response(&node.id, resource_type, &message.resource_names).map(|response| {
+                        yield this.discovery_response(id, resource_type, &message.resource_names).map(|response| {
                             pending_acks.cache_set(response.nonce.clone(), ());
                             response
-                        })?;
+                        }).unwrap();
                     }
                 }
-
             }
-        }))
+
+            tracing::info!("terminating stream");
+        }.instrument(tracing::info_span!("xds_stream", %node.id, %resource_type))))
     }
 }
 

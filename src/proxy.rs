@@ -126,7 +126,12 @@ impl Proxy {
 
             stream.send(ResourceType::Endpoint, &[]).await?;
             stream.send(ResourceType::Listener, &[]).await?;
-            Some(stream)
+            Some(tokio::spawn(async move {
+                loop {
+                    tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+                    stream.send(ResourceType::Endpoint, &[]).await.unwrap();
+                }
+            }))
         } else {
             None
         };
@@ -244,7 +249,7 @@ impl Proxy {
     ) {
         let clusters = args.config.clusters.load();
 
-        tracing::trace!(?clusters, "Clusters available");
+        tracing::trace!(clusters=%serde_json::to_value(&clusters).unwrap(), "Clusters available");
 
         let endpoints: Vec<_> = clusters.endpoints().collect();
         if endpoints.is_empty() {
