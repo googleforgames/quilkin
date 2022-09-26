@@ -19,13 +19,12 @@ mod tests {
     use std::net::SocketAddr;
     use std::{collections::BTreeMap, time::Duration};
 
-    use k8s_openapi::api::core::v1::{Node, Pod};
     use k8s_openapi::{
         api::{
             apps::v1::{Deployment, DeploymentSpec},
             core::v1::{
-                ConfigMap, ConfigMapVolumeSource, ContainerPort, PodSpec, PodTemplateSpec, Service,
-                ServiceAccount, ServicePort, ServiceSpec, Volume,
+                ConfigMap, ConfigMapVolumeSource, ContainerPort, Node, Pod, PodSpec,
+                PodTemplateSpec, Service, ServiceAccount, ServicePort, ServiceSpec, Volume,
             },
             rbac::v1::{ClusterRole, PolicyRule, RoleBinding, RoleRef, Subject},
         },
@@ -49,6 +48,8 @@ mod tests {
     use crate::{
         fleet, is_deployment_ready, is_fleet_ready, quilkin_config_map, quilkin_container, Client,
     };
+
+    const PROXY_DEPLOYMENT: &str = "quilkin-proxies";
 
     #[tokio::test]
     /// Test for Agones integration. Since this will look at all GameServers in the namespace
@@ -84,7 +85,8 @@ filters:
         config_maps.create(&pp, &config_map).await.unwrap();
 
         agones_control_plane(&client, deployments.clone()).await;
-        let proxy_address = quilkin_proxy_deployment(&client, config_maps, deployments).await;
+        let proxy_address =
+            quilkin_proxy_deployment(&client, config_maps, deployments.clone()).await;
 
         // create a fleet so we can ensure that a packet is going to the GameServer we expect, and not
         // any other.
@@ -134,6 +136,15 @@ filters:
             .expect("should receive packet from GameServer")
             .unwrap();
         assert_eq!("ACK: ALLOCATE\n", response);
+
+        // Proxy Deployment should be ready, since there is now an endpoint
+        timeout(
+            Duration::from_secs(30),
+            await_condition(deployments.clone(), PROXY_DEPLOYMENT, is_deployment_ready()),
+        )
+        .await
+        .expect("Quilkin proxy deployment should be ready")
+        .unwrap();
 
         // keep trying to send the packet to the proxy until it works, since distributed systems are eventually consistent.
         let mut response: String = "not-found".into();
@@ -340,7 +351,7 @@ management_servers:
         let labels = BTreeMap::from([("role".to_string(), "proxy".to_string())]);
         let deployment = Deployment {
             metadata: ObjectMeta {
-                name: Some("quilkin-proxies".into()),
+                name: Some(PROXY_DEPLOYMENT.into()),
                 labels: Some(labels.clone()),
                 ..Default::default()
             },
@@ -375,13 +386,13 @@ management_servers:
 
         let deployment = deployments.create(&pp, &deployment).await.unwrap();
         let name = deployment.name();
-        timeout(
-            Duration::from_secs(30),
+        // should not be ready, since there are no endpoints, but let's wait 3 seconds, make sure it doesn't do something we don't expect
+        let result = timeout(
+            Duration::from_secs(3),
             await_condition(deployments.clone(), name.as_str(), is_deployment_ready()),
         )
-        .await
-        .expect("Quilkin proxy deployment should be ready")
-        .unwrap();
+        .await;
+        assert!(result.is_err());
 
         // get the address to send data to
         let pods = client.namespaced_api::<Pod>();

@@ -20,15 +20,11 @@ mod tests {
         api::core::v1::{Pod, PodSpec},
         apimachinery::pkg::apis::meta::v1::ObjectMeta,
     };
-    use kube::{
-        api::PostParams,
-        runtime::wait::{await_condition, conditions},
-        Api, ResourceExt,
-    };
+    use kube::{api::PostParams, runtime::wait::await_condition, Api, ResourceExt};
     use std::time::Duration;
     use tokio::time::timeout;
 
-    use crate::{quilkin_container, Client};
+    use crate::{is_pod_ready, quilkin_container, Client};
 
     #[tokio::test]
     async fn create_quilkin_pod() {
@@ -53,7 +49,7 @@ mod tests {
 
         // now wait for it be become ready.
         let name = pod.name();
-        let running = await_condition(pods, name.as_str(), conditions::is_pod_running());
+        let running = await_condition(pods, name.as_str(), is_pod_ready());
         timeout(Duration::from_secs(30), running)
             .await
             .expect("Pod should be running")

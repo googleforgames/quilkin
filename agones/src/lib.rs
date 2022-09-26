@@ -24,7 +24,7 @@ use k8s_openapi::{
     api::{
         apps::v1::Deployment,
         core::v1::{
-            ConfigMap, Container, EnvVar, HTTPGetAction, Namespace, PodSpec, PodTemplateSpec,
+            ConfigMap, Container, EnvVar, HTTPGetAction, Namespace, Pod, PodSpec, PodTemplateSpec,
             Probe, ResourceRequirements, ServiceAccount, VolumeMount,
         },
         rbac::v1::{RoleBinding, RoleRef, Subject},
@@ -284,6 +284,24 @@ pub fn is_gameserver_ready() -> impl Condition<GameServer> {
     }
 }
 
+pub fn is_pod_ready() -> impl Condition<Pod> {
+    |obj: Option<&Pod>| {
+        if let Some(pod) = obj {
+            return pod
+                .status
+                .as_ref()
+                .and_then(|status| status.conditions.as_ref())
+                .and_then(|conditions| {
+                    conditions
+                        .iter()
+                        .find(|condition| condition.type_ == "Ready" && condition.status == "True")
+                })
+                .is_some();
+        }
+        false
+    }
+}
+
 /// Condition to wait for a Deployment to have all the replicas it is expecting to be ready.
 pub fn is_deployment_ready() -> impl Condition<Deployment> {
     |obj: Option<&Deployment>| {
@@ -331,6 +349,16 @@ pub fn quilkin_container(client: &Client, volume_mount: Option<String>) -> Conta
         liveness_probe: Some(Probe {
             http_get: Some(HTTPGetAction {
                 path: Some("/live".into()),
+                port: IntOrString::Int(9091),
+                ..Default::default()
+            }),
+            initial_delay_seconds: Some(3),
+            period_seconds: Some(2),
+            ..Default::default()
+        }),
+        readiness_probe: Some(Probe {
+            http_get: Some(HTTPGetAction {
+                path: Some("/ready".into()),
                 port: IntOrString::Int(9091),
                 ..Default::default()
             }),

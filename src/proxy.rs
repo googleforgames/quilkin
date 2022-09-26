@@ -27,6 +27,7 @@ use prometheus::HistogramTimer;
 use tokio::{net::UdpSocket, sync::watch, time::Duration};
 
 use crate::{
+    admin,
     endpoint::{Endpoint, EndpointAddress},
     filters::{Filter, ReadContext},
     proxy::sessions::{
@@ -136,7 +137,7 @@ impl Proxy {
         };
 
         if self.config.admin.is_some() {
-            tokio::spawn(crate::admin::server(self.config.clone()));
+            tokio::spawn(admin::server(admin::Mode::Proxy, self.config.clone()));
         }
 
         self.run_recv_from(RunRecvFromArgs {
