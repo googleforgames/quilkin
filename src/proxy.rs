@@ -27,7 +27,6 @@ use prometheus::HistogramTimer;
 use tokio::{net::UdpSocket, sync::watch, time::Duration};
 
 use crate::{
-    admin,
     endpoint::{Endpoint, EndpointAddress},
     filters::{Filter, ReadContext},
     proxy::sessions::{manager::SessionManager, SessionArgs, SESSION_TIMEOUT_SECONDS},
@@ -38,7 +37,7 @@ use crate::{
 
 /// The UDP proxy service.
 pub struct Proxy {
-    config: Arc<Config>,
+    pub config: Arc<Config>,
 }
 
 impl TryFrom<Config> for Proxy {
@@ -126,10 +125,6 @@ impl Proxy {
         } else {
             None
         };
-
-        if self.config.admin.is_some() {
-            tokio::spawn(admin::server(admin::Mode::Proxy, self.config.clone()));
-        }
 
         self.run_recv_from(RunRecvFromArgs {
             session_manager,
@@ -237,9 +232,6 @@ impl Proxy {
         args: &ProcessDownstreamReceiveConfig,
     ) {
         let clusters = args.config.clusters.load();
-
-        tracing::trace!(clusters=%serde_json::to_value(&clusters).unwrap(), "Clusters available");
-
         let endpoints: Vec<_> = clusters.endpoints().collect();
         if endpoints.is_empty() {
             tracing::trace!("dropping packet, no upstream endpoints available");

@@ -25,7 +25,7 @@ use std::{
 
 use tokio::{signal, sync::watch};
 
-use crate::Config;
+use crate::{admin::Mode, Config};
 
 pub use self::{
     generate_config_schema::GenerateConfigSchema,
@@ -40,15 +40,15 @@ const ETC_CONFIG_PATH: &str = "/etc/quilkin/quilkin.yaml";
 #[derive(clap::Parser)]
 #[non_exhaustive]
 pub struct Cli {
+    /// Whether to spawn the admin server or not.
+    #[clap(default_value = "true", env, long)]
+    pub admin: bool,
     /// The path to the configuration file for the Quilkin instance.
     #[clap(short, long, env = "QUILKIN_CONFIG", default_value = "quilkin.yaml")]
     pub config: PathBuf,
     /// The port to bind for the admin server
     #[clap(long, env = "QUILKIN_ADMIN_ADDRESS")]
     pub admin_address: Option<std::net::SocketAddr>,
-    /// Whether to spawn the admin server or not.
-    #[clap(long, env = "QUILKIN_NO_ADMIN")]
-    pub no_admin: bool,
     /// Whether Quilkin will report any results to stdout/stderr.
     #[clap(short, long, env)]
     pub quiet: bool,
@@ -64,9 +64,20 @@ pub enum Commands {
     Manage(Manage),
 }
 
+impl Commands {
+    pub fn admin_mode(&self) -> Option<Mode> {
+        match self {
+            Self::Run(_) => Some(Mode::Proxy),
+            Self::Manage(_) => Some(Mode::Xds),
+            Self::GenerateConfigSchema(_) => None,
+        }
+    }
+}
+
 impl Cli {
     /// Drives the main quilkin application lifecycle using the command line
     /// arguments.
+    #[tracing::instrument(skip_all)]
     pub async fn drive(self) -> crate::Result<()> {
         let version: std::borrow::Cow<'static, str> = if cfg!(debug_assertions) {
             format!("{VERSION}+debug").into()
@@ -80,6 +91,7 @@ impl Cli {
                 .from_env_lossy();
             tracing_subscriber::fmt()
                 .json()
+                .with_file(true)
                 .with_env_filter(env_filter)
                 .init();
         }
@@ -91,12 +103,16 @@ impl Cli {
         );
 
         let config = Arc::new(Self::read_config(self.config)?);
-        if self.no_admin {
+        let _admin_task = if let Some(mode) = self.command.admin_mode().filter(|_| self.admin) {
+            if let Some(address) = self.admin_address {
+                config
+                    .admin
+                    .store(Arc::new(crate::config::Admin { address }));
+            }
+            Some(tokio::spawn(crate::admin::server(mode, config.clone())))
+        } else {
             config.admin.remove();
-        } else if let Some(address) = self.admin_address {
-            config
-                .admin
-                .store(Arc::new(crate::config::Admin { address }));
+            None
         };
 
         let (shutdown_tx, shutdown_rx) = watch::channel::<()>(());

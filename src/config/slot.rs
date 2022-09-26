@@ -38,6 +38,11 @@ impl<T> Slot<T> {
         }
     }
 
+    /// Creates a new empty slot.
+    pub fn empty() -> Self {
+        Self::new(None)
+    }
+
     /// Adds a watcher to to the slot. The watcher will fire whenever slot's
     /// value changes.
     pub fn watch(&self, watcher: impl Fn(&T) + Send + Sync + 'static) {
@@ -137,13 +142,13 @@ impl<T: PartialEq> PartialEq for Slot<T> {
     }
 }
 
-impl<T: Default> From<T> for Slot<T> {
+impl<T> From<T> for Slot<T> {
     fn from(data: T) -> Self {
         Self::new(data)
     }
 }
 
-impl<T: Default> From<Option<T>> for Slot<T> {
+impl<T> From<Option<T>> for Slot<T> {
     fn from(data: Option<T>) -> Self {
         Self::new(data)
     }

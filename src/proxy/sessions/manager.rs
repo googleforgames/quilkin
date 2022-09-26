@@ -72,7 +72,6 @@ impl SessionManager {
                         break;
                     }
                     _ = interval.tick() => {
-                        tracing::debug!("Attempting to Prune Sessions");
                         Self::prune_sessions(&mut sessions).await;
 
                     }
@@ -98,6 +97,7 @@ impl SessionManager {
             .count();
 
         if expired_keys != 0 {
+            tracing::debug!("pruning expired sessions");
             // Go over the whole sessions map again in case anything expired
             // since acquiring the write lock.
             sessions

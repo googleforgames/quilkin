@@ -56,9 +56,10 @@ impl Client {
     }
 
     async fn new_ads_client(config: &Config) -> Result<AdsClient> {
-        const BACKOFF_INITIAL_DELAY_MILLISECONDS: u64 = 500;
-        const BACKOFF_MAX_DELAY_SECONDS: u64 = 30;
-        const BACKOFF_MAX_JITTER_MILLISECONDS: u64 = 2000;
+        use crate::config::{
+            BACKOFF_INITIAL_DELAY_MILLISECONDS, BACKOFF_MAX_DELAY_SECONDS,
+            BACKOFF_MAX_JITTER_MILLISECONDS,
+        };
 
         let mut backoff =
             ExponentialBackoff::new(Duration::from_millis(BACKOFF_INITIAL_DELAY_MILLISECONDS));
@@ -84,7 +85,7 @@ impl Client {
 
             match error {
                 RpcSessionError::InitialConnect(ref error) => {
-                    tracing::error!(?error, "Unable to connect to the XDS server");
+                    tracing::warn!(?error, "Unable to connect to the XDS server");
 
                     // Do not retry if this is an invalid URL error that we cannot recover from.
                     // Need to use {:?} as the Display output only returns 'transport error'
@@ -97,7 +98,7 @@ impl Client {
                 }
 
                 RpcSessionError::Receive(ref status) => {
-                    tracing::error!(status = ?status, "Failed to receive response from XDS server");
+                    tracing::warn!(status = ?status, "Failed to receive response from XDS server");
                     RetryPolicy::Delay(delay)
                 }
             }
@@ -177,7 +178,7 @@ impl Stream {
                     while let Some(response) = responses
                         .message()
                         .await
-                        .map_err(|error| tracing::error!(%error, "Error from xDS server"))
+                        .map_err(|error| tracing::warn!(%error, "Error from xDS server"))
                         .ok()
                         .flatten()
                     {
