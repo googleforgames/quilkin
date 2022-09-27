@@ -23,6 +23,10 @@ us-docker.pkg.dev/quilkin/release/quilkin:{version}
 
 Which can be browsed as [us-docker.pkg.dev/quilkin/release/quilkin](https://us-docker.pkg.dev/quilkin/release/quilkin).
 
+The [entrypoint](https://docs.docker.com/engine/reference/builder/#entrypoint) of the container is to run `/quilkin` 
+with no arguments, therefore arguments will need to be supplied. See the [documentation below](#command-line-interface) 
+for all command line options.
+
 ## Command-Line Interface
 
 Quilkin provides a variety of different commands depending on your use-case.

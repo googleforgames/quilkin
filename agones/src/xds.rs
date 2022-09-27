@@ -236,24 +236,21 @@ filters:
         role_bindings.create(&pp, &binding).await.unwrap();
 
         // Setup the xDS Agones provider server
-        let mut container = quilkin_container(client, None);
+        let args = [
+            "manage",
+            "agones",
+            "--config-namespace",
+            client.namespace.as_str(),
+            "--gameservers-namespace",
+            client.namespace.as_str(),
+        ]
+        .map(String::from)
+        .to_vec();
+        let mut container = quilkin_container(client, Some(args), None);
         container.ports = Some(vec![ContainerPort {
             container_port: 7000,
             ..Default::default()
         }]);
-        container.command = Some(
-            [
-                "/quilkin",
-                "manage",
-                "agones",
-                "--config-namespace",
-                client.namespace.as_str(),
-                "--gameservers-namespace",
-                client.namespace.as_str(),
-            ]
-            .map(String::from)
-            .to_vec(),
-        );
         let labels = BTreeMap::from([("role".to_string(), "xds".to_string())]);
         let deployment = Deployment {
             metadata: ObjectMeta {
@@ -334,7 +331,8 @@ management_servers:
             .await
             .unwrap();
         let mount_name = "config";
-        let mut container = quilkin_container(client, Some(mount_name.into()));
+        let mut container =
+            quilkin_container(client, Some(vec!["run".into()]), Some(mount_name.into()));
 
         // we'll use a host port, since spinning up a load balancer takes a long time.
         // we know that port 7000 is open because this is an Agones cluster and it has associated

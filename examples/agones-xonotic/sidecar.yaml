@@ -14,21 +14,6 @@
 # limitations under the License.
 #
 
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: quilkin-config
-data:
-  quilkin.yaml: |
-    version: v1alpha1
-    proxy:
-      port: 26001
-    clusters:
-      default:
-        localities:
-          - endpoints:
-              - address: 127.0.0.1:26000
----
 apiVersion: "agones.dev/v1"
 kind: Fleet
 metadata:
@@ -57,16 +42,11 @@ spec:
               image: gcr.io/agones-images/xonotic-example:0.8
             - name: quilkin
               image: us-docker.pkg.dev/quilkin/release/quilkin:0.4.0
-              volumeMounts:
-                - name: config
-                  mountPath: "/etc/quilkin"
+              args: ["run", "--port", "26001", "--to", "127.0.0.1:26000"]
               livenessProbe:
                 httpGet:
                   path: /live
                   port: 9091
                 initialDelaySeconds: 3
                 periodSeconds: 2
-          volumes:
-            - name: config
-              configMap:
-                name: quilkin-config
+
