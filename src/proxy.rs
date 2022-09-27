@@ -129,7 +129,7 @@ impl Proxy {
             Some(tokio::spawn(async move {
                 loop {
                     tokio::time::sleep(std::time::Duration::from_millis(250)).await;
-                    stream.send(ResourceType::Endpoint, &[]).await.unwrap();
+                    let _ = stream.send(ResourceType::Endpoint, &[]).await;
                 }
             }))
         } else {
