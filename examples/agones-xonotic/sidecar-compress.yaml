@@ -63,6 +63,8 @@ spec:
               image: gcr.io/agones-images/xonotic-example:0.8
             - name: quilkin
               image: us-docker.pkg.dev/quilkin/release/quilkin:0.4.0
+              args:
+                - run
               volumeMounts:
                 - name: config
                   mountPath: "/etc/quilkin"

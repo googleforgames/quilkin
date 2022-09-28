@@ -16,8 +16,7 @@ FROM gcr.io/distroless/cc:nonroot as base
 WORKDIR /
 COPY ./license.html .
 COPY ./dependencies-src.zip .
-COPY --chown=nonroot:nonroot ./image/quilkin.yaml /etc/quilkin/quilkin.yaml
 COPY ./target/image/quilkin .
 
 USER nonroot:nonroot
-ENTRYPOINT ["/quilkin", "--config", "/etc/quilkin/quilkin.yaml", "run"]
+ENTRYPOINT ["/quilkin"]

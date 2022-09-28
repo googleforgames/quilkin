@@ -12,14 +12,19 @@ create a Fleet of Xonotic dedicated game servers, with traffic processed through
 This is particularly useful if you want to take advantage of the inbuilt metrics that Quilkin provides without 
 having to alter your dedicated game server.
 
+Since the configuration is so simple, we don't need a configuration file and can utilise the command line arguements.
+
 Connect to the Agones hosted Xonotic server via the "Multiplayer > Address" field in the Xonotic client.
 
 ## Sidecar with compression filter
 
 Run `kubectl apply -f https://github.com/googleforgames/quilkin/blob/main/examples/agones-xonotic/sidecar-compress.yaml`
 to create a Fleet of Xonotic dedicated game servers, with traffic processed through a Quilkin sidecar proxy, 
-that is configured to decompresses UDP traffic with the [Snappy](../../docs/extensions/filters/compress.md#snappy) 
+that is configured to decompress UDP traffic with the [Snappy](https://crates.io/crates/snap) 
 compression format.
+
+Since this is a more complex configuration, we provide a Quilkin a yaml configuration file through a `ConfigMap` 
+stored on the cluster.
 
 Instead of connecting Xonotic directly, take the IP and port from the Agones hosted dedicated server, and replace the 
 `${GAMESERVER_IP}` and `${GAMESERVER_PORT}` values in a local copy of `client-compress.yaml`. Run this configuration 

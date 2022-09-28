@@ -337,13 +337,18 @@ pub fn is_fleet_ready() -> impl Condition<Fleet> {
 }
 
 /// Returns a container for Quilkin, with an optional volume mount name
-pub fn quilkin_container(client: &Client, volume_mount: Option<String>) -> Container {
+pub fn quilkin_container(
+    client: &Client,
+    args: Option<Vec<String>>,
+    volume_mount: Option<String>,
+) -> Container {
     let mut container = Container {
         name: "quilkin".into(),
         image: Some(client.quilkin_image.clone()),
+        args,
         env: Some(vec![EnvVar {
             name: "RUST_LOG".to_string(),
-            value: Some("trace".into()),
+            value: Some("quilkin=trace".into()),
             value_from: None,
         }]),
         liveness_probe: Some(Probe {

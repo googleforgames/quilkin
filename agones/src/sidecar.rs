@@ -98,9 +98,11 @@ clusters:
         gs.spec.container = Some(template.containers[0].name.clone());
 
         let mount_name = "config".to_string();
-        template
-            .containers
-            .push(quilkin_container(&client, Some(mount_name.clone())));
+        template.containers.push(quilkin_container(
+            &client,
+            Some(vec!["run".into()]),
+            Some(mount_name.clone()),
+        ));
 
         template.volumes = Some(vec![Volume {
             name: mount_name,
