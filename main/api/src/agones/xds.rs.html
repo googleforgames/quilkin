@@ -432,8 +432,6 @@
 <span id="426">426</span>
 <span id="427">427</span>
 <span id="428">428</span>
-<span id="429">429</span>
-<span id="430">430</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -672,24 +670,21 @@ filters:
         <span class="ident">role_bindings</span>.<span class="ident">create</span>(<span class="kw-2">&amp;</span><span class="ident">pp</span>, <span class="kw-2">&amp;</span><span class="ident">binding</span>).<span class="kw">await</span>.<span class="ident">unwrap</span>();
 
         <span class="comment">// Setup the xDS Agones provider server</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">container</span> <span class="op">=</span> <span class="ident">quilkin_container</span>(<span class="ident">client</span>, <span class="prelude-val">None</span>);
+        <span class="kw">let</span> <span class="ident">args</span> <span class="op">=</span> [
+            <span class="string">&quot;manage&quot;</span>,
+            <span class="string">&quot;agones&quot;</span>,
+            <span class="string">&quot;--config-namespace&quot;</span>,
+            <span class="ident">client</span>.<span class="ident">namespace</span>.<span class="ident">as_str</span>(),
+            <span class="string">&quot;--gameservers-namespace&quot;</span>,
+            <span class="ident">client</span>.<span class="ident">namespace</span>.<span class="ident">as_str</span>(),
+        ]
+        .<span class="ident">map</span>(<span class="ident">String::from</span>)
+        .<span class="ident">to_vec</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">container</span> <span class="op">=</span> <span class="ident">quilkin_container</span>(<span class="ident">client</span>, <span class="prelude-val">Some</span>(<span class="ident">args</span>), <span class="prelude-val">None</span>);
         <span class="ident">container</span>.<span class="ident">ports</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="ident">ContainerPort</span> {
             <span class="ident">container_port</span>: <span class="number">7000</span>,
             ..<span class="ident">Default::default</span>()
         }]);
-        <span class="ident">container</span>.<span class="ident">command</span> <span class="op">=</span> <span class="prelude-val">Some</span>(
-            [
-                <span class="string">&quot;/quilkin&quot;</span>,
-                <span class="string">&quot;manage&quot;</span>,
-                <span class="string">&quot;agones&quot;</span>,
-                <span class="string">&quot;--config-namespace&quot;</span>,
-                <span class="ident">client</span>.<span class="ident">namespace</span>.<span class="ident">as_str</span>(),
-                <span class="string">&quot;--gameservers-namespace&quot;</span>,
-                <span class="ident">client</span>.<span class="ident">namespace</span>.<span class="ident">as_str</span>(),
-            ]
-            .<span class="ident">map</span>(<span class="ident">String::from</span>)
-            .<span class="ident">to_vec</span>(),
-        );
         <span class="kw">let</span> <span class="ident">labels</span> <span class="op">=</span> <span class="ident">BTreeMap::from</span>([(<span class="string">&quot;role&quot;</span>.<span class="ident">to_string</span>(), <span class="string">&quot;xds&quot;</span>.<span class="ident">to_string</span>())]);
         <span class="kw">let</span> <span class="ident">deployment</span> <span class="op">=</span> <span class="ident">Deployment</span> {
             <span class="ident">metadata</span>: <span class="ident">ObjectMeta</span> {
@@ -770,7 +765,8 @@ management_servers:
             .<span class="kw">await</span>
             .<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="ident">mount_name</span> <span class="op">=</span> <span class="string">&quot;config&quot;</span>;
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">container</span> <span class="op">=</span> <span class="ident">quilkin_container</span>(<span class="ident">client</span>, <span class="prelude-val">Some</span>(<span class="ident">mount_name</span>.<span class="ident">into</span>()));
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">container</span> <span class="op">=</span>
+            <span class="ident">quilkin_container</span>(<span class="ident">client</span>, <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="string">&quot;run&quot;</span>.<span class="ident">into</span>()]), <span class="prelude-val">Some</span>(<span class="ident">mount_name</span>.<span class="ident">into</span>()));
 
         <span class="comment">// we&#39;ll use a host port, since spinning up a load balancer takes a long time.</span>
         <span class="comment">// we know that port 7000 is open because this is an Agones cluster and it has associated</span>

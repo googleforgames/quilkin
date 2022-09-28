@@ -150,6 +150,9 @@ hosted on Google Cloud <a href="https://cloud.google.com/artifact-registry">Arti
 <pre><code>us-docker.pkg.dev/quilkin/release/quilkin:{version}
 </code></pre>
 <p>Which can be browsed as <a href="https://us-docker.pkg.dev/quilkin/release/quilkin">us-docker.pkg.dev/quilkin/release/quilkin</a>.</p>
+<p>The <a href="https://docs.docker.com/engine/reference/builder/#entrypoint">entrypoint</a> of the container is to run <code>/quilkin</code> 
+with no arguments, therefore arguments will need to be supplied. See the <a href="#command-line-interface">documentation below</a> 
+for all command line options.</p>
 <h2 id="command-line-interface"><a class="header" href="#command-line-interface">Command-Line Interface</a></h2>
 <p>Quilkin provides a variety of different commands depending on your use-case.
 The primary entrypoint of the process is <code>run</code>, which runs Quilkin as a reverse
