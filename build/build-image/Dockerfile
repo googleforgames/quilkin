@@ -12,21 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM gcr.io/cloud-builders/docker
+FROM debian:bullseye
 
 ARG RUST_TOOLCHAIN
 
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH \
-    CROSS_DOCKER_IN_DOCKER=true \
     LC_ALL=C.UTF-8 \
     LANG=C.UTF-8
 
 # Install packages
 RUN set -eux && \
     apt-get update && \
-    apt-get install -y jq wget zip build-essential libssl-dev pkg-config python3-pip bash-completion g++-mingw-w64-x86-64 && \
+    apt-get install -y lsb-release jq curl wget zip build-essential software-properties-common \ 
+        libssl-dev pkg-config python3-pip bash-completion g++-x86-64-linux-gnu g++-mingw-w64-x86-64 && \
     pip3 install live-server && \
     echo "source /etc/bash_completion" >> /root/.bashrc
 
@@ -37,12 +37,9 @@ RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] http://packages.c
     echo "source /usr/share/google-cloud-sdk/completion.bash.inc" >> /root/.bashrc && \
     echo "source <(kubectl completion bash)" >> /root/.bashrc
 
-# install tarrafrm
-# Credit: https://learn.hashicorp.com/tutorials/terraform/install-cli
-RUN curl -fsSL https://apt.releases.hashicorp.com/gpg | apt-key add - && \
-    apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main" && \
-    apt-get update -y && apt-get install terraform -y && \
-    terraform -install-autocomplete
+# install terraform. There is no apt support for arm64, so direct downloading instead.
+RUN wget --quiet -O terraform.zip "https://releases.hashicorp.com/terraform/1.3.1/terraform_1.3.1_linux_$(dpkg --print-architecture).zip" && \
+    unzip terraform.zip && rm terraform.zip && mv terraform /usr/local/bin/
 
 # install helm
 # Credit: https://helm.sh/docs/intro/install/
@@ -51,20 +48,30 @@ RUN curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | b
 
 # Install htmltest
 WORKDIR /tmp
-RUN wget --quiet -O htmltest.tar.gz https://github.com/wjdp/htmltest/releases/download/v0.16.0/htmltest_0.16.0_linux_amd64.tar.gz && \
+RUN wget --quiet -O htmltest.tar.gz "https://github.com/wjdp/htmltest/releases/download/v0.16.0/htmltest_0.16.0_linux_$(dpkg --print-architecture).tar.gz" && \
      tar -xf htmltest.tar.gz && mv ./htmltest /usr/local/bin/ && rm htmltest.tar.gz
 
-# Install Rust
-RUN wget --quiet https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init && \
-    chmod +x rustup-init && \
-    ./rustup-init -y --no-modify-path --default-toolchain $RUST_TOOLCHAIN && \
+# Install Rust. Inspiration from: https://github.com/rust-lang/docker-rust/blob/master/1.64.0/bullseye/Dockerfile
+RUN set -eux; \
+    dpkgArch="$(dpkg --print-architecture)" && \
+    case "${dpkgArch##*-}" in \
+        amd64) rustArch='x86_64-unknown-linux-gnu';; \
+        armhf) rustArch='armv7-unknown-linux-gnueabihf';; \
+        arm64) rustArch='aarch64-unknown-linux-gnu';; \
+        i386) rustArch='i686-unknown-linux-gnu';; \
+        *) echo >&2 "unsupported architecture: ${dpkgArch}"; exit 1 ;; \
+    esac && \
+    wget --quiet "https://static.rust-lang.org/rustup/dist/${rustArch}/rustup-init" && \
+    chmod +x rustup-init; \
+    ./rustup-init -y --no-modify-path --profile minimal --default-toolchain $RUST_TOOLCHAIN --default-host ${rustArch}; \
     rm rustup-init && \
     chmod -R a+w $RUSTUP_HOME $CARGO_HOME && \
     rustup component add rustfmt clippy && \
-    rustup target add x86_64-pc-windows-gnu && \
+    rustup target add x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu x86_64-pc-windows-gnu && \
     cargo install cargo-watch mdbook && \
     cargo install cargo-about && \
     cargo install --locked cargo-deny && \
     rustup --version && \
     cargo --version && \
     rustc --version
+
