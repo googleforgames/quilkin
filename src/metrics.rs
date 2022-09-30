@@ -65,6 +65,30 @@ pub(crate) static PROCESSING_TIME: Lazy<HistogramVec> = Lazy::new(|| {
     .unwrap()
 });
 
+pub(crate) static BYTES_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
+    prometheus::register_int_counter_vec_with_registry! {
+        prometheus::opts! {
+            "bytes_total",
+            "total number of bytes",
+        },
+        &[DIRECTION_LABEL],
+        registry(),
+    }
+    .unwrap()
+});
+
+pub(crate) static ERRORS_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
+    prometheus::register_int_counter_vec_with_registry! {
+        prometheus::opts! {
+            "errors_total",
+            "total number of errors sending packets",
+        },
+        &[DIRECTION_LABEL],
+        registry(),
+    }
+    .unwrap()
+});
+
 pub(crate) static PACKETS_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
     prometheus::register_int_counter_vec_with_registry! {
         prometheus::opts! {
@@ -111,11 +135,13 @@ pub fn histogram_opts(
     name: &str,
     subsystem: &str,
     description: &str,
-    buckets: Option<Vec<f64>>,
+    buckets: impl Into<Option<Vec<f64>>>,
 ) -> HistogramOpts {
     HistogramOpts {
         common_opts: opts(name, subsystem, description),
-        buckets: buckets.unwrap_or_else(|| Vec::from(DEFAULT_BUCKETS as &'static [f64])),
+        buckets: buckets
+            .into()
+            .unwrap_or_else(|| Vec::from(DEFAULT_BUCKETS as &'static [f64])),
     }
 }
 
@@ -125,20 +151,23 @@ pub fn filter_opts(name: &str, filter_name: &str, description: &str) -> Opts {
 }
 
 /// Registers the current metric collector with the provided registry.
-/// Returns an error if a collector with the same name has already
-/// been registered.
-fn register_metric<T: Collector + Sized + 'static>(
-    registry: &Registry,
-    collector: T,
-) -> Result<()> {
-    registry.register(Box::new(collector))
+///
+/// # Panics
+/// A collector with the same name has already been registered.
+pub fn register<T: Collector + Sized + Clone + 'static>(collector: T) -> T {
+    let return_value = collector.clone();
+
+    self::registry()
+        .register(Box::from(collector))
+        .map(|_| return_value)
+        .unwrap()
 }
 
 pub trait CollectorExt: Collector + Clone + Sized + 'static {
     /// Registers the current metric collector with the provided registry
     /// if not already registered.
     fn register_if_not_exists(self) -> Result<Self> {
-        match register_metric(crate::metrics::registry(), self.clone()) {
+        match registry().register(Box::from(self.clone())) {
             Ok(_) | Err(prometheus::Error::AlreadyReg) => Ok(self),
             Err(err) => Err(err),
         }

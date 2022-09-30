@@ -16,3 +16,9 @@
 
 pub(crate) mod debug;
 pub(crate) mod net;
+
+/// A type which can be logged, usually error types.
+pub(crate) trait Loggable {
+    /// Output a log.
+    fn log(&self);
+}

@@ -14,93 +14,41 @@
  * limitations under the License.
  */
 
-use crate::metrics::{histogram_opts, opts, CollectorExt};
-use prometheus::{
-    core::{AtomicI64, AtomicU64, GenericCounter, GenericGauge},
-    Histogram, IntCounter, IntGauge, Result as MetricsResult,
-};
+use once_cell::sync::Lazy;
+use prometheus::{Histogram, IntCounter, IntGauge, Opts};
 
-#[derive(Clone)]
-pub struct Metrics {
-    pub active_sessions: GenericGauge<AtomicI64>,
-    pub sessions_total: GenericCounter<AtomicU64>,
-    pub rx_bytes_total: GenericCounter<AtomicU64>,
-    pub tx_bytes_total: GenericCounter<AtomicU64>,
-    pub rx_packets_total: GenericCounter<AtomicU64>,
-    pub tx_packets_total: GenericCounter<AtomicU64>,
-    pub rx_errors_total: GenericCounter<AtomicU64>,
-    pub tx_errors_total: GenericCounter<AtomicU64>,
-    pub packets_dropped_total: GenericCounter<AtomicU64>,
-    pub duration_secs: Histogram,
-}
+use crate::metrics::{histogram_opts, register};
 
-impl Metrics {
-    pub fn new() -> MetricsResult<Self> {
-        let subsystem = "session";
-        Ok(Self {
-            active_sessions: IntGauge::with_opts(opts(
-                "active",
-                subsystem,
-                "Number of sessions currently active",
-            ))?
-            .register_if_not_exists()?,
-            sessions_total: IntCounter::with_opts(opts(
-                "total",
-                subsystem,
-                "Total number of established sessions",
-            ))?
-            .register_if_not_exists()?,
-            rx_bytes_total: IntCounter::with_opts(opts(
-                "rx_bytes_total",
-                subsystem,
-                "Total number of bytes received",
-            ))?
-            .register_if_not_exists()?,
-            tx_bytes_total: IntCounter::with_opts(opts(
-                "tx_bytes_total",
-                subsystem,
-                "Total number of bytes sent",
-            ))?
-            .register_if_not_exists()?,
-            rx_packets_total: IntCounter::with_opts(opts(
-                "rx_packets_total",
-                subsystem,
-                "Total number of packets received",
-            ))?
-            .register_if_not_exists()?,
-            tx_packets_total: IntCounter::with_opts(opts(
-                "tx_packets_total",
-                subsystem,
-                "Total number of packets sent",
-            ))?
-            .register_if_not_exists()?,
-            packets_dropped_total: IntCounter::with_opts(opts(
-                "packets_dropped_total",
-                subsystem,
-                "Total number of dropped packets",
-            ))?
-            .register_if_not_exists()?,
-            rx_errors_total: IntCounter::with_opts(opts(
-                "rx_errors_total",
-                subsystem,
-                "Total number of errors encountered while receiving a packet",
-            ))?
-            .register_if_not_exists()?,
-            tx_errors_total: IntCounter::with_opts(opts(
-                "tx_errors_total",
-                subsystem,
-                "Total number of errors encountered while sending a packet",
-            ))?
-            .register_if_not_exists()?,
-            duration_secs: Histogram::with_opts(histogram_opts(
-                "duration_secs",
-                subsystem,
-                "Duration of sessions",
-                Some(vec![
-                    1f64, 5f64, 10f64, 25f64, 60f64, 300f64, 900f64, 1800f64, 3600f64,
-                ]),
-            ))?
-            .register_if_not_exists()?,
-        })
-    }
-}
+const SUBSYSTEM: &str = "session";
+
+pub(crate) static ACTIVE_SESSIONS: Lazy<IntGauge> = Lazy::new(|| {
+    register(
+        IntGauge::with_opts(
+            Opts::new("active", "number of sessions currently active").subsystem(SUBSYSTEM),
+        )
+        .unwrap(),
+    )
+});
+
+pub(crate) static TOTAL_SESSIONS: Lazy<IntCounter> = Lazy::new(|| {
+    register(
+        IntCounter::with_opts(
+            Opts::new("total", "total number of established sessions").subsystem(SUBSYSTEM),
+        )
+        .unwrap(),
+    )
+});
+
+pub(crate) static DURATION_SECS: Lazy<Histogram> = Lazy::new(|| {
+    register(
+        Histogram::with_opts(histogram_opts(
+            "duration_secs",
+            SUBSYSTEM,
+            "duration of sessions",
+            vec![
+                1f64, 5f64, 10f64, 25f64, 60f64, 300f64, 900f64, 1800f64, 3600f64,
+            ],
+        ))
+        .unwrap(),
+    )
+});

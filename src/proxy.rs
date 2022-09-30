@@ -30,10 +30,7 @@ use crate::{
     admin,
     endpoint::{Endpoint, EndpointAddress},
     filters::{Filter, ReadContext},
-    proxy::sessions::{
-        manager::SessionManager, metrics::Metrics as SessionMetrics, Session, SessionArgs,
-        SESSION_TIMEOUT_SECONDS,
-    },
+    proxy::sessions::{manager::SessionManager, SessionArgs, SESSION_TIMEOUT_SECONDS},
     utils::{debug, net},
     xds::ResourceType,
     Config, Result,
@@ -42,7 +39,6 @@ use crate::{
 /// The UDP proxy service.
 pub struct Proxy {
     config: Arc<Config>,
-    session_metrics: SessionMetrics,
 }
 
 impl TryFrom<Config> for Proxy {
@@ -50,7 +46,6 @@ impl TryFrom<Config> for Proxy {
     fn try_from(config: Config) -> Result<Self, Self::Error> {
         Ok(Self {
             config: Arc::from(config),
-            session_metrics: SessionMetrics::new()?,
         })
     }
 }
@@ -58,10 +53,7 @@ impl TryFrom<Config> for Proxy {
 impl TryFrom<Arc<Config>> for Proxy {
     type Error = eyre::Error;
     fn try_from(config: Arc<Config>) -> Result<Self, Self::Error> {
-        Ok(Self {
-            config,
-            session_metrics: SessionMetrics::new()?,
-        })
+        Ok(Self { config })
     }
 }
 
@@ -97,7 +89,6 @@ struct DownstreamReceiveWorkerConfig {
 /// filter chain and session pipeline.
 struct ProcessDownstreamReceiveConfig {
     config: Arc<Config>,
-    session_metrics: SessionMetrics,
     session_manager: SessionManager,
     session_ttl: Duration,
     socket: Arc<UdpSocket>,
@@ -161,7 +152,6 @@ impl Proxy {
     /// pipeline.
     async fn run_recv_from(&self, args: RunRecvFromArgs) -> Result<()> {
         let session_manager = args.session_manager;
-        let session_metrics = self.session_metrics.clone();
 
         // The number of worker tasks to spawn. Each task gets a dedicated queue to
         // consume packets off.
@@ -177,7 +167,6 @@ impl Proxy {
                 shutdown_rx: args.shutdown_rx.clone(),
                 receive_config: ProcessDownstreamReceiveConfig {
                     config: self.config.clone(),
-                    session_metrics: session_metrics.clone(),
                     session_manager: session_manager.clone(),
                     session_ttl: args.session_ttl,
                     socket,
@@ -298,7 +287,7 @@ impl Proxy {
         let guard = args.session_manager.get_sessions().await;
         if let Some(session) = guard.get(&session_key) {
             // If it exists then send the packet, we're done.
-            Self::session_send_packet_helper(session, packet, args.session_ttl).await
+            session.send(packet, args.session_ttl).await
         } else {
             // If it does not exist, grab a write lock so that we can create it.
             //
@@ -317,13 +306,12 @@ impl Proxy {
                 tracing::trace!("Reusing previous session");
                 // If the session now exists then we have less work to do,
                 // simply send the packet.
-                Self::session_send_packet_helper(session, packet, args.session_ttl).await;
+                session.send(packet, args.session_ttl).await;
             } else {
                 tracing::trace!("Creating new session");
                 // Otherwise, create the session and insert into the map.
                 let session_args = SessionArgs {
                     config: args.config.clone(),
-                    metrics: args.session_metrics.clone(),
                     source: session_key.source.clone(),
                     downstream_socket: args.socket.clone(),
                     dest: endpoint.clone(),
@@ -342,8 +330,7 @@ impl Proxy {
                         // Grab a read lock to send the packet.
                         let guard = args.session_manager.get_sessions().await;
                         if let Some(session) = guard.get(&session_key) {
-                            Self::session_send_packet_helper(session, packet, args.session_ttl)
-                                .await;
+                            session.send(packet, args.session_ttl).await;
                         } else {
                             tracing::warn!(
                                 key = %format!("({}:{})", session_key.source, session_key.dest),
@@ -357,18 +344,6 @@ impl Proxy {
                 }
             }
         }
-    }
-
-    // A helper function to push a session's packet on its socket.
-    async fn session_send_packet_helper(session: &Session, packet: &[u8], ttl: Duration) {
-        match session.send(packet).await {
-            Ok(_) => {
-                if let Err(error) = session.update_expiration(ttl) {
-                    tracing::warn!(%error, "Error updating session expiration")
-                }
-            }
-            Err(error) => tracing::error!(%error, "Error sending packet from session"),
-        };
     }
 
     /// binds the local configured port with port and address reuse applied.
@@ -518,7 +493,6 @@ mod tests {
                         .build()
                         .unwrap(),
                 ),
-                session_metrics: SessionMetrics::new().unwrap(),
                 session_manager: SessionManager::new(shutdown_rx.clone()),
                 session_ttl: Duration::from_secs(10),
                 socket,
