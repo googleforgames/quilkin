@@ -58,29 +58,29 @@ impl EndpointAddress {
 
     /// Returns the socket address for the endpoint, resolving any DNS entries
     /// if present.
-    pub fn to_socket_addr(&self) -> crate::Result<SocketAddr> {
-        let no_valid_socket_err = || eyre::eyre!("No valid socket address found.");
-        if let Some(port) = self.port {
+    pub fn to_socket_addr(&self) -> Result<SocketAddr, ToSocketAddrError> {
+        // These unwraps after `to_socket_addr` are guarenteed not to panic as
+        // all the types we use provide either one address or error.
+        Ok(if let Some(port) = self.port {
             match &self.host {
-                AddressKind::Ip(ip) => (*ip, port)
-                    .to_socket_addrs()?
-                    .next()
-                    .ok_or_else(no_valid_socket_err),
-                AddressKind::Name(name) => (&**name, port)
-                    .to_socket_addrs()?
-                    .next()
-                    .ok_or_else(no_valid_socket_err),
+                AddressKind::Ip(ip) => (*ip, port).to_socket_addrs()?.next().unwrap(),
+                AddressKind::Name(name) => (&**name, port).to_socket_addrs()?.next().unwrap(),
             }
         } else {
             match &self.host {
-                AddressKind::Ip(_) => Err(eyre::eyre!("No port provided for address.")),
-                AddressKind::Name(name) => name
-                    .to_socket_addrs()?
-                    .next()
-                    .ok_or_else(no_valid_socket_err),
+                AddressKind::Ip(_) => return Err(ToSocketAddrError::NoPort),
+                AddressKind::Name(name) => name.to_socket_addrs()?.next().unwrap(),
             }
-        }
+        })
     }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum ToSocketAddrError {
+    #[error("no port provided for address")]
+    NoPort,
+    #[error("not valid address: {0}")]
+    NotValidAddress(#[from] std::io::Error),
 }
 
 /// Forwards the deserialisation to use [`std::net::ToSocketAddrs`] instead of

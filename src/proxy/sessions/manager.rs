@@ -116,7 +116,7 @@ mod tests {
 
     use crate::{
         endpoint::{Endpoint, EndpointAddress},
-        proxy::sessions::{manager::Sessions, metrics::Metrics, SessionArgs, SessionKey},
+        proxy::sessions::{manager::Sessions, SessionArgs, SessionKey},
         test_utils::create_socket,
     };
 
@@ -151,7 +151,6 @@ mod tests {
         {
             let mut sessions = sessions.write().await;
             let session_args = SessionArgs {
-                metrics: Metrics::new().unwrap(),
                 config: <_>::default(),
                 source: from,
                 downstream_socket: socket,
@@ -204,7 +203,6 @@ mod tests {
         {
             let mut sessions = sessions.write().await;
             let session_args = SessionArgs {
-                metrics: Metrics::new().unwrap(),
                 config: <_>::default(),
                 source: from,
                 downstream_socket: socket,

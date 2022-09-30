@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-pub(crate) mod error;
 pub(crate) mod manager;
 pub(crate) mod metrics;
 
@@ -39,8 +38,7 @@ use tokio::{
 use crate::{
     endpoint::{Endpoint, EndpointAddress},
     filters::{Filter, WriteContext},
-    proxy::sessions::{error::Error, metrics::Metrics},
-    utils::debug,
+    utils::{debug, Loggable},
 };
 
 type Result<T> = std::result::Result<T, Error>;
@@ -48,7 +46,6 @@ type Result<T> = std::result::Result<T, Error>;
 /// Session encapsulates a UDP stream session
 pub struct Session {
     config: Arc<crate::Config>,
-    metrics: Metrics,
     /// created_at is time at which the session was created
     created_at: Instant,
     /// socket that sends and receives from and to the endpoint address
@@ -88,7 +85,6 @@ struct ReceivedPacketContext<'a> {
 
 pub struct SessionArgs {
     pub config: Arc<crate::Config>,
-    pub metrics: Metrics,
     pub source: EndpointAddress,
     pub downstream_socket: Arc<UdpSocket>,
     pub dest: Endpoint,
@@ -124,7 +120,6 @@ impl Session {
         Self::do_update_expiration(&expiration, args.ttl)?;
 
         let s = Session {
-            metrics: args.metrics,
             config: args.config.clone(),
             upstream_socket,
             source: args.source,
@@ -135,8 +130,8 @@ impl Session {
         };
         tracing::debug!(source = %s.source, dest = ?s.dest, "Session created");
 
-        s.metrics.sessions_total.inc();
-        s.metrics.active_sessions.inc();
+        self::metrics::TOTAL_SESSIONS.inc();
+        self::metrics::ACTIVE_SESSIONS.inc();
         s.run(args.ttl, args.downstream_socket, shutdown_rx);
         Ok(s)
     }
@@ -153,7 +148,6 @@ impl Session {
         let expiration = self.expiration.clone();
         let config = self.config.clone();
         let endpoint = self.dest.clone();
-        let metrics = self.metrics.clone();
         let upstream_socket = self.upstream_socket.clone();
 
         tokio::spawn(async move {
@@ -165,14 +159,13 @@ impl Session {
                     received = upstream_socket.recv_from(&mut buf) => {
                         match received {
                             Err(error) => {
-                                metrics.rx_errors_total.inc();
+                                crate::metrics::ERRORS_TOTAL.with_label_values(&[crate::metrics::WRITE_DIRECTION_LABEL]).inc();
                                 tracing::error!(%error, %source, dest = ?endpoint, "Error receiving packet");
                             },
                             Ok((size, recv_addr)) => {
                                 crate::metrics::PACKETS_SIZE.with_label_values(&[crate::metrics::WRITE_DIRECTION_LABEL]).inc_by(size as f64);
                                 crate::metrics::PACKETS_TOTAL.with_label_values(&[crate::metrics::WRITE_DIRECTION_LABEL]).inc();
                                 Session::process_recv_packet(
-                                    &metrics,
                                     &downstream_socket,
                                     &expiration,
                                     ttl,
@@ -211,7 +204,6 @@ impl Session {
 
     /// process_recv_packet processes a packet that is received by this session.
     async fn process_recv_packet(
-        metrics: &Metrics,
         downstream_socket: &Arc<UdpSocket>,
         expiration: &Arc<AtomicU64>,
         ttl: Duration,
@@ -228,35 +220,47 @@ impl Session {
 
         tracing::trace!(%from, dest = %endpoint.address, contents = %debug::bytes_to_string(packet), "received packet from upstream");
 
-        if let Err(error) = Session::do_update_expiration(expiration, ttl) {
-            tracing::warn!(%error, "Error updating session expiration")
-        }
+        let result = Session::do_update_expiration(expiration, ttl)
+            .and_then(|_| {
+                config
+                    .filters
+                    .load()
+                    .write(WriteContext::new(
+                        endpoint,
+                        from.clone(),
+                        dest.clone(),
+                        packet.to_vec(),
+                    ))
+                    .ok_or(Error::FilterDroppedPacket)
+            })
+            .and_then(|response| {
+                dest.to_socket_addr()
+                    .map(|addr| (addr, response))
+                    .map_err(Error::ToSocketAddr)
+            });
 
-        match config.filters.load().write(WriteContext::new(
-            endpoint,
-            from.clone(),
-            dest.clone(),
-            packet.to_vec(),
-        )) {
-            None => metrics.packets_dropped_total.inc(),
-            Some(response) => {
-                let addr = match dest.to_socket_addr() {
-                    Ok(addr) => addr,
-                    Err(error) => {
-                        tracing::error!(%dest, %error, "Error resolving address");
-                        metrics.packets_dropped_total.inc();
-                        return;
-                    }
-                };
+        let handle_error = |error: Error| {
+            error.log();
+            crate::metrics::PACKETS_DROPPED
+                .with_label_values(&[crate::metrics::WRITE_DIRECTION_LABEL])
+                .inc();
+            crate::metrics::ERRORS_TOTAL
+                .with_label_values(&[crate::metrics::WRITE_DIRECTION_LABEL])
+                .inc();
+        };
 
+        match result {
+            Ok((addr, response)) => {
                 let packet = response.contents.as_slice();
                 tracing::trace!(%from, dest = %addr, contents = %debug::bytes_to_string(packet), "sending packet downstream");
-                if let Err(error) = downstream_socket.send_to(packet, addr).await {
-                    metrics.rx_errors_total.inc();
-                    tracing::error!(%error, "Error sending packet");
-                }
+                let _ = downstream_socket
+                    .send_to(packet, addr)
+                    .await
+                    .map_err(Error::SendTo)
+                    .map_err(handle_error);
             }
-        }
+            Err(error) => (handle_error)(error),
+        };
 
         timer.stop_and_record();
     }
@@ -268,69 +272,104 @@ impl Session {
 
     /// do_update_expiration increments the expiration value by the session timeout (internal)
     fn do_update_expiration(expiration: &Arc<AtomicU64>, ttl: Duration) -> Result<()> {
-        let new_expiration_time = SystemTime::now()
+        let now = SystemTime::now();
+        let new_expiration_time = now
             .checked_add(ttl)
-            .ok_or_else(|| {
-                Error::UpdateSessionExpiration(format!(
-                    "checked_add error: expiration ttl {:?} is out of bounds",
-                    ttl
-                ))
-            })?
+            .ok_or(Error::UpdateSessionExpiration { now, ttl })?
             .duration_since(UNIX_EPOCH)
-            .map_err(|_| {
-                Error::UpdateSessionExpiration(
-                    "duration_since was called with time later than the current time".into(),
-                )
-            })?
-            .as_secs();
+            // This is safe because it's impossible for `UNIX_EPOCH` to be
+            // ahead of any clock time, or the system we're on is so severely
+            // broken that the expiration code isn't going to work anyway.
+            .unwrap();
 
-        expiration.store(new_expiration_time, Ordering::Relaxed);
+        expiration.store(new_expiration_time.as_secs(), Ordering::Relaxed);
 
         Ok(())
     }
 
     /// Sends a packet to the Session's dest.
-    pub async fn send(&self, buf: &[u8]) -> crate::Result<Option<usize>> {
+    pub async fn send(&self, buf: &[u8], ttl: Duration) {
         tracing::trace!(
         dest_address = %self.dest.address,
         contents = %debug::bytes_to_string(buf),
         "sending packet upstream");
 
-        self.do_send(buf)
-            .await
-            .map(|size| {
-                self.metrics.tx_packets_total.inc();
-                self.metrics.tx_bytes_total.inc_by(size as u64);
-                Some(size)
-            })
-            .map_err(|err| {
-                self.metrics.tx_errors_total.inc();
-                eyre::eyre!(err).wrap_err("Error sending to destination.")
-            })
+        match self.do_send(buf).await {
+            Ok(size) => {
+                crate::metrics::PACKETS_TOTAL
+                    .with_label_values(&[crate::metrics::READ_DIRECTION_LABEL])
+                    .inc();
+                crate::metrics::BYTES_TOTAL
+                    .with_label_values(&[crate::metrics::READ_DIRECTION_LABEL])
+                    .inc_by(size as u64);
+            }
+            Err(error) => {
+                crate::metrics::PACKETS_DROPPED
+                    .with_label_values(&[crate::metrics::READ_DIRECTION_LABEL])
+                    .inc();
+                crate::metrics::ERRORS_TOTAL
+                    .with_label_values(&[crate::metrics::READ_DIRECTION_LABEL])
+                    .inc();
+                tracing::error!(kind=%error.kind(), "{}", error);
+                return;
+            }
+        }
+
+        if let Err(error) = self.update_expiration(ttl) {
+            tracing::warn!(%error, "Error updating session expiration")
+        }
     }
 
     /// Sends `buf` to the session's destination address. On success, returns
     /// the number of bytes written.
-    pub async fn do_send(&self, buf: &[u8]) -> crate::Result<usize> {
-        self.upstream_socket
-            .send(buf)
-            .await
-            .map_err(|error| eyre::eyre!(error))
+    pub async fn do_send(&self, buf: &[u8]) -> std::io::Result<usize> {
+        self.upstream_socket.send(buf).await
     }
 }
 
 impl Drop for Session {
     fn drop(&mut self) {
-        self.metrics.active_sessions.dec();
-        self.metrics
-            .duration_secs
-            .observe(self.created_at.elapsed().as_secs() as f64);
+        metrics::ACTIVE_SESSIONS.dec();
+        metrics::DURATION_SECS.observe(self.created_at.elapsed().as_secs() as f64);
 
         if let Err(error) = self.shutdown_tx.send(()) {
             tracing::warn!(%error, "Error sending session shutdown signal");
         }
 
         tracing::debug!(source = %self.source, dest_address = %self.dest.address, "Session closed");
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    #[error("failed to bind socket: {0}")]
+    BindUdpSocket(std::io::Error),
+    #[error("{} + {}s would have caused overflow", chrono::DateTime::<chrono::Utc>::from(*.now).to_rfc2822(), .ttl.as_secs())]
+    UpdateSessionExpiration {
+        now: std::time::SystemTime,
+        ttl: std::time::Duration,
+    },
+    #[error("failed to convert endpoint to socket address: {0}")]
+    ToSocketAddr(crate::endpoint::ToSocketAddrError),
+    #[error("failed to send packet downstream: {0}")]
+    SendTo(std::io::Error),
+    #[error("filter dropped packet from upstream")]
+    FilterDroppedPacket,
+}
+
+impl Loggable for Error {
+    fn log(&self) {
+        match self {
+            Self::BindUdpSocket(error) | Self::SendTo(error) => {
+                tracing::error!(kind=%error.kind(), "{}", self)
+            }
+            Self::UpdateSessionExpiration { .. } | Self::ToSocketAddr(_) => {
+                tracing::error!("{}", self)
+            }
+            Self::FilterDroppedPacket => {
+                tracing::trace!("{}", self)
+            }
+        }
     }
 }
 
@@ -345,7 +384,7 @@ mod tests {
         time::{Duration, SystemTime, UNIX_EPOCH},
     };
 
-    use super::{Metrics, Session};
+    use super::*;
 
     use prometheus::{Histogram, HistogramOpts};
     use tokio::time::timeout;
@@ -363,14 +402,14 @@ mod tests {
         let endpoint = Endpoint::new(addr.clone());
         let socket = Arc::new(create_socket().await);
         let msg = "hello";
+        let ttl = Duration::from_secs(20);
 
         let sess = Session::new(SessionArgs {
             config: <_>::default(),
-            metrics: Metrics::new().unwrap(),
             source: addr.clone(),
             downstream_socket: socket.clone(),
             dest: endpoint,
-            ttl: Duration::from_secs(20),
+            ttl,
         })
         .await
         .unwrap();
@@ -383,7 +422,7 @@ mod tests {
         let diff = initial_expiration_secs - now_secs;
         assert!((15..21).contains(&diff));
 
-        sess.send(msg.as_bytes()).await.unwrap();
+        sess.send(msg.as_bytes(), ttl).await;
 
         let mut buf = vec![0; 1024];
         let (size, recv_addr) = timeout(Duration::from_secs(5), socket.recv_from(&mut buf))
@@ -414,7 +453,6 @@ mod tests {
         // first test with no filtering
         let msg = "hello";
         Session::process_recv_packet(
-            &Metrics::new().unwrap(),
             &socket,
             &expiration,
             Duration::from_secs(10),
@@ -449,7 +487,6 @@ mod tests {
         // add filter
         let config = Arc::new(new_test_config());
         Session::process_recv_packet(
-            &Metrics::new().unwrap(),
             &socket,
             &expiration,
             Duration::from_secs(10),
@@ -474,44 +511,5 @@ mod tests {
             from_utf8(&buf[..size]).unwrap()
         );
         assert_eq!(dest.port(), recv_addr.port());
-    }
-
-    #[tokio::test]
-    async fn metrics() {
-        let t = TestHelper::default();
-        let ep = t.open_socket_and_recv_single_packet().await;
-        let addr: EndpointAddress = ep.socket.local_addr().unwrap().into();
-        let endpoint = Endpoint::new(addr.clone());
-        let socket = Arc::new(create_socket().await);
-
-        let session = Session::new(SessionArgs {
-            config: <_>::default(),
-            metrics: Metrics::new().unwrap(),
-            source: addr,
-            downstream_socket: socket,
-            dest: endpoint,
-            ttl: Duration::from_secs(10),
-        })
-        .await
-        .unwrap();
-
-        assert_eq!(session.metrics.sessions_total.get(), 1);
-        assert_eq!(session.metrics.active_sessions.get(), 1);
-
-        // send a packet
-        session.send(b"hello").await.unwrap();
-        timeout(Duration::from_secs(1), ep.packet_rx)
-            .await
-            .expect("should receive a packet")
-            .unwrap();
-
-        assert_eq!(session.metrics.tx_bytes_total.get(), 5);
-        assert_eq!(session.metrics.tx_packets_total.get(), 1);
-
-        // drop metrics
-        let metrics = session.metrics.clone();
-        drop(session);
-        assert_eq!(metrics.sessions_total.get(), 1);
-        assert_eq!(metrics.active_sessions.get(), 0);
     }
 }

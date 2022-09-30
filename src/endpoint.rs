@@ -24,7 +24,7 @@ use serde::{Deserialize, Serialize};
 use crate::xds::config::endpoint::v3::{lb_endpoint::HostIdentifier, Endpoint as EnvoyEndpoint};
 
 pub use self::{
-    address::EndpointAddress,
+    address::{EndpointAddress, ToSocketAddrError},
     locality::{Locality, LocalityEndpoints},
 };
 
