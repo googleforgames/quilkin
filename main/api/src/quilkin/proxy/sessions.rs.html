@@ -519,8 +519,6 @@
 <span id="513">513</span>
 <span id="514">514</span>
 <span id="515">515</span>
-<span id="516">516</span>
-<span id="517">517</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -537,7 +535,6 @@
  * limitations under the License.
  */</span>
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod</span> <span class="ident">error</span>;
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod</span> <span class="ident">manager</span>;
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod</span> <span class="ident">metrics</span>;
 
@@ -562,8 +559,7 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">EndpointAddress</span>},
     <span class="ident">filters</span>::{<span class="ident">Filter</span>, <span class="ident">WriteContext</span>},
-    <span class="ident">proxy::sessions</span>::{<span class="ident">error::Error</span>, <span class="ident">metrics::Metrics</span>},
-    <span class="ident">utils::debug</span>,
+    <span class="ident">utils</span>::{<span class="ident">debug</span>, <span class="ident">Loggable</span>},
 };
 
 <span class="kw">type</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">std::result::Result</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
@@ -571,7 +567,6 @@
 <span class="doccomment">/// Session encapsulates a UDP stream session</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Session</span> {
     <span class="ident">config</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident"><span class="kw">crate</span>::Config</span><span class="op">&gt;</span>,
-    <span class="ident">metrics</span>: <span class="ident">Metrics</span>,
     <span class="doccomment">/// created_at is time at which the session was created</span>
     <span class="ident">created_at</span>: <span class="ident">Instant</span>,
     <span class="doccomment">/// socket that sends and receives from and to the endpoint address</span>
@@ -611,7 +606,6 @@
 
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SessionArgs</span> {
     <span class="kw">pub</span> <span class="ident">config</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident"><span class="kw">crate</span>::Config</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span> <span class="ident">metrics</span>: <span class="ident">Metrics</span>,
     <span class="kw">pub</span> <span class="ident">source</span>: <span class="ident">EndpointAddress</span>,
     <span class="kw">pub</span> <span class="ident">downstream_socket</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">UdpSocket</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">dest</span>: <span class="ident">Endpoint</span>,
@@ -647,7 +641,6 @@
         <span class="ident"><span class="self">Self</span>::do_update_expiration</span>(<span class="kw-2">&amp;</span><span class="ident">expiration</span>, <span class="ident">args</span>.<span class="ident">ttl</span>)<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="ident">s</span> <span class="op">=</span> <span class="ident">Session</span> {
-            <span class="ident">metrics</span>: <span class="ident">args</span>.<span class="ident">metrics</span>,
             <span class="ident">config</span>: <span class="ident">args</span>.<span class="ident">config</span>.<span class="ident">clone</span>(),
             <span class="ident">upstream_socket</span>,
             <span class="ident">source</span>: <span class="ident">args</span>.<span class="ident">source</span>,
@@ -658,8 +651,8 @@
         };
         <span class="macro">tracing::debug!</span>(<span class="ident">source</span> <span class="op">=</span> <span class="op">%</span><span class="ident">s</span>.<span class="ident">source</span>, <span class="ident">dest</span> <span class="op">=</span> <span class="question-mark">?</span><span class="ident">s</span>.<span class="ident">dest</span>, <span class="string">&quot;Session created&quot;</span>);
 
-        <span class="ident">s</span>.<span class="ident">metrics</span>.<span class="ident">sessions_total</span>.<span class="ident">inc</span>();
-        <span class="ident">s</span>.<span class="ident">metrics</span>.<span class="ident">active_sessions</span>.<span class="ident">inc</span>();
+        <span class="ident"><span class="self">self</span>::metrics::TOTAL_SESSIONS</span>.<span class="ident">inc</span>();
+        <span class="ident"><span class="self">self</span>::metrics::ACTIVE_SESSIONS</span>.<span class="ident">inc</span>();
         <span class="ident">s</span>.<span class="ident">run</span>(<span class="ident">args</span>.<span class="ident">ttl</span>, <span class="ident">args</span>.<span class="ident">downstream_socket</span>, <span class="ident">shutdown_rx</span>);
         <span class="prelude-val">Ok</span>(<span class="ident">s</span>)
     }
@@ -676,7 +669,6 @@
         <span class="kw">let</span> <span class="ident">expiration</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">expiration</span>.<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">dest</span>.<span class="ident">clone</span>();
-        <span class="kw">let</span> <span class="ident">metrics</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">upstream_socket</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">upstream_socket</span>.<span class="ident">clone</span>();
 
         <span class="ident">tokio::spawn</span>(<span class="kw">async</span> <span class="kw">move</span> {
@@ -688,14 +680,13 @@
                     <span class="ident">received</span> <span class="op">=</span> <span class="ident">upstream_socket</span>.<span class="ident">recv_from</span>(<span class="kw-2">&amp;mut</span> <span class="ident">buf</span>) =&gt; {
                         <span class="kw">match</span> <span class="ident">received</span> {
                             <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; {
-                                <span class="ident">metrics</span>.<span class="ident">rx_errors_total</span>.<span class="ident">inc</span>();
+                                <span class="ident"><span class="kw">crate</span>::metrics::ERRORS_TOTAL</span>.<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident"><span class="kw">crate</span>::metrics::WRITE_DIRECTION_LABEL</span>]).<span class="ident">inc</span>();
                                 <span class="macro">tracing::error!</span>(<span class="op">%</span><span class="ident">error</span>, <span class="op">%</span><span class="ident">source</span>, <span class="ident">dest</span> <span class="op">=</span> <span class="question-mark">?</span><span class="ident">endpoint</span>, <span class="string">&quot;Error receiving packet&quot;</span>);
                             },
                             <span class="prelude-val">Ok</span>((<span class="ident">size</span>, <span class="ident">recv_addr</span>)) =&gt; {
                                 <span class="ident"><span class="kw">crate</span>::metrics::PACKETS_SIZE</span>.<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident"><span class="kw">crate</span>::metrics::WRITE_DIRECTION_LABEL</span>]).<span class="ident">inc_by</span>(<span class="ident">size</span> <span class="kw">as</span> <span class="ident">f64</span>);
                                 <span class="ident"><span class="kw">crate</span>::metrics::PACKETS_TOTAL</span>.<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident"><span class="kw">crate</span>::metrics::WRITE_DIRECTION_LABEL</span>]).<span class="ident">inc</span>();
                                 <span class="ident">Session::process_recv_packet</span>(
-                                    <span class="kw-2">&amp;</span><span class="ident">metrics</span>,
                                     <span class="kw-2">&amp;</span><span class="ident">downstream_socket</span>,
                                     <span class="kw-2">&amp;</span><span class="ident">expiration</span>,
                                     <span class="ident">ttl</span>,
@@ -734,7 +725,6 @@
 
     <span class="doccomment">/// process_recv_packet processes a packet that is received by this session.</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_recv_packet</span>(
-        <span class="ident">metrics</span>: <span class="kw-2">&amp;</span><span class="ident">Metrics</span>,
         <span class="ident">downstream_socket</span>: <span class="kw-2">&amp;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">UdpSocket</span><span class="op">&gt;</span>,
         <span class="ident">expiration</span>: <span class="kw-2">&amp;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">AtomicU64</span><span class="op">&gt;</span>,
         <span class="ident">ttl</span>: <span class="ident">Duration</span>,
@@ -751,35 +741,47 @@
 
         <span class="macro">tracing::trace!</span>(<span class="op">%</span><span class="ident">from</span>, <span class="ident">dest</span> <span class="op">=</span> <span class="op">%</span><span class="ident">endpoint</span>.<span class="ident">address</span>, <span class="ident">contents</span> <span class="op">=</span> <span class="op">%</span><span class="ident">debug::bytes_to_string</span>(<span class="ident">packet</span>), <span class="string">&quot;received packet from upstream&quot;</span>);
 
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">error</span>) <span class="op">=</span> <span class="ident">Session::do_update_expiration</span>(<span class="ident">expiration</span>, <span class="ident">ttl</span>) {
-            <span class="macro">tracing::warn!</span>(<span class="op">%</span><span class="ident">error</span>, <span class="string">&quot;Error updating session expiration&quot;</span>)
-        }
+        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">Session::do_update_expiration</span>(<span class="ident">expiration</span>, <span class="ident">ttl</span>)
+            .<span class="ident">and_then</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
+                <span class="ident">config</span>
+                    .<span class="ident">filters</span>
+                    .<span class="ident">load</span>()
+                    .<span class="ident">write</span>(<span class="ident">WriteContext::new</span>(
+                        <span class="ident">endpoint</span>,
+                        <span class="ident">from</span>.<span class="ident">clone</span>(),
+                        <span class="ident">dest</span>.<span class="ident">clone</span>(),
+                        <span class="ident">packet</span>.<span class="ident">to_vec</span>(),
+                    ))
+                    .<span class="ident">ok_or</span>(<span class="ident">Error::FilterDroppedPacket</span>)
+            })
+            .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">response</span><span class="op">|</span> {
+                <span class="ident">dest</span>.<span class="ident">to_socket_addr</span>()
+                    .<span class="ident">map</span>(<span class="op">|</span><span class="ident">addr</span><span class="op">|</span> (<span class="ident">addr</span>, <span class="ident">response</span>))
+                    .<span class="ident">map_err</span>(<span class="ident">Error::ToSocketAddr</span>)
+            });
 
-        <span class="kw">match</span> <span class="ident">config</span>.<span class="ident">filters</span>.<span class="ident">load</span>().<span class="ident">write</span>(<span class="ident">WriteContext::new</span>(
-            <span class="ident">endpoint</span>,
-            <span class="ident">from</span>.<span class="ident">clone</span>(),
-            <span class="ident">dest</span>.<span class="ident">clone</span>(),
-            <span class="ident">packet</span>.<span class="ident">to_vec</span>(),
-        )) {
-            <span class="prelude-val">None</span> =&gt; <span class="ident">metrics</span>.<span class="ident">packets_dropped_total</span>.<span class="ident">inc</span>(),
-            <span class="prelude-val">Some</span>(<span class="ident">response</span>) =&gt; {
-                <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">dest</span>.<span class="ident">to_socket_addr</span>() {
-                    <span class="prelude-val">Ok</span>(<span class="ident">addr</span>) =&gt; <span class="ident">addr</span>,
-                    <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; {
-                        <span class="macro">tracing::error!</span>(<span class="op">%</span><span class="ident">dest</span>, <span class="op">%</span><span class="ident">error</span>, <span class="string">&quot;Error resolving address&quot;</span>);
-                        <span class="ident">metrics</span>.<span class="ident">packets_dropped_total</span>.<span class="ident">inc</span>();
-                        <span class="kw">return</span>;
-                    }
-                };
+        <span class="kw">let</span> <span class="ident">handle_error</span> <span class="op">=</span> <span class="op">|</span><span class="ident">error</span>: <span class="ident">Error</span><span class="op">|</span> {
+            <span class="ident">error</span>.<span class="ident">log</span>();
+            <span class="ident"><span class="kw">crate</span>::metrics::PACKETS_DROPPED</span>
+                .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident"><span class="kw">crate</span>::metrics::WRITE_DIRECTION_LABEL</span>])
+                .<span class="ident">inc</span>();
+            <span class="ident"><span class="kw">crate</span>::metrics::ERRORS_TOTAL</span>
+                .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident"><span class="kw">crate</span>::metrics::WRITE_DIRECTION_LABEL</span>])
+                .<span class="ident">inc</span>();
+        };
 
+        <span class="kw">match</span> <span class="ident">result</span> {
+            <span class="prelude-val">Ok</span>((<span class="ident">addr</span>, <span class="ident">response</span>)) =&gt; {
                 <span class="kw">let</span> <span class="ident">packet</span> <span class="op">=</span> <span class="ident">response</span>.<span class="ident">contents</span>.<span class="ident">as_slice</span>();
                 <span class="macro">tracing::trace!</span>(<span class="op">%</span><span class="ident">from</span>, <span class="ident">dest</span> <span class="op">=</span> <span class="op">%</span><span class="ident">addr</span>, <span class="ident">contents</span> <span class="op">=</span> <span class="op">%</span><span class="ident">debug::bytes_to_string</span>(<span class="ident">packet</span>), <span class="string">&quot;sending packet downstream&quot;</span>);
-                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">error</span>) <span class="op">=</span> <span class="ident">downstream_socket</span>.<span class="ident">send_to</span>(<span class="ident">packet</span>, <span class="ident">addr</span>).<span class="kw">await</span> {
-                    <span class="ident">metrics</span>.<span class="ident">rx_errors_total</span>.<span class="ident">inc</span>();
-                    <span class="macro">tracing::error!</span>(<span class="op">%</span><span class="ident">error</span>, <span class="string">&quot;Error sending packet&quot;</span>);
-                }
+                <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">downstream_socket</span>
+                    .<span class="ident">send_to</span>(<span class="ident">packet</span>, <span class="ident">addr</span>)
+                    .<span class="kw">await</span>
+                    .<span class="ident">map_err</span>(<span class="ident">Error::SendTo</span>)
+                    .<span class="ident">map_err</span>(<span class="ident">handle_error</span>);
             }
-        }
+            <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; (<span class="ident">handle_error</span>)(<span class="ident">error</span>),
+        };
 
         <span class="ident">timer</span>.<span class="ident">stop_and_record</span>();
     }
@@ -791,69 +793,104 @@
 
     <span class="doccomment">/// do_update_expiration increments the expiration value by the session timeout (internal)</span>
     <span class="kw">fn</span> <span class="ident">do_update_expiration</span>(<span class="ident">expiration</span>: <span class="kw-2">&amp;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">AtomicU64</span><span class="op">&gt;</span>, <span class="ident">ttl</span>: <span class="ident">Duration</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">new_expiration_time</span> <span class="op">=</span> <span class="ident">SystemTime::now</span>()
+        <span class="kw">let</span> <span class="ident">now</span> <span class="op">=</span> <span class="ident">SystemTime::now</span>();
+        <span class="kw">let</span> <span class="ident">new_expiration_time</span> <span class="op">=</span> <span class="ident">now</span>
             .<span class="ident">checked_add</span>(<span class="ident">ttl</span>)
-            .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
-                <span class="ident">Error::UpdateSessionExpiration</span>(<span class="macro">format!</span>(
-                    <span class="string">&quot;checked_add error: expiration ttl {:?} is out of bounds&quot;</span>,
-                    <span class="ident">ttl</span>
-                ))
-            })<span class="question-mark">?</span>
+            .<span class="ident">ok_or</span>(<span class="ident">Error::UpdateSessionExpiration</span> { <span class="ident">now</span>, <span class="ident">ttl</span> })<span class="question-mark">?</span>
             .<span class="ident">duration_since</span>(<span class="ident">UNIX_EPOCH</span>)
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
-                <span class="ident">Error::UpdateSessionExpiration</span>(
-                    <span class="string">&quot;duration_since was called with time later than the current time&quot;</span>.<span class="ident">into</span>(),
-                )
-            })<span class="question-mark">?</span>
-            .<span class="ident">as_secs</span>();
+            <span class="comment">// This is safe because it&#39;s impossible for `UNIX_EPOCH` to be</span>
+            <span class="comment">// ahead of any clock time, or the system we&#39;re on is so severely</span>
+            <span class="comment">// broken that the expiration code isn&#39;t going to work anyway.</span>
+            .<span class="ident">unwrap</span>();
 
-        <span class="ident">expiration</span>.<span class="ident">store</span>(<span class="ident">new_expiration_time</span>, <span class="ident">Ordering::Relaxed</span>);
+        <span class="ident">expiration</span>.<span class="ident">store</span>(<span class="ident">new_expiration_time</span>.<span class="ident">as_secs</span>(), <span class="ident">Ordering::Relaxed</span>);
 
         <span class="prelude-val">Ok</span>(())
     }
 
     <span class="doccomment">/// Sends a packet to the Session&#39;s dest.</span>
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">send</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">buf</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="ident"><span class="kw">crate</span>::Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">send</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">buf</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">ttl</span>: <span class="ident">Duration</span>) {
         <span class="macro">tracing::trace!</span>(
         <span class="ident">dest_address</span> <span class="op">=</span> <span class="op">%</span><span class="self">self</span>.<span class="ident">dest</span>.<span class="ident">address</span>,
         <span class="ident">contents</span> <span class="op">=</span> <span class="op">%</span><span class="ident">debug::bytes_to_string</span>(<span class="ident">buf</span>),
         <span class="string">&quot;sending packet upstream&quot;</span>);
 
-        <span class="self">self</span>.<span class="ident">do_send</span>(<span class="ident">buf</span>)
-            .<span class="kw">await</span>
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">size</span><span class="op">|</span> {
-                <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">tx_packets_total</span>.<span class="ident">inc</span>();
-                <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">tx_bytes_total</span>.<span class="ident">inc_by</span>(<span class="ident">size</span> <span class="kw">as</span> <span class="ident">u64</span>);
-                <span class="prelude-val">Some</span>(<span class="ident">size</span>)
-            })
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-                <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">tx_errors_total</span>.<span class="ident">inc</span>();
-                <span class="macro">eyre::eyre!</span>(<span class="ident">err</span>).<span class="ident">wrap_err</span>(<span class="string">&quot;Error sending to destination.&quot;</span>)
-            })
+        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">do_send</span>(<span class="ident">buf</span>).<span class="kw">await</span> {
+            <span class="prelude-val">Ok</span>(<span class="ident">size</span>) =&gt; {
+                <span class="ident"><span class="kw">crate</span>::metrics::PACKETS_TOTAL</span>
+                    .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident"><span class="kw">crate</span>::metrics::READ_DIRECTION_LABEL</span>])
+                    .<span class="ident">inc</span>();
+                <span class="ident"><span class="kw">crate</span>::metrics::BYTES_TOTAL</span>
+                    .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident"><span class="kw">crate</span>::metrics::READ_DIRECTION_LABEL</span>])
+                    .<span class="ident">inc_by</span>(<span class="ident">size</span> <span class="kw">as</span> <span class="ident">u64</span>);
+            }
+            <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; {
+                <span class="ident"><span class="kw">crate</span>::metrics::PACKETS_DROPPED</span>
+                    .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident"><span class="kw">crate</span>::metrics::READ_DIRECTION_LABEL</span>])
+                    .<span class="ident">inc</span>();
+                <span class="ident"><span class="kw">crate</span>::metrics::ERRORS_TOTAL</span>
+                    .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident"><span class="kw">crate</span>::metrics::READ_DIRECTION_LABEL</span>])
+                    .<span class="ident">inc</span>();
+                <span class="macro">tracing::error!</span>(<span class="ident">kind</span><span class="op">=</span><span class="op">%</span><span class="ident">error</span>.<span class="ident">kind</span>(), <span class="string">&quot;{}&quot;</span>, <span class="ident">error</span>);
+                <span class="kw">return</span>;
+            }
+        }
+
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">error</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">update_expiration</span>(<span class="ident">ttl</span>) {
+            <span class="macro">tracing::warn!</span>(<span class="op">%</span><span class="ident">error</span>, <span class="string">&quot;Error updating session expiration&quot;</span>)
+        }
     }
 
     <span class="doccomment">/// Sends `buf` to the session&#39;s destination address. On success, returns</span>
     <span class="doccomment">/// the number of bytes written.</span>
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">do_send</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">buf</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="ident"><span class="kw">crate</span>::Result</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">upstream_socket</span>
-            .<span class="ident">send</span>(<span class="ident">buf</span>)
-            .<span class="kw">await</span>
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">eyre::eyre!</span>(<span class="ident">error</span>))
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">do_send</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">buf</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="ident">std::io::Result</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">upstream_socket</span>.<span class="ident">send</span>(<span class="ident">buf</span>).<span class="kw">await</span>
     }
 }
 
 <span class="kw">impl</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">Session</span> {
     <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) {
-        <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">active_sessions</span>.<span class="ident">dec</span>();
-        <span class="self">self</span>.<span class="ident">metrics</span>
-            .<span class="ident">duration_secs</span>
-            .<span class="ident">observe</span>(<span class="self">self</span>.<span class="ident">created_at</span>.<span class="ident">elapsed</span>().<span class="ident">as_secs</span>() <span class="kw">as</span> <span class="ident">f64</span>);
+        <span class="ident">metrics::ACTIVE_SESSIONS</span>.<span class="ident">dec</span>();
+        <span class="ident">metrics::DURATION_SECS</span>.<span class="ident">observe</span>(<span class="self">self</span>.<span class="ident">created_at</span>.<span class="ident">elapsed</span>().<span class="ident">as_secs</span>() <span class="kw">as</span> <span class="ident">f64</span>);
 
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">error</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">shutdown_tx</span>.<span class="ident">send</span>(()) {
             <span class="macro">tracing::warn!</span>(<span class="op">%</span><span class="ident">error</span>, <span class="string">&quot;Error sending session shutdown signal&quot;</span>);
         }
 
         <span class="macro">tracing::debug!</span>(<span class="ident">source</span> <span class="op">=</span> <span class="op">%</span><span class="self">self</span>.<span class="ident">source</span>, <span class="ident">dest_address</span> <span class="op">=</span> <span class="op">%</span><span class="self">self</span>.<span class="ident">dest</span>.<span class="ident">address</span>, <span class="string">&quot;Session closed&quot;</span>);
+    }
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">thiserror::Error</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Error</span> {
+    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;failed to bind socket: {0}&quot;</span>)]</span>
+    <span class="ident">BindUdpSocket</span>(<span class="ident">std::io::Error</span>),
+    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;{} + {}s would have caused overflow&quot;</span>, <span class="ident">chrono::DateTime</span>::<span class="op">&lt;</span><span class="ident">chrono::Utc</span><span class="op">&gt;</span><span class="ident">::from</span>(<span class="kw-2">*</span>.<span class="ident">now</span>).<span class="ident">to_rfc2822</span>(), .<span class="ident">ttl</span>.<span class="ident">as_secs</span>())]</span>
+    <span class="ident">UpdateSessionExpiration</span> {
+        <span class="ident">now</span>: <span class="ident">std::time::SystemTime</span>,
+        <span class="ident">ttl</span>: <span class="ident">std::time::Duration</span>,
+    },
+    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;failed to convert endpoint to socket address: {0}&quot;</span>)]</span>
+    <span class="ident">ToSocketAddr</span>(<span class="ident"><span class="kw">crate</span>::endpoint::ToSocketAddrError</span>),
+    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;failed to send packet downstream: {0}&quot;</span>)]</span>
+    <span class="ident">SendTo</span>(<span class="ident">std::io::Error</span>),
+    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;filter dropped packet from upstream&quot;</span>)]</span>
+    <span class="ident">FilterDroppedPacket</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">Loggable</span> <span class="kw">for</span> <span class="ident">Error</span> {
+    <span class="kw">fn</span> <span class="ident">log</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) {
+        <span class="kw">match</span> <span class="self">self</span> {
+            <span class="ident"><span class="self">Self</span>::BindUdpSocket</span>(<span class="ident">error</span>) <span class="op">|</span> <span class="ident"><span class="self">Self</span>::SendTo</span>(<span class="ident">error</span>) =&gt; {
+                <span class="macro">tracing::error!</span>(<span class="ident">kind</span><span class="op">=</span><span class="op">%</span><span class="ident">error</span>.<span class="ident">kind</span>(), <span class="string">&quot;{}&quot;</span>, <span class="self">self</span>)
+            }
+            <span class="ident"><span class="self">Self</span>::UpdateSessionExpiration</span> { .. } <span class="op">|</span> <span class="ident"><span class="self">Self</span>::ToSocketAddr</span>(<span class="kw">_</span>) =&gt; {
+                <span class="macro">tracing::error!</span>(<span class="string">&quot;{}&quot;</span>, <span class="self">self</span>)
+            }
+            <span class="ident"><span class="self">Self</span>::FilterDroppedPacket</span> =&gt; {
+                <span class="macro">tracing::trace!</span>(<span class="string">&quot;{}&quot;</span>, <span class="self">self</span>)
+            }
+        }
     }
 }
 
@@ -868,7 +905,7 @@
         <span class="ident">time</span>::{<span class="ident">Duration</span>, <span class="ident">SystemTime</span>, <span class="ident">UNIX_EPOCH</span>},
     };
 
-    <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">Metrics</span>, <span class="ident">Session</span>};
+    <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
 
     <span class="kw">use</span> <span class="ident">prometheus</span>::{<span class="ident">Histogram</span>, <span class="ident">HistogramOpts</span>};
     <span class="kw">use</span> <span class="ident">tokio::time::timeout</span>;
@@ -886,14 +923,14 @@
         <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="ident">Endpoint::new</span>(<span class="ident">addr</span>.<span class="ident">clone</span>());
         <span class="kw">let</span> <span class="ident">socket</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">create_socket</span>().<span class="kw">await</span>);
         <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="string">&quot;hello&quot;</span>;
+        <span class="kw">let</span> <span class="ident">ttl</span> <span class="op">=</span> <span class="ident">Duration::from_secs</span>(<span class="number">20</span>);
 
         <span class="kw">let</span> <span class="ident">sess</span> <span class="op">=</span> <span class="ident">Session::new</span>(<span class="ident">SessionArgs</span> {
             <span class="ident">config</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
-            <span class="ident">metrics</span>: <span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>(),
             <span class="ident">source</span>: <span class="ident">addr</span>.<span class="ident">clone</span>(),
             <span class="ident">downstream_socket</span>: <span class="ident">socket</span>.<span class="ident">clone</span>(),
             <span class="ident">dest</span>: <span class="ident">endpoint</span>,
-            <span class="ident">ttl</span>: <span class="ident">Duration::from_secs</span>(<span class="number">20</span>),
+            <span class="ident">ttl</span>,
         })
         .<span class="kw">await</span>
         .<span class="ident">unwrap</span>();
@@ -906,7 +943,7 @@
         <span class="kw">let</span> <span class="ident">diff</span> <span class="op">=</span> <span class="ident">initial_expiration_secs</span> <span class="op">-</span> <span class="ident">now_secs</span>;
         <span class="macro">assert!</span>((<span class="number">15</span>..<span class="number">21</span>).<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">diff</span>));
 
-        <span class="ident">sess</span>.<span class="ident">send</span>(<span class="ident">msg</span>.<span class="ident">as_bytes</span>()).<span class="kw">await</span>.<span class="ident">unwrap</span>();
+        <span class="ident">sess</span>.<span class="ident">send</span>(<span class="ident">msg</span>.<span class="ident">as_bytes</span>(), <span class="ident">ttl</span>).<span class="kw">await</span>;
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buf</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="number">0</span>; <span class="number">1024</span>];
         <span class="kw">let</span> (<span class="ident">size</span>, <span class="ident">recv_addr</span>) <span class="op">=</span> <span class="ident">timeout</span>(<span class="ident">Duration::from_secs</span>(<span class="number">5</span>), <span class="ident">socket</span>.<span class="ident">recv_from</span>(<span class="kw-2">&amp;mut</span> <span class="ident">buf</span>))
@@ -937,7 +974,6 @@
         <span class="comment">// first test with no filtering</span>
         <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="string">&quot;hello&quot;</span>;
         <span class="ident">Session::process_recv_packet</span>(
-            <span class="kw-2">&amp;</span><span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>(),
             <span class="kw-2">&amp;</span><span class="ident">socket</span>,
             <span class="kw-2">&amp;</span><span class="ident">expiration</span>,
             <span class="ident">Duration::from_secs</span>(<span class="number">10</span>),
@@ -972,7 +1008,6 @@
         <span class="comment">// add filter</span>
         <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">new_test_config</span>());
         <span class="ident">Session::process_recv_packet</span>(
-            <span class="kw-2">&amp;</span><span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>(),
             <span class="kw-2">&amp;</span><span class="ident">socket</span>,
             <span class="kw-2">&amp;</span><span class="ident">expiration</span>,
             <span class="ident">Duration::from_secs</span>(<span class="number">10</span>),
@@ -997,45 +1032,6 @@
             <span class="ident">from_utf8</span>(<span class="kw-2">&amp;</span><span class="ident">buf</span>[..<span class="ident">size</span>]).<span class="ident">unwrap</span>()
         );
         <span class="macro">assert_eq!</span>(<span class="ident">dest</span>.<span class="ident">port</span>(), <span class="ident">recv_addr</span>.<span class="ident">port</span>());
-    }
-
-    <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">metrics</span>() {
-        <span class="kw">let</span> <span class="ident">t</span> <span class="op">=</span> <span class="ident">TestHelper::default</span>();
-        <span class="kw">let</span> <span class="ident">ep</span> <span class="op">=</span> <span class="ident">t</span>.<span class="ident">open_socket_and_recv_single_packet</span>().<span class="kw">await</span>;
-        <span class="kw">let</span> <span class="ident">addr</span>: <span class="ident">EndpointAddress</span> <span class="op">=</span> <span class="ident">ep</span>.<span class="ident">socket</span>.<span class="ident">local_addr</span>().<span class="ident">unwrap</span>().<span class="ident">into</span>();
-        <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="ident">Endpoint::new</span>(<span class="ident">addr</span>.<span class="ident">clone</span>());
-        <span class="kw">let</span> <span class="ident">socket</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">create_socket</span>().<span class="kw">await</span>);
-
-        <span class="kw">let</span> <span class="ident">session</span> <span class="op">=</span> <span class="ident">Session::new</span>(<span class="ident">SessionArgs</span> {
-            <span class="ident">config</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
-            <span class="ident">metrics</span>: <span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>(),
-            <span class="ident">source</span>: <span class="ident">addr</span>,
-            <span class="ident">downstream_socket</span>: <span class="ident">socket</span>,
-            <span class="ident">dest</span>: <span class="ident">endpoint</span>,
-            <span class="ident">ttl</span>: <span class="ident">Duration::from_secs</span>(<span class="number">10</span>),
-        })
-        .<span class="kw">await</span>
-        .<span class="ident">unwrap</span>();
-
-        <span class="macro">assert_eq!</span>(<span class="ident">session</span>.<span class="ident">metrics</span>.<span class="ident">sessions_total</span>.<span class="ident">get</span>(), <span class="number">1</span>);
-        <span class="macro">assert_eq!</span>(<span class="ident">session</span>.<span class="ident">metrics</span>.<span class="ident">active_sessions</span>.<span class="ident">get</span>(), <span class="number">1</span>);
-
-        <span class="comment">// send a packet</span>
-        <span class="ident">session</span>.<span class="ident">send</span>(<span class="string">b&quot;hello&quot;</span>).<span class="kw">await</span>.<span class="ident">unwrap</span>();
-        <span class="ident">timeout</span>(<span class="ident">Duration::from_secs</span>(<span class="number">1</span>), <span class="ident">ep</span>.<span class="ident">packet_rx</span>)
-            .<span class="kw">await</span>
-            .<span class="ident">expect</span>(<span class="string">&quot;should receive a packet&quot;</span>)
-            .<span class="ident">unwrap</span>();
-
-        <span class="macro">assert_eq!</span>(<span class="ident">session</span>.<span class="ident">metrics</span>.<span class="ident">tx_bytes_total</span>.<span class="ident">get</span>(), <span class="number">5</span>);
-        <span class="macro">assert_eq!</span>(<span class="ident">session</span>.<span class="ident">metrics</span>.<span class="ident">tx_packets_total</span>.<span class="ident">get</span>(), <span class="number">1</span>);
-
-        <span class="comment">// drop metrics</span>
-        <span class="kw">let</span> <span class="ident">metrics</span> <span class="op">=</span> <span class="ident">session</span>.<span class="ident">metrics</span>.<span class="ident">clone</span>();
-        <span class="ident">drop</span>(<span class="ident">session</span>);
-        <span class="macro">assert_eq!</span>(<span class="ident">metrics</span>.<span class="ident">sessions_total</span>.<span class="ident">get</span>(), <span class="number">1</span>);
-        <span class="macro">assert_eq!</span>(<span class="ident">metrics</span>.<span class="ident">active_sessions</span>.<span class="ident">get</span>(), <span class="number">0</span>);
     }
 }
 </code></pre></div>

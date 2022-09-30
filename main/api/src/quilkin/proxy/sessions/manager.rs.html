@@ -247,8 +247,6 @@
 <span id="241">241</span>
 <span id="242">242</span>
 <span id="243">243</span>
-<span id="244">244</span>
-<span id="245">245</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -367,7 +365,7 @@
 
     <span class="kw">use</span> <span class="kw">crate</span>::{
         <span class="ident">endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">EndpointAddress</span>},
-        <span class="ident">proxy::sessions</span>::{<span class="ident">manager::Sessions</span>, <span class="ident">metrics::Metrics</span>, <span class="ident">SessionArgs</span>, <span class="ident">SessionKey</span>},
+        <span class="ident">proxy::sessions</span>::{<span class="ident">manager::Sessions</span>, <span class="ident">SessionArgs</span>, <span class="ident">SessionKey</span>},
         <span class="ident">test_utils::create_socket</span>,
     };
 
@@ -402,7 +400,6 @@
         {
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">sessions</span> <span class="op">=</span> <span class="ident">sessions</span>.<span class="ident">write</span>().<span class="kw">await</span>;
             <span class="kw">let</span> <span class="ident">session_args</span> <span class="op">=</span> <span class="ident">SessionArgs</span> {
-                <span class="ident">metrics</span>: <span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>(),
                 <span class="ident">config</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
                 <span class="ident">source</span>: <span class="ident">from</span>,
                 <span class="ident">downstream_socket</span>: <span class="ident">socket</span>,
@@ -455,7 +452,6 @@
         {
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">sessions</span> <span class="op">=</span> <span class="ident">sessions</span>.<span class="ident">write</span>().<span class="kw">await</span>;
             <span class="kw">let</span> <span class="ident">session_args</span> <span class="op">=</span> <span class="ident">SessionArgs</span> {
-                <span class="ident">metrics</span>: <span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>(),
                 <span class="ident">config</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
                 <span class="ident">source</span>: <span class="ident">from</span>,
                 <span class="ident">downstream_socket</span>: <span class="ident">socket</span>,

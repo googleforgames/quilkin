@@ -388,29 +388,29 @@
 
     <span class="doccomment">/// Returns the socket address for the endpoint, resolving any DNS entries</span>
     <span class="doccomment">/// if present.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">to_socket_addr</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident"><span class="kw">crate</span>::Result</span><span class="op">&lt;</span><span class="ident">SocketAddr</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">no_valid_socket_err</span> <span class="op">=</span> <span class="op">|</span><span class="op">|</span> <span class="macro">eyre::eyre!</span>(<span class="string">&quot;No valid socket address found.&quot;</span>);
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">port</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">port</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">to_socket_addr</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SocketAddr</span>, <span class="ident">ToSocketAddrError</span><span class="op">&gt;</span> {
+        <span class="comment">// These unwraps after `to_socket_addr` are guarenteed not to panic as</span>
+        <span class="comment">// all the types we use provide either one address or error.</span>
+        <span class="prelude-val">Ok</span>(<span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">port</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">port</span> {
             <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">host</span> {
-                <span class="ident">AddressKind::Ip</span>(<span class="ident">ip</span>) =&gt; (<span class="kw-2">*</span><span class="ident">ip</span>, <span class="ident">port</span>)
-                    .<span class="ident">to_socket_addrs</span>()<span class="question-mark">?</span>
-                    .<span class="ident">next</span>()
-                    .<span class="ident">ok_or_else</span>(<span class="ident">no_valid_socket_err</span>),
-                <span class="ident">AddressKind::Name</span>(<span class="ident">name</span>) =&gt; (<span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">name</span>, <span class="ident">port</span>)
-                    .<span class="ident">to_socket_addrs</span>()<span class="question-mark">?</span>
-                    .<span class="ident">next</span>()
-                    .<span class="ident">ok_or_else</span>(<span class="ident">no_valid_socket_err</span>),
+                <span class="ident">AddressKind::Ip</span>(<span class="ident">ip</span>) =&gt; (<span class="kw-2">*</span><span class="ident">ip</span>, <span class="ident">port</span>).<span class="ident">to_socket_addrs</span>()<span class="question-mark">?</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>(),
+                <span class="ident">AddressKind::Name</span>(<span class="ident">name</span>) =&gt; (<span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">name</span>, <span class="ident">port</span>).<span class="ident">to_socket_addrs</span>()<span class="question-mark">?</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>(),
             }
         } <span class="kw">else</span> {
             <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">host</span> {
-                <span class="ident">AddressKind::Ip</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">&quot;No port provided for address.&quot;</span>)),
-                <span class="ident">AddressKind::Name</span>(<span class="ident">name</span>) =&gt; <span class="ident">name</span>
-                    .<span class="ident">to_socket_addrs</span>()<span class="question-mark">?</span>
-                    .<span class="ident">next</span>()
-                    .<span class="ident">ok_or_else</span>(<span class="ident">no_valid_socket_err</span>),
+                <span class="ident">AddressKind::Ip</span>(<span class="kw">_</span>) =&gt; <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">ToSocketAddrError::NoPort</span>),
+                <span class="ident">AddressKind::Name</span>(<span class="ident">name</span>) =&gt; <span class="ident">name</span>.<span class="ident">to_socket_addrs</span>()<span class="question-mark">?</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>(),
             }
-        }
+        })
     }
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">thiserror::Error</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ToSocketAddrError</span> {
+    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;no port provided for address&quot;</span>)]</span>
+    <span class="ident">NoPort</span>,
+    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;not valid address: {0}&quot;</span>)]</span>
+    <span class="ident">NotValidAddress</span>(<span class="attribute">#[<span class="ident">from</span>]</span> <span class="ident">std::io::Error</span>),
 }
 
 <span class="doccomment">/// Forwards the deserialisation to use [`std::net::ToSocketAddrs`] instead of</span>

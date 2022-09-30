@@ -341,7 +341,7 @@
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::xds::config::endpoint::v3</span>::{<span class="ident">lb_endpoint::HostIdentifier</span>, <span class="ident">Endpoint</span> <span class="kw">as</span> <span class="ident">EnvoyEndpoint</span>};
 
 <span class="kw">pub</span> <span class="kw">use</span> <span class="self">self</span>::{
-    <span class="ident">address::EndpointAddress</span>,
+    <span class="ident">address</span>::{<span class="ident">EndpointAddress</span>, <span class="ident">ToSocketAddrError</span>},
     <span class="ident">locality</span>::{<span class="ident">Locality</span>, <span class="ident">LocalityEndpoints</span>},
 };
 
