@@ -70,6 +70,13 @@ To use the tooling for Make + Docker testing and development, you will need:
 * Make installed
 * [Docker installed](https://docs.docker.com/get-docker/)
 
+#### Known issues
+
+* If you are running on an arm64 machine, such as an M1 Mac, `make build-macos-binary` to build an amd64 macOS 
+  binary will fail. Depending on your setup, it may be possible to use `BUILD_LOCAL=1 make build-macos-binary` to 
+  attempt to build the binary with local `cargo` tooling. This is generally only a release time task, so we expect 
+  it to be of minimal impact. See [#608](https://github.com/googleforgames/quilkin/issues/608) for more details.
+
 #### Run tests
 
 `make test` will run all tests for this project, except the [Agones](https:/agones.dev) integration tests.

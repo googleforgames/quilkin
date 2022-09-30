@@ -64,8 +64,11 @@ cargo_build_x86_64_windows := build --release --target x86_64-pc-windows-gnu
 #    |_|\__,_|_|  \__, |\___|\__|___/
 #                 |___/
 
-help:
+help: ensure-multi-arch
 	@cat $(MAKEFILE_LIST) | docker run --rm -i xanders/make-help
+
+ensure-multi-arch:
+	@docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64 > /dev/null 2>&1
 
 # output the current build version
 version:
@@ -120,7 +123,7 @@ build-linux-binary: ensure-build-image
 ifdef BUILD_LOCAL
 	cargo $(cargo_build_x86_64_linux)
 else
-	docker run --rm $(common_rust_args) \
+	docker run --rm $(common_rust_args) -e "CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=/usr/bin/x86_64-linux-gnu-gcc" \
 		--entrypoint=cargo $(BUILD_IMAGE_TAG) $(cargo_build_x86_64_linux)
 endif
 
@@ -130,13 +133,14 @@ build-windows-binary: ensure-build-image
 ifdef BUILD_LOCAL
 	cargo $(cargo_build_x86_64_windows)
 else
-	docker run --rm $(common_rust_args) \
+	docker run --rm $(common_rust_args) -e "CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER=/usr/bin/x86_64-w64-mingw32-gcc" \
 		--entrypoint=cargo $(BUILD_IMAGE_TAG) $(cargo_build_x86_64_windows)
 endif
 
 # Build binary for x86_64-apple-darwin
 # Use BUILD_LOCAL=1 to build through local cargo rather than through the build container.
-build-macos-binary:
+# Warning: May fail on arm64 hosts.
+build-macos-binary: ensure-multi-arch
 ifdef BUILD_LOCAL
 	cargo $(cargo_build_x86_64_apple)
 else
@@ -144,8 +148,8 @@ else
 		-v $(CARGO_HOME)/registry:/root/.cargo/registry \
 		-e "CARGO_TARGET_DIR=$(CARGO_TARGET_DIR)" \
 		-e "CC=o64-clang" -e "CXX=o64-clang++" \
-        joseluisq/rust-linux-darwin-builder:$(rust_toolchain) \
-        	sh -c "rustup target add x86_64-apple-darwin && cargo $(cargo_build_x86_64_apple)"
+		joseluisq/rust-linux-darwin-builder:$(rust_toolchain) \
+			sh -c "rustup target add x86_64-apple-darwin && cargo $(cargo_build_x86_64_apple)"
 endif
 
 # Build container image.
@@ -164,13 +168,15 @@ endif
 		--entrypoint=bash $(BUILD_IMAGE_TAG) -c 'cargo about generate license.html.hbs > license.html'
 	docker run --rm $(common_rust_args) \
 		--entrypoint=bash $(BUILD_IMAGE_TAG) -c './image/archive_dependencies.sh'
-	docker build -t $(IMAGE_TAG) -f $(project_path)/image/Dockerfile $(project_path)
+	docker build --platform=linux/amd64 -t $(IMAGE_TAG) -f $(project_path)/image/Dockerfile $(project_path)
 
 # Builds Quilkin, pushes it to a repository (use REPOSITORY arg to set value)
 # and then runs the Agones integration tests. See targets `build-images` and `push` for more options and details.
 # Not part of `test` as it requires a Kubernetes cluster to be provisioned and running.
 # To pass extra arguments to `cargo test`, to run only a single test, for example, use the `ARGS` variable
 # to set those options.
+# If a `kubectl` authentication failure occurs, run `kubectl get ns` to confirm access and refresh the Kubernetes
+# authentication token, and try again if successful.
 test-agones: push
 test-agones:
 	$(MAKE) run-test-agones
