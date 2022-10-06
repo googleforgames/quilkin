@@ -172,11 +172,11 @@ The following metrics are exposed by the management server.
 [xds-filter-chain]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener_components.proto#config-listener-v3-filterchain
 [DiscoveryRequest]: https://www.envoyproxy.io/docs/envoy/v1.22.0/api-v3/service/discovery/v3/discovery.proto.html?highlight=discoveryrequest#service-discovery-v3-discoveryrequest
 [xds-variants]: https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol#variants-of-the-xds-transport-protocol
-[filter-protos]: https://github.com/googleforgames/quilkin/tree/main/proto/quilkin/filters
+[filter-protos]: https://github.com/googleforgames/quilkin/tree/{{GITHUB_REF_NAME}}/proto/quilkin/filters
 [filters-doc]: ./filters.md
 [xds-endpoint-metadata]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/base.proto#envoy-v3-api-msg-config-core-v3-metadata
 [endpoint-metadata]: ./proxy.md#endpoint-metadata
-[control-plane]: https://github.com/googleforgames/quilkin/tree/main/xds
+[control-plane]: https://github.com/googleforgames/quilkin/tree/{{GITHUB_REF_NAME}}/xds
 [Agones]: https://agones.dev
 [Kubernetes]: https://kubernetes.io/
 [Agones GameServers]: https://agones.dev/site/docs/getting-started/create-gameserver/

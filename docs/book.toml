@@ -24,4 +24,9 @@ after = ["quilkin"]
 [preprocessor.quilkin]
 command = "./preprocessor.sh"
 
+[preprocessor.variables]
+use_env = true
+
+[preprocessor.variables.variables]
+
 [output.html]

@@ -18,7 +18,7 @@ hosted on Google Cloud [Artifact Registry](https://cloud.google.com/artifact-reg
 The production release can be found under the tag: 
 
 ```
-us-docker.pkg.dev/quilkin/release/quilkin:{version}
+us-docker.pkg.dev/quilkin/release/quilkin:{{QUILKIN_VERSION}}
 ```
 
 Which can be browsed as [us-docker.pkg.dev/quilkin/release/quilkin](https://us-docker.pkg.dev/quilkin/release/quilkin).

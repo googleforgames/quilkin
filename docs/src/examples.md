@@ -1,6 +1,6 @@
 # Examples
 
-See the [examples](https://github.com/googleforgames/quilkin/tree/main/examples) folder on Github for configuration and 
+See the [examples](https://github.com/googleforgames/quilkin/tree/{{GITHUB_REF_NAME}}/examples) folder on Github for configuration and 
 usage examples.
 
 > Depending on which release version of Quilkin you are using, you may need to choose the appropriate release tag

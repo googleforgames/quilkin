@@ -99,5 +99,5 @@ properties:
           Example: `http://example.com`
 ```
 
-[examples]: https://github.com/googleforgames/quilkin/blob/main/examples
+[examples]: https://github.com/googleforgames/quilkin/blob/{{GITHUB_REF_NAME}}/examples
 

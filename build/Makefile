@@ -219,9 +219,15 @@ minikube-test-agones: minikube-push
 # Runs mdbook and cargo doc in the same directory structure as what is hosted on Github pages.
 # Open http://localhost:3000/book/index.html or http://localhost:3000/api/quilkin/index.html after running. Pages will live reload on change.
 # (the .html extension is required for hot reload, but pages will display without it)
+# Use `GITHUB_REF_NAME` (default: `main`) to specify the branch or tag to point Github links to and `QUILKIN_VERSION`
+# (default `$(make version)) to specify which Quilkin version the documentation uses for examples.
 docs: ensure-build-image
+docs: GITHUB_REF_NAME ?= main
+docs: QUILKIN_VERSION ?= $(shell $(MAKE) version)
+docs:
 	@echo "📭 Open browser to http://localhost:3000/book/index.html or http://localhost:3000/api/quilkin/index.html (the .html extension is required for hot reload)"
 	docker run -it --rm $(common_rust_args) -p 3000:3000 \
+		-e GITHUB_REF_NAME=$(GITHUB_REF_NAME) -e QUILKIN_VERSION=$(QUILKIN_VERSION) \
 		--entrypoint=bash $(BUILD_IMAGE_TAG) -c \
 			'mkdir /tmp/docs && (live-server -p 3000 /tmp/docs &) && \
 			mkdir -p "$(CARGO_TARGET_DIR)/doc"; ln -s "$(CARGO_TARGET_DIR)/doc" /tmp/docs/api && \

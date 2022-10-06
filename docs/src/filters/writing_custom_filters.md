@@ -263,4 +263,4 @@ filter. Try it out with the following configuration:
 [prost-any]: https://docs.rs/prost-types/0.7.0/prost_types/struct.Any.html
 [prost_build]: https://docs.rs/prost-build/0.7.0/prost_build/
 [build-script]: https://doc.rust-lang.org/cargo/reference/build-scripts.html
-[example]: https://github.com/googleforgames/quilkin/tree/main/examples/quilkin-filter-example
+[example]: https://github.com/googleforgames/quilkin/tree/{{GITHUB_REF_NAME}}/examples/quilkin-filter-example
