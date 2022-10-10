@@ -157,6 +157,22 @@
 <span id="151">151</span>
 <span id="152">152</span>
 <span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
+<span id="169">169</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -184,7 +200,7 @@
 
 <span class="kw">use</span> <span class="ident">tokio</span>::{<span class="ident">signal</span>, <span class="ident">sync::watch</span>};
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::Config</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">admin::Mode</span>, <span class="ident">Config</span>};
 
 <span class="kw">pub</span> <span class="kw">use</span> <span class="self">self</span>::{
     <span class="ident">generate_config_schema::GenerateConfigSchema</span>,
@@ -199,15 +215,15 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">clap::Parser</span>)]</span>
 <span class="attribute">#[<span class="ident">non_exhaustive</span>]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Cli</span> {
+    <span class="doccomment">/// Whether to spawn the admin server or not.</span>
+    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;true&quot;</span>, <span class="ident">env</span>, <span class="ident">long</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">admin</span>: <span class="ident">bool</span>,
     <span class="doccomment">/// The path to the configuration file for the Quilkin instance.</span>
     <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">short</span>, <span class="ident">long</span>, <span class="ident">env</span> <span class="op">=</span> <span class="string">&quot;QUILKIN_CONFIG&quot;</span>, <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;quilkin.yaml&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">config</span>: <span class="ident">PathBuf</span>,
     <span class="doccomment">/// The port to bind for the admin server</span>
     <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">env</span> <span class="op">=</span> <span class="string">&quot;QUILKIN_ADMIN_ADDRESS&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">admin_address</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">std::net::SocketAddr</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// Whether to spawn the admin server or not.</span>
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">long</span>, <span class="ident">env</span> <span class="op">=</span> <span class="string">&quot;QUILKIN_NO_ADMIN&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">no_admin</span>: <span class="ident">bool</span>,
     <span class="doccomment">/// Whether Quilkin will report any results to stdout/stderr.</span>
     <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">short</span>, <span class="ident">long</span>, <span class="ident">env</span>)]</span>
     <span class="kw">pub</span> <span class="ident">quiet</span>: <span class="ident">bool</span>,
@@ -223,9 +239,20 @@
     <span class="ident">Manage</span>(<span class="ident">Manage</span>),
 }
 
+<span class="kw">impl</span> <span class="ident">Commands</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">admin_mode</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Mode</span><span class="op">&gt;</span> {
+        <span class="kw">match</span> <span class="self">self</span> {
+            <span class="ident"><span class="self">Self</span>::Run</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Some</span>(<span class="ident">Mode::Proxy</span>),
+            <span class="ident"><span class="self">Self</span>::Manage</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Some</span>(<span class="ident">Mode::Xds</span>),
+            <span class="ident"><span class="self">Self</span>::GenerateConfigSchema</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">None</span>,
+        }
+    }
+}
+
 <span class="kw">impl</span> <span class="ident">Cli</span> {
     <span class="doccomment">/// Drives the main quilkin application lifecycle using the command line</span>
     <span class="doccomment">/// arguments.</span>
+    <span class="attribute">#[<span class="ident">tracing::instrument</span>(<span class="ident">skip_all</span>)]</span>
     <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">drive</span>(<span class="self">self</span>) -&gt; <span class="ident"><span class="kw">crate</span>::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">version</span>: <span class="ident">std::borrow::Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span>, <span class="ident">str</span><span class="op">&gt;</span> <span class="op">=</span> <span class="kw">if</span> <span class="macro">cfg!</span>(<span class="ident">debug_assertions</span>) {
             <span class="macro">format!</span>(<span class="string">&quot;{VERSION}+debug&quot;</span>).<span class="ident">into</span>()
@@ -239,6 +266,7 @@
                 .<span class="ident">from_env_lossy</span>();
             <span class="ident">tracing_subscriber::fmt</span>()
                 .<span class="ident">json</span>()
+                .<span class="ident">with_file</span>(<span class="bool-val">true</span>)
                 .<span class="ident">with_env_filter</span>(<span class="ident">env_filter</span>)
                 .<span class="ident">init</span>();
         }
@@ -250,12 +278,16 @@
         );
 
         <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident"><span class="self">Self</span>::read_config</span>(<span class="self">self</span>.<span class="ident">config</span>)<span class="question-mark">?</span>);
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">no_admin</span> {
+        <span class="kw">let</span> <span class="ident">_admin_task</span> <span class="op">=</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">mode</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">command</span>.<span class="ident">admin_mode</span>().<span class="ident">filter</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">admin</span>) {
+            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">address</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">admin_address</span> {
+                <span class="ident">config</span>
+                    .<span class="ident">admin</span>
+                    .<span class="ident">store</span>(<span class="ident">Arc::new</span>(<span class="ident"><span class="kw">crate</span>::config::Admin</span> { <span class="ident">address</span> }));
+            }
+            <span class="prelude-val">Some</span>(<span class="ident">tokio::spawn</span>(<span class="ident"><span class="kw">crate</span>::admin::server</span>(<span class="ident">mode</span>, <span class="ident">config</span>.<span class="ident">clone</span>())))
+        } <span class="kw">else</span> {
             <span class="ident">config</span>.<span class="ident">admin</span>.<span class="ident">remove</span>();
-        } <span class="kw">else</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">address</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">admin_address</span> {
-            <span class="ident">config</span>
-                .<span class="ident">admin</span>
-                .<span class="ident">store</span>(<span class="ident">Arc::new</span>(<span class="ident"><span class="kw">crate</span>::config::Admin</span> { <span class="ident">address</span> }));
+            <span class="prelude-val">None</span>
         };
 
         <span class="kw">let</span> (<span class="ident">shutdown_tx</span>, <span class="ident">shutdown_rx</span>) <span class="op">=</span> <span class="ident">watch::channel</span>::<span class="op">&lt;</span>()<span class="op">&gt;</span>(());

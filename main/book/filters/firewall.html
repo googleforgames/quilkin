@@ -191,10 +191,15 @@ properties:
 definitions:
   Action:
     description: &quot;Whether or not a matching [Rule] should Allow or Deny access&quot;
-    type: string
-    enum:
-      - ALLOW
-      - DENY
+    oneOf:
+      - description: Matching rules will allow packets through.
+        type: string
+        enum:
+          - ALLOW
+      - description: Matching rules will block packets.
+        type: string
+        enum:
+          - DENY
   PortRange:
     description: &quot;Range of matching ports that are configured against a [Rule].&quot;
     allOf:

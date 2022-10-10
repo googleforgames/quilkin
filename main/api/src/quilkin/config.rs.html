@@ -583,6 +583,27 @@
 <span id="577">577</span>
 <span id="578">578</span>
 <span id="579">579</span>
+<span id="580">580</span>
+<span id="581">581</span>
+<span id="582">582</span>
+<span id="583">583</span>
+<span id="584">584</span>
+<span id="585">585</span>
+<span id="586">586</span>
+<span id="587">587</span>
+<span id="588">588</span>
+<span id="589">589</span>
+<span id="590">590</span>
+<span id="591">591</span>
+<span id="592">592</span>
+<span id="593">593</span>
+<span id="594">594</span>
+<span id="595">595</span>
+<span id="596">596</span>
+<span id="597">597</span>
+<span id="598">598</span>
+<span id="599">599</span>
+<span id="600">600</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -634,9 +655,12 @@
 <span class="comment">// For some log messages on the hot path (potentially per-packet), we log 1 out</span>
 <span class="comment">// of every `LOG_SAMPLING_RATE` occurrences to avoid spamming the logs.</span>
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const</span> <span class="ident">LOG_SAMPLING_RATE</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">1000</span>;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const</span> <span class="ident">BACKOFF_INITIAL_DELAY_MILLISECONDS</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">500</span>;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const</span> <span class="ident">BACKOFF_MAX_DELAY_SECONDS</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">30</span>;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const</span> <span class="ident">BACKOFF_MAX_JITTER_MILLISECONDS</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">2000</span>;
 
 <span class="doccomment">/// Config is the configuration of a proxy</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Default</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>, <span class="ident">JsonSchema</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>, <span class="ident">JsonSchema</span>)]</span>
 <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
 <span class="attribute">#[<span class="ident">non_exhaustive</span>]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Config</span> {
@@ -654,6 +678,9 @@
     <span class="kw">pub</span> <span class="ident">proxy</span>: <span class="ident">Slot</span><span class="op">&lt;</span><span class="ident">Proxy</span><span class="op">&gt;</span>,
     <span class="attribute">#[<span class="ident">schemars</span>(<span class="ident">with</span> <span class="op">=</span> <span class="string">&quot;Option&lt;Version&gt;&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">version</span>: <span class="ident">Slot</span><span class="op">&lt;</span><span class="ident">Version</span><span class="op">&gt;</span>,
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span> <span class="op">=</span> <span class="string">&quot;Slot::&lt;crate::maxmind_db::Source&gt;::empty&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">schemars</span>(<span class="ident">with</span> <span class="op">=</span> <span class="string">&quot;Option&lt;crate::maxmind_db::Source&gt;&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">maxmind_db</span>: <span class="ident">Slot</span><span class="op">&lt;</span><span class="ident"><span class="kw">crate</span>::maxmind_db::Source</span><span class="op">&gt;</span>,
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">skip</span>)]</span>
     <span class="ident">metrics</span>: <span class="ident">Metrics</span>,
 }
@@ -777,6 +804,21 @@
 
         <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">active_clusters</span>.<span class="ident">set</span>((<span class="ident">endpoints</span> <span class="op">==</span> <span class="number">0</span>) <span class="kw">as</span> <span class="ident">i64</span>);
         <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">active_endpoints</span>.<span class="ident">set</span>(<span class="ident">endpoints</span> <span class="kw">as</span> <span class="ident">i64</span>);
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">Config</span> {
+    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
+        <span class="self">Self</span> {
+            <span class="ident">admin</span>: <span class="ident">Slot::with_default</span>(),
+            <span class="ident">clusters</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
+            <span class="ident">filters</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
+            <span class="ident">management_servers</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
+            <span class="ident">proxy</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
+            <span class="ident">version</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
+            <span class="ident">maxmind_db</span>: <span class="ident">Slot::empty</span>(),
+            <span class="ident">metrics</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
+        }
     }
 }
 

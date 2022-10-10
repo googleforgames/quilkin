@@ -391,11 +391,6 @@
 <span id="385">385</span>
 <span id="386">386</span>
 <span id="387">387</span>
-<span id="388">388</span>
-<span id="389">389</span>
-<span id="390">390</span>
-<span id="391">391</span>
-<span id="392">392</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -420,7 +415,6 @@
 <span class="kw">use</span> <span class="ident">tracing_futures::Instrument</span>;
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">admin</span>,
     <span class="ident">config::Config</span>,
     <span class="ident">xds</span>::{
         <span class="ident">metrics</span>,
@@ -477,10 +471,6 @@
             <span class="ident">config</span>,
             <span class="ident">watchers</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
         };
-
-        <span class="kw">if</span> <span class="ident">this</span>.<span class="ident">config</span>.<span class="ident">admin</span>.<span class="ident">is_some</span>() {
-            <span class="ident">tokio::spawn</span>(<span class="ident">admin::server</span>(<span class="ident">admin::Mode::Xds</span>, <span class="ident">this</span>.<span class="ident">config</span>.<span class="ident">clone</span>()));
-        }
 
         <span class="ident">this</span>.<span class="ident">config</span>.<span class="ident">clusters</span>.<span class="ident">watch</span>({
             <span class="kw">let</span> <span class="ident">this</span> <span class="op">=</span> <span class="ident">this</span>.<span class="ident">clone</span>();

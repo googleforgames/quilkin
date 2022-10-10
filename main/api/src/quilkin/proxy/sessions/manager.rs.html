@@ -321,7 +321,6 @@
                         <span class="kw">break</span>;
                     }
                     <span class="kw">_</span> <span class="op">=</span> <span class="ident">interval</span>.<span class="ident">tick</span>() =&gt; {
-                        <span class="macro">tracing::debug!</span>(<span class="string">&quot;Attempting to Prune Sessions&quot;</span>);
                         <span class="ident"><span class="self">Self</span>::prune_sessions</span>(<span class="kw-2">&amp;mut</span> <span class="ident">sessions</span>).<span class="kw">await</span>;
 
                     }
@@ -347,6 +346,7 @@
             .<span class="ident">count</span>();
 
         <span class="kw">if</span> <span class="ident">expired_keys</span> <span class="op">!</span><span class="op">=</span> <span class="number">0</span> {
+            <span class="macro">tracing::debug!</span>(<span class="string">&quot;pruning expired sessions&quot;</span>);
             <span class="comment">// Go over the whole sessions map again in case anything expired</span>
             <span class="comment">// since acquiring the write lock.</span>
             <span class="ident">sessions</span>

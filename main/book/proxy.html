@@ -162,6 +162,19 @@ Such well known values are placed within an object in the endpoint metadata, und
 <p>An endpoint's metadata can be specified alongside the endpoint in <a href="./proxy-configuration.html">static configuration</a> or using the <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint_components.proto#envoy-v3-api-field-config-endpoint-v3-lbendpoint-metadata">xDS endpoint metadata</a> field when using <a href="./xds.html">dynamic configuration</a> via xDS.</p>
 <h5 id="session"><a class="header" href="#session">Session</a></h5>
 <p>A session represents ongoing communication flow between a client and an <a href="#upstream-endpoint">Upstream Endpoint</a>. See the <a href="./session.html">Session documentation</a> for more information.</p>
+<h6 id="asn-maxmind-information"><a class="header" href="#asn-maxmind-information">ASN Maxmind Information</a></h6>
+<p>If quilkin is provided a Maxmind database through the <code>mmdb</code> configuration
+option. Quilkin will log the following information in the <code>maxmind information</code>
+log.</p>
+<div class="table-wrapper"><table><thead><tr><th>Field</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>number</code></td><td>ASN Number</td></tr>
+<tr><td><code>organization</code></td><td>The organisation responsible for the ASN</td></tr>
+<tr><td><code>country_code</code></td><td>The corresponding country code</td></tr>
+<tr><td><code>prefix</code></td><td>The IP prefix CIDR address</td></tr>
+<tr><td><code>prefix_entity</code></td><td>The name of the entity for the prefix address</td></tr>
+<tr><td><code>prefix_name</code></td><td>The name of the prefix address</td></tr>
+</tbody></table>
+</div>
 <h4 id="metrics"><a class="header" href="#metrics">Metrics</a></h4>
 <p>The proxy exposes the following general metrics (See the metrics sub-sections for metrics specific to other Quilkin components, e.g for metrics related to packet flow see <a href="./session.html#metrics">sessions metrics</a>, or metrics exported by individual filters can be found in the documentation for each filter):</p>
 <ul>

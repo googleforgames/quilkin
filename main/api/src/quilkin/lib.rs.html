@@ -61,6 +61,9 @@
 <span id="55">55</span>
 <span id="56">56</span>
 <span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
+<span id="60">60</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -81,6 +84,7 @@
 
 <span class="kw">mod</span> <span class="ident">admin</span>;
 <span class="kw">mod</span> <span class="ident">cluster</span>;
+<span class="kw">mod</span> <span class="ident">maxmind_db</span>;
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod</span> <span class="ident">metrics</span>;
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod</span> <span class="ident">prost</span>;
 <span class="kw">mod</span> <span class="ident">proxy</span>;
@@ -103,6 +107,8 @@
 <span class="kw">pub</span> <span class="kw">use</span> <span class="self">self</span>::{<span class="ident">cli::Cli</span>, <span class="ident">config::Config</span>, <span class="ident">proxy::Proxy</span>};
 
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">quilkin_macros::include_proto</span>;
+
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">use</span> <span class="ident"><span class="self">self</span>::maxmind_db::MaxmindDb</span>;
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">doctest</span>)]</span>
 <span class="kw">mod</span> <span class="ident">external_doc_tests</span> {

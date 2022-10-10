@@ -175,11 +175,19 @@ properties:
 definitions:
   Policy:
     description: &quot;Policy represents how a [`load_balancer`][super] distributes packets across endpoints.&quot;
-    type: string
-    enum:
-      - ROUND_ROBIN
-      - RANDOM
-      - HASH
+    oneOf:
+      - description: Send packets to endpoints in turns.
+        type: string
+        enum:
+          - ROUND_ROBIN
+      - description: Send packets to endpoints chosen at random.
+        type: string
+        enum:
+          - RANDOM
+      - description: Send packets to endpoints based on hash of source IP and port.
+        type: string
+        enum:
+          - HASH
 </code></pre>
 <h3 id="metrics"><a class="header" href="#metrics">Metrics</a></h3>
 <p>This filter currently does not expose any metrics.</p>

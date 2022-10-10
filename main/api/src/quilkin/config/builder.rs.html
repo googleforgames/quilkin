@@ -140,6 +140,16 @@
 <span id="134">134</span>
 <span id="135">135</span>
 <span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -172,6 +182,7 @@
     <span class="kw">pub</span> <span class="ident">clusters</span>: <span class="ident">ClusterMap</span>,
     <span class="kw">pub</span> <span class="ident">filters</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Filter</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">management_servers</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ManagementServer</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">maxmind_db</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident"><span class="kw">crate</span>::maxmind_db::Source</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">Builder</span> {
@@ -182,6 +193,7 @@
             <span class="ident">clusters</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
             <span class="ident">filters</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
             <span class="ident">management_servers</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
+            <span class="ident">maxmind_db</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
         }
     }
 }
@@ -235,6 +247,13 @@
         }
     }
 
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">maxmind_db</span>(<span class="self">self</span>, <span class="ident">mmdb</span>: <span class="ident"><span class="kw">crate</span>::maxmind_db::Source</span>) -&gt; <span class="self">Self</span> {
+        <span class="self">Self</span> {
+            <span class="ident">maxmind_db</span>: <span class="ident">mmdb</span>.<span class="ident">into</span>(),
+            ..<span class="self">self</span>
+        }
+    }
+
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build</span>(<span class="self">self</span>) -&gt; <span class="ident"><span class="kw">crate</span>::Result</span><span class="op">&lt;</span><span class="ident">Config</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">try_into</span>().<span class="ident">map_err</span>(<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::from</span>)
     }
@@ -273,6 +292,7 @@
             <span class="ident">filters</span>: <span class="ident"><span class="kw">crate</span>::filters::FilterChain::try_from</span>(<span class="ident">builder</span>.<span class="ident">filters</span>)<span class="question-mark">?</span>.<span class="ident">into</span>(),
             <span class="ident">management_servers</span>: <span class="ident">builder</span>.<span class="ident">management_servers</span>.<span class="ident">into</span>(),
             <span class="ident">metrics</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
+            <span class="ident">maxmind_db</span>: <span class="ident">builder</span>.<span class="ident">maxmind_db</span>.<span class="ident">into</span>(),
         })
     }
 }
