@@ -206,7 +206,7 @@ impl Proxy {
                             let timer = crate::metrics::PROCESSING_TIME.with_label_values(&[crate::metrics::READ_DIRECTION_LABEL]).start_timer();
                             match recv {
                                 Ok((size, source)) => {
-                                    let contents = (&buf[..size]).to_vec();
+                                    let contents = buf[..size].to_vec();
                                     tracing::trace!(id = worker_id, size = size, source = %source, contents=&*debug::bytes_to_string(&contents), "received packet from downstream");
                                     let packet = DownstreamPacket {
                                         source: source.into(),
