@@ -168,7 +168,7 @@ impl ControlPlane {
             .with_label_values(&[&*node.id, resource_type.type_url()])
             .inc();
         let mut rx = self.watchers[resource_type].sender.subscribe();
-        let mut pending_acks = cached::TimedCache::with_lifespan(1);
+        let mut pending_acks = cached::TimedSizedCache::with_size_and_lifespan(50, 1);
         let this = Self::clone(self);
         let response = this.discovery_response(&node.id, resource_type, &message.resource_names)?;
         pending_acks.cache_set(response.nonce.clone(), ());
