@@ -30,6 +30,7 @@ pub struct Builder {
     pub clusters: ClusterMap,
     pub filters: Vec<Filter>,
     pub management_servers: Vec<ManagementServer>,
+    pub maxmind_db: Option<crate::maxmind_db::Source>,
 }
 
 impl Default for Builder {
@@ -40,6 +41,7 @@ impl Default for Builder {
             clusters: <_>::default(),
             filters: <_>::default(),
             management_servers: <_>::default(),
+            maxmind_db: <_>::default(),
         }
     }
 }
@@ -93,6 +95,13 @@ impl Builder {
         }
     }
 
+    pub fn maxmind_db(self, mmdb: crate::maxmind_db::Source) -> Self {
+        Self {
+            maxmind_db: mmdb.into(),
+            ..self
+        }
+    }
+
     pub fn build(self) -> crate::Result<Config> {
         self.try_into().map_err(<_>::from)
     }
@@ -131,6 +140,7 @@ impl TryFrom<Builder> for Config {
             filters: crate::filters::FilterChain::try_from(builder.filters)?.into(),
             management_servers: builder.management_servers.into(),
             metrics: <_>::default(),
+            maxmind_db: builder.maxmind_db.into(),
         })
     }
 }

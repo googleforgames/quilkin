@@ -26,7 +26,7 @@ CARGO_HOME="${CARGO_HOME:-$HOME/.cargo}"
 # This should be reviewed before each release to make sure we're capturing all
 # the dependencies we need.
 
-dependencies=()
+dependencies=(webpki-roots)
 
 zip="$(pwd)/dependencies-src.zip"
 

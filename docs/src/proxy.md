@@ -39,6 +39,20 @@ An endpoint's metadata can be specified alongside the endpoint in [static config
 
 A session represents ongoing communication flow between a client and an [Upstream Endpoint][endpoint]. See the [Session documentation][sessions-doc] for more information.
 
+###### ASN Maxmind Information
+If quilkin is provided a Maxmind database through the `mmdb` configuration
+option. Quilkin will log the following information in the `maxmind information`
+log.
+
+| Field | Description |
+|-------|-------------|
+| `number` | ASN Number |
+| `organization` | The organisation responsible for the ASN |
+| `country_code` | The corresponding country code |
+| `prefix` | The IP prefix CIDR address |
+| `prefix_entity` | The name of the entity for the prefix address |
+| `prefix_name` | The name of the prefix address |
+
 #### Metrics
 
 The proxy exposes the following general metrics (See the metrics sub-sections for metrics specific to other Quilkin components, e.g for metrics related to packet flow see [sessions metrics][session-metrics], or metrics exported by individual filters can be found in the documentation for each filter):
