@@ -49,9 +49,12 @@ base64_serde_type!(Base64Standard, base64::STANDARD);
 // For some log messages on the hot path (potentially per-packet), we log 1 out
 // of every `LOG_SAMPLING_RATE` occurrences to avoid spamming the logs.
 pub(crate) const LOG_SAMPLING_RATE: u64 = 1000;
+pub(crate) const BACKOFF_INITIAL_DELAY_MILLISECONDS: u64 = 500;
+pub(crate) const BACKOFF_MAX_DELAY_SECONDS: u64 = 30;
+pub(crate) const BACKOFF_MAX_JITTER_MILLISECONDS: u64 = 2000;
 
 /// Config is the configuration of a proxy
-#[derive(Clone, Debug, Default, Deserialize, Serialize, JsonSchema)]
+#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct Config {
@@ -69,6 +72,9 @@ pub struct Config {
     pub proxy: Slot<Proxy>,
     #[schemars(with = "Option<Version>")]
     pub version: Slot<Version>,
+    #[serde(default = "Slot::<crate::maxmind_db::Source>::empty")]
+    #[schemars(with = "Option<crate::maxmind_db::Source>")]
+    pub maxmind_db: Slot<crate::maxmind_db::Source>,
     #[serde(default, skip)]
     metrics: Metrics,
 }
@@ -192,6 +198,21 @@ impl Config {
 
         self.metrics.active_clusters.set((endpoints == 0) as i64);
         self.metrics.active_endpoints.set(endpoints as i64);
+    }
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            admin: Slot::with_default(),
+            clusters: <_>::default(),
+            filters: <_>::default(),
+            management_servers: <_>::default(),
+            proxy: <_>::default(),
+            version: <_>::default(),
+            maxmind_db: Slot::empty(),
+            metrics: <_>::default(),
+        }
     }
 }
 
