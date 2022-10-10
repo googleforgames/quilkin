@@ -1,13 +1,14 @@
 # Agones & Xonotic Example
 
-An example of running [Xonotic](https://xonotic.org/) with Quilkin on an [Agones](https://agones.dev/) cluster.
+An example of running [Xonotic](https://xonotic.org/) with Quilkin on an [Agones](https://agones.dev/) cluster, 
+utilising the sidecar integration pattern.
 
 To interact with the demo, you will need to download the Xonotic client.
 
 ## Sidecar with no filter
 
-Run `kubectl apply -f https://github.com/googleforgames/quilkin/blob/main/examples/agones-xonotic/sidecar.yaml` to 
-create a Fleet of Xonotic dedicated game servers, with traffic processed through a Quilkin sidecar proxy.
+Run `kubectl apply -f ./sidecar.yaml` 
+to create a Fleet of Xonotic dedicated game servers, with traffic processed through a Quilkin sidecar proxy.
 
 This is particularly useful if you want to take advantage of the inbuilt metrics that Quilkin provides without 
 having to alter your dedicated game server.
@@ -18,7 +19,7 @@ Connect to the Agones hosted Xonotic server via the "Multiplayer > Address" fiel
 
 ## Sidecar with compression filter
 
-Run `kubectl apply -f https://github.com/googleforgames/quilkin/blob/main/examples/agones-xonotic/sidecar-compress.yaml`
+Run `kubectl apply -f ./sidecar-compress.yaml`
 to create a Fleet of Xonotic dedicated game servers, with traffic processed through a Quilkin sidecar proxy, 
 that is configured to decompress UDP traffic with the [Snappy](https://crates.io/crates/snap) 
 compression format.
