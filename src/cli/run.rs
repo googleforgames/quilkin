@@ -23,15 +23,18 @@ use crate::filters::FilterFactory;
 #[derive(clap::Args)]
 #[non_exhaustive]
 pub struct Run {
+    /// One or more `quilkin manage` endpoints to listen to for config changes
+    #[clap(short, long, env = "QUILKIN_MANAGEMENT_SERVER", conflicts_with("to"))]
+    pub management_server: Vec<String>,
+    /// The remote URL or local file path to retrieve the Maxmind database.
+    #[clap(long, env)]
+    pub mmdb: Option<crate::maxmind_db::Source>,
     /// The port to listen on.
     #[clap(short, long, env = "QUILKIN_PORT")]
     pub port: Option<u16>,
     /// One or more socket addresses to forward packets to.
     #[clap(short, long, env = "QUILKIN_DEST")]
     pub to: Vec<SocketAddr>,
-    /// One or more `quilkin manage` endpoints to listen to for config changes
-    #[clap(short, long, env = "QUILKIN_MANAGEMENT_SERVER", conflicts_with("to"))]
-    pub management_server: Vec<String>,
 }
 
 impl Run {
@@ -44,6 +47,22 @@ impl Run {
         if let Some(port) = self.port {
             config.proxy.modify(|proxy| proxy.port = port);
         }
+
+        let _mmdb_task = self.mmdb.clone().map(|source| {
+            tokio::spawn(async move {
+                use crate::config::BACKOFF_INITIAL_DELAY_MILLISECONDS;
+                while let Err(error) =
+                    tryhard::retry_fn(|| crate::MaxmindDb::update(source.clone()))
+                        .retries(10)
+                        .exponential_backoff(std::time::Duration::from_millis(
+                            BACKOFF_INITIAL_DELAY_MILLISECONDS,
+                        ))
+                        .await
+                {
+                    tracing::warn!(%error, "error updating maxmind database");
+                }
+            })
+        });
 
         if !self.to.is_empty() {
             config.clusters.modify(|clusters| {
