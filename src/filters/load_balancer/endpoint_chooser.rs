@@ -58,7 +58,7 @@ pub struct RandomEndpointChooser;
 impl EndpointChooser for RandomEndpointChooser {
     fn choose_endpoints(&self, ctx: &mut ReadContext) {
         // The index is guaranteed to be in range.
-        let index = (&mut thread_rng()).gen_range(0..ctx.endpoints.len());
+        let index = thread_rng().gen_range(0..ctx.endpoints.len());
         ctx.endpoints = vec![ctx.endpoints[index].clone()];
     }
 }
