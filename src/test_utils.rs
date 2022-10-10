@@ -228,6 +228,14 @@ impl TestHelper {
     pub fn run_server(&mut self, server: crate::Proxy) {
         let (shutdown_tx, shutdown_rx) = watch::channel::<()>(());
         self.server_shutdown_tx.push(Some(shutdown_tx));
+
+        if server.config.admin.is_some() {
+            tokio::spawn(crate::admin::server(
+                crate::admin::Mode::Proxy,
+                server.config.clone(),
+            ));
+        }
+
         tokio::spawn(async move {
             server.run(shutdown_rx).await.unwrap();
         });

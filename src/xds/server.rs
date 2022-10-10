@@ -22,7 +22,6 @@ use tokio_stream::StreamExt;
 use tracing_futures::Instrument;
 
 use crate::{
-    admin,
     config::Config,
     xds::{
         metrics,
@@ -79,10 +78,6 @@ impl ControlPlane {
             config,
             watchers: <_>::default(),
         };
-
-        if this.config.admin.is_some() {
-            tokio::spawn(admin::server(admin::Mode::Xds, this.config.clone()));
-        }
 
         this.config.clusters.watch({
             let this = this.clone();

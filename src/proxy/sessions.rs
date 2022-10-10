@@ -122,7 +122,7 @@ impl Session {
         let s = Session {
             config: args.config.clone(),
             upstream_socket,
-            source: args.source,
+            source: args.source.clone(),
             dest: args.dest,
             created_at: Instant::now(),
             expiration,
@@ -132,6 +132,25 @@ impl Session {
 
         self::metrics::TOTAL_SESSIONS.inc();
         self::metrics::ACTIVE_SESSIONS.inc();
+
+        if let Some(mmdb) = &*crate::MaxmindDb::instance() {
+            let ip = args.source.to_socket_addr().unwrap().ip();
+            match mmdb.lookup::<crate::maxmind_db::IpNetEntry>(ip) {
+                Ok(asn) => tracing::info!(
+                    number = asn.r#as,
+                    organization = asn.as_name,
+                    country_code = asn.as_cc,
+                    prefix = asn.prefix,
+                    prefix_entity = asn.prefix_entity,
+                    prefix_name = asn.prefix_name,
+                    "maxmind information"
+                ),
+                Err(error) => tracing::warn!(%ip, %error, "ip not found in maxmind database"),
+            }
+        } else {
+            tracing::debug!("skipping mmdb telemetry, no maxmind database available");
+        }
+
         s.run(args.ttl, args.downstream_socket, shutdown_rx);
         Ok(s)
     }

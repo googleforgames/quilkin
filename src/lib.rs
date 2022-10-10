@@ -18,6 +18,7 @@
 
 mod admin;
 mod cluster;
+mod maxmind_db;
 pub(crate) mod metrics;
 pub(crate) mod prost;
 mod proxy;
@@ -40,6 +41,8 @@ pub type Result<T, E = eyre::Error> = std::result::Result<T, E>;
 pub use self::{cli::Cli, config::Config, proxy::Proxy};
 
 pub use quilkin_macros::include_proto;
+
+pub(crate) use self::maxmind_db::MaxmindDb;
 
 #[cfg(doctest)]
 mod external_doc_tests {
