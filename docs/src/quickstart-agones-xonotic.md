@@ -16,7 +16,7 @@ In this step, we're going to set up a Xonotic dedicated game server, with Quilki
 [metrics](./proxy.md#metrics) that Quilkin provides.
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/googleforgames/quilkin/main/examples/agones-xonotic/sidecar.yaml
+kubectl apply -f https://raw.githubusercontent.com/googleforgames/quilkin/main/examples/agones-xonotic-sidecar/sidecar.yaml
 ```
 
 This applies two resources to your cluster:
@@ -65,7 +65,7 @@ Then open a browser to [http://localhost:9091/metrics](http://localhost:9091/met
 Run the following to delete the Fleet and the accompanying ConfigMap:
 
 ```shell
-kubectl delete -f  https://raw.githubusercontent.com/googleforgames/quilkin/main/examples/agones-xonotic/sidecar.yaml
+kubectl delete -f  https://raw.githubusercontent.com/googleforgames/quilkin/main/examples/agones-xonotic-sidecar/sidecar.yaml
 ```
 
 ## 6. Agones Fleet, but with Compression
@@ -79,7 +79,7 @@ packets that are incoming.
 Run the following:
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/googleforgames/quilkin/main/examples/agones-xonotic/sidecar-compress.yaml
+kubectl apply -f https://raw.githubusercontent.com/googleforgames/quilkin/main/examples/agones-xonotic-sidecar/sidecar-compress.yaml
 ```
 
 This will implement the [Compress](./filters/compress.md) filter in our Quilkin sidecar proxy in our new 
@@ -100,7 +100,7 @@ What we will do in this step, is run Quilkin locally as a client-side proxy to c
 sent up to our Xonotic servers that are expecting compressed data.
 
 First, grab a copy of the Quilkin configuration 
-[client-compress.yaml](https://github.com/googleforgames/quilkin/blob/main/examples/agones-xonotic/sidecar-compress.yaml) 
+<a data-proofer-ignore href="https://github.com/googleforgames/quilkin/blob/main/examples/agones-xonotic-sidecar/sidecar-compress.yaml">client-compress.yaml</a>
 locally. This has the Compress filter already configured, but we need to fill in the address to connect to.
 
 > Rather than editing a file, this could also be sent through the [xDS API](./xds.md), but it is easier to 
@@ -127,7 +127,7 @@ edit either!
 Run the following to delete the Fleet and the accompanying ConfigMap:
 
 ```shell
-kubectl delete -f https://raw.githubusercontent.com/googleforgames/quilkin/main/examples/agones-xonotic/sidecar-compress.yaml
+kubectl delete -f https://raw.githubusercontent.com/googleforgames/quilkin/main/examples/agones-xonotic-sidecar/sidecar-compress.yaml
 ```
 
 ## What's Next?
