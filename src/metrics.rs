@@ -16,8 +16,7 @@
 
 use once_cell::sync::Lazy;
 use prometheus::{
-    core::Collector, CounterVec, HistogramOpts, HistogramVec, IntCounterVec, Opts, Registry,
-    DEFAULT_BUCKETS,
+    core::Collector, HistogramOpts, HistogramVec, IntCounterVec, Opts, Registry, DEFAULT_BUCKETS,
 };
 
 pub use prometheus::Result;
@@ -94,18 +93,6 @@ pub(crate) static PACKETS_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
         prometheus::opts! {
             "packets_total",
             "Total number of packets",
-        },
-        &[DIRECTION_LABEL],
-        registry(),
-    }
-    .unwrap()
-});
-
-pub(crate) static PACKETS_SIZE: Lazy<CounterVec> = Lazy::new(|| {
-    prometheus::register_counter_vec_with_registry! {
-        prometheus::opts! {
-            "packets_size",
-            "The total size of received packets",
         },
         &[DIRECTION_LABEL],
         registry(),
