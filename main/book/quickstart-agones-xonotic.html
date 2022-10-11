@@ -151,7 +151,7 @@
 <p>In this step, we're going to set up a Xonotic dedicated game server, with Quilkin running as a 
 <a href="integrations.html#server-proxy-as-a-sidecar">sidecar</a>, which will give us access to all the
 <a href="./proxy.html#metrics">metrics</a> that Quilkin provides.</p>
-<pre><code class="language-shell">kubectl apply -f https://raw.githubusercontent.com/googleforgames/quilkin/main/examples/agones-xonotic/sidecar.yaml
+<pre><code class="language-shell">kubectl apply -f https://raw.githubusercontent.com/googleforgames/quilkin/main/examples/agones-xonotic-sidecar/sidecar.yaml
 </code></pre>
 <p>This applies two resources to your cluster:</p>
 <ol>
@@ -183,7 +183,7 @@ command. This will forward the <a href="./admin.html">admin</a> interface to loc
 <a href="https://prometheus.io/">Prometheus</a> metrics that Quilkin exports.</p>
 <h2 id="5-cleanup"><a class="header" href="#5-cleanup">5. Cleanup</a></h2>
 <p>Run the following to delete the Fleet and the accompanying ConfigMap:</p>
-<pre><code class="language-shell">kubectl delete -f  https://raw.githubusercontent.com/googleforgames/quilkin/main/examples/agones-xonotic/sidecar.yaml
+<pre><code class="language-shell">kubectl delete -f  https://raw.githubusercontent.com/googleforgames/quilkin/main/examples/agones-xonotic-sidecar/sidecar.yaml
 </code></pre>
 <h2 id="6-agones-fleet-but-with-compression"><a class="header" href="#6-agones-fleet-but-with-compression">6. Agones Fleet, but with Compression</a></h2>
 <p>Let's take this one step further and compress the data between the Xonotic client and the server, without having to 
@@ -191,7 +191,7 @@ change either of them!</p>
 <p>Let's create a new Xonotic Fleet on our Agones cluster, but this time configured such that Quilkin will decompress 
 packets that are incoming.</p>
 <p>Run the following:</p>
-<pre><code class="language-shell">kubectl apply -f https://raw.githubusercontent.com/googleforgames/quilkin/main/examples/agones-xonotic/sidecar-compress.yaml
+<pre><code class="language-shell">kubectl apply -f https://raw.githubusercontent.com/googleforgames/quilkin/main/examples/agones-xonotic-sidecar/sidecar-compress.yaml
 </code></pre>
 <p>This will implement the <a href="./filters/compress.html">Compress</a> filter in our Quilkin sidecar proxy in our new 
 Fleet.</p>
@@ -205,7 +205,7 @@ xonotic-sidecar-compress-htc2x-sdp4k   Ready   34.94.107.201   7592   gke-agones
 <p>What we will do in this step, is run Quilkin locally as a client-side proxy to compress the UDP data before it is 
 sent up to our Xonotic servers that are expecting compressed data.</p>
 <p>First, grab a copy of the Quilkin configuration 
-<a href="https://github.com/googleforgames/quilkin/blob/main/examples/agones-xonotic/sidecar-compress.yaml">client-compress.yaml</a> 
+<a data-proofer-ignore href="https://github.com/googleforgames/quilkin/blob/main/examples/agones-xonotic-sidecar/sidecar-compress.yaml">client-compress.yaml</a>
 locally. This has the Compress filter already configured, but we need to fill in the address to connect to.</p>
 <blockquote>
 <p>Rather than editing a file, this could also be sent through the <a href="./xds.html">xDS API</a>, but it is easier to 
@@ -223,7 +223,7 @@ client!</p>
 edit either!</p>
 <h2 id="7-cleanup"><a class="header" href="#7-cleanup">7. Cleanup</a></h2>
 <p>Run the following to delete the Fleet and the accompanying ConfigMap:</p>
-<pre><code class="language-shell">kubectl delete -f https://raw.githubusercontent.com/googleforgames/quilkin/main/examples/agones-xonotic/sidecar-compress.yaml
+<pre><code class="language-shell">kubectl delete -f https://raw.githubusercontent.com/googleforgames/quilkin/main/examples/agones-xonotic-sidecar/sidecar-compress.yaml
 </code></pre>
 <h2 id="whats-next"><a class="header" href="#whats-next">What's Next?</a></h2>
 <ul>
