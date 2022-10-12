@@ -182,7 +182,9 @@ impl Session {
                                 tracing::error!(%error, %source, dest = ?endpoint, "Error receiving packet");
                             },
                             Ok((size, recv_addr)) => {
-                                crate::metrics::PACKETS_SIZE.with_label_values(&[crate::metrics::WRITE_DIRECTION_LABEL]).inc_by(size as f64);
+                                crate::metrics::BYTES_TOTAL
+                                    .with_label_values(&[crate::metrics::WRITE_DIRECTION_LABEL])
+                                    .inc_by(size as u64);
                                 crate::metrics::PACKETS_TOTAL.with_label_values(&[crate::metrics::WRITE_DIRECTION_LABEL]).inc();
                                 Session::process_recv_packet(
                                     &downstream_socket,
