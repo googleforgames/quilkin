@@ -15,19 +15,21 @@
  */
 
 use once_cell::sync::Lazy;
-use prometheus::{Histogram, IntCounter, IntGauge, Opts};
+use prometheus::{Histogram, IntCounter, IntGaugeVec, Opts};
 
 use crate::metrics::{histogram_opts, register};
 
 const SUBSYSTEM: &str = "session";
+const ASN_NUMBER_LABEL: &str = "asn";
+const IP_PREFIX_LABEL: &str = "ip_prefix";
 
-pub(crate) static ACTIVE_SESSIONS: Lazy<IntGauge> = Lazy::new(|| {
-    register(
-        IntGauge::with_opts(
-            Opts::new("active", "number of sessions currently active").subsystem(SUBSYSTEM),
-        )
-        .unwrap(),
-    )
+pub(crate) static ACTIVE_SESSIONS: Lazy<IntGaugeVec> = Lazy::new(|| {
+    prometheus::register_int_gauge_vec_with_registry! {
+        Opts::new("active", "number of sessions currently active").subsystem(SUBSYSTEM),
+        &[ASN_NUMBER_LABEL, IP_PREFIX_LABEL],
+        crate::metrics::registry(),
+    }
+    .unwrap()
 });
 
 pub(crate) static TOTAL_SESSIONS: Lazy<IntCounter> = Lazy::new(|| {

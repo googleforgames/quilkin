@@ -58,6 +58,8 @@ pub struct Session {
     expiration: Arc<AtomicU64>,
     /// a channel to broadcast on if we are shutting down this Session
     shutdown_tx: watch::Sender<()>,
+    /// The ASN information.
+    asn_info: Option<crate::maxmind_db::IpNetEntry>,
 }
 
 // A (source, destination) address pair that uniquely identifies a session.
@@ -119,6 +121,8 @@ impl Session {
         let expiration = Arc::new(AtomicU64::new(0));
         Self::do_update_expiration(&expiration, args.ttl)?;
 
+        let ip = args.source.to_socket_addr().unwrap().ip();
+        let asn_info = crate::MaxmindDb::lookup(ip);
         let s = Session {
             config: args.config.clone(),
             upstream_socket,
@@ -127,30 +131,13 @@ impl Session {
             created_at: Instant::now(),
             expiration,
             shutdown_tx,
+            asn_info,
         };
+
         tracing::debug!(source = %s.source, dest = ?s.dest, "Session created");
 
         self::metrics::TOTAL_SESSIONS.inc();
-        self::metrics::ACTIVE_SESSIONS.inc();
-
-        if let Some(mmdb) = &*crate::MaxmindDb::instance() {
-            let ip = args.source.to_socket_addr().unwrap().ip();
-            match mmdb.lookup::<crate::maxmind_db::IpNetEntry>(ip) {
-                Ok(asn) => tracing::info!(
-                    number = asn.r#as,
-                    organization = asn.as_name,
-                    country_code = asn.as_cc,
-                    prefix = asn.prefix,
-                    prefix_entity = asn.prefix_entity,
-                    prefix_name = asn.prefix_name,
-                    "maxmind information"
-                ),
-                Err(error) => tracing::warn!(%ip, %error, "ip not found in maxmind database"),
-            }
-        } else {
-            tracing::debug!("skipping mmdb telemetry, no maxmind database available");
-        }
-
+        s.active_session_metric().inc();
         s.run(args.ttl, args.downstream_socket, shutdown_rx);
         Ok(s)
     }
@@ -221,6 +208,23 @@ impl Session {
             source: self.source.clone(),
             dest: self.dest.address.clone(),
         }
+    }
+
+    fn active_session_metric(&self) -> prometheus::IntGauge {
+        let labels = self
+            .asn_info
+            .as_ref()
+            .map(|asn| [asn.r#as.to_string(), asn.prefix.clone()])
+            .unwrap_or_else(|| [String::new(), String::new()]);
+
+        let mut iter = labels.iter();
+
+        let labels = [
+            iter.next().map(|item| &**item).unwrap(),
+            iter.next().map(|item| &**item).unwrap(),
+        ];
+
+        metrics::ACTIVE_SESSIONS.with_label_values(labels.as_slice())
     }
 
     /// process_recv_packet processes a packet that is received by this session.
@@ -350,7 +354,7 @@ impl Session {
 
 impl Drop for Session {
     fn drop(&mut self) {
-        metrics::ACTIVE_SESSIONS.dec();
+        self.active_session_metric().dec();
         metrics::DURATION_SECS.observe(self.created_at.elapsed().as_secs() as f64);
 
         if let Err(error) = self.shutdown_tx.send(()) {
