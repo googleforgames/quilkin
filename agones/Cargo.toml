@@ -25,7 +25,7 @@ readme = "README.md"
 
 [dependencies]
 base64 = "0.13.0"
-k8s-openapi = { version = "0.15.0", features = ["v1_22"] }
-kube = { version = "0.73.1", features = ["runtime", "derive"] }
+k8s-openapi = { version = "0.16.0", features = ["v1_22"] }
+kube = { version = "0.75.0", features = ["runtime", "derive"] }
 quilkin = { path = "../" }
-tokio = { version = "1.19.2", features = ["sync", "parking_lot"] }
+tokio = { version = "1.21.2", features = ["sync", "parking_lot"] }

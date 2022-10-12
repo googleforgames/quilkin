@@ -36,7 +36,7 @@ mod tests {
         let pp = PostParams::default();
         let gs = gameservers.create(&pp, &gs).await.unwrap();
 
-        let name = gs.name();
+        let name = gs.name_unchecked();
         let ready = await_condition(gameservers.clone(), name.as_str(), is_gameserver_ready());
         timeout(Duration::from_secs(30), ready)
             .await
@@ -107,14 +107,14 @@ clusters:
         template.volumes = Some(vec![Volume {
             name: mount_name,
             config_map: Some(ConfigMapVolumeSource {
-                name: Some(config_map.name()),
+                name: Some(config_map.name_unchecked()),
                 ..Default::default()
             }),
             ..Default::default()
         }]);
 
         let gs = gameservers.create(&pp, &gs).await.unwrap();
-        let name = gs.name();
+        let name = gs.name_unchecked();
         let ready = await_condition(gameservers.clone(), name.as_str(), is_gameserver_ready());
         timeout(Duration::from_secs(30), ready)
             .await

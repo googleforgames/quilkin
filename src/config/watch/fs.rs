@@ -23,9 +23,12 @@ use crate::Config;
 pub async fn watch(config: Arc<Config>, path: impl Into<std::path::PathBuf>) -> crate::Result<()> {
     let path = path.into();
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
-    let mut watcher = notify::RecommendedWatcher::new(move |res| {
-        tx.send(res).unwrap();
-    })
+    let mut watcher = notify::RecommendedWatcher::new(
+        move |res| {
+            tx.send(res).unwrap();
+        },
+        <_>::default(),
+    )
     .unwrap();
 
     watcher.watch(&path, notify::RecursiveMode::Recursive)?;
