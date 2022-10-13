@@ -322,6 +322,8 @@ filters:
         let pp = PostParams::default();
         let config = r#"
 version: v1alpha1
+admin:
+    address: 0.0.0.0:9092
 management_servers:
   - address: http://quilkin-manage-agones:80
 "#;
