@@ -16,8 +16,7 @@
 
 # ANCHOR: yaml
 version: v1alpha1
-proxy:
-  port: 7001
+port: 7001
 filters:
 - name: greet.v1
   config:

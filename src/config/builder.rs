@@ -19,7 +19,7 @@ use std::collections::HashSet;
 use super::{Config, Filter};
 use crate::{
     cluster::ClusterMap,
-    config::{Admin, ManagementServer, Proxy, ValidationError, Version},
+    config::{Admin, ManagementServer, ValidationError, Version},
 };
 
 /// Builder for a [`Config`]
@@ -130,11 +130,8 @@ impl TryFrom<Builder> for Config {
 
         Ok(Self {
             version: Version::V1Alpha1.into(),
-            proxy: Proxy {
-                id: "test".into(),
-                port: builder.port,
-            }
-            .into(),
+            id: String::from("test").into(),
+            port: builder.port.into(),
             admin: builder.admin.into(),
             clusters: builder.clusters.into(),
             filters: crate::filters::FilterChain::try_from(builder.filters)?.into(),

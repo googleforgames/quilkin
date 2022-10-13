@@ -102,9 +102,11 @@ impl Proxy {
     /// start the async processing of incoming UDP packets. Will block until an
     /// event is sent through the stop Receiver.
     pub async fn run(self, mut shutdown_rx: watch::Receiver<()>) -> Result<()> {
-        let proxy = self.config.proxy.load();
-
-        tracing::info!(port = proxy.port, proxy_id = &*proxy.id, "Starting");
+        tracing::info!(
+            port = *self.config.port.load(),
+            proxy_id = &*self.config.id.load(),
+            "Starting"
+        );
 
         let session_manager = SessionManager::new(shutdown_rx.clone());
         let session_ttl = Duration::from_secs(SESSION_TIMEOUT_SECONDS);
@@ -152,7 +154,7 @@ impl Proxy {
         // Contains config for each worker task.
         let mut worker_configs = vec![];
         for worker_id in 0..num_workers {
-            let socket = Arc::new(self.bind(self.config.proxy.load().port)?);
+            let socket = Arc::new(self.bind(*self.config.port.load())?);
             worker_configs.push(DownstreamReceiveWorkerConfig {
                 worker_id,
                 socket: socket.clone(),

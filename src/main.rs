@@ -22,7 +22,7 @@ async fn main() {
     match <quilkin::Cli as clap::Parser>::parse().drive().await {
         Ok(()) => std::process::exit(0),
         Err(error) => {
-            tracing::error!(%error, "fatal error");
+            tracing::error!(%error, error_debug=?error, "fatal error");
             std::process::exit(-1)
         }
     }
