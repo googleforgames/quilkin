@@ -175,7 +175,7 @@
         <span class="kw">let</span> <span class="ident">pp</span> <span class="op">=</span> <span class="ident">PostParams::default</span>();
         <span class="kw">let</span> <span class="ident">gs</span> <span class="op">=</span> <span class="ident">gameservers</span>.<span class="ident">create</span>(<span class="kw-2">&amp;</span><span class="ident">pp</span>, <span class="kw-2">&amp;</span><span class="ident">gs</span>).<span class="kw">await</span>.<span class="ident">unwrap</span>();
 
-        <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">gs</span>.<span class="ident">name</span>();
+        <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">gs</span>.<span class="ident">name_unchecked</span>();
         <span class="kw">let</span> <span class="ident">ready</span> <span class="op">=</span> <span class="ident">await_condition</span>(<span class="ident">gameservers</span>.<span class="ident">clone</span>(), <span class="ident">name</span>.<span class="ident">as_str</span>(), <span class="ident">is_gameserver_ready</span>());
         <span class="ident">timeout</span>(<span class="ident">Duration::from_secs</span>(<span class="number">30</span>), <span class="ident">ready</span>)
             .<span class="kw">await</span>
@@ -246,14 +246,14 @@ clusters:
         <span class="ident">template</span>.<span class="ident">volumes</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="ident">Volume</span> {
             <span class="ident">name</span>: <span class="ident">mount_name</span>,
             <span class="ident">config_map</span>: <span class="prelude-val">Some</span>(<span class="ident">ConfigMapVolumeSource</span> {
-                <span class="ident">name</span>: <span class="prelude-val">Some</span>(<span class="ident">config_map</span>.<span class="ident">name</span>()),
+                <span class="ident">name</span>: <span class="prelude-val">Some</span>(<span class="ident">config_map</span>.<span class="ident">name_unchecked</span>()),
                 ..<span class="ident">Default::default</span>()
             }),
             ..<span class="ident">Default::default</span>()
         }]);
 
         <span class="kw">let</span> <span class="ident">gs</span> <span class="op">=</span> <span class="ident">gameservers</span>.<span class="ident">create</span>(<span class="kw-2">&amp;</span><span class="ident">pp</span>, <span class="kw-2">&amp;</span><span class="ident">gs</span>).<span class="kw">await</span>.<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">gs</span>.<span class="ident">name</span>();
+        <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">gs</span>.<span class="ident">name_unchecked</span>();
         <span class="kw">let</span> <span class="ident">ready</span> <span class="op">=</span> <span class="ident">await_condition</span>(<span class="ident">gameservers</span>.<span class="ident">clone</span>(), <span class="ident">name</span>.<span class="ident">as_str</span>(), <span class="ident">is_gameserver_ready</span>());
         <span class="ident">timeout</span>(<span class="ident">Duration::from_secs</span>(<span class="number">30</span>), <span class="ident">ready</span>)
             .<span class="kw">await</span>

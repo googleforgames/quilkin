@@ -87,7 +87,7 @@
     <span class="kw">pub</span> <span class="ident">output_directory</span>: <span class="ident">std::path::PathBuf</span>,
     <span class="doccomment">/// A list of one or more filter IDs to generate or &#39;all&#39; to generate all</span>
     <span class="doccomment">/// available filter schemas.</span>
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">min_values</span> <span class="op">=</span> <span class="number">1</span>, <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;all&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">num_args</span> <span class="op">=</span> <span class="number">1</span>.., <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;all&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">filter_ids</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
 }
 

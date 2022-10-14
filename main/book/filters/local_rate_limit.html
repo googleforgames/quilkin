@@ -174,14 +174,13 @@ For example, a configuration allowing 1000 packets per second could potentially 
 <p>Packets that that exceeds the maximum configured rate are dropped.</p>
 </blockquote>
 <h3 id="configuration-options-rust-doc"><a class="header" href="#configuration-options-rust-doc">Configuration Options (<a href="../../api/quilkin/filters/local_rate_limit/struct.Config.html">Rust Doc</a>)</a></h3>
-<pre><code class="language-yaml">---
-$schema: &quot;http://json-schema.org/draft-07/schema#&quot;
+<pre><code class="language-yaml">$schema: http://json-schema.org/draft-07/schema#
 title: Config
-description: &quot;Config represents a [self]'s configuration.&quot;
+description: Config represents a [self]'s configuration.
 type: object
 required:
-  - max_packets
-  - period
+- max_packets
+- period
 properties:
   max_packets:
     description: The maximum number of packets allowed to be forwarded by the rate limiter in a given duration.
@@ -189,7 +188,7 @@ properties:
     format: uint
     minimum: 0.0
   period:
-    description: &quot;The duration in seconds during which max_packets applies. If none is provided, it defaults to one second.&quot;
+    description: The duration in seconds during which max_packets applies. If none is provided, it defaults to one second.
     type: integer
     format: uint32
     minimum: 0.0

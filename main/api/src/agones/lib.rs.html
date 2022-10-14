@@ -514,7 +514,7 @@
     }
 
     <span class="doccomment">/// Returns a typed API client for this client in this test namespace.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">namespaced_api</span><span class="op">&lt;</span><span class="ident">K</span>: <span class="ident">Resource</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Api</span><span class="op">&lt;</span><span class="ident">K</span><span class="op">&gt;</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">namespaced_api</span><span class="op">&lt;</span><span class="ident">K</span>: <span class="ident">Resource</span><span class="op">&lt;</span><span class="ident">Scope</span> <span class="op">=</span> <span class="ident">kube::core::NamespaceResourceScope</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Api</span><span class="op">&lt;</span><span class="ident">K</span><span class="op">&gt;</span>
     <span class="kw">where</span>
         <span class="op">&lt;</span><span class="ident">K</span> <span class="kw">as</span> <span class="ident">Resource</span><span class="op">&gt;</span><span class="ident">::DynamicType</span>: <span class="ident">Default</span>,
     {
@@ -538,7 +538,7 @@
         .<span class="ident">map</span>(<span class="ident">chrono::Duration::seconds</span>);
 
     <span class="kw">for</span> <span class="ident">ns</span> <span class="kw">in</span> <span class="ident">nss</span> {
-        <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">ns</span>.<span class="ident">name</span>();
+        <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">ns</span>.<span class="ident">name_unchecked</span>();
 
         <span class="kw">let</span> <span class="ident">delete</span> <span class="op">=</span> <span class="ident">delay</span>
             .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">duration</span><span class="op">|</span> {
@@ -576,9 +576,9 @@
         .<span class="kw">await</span>
         .<span class="ident">expect</span>(<span class="string">&quot;namespace to be created&quot;</span>);
 
-    <span class="ident">add_agones_service_account</span>(<span class="ident">client</span>, <span class="ident">test_namespace</span>.<span class="ident">name</span>()).<span class="kw">await</span>;
+    <span class="ident">add_agones_service_account</span>(<span class="ident">client</span>, <span class="ident">test_namespace</span>.<span class="ident">name_unchecked</span>()).<span class="kw">await</span>;
 
-    <span class="ident">test_namespace</span>.<span class="ident">name</span>()
+    <span class="ident">test_namespace</span>.<span class="ident">name_unchecked</span>()
 }
 
 <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">add_agones_service_account</span>(<span class="ident">client</span>: <span class="ident">kube::Client</span>, <span class="ident">namespace</span>: <span class="ident">String</span>) {
@@ -616,7 +616,7 @@
         },
         <span class="ident">subjects</span>: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="ident">Subject</span> {
             <span class="ident">kind</span>: <span class="string">&quot;ServiceAccount&quot;</span>.<span class="ident">into</span>(),
-            <span class="ident">name</span>: <span class="ident">service_account</span>.<span class="ident">name</span>(),
+            <span class="ident">name</span>: <span class="ident">service_account</span>.<span class="ident">name_unchecked</span>(),
             <span class="ident">namespace</span>: <span class="prelude-val">Some</span>(<span class="ident">namespace</span>),
             <span class="ident">api_group</span>: <span class="prelude-val">None</span>,
         }]),

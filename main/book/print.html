@@ -766,76 +766,75 @@ clusters:
 </span><span class="boring">}
 </span></code></pre></pre>
 <h3 id="configuration-options-rust-doc"><a class="header" href="#configuration-options-rust-doc">Configuration Options (<a href="filters/../../api/quilkin/filters/capture/struct.Config.html">Rust Doc</a>)</a></h3>
-<pre><code class="language-yaml">---
-$schema: &quot;http://json-schema.org/draft-07/schema#&quot;
+<pre><code class="language-yaml">$schema: http://json-schema.org/draft-07/schema#
 title: Config
 type: object
 required:
-  - metadata_key
-  - strategy
+- metadata_key
+- strategy
 properties:
   metadata_key:
-    description: &quot;The key to use when storing the captured value in the filter context. If a match was found it is available under `{{metadata_key}}/is_present`.&quot;
+    description: The key to use when storing the captured value in the filter context. If a match was found it is available under `{{metadata_key}}/is_present`.
     type: string
   strategy:
     description: The capture strategy.
     allOf:
-      - $ref: &quot;#/definitions/Strategy&quot;
+    - $ref: '#/definitions/Strategy'
 definitions:
   Strategy:
     description: Strategy to apply for acquiring a set of bytes in the UDP packet
     oneOf:
-      - description: Looks for the set of bytes at the beginning of the packet
-        type: object
-        required:
-          - kind
-          - size
-        properties:
-          kind:
-            type: string
-            enum:
-              - PREFIX
-          remove:
-            description: Whether captured bytes are removed from the original packet.
-            default: false
-            type: boolean
-          size:
-            description: The number of bytes to capture.
-            type: integer
-            format: uint32
-            minimum: 0.0
-      - description: Look for the set of bytes at the end of the packet
-        type: object
-        required:
-          - kind
-          - size
-        properties:
-          kind:
-            type: string
-            enum:
-              - SUFFIX
-          remove:
-            description: The number of bytes to capture.
-            default: false
-            type: boolean
-          size:
-            description: Whether captured bytes are removed from the original packet.
-            type: integer
-            format: uint32
-            minimum: 0.0
-      - description: Look for the set of bytes at the end of the packet
-        type: object
-        required:
-          - kind
-          - pattern
-        properties:
-          kind:
-            type: string
-            enum:
-              - REGEX
-          pattern:
-            description: The regular expression to use for capture.
-            type: string
+    - description: Looks for the set of bytes at the beginning of the packet
+      type: object
+      required:
+      - kind
+      - size
+      properties:
+        kind:
+          type: string
+          enum:
+          - PREFIX
+        remove:
+          description: Whether captured bytes are removed from the original packet.
+          default: false
+          type: boolean
+        size:
+          description: The number of bytes to capture.
+          type: integer
+          format: uint32
+          minimum: 0.0
+    - description: Look for the set of bytes at the end of the packet
+      type: object
+      required:
+      - kind
+      - size
+      properties:
+        kind:
+          type: string
+          enum:
+          - SUFFIX
+        remove:
+          description: The number of bytes to capture.
+          default: false
+          type: boolean
+        size:
+          description: Whether captured bytes are removed from the original packet.
+          type: integer
+          format: uint32
+          minimum: 0.0
+    - description: Look for the set of bytes at the end of the packet
+      type: object
+      required:
+      - kind
+      - pattern
+      properties:
+        kind:
+          type: string
+          enum:
+          - REGEX
+        pattern:
+          description: The regular expression to use for capture.
+          type: string
 </code></pre>
 <h3 id="metrics-2"><a class="header" href="#metrics-2">Metrics</a></h3>
 <ul>
@@ -880,35 +879,34 @@ attention to the order it is placed in your <a href="filters/../filters.html">Fi
 the first or last Filter configured to ensure it is compressing the entire set of data being sent.</p>
 </blockquote>
 <h3 id="configuration-options-rust-doc-1"><a class="header" href="#configuration-options-rust-doc-1">Configuration Options (<a href="filters/../../api/quilkin/filters/compress/struct.Config.html">Rust Doc</a>)</a></h3>
-<pre><code class="language-yaml">---
-$schema: &quot;http://json-schema.org/draft-07/schema#&quot;
+<pre><code class="language-yaml">$schema: http://json-schema.org/draft-07/schema#
 title: Config
 type: object
 required:
-  - on_read
-  - on_write
+- on_read
+- on_write
 properties:
   mode:
     default: SNAPPY
     allOf:
-      - $ref: &quot;#/definitions/Mode&quot;
+    - $ref: '#/definitions/Mode'
   on_read:
-    $ref: &quot;#/definitions/Action&quot;
+    $ref: '#/definitions/Action'
   on_write:
-    $ref: &quot;#/definitions/Action&quot;
+    $ref: '#/definitions/Action'
 definitions:
   Action:
-    description: &quot;Whether to do nothing, compress or decompress the packet.&quot;
+    description: Whether to do nothing, compress or decompress the packet.
     type: string
     enum:
-      - DO_NOTHING
-      - COMPRESS
-      - DECOMPRESS
+    - DO_NOTHING
+    - COMPRESS
+    - DECOMPRESS
   Mode:
     description: The library to use when compressing.
     type: string
     enum:
-      - SNAPPY
+    - SNAPPY
 </code></pre>
 <h4 id="compression-modes"><a class="header" href="#compression-modes">Compression Modes</a></h4>
 <h5 id="snappy"><a class="header" href="#snappy">Snappy</a></h5>
@@ -970,13 +968,12 @@ clusters:
 </span><span class="boring">}
 </span></code></pre></pre>
 <h3 id="configuration-options-rust-doc-2"><a class="header" href="#configuration-options-rust-doc-2">Configuration Options (<a href="filters/../../api/quilkin/filters/concatenate_bytes/struct.Config.html">Rust Doc</a>)</a></h3>
-<pre><code class="language-yaml">---
-$schema: &quot;http://json-schema.org/draft-07/schema#&quot;
+<pre><code class="language-yaml">$schema: http://json-schema.org/draft-07/schema#
 title: Config
-description: &quot;Config represents a `ConcatenateBytes` filter configuration.&quot;
+description: Config represents a `ConcatenateBytes` filter configuration.
 type: object
 required:
-  - bytes
+- bytes
 properties:
   bytes:
     type: array
@@ -985,22 +982,22 @@ properties:
       format: uint8
       minimum: 0.0
   on_read:
-    description: &quot;Whether or not to `append` or `prepend` or `do nothing` on Filter `Read`&quot;
+    description: Whether or not to `append` or `prepend` or `do nothing` on Filter `Read`
     default: DO_NOTHING
     allOf:
-      - $ref: &quot;#/definitions/Strategy&quot;
+    - $ref: '#/definitions/Strategy'
   on_write:
-    description: &quot;Whether or not to `append` or `prepend` or `do nothing` on Filter `Write`&quot;
+    description: Whether or not to `append` or `prepend` or `do nothing` on Filter `Write`
     default: DO_NOTHING
     allOf:
-      - $ref: &quot;#/definitions/Strategy&quot;
+    - $ref: '#/definitions/Strategy'
 definitions:
   Strategy:
     type: string
     enum:
-      - APPEND
-      - PREPEND
-      - DO_NOTHING
+    - APPEND
+    - PREPEND
+    - DO_NOTHING
 </code></pre>
 <h3 id="metrics-4"><a class="header" href="#metrics-4">Metrics</a></h3>
 <p>This filter currently exports no metrics.</p>
@@ -1031,17 +1028,16 @@ clusters:
 </span><span class="boring">}
 </span></code></pre></pre>
 <h3 id="configuration-options-rust-doc-3"><a class="header" href="#configuration-options-rust-doc-3">Configuration Options (<a href="filters/../../api/quilkin/filters/debug/struct.Config.html">Rust Doc</a>)</a></h3>
-<pre><code class="language-yaml">---
-$schema: &quot;http://json-schema.org/draft-07/schema#&quot;
+<pre><code class="language-yaml">$schema: http://json-schema.org/draft-07/schema#
 title: Config
-description: &quot;A Debug filter's configuration.&quot;
+description: A Debug filter's configuration.
 type: object
 properties:
   id:
     description: Identifier that will be optionally included with each log message.
     type:
-      - string
-      - &quot;null&quot;
+    - string
+    - 'null'
 </code></pre>
 <h3 id="metrics-5"><a class="header" href="#metrics-5">Metrics</a></h3>
 <p>This filter currently exports no metrics.</p>
@@ -1125,44 +1121,43 @@ clusters:
 </span><span class="boring">}
 </span></code></pre></pre>
 <h3 id="configuration-options-rust-doc-4"><a class="header" href="#configuration-options-rust-doc-4">Configuration Options (<a href="filters/../../api/quilkin/filters/firewall/struct.Config.html">Rust Doc</a>)</a></h3>
-<pre><code class="language-yaml">---
-$schema: &quot;http://json-schema.org/draft-07/schema#&quot;
+<pre><code class="language-yaml">$schema: http://json-schema.org/draft-07/schema#
 title: Config
 description: Represents how a Firewall filter is configured for read and write operations.
 type: object
 required:
-  - on_read
-  - on_write
+- on_read
+- on_write
 properties:
   on_read:
     type: array
     items:
-      $ref: &quot;#/definitions/Rule&quot;
+      $ref: '#/definitions/Rule'
   on_write:
     type: array
     items:
-      $ref: &quot;#/definitions/Rule&quot;
+      $ref: '#/definitions/Rule'
 definitions:
   Action:
-    description: &quot;Whether or not a matching [Rule] should Allow or Deny access&quot;
+    description: Whether or not a matching [Rule] should Allow or Deny access
     oneOf:
-      - description: Matching rules will allow packets through.
-        type: string
-        enum:
-          - ALLOW
-      - description: Matching rules will block packets.
-        type: string
-        enum:
-          - DENY
+    - description: Matching rules will allow packets through.
+      type: string
+      enum:
+      - ALLOW
+    - description: Matching rules will block packets.
+      type: string
+      enum:
+      - DENY
   PortRange:
-    description: &quot;Range of matching ports that are configured against a [Rule].&quot;
+    description: Range of matching ports that are configured against a [Rule].
     allOf:
-      - $ref: &quot;#/definitions/Range_of_uint16&quot;
+    - $ref: '#/definitions/Range_of_uint16'
   Range_of_uint16:
     type: object
     required:
-      - end
-      - start
+    - end
+    - start
     properties:
       end:
         type: integer
@@ -1173,19 +1168,19 @@ definitions:
         format: uint16
         minimum: 0.0
   Rule:
-    description: &quot;Combination of CIDR range, port range and action to take.&quot;
+    description: Combination of CIDR range, port range and action to take.
     type: object
     required:
-      - action
-      - ports
-      - source
+    - action
+    - ports
+    - source
     properties:
       action:
-        $ref: &quot;#/definitions/Action&quot;
+        $ref: '#/definitions/Action'
       ports:
         type: array
         items:
-          $ref: &quot;#/definitions/PortRange&quot;
+          $ref: '#/definitions/PortRange'
       source:
         description: ipv4 or ipv6 CIDR address.
         type: string
@@ -1234,32 +1229,31 @@ clusters:
 <p>The load balancing policy (the strategy to use to select what endpoint to send traffic to) is configurable.
 In the example above, packets will be distributed by selecting endpoints in turn, in round robin fashion.</p>
 <h3 id="configuration-options-rust-doc-5"><a class="header" href="#configuration-options-rust-doc-5">Configuration Options (<a href="filters/../../api/quilkin/filters/load_balancer/struct.Config.html">Rust Doc</a>)</a></h3>
-<pre><code class="language-yaml">---
-$schema: &quot;http://json-schema.org/draft-07/schema#&quot;
+<pre><code class="language-yaml">$schema: http://json-schema.org/draft-07/schema#
 title: Config
-description: &quot;The configuration for [`load_balancer`][super].&quot;
+description: The configuration for [`load_balancer`][super].
 type: object
 properties:
   policy:
     default: ROUND_ROBIN
     allOf:
-      - $ref: &quot;#/definitions/Policy&quot;
+    - $ref: '#/definitions/Policy'
 definitions:
   Policy:
-    description: &quot;Policy represents how a [`load_balancer`][super] distributes packets across endpoints.&quot;
+    description: Policy represents how a [`load_balancer`][super] distributes packets across endpoints.
     oneOf:
-      - description: Send packets to endpoints in turns.
-        type: string
-        enum:
-          - ROUND_ROBIN
-      - description: Send packets to endpoints chosen at random.
-        type: string
-        enum:
-          - RANDOM
-      - description: Send packets to endpoints based on hash of source IP and port.
-        type: string
-        enum:
-          - HASH
+    - description: Send packets to endpoints in turns.
+      type: string
+      enum:
+      - ROUND_ROBIN
+    - description: Send packets to endpoints chosen at random.
+      type: string
+      enum:
+      - RANDOM
+    - description: Send packets to endpoints based on hash of source IP and port.
+      type: string
+      enum:
+      - HASH
 </code></pre>
 <h3 id="metrics-8"><a class="header" href="#metrics-8">Metrics</a></h3>
 <p>This filter currently does not expose any metrics.</p>
@@ -1303,14 +1297,13 @@ For example, a configuration allowing 1000 packets per second could potentially 
 <p>Packets that that exceeds the maximum configured rate are dropped.</p>
 </blockquote>
 <h3 id="configuration-options-rust-doc-6"><a class="header" href="#configuration-options-rust-doc-6">Configuration Options (<a href="filters/../../api/quilkin/filters/local_rate_limit/struct.Config.html">Rust Doc</a>)</a></h3>
-<pre><code class="language-yaml">---
-$schema: &quot;http://json-schema.org/draft-07/schema#&quot;
+<pre><code class="language-yaml">$schema: http://json-schema.org/draft-07/schema#
 title: Config
-description: &quot;Config represents a [self]'s configuration.&quot;
+description: Config represents a [self]'s configuration.
 type: object
 required:
-  - max_packets
-  - period
+- max_packets
+- period
 properties:
   max_packets:
     description: The maximum number of packets allowed to be forwarded by the rate limiter in a given duration.
@@ -1318,7 +1311,7 @@ properties:
     format: uint
     minimum: 0.0
   period:
-    description: &quot;The duration in seconds during which max_packets applies. If none is provided, it defaults to one second.&quot;
+    description: The duration in seconds during which max_packets applies. If none is provided, it defaults to one second.
     type: integer
     format: uint32
     minimum: 0.0
@@ -1371,30 +1364,29 @@ filters:
 </span></code></pre></pre>
 <!--  ANCHOR_END: example -->
 <h3 id="configuration-options-rust-doc-7"><a class="header" href="#configuration-options-rust-doc-7">Configuration Options (<a href="filters/../../api/quilkin/filters/match/struct.Config.html">Rust Doc</a>)</a></h3>
-<pre><code class="language-yaml">---
-$schema: &quot;http://json-schema.org/draft-07/schema#&quot;
+<pre><code class="language-yaml">$schema: http://json-schema.org/draft-07/schema#
 title: Config
-description: &quot;Configuration for [`Match`][super::Match].&quot;
+description: Configuration for [`Match`][super::Match].
 type: object
 properties:
   on_read:
-    description: &quot;Configuration for [`Filter::read`][crate::filters::Filter::read].&quot;
+    description: Configuration for [`Filter::read`][crate::filters::Filter::read].
     anyOf:
-      - $ref: &quot;#/definitions/DirectionalConfig&quot;
-      - type: &quot;null&quot;
+    - $ref: '#/definitions/DirectionalConfig'
+    - type: 'null'
   on_write:
-    description: &quot;Configuration for [`Filter::write`][crate::filters::Filter::write].&quot;
+    description: Configuration for [`Filter::write`][crate::filters::Filter::write].
     anyOf:
-      - $ref: &quot;#/definitions/DirectionalConfig&quot;
-      - type: &quot;null&quot;
+    - $ref: '#/definitions/DirectionalConfig'
+    - type: 'null'
 additionalProperties: false
 definitions:
   Branch:
-    description: &quot;A specific match branch. The filter is run when `value` matches the value defined in `metadata_key`.&quot;
+    description: A specific match branch. The filter is run when `value` matches the value defined in `metadata_key`.
     type: object
     required:
-      - name
-      - value
+    - name
+    - value
     properties:
       config: true
       name:
@@ -1402,26 +1394,26 @@ definitions:
       value:
         description: The value to compare against the dynamic metadata.
         allOf:
-          - $ref: &quot;#/definitions/Value&quot;
+        - $ref: '#/definitions/Value'
   DirectionalConfig:
     description: Configuration for a specific direction.
     type: object
     required:
-      - branches
-      - metadataKey
+    - branches
+    - metadataKey
     properties:
       branches:
         description: List of filters to compare and potentially run if any match.
         type: array
         items:
-          $ref: &quot;#/definitions/Branch&quot;
+          $ref: '#/definitions/Branch'
       fallthrough:
-        description: &quot;The behaviour for when none of the `branches` match.&quot;
+        description: The behaviour for when none of the `branches` match.
         default:
           name: quilkin.filters.drop.v1alpha1.Drop
-          config: ~
+          config: null
         allOf:
-          - $ref: &quot;#/definitions/Filter&quot;
+        - $ref: '#/definitions/Filter'
       metadataKey:
         description: The key for the metadata to compare against.
         type: string
@@ -1429,7 +1421,7 @@ definitions:
     description: Filter is the configuration for a single filter
     type: object
     required:
-      - name
+    - name
     properties:
       config: true
       name:
@@ -1437,19 +1429,19 @@ definitions:
     additionalProperties: false
   Value:
     anyOf:
-      - type: boolean
-      - type: integer
-        format: uint64
+    - type: boolean
+    - type: integer
+      format: uint64
+      minimum: 0.0
+    - type: array
+      items:
+        $ref: '#/definitions/Value'
+    - type: string
+    - type: array
+      items:
+        type: integer
+        format: uint8
         minimum: 0.0
-      - type: array
-        items:
-          $ref: &quot;#/definitions/Value&quot;
-      - type: string
-      - type: array
-        items:
-          type: integer
-          format: uint8
-          minimum: 0.0
 </code></pre>
 <p>View the <a href="filters/../../api/quilkin/filters/match/struct.Config.html">Match</a> filter documentation for more details.</p>
 <h3 id="metrics-10"><a class="header" href="#metrics-10">Metrics</a></h3>
@@ -1542,13 +1534,12 @@ clusters:
 </span></code></pre></pre>
 <p>View the <a href="filters/./capture.html">CaptureBytes</a> filter documentation for more details.</p>
 <h3 id="configuration-options-rust-doc-8"><a class="header" href="#configuration-options-rust-doc-8">Configuration Options (<a href="filters/../../api/quilkin/filters/token_router/struct.Config.html">Rust Doc</a>)</a></h3>
-<pre><code class="language-yaml">---
-$schema: &quot;http://json-schema.org/draft-07/schema#&quot;
+<pre><code class="language-yaml">$schema: http://json-schema.org/draft-07/schema#
 title: Config
 type: object
 properties:
   metadataKey:
-    description: &quot;the key to use when retrieving the token from the Filter's dynamic metadata&quot;
+    description: the key to use when retrieving the token from the Filter's dynamic metadata
     default: quilkin.dev/capture
     type: string
 </code></pre>

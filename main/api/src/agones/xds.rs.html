@@ -520,7 +520,7 @@ filters:
         <span class="comment">// any other.</span>
         <span class="kw">let</span> <span class="ident">fleet</span> <span class="op">=</span> <span class="ident">fleet</span>();
         <span class="kw">let</span> <span class="ident">fleet</span> <span class="op">=</span> <span class="ident">fleets</span>.<span class="ident">create</span>(<span class="kw-2">&amp;</span><span class="ident">pp</span>, <span class="kw-2">&amp;</span><span class="ident">fleet</span>).<span class="kw">await</span>.<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">fleet</span>.<span class="ident">name</span>();
+        <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">fleet</span>.<span class="ident">name_unchecked</span>();
         <span class="ident">timeout</span>(
             <span class="ident">Duration::from_secs</span>(<span class="number">30</span>),
             <span class="ident">await_condition</span>(<span class="ident">fleets</span>.<span class="ident">clone</span>(), <span class="ident">name</span>.<span class="ident">as_str</span>(), <span class="ident">is_fleet_ready</span>()),
@@ -530,7 +530,7 @@ filters:
         .<span class="ident">unwrap</span>();
 
         <span class="kw">let</span> <span class="ident">lp</span> <span class="op">=</span> <span class="ident">ListParams</span> {
-            <span class="ident">label_selector</span>: <span class="prelude-val">Some</span>(<span class="macro">format!</span>(<span class="string">&quot;agones.dev/fleet={}&quot;</span>, <span class="ident">fleet</span>.<span class="ident">name</span>())),
+            <span class="ident">label_selector</span>: <span class="prelude-val">Some</span>(<span class="macro">format!</span>(<span class="string">&quot;agones.dev/fleet={}&quot;</span>, <span class="ident">fleet</span>.<span class="ident">name_unchecked</span>())),
             ..<span class="ident">Default::default</span>()
         };
         <span class="kw">let</span> <span class="ident">list</span> <span class="op">=</span> <span class="ident">gameservers</span>.<span class="ident">list</span>(<span class="kw-2">&amp;</span><span class="ident">lp</span>).<span class="kw">await</span>.<span class="ident">unwrap</span>();
@@ -550,7 +550,7 @@ filters:
             .<span class="ident">get_or_insert</span>(<span class="ident">Default::default</span>())
             .<span class="ident">insert</span>(<span class="string">&quot;quilkin.dev/tokens&quot;</span>.<span class="ident">into</span>(), <span class="ident">base64::encode</span>(<span class="ident">token</span>));
         <span class="ident">gameservers</span>
-            .<span class="ident">replace</span>(<span class="ident">gs</span>.<span class="ident">name</span>().<span class="ident">as_str</span>(), <span class="kw-2">&amp;</span><span class="ident">pp</span>, <span class="kw-2">&amp;</span><span class="ident">gs</span>)
+            .<span class="ident">replace</span>(<span class="ident">gs</span>.<span class="ident">name_unchecked</span>().<span class="ident">as_str</span>(), <span class="kw-2">&amp;</span><span class="ident">pp</span>, <span class="kw-2">&amp;</span><span class="ident">gs</span>)
             .<span class="kw">await</span>
             .<span class="ident">unwrap</span>();
         <span class="comment">// and allocate it such that we have an endpoint.</span>
@@ -592,7 +592,7 @@ filters:
                 <span class="kw">break</span>;
             }
         }
-        <span class="macro">assert_eq!</span>(<span class="macro">format!</span>(<span class="string">&quot;NAME: {}\n&quot;</span>, <span class="ident">gs</span>.<span class="ident">name</span>()), <span class="ident">response</span>);
+        <span class="macro">assert_eq!</span>(<span class="macro">format!</span>(<span class="string">&quot;NAME: {}\n&quot;</span>, <span class="ident">gs</span>.<span class="ident">name_unchecked</span>()), <span class="ident">response</span>);
     }
 
     <span class="doccomment">/// Creates Quilkin xDS management instance that is in the mode to watch Agones GameServers</span>
@@ -730,7 +730,7 @@ filters:
         <span class="ident">services</span>.<span class="ident">create</span>(<span class="kw-2">&amp;</span><span class="ident">pp</span>, <span class="kw-2">&amp;</span><span class="ident">service</span>).<span class="kw">await</span>.<span class="ident">unwrap</span>();
 
         <span class="comment">// make sure the deployment and service are ready</span>
-        <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">deployment</span>.<span class="ident">name</span>();
+        <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">deployment</span>.<span class="ident">name_unchecked</span>();
         <span class="ident">timeout</span>(
             <span class="ident">Duration::from_secs</span>(<span class="number">30</span>),
             <span class="ident">await_condition</span>(<span class="ident">deployments</span>.<span class="ident">clone</span>(), <span class="ident">name</span>.<span class="ident">as_str</span>(), <span class="ident">is_deployment_ready</span>()),
@@ -797,7 +797,7 @@ management_servers:
                         <span class="ident">volumes</span>: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="ident">Volume</span> {
                             <span class="ident">name</span>: <span class="ident">mount_name</span>.<span class="ident">into</span>(),
                             <span class="ident">config_map</span>: <span class="prelude-val">Some</span>(<span class="ident">ConfigMapVolumeSource</span> {
-                                <span class="ident">name</span>: <span class="prelude-val">Some</span>(<span class="ident">config_map</span>.<span class="ident">name</span>()),
+                                <span class="ident">name</span>: <span class="prelude-val">Some</span>(<span class="ident">config_map</span>.<span class="ident">name_unchecked</span>()),
                                 ..<span class="ident">Default::default</span>()
                             }),
                             ..<span class="ident">Default::default</span>()
@@ -811,7 +811,7 @@ management_servers:
         };
 
         <span class="kw">let</span> <span class="ident">deployment</span> <span class="op">=</span> <span class="ident">deployments</span>.<span class="ident">create</span>(<span class="kw-2">&amp;</span><span class="ident">pp</span>, <span class="kw-2">&amp;</span><span class="ident">deployment</span>).<span class="kw">await</span>.<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">deployment</span>.<span class="ident">name</span>();
+        <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">deployment</span>.<span class="ident">name_unchecked</span>();
         <span class="comment">// should not be ready, since there are no endpoints, but let&#39;s wait 3 seconds, make sure it doesn&#39;t do something we don&#39;t expect</span>
         <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">timeout</span>(
             <span class="ident">Duration::from_secs</span>(<span class="number">3</span>),

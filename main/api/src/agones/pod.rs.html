@@ -108,7 +108,7 @@
         <span class="kw">let</span> <span class="ident">pod</span> <span class="op">=</span> <span class="ident">pods</span>.<span class="ident">create</span>(<span class="kw-2">&amp;</span><span class="ident">pp</span>, <span class="kw-2">&amp;</span><span class="ident">pod</span>).<span class="kw">await</span>.<span class="ident">unwrap</span>();
 
         <span class="comment">// now wait for it be become ready.</span>
-        <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">pod</span>.<span class="ident">name</span>();
+        <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">pod</span>.<span class="ident">name_unchecked</span>();
         <span class="kw">let</span> <span class="ident">running</span> <span class="op">=</span> <span class="ident">await_condition</span>(<span class="ident">pods</span>, <span class="ident">name</span>.<span class="ident">as_str</span>(), <span class="ident">is_pod_ready</span>());
         <span class="ident">timeout</span>(<span class="ident">Duration::from_secs</span>(<span class="number">30</span>), <span class="ident">running</span>)
             .<span class="kw">await</span>

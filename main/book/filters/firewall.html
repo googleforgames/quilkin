@@ -171,44 +171,43 @@ clusters:
 </span><span class="boring">}
 </span></code></pre></pre>
 <h3 id="configuration-options-rust-doc"><a class="header" href="#configuration-options-rust-doc">Configuration Options (<a href="../../api/quilkin/filters/firewall/struct.Config.html">Rust Doc</a>)</a></h3>
-<pre><code class="language-yaml">---
-$schema: &quot;http://json-schema.org/draft-07/schema#&quot;
+<pre><code class="language-yaml">$schema: http://json-schema.org/draft-07/schema#
 title: Config
 description: Represents how a Firewall filter is configured for read and write operations.
 type: object
 required:
-  - on_read
-  - on_write
+- on_read
+- on_write
 properties:
   on_read:
     type: array
     items:
-      $ref: &quot;#/definitions/Rule&quot;
+      $ref: '#/definitions/Rule'
   on_write:
     type: array
     items:
-      $ref: &quot;#/definitions/Rule&quot;
+      $ref: '#/definitions/Rule'
 definitions:
   Action:
-    description: &quot;Whether or not a matching [Rule] should Allow or Deny access&quot;
+    description: Whether or not a matching [Rule] should Allow or Deny access
     oneOf:
-      - description: Matching rules will allow packets through.
-        type: string
-        enum:
-          - ALLOW
-      - description: Matching rules will block packets.
-        type: string
-        enum:
-          - DENY
+    - description: Matching rules will allow packets through.
+      type: string
+      enum:
+      - ALLOW
+    - description: Matching rules will block packets.
+      type: string
+      enum:
+      - DENY
   PortRange:
-    description: &quot;Range of matching ports that are configured against a [Rule].&quot;
+    description: Range of matching ports that are configured against a [Rule].
     allOf:
-      - $ref: &quot;#/definitions/Range_of_uint16&quot;
+    - $ref: '#/definitions/Range_of_uint16'
   Range_of_uint16:
     type: object
     required:
-      - end
-      - start
+    - end
+    - start
     properties:
       end:
         type: integer
@@ -219,19 +218,19 @@ definitions:
         format: uint16
         minimum: 0.0
   Rule:
-    description: &quot;Combination of CIDR range, port range and action to take.&quot;
+    description: Combination of CIDR range, port range and action to take.
     type: object
     required:
-      - action
-      - ports
-      - source
+    - action
+    - ports
+    - source
     properties:
       action:
-        $ref: &quot;#/definitions/Action&quot;
+        $ref: '#/definitions/Action'
       ports:
         type: array
         items:
-          $ref: &quot;#/definitions/PortRange&quot;
+          $ref: '#/definitions/PortRange'
       source:
         description: ipv4 or ipv6 CIDR address.
         type: string

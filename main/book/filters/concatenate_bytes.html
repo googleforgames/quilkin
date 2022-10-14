@@ -163,13 +163,12 @@ clusters:
 </span><span class="boring">}
 </span></code></pre></pre>
 <h3 id="configuration-options-rust-doc"><a class="header" href="#configuration-options-rust-doc">Configuration Options (<a href="../../api/quilkin/filters/concatenate_bytes/struct.Config.html">Rust Doc</a>)</a></h3>
-<pre><code class="language-yaml">---
-$schema: &quot;http://json-schema.org/draft-07/schema#&quot;
+<pre><code class="language-yaml">$schema: http://json-schema.org/draft-07/schema#
 title: Config
-description: &quot;Config represents a `ConcatenateBytes` filter configuration.&quot;
+description: Config represents a `ConcatenateBytes` filter configuration.
 type: object
 required:
-  - bytes
+- bytes
 properties:
   bytes:
     type: array
@@ -178,22 +177,22 @@ properties:
       format: uint8
       minimum: 0.0
   on_read:
-    description: &quot;Whether or not to `append` or `prepend` or `do nothing` on Filter `Read`&quot;
+    description: Whether or not to `append` or `prepend` or `do nothing` on Filter `Read`
     default: DO_NOTHING
     allOf:
-      - $ref: &quot;#/definitions/Strategy&quot;
+    - $ref: '#/definitions/Strategy'
   on_write:
-    description: &quot;Whether or not to `append` or `prepend` or `do nothing` on Filter `Write`&quot;
+    description: Whether or not to `append` or `prepend` or `do nothing` on Filter `Write`
     default: DO_NOTHING
     allOf:
-      - $ref: &quot;#/definitions/Strategy&quot;
+    - $ref: '#/definitions/Strategy'
 definitions:
   Strategy:
     type: string
     enum:
-      - APPEND
-      - PREPEND
-      - DO_NOTHING
+    - APPEND
+    - PREPEND
+    - DO_NOTHING
 </code></pre>
 <h3 id="metrics"><a class="header" href="#metrics">Metrics</a></h3>
 <p>This filter currently exports no metrics.</p>
