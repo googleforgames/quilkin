@@ -92,7 +92,7 @@ filters:
         // any other.
         let fleet = fleet();
         let fleet = fleets.create(&pp, &fleet).await.unwrap();
-        let name = fleet.name();
+        let name = fleet.name_unchecked();
         timeout(
             Duration::from_secs(30),
             await_condition(fleets.clone(), name.as_str(), is_fleet_ready()),
@@ -102,7 +102,7 @@ filters:
         .unwrap();
 
         let lp = ListParams {
-            label_selector: Some(format!("agones.dev/fleet={}", fleet.name())),
+            label_selector: Some(format!("agones.dev/fleet={}", fleet.name_unchecked())),
             ..Default::default()
         };
         let list = gameservers.list(&lp).await.unwrap();
@@ -122,7 +122,7 @@ filters:
             .get_or_insert(Default::default())
             .insert("quilkin.dev/tokens".into(), base64::encode(token));
         gameservers
-            .replace(gs.name().as_str(), &pp, &gs)
+            .replace(gs.name_unchecked().as_str(), &pp, &gs)
             .await
             .unwrap();
         // and allocate it such that we have an endpoint.
@@ -164,7 +164,7 @@ filters:
                 break;
             }
         }
-        assert_eq!(format!("NAME: {}\n", gs.name()), response);
+        assert_eq!(format!("NAME: {}\n", gs.name_unchecked()), response);
     }
 
     /// Creates Quilkin xDS management instance that is in the mode to watch Agones GameServers
@@ -302,7 +302,7 @@ filters:
         services.create(&pp, &service).await.unwrap();
 
         // make sure the deployment and service are ready
-        let name = deployment.name();
+        let name = deployment.name_unchecked();
         timeout(
             Duration::from_secs(30),
             await_condition(deployments.clone(), name.as_str(), is_deployment_ready()),
@@ -369,7 +369,7 @@ management_servers:
                         volumes: Some(vec![Volume {
                             name: mount_name.into(),
                             config_map: Some(ConfigMapVolumeSource {
-                                name: Some(config_map.name()),
+                                name: Some(config_map.name_unchecked()),
                                 ..Default::default()
                             }),
                             ..Default::default()
@@ -383,7 +383,7 @@ management_servers:
         };
 
         let deployment = deployments.create(&pp, &deployment).await.unwrap();
-        let name = deployment.name();
+        let name = deployment.name_unchecked();
         // should not be ready, since there are no endpoints, but let's wait 3 seconds, make sure it doesn't do something we don't expect
         let result = timeout(
             Duration::from_secs(3),
