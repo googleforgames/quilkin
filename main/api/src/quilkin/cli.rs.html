@@ -167,6 +167,16 @@
 <span id="167">167</span>
 <span id="168">168</span>
 <span id="169">169</span>
+<span id="170">170</span>
+<span id="171">171</span>
+<span id="172">172</span>
+<span id="173">173</span>
+<span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
+<span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -210,8 +220,8 @@
 <span class="attribute">#[<span class="ident">non_exhaustive</span>]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Cli</span> {
     <span class="doccomment">/// Whether to spawn the admin server or not.</span>
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;true&quot;</span>, <span class="ident">env</span>, <span class="ident">long</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">admin</span>: <span class="ident">bool</span>,
+    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">env</span>, <span class="ident">long</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">no_admin</span>: <span class="ident">bool</span>,
     <span class="doccomment">/// The path to the configuration file for the Quilkin instance.</span>
     <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">short</span>, <span class="ident">long</span>, <span class="ident">env</span> <span class="op">=</span> <span class="string">&quot;QUILKIN_CONFIG&quot;</span>, <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;quilkin.yaml&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">config</span>: <span class="ident">PathBuf</span>,
@@ -272,7 +282,7 @@
         );
 
         <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident"><span class="self">Self</span>::read_config</span>(<span class="self">self</span>.<span class="ident">config</span>)<span class="question-mark">?</span>);
-        <span class="kw">let</span> <span class="ident">_admin_task</span> <span class="op">=</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">mode</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">command</span>.<span class="ident">admin_mode</span>().<span class="ident">filter</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">admin</span>) {
+        <span class="kw">let</span> <span class="ident">_admin_task</span> <span class="op">=</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">mode</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">command</span>.<span class="ident">admin_mode</span>().<span class="ident">filter</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">no_admin</span>) {
             <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">address</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">admin_address</span> {
                 <span class="ident">config</span>
                     .<span class="ident">admin</span>
@@ -284,7 +294,7 @@
             <span class="prelude-val">None</span>
         };
 
-        <span class="kw">let</span> (<span class="ident">shutdown_tx</span>, <span class="ident">shutdown_rx</span>) <span class="op">=</span> <span class="ident">watch::channel</span>::<span class="op">&lt;</span>()<span class="op">&gt;</span>(());
+        <span class="kw">let</span> (<span class="ident">shutdown_tx</span>, <span class="kw-2">mut</span> <span class="ident">shutdown_rx</span>) <span class="op">=</span> <span class="ident">watch::channel</span>::<span class="op">&lt;</span>()<span class="op">&gt;</span>(());
 
         <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">target_os</span> <span class="op">=</span> <span class="string">&quot;linux&quot;</span>)]</span>
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">sig_term_fut</span> <span class="op">=</span> <span class="ident">signal::unix::signal</span>(<span class="ident">signal::unix::SignalKind::terminate</span>())<span class="question-mark">?</span>;
@@ -306,10 +316,20 @@
             <span class="ident">shutdown_tx</span>.<span class="ident">send</span>(()).<span class="ident">ok</span>();
         });
 
-        <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">command</span> {
-            <span class="ident">Commands::Run</span>(<span class="ident">runner</span>) =&gt; <span class="ident">runner</span>.<span class="ident">run</span>(<span class="ident">config</span>, <span class="ident">shutdown_rx</span>.<span class="ident">clone</span>()).<span class="kw">await</span>,
-            <span class="ident">Commands::Manage</span>(<span class="ident">manager</span>) =&gt; <span class="ident">manager</span>.<span class="ident">manage</span>(<span class="ident">config</span>).<span class="kw">await</span>,
-            <span class="ident">Commands::GenerateConfigSchema</span>(<span class="ident">generator</span>) =&gt; <span class="ident">generator</span>.<span class="ident">generate_config_schema</span>(),
+        <span class="kw">let</span> <span class="ident">fut</span> <span class="op">=</span> <span class="kw">match</span> <span class="self">self</span>.<span class="ident">command</span> {
+            <span class="ident">Commands::Run</span>(<span class="ident">runner</span>) =&gt; <span class="ident">tokio::spawn</span>({
+                <span class="kw">let</span> <span class="ident">shutdown_rx</span> <span class="op">=</span> <span class="ident">shutdown_rx</span>.<span class="ident">clone</span>();
+                <span class="kw">async</span> <span class="kw">move</span> { <span class="ident">runner</span>.<span class="ident">run</span>(<span class="ident">config</span>, <span class="ident">shutdown_rx</span>).<span class="kw">await</span> }
+            }),
+            <span class="ident">Commands::Manage</span>(<span class="ident">manager</span>) =&gt; <span class="ident">tokio::spawn</span>(<span class="kw">async</span> <span class="kw">move</span> { <span class="ident">manager</span>.<span class="ident">manage</span>(<span class="ident">config</span>).<span class="kw">await</span> }),
+            <span class="ident">Commands::GenerateConfigSchema</span>(<span class="ident">generator</span>) =&gt; {
+                <span class="ident">tokio::spawn</span>(<span class="ident">std::future::ready</span>(<span class="ident">generator</span>.<span class="ident">generate_config_schema</span>()))
+            }
+        };
+
+        <span class="macro">tokio::select!</span> {
+            <span class="ident">result</span> <span class="op">=</span> <span class="ident">fut</span> =&gt; <span class="ident">result</span><span class="question-mark">?</span>,
+            <span class="kw">_</span> <span class="op">=</span> <span class="ident">shutdown_rx</span>.<span class="ident">changed</span>() =&gt; <span class="prelude-val">Ok</span>(())
         }
     }
 
