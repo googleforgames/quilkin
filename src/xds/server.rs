@@ -55,13 +55,16 @@ pub struct ControlPlane {
 
 struct Watchers {
     sender: tokio::sync::watch::Sender<()>,
+    receiver: tokio::sync::watch::Receiver<()>,
     version: std::sync::atomic::AtomicU64,
 }
 
 impl Default for Watchers {
     fn default() -> Self {
+        let (sender, receiver) = tokio::sync::watch::channel(());
         Self {
-            sender: tokio::sync::watch::channel(()).0,
+            sender,
+            receiver,
             version: <_>::default(),
         }
     }
@@ -162,7 +165,7 @@ impl ControlPlane {
         metrics::DISCOVERY_REQUESTS
             .with_label_values(&[&*node.id, resource_type.type_url()])
             .inc();
-        let mut rx = self.watchers[resource_type].sender.subscribe();
+        let mut rx = self.watchers[resource_type].receiver.clone();
         let mut pending_acks = cached::TimedSizedCache::with_size_and_lifespan(50, 1);
         let this = Self::clone(self);
         let response = this.discovery_response(&node.id, resource_type, &message.resource_names)?;
@@ -173,8 +176,10 @@ impl ControlPlane {
             yield response;
 
             loop {
+                tracing::trace!("stream loop");
                 tokio::select! {
                     _ = rx.changed() => {
+                        tracing::trace!("sending new discovery response");
                         yield this.discovery_response(&id, resource_type, &message.resource_names).map(|response| {
                             pending_acks.cache_set(response.nonce.clone(), ());
                             response
