@@ -107,6 +107,7 @@ impl serde::Serialize for GameServer {
 
 impl Resource for GameServer {
     type DynamicType = ();
+    type Scope = kube::core::NamespaceResourceScope;
 
     fn group(_: &()) -> std::borrow::Cow<'_, str> {
         "agones.dev".into()

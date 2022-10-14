@@ -22,7 +22,7 @@ pub struct GenerateConfigSchema {
     pub output_directory: std::path::PathBuf,
     /// A list of one or more filter IDs to generate or 'all' to generate all
     /// available filter schemas.
-    #[clap(min_values = 1, default_value = "all")]
+    #[clap(num_args = 1.., default_value = "all")]
     pub filter_ids: Vec<String>,
 }
 

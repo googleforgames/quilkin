@@ -101,7 +101,7 @@ impl Client {
     }
 
     /// Returns a typed API client for this client in this test namespace.
-    pub fn namespaced_api<K: Resource>(&self) -> Api<K>
+    pub fn namespaced_api<K: Resource<Scope = kube::core::NamespaceResourceScope>>(&self) -> Api<K>
     where
         <K as Resource>::DynamicType: Default,
     {
@@ -125,7 +125,7 @@ async fn setup_namespace(client: kube::Client) -> String {
         .map(chrono::Duration::seconds);
 
     for ns in nss {
-        let name = ns.name();
+        let name = ns.name_unchecked();
 
         let delete = delay
             .and_then(|duration| {
@@ -163,9 +163,9 @@ async fn setup_namespace(client: kube::Client) -> String {
         .await
         .expect("namespace to be created");
 
-    add_agones_service_account(client, test_namespace.name()).await;
+    add_agones_service_account(client, test_namespace.name_unchecked()).await;
 
-    test_namespace.name()
+    test_namespace.name_unchecked()
 }
 
 async fn add_agones_service_account(client: kube::Client, namespace: String) {
@@ -203,7 +203,7 @@ async fn add_agones_service_account(client: kube::Client, namespace: String) {
         },
         subjects: Some(vec![Subject {
             kind: "ServiceAccount".into(),
-            name: service_account.name(),
+            name: service_account.name_unchecked(),
             namespace: Some(namespace),
             api_group: None,
         }]),
