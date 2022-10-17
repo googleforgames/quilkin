@@ -26,7 +26,7 @@ properties:
   port:
       type: integer
       description: |
-          The listening port for the proxy.
+          The listening port. In "proxy" mode, the port for traffic to be sent to. In "manage" mode, the port to connect to the xDS API.
       default: 7000
   admin:
     type: object
