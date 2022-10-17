@@ -539,9 +539,6 @@
 <span id="539">539</span>
 <span id="540">540</span>
 <span id="541">541</span>
-<span id="542">542</span>
-<span id="543">543</span>
-<span id="544">544</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -658,14 +655,11 @@
             <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident"><span class="kw">crate</span>::xds::Client::connect</span>(<span class="self">self</span>.<span class="ident">config</span>.<span class="ident">clone</span>()).<span class="kw">await</span><span class="question-mark">?</span>;
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">stream</span> <span class="op">=</span> <span class="ident">client</span>.<span class="ident">stream</span>().<span class="kw">await</span><span class="question-mark">?</span>;
 
+            <span class="ident">tokio::time::sleep</span>(<span class="ident">std::time::Duration::from_nanos</span>(<span class="number">1</span>)).<span class="kw">await</span>;
             <span class="ident">stream</span>.<span class="ident">send</span>(<span class="ident">ResourceType::Endpoint</span>, <span class="kw-2">&amp;</span>[]).<span class="kw">await</span><span class="question-mark">?</span>;
+            <span class="ident">tokio::time::sleep</span>(<span class="ident">std::time::Duration::from_nanos</span>(<span class="number">1</span>)).<span class="kw">await</span>;
             <span class="ident">stream</span>.<span class="ident">send</span>(<span class="ident">ResourceType::Listener</span>, <span class="kw-2">&amp;</span>[]).<span class="kw">await</span><span class="question-mark">?</span>;
-            <span class="prelude-val">Some</span>(<span class="ident">tokio::spawn</span>(<span class="kw">async</span> <span class="kw">move</span> {
-                <span class="kw">loop</span> {
-                    <span class="ident">tokio::time::sleep</span>(<span class="ident">std::time::Duration::from_millis</span>(<span class="number">250</span>)).<span class="kw">await</span>;
-                    <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">stream</span>.<span class="ident">send</span>(<span class="ident">ResourceType::Endpoint</span>, <span class="kw-2">&amp;</span>[]).<span class="kw">await</span>;
-                }
-            }))
+            <span class="prelude-val">Some</span>(<span class="ident">stream</span>)
         } <span class="kw">else</span> {
             <span class="prelude-val">None</span>
         };
