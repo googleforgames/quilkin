@@ -58,6 +58,36 @@ impl MaxmindDb {
         CLIENT.load()
     }
 
+    pub fn lookup(ip: std::net::IpAddr) -> Option<IpNetEntry> {
+        let mmdb = match crate::MaxmindDb::instance().clone() {
+            Some(mmdb) => mmdb,
+            None => {
+                tracing::debug!("skipping mmdb telemetry, no maxmind database available");
+                return None;
+            }
+        };
+
+        match mmdb.lookup::<IpNetEntry>(ip) {
+            Ok(asn) => {
+                tracing::info!(
+                    number = asn.r#as,
+                    organization = asn.as_name,
+                    country_code = asn.as_cc,
+                    prefix = asn.prefix,
+                    prefix_entity = asn.prefix_entity,
+                    prefix_name = asn.prefix_name,
+                    "maxmind information"
+                );
+
+                Some(asn)
+            }
+            Err(error) => {
+                tracing::warn!(%ip, %error, "ip not found in maxmind database");
+                None
+            }
+        }
+    }
+
     #[tracing::instrument(skip_all)]
     pub async fn update(source: Source) -> Result<()> {
         let db = Self::from_source(source).await?;
