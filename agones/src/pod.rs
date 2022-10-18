@@ -49,7 +49,7 @@ mod tests {
         let pod = pods.create(&pp, &pod).await.unwrap();
 
         // now wait for it be become ready.
-        let name = pod.name();
+        let name = pod.name_unchecked();
         let running = await_condition(pods, name.as_str(), is_pod_ready());
         timeout(Duration::from_secs(30), running)
             .await

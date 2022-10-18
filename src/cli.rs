@@ -41,8 +41,8 @@ const ETC_CONFIG_PATH: &str = "/etc/quilkin/quilkin.yaml";
 #[non_exhaustive]
 pub struct Cli {
     /// Whether to spawn the admin server or not.
-    #[clap(default_value = "true", env, long)]
-    pub admin: bool,
+    #[clap(env, long)]
+    pub no_admin: bool,
     /// The path to the configuration file for the Quilkin instance.
     #[clap(short, long, env = "QUILKIN_CONFIG", default_value = "quilkin.yaml")]
     pub config: PathBuf,
@@ -103,7 +103,7 @@ impl Cli {
         );
 
         let config = Arc::new(Self::read_config(self.config)?);
-        let _admin_task = if let Some(mode) = self.command.admin_mode().filter(|_| self.admin) {
+        let _admin_task = if let Some(mode) = self.command.admin_mode().filter(|_| !self.no_admin) {
             if let Some(address) = self.admin_address {
                 config
                     .admin
@@ -115,7 +115,7 @@ impl Cli {
             None
         };
 
-        let (shutdown_tx, shutdown_rx) = watch::channel::<()>(());
+        let (shutdown_tx, mut shutdown_rx) = watch::channel::<()>(());
 
         #[cfg(target_os = "linux")]
         let mut sig_term_fut = signal::unix::signal(signal::unix::SignalKind::terminate())?;
@@ -137,10 +137,20 @@ impl Cli {
             shutdown_tx.send(()).ok();
         });
 
-        match &self.command {
-            Commands::Run(runner) => runner.run(config, shutdown_rx.clone()).await,
-            Commands::Manage(manager) => manager.manage(config).await,
-            Commands::GenerateConfigSchema(generator) => generator.generate_config_schema(),
+        let fut = match self.command {
+            Commands::Run(runner) => tokio::spawn({
+                let shutdown_rx = shutdown_rx.clone();
+                async move { runner.run(config, shutdown_rx).await }
+            }),
+            Commands::Manage(manager) => tokio::spawn(async move { manager.manage(config).await }),
+            Commands::GenerateConfigSchema(generator) => {
+                tokio::spawn(std::future::ready(generator.generate_config_schema()))
+            }
+        };
+
+        tokio::select! {
+            result = fut => result?,
+            _ = shutdown_rx.changed() => Ok(())
         }
     }
 

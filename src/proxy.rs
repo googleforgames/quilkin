@@ -114,14 +114,11 @@ impl Proxy {
             let client = crate::xds::Client::connect(self.config.clone()).await?;
             let mut stream = client.stream().await?;
 
+            tokio::time::sleep(std::time::Duration::from_nanos(1)).await;
             stream.send(ResourceType::Endpoint, &[]).await?;
+            tokio::time::sleep(std::time::Duration::from_nanos(1)).await;
             stream.send(ResourceType::Listener, &[]).await?;
-            Some(tokio::spawn(async move {
-                loop {
-                    tokio::time::sleep(std::time::Duration::from_millis(250)).await;
-                    let _ = stream.send(ResourceType::Endpoint, &[]).await;
-                }
-            }))
+            Some(stream)
         } else {
             None
         };
