@@ -168,6 +168,36 @@
 <span id="168">168</span>
 <span id="169">169</span>
 <span id="170">170</span>
+<span id="171">171</span>
+<span id="172">172</span>
+<span id="173">173</span>
+<span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
+<span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::sync::Arc</span>;
 
 <span class="kw">use</span> <span class="ident">bytes::Bytes</span>;
@@ -226,6 +256,36 @@
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">instance</span>() -&gt; <span class="ident">arc_swap::Guard</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">MaxmindDb</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="ident">CLIENT</span>.<span class="ident">load</span>()
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">lookup</span>(<span class="ident">ip</span>: <span class="ident">std::net::IpAddr</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">IpNetEntry</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">mmdb</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident"><span class="kw">crate</span>::MaxmindDb::instance</span>().<span class="ident">clone</span>() {
+            <span class="prelude-val">Some</span>(<span class="ident">mmdb</span>) =&gt; <span class="ident">mmdb</span>,
+            <span class="prelude-val">None</span> =&gt; {
+                <span class="macro">tracing::debug!</span>(<span class="string">&quot;skipping mmdb telemetry, no maxmind database available&quot;</span>);
+                <span class="kw">return</span> <span class="prelude-val">None</span>;
+            }
+        };
+
+        <span class="kw">match</span> <span class="ident">mmdb</span>.<span class="ident">lookup</span>::<span class="op">&lt;</span><span class="ident">IpNetEntry</span><span class="op">&gt;</span>(<span class="ident">ip</span>) {
+            <span class="prelude-val">Ok</span>(<span class="ident">asn</span>) =&gt; {
+                <span class="macro">tracing::info!</span>(
+                    <span class="ident">number</span> <span class="op">=</span> <span class="ident">asn</span>.<span class="ident">r#as</span>,
+                    <span class="ident">organization</span> <span class="op">=</span> <span class="ident">asn</span>.<span class="ident">as_name</span>,
+                    <span class="ident">country_code</span> <span class="op">=</span> <span class="ident">asn</span>.<span class="ident">as_cc</span>,
+                    <span class="ident">prefix</span> <span class="op">=</span> <span class="ident">asn</span>.<span class="ident">prefix</span>,
+                    <span class="ident">prefix_entity</span> <span class="op">=</span> <span class="ident">asn</span>.<span class="ident">prefix_entity</span>,
+                    <span class="ident">prefix_name</span> <span class="op">=</span> <span class="ident">asn</span>.<span class="ident">prefix_name</span>,
+                    <span class="string">&quot;maxmind information&quot;</span>
+                );
+
+                <span class="prelude-val">Some</span>(<span class="ident">asn</span>)
+            }
+            <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; {
+                <span class="macro">tracing::warn!</span>(<span class="op">%</span><span class="ident">ip</span>, <span class="op">%</span><span class="ident">error</span>, <span class="string">&quot;ip not found in maxmind database&quot;</span>);
+                <span class="prelude-val">None</span>
+            }
+        }
     }
 
     <span class="attribute">#[<span class="ident">tracing::instrument</span>(<span class="ident">skip_all</span>)]</span>

@@ -534,6 +534,10 @@
 <span id="534">534</span>
 <span id="535">535</span>
 <span id="536">536</span>
+<span id="537">537</span>
+<span id="538">538</span>
+<span id="539">539</span>
+<span id="540">540</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -594,6 +598,8 @@
     <span class="ident">expiration</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">AtomicU64</span><span class="op">&gt;</span>,
     <span class="doccomment">/// a channel to broadcast on if we are shutting down this Session</span>
     <span class="ident">shutdown_tx</span>: <span class="ident">watch::Sender</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
+    <span class="doccomment">/// The ASN information.</span>
+    <span class="ident">asn_info</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident"><span class="kw">crate</span>::maxmind_db::IpNetEntry</span><span class="op">&gt;</span>,
 }
 
 <span class="comment">// A (source, destination) address pair that uniquely identifies a session.</span>
@@ -655,6 +661,8 @@
         <span class="kw">let</span> <span class="ident">expiration</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">AtomicU64::new</span>(<span class="number">0</span>));
         <span class="ident"><span class="self">Self</span>::do_update_expiration</span>(<span class="kw-2">&amp;</span><span class="ident">expiration</span>, <span class="ident">args</span>.<span class="ident">ttl</span>)<span class="question-mark">?</span>;
 
+        <span class="kw">let</span> <span class="ident">ip</span> <span class="op">=</span> <span class="ident">args</span>.<span class="ident">source</span>.<span class="ident">to_socket_addr</span>().<span class="ident">unwrap</span>().<span class="ident">ip</span>();
+        <span class="kw">let</span> <span class="ident">asn_info</span> <span class="op">=</span> <span class="ident"><span class="kw">crate</span>::MaxmindDb::lookup</span>(<span class="ident">ip</span>);
         <span class="kw">let</span> <span class="ident">s</span> <span class="op">=</span> <span class="ident">Session</span> {
             <span class="ident">config</span>: <span class="ident">args</span>.<span class="ident">config</span>.<span class="ident">clone</span>(),
             <span class="ident">upstream_socket</span>,
@@ -663,30 +671,13 @@
             <span class="ident">created_at</span>: <span class="ident">Instant::now</span>(),
             <span class="ident">expiration</span>,
             <span class="ident">shutdown_tx</span>,
+            <span class="ident">asn_info</span>,
         };
+
         <span class="macro">tracing::debug!</span>(<span class="ident">source</span> <span class="op">=</span> <span class="op">%</span><span class="ident">s</span>.<span class="ident">source</span>, <span class="ident">dest</span> <span class="op">=</span> <span class="question-mark">?</span><span class="ident">s</span>.<span class="ident">dest</span>, <span class="string">&quot;Session created&quot;</span>);
 
         <span class="ident"><span class="self">self</span>::metrics::TOTAL_SESSIONS</span>.<span class="ident">inc</span>();
-        <span class="ident"><span class="self">self</span>::metrics::ACTIVE_SESSIONS</span>.<span class="ident">inc</span>();
-
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">mmdb</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident"><span class="kw">crate</span>::MaxmindDb::instance</span>() {
-            <span class="kw">let</span> <span class="ident">ip</span> <span class="op">=</span> <span class="ident">args</span>.<span class="ident">source</span>.<span class="ident">to_socket_addr</span>().<span class="ident">unwrap</span>().<span class="ident">ip</span>();
-            <span class="kw">match</span> <span class="ident">mmdb</span>.<span class="ident">lookup</span>::<span class="op">&lt;</span><span class="ident"><span class="kw">crate</span>::maxmind_db::IpNetEntry</span><span class="op">&gt;</span>(<span class="ident">ip</span>) {
-                <span class="prelude-val">Ok</span>(<span class="ident">asn</span>) =&gt; <span class="macro">tracing::info!</span>(
-                    <span class="ident">number</span> <span class="op">=</span> <span class="ident">asn</span>.<span class="ident">r#as</span>,
-                    <span class="ident">organization</span> <span class="op">=</span> <span class="ident">asn</span>.<span class="ident">as_name</span>,
-                    <span class="ident">country_code</span> <span class="op">=</span> <span class="ident">asn</span>.<span class="ident">as_cc</span>,
-                    <span class="ident">prefix</span> <span class="op">=</span> <span class="ident">asn</span>.<span class="ident">prefix</span>,
-                    <span class="ident">prefix_entity</span> <span class="op">=</span> <span class="ident">asn</span>.<span class="ident">prefix_entity</span>,
-                    <span class="ident">prefix_name</span> <span class="op">=</span> <span class="ident">asn</span>.<span class="ident">prefix_name</span>,
-                    <span class="string">&quot;maxmind information&quot;</span>
-                ),
-                <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; <span class="macro">tracing::warn!</span>(<span class="op">%</span><span class="ident">ip</span>, <span class="op">%</span><span class="ident">error</span>, <span class="string">&quot;ip not found in maxmind database&quot;</span>),
-            }
-        } <span class="kw">else</span> {
-            <span class="macro">tracing::debug!</span>(<span class="string">&quot;skipping mmdb telemetry, no maxmind database available&quot;</span>);
-        }
-
+        <span class="ident">s</span>.<span class="ident">active_session_metric</span>().<span class="ident">inc</span>();
         <span class="ident">s</span>.<span class="ident">run</span>(<span class="ident">args</span>.<span class="ident">ttl</span>, <span class="ident">args</span>.<span class="ident">downstream_socket</span>, <span class="ident">shutdown_rx</span>);
         <span class="prelude-val">Ok</span>(<span class="ident">s</span>)
     }
@@ -757,6 +748,23 @@
             <span class="ident">source</span>: <span class="self">self</span>.<span class="ident">source</span>.<span class="ident">clone</span>(),
             <span class="ident">dest</span>: <span class="self">self</span>.<span class="ident">dest</span>.<span class="ident">address</span>.<span class="ident">clone</span>(),
         }
+    }
+
+    <span class="kw">fn</span> <span class="ident">active_session_metric</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">prometheus::IntGauge</span> {
+        <span class="kw">let</span> <span class="ident">labels</span> <span class="op">=</span> <span class="self">self</span>
+            .<span class="ident">asn_info</span>
+            .<span class="ident">as_ref</span>()
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">asn</span><span class="op">|</span> [<span class="ident">asn</span>.<span class="ident">r#as</span>.<span class="ident">to_string</span>(), <span class="ident">asn</span>.<span class="ident">prefix</span>.<span class="ident">clone</span>()])
+            .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> [<span class="ident">String::new</span>(), <span class="ident">String::new</span>()]);
+
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">iter</span> <span class="op">=</span> <span class="ident">labels</span>.<span class="ident">iter</span>();
+
+        <span class="kw">let</span> <span class="ident">labels</span> <span class="op">=</span> [
+            <span class="ident">iter</span>.<span class="ident">next</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">item</span><span class="op">|</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">item</span>).<span class="ident">unwrap</span>(),
+            <span class="ident">iter</span>.<span class="ident">next</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">item</span><span class="op">|</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">item</span>).<span class="ident">unwrap</span>(),
+        ];
+
+        <span class="ident">metrics::ACTIVE_SESSIONS</span>.<span class="ident">with_label_values</span>(<span class="ident">labels</span>.<span class="ident">as_slice</span>())
     }
 
     <span class="doccomment">/// process_recv_packet processes a packet that is received by this session.</span>
@@ -886,7 +894,7 @@
 
 <span class="kw">impl</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">Session</span> {
     <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) {
-        <span class="ident">metrics::ACTIVE_SESSIONS</span>.<span class="ident">dec</span>();
+        <span class="self">self</span>.<span class="ident">active_session_metric</span>().<span class="ident">dec</span>();
         <span class="ident">metrics::DURATION_SECS</span>.<span class="ident">observe</span>(<span class="self">self</span>.<span class="ident">created_at</span>.<span class="ident">elapsed</span>().<span class="ident">as_secs</span>() <span class="kw">as</span> <span class="ident">f64</span>);
 
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">error</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">shutdown_tx</span>.<span class="ident">send</span>(()) {
