@@ -27,7 +27,10 @@ data:
         "list": [
           {
             "builtIn": 1,
-            "datasource": "-- Grafana --",
+            "datasource": {
+              "type": "datasource",
+              "uid": "grafana"
+            },
             "enable": true,
             "hide": true,
             "iconColor": "rgba(0, 211, 255, 1)",
@@ -44,14 +47,15 @@ data:
       },
       "editable": true,
       "fiscalYearStartMonth": 0,
-      "gnetId": null,
       "graphTooltip": 0,
-      "iteration": 1638396359116,
       "links": [],
       "liveNow": false,
       "panels": [
         {
-          "datasource": null,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
           "description": "",
           "fieldConfig": {
             "defaults": {
@@ -86,7 +90,7 @@ data:
             "orientation": "auto",
             "reduceOptions": {
               "calcs": [
-                  "lastNotNull"
+                "lastNotNull"
               ],
               "fields": "",
               "values": false
@@ -94,20 +98,29 @@ data:
             "text": {},
             "textMode": "auto"
           },
-          "pluginVersion": "8.2.1",
-          "repeat": null,
+          "pluginVersion": "9.1.2",
           "targets": [
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+              },
+              "editorMode": "code",
               "exemplar": true,
-              "expr": "sum(increase(quilkin_session_tx_bytes_total[$interval]))",
+              "expr": "sum(increase(quilkin_bytes_total{event=\"write\"}[$interval]))",
               "instant": false,
               "interval": "",
               "legendFormat": "Transmit",
               "refId": "A"
             },
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+              },
+              "editorMode": "code",
               "exemplar": true,
-              "expr": "sum(increase(quilkin_session_rx_bytes_total[$interval]))",
+              "expr": "sum(increase(quilkin_bytes_total{event=\"read\"}[$interval]))",
               "hide": false,
               "instant": false,
               "interval": "",
@@ -119,7 +132,10 @@ data:
           "type": "stat"
         },
         {
-          "datasource": null,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
           "description": "",
           "fieldConfig": {
             "defaults": {
@@ -162,7 +178,7 @@ data:
             "orientation": "auto",
             "reduceOptions": {
               "calcs": [
-                  "lastNotNull"
+                "lastNotNull"
               ],
               "fields": "",
               "values": false
@@ -170,19 +186,29 @@ data:
             "text": {},
             "textMode": "auto"
           },
-          "pluginVersion": "8.2.1",
+          "pluginVersion": "9.1.2",
           "targets": [
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+              },
+              "editorMode": "code",
               "exemplar": true,
-              "expr": "sum(rate(quilkin_session_tx_errors_total[$interval]))",
+              "expr": "sum(rate(quilkin_errors_total{event=\"write\"}[$interval]))",
               "instant": true,
               "interval": "",
               "legendFormat": "Transmit",
               "refId": "A"
             },
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+              },
+              "editorMode": "code",
               "exemplar": true,
-              "expr": "sum(rate(quilkin_session_rx_errors_total[$interval]))",
+              "expr": "sum(rate(quilkin_errors_total{event=\"read\"}[$interval]))",
               "hide": false,
               "instant": true,
               "interval": "",
@@ -194,7 +220,10 @@ data:
           "type": "stat"
         },
         {
-          "datasource": null,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
           "description": "",
           "fieldConfig": {
             "defaults": {
@@ -202,6 +231,8 @@ data:
                 "mode": "palette-classic"
               },
               "custom": {
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
                 "axisLabel": "",
                 "axisPlacement": "auto",
                 "barAlignment": 0,
@@ -257,31 +288,49 @@ data:
             "legend": {
               "calcs": [],
               "displayMode": "list",
-              "placement": "bottom"
+              "placement": "bottom",
+              "showLegend": true
             },
             "tooltip": {
-              "mode": "single"
+              "mode": "single",
+              "sort": "none"
             }
           },
           "pluginVersion": "8.0.3",
           "targets": [
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+              },
+              "editorMode": "code",
               "exemplar": true,
               "expr": "count(sum(quilkin_cluster_active{}) by (instance))",
               "format": "time_series",
               "interval": "",
               "legendFormat": "instances",
+              "range": true,
               "refId": "A"
             },
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+              },
+              "editorMode": "code",
               "exemplar": true,
               "expr": "sum(quilkin_cluster_active_endpoints)",
               "hide": false,
               "interval": "",
               "legendFormat": "endpoints",
+              "range": true,
               "refId": "B"
             },
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+              },
               "exemplar": true,
               "expr": "sum(quilkin_session_active)",
               "hide": false,
@@ -294,13 +343,18 @@ data:
           "type": "timeseries"
         },
         {
-          "datasource": null,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
           "fieldConfig": {
             "defaults": {
               "color": {
                 "mode": "palette-classic"
               },
               "custom": {
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
                 "axisLabel": "",
                 "axisPlacement": "auto",
                 "barAlignment": 0,
@@ -360,50 +414,82 @@ data:
             "legend": {
               "calcs": [],
               "displayMode": "list",
-              "placement": "bottom"
+              "placement": "bottom",
+              "showLegend": true
             },
             "tooltip": {
-              "mode": "single"
+              "mode": "single",
+              "sort": "none"
             }
           },
           "targets": [
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+              },
+              "editorMode": "code",
               "exemplar": true,
-              "expr": "sum(rate(quilkin_session_tx_bytes_total[$__rate_interval]))",
+              "expr": "sum(rate(quilkin_bytes_total{event=\"write\"}[$__rate_interval]))",
               "interval": "",
               "legendFormat": "transmit rate",
+              "range": true,
               "refId": "A"
             },
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+              },
+              "editorMode": "code",
               "exemplar": true,
-              "expr": "sum(rate(quilkin_session_rx_bytes_total[$__rate_interval]))",
+              "expr": "sum(rate(quilkin_bytes_total{event=\"read\"}[$__rate_interval]))",
               "hide": false,
               "interval": "",
               "legendFormat": "receive rate",
+              "range": true,
               "refId": "B"
             },
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+              },
+              "editorMode": "code",
               "exemplar": true,
-              "expr": "sum(rate(quilkin_packets_dropped_total[$__rate_interval]))",
+              "expr": "sum(rate(quilkin_packets_dropped[$__rate_interval]))",
               "hide": false,
               "interval": "",
               "legendFormat": "dropped packet rate",
+              "range": true,
               "refId": "C"
             },
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+              },
+              "editorMode": "code",
               "exemplar": true,
-              "expr": "sum(rate(quilkin_session_rx_errors_total[$__rate_interval]))",
+              "expr": "sum(rate(quilkin_errors_total{event=\"read\"}[$__rate_interval]))",
               "hide": false,
               "interval": "",
               "legendFormat": "receive error rate",
+              "range": true,
               "refId": "D"
             },
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+              },
+              "editorMode": "code",
               "exemplar": true,
-              "expr": "sum(rate(quilkin_session_tx_errors_total[$__rate_interval]))",
+              "expr": "sum(rate(quilkin_errors_total{event=\"write\"}[$__rate_interval]))",
               "hide": false,
               "interval": "",
               "legendFormat": "transmit error rate",
+              "range": true,
               "refId": "E"
             }
           ],
@@ -411,13 +497,18 @@ data:
           "type": "timeseries"
         },
         {
-          "datasource": null,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
           "fieldConfig": {
             "defaults": {
               "color": {
                 "mode": "palette-classic"
               },
               "custom": {
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
                 "axisLabel": "",
                 "axisPlacement": "auto",
                 "barAlignment": 0,
@@ -474,21 +565,33 @@ data:
             "legend": {
               "calcs": [],
               "displayMode": "list",
-              "placement": "bottom"
+              "placement": "bottom",
+              "showLegend": true
             },
             "tooltip": {
-              "mode": "single"
+              "mode": "single",
+              "sort": "none"
             }
           },
           "targets": [
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+              },
+              "editorMode": "code",
               "exemplar": true,
               "expr": " histogram_quantile(0.5,sum(rate(quilkin_session_duration_secs_bucket[$__rate_interval])) by (le))",
               "interval": "",
               "legendFormat": "50%",
+              "range": true,
               "refId": "A"
             },
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+              },
               "exemplar": true,
               "expr": " histogram_quantile(0.9,sum(rate(quilkin_session_duration_secs_bucket[$__rate_interval])) by (le))",
               "format": "time_series",
@@ -498,11 +601,17 @@ data:
               "refId": "B"
             },
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+              },
+              "editorMode": "code",
               "exemplar": true,
               "expr": " histogram_quantile(0.99,sum(rate(quilkin_session_duration_secs_bucket[$__rate_interval])) by (le))",
               "hide": false,
               "interval": "",
               "legendFormat": "99%",
+              "range": true,
               "refId": "C"
             }
           ],
@@ -510,13 +619,18 @@ data:
           "type": "timeseries"
         },
         {
-          "datasource": null,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
           "fieldConfig": {
             "defaults": {
               "color": {
                 "mode": "palette-classic"
               },
               "custom": {
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
                 "axisLabel": "",
                 "axisPlacement": "auto",
                 "barAlignment": 0,
@@ -705,83 +819,139 @@ data:
             "legend": {
               "calcs": [],
               "displayMode": "list",
-              "placement": "bottom"
+              "placement": "bottom",
+              "showLegend": true
             },
             "tooltip": {
-              "mode": "single"
+              "mode": "single",
+              "sort": "none"
             }
           },
           "targets": [
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+              },
+              "editorMode": "code",
               "exemplar": true,
-              "expr": "histogram_quantile(0.5,sum(rate(quilkin_packet_processing_duration_seconds_bucket[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.5,sum(rate(quilkin_packets_processing_duration_seconds_bucket[$__rate_interval])) by (le))",
               "interval": "",
               "legendFormat": "(total) 50%",
+              "range": true,
               "refId": "A"
             },
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+              },
+              "editorMode": "code",
               "exemplar": true,
-              "expr": "histogram_quantile(0.9,sum(rate(quilkin_packet_processing_duration_seconds_bucket[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.9,sum(rate(quilkin_packets_processing_duration_seconds_bucket[$__rate_interval])) by (le))",
               "format": "time_series",
               "hide": false,
               "interval": "",
               "legendFormat": "(total) 90%",
+              "range": true,
               "refId": "B"
             },
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+              },
+              "editorMode": "code",
               "exemplar": true,
-              "expr": "histogram_quantile(0.99,sum(rate(quilkin_packet_processing_duration_seconds_bucket[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.99,sum(rate(quilkin_packets_processing_duration_seconds_bucket[$__rate_interval])) by (le))",
               "hide": false,
               "interval": "",
               "legendFormat": "(total) 99%",
+              "range": true,
               "refId": "C"
             },
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+              },
+              "editorMode": "code",
               "exemplar": true,
-              "expr": "histogram_quantile(0.5,sum(rate(quilkin_packet_processing_duration_seconds_bucket{event=\"read\"}[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.5,sum(rate(quilkin_packets_processing_duration_seconds_bucket{event=\"read\"}[$__rate_interval])) by (le))",
               "hide": false,
               "interval": "",
               "legendFormat": "(read) 50%",
+              "range": true,
               "refId": "D"
             },
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+              },
+              "editorMode": "code",
               "exemplar": true,
-              "expr": "histogram_quantile(0.9,sum(rate(quilkin_packet_processing_duration_seconds_bucket{event=\"read\"}[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.9,sum(rate(quilkin_packets_processing_duration_seconds_bucket{event=\"read\"}[$__rate_interval])) by (le))",
               "hide": false,
               "interval": "",
               "legendFormat": "(read) 90%",
+              "range": true,
               "refId": "E"
             },
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+              },
+              "editorMode": "code",
               "exemplar": true,
-              "expr": "histogram_quantile(0.99,sum(rate(quilkin_packet_processing_duration_seconds_bucket{event=\"read\"}[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.99,sum(rate(quilkin_packets_processing_duration_seconds_bucket{event=\"read\"}[$__rate_interval])) by (le))",
               "hide": false,
               "interval": "",
               "legendFormat": "(read) 99%",
+              "range": true,
               "refId": "F"
             },
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+              },
+              "editorMode": "code",
               "exemplar": true,
-              "expr": "histogram_quantile(0.5,sum(rate(quilkin_packet_processing_duration_seconds_bucket{event=\"write\"}[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.5,sum(rate(quilkin_packets_processing_duration_seconds_bucket{event=\"write\"}[$__rate_interval])) by (le))",
               "hide": false,
               "interval": "",
               "legendFormat": "(write) 50%",
+              "range": true,
               "refId": "G"
             },
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+              },
+              "editorMode": "code",
               "exemplar": true,
-              "expr": "histogram_quantile(0.9,sum(rate(quilkin_packet_processing_duration_seconds_bucket{event=\"write\"}[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.9,sum(rate(quilkin_packets_processing_duration_seconds_bucket{event=\"write\"}[$__rate_interval])) by (le))",
               "hide": false,
               "interval": "",
               "legendFormat": "(write) 90%",
+              "range": true,
               "refId": "H"
             },
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+              },
+              "editorMode": "code",
               "exemplar": true,
-              "expr": "histogram_quantile(0.99,sum(rate(quilkin_packet_processing_duration_seconds_bucket{event=\"write\"}[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.99,sum(rate(quilkin_packets_processing_duration_seconds_bucket{event=\"write\"}[$__rate_interval])) by (le))",
               "hide": false,
               "interval": "",
               "legendFormat": "(write) 99%",
+              "range": true,
               "refId": "I"
             }
           ],
@@ -789,8 +959,8 @@ data:
           "type": "timeseries"
         }
       ],
-      "refresh": "10s",
-      "schemaVersion": 31,
+      "refresh": "5s",
+      "schemaVersion": 37,
       "style": "dark",
       "tags": [],
       "templating": {
@@ -804,10 +974,7 @@ data:
               "text": "30m",
               "value": "30m"
             },
-            "description": null,
-            "error": null,
             "hide": 0,
-            "label": null,
             "name": "interval",
             "options": [
               {
@@ -870,12 +1037,13 @@ data:
         ]
       },
       "time": {
-        "from": "now-15m",
+        "from": "now-5m",
         "to": "now"
       },
       "timepicker": {},
       "timezone": "",
       "title": "Quilkin General Metrics",
       "uid": "QAbeZjgnk",
-      "version": 1
+      "version": 2,
+      "weekStart": ""
     }
