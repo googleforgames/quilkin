@@ -67,7 +67,6 @@ mod tests {
 
         let config = r#"
 version: v1alpha1
-admin: null
 filters:
   - name: quilkin.filters.capture.v1alpha1.Capture # Capture and remove the authentication token
     config:
@@ -323,7 +322,6 @@ filters:
         let pp = PostParams::default();
         let config = r#"
 version: v1alpha1
-admin: null
 management_servers:
   - address: http://quilkin-manage-agones:80
 "#;
