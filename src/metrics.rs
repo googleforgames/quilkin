@@ -21,6 +21,10 @@ use prometheus::{
 
 pub use prometheus::Result;
 
+/// "metadata_key" is used as a label for metrics that can apply metrics based
+/// on specific metadata.
+pub const METADATA_KEY_LABEL: &str = "metadata_key";
+
 /// "event" is used as a label for Metrics that can apply to both Filter
 /// `read` and `write` executions.
 pub const DIRECTION_LABEL: &str = "event";
@@ -42,14 +46,14 @@ pub fn registry() -> &'static Registry {
 /// Start the histogram bucket at a quarter of a millisecond, as number below a millisecond are
 /// what we are aiming for, but some granularity below a millisecond is useful for performance
 /// profiling.
-const BUCKET_START: f64 = 0.00025;
+pub(crate) const BUCKET_START: f64 = 0.00025;
 
-const BUCKET_FACTOR: f64 = 2.0;
+pub(crate) const BUCKET_FACTOR: f64 = 2.0;
 
 /// At an exponential factor of 2.0 (BUCKET_FACTOR), 13 iterations gets us to just over 1 second.
 /// Any processing that occurs over a second is far too long, so we end bucketing there as we don't
 /// care about granularity past 1 second.
-const BUCKET_COUNT: usize = 13;
+pub(crate) const BUCKET_COUNT: usize = 13;
 
 pub(crate) static PROCESSING_TIME: Lazy<HistogramVec> = Lazy::new(|| {
     prometheus::register_histogram_vec_with_registry! {

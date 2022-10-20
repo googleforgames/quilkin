@@ -55,6 +55,7 @@ mod external_doc_tests {
     #![doc = include_str!("../docs/src/filters/load_balancer.md")]
     #![doc = include_str!("../docs/src/filters/local_rate_limit.md")]
     #![doc = include_str!("../docs/src/filters/match.md")]
+    #![doc = include_str!("../docs/src/filters/timestamp.md")]
     #![doc = include_str!("../docs/src/filters/token_router.md")]
     #![doc = include_str!("../docs/src/filters/writing_custom_filters.md")]
 }

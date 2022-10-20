@@ -35,6 +35,7 @@ pub mod load_balancer;
 pub mod local_rate_limit;
 pub mod r#match;
 pub mod pass;
+pub mod timestamp;
 pub mod token_router;
 
 /// Prelude containing all types and traits required to implement [`Filter`] and
@@ -64,6 +65,7 @@ pub use self::{
     read::{ReadContext, ReadResponse},
     registry::FilterRegistry,
     set::{FilterMap, FilterSet},
+    timestamp::Timestamp,
     token_router::TokenRouter,
     write::{WriteContext, WriteResponse},
 };
