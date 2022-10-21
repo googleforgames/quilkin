@@ -20,6 +20,7 @@
     - [Local Rate Limit](./filters/local_rate_limit.md)
     - [Match](./filters/match.md)
     - [Pass](./filters/pass.md)
+    - [Timestamp](./filters/timestamp.md)
     - [Token Router](./filters/token_router.md)
     - [Writing Custom Filters](./filters/writing_custom_filters.md)
 - [Integrations](./integrations.md)
