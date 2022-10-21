@@ -62,6 +62,7 @@ impl FilterSet {
                 filters::LocalRateLimit::factory(),
                 filters::Match::factory(),
                 filters::Pass::factory(),
+                filters::Timestamp::factory(),
                 filters::TokenRouter::factory(),
             ]
             .into_iter()

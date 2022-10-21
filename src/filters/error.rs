@@ -105,6 +105,13 @@ impl ConvertProtoConfigError {
             field,
         }
     }
+
+    pub fn missing_field(field: &'static str) -> Self {
+        Self {
+            reason: format!("`{field}` is required but not found"),
+            field: Some(field.into()),
+        }
+    }
 }
 
 /// Returns a [`ConvertProtoConfigError`] with an error message when

@@ -40,6 +40,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "proto/quilkin/filters/match/v1alpha1/match.proto",
         "proto/quilkin/filters/pass/v1alpha1/pass.proto",
         "proto/quilkin/filters/token_router/v1alpha1/token_router.proto",
+        "proto/quilkin/filters/timestamp/v1alpha1/timestamp.proto",
         "proto/udpa/xds/core/v3/resource_name.proto",
     ]
     .iter()
