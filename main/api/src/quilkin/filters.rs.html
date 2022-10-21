@@ -212,6 +212,8 @@
 <span id="212">212</span>
 <span id="213">213</span>
 <span id="214">214</span>
+<span id="215">215</span>
+<span id="216">216</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -249,6 +251,7 @@
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">local_rate_limit</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">r#match</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">pass</span>;
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">timestamp</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">token_router</span>;
 
 <span class="doccomment">/// Prelude containing all types and traits required to implement [`Filter`] and</span>
@@ -278,6 +281,7 @@
     <span class="ident">read</span>::{<span class="ident">ReadContext</span>, <span class="ident">ReadResponse</span>},
     <span class="ident">registry::FilterRegistry</span>,
     <span class="ident">set</span>::{<span class="ident">FilterMap</span>, <span class="ident">FilterSet</span>},
+    <span class="ident">timestamp::Timestamp</span>,
     <span class="ident">token_router::TokenRouter</span>,
     <span class="ident">write</span>::{<span class="ident">WriteContext</span>, <span class="ident">WriteResponse</span>},
 };
