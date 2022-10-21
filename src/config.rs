@@ -64,12 +64,13 @@ pub struct Config {
     pub clusters: Slot<ClusterMap>,
     #[serde(default)]
     pub filters: Slot<crate::filters::FilterChain>,
+    #[serde(default = "default_proxy_id")]
+    pub id: Slot<String>,
     #[serde(default)]
     #[schemars(with = "Vec::<ManagementServer>")]
     pub management_servers: Slot<Vec<ManagementServer>>,
-    #[serde(default)]
-    #[schemars(with = "Option<Proxy>")]
-    pub proxy: Slot<Proxy>,
+    #[serde(default = "default_proxy_port")]
+    pub port: Slot<u16>,
     #[schemars(with = "Option<Version>")]
     pub version: Slot<Version>,
     #[serde(default = "Slot::<crate::maxmind_db::Source>::empty")]
@@ -104,7 +105,15 @@ impl Config {
             }
         }
 
-        replace_if_present!(admin, clusters, filters, management_servers, proxy, version);
+        replace_if_present!(
+            admin,
+            clusters,
+            filters,
+            management_servers,
+            port,
+            id,
+            version
+        );
         self.apply_metrics();
 
         Ok(())
@@ -207,11 +216,12 @@ impl Default for Config {
             admin: Slot::with_default(),
             clusters: <_>::default(),
             filters: <_>::default(),
+            id: default_proxy_id(),
             management_servers: <_>::default(),
-            proxy: <_>::default(),
-            version: <_>::default(),
             maxmind_db: Slot::empty(),
             metrics: <_>::default(),
+            port: default_proxy_port(),
+            version: <_>::default(),
         }
     }
 }
@@ -219,10 +229,10 @@ impl Default for Config {
 impl PartialEq for Config {
     fn eq(&self, rhs: &Self) -> bool {
         self.admin == rhs.admin
-            && self.clusters == rhs.clusters
+            && self.id == rhs.id
+            && self.port == rhs.port
             && self.filters == rhs.filters
             && self.management_servers == rhs.management_servers
-            && self.proxy == rhs.proxy
             && self.version == rhs.version
     }
 }
@@ -239,36 +249,18 @@ impl Default for Version {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Eq, Serialize, JsonSchema, PartialEq)]
-#[serde(deny_unknown_fields)]
-pub struct Proxy {
-    #[serde(default = "default_proxy_id")]
-    pub id: String,
-    #[serde(default = "default_proxy_port")]
-    pub port: u16,
-}
-
 #[cfg(not(target_os = "linux"))]
-fn default_proxy_id() -> String {
-    Uuid::new_v4().as_hyphenated().to_string()
+fn default_proxy_id() -> Slot<String> {
+    Slot::from(Uuid::new_v4().as_hyphenated().to_string())
 }
 
 #[cfg(target_os = "linux")]
-fn default_proxy_id() -> String {
-    sys_info::hostname().unwrap_or_else(|_| Uuid::new_v4().as_hyphenated().to_string())
+fn default_proxy_id() -> Slot<String> {
+    Slot::from(sys_info::hostname().unwrap_or_else(|_| Uuid::new_v4().as_hyphenated().to_string()))
 }
 
-fn default_proxy_port() -> u16 {
-    7000
-}
-
-impl Default for Proxy {
-    fn default() -> Self {
-        Proxy {
-            id: default_proxy_id(),
-            port: default_proxy_port(),
-        }
-    }
+fn default_proxy_port() -> Slot<u16> {
+    Slot::from(7000)
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, Serialize, JsonSchema, PartialEq)]
@@ -405,22 +397,21 @@ mod tests {
         }))
         .unwrap();
 
-        assert_eq!(config.proxy.load().port, 7000);
-        assert!(config.proxy.load().id.len() > 1);
+        assert_eq!(*config.port.load(), 7000);
+        assert!(config.id.load().len() > 1);
     }
 
     #[test]
     fn parse_proxy() {
         let yaml = "
 version: v1alpha1
-proxy:
-  id: server-proxy
-  port: 7000
+id: server-proxy
+port: 7000
   ";
         let config = parse_config(yaml);
 
-        assert_eq!(config.proxy.load().port, 7000);
-        assert_eq!(config.proxy.load().id.as_str(), "server-proxy");
+        assert_eq!(*config.port.load(), 7000);
+        assert_eq!(config.id.load().as_str(), "server-proxy");
     }
 
     #[test]
@@ -539,10 +530,9 @@ clusters:
             "
 # proxy
 version: v1alpha1
-proxy:
-  foo: bar
-  id: client-proxy
-  port: 7000
+foo: bar
+id: client-proxy
+port: 7000
 clusters:
     default:
         localities:

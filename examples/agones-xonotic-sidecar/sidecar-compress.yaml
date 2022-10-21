@@ -21,8 +21,7 @@ metadata:
 data:
   quilkin.yaml: |
     version: v1alpha1
-    proxy:
-      port: 26001
+    port: 26001
     filters:
       - name: quilkin.filters.compress.v1alpha1.Compress
         config:

@@ -19,9 +19,8 @@
 #
 
 version: v1alpha1
-proxy:
-  id: iperf3
-  port: 8000
+id: iperf3
+port: 8000
 clusters:
   default:
     localities:

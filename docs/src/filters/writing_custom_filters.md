@@ -101,8 +101,7 @@ at port 4321.
 ```yaml
 # quilkin.yaml
 version: v1alpha1
-proxy:
-  port: 7001
+port: 7001
 filters:
   - name: greet.v1
 clusters:
