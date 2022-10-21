@@ -150,21 +150,16 @@ properties:
       The configuration file version to use.
     enum:
       - v1alpha1
-  proxy:
-    type: object
-    description: |
-      Configuration of core proxy behavior.
-    properties:
-      id:
-        type: string
-        description: |
+  id:
+      type: string
+      description: |
           An identifier for the proxy instance.
-        default: On linux, the machine hostname is used as default. On all other platforms a UUID is generated for the proxy.
-      port:
-        type: integer
-        description: |
-          The listening port for the proxy.
-        default: 7000
+      default: On linux, the machine hostname is used as default. On all other platforms a UUID is generated for the proxy.
+  port:
+      type: integer
+      description: |
+          The listening port. In &quot;proxy&quot; mode, the port for traffic to be sent to. In &quot;manage&quot; mode, the port to connect to the xDS API.
+      default: 7000
   admin:
     type: object
     description: |

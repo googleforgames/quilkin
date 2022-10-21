@@ -233,8 +233,7 @@ version of the proxy at port 7001 and forwards all packets to an upstream server
 at port 4321.</p>
 <pre><code class="language-yaml"># quilkin.yaml
 version: v1alpha1
-proxy:
-  port: 7001
+port: 7001
 filters:
   - name: greet.v1
 clusters:
@@ -394,8 +393,7 @@ impl StaticFilter for Greet {
 filter. Try it out with the following configuration:</p>
 <pre><code class="language-yaml"># quilkin.yaml
 version: v1alpha1
-proxy:
-  port: 7001
+port: 7001
 filters:
 - name: greet.v1
   config:

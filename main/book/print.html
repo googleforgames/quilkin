@@ -502,21 +502,16 @@ properties:
       The configuration file version to use.
     enum:
       - v1alpha1
-  proxy:
-    type: object
-    description: |
-      Configuration of core proxy behavior.
-    properties:
-      id:
-        type: string
-        description: |
+  id:
+      type: string
+      description: |
           An identifier for the proxy instance.
-        default: On linux, the machine hostname is used as default. On all other platforms a UUID is generated for the proxy.
-      port:
-        type: integer
-        description: |
-          The listening port for the proxy.
-        default: 7000
+      default: On linux, the machine hostname is used as default. On all other platforms a UUID is generated for the proxy.
+  port:
+      type: integer
+      description: |
+          The listening port. In &quot;proxy&quot; mode, the port for traffic to be sent to. In &quot;manage&quot; mode, the port to connect to the xDS API.
+      default: 7000
   admin:
     type: object
     description: |
@@ -1699,8 +1694,7 @@ version of the proxy at port 7001 and forwards all packets to an upstream server
 at port 4321.</p>
 <pre><code class="language-yaml"># quilkin.yaml
 version: v1alpha1
-proxy:
-  port: 7001
+port: 7001
 filters:
   - name: greet.v1
 clusters:
@@ -1860,8 +1854,7 @@ impl StaticFilter for Greet {
 filter. Try it out with the following configuration:</p>
 <pre><code class="language-yaml"># quilkin.yaml
 version: v1alpha1
-proxy:
-  port: 7001
+port: 7001
 filters:
 - name: greet.v1
   config:

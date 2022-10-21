@@ -588,16 +588,6 @@
 <span id="588">588</span>
 <span id="589">589</span>
 <span id="590">590</span>
-<span id="591">591</span>
-<span id="592">592</span>
-<span id="593">593</span>
-<span id="594">594</span>
-<span id="595">595</span>
-<span id="596">596</span>
-<span id="597">597</span>
-<span id="598">598</span>
-<span id="599">599</span>
-<span id="600">600</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -664,12 +654,13 @@
     <span class="kw">pub</span> <span class="ident">clusters</span>: <span class="ident">Slot</span><span class="op">&lt;</span><span class="ident">ClusterMap</span><span class="op">&gt;</span>,
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
     <span class="kw">pub</span> <span class="ident">filters</span>: <span class="ident">Slot</span><span class="op">&lt;</span><span class="ident"><span class="kw">crate</span>::filters::FilterChain</span><span class="op">&gt;</span>,
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span> <span class="op">=</span> <span class="string">&quot;default_proxy_id&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">id</span>: <span class="ident">Slot</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
     <span class="attribute">#[<span class="ident">schemars</span>(<span class="ident">with</span> <span class="op">=</span> <span class="string">&quot;Vec::&lt;ManagementServer&gt;&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">management_servers</span>: <span class="ident">Slot</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ManagementServer</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
-    <span class="attribute">#[<span class="ident">schemars</span>(<span class="ident">with</span> <span class="op">=</span> <span class="string">&quot;Option&lt;Proxy&gt;&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">proxy</span>: <span class="ident">Slot</span><span class="op">&lt;</span><span class="ident">Proxy</span><span class="op">&gt;</span>,
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span> <span class="op">=</span> <span class="string">&quot;default_proxy_port&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">port</span>: <span class="ident">Slot</span><span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span>,
     <span class="attribute">#[<span class="ident">schemars</span>(<span class="ident">with</span> <span class="op">=</span> <span class="string">&quot;Option&lt;Version&gt;&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">version</span>: <span class="ident">Slot</span><span class="op">&lt;</span><span class="ident">Version</span><span class="op">&gt;</span>,
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span> <span class="op">=</span> <span class="string">&quot;Slot::&lt;crate::maxmind_db::Source&gt;::empty&quot;</span>)]</span>
@@ -704,7 +695,15 @@
             }
         }
 
-        <span class="macro">replace_if_present!</span>(<span class="ident">admin</span>, <span class="ident">clusters</span>, <span class="ident">filters</span>, <span class="ident">management_servers</span>, <span class="ident">proxy</span>, <span class="ident">version</span>);
+        <span class="macro">replace_if_present!</span>(
+            <span class="ident">admin</span>,
+            <span class="ident">clusters</span>,
+            <span class="ident">filters</span>,
+            <span class="ident">management_servers</span>,
+            <span class="ident">port</span>,
+            <span class="ident">id</span>,
+            <span class="ident">version</span>
+        );
         <span class="self">self</span>.<span class="ident">apply_metrics</span>();
 
         <span class="prelude-val">Ok</span>(())
@@ -807,11 +806,12 @@
             <span class="ident">admin</span>: <span class="ident">Slot::with_default</span>(),
             <span class="ident">clusters</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
             <span class="ident">filters</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
+            <span class="ident">id</span>: <span class="ident">default_proxy_id</span>(),
             <span class="ident">management_servers</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
-            <span class="ident">proxy</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
-            <span class="ident">version</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
             <span class="ident">maxmind_db</span>: <span class="ident">Slot::empty</span>(),
             <span class="ident">metrics</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
+            <span class="ident">port</span>: <span class="ident">default_proxy_port</span>(),
+            <span class="ident">version</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
         }
     }
 }
@@ -819,10 +819,10 @@
 <span class="kw">impl</span> <span class="ident">PartialEq</span> <span class="kw">for</span> <span class="ident">Config</span> {
     <span class="kw">fn</span> <span class="ident">eq</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">rhs</span>: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="ident">bool</span> {
         <span class="self">self</span>.<span class="ident">admin</span> <span class="op">==</span> <span class="ident">rhs</span>.<span class="ident">admin</span>
-            <span class="op">&amp;&amp;</span> <span class="self">self</span>.<span class="ident">clusters</span> <span class="op">==</span> <span class="ident">rhs</span>.<span class="ident">clusters</span>
+            <span class="op">&amp;&amp;</span> <span class="self">self</span>.<span class="ident">id</span> <span class="op">==</span> <span class="ident">rhs</span>.<span class="ident">id</span>
+            <span class="op">&amp;&amp;</span> <span class="self">self</span>.<span class="ident">port</span> <span class="op">==</span> <span class="ident">rhs</span>.<span class="ident">port</span>
             <span class="op">&amp;&amp;</span> <span class="self">self</span>.<span class="ident">filters</span> <span class="op">==</span> <span class="ident">rhs</span>.<span class="ident">filters</span>
             <span class="op">&amp;&amp;</span> <span class="self">self</span>.<span class="ident">management_servers</span> <span class="op">==</span> <span class="ident">rhs</span>.<span class="ident">management_servers</span>
-            <span class="op">&amp;&amp;</span> <span class="self">self</span>.<span class="ident">proxy</span> <span class="op">==</span> <span class="ident">rhs</span>.<span class="ident">proxy</span>
             <span class="op">&amp;&amp;</span> <span class="self">self</span>.<span class="ident">version</span> <span class="op">==</span> <span class="ident">rhs</span>.<span class="ident">version</span>
     }
 }
@@ -839,36 +839,18 @@
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Eq</span>, <span class="ident">Serialize</span>, <span class="ident">JsonSchema</span>, <span class="ident">PartialEq</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Proxy</span> {
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span> <span class="op">=</span> <span class="string">&quot;default_proxy_id&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">id</span>: <span class="ident">String</span>,
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span> <span class="op">=</span> <span class="string">&quot;default_proxy_port&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">port</span>: <span class="ident">u16</span>,
-}
-
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">target_os</span> <span class="op">=</span> <span class="string">&quot;linux&quot;</span>))]</span>
-<span class="kw">fn</span> <span class="ident">default_proxy_id</span>() -&gt; <span class="ident">String</span> {
-    <span class="ident">Uuid::new_v4</span>().<span class="ident">as_hyphenated</span>().<span class="ident">to_string</span>()
+<span class="kw">fn</span> <span class="ident">default_proxy_id</span>() -&gt; <span class="ident">Slot</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
+    <span class="ident">Slot::from</span>(<span class="ident">Uuid::new_v4</span>().<span class="ident">as_hyphenated</span>().<span class="ident">to_string</span>())
 }
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">target_os</span> <span class="op">=</span> <span class="string">&quot;linux&quot;</span>)]</span>
-<span class="kw">fn</span> <span class="ident">default_proxy_id</span>() -&gt; <span class="ident">String</span> {
-    <span class="ident">sys_info::hostname</span>().<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">Uuid::new_v4</span>().<span class="ident">as_hyphenated</span>().<span class="ident">to_string</span>())
+<span class="kw">fn</span> <span class="ident">default_proxy_id</span>() -&gt; <span class="ident">Slot</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
+    <span class="ident">Slot::from</span>(<span class="ident">sys_info::hostname</span>().<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">Uuid::new_v4</span>().<span class="ident">as_hyphenated</span>().<span class="ident">to_string</span>()))
 }
 
-<span class="kw">fn</span> <span class="ident">default_proxy_port</span>() -&gt; <span class="ident">u16</span> {
-    <span class="number">7000</span>
-}
-
-<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">Proxy</span> {
-    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
-        <span class="ident">Proxy</span> {
-            <span class="ident">id</span>: <span class="ident">default_proxy_id</span>(),
-            <span class="ident">port</span>: <span class="ident">default_proxy_port</span>(),
-        }
-    }
+<span class="kw">fn</span> <span class="ident">default_proxy_port</span>() -&gt; <span class="ident">Slot</span><span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span> {
+    <span class="ident">Slot::from</span>(<span class="number">7000</span>)
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Eq</span>, <span class="ident">Serialize</span>, <span class="ident">JsonSchema</span>, <span class="ident">PartialEq</span>)]</span>
@@ -1005,22 +987,21 @@
         }))
         .<span class="ident">unwrap</span>();
 
-        <span class="macro">assert_eq!</span>(<span class="ident">config</span>.<span class="ident">proxy</span>.<span class="ident">load</span>().<span class="ident">port</span>, <span class="number">7000</span>);
-        <span class="macro">assert!</span>(<span class="ident">config</span>.<span class="ident">proxy</span>.<span class="ident">load</span>().<span class="ident">id</span>.<span class="ident">len</span>() <span class="op">&gt;</span> <span class="number">1</span>);
+        <span class="macro">assert_eq!</span>(<span class="kw-2">*</span><span class="ident">config</span>.<span class="ident">port</span>.<span class="ident">load</span>(), <span class="number">7000</span>);
+        <span class="macro">assert!</span>(<span class="ident">config</span>.<span class="ident">id</span>.<span class="ident">load</span>().<span class="ident">len</span>() <span class="op">&gt;</span> <span class="number">1</span>);
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">parse_proxy</span>() {
         <span class="kw">let</span> <span class="ident">yaml</span> <span class="op">=</span> <span class="string">&quot;
 version: v1alpha1
-proxy:
-  id: server-proxy
-  port: 7000
+id: server-proxy
+port: 7000
   &quot;</span>;
         <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">parse_config</span>(<span class="ident">yaml</span>);
 
-        <span class="macro">assert_eq!</span>(<span class="ident">config</span>.<span class="ident">proxy</span>.<span class="ident">load</span>().<span class="ident">port</span>, <span class="number">7000</span>);
-        <span class="macro">assert_eq!</span>(<span class="ident">config</span>.<span class="ident">proxy</span>.<span class="ident">load</span>().<span class="ident">id</span>.<span class="ident">as_str</span>(), <span class="string">&quot;server-proxy&quot;</span>);
+        <span class="macro">assert_eq!</span>(<span class="kw-2">*</span><span class="ident">config</span>.<span class="ident">port</span>.<span class="ident">load</span>(), <span class="number">7000</span>);
+        <span class="macro">assert_eq!</span>(<span class="ident">config</span>.<span class="ident">id</span>.<span class="ident">load</span>().<span class="ident">as_str</span>(), <span class="string">&quot;server-proxy&quot;</span>);
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
@@ -1139,10 +1120,9 @@ clusters:
             <span class="string">&quot;
 # proxy
 version: v1alpha1
-proxy:
-  foo: bar
-  id: client-proxy
-  port: 7000
+foo: bar
+id: client-proxy
+port: 7000
 clusters:
     default:
         localities:

@@ -358,12 +358,6 @@
 <span id="358">358</span>
 <span id="359">359</span>
 <span id="360">360</span>
-<span id="361">361</span>
-<span id="362">362</span>
-<span id="363">363</span>
-<span id="364">364</span>
-<span id="365">365</span>
-<span id="366">366</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -525,10 +519,8 @@
         <span class="kw">let</span> <span class="ident">xds_config</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Config</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">serde_json::from_value</span>(<span class="macro">serde_json::json!</span>({
             <span class="string">&quot;admin&quot;</span>: <span class="ident">null</span>,
             <span class="string">&quot;version&quot;</span>: <span class="string">&quot;v1alpha1&quot;</span>,
-            <span class="string">&quot;proxy&quot;</span>: {
-                <span class="string">&quot;id&quot;</span>: <span class="string">&quot;test-proxy&quot;</span>,
-                <span class="string">&quot;port&quot;</span>: <span class="ident">xds_port</span>
-            },
+            <span class="string">&quot;id&quot;</span>: <span class="string">&quot;test-proxy&quot;</span>,
+            <span class="string">&quot;port&quot;</span>: <span class="ident">xds_port</span>,
             <span class="string">&quot;clusters&quot;</span>: {
                 <span class="string">&quot;default&quot;</span>: {
                     <span class="string">&quot;localities&quot;</span>: [<span class="ident">localities</span>]
@@ -542,10 +534,8 @@
         <span class="kw">let</span> <span class="ident">client_config</span>: <span class="ident">Config</span> <span class="op">=</span> <span class="ident">serde_json::from_value</span>(<span class="macro">serde_json::json!</span>({
             <span class="string">&quot;version&quot;</span>: <span class="string">&quot;v1alpha1&quot;</span>,
             <span class="string">&quot;admin&quot;</span>: <span class="ident">null</span>,
-            <span class="string">&quot;proxy&quot;</span>: {
-                <span class="string">&quot;id&quot;</span>: <span class="string">&quot;test-proxy&quot;</span>,
-                <span class="string">&quot;port&quot;</span>: <span class="ident">client_addr</span>.<span class="ident">port</span>(),
-            },
+            <span class="string">&quot;id&quot;</span>: <span class="string">&quot;test-proxy&quot;</span>,
+            <span class="string">&quot;port&quot;</span>: <span class="ident">client_addr</span>.<span class="ident">port</span>(),
             <span class="string">&quot;management_servers&quot;</span>: [{
                 <span class="string">&quot;address&quot;</span>: <span class="macro">format!</span>(<span class="string">&quot;http://0.0.0.0:{}&quot;</span>, <span class="ident">xds_port</span>),
             }]
@@ -658,10 +648,8 @@
         <span class="kw">let</span> <span class="ident">config</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Config</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">serde_json::from_value</span>(<span class="macro">serde_json::json!</span>({
             <span class="string">&quot;version&quot;</span>: <span class="string">&quot;v1alpha1&quot;</span>,
             <span class="string">&quot;admin&quot;</span>: <span class="ident">null</span>,
-            <span class="string">&quot;proxy&quot;</span>: {
-                <span class="string">&quot;id&quot;</span>: <span class="string">&quot;test-proxy&quot;</span>,
-                <span class="string">&quot;port&quot;</span>: <span class="number">23456u16</span>,
-            },
+            <span class="string">&quot;id&quot;</span>: <span class="string">&quot;test-proxy&quot;</span>,
+            <span class="string">&quot;port&quot;</span>: <span class="number">23456u16</span>,
             <span class="string">&quot;management_servers&quot;</span>: [{
                 <span class="string">&quot;address&quot;</span>: <span class="string">&quot;http://127.0.0.1:23456&quot;</span>,
             }]
