@@ -115,6 +115,7 @@ Quilkin includes several filters out of the box.
 | [LocalRateLimit]                                   | Limit the frequency of packets.                                                                             |
 | [Match](./filters/match.md)                        | Change Filter behaviour based on dynamic metadata                                                           |
 | [Pass](./filters/pass.md)                          | Allow all packets through                                                                                   |
+| [Timestamp](./filters/timestamp.md)                | Accepts a UNIX timestamp from metadata and observes the duration between that timestamp and now.            |
 | [TokenRouter]                                      | Send packets to endpoints based on metadata.                                                                |
 
 ### FilterConfig <a name="filter-config"></a>
