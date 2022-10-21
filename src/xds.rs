@@ -159,10 +159,8 @@ mod tests {
         let xds_config: Arc<Config> = serde_json::from_value(serde_json::json!({
             "admin": null,
             "version": "v1alpha1",
-            "proxy": {
-                "id": "test-proxy",
-                "port": xds_port
-            },
+            "id": "test-proxy",
+            "port": xds_port,
             "clusters": {
                 "default": {
                     "localities": [localities]
@@ -176,10 +174,8 @@ mod tests {
         let client_config: Config = serde_json::from_value(serde_json::json!({
             "version": "v1alpha1",
             "admin": null,
-            "proxy": {
-                "id": "test-proxy",
-                "port": client_addr.port(),
-            },
+            "id": "test-proxy",
+            "port": client_addr.port(),
             "management_servers": [{
                 "address": format!("http://0.0.0.0:{}", xds_port),
             }]
@@ -292,10 +288,8 @@ mod tests {
         let config: Arc<Config> = serde_json::from_value(serde_json::json!({
             "version": "v1alpha1",
             "admin": null,
-            "proxy": {
-                "id": "test-proxy",
-                "port": 23456u16,
-            },
+            "id": "test-proxy",
+            "port": 23456u16,
             "management_servers": [{
                 "address": "http://127.0.0.1:23456",
             }]

@@ -18,6 +18,8 @@
 /// a configuration source.
 #[derive(clap::Args)]
 pub struct Manage {
+    #[clap(short, long, env = "QUILKIN_PORT")]
+    port: Option<u16>,
     /// The configuration source for a management server.
     #[clap(subcommand)]
     pub provider: Providers,
@@ -46,6 +48,10 @@ pub enum Providers {
 
 impl Manage {
     pub async fn manage(&self, config: std::sync::Arc<crate::Config>) -> crate::Result<()> {
+        if let Some(port) = self.port {
+            config.port.store(port.into());
+        }
+
         let provider_task = match &self.provider {
             Providers::Agones {
                 gameservers_namespace,

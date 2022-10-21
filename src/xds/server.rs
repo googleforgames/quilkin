@@ -37,7 +37,7 @@ use crate::{
 
 #[tracing::instrument(skip_all)]
 pub async fn spawn(config: std::sync::Arc<crate::Config>) -> crate::Result<()> {
-    let port = config.proxy.load().port;
+    let port = *config.port.load();
 
     let server = AggregatedDiscoveryServiceServer::new(ControlPlane::from_arc(config));
     let server = tonic::transport::Server::builder().add_service(server);
@@ -127,7 +127,7 @@ impl ControlPlane {
             .load(std::sync::atomic::Ordering::Relaxed)
             .to_string();
         response.control_plane = Some(crate::xds::config::core::v3::ControlPlane {
-            identifier: self.config.proxy.load().id.clone(),
+            identifier: (*self.config.id.load()).clone(),
         });
         response.nonce = nonce.to_string();
 

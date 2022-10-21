@@ -45,7 +45,7 @@ impl Run {
         shutdown_rx: tokio::sync::watch::Receiver<()>,
     ) -> crate::Result<()> {
         if let Some(port) = self.port {
-            config.proxy.modify(|proxy| proxy.port = port);
+            config.port.store(port.into());
         }
 
         let _mmdb_task = self.mmdb.clone().map(|source| {

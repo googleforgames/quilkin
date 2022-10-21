@@ -268,7 +268,7 @@ impl Stream {
     ) -> Result<()> {
         let request = DiscoveryRequest {
             node: Some(Node {
-                id: config.proxy.load().id.clone(),
+                id: (*config.id.load()).clone(),
                 user_agent_name: "quilkin".into(),
                 ..Node::default()
             }),

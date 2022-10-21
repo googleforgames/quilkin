@@ -19,9 +19,8 @@
 #
 
 version: v1alpha1
-proxy:
-  id: my-proxy # An identifier for the proxy instance.
-  port: 7001 # the port to receive traffic to locally
+id: my-proxy # An identifier for the proxy instance.
+port: 7001 # the port to receive traffic to locally
 management_servers: # array of management servers to configure the proxy with.
                     # Multiple servers can be provided for redundancy.
   - address: http://127.0.0.1:26000
