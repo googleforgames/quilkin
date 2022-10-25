@@ -211,9 +211,6 @@
 <span id="211">211</span>
 <span id="212">212</span>
 <span id="213">213</span>
-<span id="214">214</span>
-<span id="215">215</span>
-<span id="216">216</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -259,7 +256,7 @@
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">prelude</span> {
     <span class="kw">pub</span> <span class="kw">use</span> <span class="kw">super</span>::{
         <span class="ident">ConvertProtoConfigError</span>, <span class="ident">CreateFilterArgs</span>, <span class="ident">Error</span>, <span class="ident">Filter</span>, <span class="ident">FilterInstance</span>, <span class="ident">ReadContext</span>,
-        <span class="ident">ReadResponse</span>, <span class="ident">StaticFilter</span>, <span class="ident">WriteContext</span>, <span class="ident">WriteResponse</span>,
+        <span class="ident">StaticFilter</span>, <span class="ident">WriteContext</span>,
     };
 }
 
@@ -278,12 +275,12 @@
     <span class="ident">local_rate_limit::LocalRateLimit</span>,
     <span class="ident">pass::Pass</span>,
     <span class="ident">r#match</span><span class="ident">::Match</span>,
-    <span class="ident">read</span>::{<span class="ident">ReadContext</span>, <span class="ident">ReadResponse</span>},
+    <span class="ident">read::ReadContext</span>,
     <span class="ident">registry::FilterRegistry</span>,
     <span class="ident">set</span>::{<span class="ident">FilterMap</span>, <span class="ident">FilterSet</span>},
     <span class="ident">timestamp::Timestamp</span>,
     <span class="ident">token_router::TokenRouter</span>,
-    <span class="ident">write</span>::{<span class="ident">WriteContext</span>, <span class="ident">WriteResponse</span>},
+    <span class="ident">write::WriteContext</span>,
 };
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">use</span> <span class="ident"><span class="self">self</span>::chain::FilterChain</span>;
@@ -299,13 +296,13 @@
 <span class="doccomment">/// struct Greet;</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// impl Filter for Greet {</span>
-<span class="doccomment">///     fn read(&amp;self, mut ctx: ReadContext) -&gt; Option&lt;ReadResponse&gt; {</span>
+<span class="doccomment">///     fn read(&amp;self, ctx: &amp;mut ReadContext) -&gt; Option&lt;()&gt; {</span>
 <span class="doccomment">///         ctx.contents.splice(0..0, b&quot;Hello &quot;.into_iter().copied());</span>
-<span class="doccomment">///         Some(ctx.into())</span>
+<span class="doccomment">///         Some(())</span>
 <span class="doccomment">///     }</span>
-<span class="doccomment">///     fn write(&amp;self, mut ctx: WriteContext) -&gt; Option&lt;WriteResponse&gt; {</span>
+<span class="doccomment">///     fn write(&amp;self, ctx: &amp;mut WriteContext) -&gt; Option&lt;()&gt; {</span>
 <span class="doccomment">///         ctx.contents.splice(0..0, b&quot;Goodbye &quot;.into_iter().copied());</span>
-<span class="doccomment">///         Some(ctx.into())</span>
+<span class="doccomment">///         Some(())</span>
 <span class="doccomment">///     }</span>
 <span class="doccomment">/// }</span>
 <span class="doccomment">///</span>
@@ -410,24 +407,21 @@
     <span class="doccomment">/// [`Filter::read`] is invoked when the proxy receives data from a</span>
     <span class="doccomment">/// downstream connection on the listening port.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// This function should return a [`ReadResponse`] containing the array of</span>
-    <span class="doccomment">/// endpoints that the packet should be sent to and the packet that should</span>
-    <span class="doccomment">/// be sent (which may be manipulated) as well. If the packet should be</span>
-    <span class="doccomment">/// rejected, return [`None`].  By default, the context passes</span>
-    <span class="doccomment">/// through unchanged.</span>
-    <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="ident">ReadContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ReadResponse</span><span class="op">&gt;</span> {
-        <span class="prelude-val">Some</span>(<span class="ident">ctx</span>.<span class="ident">into</span>())
+    <span class="doccomment">/// This function should return an `Some` if the packet processing should</span>
+    <span class="doccomment">/// proceed. If the packet should be rejected, it will return [`None`]</span>
+    <span class="doccomment">/// instead. By default, the context passes through unchanged.</span>
+    <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ReadContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="prelude-val">Some</span>(())
     }
 
     <span class="doccomment">/// [`Filter::write`] is invoked when the proxy is about to send data to a</span>
     <span class="doccomment">/// downstream connection via the listening port after receiving it via one</span>
     <span class="doccomment">/// of the upstream Endpoints.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// This function should return an [`WriteResponse`] containing the packet to</span>
-    <span class="doccomment">/// be sent (which may be manipulated). If the packet should be rejected,</span>
-    <span class="doccomment">/// return [`None`]. By default, the context passes through unchanged.</span>
-    <span class="kw">fn</span> <span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="ident">WriteContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">WriteResponse</span><span class="op">&gt;</span> {
-        <span class="prelude-val">Some</span>(<span class="ident">ctx</span>.<span class="ident">into</span>())
+    <span class="doccomment">/// This function should return an `Some` if the packet processing should</span>
+    <span class="doccomment">/// proceed. If the packet should be rejected, it will return [`None`]</span>
+    <span class="kw">fn</span> <span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;mut</span> <span class="ident">WriteContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="prelude-val">Some</span>(())
     }
 }
 </code></pre></div>

@@ -128,7 +128,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Filter</span> <span class="kw">for</span> <span class="ident">ConcatenateBytes</span> {
-    <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut</span> <span class="ident">ctx</span>: <span class="ident">ReadContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ReadResponse</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ReadContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">on_read</span> {
             <span class="ident">Strategy::Append</span> =&gt; {
                 <span class="ident">ctx</span>.<span class="ident">contents</span>.<span class="ident">extend</span>(<span class="self">self</span>.<span class="ident">bytes</span>.<span class="ident">iter</span>());
@@ -139,10 +139,10 @@
             <span class="ident">Strategy::DoNothing</span> =&gt; {}
         }
 
-        <span class="prelude-val">Some</span>(<span class="ident">ctx</span>.<span class="ident">into</span>())
+        <span class="prelude-val">Some</span>(())
     }
 
-    <span class="kw">fn</span> <span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut</span> <span class="ident">ctx</span>: <span class="ident">WriteContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">WriteResponse</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">WriteContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">on_write</span> {
             <span class="ident">Strategy::Append</span> =&gt; {
                 <span class="ident">ctx</span>.<span class="ident">contents</span>.<span class="ident">extend</span>(<span class="self">self</span>.<span class="ident">bytes</span>.<span class="ident">iter</span>());
@@ -153,7 +153,7 @@
             <span class="ident">Strategy::DoNothing</span> =&gt; {}
         }
 
-        <span class="prelude-val">Some</span>(<span class="ident">ctx</span>.<span class="ident">into</span>())
+        <span class="prelude-val">Some</span>(())
     }
 }
 

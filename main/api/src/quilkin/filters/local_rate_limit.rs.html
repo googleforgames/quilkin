@@ -559,13 +559,11 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Filter</span> <span class="kw">for</span> <span class="ident">LocalRateLimit</span> {
-    <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="ident">ReadContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ReadResponse</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">acquire_token</span>(<span class="kw-2">&amp;</span><span class="ident">ctx</span>.<span class="ident">source</span>)
-            .<span class="ident">map</span>(<span class="op">|</span>()<span class="op">|</span> <span class="ident">ctx</span>.<span class="ident">into</span>())
-            .<span class="ident">or_else</span>(<span class="op">|</span><span class="op">|</span> {
-                <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_total</span>.<span class="ident">inc</span>();
-                <span class="prelude-val">None</span>
-            })
+    <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ReadContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">acquire_token</span>(<span class="kw-2">&amp;</span><span class="ident">ctx</span>.<span class="ident">source</span>).<span class="ident">or_else</span>(<span class="op">|</span><span class="op">|</span> {
+            <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_total</span>.<span class="ident">inc</span>();
+            <span class="prelude-val">None</span>
+        })
     }
 }
 
@@ -641,10 +639,12 @@
             (<span class="ident">Ipv4Addr::LOCALHOST</span>, <span class="number">8089</span>).<span class="ident">into</span>(),
         )];
 
-        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">read</span>(<span class="ident">ReadContext::new</span>(<span class="ident">endpoints</span>, <span class="ident">address</span>.<span class="ident">clone</span>(), <span class="macro">vec!</span>[<span class="number">9</span>]));
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">context</span> <span class="op">=</span> <span class="ident">ReadContext::new</span>(<span class="ident">endpoints</span>, <span class="ident">address</span>.<span class="ident">clone</span>(), <span class="macro">vec!</span>[<span class="number">9</span>]);
+        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">read</span>(<span class="kw-2">&amp;mut</span> <span class="ident">context</span>);
 
         <span class="kw">if</span> <span class="ident">should_succeed</span> {
-            <span class="macro">assert_eq!</span>(<span class="ident">result</span>.<span class="ident">unwrap</span>().<span class="ident">contents</span>, <span class="macro">vec!</span>[<span class="number">9</span>]);
+            <span class="ident">result</span>.<span class="ident">unwrap</span>();
+            <span class="macro">assert_eq!</span>(<span class="ident">context</span>.<span class="ident">contents</span>, <span class="macro">vec!</span>[<span class="number">9</span>]);
         } <span class="kw">else</span> {
             <span class="macro">assert!</span>(<span class="ident">result</span>.<span class="ident">is_none</span>());
         }

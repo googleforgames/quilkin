@@ -218,7 +218,6 @@
 <span id="218">218</span>
 <span id="219">219</span>
 <span id="220">220</span>
-<span id="221">221</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -306,19 +305,18 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">match_filter</span><span class="op">&lt;</span><span class="lifetime">&#39;config</span>, <span class="ident">Ctx</span>, <span class="ident">R</span><span class="op">&gt;</span>(
+<span class="kw">fn</span> <span class="ident">match_filter</span><span class="op">&lt;</span><span class="lifetime">&#39;config</span>, <span class="lifetime">&#39;ctx</span>, <span class="ident">Ctx</span><span class="op">&gt;</span>(
     <span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;config</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ConfigInstance</span><span class="op">&gt;</span>,
     <span class="ident">metrics</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;config</span> <span class="ident">Metrics</span>,
-    <span class="ident">ctx</span>: <span class="ident">Ctx</span>,
-    <span class="ident">get_metadata</span>: <span class="kw">impl</span> <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;ctx</span><span class="op">&gt;</span> <span class="ident">Fn</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;ctx</span> <span class="ident">Ctx</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;config</span> <span class="ident">String</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;ctx</span> <span class="ident">Value</span><span class="op">&gt;</span>,
-    <span class="ident">and_then</span>: <span class="kw">impl</span> <span class="ident">Fn</span>(<span class="ident">Ctx</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;config</span> <span class="ident">FilterInstance</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">R</span><span class="op">&gt;</span>,
-) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">R</span><span class="op">&gt;</span>
+    <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;ctx</span> <span class="kw-2">mut</span> <span class="ident">Ctx</span>,
+    <span class="ident">get_metadata</span>: <span class="kw">impl</span> <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;value</span><span class="op">&gt;</span> <span class="ident">Fn</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;value</span> <span class="ident">Ctx</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;config</span> <span class="ident">String</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;value</span> <span class="ident">Value</span><span class="op">&gt;</span>,
+    <span class="ident">and_then</span>: <span class="kw">impl</span> <span class="ident">Fn</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;ctx</span> <span class="kw-2">mut</span> <span class="ident">Ctx</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;config</span> <span class="ident">FilterInstance</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
+) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>()<span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">Ctx</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">R</span><span class="op">&gt;</span>,
 {
     <span class="kw">match</span> <span class="ident">config</span> {
         <span class="prelude-val">Some</span>(<span class="ident">config</span>) =&gt; {
-            <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> (<span class="ident">get_metadata</span>)(<span class="kw-2">&amp;</span><span class="ident">ctx</span>, <span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">metadata_key</span>)<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> (<span class="ident">get_metadata</span>)(<span class="ident">ctx</span>, <span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">metadata_key</span>)<span class="question-mark">?</span>;
 
             <span class="kw">match</span> <span class="ident">config</span>.<span class="ident">branches</span>.<span class="ident">iter</span>().<span class="ident">find</span>(<span class="op">|</span>(<span class="ident">key</span>, <span class="kw">_</span>)<span class="op">|</span> <span class="ident">key</span> <span class="op">==</span> <span class="ident">value</span>) {
                 <span class="prelude-val">Some</span>((<span class="ident">value</span>, <span class="ident">instance</span>)) =&gt; {
@@ -337,13 +335,13 @@
                 }
             }
         }
-        <span class="prelude-val">None</span> =&gt; <span class="prelude-val">Some</span>(<span class="ident">ctx</span>.<span class="ident">into</span>()),
+        <span class="prelude-val">None</span> =&gt; <span class="prelude-val">Some</span>(()),
     }
 }
 
 <span class="kw">impl</span> <span class="ident">Filter</span> <span class="kw">for</span> <span class="ident">Match</span> {
     <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;instrument&quot;</span>, <span class="ident">tracing::instrument</span>(<span class="ident">skip</span>(<span class="self">self</span>, <span class="ident">ctx</span>)))]</span>
-    <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="ident">ReadContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ReadResponse</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ReadContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="macro">tracing::trace!</span>(<span class="ident">metadata</span><span class="op">=</span><span class="question-mark">?</span><span class="ident">ctx</span>.<span class="ident">metadata</span>);
         <span class="ident">match_filter</span>(
             <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">on_read_filters</span>,
@@ -355,7 +353,7 @@
     }
 
     <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;instrument&quot;</span>, <span class="ident">tracing::instrument</span>(<span class="ident">skip</span>(<span class="self">self</span>, <span class="ident">ctx</span>)))]</span>
-    <span class="kw">fn</span> <span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="ident">WriteContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">WriteResponse</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">WriteContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="ident">match_filter</span>(
             <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">on_write_filters</span>,
             <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">metrics</span>,
@@ -404,9 +402,9 @@
 
         <span class="comment">// no config, so should make no change.</span>
         <span class="ident">filter</span>
-            .<span class="ident">write</span>(<span class="ident">WriteContext::new</span>(
-                <span class="kw-2">&amp;</span><span class="ident">endpoint</span>,
-                <span class="ident">endpoint</span>.<span class="ident">address</span>.<span class="ident">clone</span>(),
+            .<span class="ident">write</span>(<span class="kw-2">&amp;mut</span> <span class="ident">WriteContext::new</span>(
+                <span class="ident">endpoint</span>.<span class="ident">clone</span>(),
+                <span class="ident">endpoint</span>.<span class="ident">address</span>,
                 <span class="string">&quot;127.0.0.1:70&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
                 <span class="ident">contents</span>.<span class="ident">clone</span>(),
             ))
@@ -423,7 +421,7 @@
         );
         <span class="ident">ctx</span>.<span class="ident">metadata</span>.<span class="ident">insert</span>(<span class="ident">Arc::new</span>(<span class="ident">key</span>.<span class="ident">into</span>()), <span class="string">&quot;abc&quot;</span>.<span class="ident">into</span>());
 
-        <span class="ident">filter</span>.<span class="ident">read</span>(<span class="ident">ctx</span>).<span class="ident">unwrap</span>();
+        <span class="ident">filter</span>.<span class="ident">read</span>(<span class="kw-2">&amp;mut</span> <span class="ident">ctx</span>).<span class="ident">unwrap</span>();
         <span class="macro">assert_eq!</span>(<span class="number">1</span>, <span class="ident">filter</span>.<span class="ident">metrics</span>.<span class="ident">packets_matched_total</span>.<span class="ident">get</span>());
         <span class="macro">assert_eq!</span>(<span class="number">0</span>, <span class="ident">filter</span>.<span class="ident">metrics</span>.<span class="ident">packets_fallthrough_total</span>.<span class="ident">get</span>());
 
@@ -434,7 +432,7 @@
         );
         <span class="ident">ctx</span>.<span class="ident">metadata</span>.<span class="ident">insert</span>(<span class="ident">Arc::new</span>(<span class="ident">key</span>.<span class="ident">into</span>()), <span class="string">&quot;xyz&quot;</span>.<span class="ident">into</span>());
 
-        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">filter</span>.<span class="ident">read</span>(<span class="ident">ctx</span>);
+        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">filter</span>.<span class="ident">read</span>(<span class="kw-2">&amp;mut</span> <span class="ident">ctx</span>);
         <span class="macro">assert!</span>(<span class="ident">result</span>.<span class="ident">is_none</span>());
         <span class="macro">assert_eq!</span>(<span class="number">1</span>, <span class="ident">filter</span>.<span class="ident">metrics</span>.<span class="ident">packets_matched_total</span>.<span class="ident">get</span>());
         <span class="macro">assert_eq!</span>(<span class="number">1</span>, <span class="ident">filter</span>.<span class="ident">metrics</span>.<span class="ident">packets_fallthrough_total</span>.<span class="ident">get</span>());

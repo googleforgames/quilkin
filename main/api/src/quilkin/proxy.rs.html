@@ -539,8 +539,6 @@
 <span id="539">539</span>
 <span id="540">540</span>
 <span id="541">541</span>
-<span id="542">542</span>
-<span id="543">543</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -783,17 +781,15 @@
             <span class="kw">return</span>;
         }
 
-        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">args</span>.<span class="ident">config</span>.<span class="ident">filters</span>.<span class="ident">load</span>().<span class="ident">read</span>(<span class="ident">ReadContext::new</span>(
-            <span class="ident">endpoints</span>,
-            <span class="ident">packet</span>.<span class="ident">source</span>.<span class="ident">clone</span>(),
-            <span class="ident">packet</span>.<span class="ident">contents</span>,
-        ));
+        <span class="kw">let</span> <span class="ident">filters</span> <span class="op">=</span> <span class="ident">args</span>.<span class="ident">config</span>.<span class="ident">filters</span>.<span class="ident">load</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">context</span> <span class="op">=</span> <span class="ident">ReadContext::new</span>(<span class="ident">endpoints</span>, <span class="ident">packet</span>.<span class="ident">source</span>, <span class="ident">packet</span>.<span class="ident">contents</span>);
+        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">filters</span>.<span class="ident">read</span>(<span class="kw-2">&amp;mut</span> <span class="ident">context</span>);
 
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">response</span>) <span class="op">=</span> <span class="ident">result</span> {
-            <span class="kw">for</span> <span class="ident">endpoint</span> <span class="kw">in</span> <span class="ident">response</span>.<span class="ident">endpoints</span>.<span class="ident">iter</span>() {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(()) <span class="op">=</span> <span class="ident">result</span> {
+            <span class="kw">for</span> <span class="ident">endpoint</span> <span class="kw">in</span> <span class="ident">context</span>.<span class="ident">endpoints</span>.<span class="ident">iter</span>() {
                 <span class="ident"><span class="self">Self</span>::session_send_packet</span>(
-                    <span class="kw-2">&amp;</span><span class="ident">response</span>.<span class="ident">contents</span>,
-                    <span class="ident">packet</span>.<span class="ident">source</span>.<span class="ident">clone</span>(),
+                    <span class="kw-2">&amp;</span><span class="ident">context</span>.<span class="ident">contents</span>,
+                    <span class="ident">context</span>.<span class="ident">source</span>.<span class="ident">clone</span>(),
                     <span class="ident">endpoint</span>,
                     <span class="ident">args</span>,
                 )

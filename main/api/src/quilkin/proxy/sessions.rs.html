@@ -538,6 +538,8 @@
 <span id="538">538</span>
 <span id="539">539</span>
 <span id="540">540</span>
+<span id="541">541</span>
+<span id="542">542</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -787,20 +789,22 @@
 
         <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">Session::do_update_expiration</span>(<span class="ident">expiration</span>, <span class="ident">ttl</span>)
             .<span class="ident">and_then</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
+                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">context</span> <span class="op">=</span> <span class="ident">WriteContext::new</span>(
+                    <span class="ident">endpoint</span>.<span class="ident">clone</span>(),
+                    <span class="ident">from</span>.<span class="ident">clone</span>(),
+                    <span class="ident">dest</span>.<span class="ident">clone</span>(),
+                    <span class="ident">packet</span>.<span class="ident">to_vec</span>(),
+                );
                 <span class="ident">config</span>
                     .<span class="ident">filters</span>
                     .<span class="ident">load</span>()
-                    .<span class="ident">write</span>(<span class="ident">WriteContext::new</span>(
-                        <span class="ident">endpoint</span>,
-                        <span class="ident">from</span>.<span class="ident">clone</span>(),
-                        <span class="ident">dest</span>.<span class="ident">clone</span>(),
-                        <span class="ident">packet</span>.<span class="ident">to_vec</span>(),
-                    ))
+                    .<span class="ident">write</span>(<span class="kw-2">&amp;mut</span> <span class="ident">context</span>)
                     .<span class="ident">ok_or</span>(<span class="ident">Error::FilterDroppedPacket</span>)
+                    .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">context</span>)
             })
-            .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">response</span><span class="op">|</span> {
+            .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">context</span><span class="op">|</span> {
                 <span class="ident">dest</span>.<span class="ident">to_socket_addr</span>()
-                    .<span class="ident">map</span>(<span class="op">|</span><span class="ident">addr</span><span class="op">|</span> (<span class="ident">addr</span>, <span class="ident">response</span>))
+                    .<span class="ident">map</span>(<span class="op">|</span><span class="ident">addr</span><span class="op">|</span> (<span class="ident">addr</span>, <span class="ident">context</span>))
                     .<span class="ident">map_err</span>(<span class="ident">Error::ToSocketAddr</span>)
             });
 
@@ -815,8 +819,8 @@
         };
 
         <span class="kw">match</span> <span class="ident">result</span> {
-            <span class="prelude-val">Ok</span>((<span class="ident">addr</span>, <span class="ident">response</span>)) =&gt; {
-                <span class="kw">let</span> <span class="ident">packet</span> <span class="op">=</span> <span class="ident">response</span>.<span class="ident">contents</span>.<span class="ident">as_slice</span>();
+            <span class="prelude-val">Ok</span>((<span class="ident">addr</span>, <span class="ident">context</span>)) =&gt; {
+                <span class="kw">let</span> <span class="ident">packet</span> <span class="op">=</span> <span class="ident">context</span>.<span class="ident">contents</span>.<span class="ident">as_ref</span>();
                 <span class="macro">tracing::trace!</span>(<span class="op">%</span><span class="ident">from</span>, <span class="ident">dest</span> <span class="op">=</span> <span class="op">%</span><span class="ident">addr</span>, <span class="ident">contents</span> <span class="op">=</span> <span class="op">%</span><span class="ident">debug::bytes_to_string</span>(<span class="ident">packet</span>), <span class="string">&quot;sending packet downstream&quot;</span>);
                 <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">downstream_socket</span>
                     .<span class="ident">send_to</span>(<span class="ident">packet</span>, <span class="ident">addr</span>)

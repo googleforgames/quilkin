@@ -178,13 +178,13 @@ sent to a downstream client.</p>
 </span>use quilkin::filters::prelude::*;
 
 impl Filter for Greet {
-    fn read(&amp;self, mut ctx: ReadContext) -&gt; Option&lt;ReadResponse&gt; {
+    fn read(&amp;self, ctx: &amp;mut ReadContext) -&gt; Option&lt;()&gt; {
         ctx.contents.extend(b&quot;Hello&quot;);
-        Some(ctx.into())
+        Some(())
     }
-    fn write(&amp;self, mut ctx: WriteContext) -&gt; Option&lt;WriteResponse&gt; {
+    fn write(&amp;self, ctx: &amp;mut WriteContext) -&gt; Option&lt;()&gt; {
         ctx.contents.extend(b&quot;Goodbye&quot;);
-        Some(ctx.into())
+        Some(())
     }
 }
 </code></pre>
@@ -296,15 +296,15 @@ struct Greet {
 }
 
 impl Filter for Greet {
-    fn read(&amp;self, mut ctx: ReadContext) -&gt; Option&lt;ReadResponse&gt; {
+    fn read(&amp;self, ctx: &amp;mut ReadContext) -&gt; Option&lt;()&gt; {
         ctx.contents
             .splice(0..0, format!(&quot;{} &quot;, self.config.greeting).into_bytes());
-        Some(ctx.into())
+        Some(())
     }
-    fn write(&amp;self, mut ctx: WriteContext) -&gt; Option&lt;WriteResponse&gt; {
+    fn write(&amp;self, ctx: &amp;mut WriteContext) -&gt; Option&lt;()&gt; {
         ctx.contents
             .splice(0..0, format!(&quot;{} &quot;, self.config.greeting).into_bytes());
-        Some(ctx.into())
+        Some(())
     }
 }
 </code></pre>
