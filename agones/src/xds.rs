@@ -117,10 +117,11 @@ filters:
         // add routing label to the GameServer
         let token = "456"; // NDU2
         assert_eq!(3, token.as_bytes().len());
+        let token_key = "quilkin.dev/tokens";
         gs.metadata
             .annotations
             .get_or_insert(Default::default())
-            .insert("quilkin.dev/tokens".into(), base64::encode(token));
+            .insert(token_key.into(), base64::encode(token));
         gameservers
             .replace(gs.name_unchecked().as_str(), &pp, &gs)
             .await
@@ -149,7 +150,7 @@ filters:
         // keep trying to send the packet to the proxy until it works, since distributed systems are eventually consistent.
         let mut response: String = "not-found".into();
         for i in 0..30 {
-            println!("Attempt: {i}");
+            println!("Connection Attempt: {i}");
 
             // returns the nae of the GameServer. This proves we are routing the the allocated
             // GameServer with the correct token attached.
@@ -165,6 +166,32 @@ filters:
             }
         }
         assert_eq!(format!("NAME: {}\n", gs.name_unchecked()), response);
+
+        // let's remove the token from the gameserver, which should remove access.
+        let mut gs = gameservers.get(gs.name_unchecked().as_str()).await.unwrap();
+        let name = gs.name_unchecked();
+        gs.metadata
+            .annotations
+            .as_mut()
+            .map(|annotations| annotations.remove(token_key).unwrap());
+        gameservers.replace(name.as_str(), &pp, &gs).await.unwrap();
+
+        // now we should send a packet, and not get a response.
+        let mut failed = false;
+        for i in 0..30 {
+            println!("Disconnection Attempt: {i}");
+            socket
+                .send_to(format!("GAMESERVER{token}").as_bytes(), proxy_address)
+                .await
+                .unwrap();
+
+            let result = timeout(Duration::from_secs(1), rx.recv()).await;
+            if result.is_err() {
+                failed = true;
+                break;
+            }
+        }
+        assert!(failed, "Packet should have failed");
     }
 
     /// Creates Quilkin xDS management instance that is in the mode to watch Agones GameServers
