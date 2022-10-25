@@ -97,7 +97,11 @@ test-examples: ensure-build-image
 
 # Run tests against documentation
 test-docs: ensure-build-image
+test-docs: GITHUB_REF_NAME ?= main
+test-docs: QUILKIN_VERSION ?= $(shell $(MAKE) version)
+test-docs:
 	docker run --rm $(common_rust_args) \
+		-e GITHUB_REF_NAME=$(GITHUB_REF_NAME) -e QUILKIN_VERSION=$(QUILKIN_VERSION) \
 		--entrypoint=bash $(BUILD_IMAGE_TAG) -c \
 			'export RUSTDOCFLAGS="-Dwarnings" && mkdir /tmp/docs && \
 			mkdir -p "$(CARGO_TARGET_DIR)/doc"; \
