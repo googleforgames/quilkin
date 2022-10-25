@@ -154,13 +154,11 @@ impl LocalRateLimit {
 }
 
 impl Filter for LocalRateLimit {
-    fn read(&self, ctx: ReadContext) -> Option<ReadResponse> {
-        self.acquire_token(&ctx.source)
-            .map(|()| ctx.into())
-            .or_else(|| {
-                self.metrics.packets_dropped_total.inc();
-                None
-            })
+    fn read(&self, ctx: &mut ReadContext) -> Option<()> {
+        self.acquire_token(&ctx.source).or_else(|| {
+            self.metrics.packets_dropped_total.inc();
+            None
+        })
     }
 }
 
@@ -236,10 +234,12 @@ mod tests {
             (Ipv4Addr::LOCALHOST, 8089).into(),
         )];
 
-        let result = r.read(ReadContext::new(endpoints, address.clone(), vec![9]));
+        let mut context = ReadContext::new(endpoints, address.clone(), vec![9]);
+        let result = r.read(&mut context);
 
         if should_succeed {
-            assert_eq!(result.unwrap().contents, vec![9]);
+            result.unwrap();
+            assert_eq!(context.contents, vec![9]);
         } else {
             assert!(result.is_none());
         }

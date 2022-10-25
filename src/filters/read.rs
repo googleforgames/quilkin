@@ -45,44 +45,8 @@ impl ReadContext {
         }
     }
 
-    /// Creates a new [`ReadContext`] from a given [`ReadResponse`].
-    pub fn with_response(source: EndpointAddress, response: ReadResponse) -> Self {
-        Self {
-            endpoints: response.endpoints,
-            source,
-            contents: response.contents,
-            metadata: response.metadata,
-        }
+    pub fn metadata(mut self, metadata: DynamicMetadata) -> Self {
+        self.metadata = metadata;
+        self
     }
-}
-
-impl From<ReadContext> for ReadResponse {
-    fn from(ctx: ReadContext) -> Self {
-        Self {
-            endpoints: ctx.endpoints,
-            contents: ctx.contents,
-            metadata: ctx.metadata,
-        }
-    }
-}
-
-/// The output of [`Filter::read`].
-///
-/// New instances are created from [`ReadContext`].
-///
-/// ```rust
-/// # use quilkin::filters::{ReadContext, ReadResponse};
-///   fn read(ctx: ReadContext) -> Option<ReadResponse> {
-///       Some(ctx.into())
-///   }
-/// ```
-#[derive(Debug)]
-#[non_exhaustive]
-pub struct ReadResponse {
-    /// The upstream endpoints that the packet should be forwarded to.
-    pub endpoints: Vec<Endpoint>,
-    /// Contents of the packet to be forwarded.
-    pub contents: Vec<u8>,
-    /// Arbitrary values that can be passed from one filter to another
-    pub metadata: DynamicMetadata,
 }

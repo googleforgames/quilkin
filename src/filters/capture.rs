@@ -61,7 +61,7 @@ impl Capture {
 
 impl Filter for Capture {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
+    fn read(&self, ctx: &mut ReadContext) -> Option<()> {
         let capture = self.capture.capture(&mut ctx.contents, &self.metrics);
         ctx.metadata
             .insert(self.is_present_key.clone(), Value::Bool(capture.is_some()));
@@ -69,7 +69,7 @@ impl Filter for Capture {
         if let Some(value) = capture {
             tracing::trace!(key=&**self.metadata_key, %value, "captured value");
             ctx.metadata.insert(self.metadata_key.clone(), value);
-            Some(ctx.into())
+            Some(())
         } else {
             tracing::trace!(key = &**self.metadata_key, "No value captured");
             None
@@ -163,13 +163,14 @@ mod tests {
         };
         let filter = Capture::from_config(config.into());
         let endpoints = vec![Endpoint::new("127.0.0.1:81".parse().unwrap())];
-        let response = filter.read(ReadContext::new(
-            endpoints,
-            (std::net::Ipv4Addr::LOCALHOST, 80).into(),
-            "abc".to_string().into_bytes(),
-        ));
+        assert!(filter
+            .read(&mut ReadContext::new(
+                endpoints,
+                (std::net::Ipv4Addr::LOCALHOST, 80).into(),
+                "abc".to_string().into_bytes(),
+            ))
+            .is_none());
 
-        assert!(response.is_none());
         let count = filter.metrics.packets_dropped_total.get();
         assert_eq!(1, count);
     }
@@ -243,21 +244,21 @@ mod tests {
         F: Filter + ?Sized,
     {
         let endpoints = vec![Endpoint::new("127.0.0.1:81".parse().unwrap())];
-        let response = filter
-            .read(ReadContext::new(
-                endpoints,
-                "127.0.0.1:80".parse().unwrap(),
-                "helloabc".to_string().into_bytes(),
-            ))
-            .unwrap();
+        let mut context = ReadContext::new(
+            endpoints,
+            "127.0.0.1:80".parse().unwrap(),
+            "helloabc".to_string().into_bytes(),
+        );
+
+        filter.read(&mut context).unwrap();
 
         if remove {
-            assert_eq!(b"hello".to_vec(), response.contents);
+            assert_eq!(b"hello", &*context.contents);
         } else {
-            assert_eq!(b"helloabc".to_vec(), response.contents);
+            assert_eq!(b"helloabc", &*context.contents);
         }
 
-        let token = response
+        let token = context
             .metadata
             .get(&Arc::new(key.into()))
             .unwrap()

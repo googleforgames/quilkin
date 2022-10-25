@@ -186,11 +186,11 @@ impl<T: JsonSchema + Default> JsonSchema for Slot<T> {
 }
 
 impl<T: crate::filters::Filter + Default> crate::filters::Filter for Slot<T> {
-    fn read(&self, ctx: ReadContext) -> Option<ReadResponse> {
+    fn read(&self, ctx: &mut ReadContext) -> Option<()> {
         self.load().read(ctx)
     }
 
-    fn write(&self, ctx: WriteContext) -> Option<WriteResponse> {
+    fn write(&self, ctx: &mut WriteContext) -> Option<()> {
         self.load().write(ctx)
     }
 }

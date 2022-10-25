@@ -39,9 +39,9 @@ impl LoadBalancer {
 }
 
 impl Filter for LoadBalancer {
-    fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
-        self.endpoint_chooser.choose_endpoints(&mut ctx);
-        Some(ctx.into())
+    fn read(&self, ctx: &mut ReadContext) -> Option<()> {
+        self.endpoint_chooser.choose_endpoints(ctx);
+        Some(())
     }
 }
 
@@ -67,13 +67,15 @@ mod tests {
         input_addresses: &[EndpointAddress],
         source: EndpointAddress,
     ) -> Vec<EndpointAddress> {
-        filter
-            .read(ReadContext::new(
-                input_addresses.iter().cloned().map(Endpoint::new).collect(),
-                source,
-                vec![],
-            ))
-            .unwrap()
+        let mut context = ReadContext::new(
+            Vec::from_iter(input_addresses.iter().cloned().map(Endpoint::new)),
+            source,
+            vec![],
+        );
+
+        filter.read(&mut context).unwrap();
+
+        context
             .endpoints
             .iter()
             .map(|ep| ep.address.clone())

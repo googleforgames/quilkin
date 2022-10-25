@@ -66,18 +66,16 @@ mod tests {
 
     use super::*;
     use crate::endpoint::{Endpoint, EndpointAddress};
-    use crate::filters::{
-        Filter, FilterRegistry, ReadContext, ReadResponse, WriteContext, WriteResponse,
-    };
+    use crate::filters::{Filter, FilterRegistry, ReadContext, WriteContext};
 
     struct TestFilter {}
 
     impl Filter for TestFilter {
-        fn read(&self, _: ReadContext) -> Option<ReadResponse> {
+        fn read(&self, _: &mut ReadContext) -> Option<()> {
             None
         }
 
-        fn write(&self, _: WriteContext) -> Option<WriteResponse> {
+        fn write(&self, _: &mut WriteContext) -> Option<()> {
             None
         }
     }
@@ -104,14 +102,14 @@ mod tests {
         let endpoint = Endpoint::new(addr.clone());
 
         assert!(filter
-            .read(ReadContext::new(
+            .read(&mut ReadContext::new(
                 vec![endpoint.clone()],
                 addr.clone(),
                 vec![]
             ))
             .is_some());
         assert!(filter
-            .write(WriteContext::new(&endpoint, addr.clone(), addr, vec![],))
+            .write(&mut WriteContext::new(endpoint, addr.clone(), addr, vec![],))
             .is_some());
     }
 }

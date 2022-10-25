@@ -85,19 +85,18 @@ impl Match {
     }
 }
 
-fn match_filter<'config, Ctx, R>(
+fn match_filter<'config, 'ctx, Ctx>(
     config: &'config Option<ConfigInstance>,
     metrics: &'config Metrics,
-    ctx: Ctx,
-    get_metadata: impl for<'ctx> Fn(&'ctx Ctx, &'config String) -> Option<&'ctx Value>,
-    and_then: impl Fn(Ctx, &'config FilterInstance) -> Option<R>,
-) -> Option<R>
+    ctx: &'ctx mut Ctx,
+    get_metadata: impl for<'value> Fn(&'value Ctx, &'config String) -> Option<&'value Value>,
+    and_then: impl Fn(&'ctx mut Ctx, &'config FilterInstance) -> Option<()>,
+) -> Option<()>
 where
-    Ctx: Into<R>,
 {
     match config {
         Some(config) => {
-            let value = (get_metadata)(&ctx, &config.metadata_key)?;
+            let value = (get_metadata)(ctx, &config.metadata_key)?;
 
             match config.branches.iter().find(|(key, _)| key == value) {
                 Some((value, instance)) => {
@@ -116,13 +115,13 @@ where
                 }
             }
         }
-        None => Some(ctx.into()),
+        None => Some(()),
     }
 }
 
 impl Filter for Match {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn read(&self, ctx: ReadContext) -> Option<ReadResponse> {
+    fn read(&self, ctx: &mut ReadContext) -> Option<()> {
         tracing::trace!(metadata=?ctx.metadata);
         match_filter(
             &self.on_read_filters,
@@ -134,7 +133,7 @@ impl Filter for Match {
     }
 
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn write(&self, ctx: WriteContext) -> Option<WriteResponse> {
+    fn write(&self, ctx: &mut WriteContext) -> Option<()> {
         match_filter(
             &self.on_write_filters,
             &self.metrics,
@@ -183,9 +182,9 @@ mod tests {
 
         // no config, so should make no change.
         filter
-            .write(WriteContext::new(
-                &endpoint,
-                endpoint.address.clone(),
+            .write(&mut WriteContext::new(
+                endpoint.clone(),
+                endpoint.address,
                 "127.0.0.1:70".parse().unwrap(),
                 contents.clone(),
             ))
@@ -202,7 +201,7 @@ mod tests {
         );
         ctx.metadata.insert(Arc::new(key.into()), "abc".into());
 
-        filter.read(ctx).unwrap();
+        filter.read(&mut ctx).unwrap();
         assert_eq!(1, filter.metrics.packets_matched_total.get());
         assert_eq!(0, filter.metrics.packets_fallthrough_total.get());
 
@@ -213,7 +212,7 @@ mod tests {
         );
         ctx.metadata.insert(Arc::new(key.into()), "xyz".into());
 
-        let result = filter.read(ctx);
+        let result = filter.read(&mut ctx);
         assert!(result.is_none());
         assert_eq!(1, filter.metrics.packets_matched_total.get());
         assert_eq!(1, filter.metrics.packets_fallthrough_total.get());

@@ -40,13 +40,13 @@ sent to a downstream client.
 use quilkin::filters::prelude::*;
 
 impl Filter for Greet {
-    fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
+    fn read(&self, ctx: &mut ReadContext) -> Option<()> {
         ctx.contents.extend(b"Hello");
-        Some(ctx.into())
+        Some(())
     }
-    fn write(&self, mut ctx: WriteContext) -> Option<WriteResponse> {
+    fn write(&self, ctx: &mut WriteContext) -> Option<()> {
         ctx.contents.extend(b"Goodbye");
-        Some(ctx.into())
+        Some(())
     }
 }
 ```
