@@ -40,5 +40,5 @@ Quilkin incorporates these abilities:
 ## What Next?
 
 * Read the [usage guide](./using.md)
-* Have a look at the [example configurations](https://github.com/googleforgames/quilkin/blob/main/examples) for basic configuration examples.
+* Have a look at the [example configurations](https://github.com/googleforgames/quilkin/blob/{{GITHUB_REF_NAME}}/examples) for basic configuration examples.
 * Check out the [example integration patterns](./integrations.md).
