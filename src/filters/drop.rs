@@ -35,12 +35,12 @@ impl Drop {
 
 impl Filter for Drop {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn read(&self, _: ReadContext) -> Option<ReadResponse> {
+    fn read(&self, _: &mut ReadContext) -> Option<()> {
         None
     }
 
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn write(&self, _: WriteContext) -> Option<WriteResponse> {
+    fn write(&self, _: &mut WriteContext) -> Option<()> {
         None
     }
 }

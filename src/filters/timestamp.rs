@@ -118,14 +118,14 @@ impl TryFrom<Config> for Timestamp {
 }
 
 impl Filter for Timestamp {
-    fn read(&self, ctx: ReadContext) -> Option<ReadResponse> {
+    fn read(&self, ctx: &mut ReadContext) -> Option<()> {
         self.observe(&ctx.metadata, READ_DIRECTION_LABEL);
-        Some(ctx.into())
+        Some(())
     }
 
-    fn write(&self, ctx: WriteContext) -> Option<WriteResponse> {
+    fn write(&self, ctx: &mut WriteContext) -> Option<()> {
         self.observe(&ctx.metadata, WRITE_DIRECTION_LABEL);
-        Some(ctx.into())
+        Some(())
     }
 }
 
@@ -197,7 +197,7 @@ mod tests {
             Value::Number(Utc::now().timestamp() as u64),
         );
 
-        let _ = filter.read(ctx).unwrap();
+        filter.read(&mut ctx).unwrap();
 
         assert_eq!(1, filter.metric(READ_DIRECTION_LABEL).get_sample_count());
     }
@@ -218,16 +218,14 @@ mod tests {
         );
         let timestamp = Timestamp::from_config(Config::new(TIMESTAMP_KEY.to_string()).into());
         let source = (std::net::Ipv4Addr::UNSPECIFIED, 0);
-        let ctx = ReadContext::new(
+        let mut ctx = ReadContext::new(
             vec![],
             source.into(),
             [0, 0, 0, 0, 99, 81, 55, 181].to_vec(),
         );
 
-        let response = capture.read(ctx).unwrap();
-        let _ = timestamp
-            .read(ReadContext::with_response(source.into(), response))
-            .unwrap();
+        capture.read(&mut ctx).unwrap();
+        timestamp.read(&mut ctx).unwrap();
 
         assert_eq!(1, timestamp.metric(READ_DIRECTION_LABEL).get_sample_count());
     }

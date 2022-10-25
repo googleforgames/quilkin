@@ -240,17 +240,15 @@ impl Proxy {
             return;
         }
 
-        let result = args.config.filters.load().read(ReadContext::new(
-            endpoints,
-            packet.source.clone(),
-            packet.contents,
-        ));
+        let filters = args.config.filters.load();
+        let mut context = ReadContext::new(endpoints, packet.source, packet.contents);
+        let result = filters.read(&mut context);
 
-        if let Some(response) = result {
-            for endpoint in response.endpoints.iter() {
+        if let Some(()) = result {
+            for endpoint in context.endpoints.iter() {
                 Self::session_send_packet(
-                    &response.contents,
-                    packet.source.clone(),
+                    &context.contents,
+                    context.source.clone(),
                     endpoint,
                     args,
                 )

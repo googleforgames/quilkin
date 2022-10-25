@@ -246,65 +246,56 @@ impl schemars::JsonSchema for FilterChain {
 }
 
 impl Filter for FilterChain {
-    fn read(&self, ctx: ReadContext) -> Option<ReadResponse> {
+    fn read(&self, ctx: &mut ReadContext) -> Option<()> {
         self.filters
             .iter()
             .zip(self.filter_read_duration_seconds.iter())
-            .try_fold(ctx, |ctx, ((id, instance), histogram)| {
+            .try_fold((), |_, ((id, instance), histogram)| {
                 tracing::trace!(%id, "read filtering packet");
-                Some(ReadContext::with_response(
-                    ctx.source.clone(),
-                    match histogram.observe_closure_duration(|| instance.filter.read(ctx)) {
-                        Some(response) => {
-                            tracing::trace!(%id, "read passing packet");
-                            response
-                        }
-                        None => {
-                            tracing::trace!(%id, "read dropping packet");
-                            crate::metrics::PACKETS_DROPPED
-                                .with_label_values(&[crate::metrics::READ_DIRECTION_LABEL, id])
-                                .inc();
-                            return None;
-                        }
-                    },
-                ))
+                match histogram.observe_closure_duration(|| instance.filter.read(ctx)) {
+                    Some(()) => {
+                        tracing::trace!(%id, "read passing packet");
+                    }
+                    None => {
+                        tracing::trace!(%id, "read dropping packet");
+                        crate::metrics::PACKETS_DROPPED
+                            .with_label_values(&[crate::metrics::READ_DIRECTION_LABEL, id])
+                            .inc();
+                        return None;
+                    }
+                }
+
+                Some(())
             })
-            .map(ReadResponse::from)
     }
 
-    fn write(&self, ctx: WriteContext) -> Option<WriteResponse> {
+    fn write(&self, ctx: &mut WriteContext) -> Option<()> {
         self.filters
             .iter()
             .rev()
             .zip(self.filter_write_duration_seconds.iter().rev())
-            .try_fold(ctx, |ctx, ((id, instance), histogram)| {
+            .try_fold((), |_, ((id, instance), histogram)| {
                 tracing::trace!(%id, "write filtering packet");
-                Some(WriteContext::with_response(
-                    ctx.endpoint,
-                    ctx.source.clone(),
-                    ctx.dest.clone(),
-                    match histogram.observe_closure_duration(|| instance.filter.write(ctx)) {
-                        Some(response) => {
-                            tracing::trace!(%id, "write passing packet");
-                            response
-                        }
-                        None => {
-                            tracing::trace!(%id, "write dropping packet");
-                            crate::metrics::PACKETS_DROPPED
-                                .with_label_values(&[crate::metrics::WRITE_DIRECTION_LABEL, id])
-                                .inc();
-                            return None;
-                        }
-                    },
-                ))
+                match histogram.observe_closure_duration(|| instance.filter.write(ctx)) {
+                    Some(()) => {
+                        tracing::trace!(%id, "write passing packet");
+                        Some(())
+                    }
+                    None => {
+                        tracing::trace!(%id, "write dropping packet");
+                        crate::metrics::PACKETS_DROPPED
+                            .with_label_values(&[crate::metrics::WRITE_DIRECTION_LABEL, id])
+                            .inc();
+                        None
+                    }
+                }
             })
-            .map(WriteResponse::from)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::{str::from_utf8, sync::Arc};
+    use std::sync::Arc;
 
     use crate::{
         config,
@@ -349,49 +340,39 @@ mod tests {
         crate::test_utils::load_test_filters();
         let config = new_test_config();
         let endpoints_fixture = endpoints();
+        let mut context = ReadContext::new(
+            endpoints_fixture.clone(),
+            "127.0.0.1:70".parse().unwrap(),
+            b"hello".to_vec(),
+        );
 
-        let response = config
-            .filters
-            .read(ReadContext::new(
-                endpoints_fixture.clone(),
-                "127.0.0.1:70".parse().unwrap(),
-                b"hello".to_vec(),
-            ))
-            .unwrap();
-
+        config.filters.read(&mut context).unwrap();
         let expected = endpoints_fixture.clone();
-        assert_eq!(expected, response.endpoints.to_vec());
-        assert_eq!(
-            "hello:odr:127.0.0.1:70",
-            from_utf8(response.contents.as_slice()).unwrap()
-        );
+
+        assert_eq!(expected, &*context.endpoints);
+        assert_eq!(b"hello:odr:127.0.0.1:70", &*context.contents);
         assert_eq!(
             "receive",
-            response.metadata[&"downstream".to_string()]
+            context.metadata[&"downstream".to_string()]
                 .as_string()
                 .unwrap()
         );
 
-        let response = config
-            .filters
-            .write(WriteContext::new(
-                &endpoints_fixture[0],
-                endpoints_fixture[0].address.clone(),
-                "127.0.0.1:70".parse().unwrap(),
-                b"hello".to_vec(),
-            ))
-            .unwrap();
+        let mut context = WriteContext::new(
+            endpoints_fixture[0].clone(),
+            endpoints_fixture[0].address.clone(),
+            "127.0.0.1:70".parse().unwrap(),
+            b"hello".to_vec(),
+        );
+        config.filters.write(&mut context).unwrap();
 
         assert_eq!(
             "receive",
-            response.metadata[&"upstream".to_string()]
+            context.metadata[&"upstream".to_string()]
                 .as_string()
                 .unwrap()
         );
-        assert_eq!(
-            "hello:our:127.0.0.1:80:127.0.0.1:70",
-            from_utf8(response.contents.as_slice()).unwrap()
-        );
+        assert_eq!(b"hello:our:127.0.0.1:80:127.0.0.1:70", &*context.contents,);
     }
 
     #[test]
@@ -415,43 +396,41 @@ mod tests {
         .unwrap();
 
         let endpoints_fixture = endpoints();
+        let mut context = ReadContext::new(
+            endpoints_fixture.clone(),
+            "127.0.0.1:70".parse().unwrap(),
+            b"hello".to_vec(),
+        );
 
-        let response = chain
-            .read(ReadContext::new(
-                endpoints_fixture.clone(),
-                "127.0.0.1:70".parse().unwrap(),
-                b"hello".to_vec(),
-            ))
-            .unwrap();
-
+        chain.read(&mut context).unwrap();
         let expected = endpoints_fixture.clone();
-        assert_eq!(expected, response.endpoints.to_vec());
+        assert_eq!(expected, context.endpoints.to_vec());
         assert_eq!(
-            "hello:odr:127.0.0.1:70:odr:127.0.0.1:70",
-            from_utf8(response.contents.as_slice()).unwrap()
+            b"hello:odr:127.0.0.1:70:odr:127.0.0.1:70",
+            &*context.contents
         );
         assert_eq!(
             "receive:receive",
-            response.metadata[&"downstream".to_string()]
+            context.metadata[&"downstream".to_string()]
                 .as_string()
                 .unwrap()
         );
 
-        let response = chain
-            .write(WriteContext::new(
-                &endpoints_fixture[0],
-                endpoints_fixture[0].address.clone(),
-                "127.0.0.1:70".parse().unwrap(),
-                b"hello".to_vec(),
-            ))
-            .unwrap();
+        let mut context = WriteContext::new(
+            endpoints_fixture[0].clone(),
+            endpoints_fixture[0].address.clone(),
+            "127.0.0.1:70".parse().unwrap(),
+            b"hello".to_vec(),
+        );
+
+        chain.write(&mut context).unwrap();
         assert_eq!(
-            "hello:our:127.0.0.1:80:127.0.0.1:70:our:127.0.0.1:80:127.0.0.1:70",
-            from_utf8(response.contents.as_slice()).unwrap()
+            b"hello:our:127.0.0.1:80:127.0.0.1:70:our:127.0.0.1:80:127.0.0.1:70",
+            &*context.contents,
         );
         assert_eq!(
             "receive:receive",
-            response.metadata[&"upstream".to_string()]
+            context.metadata[&"upstream".to_string()]
                 .as_string()
                 .unwrap()
         );

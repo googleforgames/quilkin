@@ -26,9 +26,9 @@ use crate::filters::Filter;
 
 /// The input arguments to [`Filter::write`].
 #[non_exhaustive]
-pub struct WriteContext<'a> {
+pub struct WriteContext {
     /// The upstream endpoint that we're expecting packets from.
-    pub endpoint: &'a Endpoint,
+    pub endpoint: Endpoint,
     /// The source of the received packet.
     pub source: EndpointAddress,
     /// The destination of the received packet.
@@ -39,63 +39,20 @@ pub struct WriteContext<'a> {
     pub metadata: DynamicMetadata,
 }
 
-/// The output of [`Filter::write`].
-///
-/// New instances are created from [`WriteContext`].
-///
-/// ```rust
-/// # use quilkin::filters::{WriteContext, WriteResponse};
-///   fn write(ctx: WriteContext) -> Option<WriteResponse> {
-///       Some(ctx.into())
-///   }
-/// ```
-#[non_exhaustive]
-pub struct WriteResponse {
-    /// Contents of the packet to be sent back to the original sender.
-    pub contents: Vec<u8>,
-    /// Arbitrary values that can be passed from one filter to another.
-    pub metadata: DynamicMetadata,
-}
-
-impl WriteContext<'_> {
+impl WriteContext {
     /// Creates a new [`WriteContext`]
     pub fn new(
-        endpoint: &Endpoint,
+        endpoint: Endpoint,
         source: EndpointAddress,
         dest: EndpointAddress,
         contents: Vec<u8>,
-    ) -> WriteContext {
-        WriteContext {
+    ) -> Self {
+        Self {
             endpoint,
             source,
             dest,
             contents,
             metadata: HashMap::new(),
-        }
-    }
-
-    /// Creates a new [`WriteContext`] from a given [`WriteResponse`].
-    pub fn with_response(
-        endpoint: &Endpoint,
-        source: EndpointAddress,
-        dest: EndpointAddress,
-        response: WriteResponse,
-    ) -> WriteContext {
-        WriteContext {
-            endpoint,
-            source,
-            dest,
-            contents: response.contents,
-            metadata: response.metadata,
-        }
-    }
-}
-
-impl From<WriteContext<'_>> for WriteResponse {
-    fn from(ctx: WriteContext) -> Self {
-        Self {
-            contents: ctx.contents,
-            metadata: ctx.metadata,
         }
     }
 }

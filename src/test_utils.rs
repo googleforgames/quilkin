@@ -60,7 +60,7 @@ pub async fn available_addr() -> SocketAddr {
 pub struct TestFilter;
 
 impl Filter for TestFilter {
-    fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
+    fn read(&self, ctx: &mut ReadContext) -> Option<()> {
         // append values on each run
         ctx.metadata
             .entry(Arc::new("downstream".into()))
@@ -69,10 +69,10 @@ impl Filter for TestFilter {
 
         ctx.contents
             .append(&mut format!(":odr:{}", ctx.source).into_bytes());
-        Some(ctx.into())
+        Some(())
     }
 
-    fn write(&self, mut ctx: WriteContext) -> Option<WriteResponse> {
+    fn write(&self, ctx: &mut WriteContext) -> Option<()> {
         // append values on each run
         ctx.metadata
             .entry("upstream".to_string().into())
@@ -81,7 +81,7 @@ impl Filter for TestFilter {
 
         ctx.contents
             .append(&mut format!(":our:{}:{}", ctx.source, ctx.dest).into_bytes());
-        Some(ctx.into())
+        Some(())
     }
 }
 
@@ -264,18 +264,11 @@ where
     let endpoints = vec!["127.0.0.1:80".parse::<Endpoint>().unwrap()];
     let source = "127.0.0.1:90".parse().unwrap();
     let contents = "hello".to_string().into_bytes();
+    let mut context = ReadContext::new(endpoints.clone(), source, contents.clone());
 
-    match filter.read(ReadContext::new(
-        endpoints.clone(),
-        source,
-        contents.clone(),
-    )) {
-        None => unreachable!("should return a result"),
-        Some(response) => {
-            assert_eq!(endpoints, response.endpoints);
-            assert_eq!(contents, response.contents);
-        }
-    }
+    filter.read(&mut context).unwrap();
+    assert_eq!(endpoints, &*context.endpoints);
+    assert_eq!(contents, &*context.contents);
 }
 
 /// assert that write makes no changes
@@ -285,16 +278,15 @@ where
 {
     let endpoint = "127.0.0.1:90".parse::<Endpoint>().unwrap();
     let contents = "hello".to_string().into_bytes();
-
-    match filter.write(WriteContext::new(
-        &endpoint,
-        endpoint.address.clone(),
+    let mut context = WriteContext::new(
+        endpoint.clone(),
+        endpoint.address,
         "127.0.0.1:70".parse().unwrap(),
         contents.clone(),
-    )) {
-        None => unreachable!("should return a result"),
-        Some(response) => assert_eq!(contents, response.contents),
-    }
+    );
+
+    filter.write(&mut context).unwrap();
+    assert_eq!(contents, &*context.contents);
 }
 
 /// Opens a new socket bound to an ephemeral port
