@@ -247,20 +247,22 @@ impl Session {
 
         let result = Session::do_update_expiration(expiration, ttl)
             .and_then(|_| {
+                let mut context = WriteContext::new(
+                    endpoint.clone(),
+                    from.clone(),
+                    dest.clone(),
+                    packet.to_vec(),
+                );
                 config
                     .filters
                     .load()
-                    .write(WriteContext::new(
-                        endpoint,
-                        from.clone(),
-                        dest.clone(),
-                        packet.to_vec(),
-                    ))
+                    .write(&mut context)
                     .ok_or(Error::FilterDroppedPacket)
+                    .map(|_| context)
             })
-            .and_then(|response| {
+            .and_then(|context| {
                 dest.to_socket_addr()
-                    .map(|addr| (addr, response))
+                    .map(|addr| (addr, context))
                     .map_err(Error::ToSocketAddr)
             });
 
@@ -275,8 +277,8 @@ impl Session {
         };
 
         match result {
-            Ok((addr, response)) => {
-                let packet = response.contents.as_slice();
+            Ok((addr, context)) => {
+                let packet = context.contents.as_ref();
                 tracing::trace!(%from, dest = %addr, contents = %debug::bytes_to_string(packet), "sending packet downstream");
                 let _ = downstream_socket
                     .send_to(packet, addr)

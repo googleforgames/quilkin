@@ -34,13 +34,13 @@ impl Pass {
 
 impl Filter for Pass {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn read(&self, ctx: ReadContext) -> Option<ReadResponse> {
-        Some(ctx.into())
+    fn read(&self, _: &mut ReadContext) -> Option<()> {
+        Some(())
     }
 
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn write(&self, ctx: WriteContext) -> Option<WriteResponse> {
-        Some(ctx.into())
+    fn write(&self, _: &mut WriteContext) -> Option<()> {
+        Some(())
     }
 }
 

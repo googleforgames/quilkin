@@ -72,7 +72,7 @@ impl Compress {
 
 impl Filter for Compress {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
+    fn read(&self, ctx: &mut ReadContext) -> Option<()> {
         let original_size = ctx.contents.len();
 
         match self.on_read {
@@ -84,7 +84,7 @@ impl Filter for Compress {
                     self.metrics
                         .compressed_bytes_total
                         .inc_by(ctx.contents.len() as u64);
-                    Some(ctx.into())
+                    Some(())
                 }
                 Err(err) => self.failed_compression(&err),
             },
@@ -96,16 +96,16 @@ impl Filter for Compress {
                     self.metrics
                         .decompressed_bytes_total
                         .inc_by(ctx.contents.len() as u64);
-                    Some(ctx.into())
+                    Some(())
                 }
                 Err(err) => self.failed_decompression(&err),
             },
-            Action::DoNothing => Some(ctx.into()),
+            Action::DoNothing => Some(()),
         }
     }
 
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn write(&self, mut ctx: WriteContext) -> Option<WriteResponse> {
+    fn write(&self, ctx: &mut WriteContext) -> Option<()> {
         let original_size = ctx.contents.len();
         match self.on_write {
             Action::Compress => match self.compressor.encode(&mut ctx.contents) {
@@ -116,7 +116,7 @@ impl Filter for Compress {
                     self.metrics
                         .compressed_bytes_total
                         .inc_by(ctx.contents.len() as u64);
-                    Some(ctx.into())
+                    Some(())
                 }
                 Err(err) => self.failed_compression(&err),
             },
@@ -128,12 +128,12 @@ impl Filter for Compress {
                     self.metrics
                         .decompressed_bytes_total
                         .inc_by(ctx.contents.len() as u64);
-                    Some(ctx.into())
+                    Some(())
                 }
 
                 Err(err) => self.failed_decompression(&err),
             },
-            Action::DoNothing => Some(ctx.into()),
+            Action::DoNothing => Some(()),
         }
     }
 }
@@ -281,47 +281,48 @@ mod tests {
         let expected = contents_fixture();
 
         // read compress
-        let read_response = compress
-            .read(ReadContext::new(
-                vec![Endpoint::new("127.0.0.1:80".parse().unwrap())],
-                "127.0.0.1:8080".parse().unwrap(),
-                expected.clone(),
-            ))
-            .expect("should compress");
+        let mut read_context = ReadContext::new(
+            vec![Endpoint::new("127.0.0.1:80".parse().unwrap())],
+            "127.0.0.1:8080".parse().unwrap(),
+            expected.clone(),
+        );
+        compress.read(&mut read_context).expect("should compress");
 
-        assert_ne!(expected, read_response.contents);
+        assert_ne!(expected, &*read_context.contents);
         assert!(
-            expected.len() > read_response.contents.len(),
+            expected.len() > read_context.contents.len(),
             "Original: {}. Compressed: {}",
             expected.len(),
-            read_response.contents.len()
+            read_context.contents.len()
         );
         assert_eq!(
             expected.len() as u64,
             compress.metrics.decompressed_bytes_total.get()
         );
         assert_eq!(
-            read_response.contents.len() as u64,
+            read_context.contents.len() as u64,
             compress.metrics.compressed_bytes_total.get()
         );
 
         // write decompress
-        let write_response = compress
-            .write(WriteContext::new(
-                &Endpoint::new("127.0.0.1:80".parse().unwrap()),
-                "127.0.0.1:8080".parse().unwrap(),
-                "127.0.0.1:8081".parse().unwrap(),
-                read_response.contents.clone(),
-            ))
+        let mut write_context = WriteContext::new(
+            Endpoint::new("127.0.0.1:80".parse().unwrap()),
+            "127.0.0.1:8080".parse().unwrap(),
+            "127.0.0.1:8081".parse().unwrap(),
+            read_context.contents.clone(),
+        );
+
+        compress
+            .write(&mut write_context)
             .expect("should decompress");
 
-        assert_eq!(expected, write_response.contents);
+        assert_eq!(expected, &*write_context.contents);
 
         assert_eq!(0, compress.metrics.packets_dropped_decompress.get());
         assert_eq!(0, compress.metrics.packets_dropped_compress.get());
         // multiply by two, because data was sent both upstream and downstream
         assert_eq!(
-            (read_response.contents.len() * 2) as u64,
+            (read_context.contents.len() * 2) as u64,
             compress.metrics.compressed_bytes_total.get()
         );
         assert_eq!(
@@ -369,14 +370,15 @@ mod tests {
             Metrics::new().unwrap(),
         );
 
-        let write_response = compression.write(WriteContext::new(
-            &Endpoint::new("127.0.0.1:80".parse().unwrap()),
-            "127.0.0.1:8080".parse().unwrap(),
-            "127.0.0.1:8081".parse().unwrap(),
-            b"hello".to_vec(),
-        ));
+        assert!(compression
+            .write(&mut WriteContext::new(
+                Endpoint::new("127.0.0.1:80".parse().unwrap()),
+                "127.0.0.1:8080".parse().unwrap(),
+                "127.0.0.1:8081".parse().unwrap(),
+                b"hello".to_vec(),
+            ))
+            .is_none());
 
-        assert!(write_response.is_none());
         assert_eq!(1, compression.metrics.packets_dropped_decompress.get());
         assert_eq!(0, compression.metrics.packets_dropped_compress.get());
 
@@ -389,18 +391,19 @@ mod tests {
             Metrics::new().unwrap(),
         );
 
-        let read_response = compression.read(ReadContext::new(
-            vec![Endpoint::new("127.0.0.1:80".parse().unwrap())],
-            "127.0.0.1:8080".parse().unwrap(),
-            b"hello".to_vec(),
-        ));
+        assert!(compression
+            .read(&mut ReadContext::new(
+                vec![Endpoint::new("127.0.0.1:80".parse().unwrap())],
+                "127.0.0.1:8080".parse().unwrap(),
+                b"hello".to_vec(),
+            ))
+            .is_none());
 
         assert!(logs_contain(
             "Packets are being dropped as they could not be decompressed"
         ));
         assert!(logs_contain("quilkin::filters::compress")); // the given name to the the logger by tracing
 
-        assert!(read_response.is_none());
         assert_eq!(1, compression.metrics.packets_dropped_decompress.get());
         assert_eq!(0, compression.metrics.packets_dropped_compress.get());
         assert_eq!(0, compression.metrics.compressed_bytes_total.get());
@@ -418,21 +421,24 @@ mod tests {
             Metrics::new().unwrap(),
         );
 
-        let read_response = compression.read(ReadContext::new(
+        let mut read_context = ReadContext::new(
             vec![Endpoint::new("127.0.0.1:80".parse().unwrap())],
             "127.0.0.1:8080".parse().unwrap(),
             b"hello".to_vec(),
-        ));
-        assert_eq!(b"hello".to_vec(), read_response.unwrap().contents);
+        );
+        compression.read(&mut read_context).unwrap();
+        assert_eq!(b"hello", &*read_context.contents);
 
-        let write_response = compression.write(WriteContext::new(
-            &Endpoint::new("127.0.0.1:80".parse().unwrap()),
+        let mut write_context = WriteContext::new(
+            Endpoint::new("127.0.0.1:80".parse().unwrap()),
             "127.0.0.1:8080".parse().unwrap(),
             "127.0.0.1:8081".parse().unwrap(),
             b"hello".to_vec(),
-        ));
+        );
 
-        assert_eq!(b"hello".to_vec(), write_response.unwrap().contents)
+        compression.write(&mut write_context).unwrap();
+
+        assert_eq!(b"hello".to_vec(), &*write_context.contents)
     }
 
     #[test]
@@ -482,33 +488,33 @@ mod tests {
     {
         let expected = contents_fixture();
         // write compress
-        let write_response = filter
-            .write(WriteContext::new(
-                &Endpoint::new("127.0.0.1:80".parse().unwrap()),
-                "127.0.0.1:8080".parse().unwrap(),
-                "127.0.0.1:8081".parse().unwrap(),
-                expected.clone(),
-            ))
-            .expect("should compress");
+        let mut write_context = WriteContext::new(
+            Endpoint::new("127.0.0.1:80".parse().unwrap()),
+            "127.0.0.1:8080".parse().unwrap(),
+            "127.0.0.1:8081".parse().unwrap(),
+            expected.clone(),
+        );
 
-        assert_ne!(expected, write_response.contents);
+        filter.write(&mut write_context).expect("should compress");
+
+        assert_ne!(expected, &*write_context.contents);
         assert!(
-            expected.len() > write_response.contents.len(),
+            expected.len() > write_context.contents.len(),
             "Original: {}. Compressed: {}",
             expected.len(),
-            write_response.contents.len()
+            write_context.contents.len()
         );
 
         // read decompress
-        let read_response = filter
-            .read(ReadContext::new(
-                vec![Endpoint::new("127.0.0.1:80".parse().unwrap())],
-                "127.0.0.1:8080".parse().unwrap(),
-                write_response.contents.clone(),
-            ))
-            .expect("should decompress");
+        let mut read_context = ReadContext::new(
+            vec![Endpoint::new("127.0.0.1:80".parse().unwrap())],
+            "127.0.0.1:8080".parse().unwrap(),
+            write_context.contents.clone(),
+        );
 
-        assert_eq!(expected, read_response.contents);
-        (expected, write_response.contents)
+        filter.read(&mut read_context).expect("should decompress");
+
+        assert_eq!(expected, &*read_context.contents);
+        (expected, write_context.contents.to_vec())
     }
 }

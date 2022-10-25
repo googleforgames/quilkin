@@ -58,15 +58,15 @@ struct Greet {
 }
 
 impl Filter for Greet {
-    fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
+    fn read(&self, ctx: &mut ReadContext) -> Option<()> {
         ctx.contents
             .splice(0..0, format!("{} ", self.config.greeting).into_bytes());
-        Some(ctx.into())
+        Some(())
     }
-    fn write(&self, mut ctx: WriteContext) -> Option<WriteResponse> {
+    fn write(&self, ctx: &mut WriteContext) -> Option<()> {
         ctx.contents
             .splice(0..0, format!("{} ", self.config.greeting).into_bytes());
-        Some(ctx.into())
+        Some(())
     }
 }
 // ANCHOR_END: filter

@@ -62,7 +62,7 @@ impl StaticFilter for TokenRouter {
 }
 
 impl Filter for TokenRouter {
-    fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
+    fn read(&self, ctx: &mut ReadContext) -> Option<()> {
         match ctx.metadata.get(self.metadata_key.as_ref()) {
             None => {
                 tracing::trace!(
@@ -92,7 +92,7 @@ impl Filter for TokenRouter {
                         self.metrics.packets_dropped_no_endpoint_match.inc();
                         None
                     } else {
-                        Some(ctx.into())
+                        Some(())
                     }
                 }
                 _ => {
@@ -106,10 +106,6 @@ impl Filter for TokenRouter {
                 }
             },
         }
-    }
-
-    fn write(&self, ctx: WriteContext) -> Option<WriteResponse> {
-        Some(ctx.into())
     }
 }
 
@@ -249,13 +245,12 @@ mod tests {
             Value::Bytes(b"567".to_vec().into()),
         );
 
-        let option = filter.read(ctx);
-        assert!(option.is_none());
+        assert!(filter.read(&mut ctx).is_none());
         assert_eq!(1, filter.metrics.packets_dropped_no_endpoint_match.get());
 
         // no key
-        let ctx = new_ctx();
-        assert!(filter.read(ctx).is_none());
+        let mut ctx = new_ctx();
+        assert!(filter.read(&mut ctx).is_none());
         assert_eq!(1, filter.metrics.packets_dropped_no_token_found.get());
 
         // wrong type key
@@ -264,7 +259,7 @@ mod tests {
             Arc::new(CAPTURED_BYTES.into()),
             Value::String(String::from("wrong")),
         );
-        assert!(filter.read(ctx).is_none());
+        assert!(filter.read(&mut ctx).is_none());
         assert_eq!(1, filter.metrics.packets_dropped_invalid_token.get());
     }
 
@@ -298,12 +293,12 @@ mod tests {
         )
     }
 
-    fn assert_read<F>(filter: &F, ctx: ReadContext)
+    fn assert_read<F>(filter: &F, mut ctx: ReadContext)
     where
         F: Filter + ?Sized,
     {
-        let result = filter.read(ctx).unwrap();
+        filter.read(&mut ctx).unwrap();
 
-        assert_eq!(b"hello".to_vec(), result.contents);
+        assert_eq!(b"hello", &*ctx.contents);
     }
 }

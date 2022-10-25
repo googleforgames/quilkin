@@ -43,7 +43,7 @@ pub mod token_router;
 pub mod prelude {
     pub use super::{
         ConvertProtoConfigError, CreateFilterArgs, Error, Filter, FilterInstance, ReadContext,
-        ReadResponse, StaticFilter, WriteContext, WriteResponse,
+        StaticFilter, WriteContext,
     };
 }
 
@@ -62,12 +62,12 @@ pub use self::{
     local_rate_limit::LocalRateLimit,
     pass::Pass,
     r#match::Match,
-    read::{ReadContext, ReadResponse},
+    read::ReadContext,
     registry::FilterRegistry,
     set::{FilterMap, FilterSet},
     timestamp::Timestamp,
     token_router::TokenRouter,
-    write::{WriteContext, WriteResponse},
+    write::WriteContext,
 };
 
 pub(crate) use self::chain::FilterChain;
@@ -83,13 +83,13 @@ pub(crate) use self::chain::FilterChain;
 /// struct Greet;
 ///
 /// impl Filter for Greet {
-///     fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
+///     fn read(&self, ctx: &mut ReadContext) -> Option<()> {
 ///         ctx.contents.splice(0..0, b"Hello ".into_iter().copied());
-///         Some(ctx.into())
+///         Some(())
 ///     }
-///     fn write(&self, mut ctx: WriteContext) -> Option<WriteResponse> {
+///     fn write(&self, ctx: &mut WriteContext) -> Option<()> {
 ///         ctx.contents.splice(0..0, b"Goodbye ".into_iter().copied());
-///         Some(ctx.into())
+///         Some(())
 ///     }
 /// }
 ///
@@ -194,23 +194,20 @@ pub trait Filter: Send + Sync {
     /// [`Filter::read`] is invoked when the proxy receives data from a
     /// downstream connection on the listening port.
     ///
-    /// This function should return a [`ReadResponse`] containing the array of
-    /// endpoints that the packet should be sent to and the packet that should
-    /// be sent (which may be manipulated) as well. If the packet should be
-    /// rejected, return [`None`].  By default, the context passes
-    /// through unchanged.
-    fn read(&self, ctx: ReadContext) -> Option<ReadResponse> {
-        Some(ctx.into())
+    /// This function should return an `Some` if the packet processing should
+    /// proceed. If the packet should be rejected, it will return [`None`]
+    /// instead. By default, the context passes through unchanged.
+    fn read(&self, _: &mut ReadContext) -> Option<()> {
+        Some(())
     }
 
     /// [`Filter::write`] is invoked when the proxy is about to send data to a
     /// downstream connection via the listening port after receiving it via one
     /// of the upstream Endpoints.
     ///
-    /// This function should return an [`WriteResponse`] containing the packet to
-    /// be sent (which may be manipulated). If the packet should be rejected,
-    /// return [`None`]. By default, the context passes through unchanged.
-    fn write(&self, ctx: WriteContext) -> Option<WriteResponse> {
-        Some(ctx.into())
+    /// This function should return an `Some` if the packet processing should
+    /// proceed. If the packet should be rejected, it will return [`None`]
+    fn write(&self, _: &mut WriteContext) -> Option<()> {
+        Some(())
     }
 }

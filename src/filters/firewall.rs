@@ -60,7 +60,7 @@ impl StaticFilter for Firewall {
 
 impl Filter for Firewall {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn read(&self, ctx: ReadContext) -> Option<ReadResponse> {
+    fn read(&self, ctx: &mut ReadContext) -> Option<()> {
         for rule in &self.on_read {
             if rule.contains(ctx.source.to_socket_addr().ok()?) {
                 return match rule.action {
@@ -71,7 +71,7 @@ impl Filter for Firewall {
                             source = ?ctx.source.to_string()
                         );
                         self.metrics.packets_allowed_read.inc();
-                        Some(ctx.into())
+                        Some(())
                     }
                     Action::Deny => {
                         debug!(action = "Deny", event = "read", source = ?ctx.source);
@@ -91,7 +91,7 @@ impl Filter for Firewall {
     }
 
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn write(&self, ctx: WriteContext) -> Option<WriteResponse> {
+    fn write(&self, ctx: &mut WriteContext) -> Option<()> {
         for rule in &self.on_write {
             if rule.contains(ctx.source.to_socket_addr().ok()?) {
                 return match rule.action {
@@ -102,7 +102,7 @@ impl Filter for Firewall {
                             source = ?ctx.source.to_string()
                         );
                         self.metrics.packets_allowed_write.inc();
-                        Some(ctx.into())
+                        Some(())
                     }
                     Action::Deny => {
                         debug!(action = "Deny", event = "write", source = ?ctx.source);
@@ -147,16 +147,16 @@ mod tests {
         };
 
         let local_ip = [192, 168, 75, 20];
-        let ctx = ReadContext::new(
+        let mut ctx = ReadContext::new(
             vec![Endpoint::new((Ipv4Addr::LOCALHOST, 8080).into())],
             (local_ip, 80).into(),
             vec![],
         );
-        assert!(firewall.read(ctx).is_some());
+        assert!(firewall.read(&mut ctx).is_some());
         assert_eq!(1, firewall.metrics.packets_allowed_read.get());
         assert_eq!(0, firewall.metrics.packets_denied_read.get());
 
-        let ctx = ReadContext::new(
+        let mut ctx = ReadContext::new(
             vec![Endpoint::new((Ipv4Addr::LOCALHOST, 8080).into())],
             (local_ip, 2000).into(),
             vec![],
@@ -164,7 +164,7 @@ mod tests {
         assert!(logs_contain("quilkin::filters::firewall")); // the given name to the the logger by tracing
         assert!(logs_contain("Allow"));
 
-        assert!(firewall.read(ctx).is_none());
+        assert!(firewall.read(&mut ctx).is_none());
         assert_eq!(1, firewall.metrics.packets_allowed_read.get());
         assert_eq!(1, firewall.metrics.packets_denied_read.get());
 
@@ -187,23 +187,23 @@ mod tests {
         let endpoint = Endpoint::new((Ipv4Addr::LOCALHOST, 80).into());
         let local_addr: crate::endpoint::EndpointAddress = (Ipv4Addr::LOCALHOST, 8081).into();
 
-        let ctx = WriteContext::new(
-            &endpoint,
+        let mut ctx = WriteContext::new(
+            endpoint.clone(),
             ([192, 168, 75, 20], 80).into(),
             local_addr.clone(),
             vec![],
         );
-        assert!(firewall.write(ctx).is_some());
+        assert!(firewall.write(&mut ctx).is_some());
         assert_eq!(1, firewall.metrics.packets_allowed_write.get());
         assert_eq!(0, firewall.metrics.packets_denied_write.get());
 
-        let ctx = WriteContext::new(
-            &endpoint,
+        let mut ctx = WriteContext::new(
+            endpoint,
             ([192, 168, 77, 20], 80).into(),
             local_addr,
             vec![],
         );
-        assert!(firewall.write(ctx).is_none());
+        assert!(firewall.write(&mut ctx).is_none());
         assert_eq!(1, firewall.metrics.packets_allowed_write.get());
         assert_eq!(1, firewall.metrics.packets_denied_write.get());
 

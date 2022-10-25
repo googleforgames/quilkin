@@ -44,7 +44,7 @@ impl ConcatenateBytes {
 }
 
 impl Filter for ConcatenateBytes {
-    fn read(&self, mut ctx: ReadContext) -> Option<ReadResponse> {
+    fn read(&self, ctx: &mut ReadContext) -> Option<()> {
         match self.on_read {
             Strategy::Append => {
                 ctx.contents.extend(self.bytes.iter());
@@ -55,10 +55,10 @@ impl Filter for ConcatenateBytes {
             Strategy::DoNothing => {}
         }
 
-        Some(ctx.into())
+        Some(())
     }
 
-    fn write(&self, mut ctx: WriteContext) -> Option<WriteResponse> {
+    fn write(&self, ctx: &mut WriteContext) -> Option<()> {
         match self.on_write {
             Strategy::Append => {
                 ctx.contents.extend(self.bytes.iter());
@@ -69,7 +69,7 @@ impl Filter for ConcatenateBytes {
             Strategy::DoNothing => {}
         }
 
-        Some(ctx.into())
+        Some(())
     }
 }
 
