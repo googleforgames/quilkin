@@ -16,7 +16,7 @@
 
 /// Runs Quilkin as a xDS management server, using `provider` as
 /// a configuration source.
-#[derive(clap::Args)]
+#[derive(clap::Args, Clone)]
 pub struct Manage {
     #[clap(short, long, env = "QUILKIN_PORT")]
     port: Option<u16>,
@@ -26,7 +26,7 @@ pub struct Manage {
 }
 
 /// The available xDS source providers.
-#[derive(clap::Subcommand)]
+#[derive(Clone, clap::Subcommand)]
 pub enum Providers {
     /// Watches Agones' game server CRDs for `Allocated` game server endpoints,
     /// and for a `ConfigMap` that specifies the filter configuration.

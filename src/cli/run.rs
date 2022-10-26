@@ -20,7 +20,7 @@ use std::net::SocketAddr;
 use crate::filters::FilterFactory;
 
 /// Run Quilkin as a UDP reverse proxy.
-#[derive(clap::Args)]
+#[derive(clap::Args, Clone)]
 #[non_exhaustive]
 pub struct Run {
     /// One or more `quilkin manage` endpoints to listen to for config changes
