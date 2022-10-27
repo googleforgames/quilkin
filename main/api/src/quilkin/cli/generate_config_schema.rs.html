@@ -80,7 +80,7 @@
  */</span>
 
 <span class="doccomment">/// Generates JSON schema files for known filters.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">clap::Args</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">clap::Args</span>, <span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GenerateConfigSchema</span> {
     <span class="doccomment">/// The directory to write configuration files.</span>
     <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">short</span>, <span class="ident">long</span>, <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;.&quot;</span>)]</span>

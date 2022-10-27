@@ -90,7 +90,7 @@
 
 <span class="doccomment">/// Runs Quilkin as a xDS management server, using `provider` as</span>
 <span class="doccomment">/// a configuration source.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">clap::Args</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">clap::Args</span>, <span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Manage</span> {
     <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">short</span>, <span class="ident">long</span>, <span class="ident">env</span> <span class="op">=</span> <span class="string">&quot;QUILKIN_PORT&quot;</span>)]</span>
     <span class="ident">port</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span>,
@@ -100,7 +100,7 @@
 }
 
 <span class="doccomment">/// The available xDS source providers.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">clap::Subcommand</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">clap::Subcommand</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Providers</span> {
     <span class="doccomment">/// Watches Agones&#39; game server CRDs for `Allocated` game server endpoints,</span>
     <span class="doccomment">/// and for a `ConfigMap` that specifies the filter configuration.</span>

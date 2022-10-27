@@ -112,7 +112,7 @@
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters::FilterFactory</span>;
 
 <span class="doccomment">/// Run Quilkin as a UDP reverse proxy.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">clap::Args</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">clap::Args</span>, <span class="ident">Clone</span>)]</span>
 <span class="attribute">#[<span class="ident">non_exhaustive</span>]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Run</span> {
     <span class="doccomment">/// One or more `quilkin manage` endpoints to listen to for config changes</span>
