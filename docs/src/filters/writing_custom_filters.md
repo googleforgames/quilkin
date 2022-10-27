@@ -253,7 +253,7 @@ filter. Try it out with the following configuration:
 [filter chain]: ../filters.md#filters-and-filter-chain
 [built-in-filters]: ../filters.md#built-in-filters
 [filter configuration]: ../filters.md#filter-config
-[proxy-config]: ../proxy-configuration.md
+[proxy-config]: ../file-configuration.md
 [management server]: ../xds.md
 [tokio]: https://docs.rs/tokio
 [tonic]: https://docs.rs/tonic
