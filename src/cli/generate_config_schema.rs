@@ -15,7 +15,7 @@
  */
 
 /// Generates JSON schema files for known filters.
-#[derive(clap::Args)]
+#[derive(clap::Args, Clone)]
 pub struct GenerateConfigSchema {
     /// The directory to write configuration files.
     #[clap(short, long, default_value = ".")]

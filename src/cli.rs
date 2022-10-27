@@ -57,7 +57,7 @@ pub struct Cli {
 }
 
 /// The various Quilkin commands.
-#[derive(clap::Subcommand)]
+#[derive(Clone, clap::Subcommand)]
 pub enum Commands {
     Run(Run),
     GenerateConfigSchema(GenerateConfigSchema),
@@ -137,16 +137,32 @@ impl Cli {
             shutdown_tx.send(()).ok();
         });
 
-        let fut = match self.command {
-            Commands::Run(runner) => tokio::spawn({
-                let shutdown_rx = shutdown_rx.clone();
-                async move { runner.run(config, shutdown_rx).await }
-            }),
-            Commands::Manage(manager) => tokio::spawn(async move { manager.manage(config).await }),
-            Commands::GenerateConfigSchema(generator) => {
-                tokio::spawn(std::future::ready(generator.generate_config_schema()))
+        let fut = tryhard::retry_fn({
+            let shutdown_rx = shutdown_rx.clone();
+            move || match self.command.clone() {
+                Commands::Run(runner) => {
+                    let config = config.clone();
+                    let shutdown_rx = shutdown_rx.clone();
+                    tokio::spawn(
+                        async move { runner.run(config.clone(), shutdown_rx.clone()).await },
+                    )
+                }
+                Commands::Manage(manager) => {
+                    let config = config.clone();
+                    tokio::spawn(async move { manager.manage(config.clone()).await })
+                }
+                Commands::GenerateConfigSchema(generator) => {
+                    tokio::spawn(std::future::ready(generator.generate_config_schema()))
+                }
             }
-        };
+        })
+        .retries(3)
+        .on_retry(|_, _, error| {
+            let error = error.to_string();
+            async move {
+                tracing::warn!(%error, "error would have caused fatal crash");
+            }
+        });
 
         tokio::select! {
             result = fut => result?,
