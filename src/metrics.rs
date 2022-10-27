@@ -16,7 +16,8 @@
 
 use once_cell::sync::Lazy;
 use prometheus::{
-    core::Collector, HistogramOpts, HistogramVec, IntCounterVec, Opts, Registry, DEFAULT_BUCKETS,
+    core::Collector, Histogram, HistogramOpts, HistogramVec, IntCounter, IntCounterVec, Opts,
+    Registry, DEFAULT_BUCKETS,
 };
 
 pub use prometheus::Result;
@@ -28,6 +29,9 @@ pub const METADATA_KEY_LABEL: &str = "metadata_key";
 /// "event" is used as a label for Metrics that can apply to both Filter
 /// `read` and `write` executions.
 pub const DIRECTION_LABEL: &str = "event";
+
+pub(crate) const READ: Direction = Direction::Read;
+pub(crate) const WRITE: Direction = Direction::Write;
 
 /// Label value for [DIRECTION_LABEL] for `read` events
 pub const READ_DIRECTION_LABEL: &str = "read";
@@ -55,66 +59,103 @@ pub(crate) const BUCKET_FACTOR: f64 = 2.0;
 /// care about granularity past 1 second.
 pub(crate) const BUCKET_COUNT: usize = 13;
 
-pub(crate) static PROCESSING_TIME: Lazy<HistogramVec> = Lazy::new(|| {
-    prometheus::register_histogram_vec_with_registry! {
-        prometheus::histogram_opts! {
-            "packets_processing_duration_seconds",
-            "Total processing time for a packet",
-            prometheus::exponential_buckets(BUCKET_START, BUCKET_FACTOR, BUCKET_COUNT).unwrap(),
-        },
-        &[DIRECTION_LABEL],
-        registry(),
-    }
-    .unwrap()
-});
+#[derive(Clone, Copy, Debug)]
+pub enum Direction {
+    Read,
+    Write,
+}
 
-pub(crate) static BYTES_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
-    prometheus::register_int_counter_vec_with_registry! {
-        prometheus::opts! {
-            "bytes_total",
-            "total number of bytes",
-        },
-        &[DIRECTION_LABEL],
-        registry(),
-    }
-    .unwrap()
-});
+impl Direction {
+    pub(crate) const LABEL: &'static str = DIRECTION_LABEL;
 
-pub(crate) static ERRORS_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
-    prometheus::register_int_counter_vec_with_registry! {
-        prometheus::opts! {
-            "errors_total",
-            "total number of errors sending packets",
-        },
-        &[DIRECTION_LABEL],
-        registry(),
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Read => READ_DIRECTION_LABEL,
+            Self::Write => WRITE_DIRECTION_LABEL,
+        }
     }
-    .unwrap()
-});
+}
 
-pub(crate) static PACKETS_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
-    prometheus::register_int_counter_vec_with_registry! {
-        prometheus::opts! {
-            "packets_total",
-            "Total number of packets",
-        },
-        &[DIRECTION_LABEL],
-        registry(),
-    }
-    .unwrap()
-});
+pub(crate) fn processing_time(direction: Direction) -> Histogram {
+    static PROCESSING_TIME: Lazy<HistogramVec> = Lazy::new(|| {
+        prometheus::register_histogram_vec_with_registry! {
+            prometheus::histogram_opts! {
+                "packets_processing_duration_seconds",
+                "Total processing time for a packet",
+                prometheus::exponential_buckets(BUCKET_START, BUCKET_FACTOR, BUCKET_COUNT).unwrap(),
+            },
+            &[Direction::LABEL],
+            registry(),
+        }
+        .unwrap()
+    });
 
-pub(crate) static PACKETS_DROPPED: Lazy<IntCounterVec> = Lazy::new(|| {
-    prometheus::register_int_counter_vec_with_registry! {
-        prometheus::opts! {
-            "packets_dropped",
-            "Total number of dropped packets",
-        },
-        &[DIRECTION_LABEL, "reason"],
-        registry(),
-    }
-    .unwrap()
-});
+    PROCESSING_TIME.with_label_values(&[direction.label()])
+}
+
+pub(crate) fn bytes_total(direction: Direction) -> IntCounter {
+    static BYTES_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
+        prometheus::register_int_counter_vec_with_registry! {
+            prometheus::opts! {
+                "bytes_total",
+                "total number of bytes",
+            },
+            &[Direction::LABEL],
+            registry(),
+        }
+        .unwrap()
+    });
+
+    BYTES_TOTAL.with_label_values(&[direction.label()])
+}
+
+pub(crate) fn errors_total(direction: Direction) -> IntCounter {
+    static ERRORS_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
+        prometheus::register_int_counter_vec_with_registry! {
+            prometheus::opts! {
+                "errors_total",
+                "total number of errors sending packets",
+            },
+            &[Direction::LABEL],
+            registry(),
+        }
+        .unwrap()
+    });
+
+    ERRORS_TOTAL.with_label_values(&[direction.label()])
+}
+
+pub(crate) fn packets_total(direction: Direction) -> IntCounter {
+    static PACKETS_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
+        prometheus::register_int_counter_vec_with_registry! {
+            prometheus::opts! {
+                "packets_total",
+                "Total number of packets",
+            },
+            &[Direction::LABEL],
+            registry(),
+        }
+        .unwrap()
+    });
+
+    PACKETS_TOTAL.with_label_values(&[direction.label()])
+}
+
+pub(crate) fn packets_dropped(direction: Direction, reason: &str) -> IntCounter {
+    static PACKETS_DROPPED: Lazy<IntCounterVec> = Lazy::new(|| {
+        prometheus::register_int_counter_vec_with_registry! {
+            prometheus::opts! {
+                "packets_dropped",
+                "Total number of dropped packets",
+            },
+            &[Direction::LABEL, "reason"],
+            registry(),
+        }
+        .unwrap()
+    });
+
+    PACKETS_DROPPED.with_label_values(&[direction.label(), reason])
+}
 
 /// Create a generic metrics options.
 /// Use [filter_opts] instead if the intended target is a filter.

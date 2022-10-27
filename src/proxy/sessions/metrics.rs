@@ -15,7 +15,7 @@
  */
 
 use once_cell::sync::Lazy;
-use prometheus::{Histogram, IntCounter, IntGaugeVec, Opts};
+use prometheus::{Histogram, IntCounter, IntGauge, IntGaugeVec, Opts};
 
 use crate::metrics::{histogram_opts, register};
 
@@ -23,34 +23,46 @@ const SUBSYSTEM: &str = "session";
 const ASN_NUMBER_LABEL: &str = "asn";
 const IP_PREFIX_LABEL: &str = "ip_prefix";
 
-pub(crate) static ACTIVE_SESSIONS: Lazy<IntGaugeVec> = Lazy::new(|| {
-    prometheus::register_int_gauge_vec_with_registry! {
-        Opts::new("active", "number of sessions currently active").subsystem(SUBSYSTEM),
-        &[ASN_NUMBER_LABEL, IP_PREFIX_LABEL],
-        crate::metrics::registry(),
-    }
-    .unwrap()
-});
+pub(crate) fn active_sessions(asn_number: u16, ip_prefix: &str) -> IntGauge {
+    static ACTIVE_SESSIONS: Lazy<IntGaugeVec> = Lazy::new(|| {
+        prometheus::register_int_gauge_vec_with_registry! {
+            Opts::new("active", "number of sessions currently active").subsystem(SUBSYSTEM),
+            &[ASN_NUMBER_LABEL, IP_PREFIX_LABEL],
+            crate::metrics::registry(),
+        }
+        .unwrap()
+    });
 
-pub(crate) static TOTAL_SESSIONS: Lazy<IntCounter> = Lazy::new(|| {
-    register(
-        IntCounter::with_opts(
-            Opts::new("total", "total number of established sessions").subsystem(SUBSYSTEM),
+    ACTIVE_SESSIONS.with_label_values(&[&asn_number.to_string(), ip_prefix])
+}
+
+pub(crate) fn total_sessions() -> &'static IntCounter {
+    static TOTAL_SESSIONS: Lazy<IntCounter> = Lazy::new(|| {
+        register(
+            IntCounter::with_opts(
+                Opts::new("total", "total number of established sessions").subsystem(SUBSYSTEM),
+            )
+            .unwrap(),
         )
-        .unwrap(),
-    )
-});
+    });
 
-pub(crate) static DURATION_SECS: Lazy<Histogram> = Lazy::new(|| {
-    register(
-        Histogram::with_opts(histogram_opts(
-            "duration_secs",
-            SUBSYSTEM,
-            "duration of sessions",
-            vec![
-                1f64, 5f64, 10f64, 25f64, 60f64, 300f64, 900f64, 1800f64, 3600f64,
-            ],
-        ))
-        .unwrap(),
-    )
-});
+    &*TOTAL_SESSIONS
+}
+
+pub(crate) fn duration_secs() -> &'static Histogram {
+    static DURATION_SECS: Lazy<Histogram> = Lazy::new(|| {
+        register(
+            Histogram::with_opts(histogram_opts(
+                "duration_secs",
+                SUBSYSTEM,
+                "duration of sessions",
+                vec![
+                    1f64, 5f64, 10f64, 25f64, 60f64, 300f64, 900f64, 1800f64, 3600f64,
+                ],
+            ))
+            .unwrap(),
+        )
+    });
+
+    &*DURATION_SECS
+}

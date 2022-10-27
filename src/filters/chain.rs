@@ -258,9 +258,7 @@ impl Filter for FilterChain {
                     }
                     None => {
                         tracing::trace!(%id, "read dropping packet");
-                        crate::metrics::PACKETS_DROPPED
-                            .with_label_values(&[crate::metrics::READ_DIRECTION_LABEL, id])
-                            .inc();
+                        crate::metrics::packets_dropped(crate::metrics::READ, id).inc();
                         return None;
                     }
                 }
@@ -283,9 +281,7 @@ impl Filter for FilterChain {
                     }
                     None => {
                         tracing::trace!(%id, "write dropping packet");
-                        crate::metrics::PACKETS_DROPPED
-                            .with_label_values(&[crate::metrics::WRITE_DIRECTION_LABEL, id])
-                            .inc();
+                        crate::metrics::packets_dropped(crate::metrics::WRITE, id).inc();
                         None
                     }
                 }
