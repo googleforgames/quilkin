@@ -136,7 +136,7 @@ impl Session {
 
         tracing::debug!(source = %s.source, dest = ?s.dest, "Session created");
 
-        self::metrics::TOTAL_SESSIONS.inc();
+        self::metrics::total_sessions().inc();
         s.active_session_metric().inc();
         s.run(args.ttl, args.downstream_socket, shutdown_rx);
         Ok(s)
@@ -165,14 +165,12 @@ impl Session {
                     received = upstream_socket.recv_from(&mut buf) => {
                         match received {
                             Err(error) => {
-                                crate::metrics::ERRORS_TOTAL.with_label_values(&[crate::metrics::WRITE_DIRECTION_LABEL]).inc();
+                                crate::metrics::errors_total(crate::metrics::WRITE).inc();
                                 tracing::error!(%error, %source, dest = ?endpoint, "Error receiving packet");
                             },
                             Ok((size, recv_addr)) => {
-                                crate::metrics::BYTES_TOTAL
-                                    .with_label_values(&[crate::metrics::WRITE_DIRECTION_LABEL])
-                                    .inc_by(size as u64);
-                                crate::metrics::PACKETS_TOTAL.with_label_values(&[crate::metrics::WRITE_DIRECTION_LABEL]).inc();
+                                crate::metrics::bytes_total(crate::metrics::WRITE).inc_by(size as u64);
+                                crate::metrics::packets_total(crate::metrics::WRITE).inc();
                                 Session::process_recv_packet(
                                     &downstream_socket,
                                     &expiration,
@@ -183,7 +181,7 @@ impl Session {
                                         endpoint: &endpoint,
                                         source: recv_addr.into(),
                                         dest: source.clone(),
-                                        timer: crate::metrics::PROCESSING_TIME.with_label_values(&[crate::metrics::WRITE_DIRECTION_LABEL]).start_timer(),
+                                        timer: crate::metrics::processing_time(crate::metrics::WRITE).start_timer(),
                                     }).await
                             }
                         };
@@ -211,20 +209,13 @@ impl Session {
     }
 
     fn active_session_metric(&self) -> prometheus::IntGauge {
-        let labels = self
+        let (asn_number, ip_prefix) = self
             .asn_info
             .as_ref()
-            .map(|asn| [asn.r#as.to_string(), asn.prefix.clone()])
-            .unwrap_or_else(|| [String::new(), String::new()]);
+            .map(|asn| (asn.r#as, &*asn.prefix))
+            .unwrap_or_else(|| (<_>::default(), <_>::default()));
 
-        let mut iter = labels.iter();
-
-        let labels = [
-            iter.next().map(|item| &**item).unwrap(),
-            iter.next().map(|item| &**item).unwrap(),
-        ];
-
-        metrics::ACTIVE_SESSIONS.with_label_values(labels.as_slice())
+        metrics::active_sessions(asn_number as u16, ip_prefix)
     }
 
     /// process_recv_packet processes a packet that is received by this session.
@@ -268,12 +259,12 @@ impl Session {
 
         let handle_error = |error: Error| {
             error.log();
-            crate::metrics::PACKETS_DROPPED
-                .with_label_values(&[crate::metrics::WRITE_DIRECTION_LABEL])
-                .inc();
-            crate::metrics::ERRORS_TOTAL
-                .with_label_values(&[crate::metrics::WRITE_DIRECTION_LABEL])
-                .inc();
+            crate::metrics::packets_dropped(
+                crate::metrics::WRITE,
+                "proxy::Session::process_recv_packet",
+            )
+            .inc();
+            crate::metrics::errors_total(crate::metrics::WRITE).inc();
         };
 
         match result {
@@ -323,20 +314,12 @@ impl Session {
 
         match self.do_send(buf).await {
             Ok(size) => {
-                crate::metrics::PACKETS_TOTAL
-                    .with_label_values(&[crate::metrics::READ_DIRECTION_LABEL])
-                    .inc();
-                crate::metrics::BYTES_TOTAL
-                    .with_label_values(&[crate::metrics::READ_DIRECTION_LABEL])
-                    .inc_by(size as u64);
+                crate::metrics::packets_total(crate::metrics::READ).inc();
+                crate::metrics::bytes_total(crate::metrics::READ).inc_by(size as u64);
             }
             Err(error) => {
-                crate::metrics::PACKETS_DROPPED
-                    .with_label_values(&[crate::metrics::READ_DIRECTION_LABEL])
-                    .inc();
-                crate::metrics::ERRORS_TOTAL
-                    .with_label_values(&[crate::metrics::READ_DIRECTION_LABEL])
-                    .inc();
+                crate::metrics::packets_dropped(crate::metrics::READ, "proxy::Session::send").inc();
+                crate::metrics::errors_total(crate::metrics::READ).inc();
                 tracing::error!(kind=%error.kind(), "{}", error);
                 return;
             }
@@ -357,7 +340,7 @@ impl Session {
 impl Drop for Session {
     fn drop(&mut self) {
         self.active_session_metric().dec();
-        metrics::DURATION_SECS.observe(self.created_at.elapsed().as_secs() as f64);
+        metrics::duration_secs().observe(self.created_at.elapsed().as_secs() as f64);
 
         if let Err(error) = self.shutdown_tx.send(()) {
             tracing::warn!(%error, "Error sending session shutdown signal");

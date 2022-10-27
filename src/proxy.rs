@@ -197,7 +197,7 @@ impl Proxy {
                     );
                     tokio::select! {
                         recv = socket.recv_from(&mut buf) => {
-                            let timer = crate::metrics::PROCESSING_TIME.with_label_values(&[crate::metrics::READ_DIRECTION_LABEL]).start_timer();
+                            let timer = crate::metrics::processing_time(crate::metrics::READ).start_timer();
                             match recv {
                                 Ok((size, source)) => {
                                     let contents = buf[..size].to_vec();
@@ -234,9 +234,7 @@ impl Proxy {
         let endpoints: Vec<_> = clusters.endpoints().collect();
         if endpoints.is_empty() {
             tracing::trace!("dropping packet, no upstream endpoints available");
-            crate::metrics::PACKETS_DROPPED
-                .with_label_values(&[crate::metrics::READ_DIRECTION_LABEL, "NoEndpointsAvailable"])
-                .inc();
+            crate::metrics::packets_dropped(crate::metrics::READ, "NoEndpointsAvailable").inc();
             return;
         }
 
