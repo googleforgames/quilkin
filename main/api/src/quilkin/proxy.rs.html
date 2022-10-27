@@ -537,8 +537,6 @@
 <span id="537">537</span>
 <span id="538">538</span>
 <span id="539">539</span>
-<span id="540">540</span>
-<span id="541">541</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -738,7 +736,7 @@
                     );
                     <span class="macro">tokio::select!</span> {
                         <span class="ident">recv</span> <span class="op">=</span> <span class="ident">socket</span>.<span class="ident">recv_from</span>(<span class="kw-2">&amp;mut</span> <span class="ident">buf</span>) =&gt; {
-                            <span class="kw">let</span> <span class="ident">timer</span> <span class="op">=</span> <span class="ident"><span class="kw">crate</span>::metrics::PROCESSING_TIME</span>.<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident"><span class="kw">crate</span>::metrics::READ_DIRECTION_LABEL</span>]).<span class="ident">start_timer</span>();
+                            <span class="kw">let</span> <span class="ident">timer</span> <span class="op">=</span> <span class="ident"><span class="kw">crate</span>::metrics::processing_time</span>(<span class="ident"><span class="kw">crate</span>::metrics::READ</span>).<span class="ident">start_timer</span>();
                             <span class="kw">match</span> <span class="ident">recv</span> {
                                 <span class="prelude-val">Ok</span>((<span class="ident">size</span>, <span class="ident">source</span>)) =&gt; {
                                     <span class="kw">let</span> <span class="ident">contents</span> <span class="op">=</span> <span class="ident">buf</span>[..<span class="ident">size</span>].<span class="ident">to_vec</span>();
@@ -775,9 +773,7 @@
         <span class="kw">let</span> <span class="ident">endpoints</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">clusters</span>.<span class="ident">endpoints</span>().<span class="ident">collect</span>();
         <span class="kw">if</span> <span class="ident">endpoints</span>.<span class="ident">is_empty</span>() {
             <span class="macro">tracing::trace!</span>(<span class="string">&quot;dropping packet, no upstream endpoints available&quot;</span>);
-            <span class="ident"><span class="kw">crate</span>::metrics::PACKETS_DROPPED</span>
-                .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident"><span class="kw">crate</span>::metrics::READ_DIRECTION_LABEL</span>, <span class="string">&quot;NoEndpointsAvailable&quot;</span>])
-                .<span class="ident">inc</span>();
+            <span class="ident"><span class="kw">crate</span>::metrics::packets_dropped</span>(<span class="ident"><span class="kw">crate</span>::metrics::READ</span>, <span class="string">&quot;NoEndpointsAvailable&quot;</span>).<span class="ident">inc</span>();
             <span class="kw">return</span>;
         }
 

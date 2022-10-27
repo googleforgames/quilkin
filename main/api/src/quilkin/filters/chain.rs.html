@@ -477,10 +477,6 @@
 <span id="477">477</span>
 <span id="478">478</span>
 <span id="479">479</span>
-<span id="480">480</span>
-<span id="481">481</span>
-<span id="482">482</span>
-<span id="483">483</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -741,9 +737,7 @@
                     }
                     <span class="prelude-val">None</span> =&gt; {
                         <span class="macro">tracing::trace!</span>(<span class="op">%</span><span class="ident">id</span>, <span class="string">&quot;read dropping packet&quot;</span>);
-                        <span class="ident"><span class="kw">crate</span>::metrics::PACKETS_DROPPED</span>
-                            .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident"><span class="kw">crate</span>::metrics::READ_DIRECTION_LABEL</span>, <span class="ident">id</span>])
-                            .<span class="ident">inc</span>();
+                        <span class="ident"><span class="kw">crate</span>::metrics::packets_dropped</span>(<span class="ident"><span class="kw">crate</span>::metrics::READ</span>, <span class="ident">id</span>).<span class="ident">inc</span>();
                         <span class="kw">return</span> <span class="prelude-val">None</span>;
                     }
                 }
@@ -766,9 +760,7 @@
                     }
                     <span class="prelude-val">None</span> =&gt; {
                         <span class="macro">tracing::trace!</span>(<span class="op">%</span><span class="ident">id</span>, <span class="string">&quot;write dropping packet&quot;</span>);
-                        <span class="ident"><span class="kw">crate</span>::metrics::PACKETS_DROPPED</span>
-                            .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident"><span class="kw">crate</span>::metrics::WRITE_DIRECTION_LABEL</span>, <span class="ident">id</span>])
-                            .<span class="ident">inc</span>();
+                        <span class="ident"><span class="kw">crate</span>::metrics::packets_dropped</span>(<span class="ident"><span class="kw">crate</span>::metrics::WRITE</span>, <span class="ident">id</span>).<span class="ident">inc</span>();
                         <span class="prelude-val">None</span>
                     }
                 }

@@ -523,23 +523,6 @@
 <span id="523">523</span>
 <span id="524">524</span>
 <span id="525">525</span>
-<span id="526">526</span>
-<span id="527">527</span>
-<span id="528">528</span>
-<span id="529">529</span>
-<span id="530">530</span>
-<span id="531">531</span>
-<span id="532">532</span>
-<span id="533">533</span>
-<span id="534">534</span>
-<span id="535">535</span>
-<span id="536">536</span>
-<span id="537">537</span>
-<span id="538">538</span>
-<span id="539">539</span>
-<span id="540">540</span>
-<span id="541">541</span>
-<span id="542">542</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -678,7 +661,7 @@
 
         <span class="macro">tracing::debug!</span>(<span class="ident">source</span> <span class="op">=</span> <span class="op">%</span><span class="ident">s</span>.<span class="ident">source</span>, <span class="ident">dest</span> <span class="op">=</span> <span class="question-mark">?</span><span class="ident">s</span>.<span class="ident">dest</span>, <span class="string">&quot;Session created&quot;</span>);
 
-        <span class="ident"><span class="self">self</span>::metrics::TOTAL_SESSIONS</span>.<span class="ident">inc</span>();
+        <span class="ident"><span class="self">self</span>::metrics::total_sessions</span>().<span class="ident">inc</span>();
         <span class="ident">s</span>.<span class="ident">active_session_metric</span>().<span class="ident">inc</span>();
         <span class="ident">s</span>.<span class="ident">run</span>(<span class="ident">args</span>.<span class="ident">ttl</span>, <span class="ident">args</span>.<span class="ident">downstream_socket</span>, <span class="ident">shutdown_rx</span>);
         <span class="prelude-val">Ok</span>(<span class="ident">s</span>)
@@ -707,14 +690,12 @@
                     <span class="ident">received</span> <span class="op">=</span> <span class="ident">upstream_socket</span>.<span class="ident">recv_from</span>(<span class="kw-2">&amp;mut</span> <span class="ident">buf</span>) =&gt; {
                         <span class="kw">match</span> <span class="ident">received</span> {
                             <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; {
-                                <span class="ident"><span class="kw">crate</span>::metrics::ERRORS_TOTAL</span>.<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident"><span class="kw">crate</span>::metrics::WRITE_DIRECTION_LABEL</span>]).<span class="ident">inc</span>();
+                                <span class="ident"><span class="kw">crate</span>::metrics::errors_total</span>(<span class="ident"><span class="kw">crate</span>::metrics::WRITE</span>).<span class="ident">inc</span>();
                                 <span class="macro">tracing::error!</span>(<span class="op">%</span><span class="ident">error</span>, <span class="op">%</span><span class="ident">source</span>, <span class="ident">dest</span> <span class="op">=</span> <span class="question-mark">?</span><span class="ident">endpoint</span>, <span class="string">&quot;Error receiving packet&quot;</span>);
                             },
                             <span class="prelude-val">Ok</span>((<span class="ident">size</span>, <span class="ident">recv_addr</span>)) =&gt; {
-                                <span class="ident"><span class="kw">crate</span>::metrics::BYTES_TOTAL</span>
-                                    .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident"><span class="kw">crate</span>::metrics::WRITE_DIRECTION_LABEL</span>])
-                                    .<span class="ident">inc_by</span>(<span class="ident">size</span> <span class="kw">as</span> <span class="ident">u64</span>);
-                                <span class="ident"><span class="kw">crate</span>::metrics::PACKETS_TOTAL</span>.<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident"><span class="kw">crate</span>::metrics::WRITE_DIRECTION_LABEL</span>]).<span class="ident">inc</span>();
+                                <span class="ident"><span class="kw">crate</span>::metrics::bytes_total</span>(<span class="ident"><span class="kw">crate</span>::metrics::WRITE</span>).<span class="ident">inc_by</span>(<span class="ident">size</span> <span class="kw">as</span> <span class="ident">u64</span>);
+                                <span class="ident"><span class="kw">crate</span>::metrics::packets_total</span>(<span class="ident"><span class="kw">crate</span>::metrics::WRITE</span>).<span class="ident">inc</span>();
                                 <span class="ident">Session::process_recv_packet</span>(
                                     <span class="kw-2">&amp;</span><span class="ident">downstream_socket</span>,
                                     <span class="kw-2">&amp;</span><span class="ident">expiration</span>,
@@ -725,7 +706,7 @@
                                         <span class="ident">endpoint</span>: <span class="kw-2">&amp;</span><span class="ident">endpoint</span>,
                                         <span class="ident">source</span>: <span class="ident">recv_addr</span>.<span class="ident">into</span>(),
                                         <span class="ident">dest</span>: <span class="ident">source</span>.<span class="ident">clone</span>(),
-                                        <span class="ident">timer</span>: <span class="ident"><span class="kw">crate</span>::metrics::PROCESSING_TIME</span>.<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident"><span class="kw">crate</span>::metrics::WRITE_DIRECTION_LABEL</span>]).<span class="ident">start_timer</span>(),
+                                        <span class="ident">timer</span>: <span class="ident"><span class="kw">crate</span>::metrics::processing_time</span>(<span class="ident"><span class="kw">crate</span>::metrics::WRITE</span>).<span class="ident">start_timer</span>(),
                                     }).<span class="kw">await</span>
                             }
                         };
@@ -753,20 +734,13 @@
     }
 
     <span class="kw">fn</span> <span class="ident">active_session_metric</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">prometheus::IntGauge</span> {
-        <span class="kw">let</span> <span class="ident">labels</span> <span class="op">=</span> <span class="self">self</span>
+        <span class="kw">let</span> (<span class="ident">asn_number</span>, <span class="ident">ip_prefix</span>) <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">asn_info</span>
             .<span class="ident">as_ref</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">asn</span><span class="op">|</span> [<span class="ident">asn</span>.<span class="ident">r#as</span>.<span class="ident">to_string</span>(), <span class="ident">asn</span>.<span class="ident">prefix</span>.<span class="ident">clone</span>()])
-            .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> [<span class="ident">String::new</span>(), <span class="ident">String::new</span>()]);
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">asn</span><span class="op">|</span> (<span class="ident">asn</span>.<span class="ident">r#as</span>, <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">asn</span>.<span class="ident">prefix</span>))
+            .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> (<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(), <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>()));
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">iter</span> <span class="op">=</span> <span class="ident">labels</span>.<span class="ident">iter</span>();
-
-        <span class="kw">let</span> <span class="ident">labels</span> <span class="op">=</span> [
-            <span class="ident">iter</span>.<span class="ident">next</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">item</span><span class="op">|</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">item</span>).<span class="ident">unwrap</span>(),
-            <span class="ident">iter</span>.<span class="ident">next</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">item</span><span class="op">|</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">item</span>).<span class="ident">unwrap</span>(),
-        ];
-
-        <span class="ident">metrics::ACTIVE_SESSIONS</span>.<span class="ident">with_label_values</span>(<span class="ident">labels</span>.<span class="ident">as_slice</span>())
+        <span class="ident">metrics::active_sessions</span>(<span class="ident">asn_number</span> <span class="kw">as</span> <span class="ident">u16</span>, <span class="ident">ip_prefix</span>)
     }
 
     <span class="doccomment">/// process_recv_packet processes a packet that is received by this session.</span>
@@ -810,12 +784,12 @@
 
         <span class="kw">let</span> <span class="ident">handle_error</span> <span class="op">=</span> <span class="op">|</span><span class="ident">error</span>: <span class="ident">Error</span><span class="op">|</span> {
             <span class="ident">error</span>.<span class="ident">log</span>();
-            <span class="ident"><span class="kw">crate</span>::metrics::PACKETS_DROPPED</span>
-                .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident"><span class="kw">crate</span>::metrics::WRITE_DIRECTION_LABEL</span>])
-                .<span class="ident">inc</span>();
-            <span class="ident"><span class="kw">crate</span>::metrics::ERRORS_TOTAL</span>
-                .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident"><span class="kw">crate</span>::metrics::WRITE_DIRECTION_LABEL</span>])
-                .<span class="ident">inc</span>();
+            <span class="ident"><span class="kw">crate</span>::metrics::packets_dropped</span>(
+                <span class="ident"><span class="kw">crate</span>::metrics::WRITE</span>,
+                <span class="string">&quot;proxy::Session::process_recv_packet&quot;</span>,
+            )
+            .<span class="ident">inc</span>();
+            <span class="ident"><span class="kw">crate</span>::metrics::errors_total</span>(<span class="ident"><span class="kw">crate</span>::metrics::WRITE</span>).<span class="ident">inc</span>();
         };
 
         <span class="kw">match</span> <span class="ident">result</span> {
@@ -865,20 +839,12 @@
 
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">do_send</span>(<span class="ident">buf</span>).<span class="kw">await</span> {
             <span class="prelude-val">Ok</span>(<span class="ident">size</span>) =&gt; {
-                <span class="ident"><span class="kw">crate</span>::metrics::PACKETS_TOTAL</span>
-                    .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident"><span class="kw">crate</span>::metrics::READ_DIRECTION_LABEL</span>])
-                    .<span class="ident">inc</span>();
-                <span class="ident"><span class="kw">crate</span>::metrics::BYTES_TOTAL</span>
-                    .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident"><span class="kw">crate</span>::metrics::READ_DIRECTION_LABEL</span>])
-                    .<span class="ident">inc_by</span>(<span class="ident">size</span> <span class="kw">as</span> <span class="ident">u64</span>);
+                <span class="ident"><span class="kw">crate</span>::metrics::packets_total</span>(<span class="ident"><span class="kw">crate</span>::metrics::READ</span>).<span class="ident">inc</span>();
+                <span class="ident"><span class="kw">crate</span>::metrics::bytes_total</span>(<span class="ident"><span class="kw">crate</span>::metrics::READ</span>).<span class="ident">inc_by</span>(<span class="ident">size</span> <span class="kw">as</span> <span class="ident">u64</span>);
             }
             <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; {
-                <span class="ident"><span class="kw">crate</span>::metrics::PACKETS_DROPPED</span>
-                    .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident"><span class="kw">crate</span>::metrics::READ_DIRECTION_LABEL</span>])
-                    .<span class="ident">inc</span>();
-                <span class="ident"><span class="kw">crate</span>::metrics::ERRORS_TOTAL</span>
-                    .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident"><span class="kw">crate</span>::metrics::READ_DIRECTION_LABEL</span>])
-                    .<span class="ident">inc</span>();
+                <span class="ident"><span class="kw">crate</span>::metrics::packets_dropped</span>(<span class="ident"><span class="kw">crate</span>::metrics::READ</span>, <span class="string">&quot;proxy::Session::send&quot;</span>).<span class="ident">inc</span>();
+                <span class="ident"><span class="kw">crate</span>::metrics::errors_total</span>(<span class="ident"><span class="kw">crate</span>::metrics::READ</span>).<span class="ident">inc</span>();
                 <span class="macro">tracing::error!</span>(<span class="ident">kind</span><span class="op">=</span><span class="op">%</span><span class="ident">error</span>.<span class="ident">kind</span>(), <span class="string">&quot;{}&quot;</span>, <span class="ident">error</span>);
                 <span class="kw">return</span>;
             }
@@ -899,7 +865,7 @@
 <span class="kw">impl</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">Session</span> {
     <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) {
         <span class="self">self</span>.<span class="ident">active_session_metric</span>().<span class="ident">dec</span>();
-        <span class="ident">metrics::DURATION_SECS</span>.<span class="ident">observe</span>(<span class="self">self</span>.<span class="ident">created_at</span>.<span class="ident">elapsed</span>().<span class="ident">as_secs</span>() <span class="kw">as</span> <span class="ident">f64</span>);
+        <span class="ident">metrics::duration_secs</span>().<span class="ident">observe</span>(<span class="self">self</span>.<span class="ident">created_at</span>.<span class="ident">elapsed</span>().<span class="ident">as_secs</span>() <span class="kw">as</span> <span class="ident">f64</span>);
 
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">error</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">shutdown_tx</span>.<span class="ident">send</span>(()) {
             <span class="macro">tracing::warn!</span>(<span class="op">%</span><span class="ident">error</span>, <span class="string">&quot;Error sending session shutdown signal&quot;</span>);

@@ -166,6 +166,47 @@
 <span id="166">166</span>
 <span id="167">167</span>
 <span id="168">168</span>
+<span id="169">169</span>
+<span id="170">170</span>
+<span id="171">171</span>
+<span id="172">172</span>
+<span id="173">173</span>
+<span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
+<span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
+<span id="206">206</span>
+<span id="207">207</span>
+<span id="208">208</span>
+<span id="209">209</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -184,7 +225,8 @@
 
 <span class="kw">use</span> <span class="ident">once_cell::sync::Lazy</span>;
 <span class="kw">use</span> <span class="ident">prometheus</span>::{
-    <span class="ident">core::Collector</span>, <span class="ident">HistogramOpts</span>, <span class="ident">HistogramVec</span>, <span class="ident">IntCounterVec</span>, <span class="ident">Opts</span>, <span class="ident">Registry</span>, <span class="ident">DEFAULT_BUCKETS</span>,
+    <span class="ident">core::Collector</span>, <span class="ident">Histogram</span>, <span class="ident">HistogramOpts</span>, <span class="ident">HistogramVec</span>, <span class="ident">IntCounter</span>, <span class="ident">IntCounterVec</span>, <span class="ident">Opts</span>,
+    <span class="ident">Registry</span>, <span class="ident">DEFAULT_BUCKETS</span>,
 };
 
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">prometheus::Result</span>;
@@ -196,6 +238,9 @@
 <span class="doccomment">/// &quot;event&quot; is used as a label for Metrics that can apply to both Filter</span>
 <span class="doccomment">/// `read` and `write` executions.</span>
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">DIRECTION_LABEL</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;event&quot;</span>;
+
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const</span> <span class="ident">READ</span>: <span class="ident">Direction</span> <span class="op">=</span> <span class="ident">Direction::Read</span>;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const</span> <span class="ident">WRITE</span>: <span class="ident">Direction</span> <span class="op">=</span> <span class="ident">Direction::Write</span>;
 
 <span class="doccomment">/// Label value for [DIRECTION_LABEL] for `read` events</span>
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">READ_DIRECTION_LABEL</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;read&quot;</span>;
@@ -223,66 +268,103 @@
 <span class="doccomment">/// care about granularity past 1 second.</span>
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const</span> <span class="ident">BUCKET_COUNT</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">13</span>;
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">static</span> <span class="ident">PROCESSING_TIME</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">HistogramVec</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy::new</span>(<span class="op">|</span><span class="op">|</span> {
-    <span class="macro">prometheus::register_histogram_vec_with_registry!</span> {
-        <span class="macro">prometheus::histogram_opts!</span> {
-            <span class="string">&quot;packets_processing_duration_seconds&quot;</span>,
-            <span class="string">&quot;Total processing time for a packet&quot;</span>,
-            <span class="ident">prometheus::exponential_buckets</span>(<span class="ident">BUCKET_START</span>, <span class="ident">BUCKET_FACTOR</span>, <span class="ident">BUCKET_COUNT</span>).<span class="ident">unwrap</span>(),
-        },
-        <span class="kw-2">&amp;</span>[<span class="ident">DIRECTION_LABEL</span>],
-        <span class="ident">registry</span>(),
-    }
-    .<span class="ident">unwrap</span>()
-});
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">Debug</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Direction</span> {
+    <span class="ident">Read</span>,
+    <span class="ident">Write</span>,
+}
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">static</span> <span class="ident">BYTES_TOTAL</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">IntCounterVec</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy::new</span>(<span class="op">|</span><span class="op">|</span> {
-    <span class="macro">prometheus::register_int_counter_vec_with_registry!</span> {
-        <span class="macro">prometheus::opts!</span> {
-            <span class="string">&quot;bytes_total&quot;</span>,
-            <span class="string">&quot;total number of bytes&quot;</span>,
-        },
-        <span class="kw-2">&amp;</span>[<span class="ident">DIRECTION_LABEL</span>],
-        <span class="ident">registry</span>(),
-    }
-    .<span class="ident">unwrap</span>()
-});
+<span class="kw">impl</span> <span class="ident">Direction</span> {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const</span> <span class="ident">LABEL</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> <span class="op">=</span> <span class="ident">DIRECTION_LABEL</span>;
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">static</span> <span class="ident">ERRORS_TOTAL</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">IntCounterVec</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy::new</span>(<span class="op">|</span><span class="op">|</span> {
-    <span class="macro">prometheus::register_int_counter_vec_with_registry!</span> {
-        <span class="macro">prometheus::opts!</span> {
-            <span class="string">&quot;errors_total&quot;</span>,
-            <span class="string">&quot;total number of errors sending packets&quot;</span>,
-        },
-        <span class="kw-2">&amp;</span>[<span class="ident">DIRECTION_LABEL</span>],
-        <span class="ident">registry</span>(),
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">label</span>(<span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
+        <span class="kw">match</span> <span class="self">self</span> {
+            <span class="ident"><span class="self">Self</span>::Read</span> =&gt; <span class="ident">READ_DIRECTION_LABEL</span>,
+            <span class="ident"><span class="self">Self</span>::Write</span> =&gt; <span class="ident">WRITE_DIRECTION_LABEL</span>,
+        }
     }
-    .<span class="ident">unwrap</span>()
-});
+}
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">static</span> <span class="ident">PACKETS_TOTAL</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">IntCounterVec</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy::new</span>(<span class="op">|</span><span class="op">|</span> {
-    <span class="macro">prometheus::register_int_counter_vec_with_registry!</span> {
-        <span class="macro">prometheus::opts!</span> {
-            <span class="string">&quot;packets_total&quot;</span>,
-            <span class="string">&quot;Total number of packets&quot;</span>,
-        },
-        <span class="kw-2">&amp;</span>[<span class="ident">DIRECTION_LABEL</span>],
-        <span class="ident">registry</span>(),
-    }
-    .<span class="ident">unwrap</span>()
-});
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">processing_time</span>(<span class="ident">direction</span>: <span class="ident">Direction</span>) -&gt; <span class="ident">Histogram</span> {
+    <span class="kw">static</span> <span class="ident">PROCESSING_TIME</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">HistogramVec</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy::new</span>(<span class="op">|</span><span class="op">|</span> {
+        <span class="macro">prometheus::register_histogram_vec_with_registry!</span> {
+            <span class="macro">prometheus::histogram_opts!</span> {
+                <span class="string">&quot;packets_processing_duration_seconds&quot;</span>,
+                <span class="string">&quot;Total processing time for a packet&quot;</span>,
+                <span class="ident">prometheus::exponential_buckets</span>(<span class="ident">BUCKET_START</span>, <span class="ident">BUCKET_FACTOR</span>, <span class="ident">BUCKET_COUNT</span>).<span class="ident">unwrap</span>(),
+            },
+            <span class="kw-2">&amp;</span>[<span class="ident">Direction::LABEL</span>],
+            <span class="ident">registry</span>(),
+        }
+        .<span class="ident">unwrap</span>()
+    });
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">static</span> <span class="ident">PACKETS_DROPPED</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">IntCounterVec</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy::new</span>(<span class="op">|</span><span class="op">|</span> {
-    <span class="macro">prometheus::register_int_counter_vec_with_registry!</span> {
-        <span class="macro">prometheus::opts!</span> {
-            <span class="string">&quot;packets_dropped&quot;</span>,
-            <span class="string">&quot;Total number of dropped packets&quot;</span>,
-        },
-        <span class="kw-2">&amp;</span>[<span class="ident">DIRECTION_LABEL</span>, <span class="string">&quot;reason&quot;</span>],
-        <span class="ident">registry</span>(),
-    }
-    .<span class="ident">unwrap</span>()
-});
+    <span class="ident">PROCESSING_TIME</span>.<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident">direction</span>.<span class="ident">label</span>()])
+}
+
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">bytes_total</span>(<span class="ident">direction</span>: <span class="ident">Direction</span>) -&gt; <span class="ident">IntCounter</span> {
+    <span class="kw">static</span> <span class="ident">BYTES_TOTAL</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">IntCounterVec</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy::new</span>(<span class="op">|</span><span class="op">|</span> {
+        <span class="macro">prometheus::register_int_counter_vec_with_registry!</span> {
+            <span class="macro">prometheus::opts!</span> {
+                <span class="string">&quot;bytes_total&quot;</span>,
+                <span class="string">&quot;total number of bytes&quot;</span>,
+            },
+            <span class="kw-2">&amp;</span>[<span class="ident">Direction::LABEL</span>],
+            <span class="ident">registry</span>(),
+        }
+        .<span class="ident">unwrap</span>()
+    });
+
+    <span class="ident">BYTES_TOTAL</span>.<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident">direction</span>.<span class="ident">label</span>()])
+}
+
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">errors_total</span>(<span class="ident">direction</span>: <span class="ident">Direction</span>) -&gt; <span class="ident">IntCounter</span> {
+    <span class="kw">static</span> <span class="ident">ERRORS_TOTAL</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">IntCounterVec</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy::new</span>(<span class="op">|</span><span class="op">|</span> {
+        <span class="macro">prometheus::register_int_counter_vec_with_registry!</span> {
+            <span class="macro">prometheus::opts!</span> {
+                <span class="string">&quot;errors_total&quot;</span>,
+                <span class="string">&quot;total number of errors sending packets&quot;</span>,
+            },
+            <span class="kw-2">&amp;</span>[<span class="ident">Direction::LABEL</span>],
+            <span class="ident">registry</span>(),
+        }
+        .<span class="ident">unwrap</span>()
+    });
+
+    <span class="ident">ERRORS_TOTAL</span>.<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident">direction</span>.<span class="ident">label</span>()])
+}
+
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">packets_total</span>(<span class="ident">direction</span>: <span class="ident">Direction</span>) -&gt; <span class="ident">IntCounter</span> {
+    <span class="kw">static</span> <span class="ident">PACKETS_TOTAL</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">IntCounterVec</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy::new</span>(<span class="op">|</span><span class="op">|</span> {
+        <span class="macro">prometheus::register_int_counter_vec_with_registry!</span> {
+            <span class="macro">prometheus::opts!</span> {
+                <span class="string">&quot;packets_total&quot;</span>,
+                <span class="string">&quot;Total number of packets&quot;</span>,
+            },
+            <span class="kw-2">&amp;</span>[<span class="ident">Direction::LABEL</span>],
+            <span class="ident">registry</span>(),
+        }
+        .<span class="ident">unwrap</span>()
+    });
+
+    <span class="ident">PACKETS_TOTAL</span>.<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident">direction</span>.<span class="ident">label</span>()])
+}
+
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">packets_dropped</span>(<span class="ident">direction</span>: <span class="ident">Direction</span>, <span class="ident">reason</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="ident">IntCounter</span> {
+    <span class="kw">static</span> <span class="ident">PACKETS_DROPPED</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">IntCounterVec</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy::new</span>(<span class="op">|</span><span class="op">|</span> {
+        <span class="macro">prometheus::register_int_counter_vec_with_registry!</span> {
+            <span class="macro">prometheus::opts!</span> {
+                <span class="string">&quot;packets_dropped&quot;</span>,
+                <span class="string">&quot;Total number of dropped packets&quot;</span>,
+            },
+            <span class="kw-2">&amp;</span>[<span class="ident">Direction::LABEL</span>, <span class="string">&quot;reason&quot;</span>],
+            <span class="ident">registry</span>(),
+        }
+        .<span class="ident">unwrap</span>()
+    });
+
+    <span class="ident">PACKETS_DROPPED</span>.<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident">direction</span>.<span class="ident">label</span>(), <span class="ident">reason</span>])
+}
 
 <span class="doccomment">/// Create a generic metrics options.</span>
 <span class="doccomment">/// Use [filter_opts] instead if the intended target is a filter.</span>
