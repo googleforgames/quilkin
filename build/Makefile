@@ -143,8 +143,7 @@ endif
 
 # Build binary for x86_64-apple-darwin
 # Use BUILD_LOCAL=1 to build through local cargo rather than through the build container.
-# Warning: May fail on arm64 hosts.
-build-macos-binary: ensure-multi-arch
+build-macos-binary:
 ifdef BUILD_LOCAL
 	cargo $(cargo_build_x86_64_apple)
 else
@@ -152,7 +151,7 @@ else
 		-v $(CARGO_HOME)/registry:/root/.cargo/registry \
 		-e "CARGO_TARGET_DIR=$(CARGO_TARGET_DIR)" \
 		-e "CC=o64-clang" -e "CXX=o64-clang++" \
-		joseluisq/rust-linux-darwin-builder:$(rust_toolchain) \
+		us-docker.pkg.dev/quilkin/ci/rust-linux-darwin-builder:$(rust_toolchain) \
 			sh -c "rustup target add x86_64-apple-darwin && cargo $(cargo_build_x86_64_apple)"
 endif
 
