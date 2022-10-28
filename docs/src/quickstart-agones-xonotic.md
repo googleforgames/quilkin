@@ -133,4 +133,4 @@ kubectl delete -f https://raw.githubusercontent.com/googleforgames/quilkin/{{GIT
 ## What's Next?
 
 * Have a look at the [examples](https://github.com/googleforgames/quilkin/blob/{{GITHUB_REF_NAME}}/examples) folder for configuration and usage examples.
-* Explore the [proxy configuration reference](./proxy-configuration.md) for other configuration options. 
+* Explore the [usage documentation](./using.md) for other configuration options. 

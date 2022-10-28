@@ -82,7 +82,7 @@ The total duration of time in seconds that it took to process a packet.
 [session-metrics]: ./session.md#metrics
 [filters-doc]: ./filters.md
 [endpoint]: #upstream-endpoint
-[proxy-configuration]: ./proxy-configuration.md
+[proxy-configuration]: ./file-configuration.md
 [xds-endpoint-metadata]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint_components.proto#envoy-v3-api-field-config-endpoint-v3-lbendpoint-metadata
 [dynamic-configuration-doc]: ./xds.md
 [TokenRouter]: ./filters/token_router.md

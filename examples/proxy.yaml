@@ -15,10 +15,13 @@
 #
 
 #
-# Example configuration for a Quilkin Proxy that sits in front of dedicated game servers
+# Example configuration for a Quilkin Proxy with static Endpoints
 #
 
 version: v1alpha1
+admin: # configuration options for administration
+  address: "[::]:9091" # the address and port to bind the admin API to.
+maxmind_db: null # Remote URL or local file path to retrieve a Maxmind database (requires licence).
 id: my-proxy # An identifier for the proxy instance.
 port: 7001 # the port to receive traffic to locally
 clusters: # grouping of clusters

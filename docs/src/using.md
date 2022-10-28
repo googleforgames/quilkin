@@ -35,6 +35,17 @@ UDP proxy.  To see a basic usage of the command-line interface run through the
 [netcat with Quilkin quickstart](./quickstart-netcat.md). For more advanced
 usage, checkout the [`quilkin::Cli`] documentation.
 
+## File Based Configuration
+
+For use cases that utilise functionality such as:
+ 
+* A static set of Filters 
+* Multiple static Endpoints
+* Static metadata on Endpoints
+
+Quilkin also provides a yaml based config file as well.
+See the [File Configuration](./file-configuration.md) documentation for details.
+
 ## Logging
 By default Quilkin will log `INFO` level events, you can change this by setting
 the `RUST_LOG` environment variable. See [`log` documentation][log-docs] for
