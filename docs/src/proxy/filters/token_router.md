@@ -6,12 +6,12 @@ This Filter provides this functionality by comparing a byte array token found in
 [Filter Dynamic Metadata][filter-dynamic-metadata] from a previous Filter, and comparing it to
 [Endpoint's tokens][endpoint-tokens], and sending packets to those Endpoints only if there is a match.
 
-#### Filter name
+## Filter name
 ```text
 quilkin.filters.token_router.v1alpha1.TokenRouter
 ```
 
-### Configuration Examples
+## Configuration Examples
 ```rust
 # let yaml = "
 version: v1alpha1
@@ -40,15 +40,15 @@ clusters:
 # quilkin::Proxy::try_from(config).unwrap();
 ```
 
-View the [CaptureBytes](./capture.md) filter documentation for more details.
+View the [CaptureBytes](capture.md) filter documentation for more details.
 
-### Configuration Options ([Rust Doc](../../api/quilkin/filters/token_router/struct.Config.html))
+## Configuration Options ([Rust Doc](../../../api/quilkin/filters/token_router/struct.Config.html))
 
 ```yaml
-{{#include ../../../target/quilkin.filters.token_router.v1alpha1.yaml}}
+{{#include ../../../../target/quilkin.filters.token_router.v1alpha1.yaml}}
 ```
 
-### Metrics
+## Metrics
 
 * `quilkin_filter_TokenRouter_packets_dropped_total`
   A counter of the total number of packets that have been dropped. This is also provided with a `Reason` label, as there
@@ -58,14 +58,14 @@ View the [CaptureBytes](./capture.md) filter documentation for more details.
     * `InvalidToken` - The data found for the token in the Filter dynamic metadata is not of the correct data type
        (Vec<u8>)
 
-### Sample Applications
+## Sample Applications
 
-#### Packet Authentication
+### Packet Authentication
 
 In combination with several other filters, the `TokenRouter` can be utilised as an authentication and access control
 mechanism for all incoming packets.
 
-Capturing the authentication token from an incoming packet can be implemented via the [CaptureByte](./capture.md)
+Capturing the authentication token from an incoming packet can be implemented via the [CaptureByte](capture.md)
 filter, with an example outlined below, or any other filter that populates the configured dynamic metadata key for the
 authentication token to reside.
 
@@ -105,8 +105,8 @@ clusters:
 # quilkin::Proxy::try_from(config).unwrap();
 ```
 
-On the game client side the [ConcatenateBytes](./concatenate_bytes.md) filter could also be used to add authentication
+On the game client side the [ConcatenateBytes](concatenate_bytes.md) filter could also be used to add authentication
 tokens to outgoing packets.
 
-[filter-dynamic-metadata]: ../filters.md#filter-dynamic-metadata
-[endpoint-tokens]: ../proxy.md#upstream-endpoint
+[filter-dynamic-metadata]: ../../filters.md#filter-dynamic-metadata
+[endpoint-tokens]: ../concepts.md#endpoints

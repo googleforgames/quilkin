@@ -4,12 +4,12 @@ The `Match` filter's job is to provide a mechanism to change behaviour based
 on dynamic metadata. This filter behaves similarly to the `match` expression
 in Rust or `switch` statements in other languages.
 
-#### Filter name
+## Filter name
 ```text
 quilkin.filters.match.v1alpha1.Match
 ```
 
-### Configuration Examples
+## Configuration Examples
 <!-- ANCHOR: example -->
 ```rust
 # let yaml = "
@@ -43,15 +43,15 @@ filters:
 ```
 <!--  ANCHOR_END: example -->
 
-### Configuration Options ([Rust Doc](../../api/quilkin/filters/match/struct.Config.html))
+## Configuration Options ([Rust Doc](../../../api/quilkin/filters/match/struct.Config.html))
 
 ```yaml
-{{#include ../../../target/quilkin.filters.match.v1alpha1.yaml}}
+{{#include ../../../../target/quilkin.filters.match.v1alpha1.yaml}}
 ```
 
-View the [Match](../../api/quilkin/filters/match/struct.Config.html) filter documentation for more details.
+View the [Match](../../../api/quilkin/filters/match/struct.Config.html) filter documentation for more details.
 
-### Metrics
+## Metrics
 
 * `quilkin_filter_Match_packets_matched_total`
   A counter of the total number of packets where the dynamic metadata matches a branch value.

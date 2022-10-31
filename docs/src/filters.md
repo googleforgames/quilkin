@@ -1,8 +1,8 @@
-# Filters
+# Proxy Filters
 
 In most cases, we would like Quilkin to do some preprocessing of received packets before sending them off to their destination. Because this stage is entirely specific to the use case at hand and differs between Quilkin deployments, we must have a say over what tweaks to perform - this is where filters come in.
 
-### Filters and Filter chain
+## Filters and Filter chain
 A filter represents a step in the tweaking/decision-making process of how we would like to process our packets. For example, at some step, we might choose to append some metadata to every packet we receive before forwarding it while at a later step, choose not to forward packets that don't meet some criteria.
 
 Quilkin lets us specify any number of filters and connect them in a sequence to form a packet processing pipeline similar to a <a href="https://en.wikipedia.org/wiki/Pipeline_(Unix)" target="_blank">Unix pipeline</a> - we call this pipeline a `Filter chain`. The combination of filters and filter chain allows us to add new functionality to fit every scenario without changing Quilkin's core.
@@ -14,7 +14,7 @@ As an example, say we would like to perform the following steps in our processin
 * Do not forward (drop) the packet if its compressed length is over 512 bytes.
 
 We would create a filter corresponding to each step either by leveraging any [existing filters](#built-in-filters)
-that do what we want or [writing one ourselves](./filters/writing_custom_filters.md) and connect them to form the
+that do what we want or [writing one ourselves](proxy/filters/writing_custom_filters.md) and connect them to form the
 following filter chain:
 
 ```bash
@@ -32,19 +32,7 @@ There are a few things we note here:
 
 * Exactly one filter chain is specified and used to process all packets that flow through Quilkin.
 
-**Metrics**
-
-* `quilkin_filter_read_duration_seconds` The duration it took for a `filter`'s
-  `read` implementation to execute.
-  * Labels
-    * `filter` The name of the filter being executed.
-
-* `quilkin_filter_write_duration_seconds` The duration it took for a `filter`'s
-  `write` implementation to execute.
-  * Labels
-    * `filter` The name of the filter being executed.
-
-### Configuration Examples ###
+## Configuration Examples ###
 
 ```rust
 # // Wrap this example within an async main function since the
@@ -79,7 +67,7 @@ The above example creates a filter chain comprising a [Debug] filter followed by
 
 > The sequence determines the filter chain order so its ordering matters - the chain starts with the filter corresponding the first filter config and ends with the filter corresponding the last filter config in the sequence.
 
-### Filter Dynamic Metadata
+## Filter Dynamic Metadata
 
 A filter within the filter chain can share data within another filter further along in the filter chain by propagating the desired data alongside the packet being processed.
 This enables sharing dynamic information at runtime, e.g information about the current packet that might be useful to other filters that process that packet.
@@ -92,7 +80,7 @@ As an example, the built-in [CaptureBytes] filter is one such filter that popula
 On the other hand, the built-in [TokenRouter] filter selects what endpoint to route a packet by consulting the packet's dynamic metadata for a routing token.
 Consequently, we can build a filter chain with a [CaptureBytes] filter preceeding a [TokenRouter] filter, both configured to write and read the same key in the dynamic metadata entry. The effect would be that packets are routed to upstream endpoints based on token information extracted from their contents.
 
-#### Well Known Dynamic Metadata
+### Well Known Dynamic Metadata
 
 The following metadata are currently used by Quilkin core and built-in filters.
 
@@ -100,25 +88,25 @@ The following metadata are currently used by Quilkin core and built-in filters.
 |------|------|-------------|
 | `quilkin.dev/captured` | `Bytes` | The default key under which the [Capture] filter puts the byte slices it extracts from each packet. |
 
-### Built-in filters <a name="built-in-filters"></a>
+## Built-in filters <a name="built-in-filters"></a>
 Quilkin includes several filters out of the box.
 
 | Filter                                             | Description                                                                                                 |
 |----------------------------------------------------|-------------------------------------------------------------------------------------------------------------|
 | [Capture]                                          | Capture specific bytes from a packet and store them in [filter dynamic metadata](#filter-dynamic-metadata). |
-| [Compress](./filters/compress.md)                  | Compress and decompress packets data.                                                                       |
-| [ConcatenateBytes](./filters/concatenate_bytes.md) | Add authentication tokens to packets.                                                                       |
+| [Compress](proxy/filters/compress.md)                  | Compress and decompress packets data.                                                                       |
+| [ConcatenateBytes](proxy/filters/concatenate_bytes.md) | Add authentication tokens to packets.                                                                       |
 | [Debug]                                            | Logs every packet.                                                                                          |
-| [Drop](./filters/drop.md)                          | Drop all packets                                                                                            |
-| [Firewall](./filters/firewall.md)                  | Allowing/blocking traffic by IP and port.                                                                   |
-| [LoadBalancer](./filters/load_balancer.md)         | Distributes downstream packets among upstream endpoints.                                                    |
+| [Drop](proxy/filters/drop.md)                          | Drop all packets                                                                                            |
+| [Firewall](proxy/filters/firewall.md)                  | Allowing/blocking traffic by IP and port.                                                                   |
+| [LoadBalancer](proxy/filters/load_balancer.md)         | Distributes downstream packets among upstream endpoints.                                                    |
 | [LocalRateLimit]                                   | Limit the frequency of packets.                                                                             |
-| [Match](./filters/match.md)                        | Change Filter behaviour based on dynamic metadata                                                           |
-| [Pass](./filters/pass.md)                          | Allow all packets through                                                                                   |
-| [Timestamp](./filters/timestamp.md)                | Accepts a UNIX timestamp from metadata and observes the duration between that timestamp and now.            |
+| [Match](proxy/filters/match.md)                        | Change Filter behaviour based on dynamic metadata                                                           |
+| [Pass](proxy/filters/pass.md)                          | Allow all packets through                                                                                   |
+| [Timestamp](proxy/filters/timestamp.md)                | Accepts a UNIX timestamp from metadata and observes the duration between that timestamp and now.            |
 | [TokenRouter]                                      | Send packets to endpoints based on metadata.                                                                |
 
-### FilterConfig <a name="filter-config"></a>
+## FilterConfig <a name="filter-config"></a>
 Represents configuration for a filter instance.
 
 ```yaml
@@ -136,11 +124,11 @@ properties:
       This is passed as an object value since it is specific to the filter's type and is validated by the filter
       implementation. Please consult the documentation for the particular filter for its schema.
 
-required: [ 'name', 'config' ]
+required: [ 'name' ]
 ```
 
-[Capture]: ./filters/capture.md
-[TokenRouter]: ./filters/token_router.md
-[Debug]: ./filters/debug.md
-[LocalRateLimit]: ./filters/local_rate_limit.md
+[Capture]: proxy/filters/capture.md
+[TokenRouter]: proxy/filters/token_router.md
+[Debug]: proxy/filters/debug.md
+[LocalRateLimit]: proxy/filters/local_rate_limit.md
 [`quilkin::metadata::Value`]: ../api/quilkin/metadata/enum.Value.html
