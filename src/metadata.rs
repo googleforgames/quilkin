@@ -14,17 +14,21 @@
  * limitations under the License.
  */
 
-use std::{collections::HashMap, convert::TryFrom, sync::Arc};
-
-use crate::xds::config::core::v3::Metadata as ProtoMetadata;
+pub(crate) mod symbol;
 
 #[doc(hidden)]
 pub mod build {
     include!(concat!(env!("OUT_DIR"), "/built.rs"));
 }
 
+use std::{collections::HashMap, convert::TryFrom};
+
+use crate::xds::config::core::v3::Metadata as ProtoMetadata;
+
+pub use symbol::{Key, Reference, Symbol};
+
 /// Shared state between [`Filter`][crate::filters::Filter]s during processing for a single packet.
-pub type DynamicMetadata = HashMap<Arc<String>, Value>;
+pub type DynamicMetadata = HashMap<Key, Value>;
 
 pub const KEY: &str = "quilkin.dev";
 

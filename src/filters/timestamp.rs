@@ -81,7 +81,7 @@ impl Timestamp {
             None => {
                 tracing::warn!(
                     timestamp = value,
-                    metadata_key = &*self.config.metadata_key,
+                    metadata_key = %self.config.metadata_key,
                     "invalid unix timestamp"
                 );
                 return;
@@ -97,7 +97,7 @@ impl Timestamp {
     }
 
     fn metric(&self, direction_label: &'static str) -> prometheus::Histogram {
-        METRIC.with_label_values(&[&*self.config.metadata_key, direction_label])
+        METRIC.with_label_values(&[&self.config.metadata_key.to_string(), direction_label])
     }
 }
 
@@ -146,13 +146,13 @@ impl StaticFilter for Timestamp {
 pub struct Config {
     /// The metadata key to read the UTC UNIX Timestamp from.
     #[serde(rename = "metadataKey")]
-    pub metadata_key: String,
+    pub metadata_key: crate::metadata::Key,
 }
 
 impl Config {
-    pub fn new(metadata_key: impl Into<String>) -> Self {
+    pub fn new(metadata_key: impl AsRef<str>) -> Self {
         Self {
-            metadata_key: metadata_key.into(),
+            metadata_key: metadata_key.as_ref().into(),
         }
     }
 }
@@ -160,7 +160,7 @@ impl Config {
 impl From<Config> for proto::Timestamp {
     fn from(config: Config) -> Self {
         Self {
-            metadata_key: Some(config.metadata_key),
+            metadata_key: Some(config.metadata_key.to_string()),
         }
     }
 }
@@ -169,11 +169,9 @@ impl TryFrom<proto::Timestamp> for Config {
     type Error = ConvertProtoConfigError;
 
     fn try_from(p: proto::Timestamp) -> Result<Self, Self::Error> {
-        Ok(Self {
-            metadata_key: p
-                .metadata_key
-                .ok_or_else(|| ConvertProtoConfigError::missing_field("metadata_key"))?,
-        })
+        p.metadata_key
+            .map(Self::new)
+            .ok_or_else(|| ConvertProtoConfigError::missing_field("metadata_key"))
     }
 }
 
@@ -186,14 +184,14 @@ mod tests {
     #[test]
     fn basic() {
         const TIMESTAMP_KEY: &str = "BASIC";
-        let filter = Timestamp::from_config(Config::new(TIMESTAMP_KEY.to_string()).into());
+        let filter = Timestamp::from_config(Config::new(TIMESTAMP_KEY).into());
         let mut ctx = ReadContext::new(
             vec![],
             (std::net::Ipv4Addr::UNSPECIFIED, 0).into(),
             b"hello".to_vec(),
         );
         ctx.metadata.insert(
-            Arc::new(TIMESTAMP_KEY.into()),
+            TIMESTAMP_KEY.into(),
             Value::Number(Utc::now().timestamp() as u64),
         );
 
@@ -216,7 +214,7 @@ mod tests {
             }
             .into(),
         );
-        let timestamp = Timestamp::from_config(Config::new(TIMESTAMP_KEY.to_string()).into());
+        let timestamp = Timestamp::from_config(Config::new(TIMESTAMP_KEY).into());
         let source = (std::net::Ipv4Addr::UNSPECIFIED, 0);
         let mut ctx = ReadContext::new(
             vec![],

@@ -19,13 +19,12 @@ mod metrics;
 crate::include_proto!("quilkin.filters.token_router.v1alpha1");
 
 use std::convert::TryFrom;
-use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 
 use crate::{
     filters::{metadata::CAPTURED_BYTES, prelude::*},
-    metadata::Value,
+    metadata,
 };
 
 use metrics::Metrics;
@@ -35,16 +34,13 @@ use self::quilkin::filters::token_router::v1alpha1 as proto;
 /// Filter that only allows packets to be passed to Endpoints that have a matching
 /// connection_id to the token stored in the Filter's dynamic metadata.
 pub struct TokenRouter {
-    metadata_key: Arc<String>,
+    config: Config,
     metrics: Metrics,
 }
 
 impl TokenRouter {
     fn new(config: Config, metrics: Metrics) -> Self {
-        Self {
-            metadata_key: Arc::new(config.metadata_key),
-            metrics,
-        }
+        Self { config, metrics }
     }
 }
 
@@ -63,17 +59,17 @@ impl StaticFilter for TokenRouter {
 
 impl Filter for TokenRouter {
     fn read(&self, ctx: &mut ReadContext) -> Option<()> {
-        match ctx.metadata.get(self.metadata_key.as_ref()) {
+        match ctx.metadata.get(&self.config.metadata_key) {
             None => {
                 tracing::trace!(
-                    metadata_key = %self.metadata_key,
+                    metadata_key = %self.config.metadata_key,
                     "Dropping packet, no routing token was found"
                 );
                 self.metrics.packets_dropped_no_token_found.inc();
                 None
             }
             Some(value) => match value {
-                Value::Bytes(token) => {
+                metadata::Value::Bytes(token) => {
                     ctx.endpoints.retain(|endpoint| {
                         if endpoint.metadata.known.tokens.contains(&**token) {
                             tracing::trace!(%endpoint.address, token = &*base64::encode(token), "Endpoint matched");
@@ -98,7 +94,7 @@ impl Filter for TokenRouter {
                 _ => {
                     tracing::trace!(
                         count = ?self.metrics.packets_dropped_invalid_token.get(),
-                        metadata_key = ?self.metadata_key.clone(),
+                        metadata_key = %self.config.metadata_key,
                         "Packets are being dropped as routing token has invalid type: expected Value::Bytes"
                     );
                     self.metrics.packets_dropped_invalid_token.inc();
@@ -114,12 +110,12 @@ impl Filter for TokenRouter {
 pub struct Config {
     /// the key to use when retrieving the token from the Filter's dynamic metadata
     #[serde(rename = "metadataKey", default = "default_metadata_key")]
-    pub metadata_key: String,
+    pub metadata_key: metadata::Key,
 }
 
 /// Default value for [`Config::metadata_key`]
-fn default_metadata_key() -> String {
-    CAPTURED_BYTES.into()
+fn default_metadata_key() -> metadata::Key {
+    metadata::Key::from_static(CAPTURED_BYTES)
 }
 
 impl Default for Config {
@@ -133,7 +129,7 @@ impl Default for Config {
 impl From<Config> for proto::TokenRouter {
     fn from(config: Config) -> Self {
         Self {
-            metadata_key: Some(config.metadata_key),
+            metadata_key: Some(config.metadata_key.to_string()),
         }
     }
 }
@@ -143,15 +139,16 @@ impl TryFrom<proto::TokenRouter> for Config {
 
     fn try_from(p: proto::TokenRouter) -> Result<Self, Self::Error> {
         Ok(Self {
-            metadata_key: p.metadata_key.unwrap_or_else(default_metadata_key),
+            metadata_key: p
+                .metadata_key
+                .map(metadata::Key::new)
+                .unwrap_or_else(default_metadata_key),
         })
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-
     use crate::{
         endpoint::{Endpoint, Metadata},
         metadata::Value,
@@ -200,15 +197,13 @@ mod tests {
     fn factory_custom_tokens() {
         let filter = TokenRouter::from_config(
             Config {
-                metadata_key: TOKEN_KEY.to_string(),
+                metadata_key: TOKEN_KEY.into(),
             }
             .into(),
         );
         let mut ctx = new_ctx();
-        ctx.metadata.insert(
-            Arc::new(TOKEN_KEY.into()),
-            Value::Bytes(b"123".to_vec().into()),
-        );
+        ctx.metadata
+            .insert(TOKEN_KEY.into(), Value::Bytes(b"123".to_vec().into()));
         assert_read(&filter, ctx);
     }
 
@@ -216,10 +211,8 @@ mod tests {
     fn factory_empty_config() {
         let filter = TokenRouter::from_config(None);
         let mut ctx = new_ctx();
-        ctx.metadata.insert(
-            Arc::new(CAPTURED_BYTES.into()),
-            Value::Bytes(b"123".to_vec().into()),
-        );
+        ctx.metadata
+            .insert(CAPTURED_BYTES.into(), Value::Bytes(b"123".to_vec().into()));
         assert_read(&filter, ctx);
     }
 
@@ -232,18 +225,14 @@ mod tests {
         let filter = TokenRouter::from_config(config.into());
 
         let mut ctx = new_ctx();
-        ctx.metadata.insert(
-            Arc::new(CAPTURED_BYTES.into()),
-            Value::Bytes(b"123".to_vec().into()),
-        );
+        ctx.metadata
+            .insert(CAPTURED_BYTES.into(), Value::Bytes(b"123".to_vec().into()));
         assert_read(&filter, ctx);
 
         // invalid key
         let mut ctx = new_ctx();
-        ctx.metadata.insert(
-            Arc::new(CAPTURED_BYTES.into()),
-            Value::Bytes(b"567".to_vec().into()),
-        );
+        ctx.metadata
+            .insert(CAPTURED_BYTES.into(), Value::Bytes(b"567".to_vec().into()));
 
         assert!(filter.read(&mut ctx).is_none());
         assert_eq!(1, filter.metrics.packets_dropped_no_endpoint_match.get());
@@ -255,10 +244,8 @@ mod tests {
 
         // wrong type key
         let mut ctx = new_ctx();
-        ctx.metadata.insert(
-            Arc::new(CAPTURED_BYTES.into()),
-            Value::String(String::from("wrong")),
-        );
+        ctx.metadata
+            .insert(CAPTURED_BYTES.into(), Value::String(String::from("wrong")));
         assert!(filter.read(&mut ctx).is_none());
         assert_eq!(1, filter.metrics.packets_dropped_invalid_token.get());
     }
