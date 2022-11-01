@@ -21,7 +21,7 @@ crate::include_proto!("quilkin.filters.matches.v1alpha1");
 mod config;
 mod metrics;
 
-use crate::{filters::prelude::*, metadata::Value};
+use crate::{filters::prelude::*, metadata};
 
 use self::quilkin::filters::matches::v1alpha1 as proto;
 use crate::filters::r#match::metrics::Metrics;
@@ -29,9 +29,9 @@ use crate::filters::r#match::metrics::Metrics;
 pub use self::config::{Branch, Config, DirectionalConfig, Fallthrough};
 
 struct ConfigInstance {
-    metadata_key: String,
-    branches: Vec<(Value, (String, FilterInstance))>,
-    fallthrough: (String, FilterInstance),
+    metadata_key: metadata::Key,
+    branches: Vec<(metadata::Value, (metadata::Key, FilterInstance))>,
+    fallthrough: (metadata::Key, FilterInstance),
 }
 
 impl ConfigInstance {
@@ -42,7 +42,7 @@ impl ConfigInstance {
                     &filter,
                     CreateFilterArgs::new(config_type.map(From::from)),
                 )?;
-                Ok((filter, instance))
+                Ok((filter.into(), instance))
             };
 
         let branches = config
@@ -89,7 +89,10 @@ fn match_filter<'config, 'ctx, Ctx>(
     config: &'config Option<ConfigInstance>,
     metrics: &'config Metrics,
     ctx: &'ctx mut Ctx,
-    get_metadata: impl for<'value> Fn(&'value Ctx, &'config String) -> Option<&'value Value>,
+    get_metadata: impl for<'value> Fn(
+        &'value Ctx,
+        &'config metadata::Key,
+    ) -> Option<&'value metadata::Value>,
     and_then: impl Fn(&'ctx mut Ctx, &'config FilterInstance) -> Option<()>,
 ) -> Option<()>
 where
@@ -100,14 +103,14 @@ where
 
             match config.branches.iter().find(|(key, _)| key == value) {
                 Some((value, instance)) => {
-                    tracing::trace!(key=&*config.metadata_key, %value, filter=&*instance.0, "Matched against branch");
+                    tracing::trace!(key=%config.metadata_key, %value, filter=%instance.0, "Matched against branch");
                     metrics.packets_matched_total.inc();
                     (and_then)(ctx, &instance.1)
                 }
                 None => {
                     tracing::trace!(
-                        key = &*config.metadata_key,
-                        fallthrough = &*config.fallthrough.0,
+                        key = %config.metadata_key,
+                        fallthrough = %config.fallthrough.0,
                         "No match found, calling fallthrough"
                     );
                     metrics.packets_fallthrough_total.inc();
@@ -159,15 +162,14 @@ mod tests {
     use super::*;
 
     use crate::{endpoint::Endpoint, filters::*};
-    use std::sync::Arc;
 
     #[test]
     fn metrics() {
         let metrics = Metrics::new().unwrap();
-        let key = "myapp.com/token";
+        let key = crate::metadata::Key::from_static("myapp.com/token");
         let config = Config {
             on_read: Some(DirectionalConfig {
-                metadata_key: key.into(),
+                metadata_key: key,
                 branches: vec![Branch {
                     value: "abc".into(),
                     filter: Pass::as_filter_config(None).unwrap(),
@@ -199,7 +201,7 @@ mod tests {
             ([127, 0, 0, 1], 7000).into(),
             contents.clone(),
         );
-        ctx.metadata.insert(Arc::new(key.into()), "abc".into());
+        ctx.metadata.insert(key, "abc".into());
 
         filter.read(&mut ctx).unwrap();
         assert_eq!(1, filter.metrics.packets_matched_total.get());
@@ -210,7 +212,7 @@ mod tests {
             ([127, 0, 0, 1], 7000).into(),
             contents,
         );
-        ctx.metadata.insert(Arc::new(key.into()), "xyz".into());
+        ctx.metadata.insert(key, "xyz".into());
 
         let result = filter.read(&mut ctx);
         assert!(result.is_none());

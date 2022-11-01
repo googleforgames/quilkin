@@ -63,7 +63,7 @@ impl Filter for TestFilter {
     fn read(&self, ctx: &mut ReadContext) -> Option<()> {
         // append values on each run
         ctx.metadata
-            .entry(Arc::new("downstream".into()))
+            .entry("downstream".into())
             .and_modify(|e| e.as_mut_string().unwrap().push_str(":receive"))
             .or_insert_with(|| Value::String("receive".into()));
 
@@ -75,7 +75,7 @@ impl Filter for TestFilter {
     fn write(&self, ctx: &mut WriteContext) -> Option<()> {
         // append values on each run
         ctx.metadata
-            .entry("upstream".to_string().into())
+            .entry("upstream".into())
             .and_modify(|e| e.as_mut_string().unwrap().push_str(":receive"))
             .or_insert_with(|| Value::String("receive".to_string()));
 

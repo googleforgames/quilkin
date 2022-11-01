@@ -69,7 +69,7 @@ pub struct Config {
     /// The key to use when storing the captured value in the filter context.
     /// If a match was found it is available
     /// under `{{metadata_key}}/is_present`.
-    pub metadata_key: String,
+    pub metadata_key: crate::metadata::Key,
     /// The capture strategy.
     pub strategy: Strategy,
 }
@@ -165,7 +165,8 @@ impl<'de> serde::Deserialize<'de> for Config {
                     }
                 }
 
-                let metadata_key = metadata_key.unwrap_or_else(|| CAPTURED_BYTES.into());
+                let metadata_key = metadata_key
+                    .unwrap_or_else(|| crate::metadata::Key::from_static(CAPTURED_BYTES));
                 let strategy = strategy.ok_or_else(|| {
                     serde::de::Error::custom(
                         "Capture strategy of `regex`, `suffix`, or `prefix` is required",
@@ -186,7 +187,7 @@ impl<'de> serde::Deserialize<'de> for Config {
 impl From<Config> for proto::Capture {
     fn from(config: Config) -> Self {
         Self {
-            metadata_key: Some(config.metadata_key),
+            metadata_key: Some(config.metadata_key.to_string()),
             strategy: Some(config.strategy.into()),
         }
     }
@@ -201,9 +202,12 @@ impl TryFrom<proto::Capture> for Config {
             .ok_or_else(|| ConvertProtoConfigError::new("Missing", Some("strategy".into())))?;
 
         Ok(Self {
-            metadata_key: p.metadata_key.ok_or_else(|| {
-                ConvertProtoConfigError::new("Missing", Some("metadata_key".into()))
-            })?,
+            metadata_key: p
+                .metadata_key
+                .map(crate::metadata::Key::from)
+                .ok_or_else(|| {
+                    ConvertProtoConfigError::new("Missing", Some("metadata_key".into()))
+                })?,
             strategy: strategy.try_into()?,
         })
     }

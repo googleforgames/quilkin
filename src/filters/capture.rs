@@ -21,9 +21,7 @@ mod regex;
 
 crate::include_proto!("quilkin.filters.capture.v1alpha1");
 
-use std::sync::Arc;
-
-use crate::{filters::prelude::*, metadata::Value};
+use crate::{filters::prelude::*, metadata};
 
 use self::{metrics::Metrics, quilkin::filters::capture::v1alpha1 as proto};
 
@@ -37,15 +35,15 @@ pub use self::{
 pub trait CaptureStrategy {
     /// Capture packet data from the contents, and optionally returns a value if
     /// anything was captured.
-    fn capture(&self, contents: &mut Vec<u8>, metrics: &Metrics) -> Option<Value>;
+    fn capture(&self, contents: &mut Vec<u8>, metrics: &Metrics) -> Option<metadata::Value>;
 }
 
 pub struct Capture {
     capture: Box<dyn CaptureStrategy + Sync + Send>,
     /// metrics reporter for this filter.
     metrics: Metrics,
-    metadata_key: Arc<String>,
-    is_present_key: Arc<String>,
+    metadata_key: metadata::Key,
+    is_present_key: metadata::Key,
 }
 
 impl Capture {
@@ -53,8 +51,8 @@ impl Capture {
         Self {
             capture: config.strategy.into_capture(),
             metrics,
-            is_present_key: Arc::new(config.metadata_key.clone() + "/is_present"),
-            metadata_key: Arc::new(config.metadata_key),
+            is_present_key: (config.metadata_key.to_string() + "/is_present").into(),
+            metadata_key: config.metadata_key,
         }
     }
 }
@@ -63,15 +61,17 @@ impl Filter for Capture {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
     fn read(&self, ctx: &mut ReadContext) -> Option<()> {
         let capture = self.capture.capture(&mut ctx.contents, &self.metrics);
-        ctx.metadata
-            .insert(self.is_present_key.clone(), Value::Bool(capture.is_some()));
+        ctx.metadata.insert(
+            self.is_present_key,
+            metadata::Value::Bool(capture.is_some()),
+        );
 
         if let Some(value) = capture {
-            tracing::trace!(key=&**self.metadata_key, %value, "captured value");
-            ctx.metadata.insert(self.metadata_key.clone(), value);
+            tracing::trace!(key=%self.metadata_key, %value, "captured value");
+            ctx.metadata.insert(self.metadata_key, value);
             Some(())
         } else {
-            tracing::trace!(key = &**self.metadata_key, "No value captured");
+            tracing::trace!(key = %self.metadata_key, "No value captured");
             None
         }
     }
@@ -92,8 +92,6 @@ impl StaticFilter for Capture {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-
     use crate::{
         endpoint::Endpoint, filters::metadata::CAPTURED_BYTES, metadata::Value,
         test_utils::assert_write_no_change,
@@ -113,7 +111,7 @@ mod tests {
             }
         });
         let filter = Capture::from_config(Some(serde_json::from_value(config).unwrap()));
-        assert_end_strategy(&filter, TOKEN_KEY, true);
+        assert_end_strategy(&filter, TOKEN_KEY.into(), true);
     }
 
     #[test]
@@ -125,7 +123,7 @@ mod tests {
         });
 
         let filter = Capture::from_config(Some(serde_json::from_value(config).unwrap()));
-        assert_end_strategy(&filter, CAPTURED_BYTES, false);
+        assert_end_strategy(&filter, CAPTURED_BYTES.into(), false);
     }
 
     #[test]
@@ -149,7 +147,7 @@ mod tests {
         };
 
         let filter = Capture::from_config(config.into());
-        assert_end_strategy(&filter, TOKEN_KEY, true);
+        assert_end_strategy(&filter, TOKEN_KEY.into(), true);
     }
 
     #[test]
@@ -239,7 +237,7 @@ mod tests {
         assert_eq!(b"hello".to_vec(), contents);
     }
 
-    fn assert_end_strategy<F>(filter: &F, key: &str, remove: bool)
+    fn assert_end_strategy<F>(filter: &F, key: metadata::Key, remove: bool)
     where
         F: Filter + ?Sized,
     {
@@ -258,12 +256,7 @@ mod tests {
             assert_eq!(b"helloabc", &*context.contents);
         }
 
-        let token = context
-            .metadata
-            .get(&Arc::new(key.into()))
-            .unwrap()
-            .as_bytes()
-            .unwrap();
+        let token = context.metadata.get(&key).unwrap().as_bytes().unwrap();
         assert_eq!(b"abc", &**token);
     }
 }

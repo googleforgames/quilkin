@@ -349,9 +349,7 @@ mod tests {
         assert_eq!(b"hello:odr:127.0.0.1:70", &*context.contents);
         assert_eq!(
             "receive",
-            context.metadata[&"downstream".to_string()]
-                .as_string()
-                .unwrap()
+            context.metadata[&"downstream".into()].as_string().unwrap()
         );
 
         let mut context = WriteContext::new(
@@ -364,9 +362,7 @@ mod tests {
 
         assert_eq!(
             "receive",
-            context.metadata[&"upstream".to_string()]
-                .as_string()
-                .unwrap()
+            context.metadata[&"upstream".into()].as_string().unwrap()
         );
         assert_eq!(b"hello:our:127.0.0.1:80:127.0.0.1:70", &*context.contents,);
     }
@@ -407,9 +403,7 @@ mod tests {
         );
         assert_eq!(
             "receive:receive",
-            context.metadata[&"downstream".to_string()]
-                .as_string()
-                .unwrap()
+            context.metadata[&"downstream".into()].as_string().unwrap()
         );
 
         let mut context = WriteContext::new(
@@ -426,9 +420,7 @@ mod tests {
         );
         assert_eq!(
             "receive:receive",
-            context.metadata[&"upstream".to_string()]
-                .as_string()
-                .unwrap()
+            context.metadata[&"upstream".into()].as_string().unwrap()
         );
     }
 

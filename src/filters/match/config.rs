@@ -71,7 +71,7 @@ impl TryFrom<proto::Match> for Config {
 pub struct DirectionalConfig {
     /// The key for the metadata to compare against.
     #[serde(rename = "metadataKey")]
-    pub metadata_key: String,
+    pub metadata_key: crate::metadata::Key,
     /// List of filters to compare and potentially run if any match.
     pub branches: Vec<Branch>,
     /// The behaviour for when none of the `branches` match.
@@ -84,7 +84,7 @@ impl TryFrom<DirectionalConfig> for proto::r#match::Config {
 
     fn try_from(config: DirectionalConfig) -> Result<Self, Self::Error> {
         Ok(Self {
-            metadata_key: Some(config.metadata_key),
+            metadata_key: Some(config.metadata_key.to_string()),
             branches: config
                 .branches
                 .into_iter()
@@ -100,7 +100,7 @@ impl TryFrom<proto::r#match::Config> for DirectionalConfig {
 
     fn try_from(value: proto::r#match::Config) -> Result<Self, Self::Error> {
         Ok(Self {
-            metadata_key: value.metadata_key.ok_or_else(|| {
+            metadata_key: value.metadata_key.map(From::from).ok_or_else(|| {
                 ConvertProtoConfigError::new("Missing", Some("metadata_key".into()))
             })?,
             branches: value

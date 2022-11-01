@@ -90,6 +90,7 @@ tracing-subscriber = { version = "0.3.16", features = ["json", "env-filter"] }
 tryhard = "0.5.0"
 url = { version = "2.3.1", features = ["serde"] }
 uuid = { version = "1.2.1", default-features = false, features = ["v4"] }
+lasso = { version = "0.6.0", features = ["multi-threaded"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 sys-info = "0.9.1"
