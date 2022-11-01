@@ -260,13 +260,6 @@
 <span id="260">260</span>
 <span id="261">261</span>
 <span id="262">262</span>
-<span id="263">263</span>
-<span id="264">264</span>
-<span id="265">265</span>
-<span id="266">266</span>
-<span id="267">267</span>
-<span id="268">268</span>
-<span id="269">269</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -290,9 +283,7 @@
 
 <span class="macro">crate::include_proto!</span>(<span class="string">&quot;quilkin.filters.capture.v1alpha1&quot;</span>);
 
-<span class="kw">use</span> <span class="ident">std::sync::Arc</span>;
-
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">filters::prelude</span>::<span class="kw-2">*</span>, <span class="ident">metadata::Value</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">filters::prelude</span>::<span class="kw-2">*</span>, <span class="ident">metadata</span>};
 
 <span class="kw">use</span> <span class="self">self</span>::{<span class="ident">metrics::Metrics</span>, <span class="ident">quilkin::filters::capture::v1alpha1</span> <span class="kw">as</span> <span class="ident">proto</span>};
 
@@ -306,15 +297,15 @@
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">CaptureStrategy</span> {
     <span class="doccomment">/// Capture packet data from the contents, and optionally returns a value if</span>
     <span class="doccomment">/// anything was captured.</span>
-    <span class="kw">fn</span> <span class="ident">capture</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">contents</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">metrics</span>: <span class="kw-2">&amp;</span><span class="ident">Metrics</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">capture</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">contents</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">metrics</span>: <span class="kw-2">&amp;</span><span class="ident">Metrics</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">metadata::Value</span><span class="op">&gt;</span>;
 }
 
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Capture</span> {
     <span class="ident">capture</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">CaptureStrategy</span> <span class="op">+</span> <span class="ident">Sync</span> <span class="op">+</span> <span class="ident">Send</span><span class="op">&gt;</span>,
     <span class="doccomment">/// metrics reporter for this filter.</span>
     <span class="ident">metrics</span>: <span class="ident">Metrics</span>,
-    <span class="ident">metadata_key</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-    <span class="ident">is_present_key</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="ident">metadata_key</span>: <span class="ident">metadata::Key</span>,
+    <span class="ident">is_present_key</span>: <span class="ident">metadata::Key</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">Capture</span> {
@@ -322,8 +313,8 @@
         <span class="self">Self</span> {
             <span class="ident">capture</span>: <span class="ident">config</span>.<span class="ident">strategy</span>.<span class="ident">into_capture</span>(),
             <span class="ident">metrics</span>,
-            <span class="ident">is_present_key</span>: <span class="ident">Arc::new</span>(<span class="ident">config</span>.<span class="ident">metadata_key</span>.<span class="ident">clone</span>() <span class="op">+</span> <span class="string">&quot;/is_present&quot;</span>),
-            <span class="ident">metadata_key</span>: <span class="ident">Arc::new</span>(<span class="ident">config</span>.<span class="ident">metadata_key</span>),
+            <span class="ident">is_present_key</span>: (<span class="ident">config</span>.<span class="ident">metadata_key</span>.<span class="ident">to_string</span>() <span class="op">+</span> <span class="string">&quot;/is_present&quot;</span>).<span class="ident">into</span>(),
+            <span class="ident">metadata_key</span>: <span class="ident">config</span>.<span class="ident">metadata_key</span>,
         }
     }
 }
@@ -332,15 +323,17 @@
     <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;instrument&quot;</span>, <span class="ident">tracing::instrument</span>(<span class="ident">skip</span>(<span class="self">self</span>, <span class="ident">ctx</span>)))]</span>
     <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ReadContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">capture</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">capture</span>.<span class="ident">capture</span>(<span class="kw-2">&amp;mut</span> <span class="ident">ctx</span>.<span class="ident">contents</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">metrics</span>);
-        <span class="ident">ctx</span>.<span class="ident">metadata</span>
-            .<span class="ident">insert</span>(<span class="self">self</span>.<span class="ident">is_present_key</span>.<span class="ident">clone</span>(), <span class="ident">Value::Bool</span>(<span class="ident">capture</span>.<span class="ident">is_some</span>()));
+        <span class="ident">ctx</span>.<span class="ident">metadata</span>.<span class="ident">insert</span>(
+            <span class="self">self</span>.<span class="ident">is_present_key</span>,
+            <span class="ident">metadata::Value::Bool</span>(<span class="ident">capture</span>.<span class="ident">is_some</span>()),
+        );
 
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">value</span>) <span class="op">=</span> <span class="ident">capture</span> {
-            <span class="macro">tracing::trace!</span>(<span class="ident">key</span><span class="op">=</span><span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="self">self</span>.<span class="ident">metadata_key</span>, <span class="op">%</span><span class="ident">value</span>, <span class="string">&quot;captured value&quot;</span>);
-            <span class="ident">ctx</span>.<span class="ident">metadata</span>.<span class="ident">insert</span>(<span class="self">self</span>.<span class="ident">metadata_key</span>.<span class="ident">clone</span>(), <span class="ident">value</span>);
+            <span class="macro">tracing::trace!</span>(<span class="ident">key</span><span class="op">=</span><span class="op">%</span><span class="self">self</span>.<span class="ident">metadata_key</span>, <span class="op">%</span><span class="ident">value</span>, <span class="string">&quot;captured value&quot;</span>);
+            <span class="ident">ctx</span>.<span class="ident">metadata</span>.<span class="ident">insert</span>(<span class="self">self</span>.<span class="ident">metadata_key</span>, <span class="ident">value</span>);
             <span class="prelude-val">Some</span>(())
         } <span class="kw">else</span> {
-            <span class="macro">tracing::trace!</span>(<span class="ident">key</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="self">self</span>.<span class="ident">metadata_key</span>, <span class="string">&quot;No value captured&quot;</span>);
+            <span class="macro">tracing::trace!</span>(<span class="ident">key</span> <span class="op">=</span> <span class="op">%</span><span class="self">self</span>.<span class="ident">metadata_key</span>, <span class="string">&quot;No value captured&quot;</span>);
             <span class="prelude-val">None</span>
         }
     }
@@ -361,8 +354,6 @@
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="ident">std::sync::Arc</span>;
-
     <span class="kw">use</span> <span class="kw">crate</span>::{
         <span class="ident">endpoint::Endpoint</span>, <span class="ident">filters::metadata::CAPTURED_BYTES</span>, <span class="ident">metadata::Value</span>,
         <span class="ident">test_utils::assert_write_no_change</span>,
@@ -382,7 +373,7 @@
             }
         });
         <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">Capture::from_config</span>(<span class="prelude-val">Some</span>(<span class="ident">serde_json::from_value</span>(<span class="ident">config</span>).<span class="ident">unwrap</span>()));
-        <span class="ident">assert_end_strategy</span>(<span class="kw-2">&amp;</span><span class="ident">filter</span>, <span class="ident">TOKEN_KEY</span>, <span class="bool-val">true</span>);
+        <span class="ident">assert_end_strategy</span>(<span class="kw-2">&amp;</span><span class="ident">filter</span>, <span class="ident">TOKEN_KEY</span>.<span class="ident">into</span>(), <span class="bool-val">true</span>);
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
@@ -394,7 +385,7 @@
         });
 
         <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">Capture::from_config</span>(<span class="prelude-val">Some</span>(<span class="ident">serde_json::from_value</span>(<span class="ident">config</span>).<span class="ident">unwrap</span>()));
-        <span class="ident">assert_end_strategy</span>(<span class="kw-2">&amp;</span><span class="ident">filter</span>, <span class="ident">CAPTURED_BYTES</span>, <span class="bool-val">false</span>);
+        <span class="ident">assert_end_strategy</span>(<span class="kw-2">&amp;</span><span class="ident">filter</span>, <span class="ident">CAPTURED_BYTES</span>.<span class="ident">into</span>(), <span class="bool-val">false</span>);
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
@@ -418,7 +409,7 @@
         };
 
         <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">Capture::from_config</span>(<span class="ident">config</span>.<span class="ident">into</span>());
-        <span class="ident">assert_end_strategy</span>(<span class="kw-2">&amp;</span><span class="ident">filter</span>, <span class="ident">TOKEN_KEY</span>, <span class="bool-val">true</span>);
+        <span class="ident">assert_end_strategy</span>(<span class="kw-2">&amp;</span><span class="ident">filter</span>, <span class="ident">TOKEN_KEY</span>.<span class="ident">into</span>(), <span class="bool-val">true</span>);
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
@@ -508,7 +499,7 @@
         <span class="macro">assert_eq!</span>(<span class="string">b&quot;hello&quot;</span>.<span class="ident">to_vec</span>(), <span class="ident">contents</span>);
     }
 
-    <span class="kw">fn</span> <span class="ident">assert_end_strategy</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>(<span class="ident">filter</span>: <span class="kw-2">&amp;</span><span class="ident">F</span>, <span class="ident">key</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">remove</span>: <span class="ident">bool</span>)
+    <span class="kw">fn</span> <span class="ident">assert_end_strategy</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>(<span class="ident">filter</span>: <span class="kw-2">&amp;</span><span class="ident">F</span>, <span class="ident">key</span>: <span class="ident">metadata::Key</span>, <span class="ident">remove</span>: <span class="ident">bool</span>)
     <span class="kw">where</span>
         <span class="ident">F</span>: <span class="ident">Filter</span> <span class="op">+</span> <span class="question-mark">?</span><span class="ident">Sized</span>,
     {
@@ -527,12 +518,7 @@
             <span class="macro">assert_eq!</span>(<span class="string">b&quot;helloabc&quot;</span>, <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">context</span>.<span class="ident">contents</span>);
         }
 
-        <span class="kw">let</span> <span class="ident">token</span> <span class="op">=</span> <span class="ident">context</span>
-            .<span class="ident">metadata</span>
-            .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">Arc::new</span>(<span class="ident">key</span>.<span class="ident">into</span>()))
-            .<span class="ident">unwrap</span>()
-            .<span class="ident">as_bytes</span>()
-            .<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="ident">token</span> <span class="op">=</span> <span class="ident">context</span>.<span class="ident">metadata</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">key</span>).<span class="ident">unwrap</span>().<span class="ident">as_bytes</span>().<span class="ident">unwrap</span>();
         <span class="macro">assert_eq!</span>(<span class="string">b&quot;abc&quot;</span>, <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">token</span>);
     }
 }

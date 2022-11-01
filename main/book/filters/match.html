@@ -237,7 +237,8 @@ definitions:
         - $ref: '#/definitions/Filter'
       metadataKey:
         description: The key for the metadata to compare against.
-        type: string
+        allOf:
+        - $ref: '#/definitions/Key'
   Filter:
     description: Filter is the configuration for a single filter
     type: object
@@ -248,6 +249,9 @@ definitions:
       name:
         type: string
     additionalProperties: false
+  Key:
+    description: A key in the metadata table.
+    type: string
   Value:
     anyOf:
     - type: boolean

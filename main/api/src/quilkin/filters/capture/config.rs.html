@@ -295,6 +295,10 @@
 <span id="295">295</span>
 <span id="296">296</span>
 <span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC All Rights Reserved.
  *
@@ -366,7 +370,7 @@
     <span class="doccomment">/// The key to use when storing the captured value in the filter context.</span>
     <span class="doccomment">/// If a match was found it is available</span>
     <span class="doccomment">/// under `{{metadata_key}}/is_present`.</span>
-    <span class="kw">pub</span> <span class="ident">metadata_key</span>: <span class="ident">String</span>,
+    <span class="kw">pub</span> <span class="ident">metadata_key</span>: <span class="ident"><span class="kw">crate</span>::metadata::Key</span>,
     <span class="doccomment">/// The capture strategy.</span>
     <span class="kw">pub</span> <span class="ident">strategy</span>: <span class="ident">Strategy</span>,
 }
@@ -462,7 +466,8 @@
                     }
                 }
 
-                <span class="kw">let</span> <span class="ident">metadata_key</span> <span class="op">=</span> <span class="ident">metadata_key</span>.<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">CAPTURED_BYTES</span>.<span class="ident">into</span>());
+                <span class="kw">let</span> <span class="ident">metadata_key</span> <span class="op">=</span> <span class="ident">metadata_key</span>
+                    .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident"><span class="kw">crate</span>::metadata::Key::from_static</span>(<span class="ident">CAPTURED_BYTES</span>));
                 <span class="kw">let</span> <span class="ident">strategy</span> <span class="op">=</span> <span class="ident">strategy</span>.<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
                     <span class="ident">serde::de::Error::custom</span>(
                         <span class="string">&quot;Capture strategy of `regex`, `suffix`, or `prefix` is required&quot;</span>,
@@ -483,7 +488,7 @@
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">Config</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">proto::Capture</span> {
     <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">config</span>: <span class="ident">Config</span>) -&gt; <span class="self">Self</span> {
         <span class="self">Self</span> {
-            <span class="ident">metadata_key</span>: <span class="prelude-val">Some</span>(<span class="ident">config</span>.<span class="ident">metadata_key</span>),
+            <span class="ident">metadata_key</span>: <span class="prelude-val">Some</span>(<span class="ident">config</span>.<span class="ident">metadata_key</span>.<span class="ident">to_string</span>()),
             <span class="ident">strategy</span>: <span class="prelude-val">Some</span>(<span class="ident">config</span>.<span class="ident">strategy</span>.<span class="ident">into</span>()),
         }
     }
@@ -498,9 +503,12 @@
             .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">ConvertProtoConfigError::new</span>(<span class="string">&quot;Missing&quot;</span>, <span class="prelude-val">Some</span>(<span class="string">&quot;strategy&quot;</span>.<span class="ident">into</span>())))<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
-            <span class="ident">metadata_key</span>: <span class="ident">p</span>.<span class="ident">metadata_key</span>.<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
-                <span class="ident">ConvertProtoConfigError::new</span>(<span class="string">&quot;Missing&quot;</span>, <span class="prelude-val">Some</span>(<span class="string">&quot;metadata_key&quot;</span>.<span class="ident">into</span>()))
-            })<span class="question-mark">?</span>,
+            <span class="ident">metadata_key</span>: <span class="ident">p</span>
+                .<span class="ident">metadata_key</span>
+                .<span class="ident">map</span>(<span class="ident"><span class="kw">crate</span>::metadata::Key::from</span>)
+                .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
+                    <span class="ident">ConvertProtoConfigError::new</span>(<span class="string">&quot;Missing&quot;</span>, <span class="prelude-val">Some</span>(<span class="string">&quot;metadata_key&quot;</span>.<span class="ident">into</span>()))
+                })<span class="question-mark">?</span>,
             <span class="ident">strategy</span>: <span class="ident">strategy</span>.<span class="ident">try_into</span>()<span class="question-mark">?</span>,
         })
     }

@@ -333,7 +333,7 @@ edit either!</p>
 <p>For each <a href="https://github.com/googleforgames/quilkin/releases">release</a>, there is a container image built and
 hosted on Google Cloud <a href="https://cloud.google.com/artifact-registry">Artifact Registry</a>.</p>
 <p>The production release can be found under the tag: </p>
-<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.4.0-dev-89bef3d
+<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.4.0-dev-c92627d
 </code></pre>
 <p>Which can be browsed as <a href="https://us-docker.pkg.dev/quilkin/release/quilkin">us-docker.pkg.dev/quilkin/release/quilkin</a>.</p>
 <p>The <a href="https://docs.docker.com/engine/reference/builder/#entrypoint">entrypoint</a> of the container is to run <code>/quilkin</code> 
@@ -838,12 +838,16 @@ required:
 properties:
   metadata_key:
     description: The key to use when storing the captured value in the filter context. If a match was found it is available under `{{metadata_key}}/is_present`.
-    type: string
+    allOf:
+    - $ref: '#/definitions/Key'
   strategy:
     description: The capture strategy.
     allOf:
     - $ref: '#/definitions/Strategy'
 definitions:
+  Key:
+    description: A key in the metadata table.
+    type: string
   Strategy:
     description: Strategy to apply for acquiring a set of bytes in the UDP packet
     oneOf:
@@ -1479,7 +1483,8 @@ definitions:
         - $ref: '#/definitions/Filter'
       metadataKey:
         description: The key for the metadata to compare against.
-        type: string
+        allOf:
+        - $ref: '#/definitions/Key'
   Filter:
     description: Filter is the configuration for a single filter
     type: object
@@ -1490,6 +1495,9 @@ definitions:
       name:
         type: string
     additionalProperties: false
+  Key:
+    description: A key in the metadata table.
+    type: string
   Value:
     anyOf:
     - type: boolean
@@ -1599,6 +1607,11 @@ required:
 properties:
   metadataKey:
     description: The metadata key to read the UTC UNIX Timestamp from.
+    allOf:
+    - $ref: '#/definitions/Key'
+definitions:
+  Key:
+    description: A key in the metadata table.
     type: string
 </code></pre>
 <h3 id="metrics-12"><a class="header" href="#metrics-12">Metrics</a></h3>
@@ -1653,6 +1666,11 @@ properties:
   metadataKey:
     description: the key to use when retrieving the token from the Filter's dynamic metadata
     default: quilkin.dev/capture
+    allOf:
+    - $ref: '#/definitions/Key'
+definitions:
+  Key:
+    description: A key in the metadata table.
     type: string
 </code></pre>
 <h3 id="metrics-13"><a class="header" href="#metrics-13">Metrics</a></h3>

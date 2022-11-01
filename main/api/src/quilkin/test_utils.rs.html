@@ -426,7 +426,7 @@
     <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ReadContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="comment">// append values on each run</span>
         <span class="ident">ctx</span>.<span class="ident">metadata</span>
-            .<span class="ident">entry</span>(<span class="ident">Arc::new</span>(<span class="string">&quot;downstream&quot;</span>.<span class="ident">into</span>()))
+            .<span class="ident">entry</span>(<span class="string">&quot;downstream&quot;</span>.<span class="ident">into</span>())
             .<span class="ident">and_modify</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">e</span>.<span class="ident">as_mut_string</span>().<span class="ident">unwrap</span>().<span class="ident">push_str</span>(<span class="string">&quot;:receive&quot;</span>))
             .<span class="ident">or_insert_with</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Value::String</span>(<span class="string">&quot;receive&quot;</span>.<span class="ident">into</span>()));
 
@@ -438,7 +438,7 @@
     <span class="kw">fn</span> <span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">WriteContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="comment">// append values on each run</span>
         <span class="ident">ctx</span>.<span class="ident">metadata</span>
-            .<span class="ident">entry</span>(<span class="string">&quot;upstream&quot;</span>.<span class="ident">to_string</span>().<span class="ident">into</span>())
+            .<span class="ident">entry</span>(<span class="string">&quot;upstream&quot;</span>.<span class="ident">into</span>())
             .<span class="ident">and_modify</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">e</span>.<span class="ident">as_mut_string</span>().<span class="ident">unwrap</span>().<span class="ident">push_str</span>(<span class="string">&quot;:receive&quot;</span>))
             .<span class="ident">or_insert_with</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Value::String</span>(<span class="string">&quot;receive&quot;</span>.<span class="ident">to_string</span>()));
 

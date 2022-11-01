@@ -184,6 +184,11 @@ required:
 properties:
   metadataKey:
     description: The metadata key to read the UTC UNIX Timestamp from.
+    allOf:
+    - $ref: '#/definitions/Key'
+definitions:
+  Key:
+    description: A key in the metadata table.
     type: string
 </code></pre>
 <h3 id="metrics"><a class="header" href="#metrics">Metrics</a></h3>

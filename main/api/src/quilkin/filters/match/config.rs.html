@@ -280,7 +280,7 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">DirectionalConfig</span> {
     <span class="doccomment">/// The key for the metadata to compare against.</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;metadataKey&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">metadata_key</span>: <span class="ident">String</span>,
+    <span class="kw">pub</span> <span class="ident">metadata_key</span>: <span class="ident"><span class="kw">crate</span>::metadata::Key</span>,
     <span class="doccomment">/// List of filters to compare and potentially run if any match.</span>
     <span class="kw">pub</span> <span class="ident">branches</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Branch</span><span class="op">&gt;</span>,
     <span class="doccomment">/// The behaviour for when none of the `branches` match.</span>
@@ -293,7 +293,7 @@
 
     <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">config</span>: <span class="ident">DirectionalConfig</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident"><span class="self">Self</span>::Error</span><span class="op">&gt;</span> {
         <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
-            <span class="ident">metadata_key</span>: <span class="prelude-val">Some</span>(<span class="ident">config</span>.<span class="ident">metadata_key</span>),
+            <span class="ident">metadata_key</span>: <span class="prelude-val">Some</span>(<span class="ident">config</span>.<span class="ident">metadata_key</span>.<span class="ident">to_string</span>()),
             <span class="ident">branches</span>: <span class="ident">config</span>
                 .<span class="ident">branches</span>
                 .<span class="ident">into_iter</span>()
@@ -309,7 +309,7 @@
 
     <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">value</span>: <span class="ident">proto</span>::<span class="ident">r#match</span><span class="ident">::Config</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident"><span class="self">Self</span>::Error</span><span class="op">&gt;</span> {
         <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
-            <span class="ident">metadata_key</span>: <span class="ident">value</span>.<span class="ident">metadata_key</span>.<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
+            <span class="ident">metadata_key</span>: <span class="ident">value</span>.<span class="ident">metadata_key</span>.<span class="ident">map</span>(<span class="ident">From::from</span>).<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
                 <span class="ident">ConvertProtoConfigError::new</span>(<span class="string">&quot;Missing&quot;</span>, <span class="prelude-val">Some</span>(<span class="string">&quot;metadata_key&quot;</span>.<span class="ident">into</span>()))
             })<span class="question-mark">?</span>,
             <span class="ident">branches</span>: <span class="ident">value</span>

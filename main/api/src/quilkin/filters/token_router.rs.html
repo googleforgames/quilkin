@@ -289,19 +289,6 @@
 <span id="289">289</span>
 <span id="290">290</span>
 <span id="291">291</span>
-<span id="292">292</span>
-<span id="293">293</span>
-<span id="294">294</span>
-<span id="295">295</span>
-<span id="296">296</span>
-<span id="297">297</span>
-<span id="298">298</span>
-<span id="299">299</span>
-<span id="300">300</span>
-<span id="301">301</span>
-<span id="302">302</span>
-<span id="303">303</span>
-<span id="304">304</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -323,13 +310,12 @@
 <span class="macro">crate::include_proto!</span>(<span class="string">&quot;quilkin.filters.token_router.v1alpha1&quot;</span>);
 
 <span class="kw">use</span> <span class="ident">std::convert::TryFrom</span>;
-<span class="kw">use</span> <span class="ident">std::sync::Arc</span>;
 
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">filters</span>::{<span class="ident">metadata::CAPTURED_BYTES</span>, <span class="ident">prelude</span>::<span class="kw-2">*</span>},
-    <span class="ident">metadata::Value</span>,
+    <span class="ident">metadata</span>,
 };
 
 <span class="kw">use</span> <span class="ident">metrics::Metrics</span>;
@@ -339,16 +325,13 @@
 <span class="doccomment">/// Filter that only allows packets to be passed to Endpoints that have a matching</span>
 <span class="doccomment">/// connection_id to the token stored in the Filter&#39;s dynamic metadata.</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TokenRouter</span> {
-    <span class="ident">metadata_key</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="ident">config</span>: <span class="ident">Config</span>,
     <span class="ident">metrics</span>: <span class="ident">Metrics</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">TokenRouter</span> {
     <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">config</span>: <span class="ident">Config</span>, <span class="ident">metrics</span>: <span class="ident">Metrics</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">metadata_key</span>: <span class="ident">Arc::new</span>(<span class="ident">config</span>.<span class="ident">metadata_key</span>),
-            <span class="ident">metrics</span>,
-        }
+        <span class="self">Self</span> { <span class="ident">config</span>, <span class="ident">metrics</span> }
     }
 }
 
@@ -367,17 +350,17 @@
 
 <span class="kw">impl</span> <span class="ident">Filter</span> <span class="kw">for</span> <span class="ident">TokenRouter</span> {
     <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ReadContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="kw">match</span> <span class="ident">ctx</span>.<span class="ident">metadata</span>.<span class="ident">get</span>(<span class="self">self</span>.<span class="ident">metadata_key</span>.<span class="ident">as_ref</span>()) {
+        <span class="kw">match</span> <span class="ident">ctx</span>.<span class="ident">metadata</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">config</span>.<span class="ident">metadata_key</span>) {
             <span class="prelude-val">None</span> =&gt; {
                 <span class="macro">tracing::trace!</span>(
-                    <span class="ident">metadata_key</span> <span class="op">=</span> <span class="op">%</span><span class="self">self</span>.<span class="ident">metadata_key</span>,
+                    <span class="ident">metadata_key</span> <span class="op">=</span> <span class="op">%</span><span class="self">self</span>.<span class="ident">config</span>.<span class="ident">metadata_key</span>,
                     <span class="string">&quot;Dropping packet, no routing token was found&quot;</span>
                 );
                 <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_no_token_found</span>.<span class="ident">inc</span>();
                 <span class="prelude-val">None</span>
             }
             <span class="prelude-val">Some</span>(<span class="ident">value</span>) =&gt; <span class="kw">match</span> <span class="ident">value</span> {
-                <span class="ident">Value::Bytes</span>(<span class="ident">token</span>) =&gt; {
+                <span class="ident">metadata::Value::Bytes</span>(<span class="ident">token</span>) =&gt; {
                     <span class="ident">ctx</span>.<span class="ident">endpoints</span>.<span class="ident">retain</span>(<span class="op">|</span><span class="ident">endpoint</span><span class="op">|</span> {
                         <span class="kw">if</span> <span class="ident">endpoint</span>.<span class="ident">metadata</span>.<span class="ident">known</span>.<span class="ident">tokens</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">token</span>) {
                             <span class="macro">tracing::trace!</span>(<span class="op">%</span><span class="ident">endpoint</span>.<span class="ident">address</span>, <span class="ident">token</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">base64::encode</span>(<span class="ident">token</span>), <span class="string">&quot;Endpoint matched&quot;</span>);
@@ -402,7 +385,7 @@
                 <span class="kw">_</span> =&gt; {
                     <span class="macro">tracing::trace!</span>(
                         <span class="ident">count</span> <span class="op">=</span> <span class="question-mark">?</span><span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_invalid_token</span>.<span class="ident">get</span>(),
-                        <span class="ident">metadata_key</span> <span class="op">=</span> <span class="question-mark">?</span><span class="self">self</span>.<span class="ident">metadata_key</span>.<span class="ident">clone</span>(),
+                        <span class="ident">metadata_key</span> <span class="op">=</span> <span class="op">%</span><span class="self">self</span>.<span class="ident">config</span>.<span class="ident">metadata_key</span>,
                         <span class="string">&quot;Packets are being dropped as routing token has invalid type: expected Value::Bytes&quot;</span>
                     );
                     <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_invalid_token</span>.<span class="ident">inc</span>();
@@ -418,12 +401,12 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Config</span> {
     <span class="doccomment">/// the key to use when retrieving the token from the Filter&#39;s dynamic metadata</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;metadataKey&quot;</span>, <span class="ident">default</span> <span class="op">=</span> <span class="string">&quot;default_metadata_key&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">metadata_key</span>: <span class="ident">String</span>,
+    <span class="kw">pub</span> <span class="ident">metadata_key</span>: <span class="ident">metadata::Key</span>,
 }
 
 <span class="doccomment">/// Default value for [`Config::metadata_key`]</span>
-<span class="kw">fn</span> <span class="ident">default_metadata_key</span>() -&gt; <span class="ident">String</span> {
-    <span class="ident">CAPTURED_BYTES</span>.<span class="ident">into</span>()
+<span class="kw">fn</span> <span class="ident">default_metadata_key</span>() -&gt; <span class="ident">metadata::Key</span> {
+    <span class="ident">metadata::Key::from_static</span>(<span class="ident">CAPTURED_BYTES</span>)
 }
 
 <span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">Config</span> {
@@ -437,7 +420,7 @@
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">Config</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">proto::TokenRouter</span> {
     <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">config</span>: <span class="ident">Config</span>) -&gt; <span class="self">Self</span> {
         <span class="self">Self</span> {
-            <span class="ident">metadata_key</span>: <span class="prelude-val">Some</span>(<span class="ident">config</span>.<span class="ident">metadata_key</span>),
+            <span class="ident">metadata_key</span>: <span class="prelude-val">Some</span>(<span class="ident">config</span>.<span class="ident">metadata_key</span>.<span class="ident">to_string</span>()),
         }
     }
 }
@@ -447,15 +430,16 @@
 
     <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">p</span>: <span class="ident">proto::TokenRouter</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident"><span class="self">Self</span>::Error</span><span class="op">&gt;</span> {
         <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
-            <span class="ident">metadata_key</span>: <span class="ident">p</span>.<span class="ident">metadata_key</span>.<span class="ident">unwrap_or_else</span>(<span class="ident">default_metadata_key</span>),
+            <span class="ident">metadata_key</span>: <span class="ident">p</span>
+                .<span class="ident">metadata_key</span>
+                .<span class="ident">map</span>(<span class="ident">metadata::Key::new</span>)
+                .<span class="ident">unwrap_or_else</span>(<span class="ident">default_metadata_key</span>),
         })
     }
 }
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="ident">std::sync::Arc</span>;
-
     <span class="kw">use</span> <span class="kw">crate</span>::{
         <span class="ident">endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">Metadata</span>},
         <span class="ident">metadata::Value</span>,
@@ -504,15 +488,13 @@
     <span class="kw">fn</span> <span class="ident">factory_custom_tokens</span>() {
         <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">TokenRouter::from_config</span>(
             <span class="ident">Config</span> {
-                <span class="ident">metadata_key</span>: <span class="ident">TOKEN_KEY</span>.<span class="ident">to_string</span>(),
+                <span class="ident">metadata_key</span>: <span class="ident">TOKEN_KEY</span>.<span class="ident">into</span>(),
             }
             .<span class="ident">into</span>(),
         );
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ctx</span> <span class="op">=</span> <span class="ident">new_ctx</span>();
-        <span class="ident">ctx</span>.<span class="ident">metadata</span>.<span class="ident">insert</span>(
-            <span class="ident">Arc::new</span>(<span class="ident">TOKEN_KEY</span>.<span class="ident">into</span>()),
-            <span class="ident">Value::Bytes</span>(<span class="string">b&quot;123&quot;</span>.<span class="ident">to_vec</span>().<span class="ident">into</span>()),
-        );
+        <span class="ident">ctx</span>.<span class="ident">metadata</span>
+            .<span class="ident">insert</span>(<span class="ident">TOKEN_KEY</span>.<span class="ident">into</span>(), <span class="ident">Value::Bytes</span>(<span class="string">b&quot;123&quot;</span>.<span class="ident">to_vec</span>().<span class="ident">into</span>()));
         <span class="ident">assert_read</span>(<span class="kw-2">&amp;</span><span class="ident">filter</span>, <span class="ident">ctx</span>);
     }
 
@@ -520,10 +502,8 @@
     <span class="kw">fn</span> <span class="ident">factory_empty_config</span>() {
         <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">TokenRouter::from_config</span>(<span class="prelude-val">None</span>);
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ctx</span> <span class="op">=</span> <span class="ident">new_ctx</span>();
-        <span class="ident">ctx</span>.<span class="ident">metadata</span>.<span class="ident">insert</span>(
-            <span class="ident">Arc::new</span>(<span class="ident">CAPTURED_BYTES</span>.<span class="ident">into</span>()),
-            <span class="ident">Value::Bytes</span>(<span class="string">b&quot;123&quot;</span>.<span class="ident">to_vec</span>().<span class="ident">into</span>()),
-        );
+        <span class="ident">ctx</span>.<span class="ident">metadata</span>
+            .<span class="ident">insert</span>(<span class="ident">CAPTURED_BYTES</span>.<span class="ident">into</span>(), <span class="ident">Value::Bytes</span>(<span class="string">b&quot;123&quot;</span>.<span class="ident">to_vec</span>().<span class="ident">into</span>()));
         <span class="ident">assert_read</span>(<span class="kw-2">&amp;</span><span class="ident">filter</span>, <span class="ident">ctx</span>);
     }
 
@@ -536,18 +516,14 @@
         <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">TokenRouter::from_config</span>(<span class="ident">config</span>.<span class="ident">into</span>());
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ctx</span> <span class="op">=</span> <span class="ident">new_ctx</span>();
-        <span class="ident">ctx</span>.<span class="ident">metadata</span>.<span class="ident">insert</span>(
-            <span class="ident">Arc::new</span>(<span class="ident">CAPTURED_BYTES</span>.<span class="ident">into</span>()),
-            <span class="ident">Value::Bytes</span>(<span class="string">b&quot;123&quot;</span>.<span class="ident">to_vec</span>().<span class="ident">into</span>()),
-        );
+        <span class="ident">ctx</span>.<span class="ident">metadata</span>
+            .<span class="ident">insert</span>(<span class="ident">CAPTURED_BYTES</span>.<span class="ident">into</span>(), <span class="ident">Value::Bytes</span>(<span class="string">b&quot;123&quot;</span>.<span class="ident">to_vec</span>().<span class="ident">into</span>()));
         <span class="ident">assert_read</span>(<span class="kw-2">&amp;</span><span class="ident">filter</span>, <span class="ident">ctx</span>);
 
         <span class="comment">// invalid key</span>
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ctx</span> <span class="op">=</span> <span class="ident">new_ctx</span>();
-        <span class="ident">ctx</span>.<span class="ident">metadata</span>.<span class="ident">insert</span>(
-            <span class="ident">Arc::new</span>(<span class="ident">CAPTURED_BYTES</span>.<span class="ident">into</span>()),
-            <span class="ident">Value::Bytes</span>(<span class="string">b&quot;567&quot;</span>.<span class="ident">to_vec</span>().<span class="ident">into</span>()),
-        );
+        <span class="ident">ctx</span>.<span class="ident">metadata</span>
+            .<span class="ident">insert</span>(<span class="ident">CAPTURED_BYTES</span>.<span class="ident">into</span>(), <span class="ident">Value::Bytes</span>(<span class="string">b&quot;567&quot;</span>.<span class="ident">to_vec</span>().<span class="ident">into</span>()));
 
         <span class="macro">assert!</span>(<span class="ident">filter</span>.<span class="ident">read</span>(<span class="kw-2">&amp;mut</span> <span class="ident">ctx</span>).<span class="ident">is_none</span>());
         <span class="macro">assert_eq!</span>(<span class="number">1</span>, <span class="ident">filter</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_no_endpoint_match</span>.<span class="ident">get</span>());
@@ -559,10 +535,8 @@
 
         <span class="comment">// wrong type key</span>
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ctx</span> <span class="op">=</span> <span class="ident">new_ctx</span>();
-        <span class="ident">ctx</span>.<span class="ident">metadata</span>.<span class="ident">insert</span>(
-            <span class="ident">Arc::new</span>(<span class="ident">CAPTURED_BYTES</span>.<span class="ident">into</span>()),
-            <span class="ident">Value::String</span>(<span class="ident">String::from</span>(<span class="string">&quot;wrong&quot;</span>)),
-        );
+        <span class="ident">ctx</span>.<span class="ident">metadata</span>
+            .<span class="ident">insert</span>(<span class="ident">CAPTURED_BYTES</span>.<span class="ident">into</span>(), <span class="ident">Value::String</span>(<span class="ident">String::from</span>(<span class="string">&quot;wrong&quot;</span>)));
         <span class="macro">assert!</span>(<span class="ident">filter</span>.<span class="ident">read</span>(<span class="kw-2">&amp;mut</span> <span class="ident">ctx</span>).<span class="ident">is_none</span>());
         <span class="macro">assert_eq!</span>(<span class="number">1</span>, <span class="ident">filter</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_invalid_token</span>.<span class="ident">get</span>());
     }

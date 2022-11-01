@@ -195,12 +195,16 @@ required:
 properties:
   metadata_key:
     description: The key to use when storing the captured value in the filter context. If a match was found it is available under `{{metadata_key}}/is_present`.
-    type: string
+    allOf:
+    - $ref: '#/definitions/Key'
   strategy:
     description: The capture strategy.
     allOf:
     - $ref: '#/definitions/Strategy'
 definitions:
+  Key:
+    description: A key in the metadata table.
+    type: string
   Strategy:
     description: Strategy to apply for acquiring a set of bytes in the UDP packet
     oneOf:

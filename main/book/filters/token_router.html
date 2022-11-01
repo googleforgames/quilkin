@@ -189,6 +189,11 @@ properties:
   metadataKey:
     description: the key to use when retrieving the token from the Filter's dynamic metadata
     default: quilkin.dev/capture
+    allOf:
+    - $ref: '#/definitions/Key'
+definitions:
+  Key:
+    description: A key in the metadata table.
     type: string
 </code></pre>
 <h3 id="metrics"><a class="header" href="#metrics">Metrics</a></h3>
