@@ -16,7 +16,7 @@
 
 use once_cell::sync::Lazy;
 
-use super::{DynamicMetadata, Value};
+use super::Value;
 
 static INTERNER: Lazy<lasso::ThreadedRodeo> = Lazy::new(lasso::ThreadedRodeo::new);
 
@@ -105,6 +105,23 @@ pub enum Symbol {
 }
 
 impl Symbol {
+    /// Creates a reference symbol referring to a variable coming
+    /// from metadata.
+    pub fn reference(key: impl AsRef<str>) -> Self {
+        Self::Reference(Reference::new(key.as_ref()))
+    }
+
+    /// Creates a reference symbol referring to an existing `key`.
+    pub fn raw_reference(key: Key) -> Self {
+        Self::Reference(Reference::raw(key))
+    }
+
+    /// Creates a literal value symbol.
+    pub fn literal(value: impl Into<Value>) -> Self {
+        Self::Literal(value.into())
+    }
+
+    /// Maps the symbol to its inner literal value, if present.
     pub fn as_literal(&self) -> Option<&Value> {
         match self {
             Self::Literal(value) => Some(value),
@@ -112,47 +129,11 @@ impl Symbol {
         }
     }
 
+    /// Maps the symbol to its inner reference, if present.
     pub fn as_reference(&self) -> Option<&Reference> {
         match self {
             Self::Literal(_) => None,
             Self::Reference(reference) => Some(reference),
-        }
-    }
-
-    /// Resolves a symbol into a [`Value`], using `ctx` for any references,
-    /// returning `None` if could not be found.
-    pub fn resolve<'literal: 'metadata, 'metadata>(
-        &'literal self,
-        metadata: &'metadata DynamicMetadata,
-    ) -> Option<&'metadata Value> {
-        match self {
-            Self::Literal(value) => Some(value),
-            Self::Reference(reference) => match metadata.get(&reference.key()) {
-                Some(value) => Some(value),
-                None => {
-                    tracing::warn!(key=%self.as_reference().unwrap(), "couldn't resolve key");
-                    None
-                }
-            },
-        }
-    }
-
-    /// Tries to [`Self::resolve`] the symbol to a `bytes::Bytes`, performing
-    /// a conversion process on different [`Value`] if relevant. Returning
-    /// `None` if it isn't supported currently.
-    ///
-    /// - [`Value::Bytes`] The value is copied as-is.
-    /// - [`Value::String`] The value is interpreted as a base64 string.
-    /// - [`Value::Number`] The value is an eight byte number encoded as big endian.
-    pub fn resolve_to_bytes<'literal: 'metadata, 'metadata>(
-        &'literal self,
-        metadata: &'metadata DynamicMetadata,
-    ) -> Option<bytes::Bytes> {
-        match self.resolve(metadata) {
-            Some(Value::Number(value)) => Some(Vec::from(value.to_be_bytes()).into()),
-            Some(Value::Bytes(bytes)) => Some(bytes.clone()),
-            Some(Value::String(string)) => Some(base64::decode(&string).ok()?.into()),
-            _ => None,
         }
     }
 }
@@ -177,12 +158,17 @@ pub struct Reference {
 }
 
 impl Reference {
+    /// Creates a new reference to a value in metadata.
     pub fn new<A: AsRef<str>>(key: A) -> Self {
-        Self {
-            key: Key::new(key.as_ref()),
-        }
+        Self::raw(Key::new(key.as_ref()))
     }
 
+    /// Creates a new reference to a value in metadata.
+    pub fn raw(key: Key) -> Self {
+        Self { key }
+    }
+
+    /// Returns the inner `key`.
     pub fn key(self) -> Key {
         self.key
     }

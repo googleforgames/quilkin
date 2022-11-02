@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-use std::collections::HashMap;
-
 use crate::{
     endpoint::{Endpoint, EndpointAddress},
     metadata::DynamicMetadata,
@@ -52,7 +50,7 @@ impl WriteContext {
             source,
             dest,
             contents,
-            metadata: HashMap::new(),
+            metadata: <_>::default(),
         }
     }
 }

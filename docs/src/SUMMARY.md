@@ -12,7 +12,7 @@
 - [Filters](./filters.md)
     - [Capture](./filters/capture.md)
     - [Compress](./filters/compress.md)
-    - [Concatenate Bytes](./filters/concatenate_bytes.md)
+    - [Concatenate Bytes](./filters/concatenate.md)
     - [Debug](./filters/debug.md)
     - [Drop](./filters/drop.md)
     - [Firewall](./filters/firewall.md)

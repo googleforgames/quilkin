@@ -273,7 +273,7 @@ mod tests {
         assert_eq!(
             serde_json::to_value(EndpointMetadata::from(metadata)).unwrap(),
             serde_json::json!({
-                crate::metadata::KEY: {
+                crate::metadata::BASE_URL: {
                     "tokens": ["TWFu"],
                 }
             })

@@ -71,11 +71,11 @@ mod tests {
         let config = r#"
 version: v1alpha1
 filters:
-  - name: quilkin.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
+  - name: quilkin.filters.concatenate.v1alpha1.Concatenate
     config:
         on_read: APPEND
         on_write: DO_NOTHING
-        bytes: c2lkZWNhcg== # sidecar
+        value: c2lkZWNhcg== # sidecar
 clusters:
   default:
     localities:

@@ -35,7 +35,7 @@ impl FilterSet {
     /// Current default filters:
     /// - [`debug`][filters::debug]
     /// - [`local_rate_limit`][filters::local_rate_limit]
-    /// - [`concatenate_bytes`][filters::concatenate_bytes]
+    /// - [`concatenate`][filters::concatenate]
     /// - [`load_balancer`][filters::load_balancer]
     /// - [`capture`][filters::capture]
     /// - [`token_router`][filters::token_router]
@@ -54,7 +54,7 @@ impl FilterSet {
             [
                 filters::Capture::factory(),
                 filters::Compress::factory(),
-                filters::ConcatenateBytes::factory(),
+                filters::Concatenate::factory(),
                 filters::Debug::factory(),
                 filters::Drop::factory(),
                 filters::Firewall::factory(),

@@ -130,7 +130,7 @@ impl Filter for Match {
             &self.on_read_filters,
             &self.metrics,
             ctx,
-            |ctx, metadata_key| ctx.metadata.get(metadata_key),
+            |ctx, metadata_key| ctx.metadata.get(*metadata_key),
             |ctx, instance| instance.filter.read(ctx),
         )
     }
@@ -141,7 +141,7 @@ impl Filter for Match {
             &self.on_write_filters,
             &self.metrics,
             ctx,
-            |ctx, metadata_key| ctx.metadata.get(metadata_key),
+            |ctx, metadata_key| ctx.metadata.get(*metadata_key),
             |ctx, instance| instance.filter.write(ctx),
         )
     }

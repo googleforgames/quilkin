@@ -64,7 +64,7 @@ impl Timestamp {
         direction_label: &'static str,
     ) {
         let value = metadata
-            .get(&self.config.metadata_key)
+            .get(self.config.metadata_key)
             .and_then(|item| match item {
                 Value::Number(item) => Some(*item as i64),
                 Value::Bytes(vec) => Some(i64::from_be_bytes((**vec).try_into().ok()?)),
@@ -76,7 +76,9 @@ impl Timestamp {
             None => return,
         };
 
-        let naive = match NaiveDateTime::from_timestamp_opt(value, 0) {
+        const BILLION: i64 = 1_000_000_000;
+        let (secs, nsecs) = (value / BILLION, (value % BILLION) as u32);
+        let naive = match NaiveDateTime::from_timestamp_opt(secs, nsecs) {
             Some(datetime) => datetime,
             None => {
                 tracing::warn!(
@@ -179,7 +181,7 @@ impl TryFrom<proto::Timestamp> for Config {
 mod tests {
     use super::*;
 
-    use crate::filters::capture::{self, Capture};
+    use crate::filters::{capture, concatenate, Capture, Concatenate};
 
     #[test]
     fn basic() {
@@ -201,8 +203,16 @@ mod tests {
     }
 
     #[test]
-    fn with_capture() {
+    fn with_capture_and_timestamp() {
         const TIMESTAMP_KEY: &str = "WITH_CAPTURE";
+        let concat = Concatenate::from_config(
+            concatenate::Config {
+                on_read: concatenate::Strategy::Append,
+                on_write: <_>::default(),
+                value: crate::metadata::Symbol::reference("quilkin.dev/computed/timestamp/now"),
+            }
+            .into(),
+        );
         let capture = Capture::from_config(
             capture::Config {
                 metadata_key: TIMESTAMP_KEY.into(),
@@ -216,13 +226,10 @@ mod tests {
         );
         let timestamp = Timestamp::from_config(Config::new(TIMESTAMP_KEY).into());
         let source = (std::net::Ipv4Addr::UNSPECIFIED, 0);
-        let mut ctx = ReadContext::new(
-            vec![],
-            source.into(),
-            [0, 0, 0, 0, 99, 81, 55, 181].to_vec(),
-        );
+        let mut ctx = ReadContext::new(vec![], source.into(), Vec::new());
 
-        capture.read(&mut ctx).unwrap();
+        concat.read(&mut ctx).unwrap();
+        capture.read(dbg!(&mut ctx)).unwrap();
         timestamp.read(&mut ctx).unwrap();
 
         assert_eq!(1, timestamp.metric(READ_DIRECTION_LABEL).get_sample_count());

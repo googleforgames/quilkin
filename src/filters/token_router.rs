@@ -59,7 +59,7 @@ impl StaticFilter for TokenRouter {
 
 impl Filter for TokenRouter {
     fn read(&self, ctx: &mut ReadContext) -> Option<()> {
-        match ctx.metadata.get(&self.config.metadata_key) {
+        match ctx.metadata.get(self.config.metadata_key) {
             None => {
                 tracing::trace!(
                     metadata_key = %self.config.metadata_key,

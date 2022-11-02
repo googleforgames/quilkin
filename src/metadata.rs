@@ -25,12 +25,98 @@ use std::{collections::HashMap, convert::TryFrom};
 
 use crate::xds::config::core::v3::Metadata as ProtoMetadata;
 
+pub use self::Metadata as DynamicMetadata;
 pub use symbol::{Key, Reference, Symbol};
 
-/// Shared state between [`Filter`][crate::filters::Filter]s during processing for a single packet.
-pub type DynamicMetadata = HashMap<Key, Value>;
+pub const BASE_URL: &str = "quilkin.dev";
+pub const COMPUTED_BASE_URL: &str = "$quilkin.dev/computed";
+pub const VARIABLE_SIGIL: &str = "$";
 
-pub const KEY: &str = "quilkin.dev";
+/// Shared state between [`Filter`][crate::filters::Filter]s during processing for a single packet.
+#[derive(
+    Clone, Default, Debug, PartialEq, serde::Serialize, serde::Deserialize, Eq, schemars::JsonSchema,
+)]
+#[serde(transparent)]
+pub struct Metadata {
+    map: HashMap<Key, Value>,
+}
+
+impl Metadata {
+    /// Instantiates an empty metadata table.
+    pub fn new() -> Self {
+        <_>::default()
+    }
+
+    /// Provides the entry for a metadata value.
+    pub fn entry(&mut self, key: Key) -> std::collections::hash_map::Entry<Key, Value> {
+        self.map.entry(key)
+    }
+
+    /// Provides the entry for a metadata value.
+    pub fn get<K: Copy>(&self, key: K) -> Option<&Value>
+    where
+        Key: std::borrow::Borrow<K>,
+        K: Eq + std::hash::Hash,
+    {
+        self.map.get(&key)
+    }
+
+    /// Provides the entry for a metadata value.
+    pub fn insert(&mut self, key: Key, value: Value) -> Option<Value> {
+        self.map.insert(key, value)
+    }
+
+    /// Resolves a symbol into a [`Value`], using `ctx` for any references,
+    /// returning `None` if could not be found.
+    pub fn resolve(&self, symbol: &Symbol) -> Option<Value> {
+        match symbol {
+            Symbol::Literal(value) => Some(value.clone()),
+            Symbol::Reference(reference) => {
+                match reference.to_string().strip_prefix(COMPUTED_BASE_URL) {
+                    Some("/timestamp/now") => {
+                        Some(Value::Number(chrono::Utc::now().timestamp_nanos() as u64))
+                    }
+                    Some(_) => None,
+                    None => self.map.get(&reference.key()).cloned(),
+                }
+            }
+        }
+    }
+
+    /// Tries to [`Self::resolve`] the symbol to a `bytes::Bytes`, performing
+    /// a conversion process on different [`Value`] if relevant. Returning
+    /// `None` if it isn't supported currently.
+    ///
+    /// - [`Value::Bytes`] The value is copied as-is.
+    /// - [`Value::String`] The value is interpreted as a base64 string.
+    /// - [`Value::Number`] The value is an eight byte number encoded as big endian.
+    pub fn resolve_to_bytes(&self, symbol: &Symbol) -> Option<bytes::Bytes> {
+        match self.resolve(symbol) {
+            Some(Value::Number(value)) => Some(Vec::from(value.to_be_bytes()).into()),
+            Some(Value::Bytes(bytes)) => Some(bytes),
+            Some(Value::String(string)) => Some(base64::decode(&string).ok()?.into()),
+            _ => None,
+        }
+    }
+}
+
+impl<Q> std::ops::Index<Q> for Metadata
+where
+    Key: Eq + std::hash::Hash + std::borrow::Borrow<Q>,
+    Q: Copy + Eq + std::hash::Hash,
+{
+    type Output = Value;
+
+    /// Returns a reference to the value corresponding to the supplied key.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the key is not present in the `HashMap`.
+    #[inline]
+    fn index(&self, key: Q) -> &Self::Output {
+        self.get(key).expect("no entry found for key")
+    }
+}
 
 #[derive(
     Clone, Debug, PartialOrd, serde::Serialize, serde::Deserialize, Eq, Ord, schemars::JsonSchema,
@@ -119,6 +205,7 @@ from_value! {
         Vec<Self> => Self::List(value),
         String => Self::String(value),
         &str => Self::String(value.into()),
+        Vec<u8> => Self::Bytes(value.into()),
         bytes::Bytes => Self::Bytes(value),
     }
 }
@@ -210,7 +297,7 @@ impl TryFrom<prost_types::Value> for Value {
 
 /// Represents a view into the metadata object attached to another object. `T`
 /// represents metadata known to Quilkin under `quilkin.dev` (available under
-/// the [`KEY`] constant.)
+/// the [`BASE_URL`] constant.)
 #[derive(
     Default, Debug, serde::Deserialize, serde::Serialize, PartialEq, Clone, Eq, schemars::JsonSchema,
 )]
@@ -285,7 +372,7 @@ where
     fn try_from(mut value: ProtoMetadata) -> Result<Self, Self::Error> {
         let known = value
             .filter_metadata
-            .remove(KEY)
+            .remove(BASE_URL)
             .map(T::try_from)
             .transpose()?
             .unwrap_or_default();

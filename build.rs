@@ -31,7 +31,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "proto/data-plane-api/envoy/type/tracing/v3/custom_tag.proto",
         "proto/quilkin/filters/capture/v1alpha1/capture.proto",
         "proto/quilkin/filters/compress/v1alpha1/compress.proto",
-        "proto/quilkin/filters/concatenate_bytes/v1alpha1/concatenate_bytes.proto",
+        "proto/quilkin/filters/concatenate/v1alpha1/concatenate.proto",
         "proto/quilkin/filters/debug/v1alpha1/debug.proto",
         "proto/quilkin/filters/drop/v1alpha1/drop.proto",
         "proto/quilkin/filters/firewall/v1alpha1/firewall.proto",

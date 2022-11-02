@@ -22,6 +22,7 @@ use crate::{
 };
 
 /// The input arguments to [`Filter::read`].
+#[derive(Debug)]
 #[non_exhaustive]
 pub struct ReadContext {
     /// The upstream endpoints that the packet will be forwarded to.

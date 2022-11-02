@@ -142,7 +142,7 @@ mod tests {
 
     use std::sync::Arc;
 
-    use crate::{config::Config, endpoint::Endpoint, filters::*};
+    use crate::{config::Config, endpoint::Endpoint, filters::*, metadata};
 
     #[tokio::test]
     async fn token_routing() {
@@ -314,16 +314,16 @@ mod tests {
             });
 
             let filters = crate::filters::FilterChain::try_from(vec![
-                ConcatenateBytes::as_filter_config(concatenate_bytes::Config {
-                    on_read: concatenate_bytes::Strategy::Append,
+                Concatenate::as_filter_config(concatenate::Config {
+                    on_read: concatenate::Strategy::Append,
                     on_write: <_>::default(),
-                    bytes: b1.as_bytes().to_vec(),
+                    value: metadata::Value::from(b1.as_bytes().to_vec()).into(),
                 })
                 .unwrap(),
-                ConcatenateBytes::as_filter_config(concatenate_bytes::Config {
-                    on_read: concatenate_bytes::Strategy::Append,
+                Concatenate::as_filter_config(concatenate::Config {
+                    on_read: concatenate::Strategy::Append,
                     on_write: <_>::default(),
-                    bytes: b2.as_bytes().to_vec(),
+                    value: metadata::Value::from(b2.as_bytes().to_vec()).into(),
                 })
                 .unwrap(),
             ])

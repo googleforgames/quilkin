@@ -256,7 +256,7 @@ mod tests {
             assert_eq!(b"helloabc", &*context.contents);
         }
 
-        let token = context.metadata.get(&key).unwrap().as_bytes().unwrap();
+        let token = context.metadata.get(key).unwrap().as_bytes().unwrap();
         assert_eq!(b"abc", &**token);
     }
 }

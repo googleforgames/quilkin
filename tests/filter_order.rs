@@ -22,7 +22,7 @@ use tokio::time::{timeout, Duration};
 use quilkin::{
     config::Filter,
     endpoint::Endpoint,
-    filters::{Compress, ConcatenateBytes, StaticFilter},
+    filters::{Compress, Concatenate, StaticFilter},
     test_utils::TestHelper,
 };
 
@@ -32,12 +32,12 @@ async fn filter_order() {
 
     let yaml_concat_read = "
 on_read: APPEND
-bytes: eHl6 #xyz
+value: eHl6 #xyz
 ";
 
     let yaml_concat_write = "
 on_write: APPEND
-bytes: YWJj #abc
+value: YWJj #abc
 ";
 
     let yaml_compress = "
@@ -59,11 +59,11 @@ on_write: DECOMPRESS
         .port(server_port)
         .filters(vec![
             Filter {
-                name: ConcatenateBytes::factory().name().into(),
+                name: Concatenate::factory().name().into(),
                 config: serde_yaml::from_str(yaml_concat_read).unwrap(),
             },
             Filter {
-                name: ConcatenateBytes::factory().name().into(),
+                name: Concatenate::factory().name().into(),
                 config: serde_yaml::from_str(yaml_concat_write).unwrap(),
             },
             Filter {

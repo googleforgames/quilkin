@@ -61,7 +61,7 @@ filters:
     config:
       max_packets: 10
       period: 1
-clusters: 
+clusters:
   default:
     localities:
       - endpoints:
@@ -87,10 +87,10 @@ This enables sharing dynamic information at runtime, e.g information about the c
 At packet processing time each packet is associated with _filter dynamic metadata_ (a set of key-value pairs). Each key is a unique string while its value is an associated [`quilkin::metadata::Value`].
 When a filter processes a packet, it can choose to consult the associated dynamic metadata for more information or itself add/update or remove key-values from the set.
 
-As an example, the built-in [CaptureBytes] filter is one such filter that populates a packet's filter metadata.
-[CaptureBytes] extracts information (a configurable byte sequence) from each packet and appends it to the packet's dynamic metadata for other filters to leverage.
+As an example, the built-in [Capture] filter is one such filter that populates a packet's filter metadata.
+[Capture] extracts information (a configurable byte sequence) from each packet and appends it to the packet's dynamic metadata for other filters to leverage.
 On the other hand, the built-in [TokenRouter] filter selects what endpoint to route a packet by consulting the packet's dynamic metadata for a routing token.
-Consequently, we can build a filter chain with a [CaptureBytes] filter preceeding a [TokenRouter] filter, both configured to write and read the same key in the dynamic metadata entry. The effect would be that packets are routed to upstream endpoints based on token information extracted from their contents.
+Consequently, we can build a filter chain with a [Capture] filter preceeding a [TokenRouter] filter, both configured to write and read the same key in the dynamic metadata entry. The effect would be that packets are routed to upstream endpoints based on token information extracted from their contents.
 
 #### Well Known Dynamic Metadata
 
@@ -107,7 +107,7 @@ Quilkin includes several filters out of the box.
 |----------------------------------------------------|-------------------------------------------------------------------------------------------------------------|
 | [Capture]                                          | Capture specific bytes from a packet and store them in [filter dynamic metadata](#filter-dynamic-metadata). |
 | [Compress](./filters/compress.md)                  | Compress and decompress packets data.                                                                       |
-| [ConcatenateBytes](./filters/concatenate_bytes.md) | Add authentication tokens to packets.                                                                       |
+| [Concatenate](./filters/concatenate.md) | Add authentication tokens to packets.                                                                       |
 | [Debug]                                            | Logs every packet.                                                                                          |
 | [Drop](./filters/drop.md)                          | Drop all packets                                                                                            |
 | [Firewall](./filters/firewall.md)                  | Allowing/blocking traffic by IP and port.                                                                   |
@@ -138,6 +138,20 @@ properties:
 
 required: [ 'name', 'config' ]
 ```
+
+### Filter Metadata Data Model
+Filter metadata can be used with filters to create simple protocol data units
+(PDUs) between the proxy and the client, and the proxy and the server. Typically
+anywhere you can supply a literal value you can also supply a reference to a
+piece of metadata. To do so prefix the id of the metadata with `$`
+(e.g. `$example.com/foo`). This will insert the value of the metadata from at
+that point in the pipeline for the configuration.
+
+There are also computed symbols under `quilkin.dev/computed` that will return the result of an operation when referenced (e.g. `$quilkin.dev/computed/timestamp/now`).
+
+| id | description |
+|----|-------------|
+| `/timestamp/now` | Returns the current time in nanoseconds |
 
 [Capture]: ./filters/capture.md
 [TokenRouter]: ./filters/token_router.md

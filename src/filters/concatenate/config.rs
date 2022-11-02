@@ -20,13 +20,13 @@ use base64_serde::base64_serde_type;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{filters::prelude::*, map_proto_enum};
+use crate::{filters::prelude::*, map_proto_enum, metadata};
 
 use super::proto;
 
 base64_serde_type!(Base64Standard, base64::STANDARD);
 
-#[derive(Serialize, Deserialize, Debug, Eq, PartialEq, JsonSchema)]
+#[derive(Copy, Clone, Serialize, Deserialize, Debug, Eq, PartialEq, JsonSchema)]
 pub enum Strategy {
     #[serde(rename = "APPEND")]
     Append,
@@ -42,7 +42,7 @@ impl Default for Strategy {
     }
 }
 
-impl From<Strategy> for proto::concatenate_bytes::Strategy {
+impl From<Strategy> for proto::concatenate::Strategy {
     fn from(strategy: Strategy) -> Self {
         match strategy {
             Strategy::Append => Self::Append,
@@ -52,15 +52,15 @@ impl From<Strategy> for proto::concatenate_bytes::Strategy {
     }
 }
 
-impl From<Strategy> for proto::concatenate_bytes::StrategyValue {
+impl From<Strategy> for proto::concatenate::StrategyValue {
     fn from(strategy: Strategy) -> Self {
         Self {
-            value: proto::concatenate_bytes::Strategy::from(strategy) as i32,
+            value: proto::concatenate::Strategy::from(strategy) as i32,
         }
     }
 }
 
-/// Config represents a `ConcatenateBytes` filter configuration.
+/// Config represents a `Concatenate` filter configuration.
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq, JsonSchema)]
 #[non_exhaustive]
 pub struct Config {
@@ -70,35 +70,37 @@ pub struct Config {
     /// Whether or not to `append` or `prepend` or `do nothing` on Filter `Write`
     #[serde(default)]
     pub on_write: Strategy,
-
-    #[serde(
-        deserialize_with = "Base64Standard::deserialize",
-        serialize_with = "Base64Standard::serialize"
-    )]
-    pub bytes: Vec<u8>,
+    pub value: metadata::Symbol,
 }
 
-impl From<Config> for proto::ConcatenateBytes {
+impl From<Config> for proto::Concatenate {
     fn from(config: Config) -> Self {
         Self {
             on_read: Some(config.on_read.into()),
             on_write: Some(config.on_write.into()),
-            bytes: config.bytes,
+            value: Some(match config.value {
+                metadata::Symbol::Literal(value) => {
+                    proto::concatenate::Value::Literal(value.into())
+                }
+                metadata::Symbol::Reference(reference) => {
+                    proto::concatenate::Value::Reference(reference.to_string())
+                }
+            }),
         }
     }
 }
 
-impl TryFrom<proto::ConcatenateBytes> for Config {
+impl TryFrom<proto::Concatenate> for Config {
     type Error = ConvertProtoConfigError;
 
-    fn try_from(p: proto::ConcatenateBytes) -> Result<Self, Self::Error> {
+    fn try_from(p: proto::Concatenate) -> Result<Self, Self::Error> {
         let on_read = p
             .on_read
             .map(|strategy| {
                 map_proto_enum!(
                     value = strategy.value,
                     field = "on_read",
-                    proto_enum_type = proto::concatenate_bytes::Strategy,
+                    proto_enum_type = proto::concatenate::Strategy,
                     target_enum_type = Strategy,
                     variants = [DoNothing, Append, Prepend]
                 )
@@ -112,7 +114,7 @@ impl TryFrom<proto::ConcatenateBytes> for Config {
                 map_proto_enum!(
                     value = strategy.value,
                     field = "on_write",
-                    proto_enum_type = proto::concatenate_bytes::Strategy,
+                    proto_enum_type = proto::concatenate::Strategy,
                     target_enum_type = Strategy,
                     variants = [DoNothing, Append, Prepend]
                 )
@@ -123,7 +125,15 @@ impl TryFrom<proto::ConcatenateBytes> for Config {
         Ok(Self {
             on_read,
             on_write,
-            bytes: p.bytes,
+            value: match p.value {
+                Some(proto::concatenate::Value::Literal(value)) => metadata::Value::try_from(value)
+                    .map_err(|error| ConvertProtoConfigError::new(error, Some("bytes".into())))?
+                    .into(),
+                Some(proto::concatenate::Value::Reference(key)) => {
+                    metadata::Reference::new(key).into()
+                }
+                None => metadata::Value::from(bytes::Bytes::new()).into(),
+            },
         })
     }
 }

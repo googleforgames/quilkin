@@ -16,9 +16,12 @@
 
 syntax = "proto3";
 
-package quilkin.filters.concatenate_bytes.v1alpha1;
+package quilkin.filters.concatenate.v1alpha1;
 
-message ConcatenateBytes {
+import "google/protobuf/wrappers.proto";
+import "google/protobuf/struct.proto";
+
+message Concatenate {
   enum Strategy {
     DoNothing = 0;
     Append = 1;
@@ -31,6 +34,9 @@ message ConcatenateBytes {
 
   StrategyValue on_write = 1;
   StrategyValue on_read = 2;
-  bytes bytes = 3;
+  oneof value {
+    google.protobuf.StringValue reference = 3;
+    google.protobuf.Value literal = 4;
+  }
 }
 

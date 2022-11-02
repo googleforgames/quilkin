@@ -5,7 +5,7 @@ The `CaptureBytes` filter's job is to find a series of bytes within a packet, an
 down the chain.
 
 This is often used as a way of retrieving authentication tokens from a packet, and used in combination with
-[ConcatenateBytes](./concatenate_bytes.md) and
+[Concatenate](./concatenate.md) and
 [TokenRouter](token_router.md) filter to provide common packet routing utilities.
 
 ### Capture strategies
