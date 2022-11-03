@@ -51,21 +51,21 @@ impl Compress {
 
     /// Track a failed attempt at compression
     fn failed_compression<T>(&self, err: &dyn std::error::Error) -> Option<T> {
-        if self.metrics.packets_dropped_compress.get() % LOG_SAMPLING_RATE == 0 {
-            warn!(mode = ?self.compression_mode, error = %err, count = self.metrics.packets_dropped_compress.get(),
+        if self.metrics.packets_dropped_total_compress.get() % LOG_SAMPLING_RATE == 0 {
+            warn!(mode = ?self.compression_mode, error = %err, count = self.metrics.packets_dropped_total_compress.get(),
             "Packets are being dropped as they could not be compressed");
         }
-        self.metrics.packets_dropped_compress.inc();
+        self.metrics.packets_dropped_total_compress.inc();
         None
     }
 
     /// Track a failed attempt at decompression
     fn failed_decompression<T>(&self, err: &dyn std::error::Error) -> Option<T> {
-        if self.metrics.packets_dropped_decompress.get() % LOG_SAMPLING_RATE == 0 {
-            warn!(mode = ?self.compression_mode, error = %err, count = ?self.metrics.packets_dropped_decompress.get(),
+        if self.metrics.packets_dropped_total_decompress.get() % LOG_SAMPLING_RATE == 0 {
+            warn!(mode = ?self.compression_mode, error = %err, count = ?self.metrics.packets_dropped_total_decompress.get(),
             "Packets are being dropped as they could not be decompressed");
         }
-        self.metrics.packets_dropped_decompress.inc();
+        self.metrics.packets_dropped_total_decompress.inc();
         None
     }
 }
@@ -318,8 +318,8 @@ mod tests {
 
         assert_eq!(expected, &*write_context.contents);
 
-        assert_eq!(0, compress.metrics.packets_dropped_decompress.get());
-        assert_eq!(0, compress.metrics.packets_dropped_compress.get());
+        assert_eq!(0, compress.metrics.packets_dropped_total_decompress.get());
+        assert_eq!(0, compress.metrics.packets_dropped_total_compress.get());
         // multiply by two, because data was sent both upstream and downstream
         assert_eq!(
             (read_context.contents.len() * 2) as u64,
@@ -354,8 +354,8 @@ mod tests {
             compress.metrics.decompressed_bytes_total.get()
         );
 
-        assert_eq!(0, compress.metrics.packets_dropped_decompress.get());
-        assert_eq!(0, compress.metrics.packets_dropped_compress.get());
+        assert_eq!(0, compress.metrics.packets_dropped_total_decompress.get());
+        assert_eq!(0, compress.metrics.packets_dropped_total_compress.get());
     }
 
     #[traced_test]
@@ -379,8 +379,11 @@ mod tests {
             ))
             .is_none());
 
-        assert_eq!(1, compression.metrics.packets_dropped_decompress.get());
-        assert_eq!(0, compression.metrics.packets_dropped_compress.get());
+        assert_eq!(
+            1,
+            compression.metrics.packets_dropped_total_decompress.get()
+        );
+        assert_eq!(0, compression.metrics.packets_dropped_total_compress.get());
 
         let compression = Compress::new(
             Config {
@@ -404,8 +407,11 @@ mod tests {
         ));
         assert!(logs_contain("quilkin::filters::compress")); // the given name to the the logger by tracing
 
-        assert_eq!(1, compression.metrics.packets_dropped_decompress.get());
-        assert_eq!(0, compression.metrics.packets_dropped_compress.get());
+        assert_eq!(
+            1,
+            compression.metrics.packets_dropped_total_decompress.get()
+        );
+        assert_eq!(0, compression.metrics.packets_dropped_total_compress.get());
         assert_eq!(0, compression.metrics.compressed_bytes_total.get());
         assert_eq!(0, compression.metrics.decompressed_bytes_total.get());
     }

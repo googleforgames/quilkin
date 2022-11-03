@@ -22,9 +22,9 @@ use crate::metrics::{filter_opts, CollectorExt};
 
 /// Register and manage metrics for this filter
 pub(super) struct Metrics {
-    pub(super) packets_dropped_no_token_found: GenericCounter<AtomicU64>,
-    pub(super) packets_dropped_invalid_token: GenericCounter<AtomicU64>,
-    pub(super) packets_dropped_no_endpoint_match: GenericCounter<AtomicU64>,
+    pub(super) packets_dropped_total_no_token_found: GenericCounter<AtomicU64>,
+    pub(super) packets_dropped_total_invalid_token: GenericCounter<AtomicU64>,
+    pub(super) packets_dropped_total_no_endpoint_match: GenericCounter<AtomicU64>,
 }
 
 impl Metrics {
@@ -32,7 +32,7 @@ impl Metrics {
         let label_names = vec!["reason"];
         let metric = IntCounterVec::new(
             filter_opts(
-                "packets_dropped",
+                "packets_dropped_total",
                 "TokenRouter",
                 "Total number of packets dropped. labels: reason.",
             ),
@@ -41,11 +41,11 @@ impl Metrics {
         .register_if_not_exists()?;
 
         Ok(Metrics {
-            packets_dropped_no_token_found: metric
+            packets_dropped_total_no_token_found: metric
                 .get_metric_with_label_values(vec!["NoTokenFound"].as_slice())?,
-            packets_dropped_invalid_token: metric
+            packets_dropped_total_invalid_token: metric
                 .get_metric_with_label_values(vec!["InvalidToken"].as_slice())?,
-            packets_dropped_no_endpoint_match: metric
+            packets_dropped_total_no_endpoint_match: metric
                 .get_metric_with_label_values(vec!["NoEndpointMatch"].as_slice())?,
         })
     }

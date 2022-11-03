@@ -27,7 +27,7 @@ impl Metrics {
     pub(super) fn new() -> prometheus::Result<Self> {
         Ok(Metrics {
             packets_dropped_total: IntCounter::with_opts(filter_opts(
-                "packets_dropped",
+                "packets_dropped_total",
                 "CaptureBytes",
                 "Total number of packets dropped due capture size being larger than the received packet",
             ))?

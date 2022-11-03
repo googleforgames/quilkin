@@ -258,7 +258,7 @@ impl Filter for FilterChain {
                     }
                     None => {
                         tracing::trace!(%id, "read dropping packet");
-                        crate::metrics::packets_dropped(crate::metrics::READ, id).inc();
+                        crate::metrics::packets_dropped_total(crate::metrics::READ, id).inc();
                         return None;
                     }
                 }
@@ -281,7 +281,7 @@ impl Filter for FilterChain {
                     }
                     None => {
                         tracing::trace!(%id, "write dropping packet");
-                        crate::metrics::packets_dropped(crate::metrics::WRITE, id).inc();
+                        crate::metrics::packets_dropped_total(crate::metrics::WRITE, id).inc();
                         None
                     }
                 }

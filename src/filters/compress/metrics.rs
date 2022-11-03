@@ -22,8 +22,8 @@ use crate::metrics::{filter_opts, CollectorExt};
 
 /// Register and manage metrics for this filter
 pub(super) struct Metrics {
-    pub(super) packets_dropped_compress: GenericCounter<AtomicU64>,
-    pub(super) packets_dropped_decompress: GenericCounter<AtomicU64>,
+    pub(super) packets_dropped_total_compress: GenericCounter<AtomicU64>,
+    pub(super) packets_dropped_total_decompress: GenericCounter<AtomicU64>,
     pub(super) compressed_bytes_total: GenericCounter<AtomicU64>,
     pub(super) decompressed_bytes_total: GenericCounter<AtomicU64>,
 }
@@ -56,9 +56,9 @@ impl Metrics {
         .register_if_not_exists()?;
 
         Ok(Metrics {
-            packets_dropped_compress: dropped_metric
+            packets_dropped_total_compress: dropped_metric
                 .get_metric_with_label_values(vec!["Compress"].as_slice())?,
-            packets_dropped_decompress: dropped_metric
+            packets_dropped_total_decompress: dropped_metric
                 .get_metric_with_label_values(vec!["Decompress"].as_slice())?,
             compressed_bytes_total,
             decompressed_bytes_total,

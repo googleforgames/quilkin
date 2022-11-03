@@ -28,7 +28,7 @@ impl Metrics {
     pub(super) fn new() -> MetricsResult<Self> {
         Ok(Metrics {
             packets_dropped_total: IntCounter::with_opts(filter_opts(
-                "packets_dropped",
+                "packets_dropped_total",
                 "LocalRateLimit",
                 "Total number of packets dropped due to rate limiting",
             ))?

@@ -59,7 +59,7 @@ clusters:
 
 ### Metrics
 
-* `quilkin_filter_Capture_packets_dropped`
+* `quilkin_filter_Capture_packets_dropped_total`
   A counter of the total number of packets that have been dropped due to their length being less than the configured
   `size`.
 

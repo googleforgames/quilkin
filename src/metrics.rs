@@ -141,11 +141,11 @@ pub(crate) fn packets_total(direction: Direction) -> IntCounter {
     PACKETS_TOTAL.with_label_values(&[direction.label()])
 }
 
-pub(crate) fn packets_dropped(direction: Direction, reason: &str) -> IntCounter {
+pub(crate) fn packets_dropped_total(direction: Direction, reason: &str) -> IntCounter {
     static PACKETS_DROPPED: Lazy<IntCounterVec> = Lazy::new(|| {
         prometheus::register_int_counter_vec_with_registry! {
             prometheus::opts! {
-                "packets_dropped",
+                "packets_dropped_total",
                 "Total number of dropped packets",
             },
             &[Direction::LABEL, "reason"],

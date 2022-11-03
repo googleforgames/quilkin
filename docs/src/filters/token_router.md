@@ -50,7 +50,7 @@ View the [CaptureBytes](./capture.md) filter documentation for more details.
 
 ### Metrics
 
-* `quilkin_filter_TokenRouter_packets_dropped`
+* `quilkin_filter_TokenRouter_packets_dropped_total`
   A counter of the total number of packets that have been dropped. This is also provided with a `Reason` label, as there
   are differing reasons for packets to be dropped:
     * `NoEndpointMatch` - The token provided via the Filter dynamic metadata does not match any Endpoint's tokens.
