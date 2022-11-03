@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/config/builder.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>builder.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../quilkin/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/config/builder.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>builder.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../normalize.css"><link rel="stylesheet" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../ayu.css" disabled><link rel="stylesheet" href="../../../dark.css" disabled><link rel="stylesheet" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../quilkin/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -155,134 +155,134 @@
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- */</span>
+ */
 
-<span class="kw">use</span> <span class="ident">std::collections::HashSet</span>;
+</span><span class="kw">use </span>std::collections::HashSet;
 
-<span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">Config</span>, <span class="ident">Filter</span>};
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">cluster::ClusterMap</span>,
-    <span class="ident">config</span>::{<span class="ident">Admin</span>, <span class="ident">ManagementServer</span>, <span class="ident">ValidationError</span>, <span class="ident">Version</span>},
+<span class="kw">use super</span>::{Config, Filter};
+<span class="kw">use crate</span>::{
+    cluster::ClusterMap,
+    config::{Admin, ManagementServer, ValidationError, Version},
 };
 
-<span class="doccomment">/// Builder for a [`Config`]</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Builder</span> {
-    <span class="kw">pub</span> <span class="ident">port</span>: <span class="ident">u16</span>,
-    <span class="kw">pub</span> <span class="ident">admin</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Admin</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span> <span class="ident">clusters</span>: <span class="ident">ClusterMap</span>,
-    <span class="kw">pub</span> <span class="ident">filters</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Filter</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span> <span class="ident">management_servers</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ManagementServer</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span> <span class="ident">maxmind_db</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident"><span class="kw">crate</span>::maxmind_db::Source</span><span class="op">&gt;</span>,
+<span class="doccomment">/// Builder for a [`Config`]
+</span><span class="attribute">#[derive(Debug)]
+</span><span class="kw">pub struct </span>Builder {
+    <span class="kw">pub </span>port: u16,
+    <span class="kw">pub </span>admin: <span class="prelude-ty">Option</span>&lt;Admin&gt;,
+    <span class="kw">pub </span>clusters: ClusterMap,
+    <span class="kw">pub </span>filters: Vec&lt;Filter&gt;,
+    <span class="kw">pub </span>management_servers: Vec&lt;ManagementServer&gt;,
+    <span class="kw">pub </span>maxmind_db: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::maxmind_db::Source&gt;,
 }
 
-<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">Builder</span> {
-    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">admin</span>: <span class="prelude-val">Some</span>(<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>()),
-            <span class="ident">port</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
-            <span class="ident">clusters</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
-            <span class="ident">filters</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
-            <span class="ident">management_servers</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
-            <span class="ident">maxmind_db</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
+<span class="kw">impl </span>Default <span class="kw">for </span>Builder {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            admin: <span class="prelude-val">Some</span>(&lt;<span class="kw">_</span>&gt;::default()),
+            port: &lt;<span class="kw">_</span>&gt;::default(),
+            clusters: &lt;<span class="kw">_</span>&gt;::default(),
+            filters: &lt;<span class="kw">_</span>&gt;::default(),
+            management_servers: &lt;<span class="kw">_</span>&gt;::default(),
+            maxmind_db: &lt;<span class="kw">_</span>&gt;::default(),
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">Builder</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">port</span>(<span class="self">self</span>, <span class="ident">port</span>: <span class="ident">u16</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">Builder</span> { <span class="ident">port</span>, ..<span class="self">self</span> }
+<span class="kw">impl </span>Builder {
+    <span class="kw">pub fn </span>port(<span class="self">self</span>, port: u16) -&gt; <span class="self">Self </span>{
+        Builder { port, ..<span class="self">self </span>}
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">filters</span>(<span class="self">self</span>, <span class="ident">filters</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Filter</span><span class="op">&gt;</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">filters</span>: <span class="ident">filters</span>.<span class="ident">into</span>(),
-            ..<span class="self">self</span>
-        }
+    <span class="kw">pub fn </span>filters(<span class="self">self</span>, filters: <span class="kw">impl </span>Into&lt;Vec&lt;Filter&gt;&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            filters: filters.into(),
+            ..<span class="self">self
+        </span>}
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">clusters</span>(<span class="self">self</span>, <span class="ident">clusters</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">ClusterMap</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">clusters</span>: <span class="ident">clusters</span>.<span class="ident">into</span>(),
-            ..<span class="self">self</span>
-        }
+    <span class="kw">pub fn </span>clusters(<span class="self">self</span>, clusters: <span class="kw">impl </span>Into&lt;ClusterMap&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            clusters: clusters.into(),
+            ..<span class="self">self
+        </span>}
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">endpoints</span>(<span class="self">self</span>, <span class="ident">endpoints</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident"><span class="kw">crate</span>::endpoint::Endpoint</span><span class="op">&gt;</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">clusters</span>: <span class="ident">ClusterMap::new_with_default_cluster</span>(
-                <span class="ident">endpoints</span>
-                    .<span class="ident">into</span>()
-                    .<span class="ident">into_iter</span>()
-                    .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">std::collections::BTreeSet</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>(),
+    <span class="kw">pub fn </span>endpoints(<span class="self">self</span>, endpoints: <span class="kw">impl </span>Into&lt;Vec&lt;<span class="kw">crate</span>::endpoint::Endpoint&gt;&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            clusters: ClusterMap::new_with_default_cluster(
+                endpoints
+                    .into()
+                    .into_iter()
+                    .collect::&lt;std::collections::BTreeSet&lt;<span class="kw">_</span>&gt;&gt;(),
             ),
-            ..<span class="self">self</span>
-        }
+            ..<span class="self">self
+        </span>}
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">management_servers</span>(<span class="self">self</span>, <span class="ident">management_servers</span>: <span class="kw">impl</span> <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">String</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">management_servers</span> <span class="op">=</span> <span class="ident">management_servers</span>
-            .<span class="ident">into_iter</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">address</span><span class="op">|</span> <span class="ident">ManagementServer</span> { <span class="ident">address</span> })
-            .<span class="ident">collect</span>();
-        <span class="self">Self</span> {
-            <span class="ident">management_servers</span>,
-            ..<span class="self">self</span>
-        }
+    <span class="kw">pub fn </span>management_servers(<span class="self">self</span>, management_servers: <span class="kw">impl </span>IntoIterator&lt;Item = String&gt;) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span>management_servers = management_servers
+            .into_iter()
+            .map(|address| ManagementServer { address })
+            .collect();
+        <span class="self">Self </span>{
+            management_servers,
+            ..<span class="self">self
+        </span>}
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">admin</span>(<span class="self">self</span>, <span class="ident">admin</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Admin</span><span class="op">&gt;</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">admin</span>: <span class="ident">admin</span>.<span class="ident">into</span>(),
-            ..<span class="self">self</span>
-        }
+    <span class="kw">pub fn </span>admin(<span class="self">self</span>, admin: <span class="kw">impl </span>Into&lt;<span class="prelude-ty">Option</span>&lt;Admin&gt;&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            admin: admin.into(),
+            ..<span class="self">self
+        </span>}
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">maxmind_db</span>(<span class="self">self</span>, <span class="ident">mmdb</span>: <span class="ident"><span class="kw">crate</span>::maxmind_db::Source</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">maxmind_db</span>: <span class="ident">mmdb</span>.<span class="ident">into</span>(),
-            ..<span class="self">self</span>
-        }
+    <span class="kw">pub fn </span>maxmind_db(<span class="self">self</span>, mmdb: <span class="kw">crate</span>::maxmind_db::Source) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            maxmind_db: mmdb.into(),
+            ..<span class="self">self
+        </span>}
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build</span>(<span class="self">self</span>) -&gt; <span class="ident"><span class="kw">crate</span>::Result</span><span class="op">&lt;</span><span class="ident">Config</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">try_into</span>().<span class="ident">map_err</span>(<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::from</span>)
+    <span class="kw">pub fn </span>build(<span class="self">self</span>) -&gt; <span class="kw">crate</span>::Result&lt;Config&gt; {
+        <span class="self">self</span>.try_into().map_err(&lt;<span class="kw">_</span>&gt;::from)
     }
 }
 
-<span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident">Builder</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Config</span> {
-    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">ValidationError</span>;
+<span class="kw">impl </span>TryFrom&lt;Builder&gt; <span class="kw">for </span>Config {
+    <span class="kw">type </span>Error = ValidationError;
 
-    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">builder</span>: <span class="ident">Builder</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident"><span class="self">Self</span>::Error</span><span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="op">!</span><span class="ident">builder</span>.<span class="ident">clusters</span>.<span class="ident">contains_only_unique_endpoints</span>() {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">ValidationError::NotUnique</span>(<span class="string">&quot;clusters&quot;</span>.<span class="ident">into</span>()));
+    <span class="kw">fn </span>try_from(builder: Builder) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
+        <span class="kw">if </span>!builder.clusters.contains_only_unique_endpoints() {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(ValidationError::NotUnique(<span class="string">&quot;clusters&quot;</span>.into()));
         }
 
-        <span class="kw">if</span> <span class="ident">builder</span>
-            .<span class="ident">management_servers</span>
-            .<span class="ident">iter</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">server</span><span class="op">|</span> <span class="kw-2">&amp;</span><span class="ident">server</span>.<span class="ident">address</span>)
-            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">HashSet</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
-            .<span class="ident">len</span>()
-            <span class="op">!</span><span class="op">=</span> <span class="ident">builder</span>.<span class="ident">management_servers</span>.<span class="ident">len</span>()
+        <span class="kw">if </span>builder
+            .management_servers
+            .iter()
+            .map(|server| <span class="kw-2">&amp;</span>server.address)
+            .collect::&lt;HashSet&lt;<span class="kw">_</span>&gt;&gt;()
+            .len()
+            != builder.management_servers.len()
         {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">ValidationError::NotUnique</span>(
-                <span class="string">&quot;dynamic.management_servers.address&quot;</span>.<span class="ident">to_string</span>(),
+            <span class="kw">return </span><span class="prelude-val">Err</span>(ValidationError::NotUnique(
+                <span class="string">&quot;dynamic.management_servers.address&quot;</span>.to_string(),
             ));
         }
 
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
-            <span class="ident">version</span>: <span class="ident">Version::V1Alpha1</span>.<span class="ident">into</span>(),
-            <span class="ident">id</span>: <span class="ident">String::from</span>(<span class="string">&quot;test&quot;</span>).<span class="ident">into</span>(),
-            <span class="ident">port</span>: <span class="ident">builder</span>.<span class="ident">port</span>.<span class="ident">into</span>(),
-            <span class="ident">admin</span>: <span class="ident">builder</span>.<span class="ident">admin</span>.<span class="ident">into</span>(),
-            <span class="ident">clusters</span>: <span class="ident">builder</span>.<span class="ident">clusters</span>.<span class="ident">into</span>(),
-            <span class="ident">filters</span>: <span class="ident"><span class="kw">crate</span>::filters::FilterChain::try_from</span>(<span class="ident">builder</span>.<span class="ident">filters</span>)<span class="question-mark">?</span>.<span class="ident">into</span>(),
-            <span class="ident">management_servers</span>: <span class="ident">builder</span>.<span class="ident">management_servers</span>.<span class="ident">into</span>(),
-            <span class="ident">metrics</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
-            <span class="ident">maxmind_db</span>: <span class="ident">builder</span>.<span class="ident">maxmind_db</span>.<span class="ident">into</span>(),
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
+            version: Version::V1Alpha1.into(),
+            id: String::from(<span class="string">&quot;test&quot;</span>).into(),
+            port: builder.port.into(),
+            admin: builder.admin.into(),
+            clusters: builder.clusters.into(),
+            filters: <span class="kw">crate</span>::filters::FilterChain::try_from(builder.filters)<span class="question-mark">?</span>.into(),
+            management_servers: builder.management_servers.into(),
+            metrics: &lt;<span class="kw">_</span>&gt;::default(),
+            maxmind_db: builder.maxmind_db.into(),
         })
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

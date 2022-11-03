@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/config/slot.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>slot.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../quilkin/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/config/slot.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>slot.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../normalize.css"><link rel="stylesheet" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../ayu.css" disabled><link rel="stylesheet" href="../../../dark.css" disabled><link rel="stylesheet" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../quilkin/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -231,210 +231,210 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */</span>
+ */
 
-<span class="kw">use</span> <span class="ident">std::sync::Arc</span>;
+</span><span class="kw">use </span>std::sync::Arc;
 
-<span class="kw">use</span> <span class="ident">arc_swap::ArcSwapOption</span>;
-<span class="kw">use</span> <span class="ident">schemars::JsonSchema</span>;
+<span class="kw">use </span>arc_swap::ArcSwapOption;
+<span class="kw">use </span>schemars::JsonSchema;
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters::prelude</span>::<span class="kw-2">*</span>;
+<span class="kw">use </span><span class="kw">crate</span>::filters::prelude::<span class="kw-2">*</span>;
 
-<span class="doccomment">/// A mutable memory location with atomic storage rules.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Slot</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="ident">inner</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ArcSwapOption</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::type_complexity</span>)]</span>
-    <span class="ident">watcher</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">ArcSwapOption</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Fn</span>(<span class="kw-2">&amp;</span><span class="ident">T</span>) <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+<span class="doccomment">/// A mutable memory location with atomic storage rules.
+</span><span class="attribute">#[derive(Clone)]
+</span><span class="kw">pub struct </span>Slot&lt;T&gt; {
+    inner: Arc&lt;ArcSwapOption&lt;T&gt;&gt;,
+    <span class="attribute">#[allow(clippy::type_complexity)]
+    </span>watcher: Arc&lt;ArcSwapOption&lt;Box&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;</span>T) + Send + Sync&gt;&gt;&gt;,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">Slot</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Creates a new slot for `value`.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">value</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">inner</span>: <span class="ident">Arc::new</span>(<span class="ident">ArcSwapOption::new</span>(<span class="ident">value</span>.<span class="ident">into</span>().<span class="ident">map</span>(<span class="ident">Arc::new</span>))),
-            <span class="ident">watcher</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
+<span class="kw">impl</span>&lt;T&gt; Slot&lt;T&gt; {
+    <span class="doccomment">/// Creates a new slot for `value`.
+    </span><span class="kw">pub fn </span>new(value: <span class="kw">impl </span>Into&lt;<span class="prelude-ty">Option</span>&lt;T&gt;&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            inner: Arc::new(ArcSwapOption::new(value.into().map(Arc::new))),
+            watcher: &lt;<span class="kw">_</span>&gt;::default(),
         }
     }
 
-    <span class="doccomment">/// Creates a new empty slot.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">empty</span>() -&gt; <span class="self">Self</span> {
-        <span class="ident"><span class="self">Self</span>::new</span>(<span class="prelude-val">None</span>)
+    <span class="doccomment">/// Creates a new empty slot.
+    </span><span class="kw">pub fn </span>empty() -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::new(<span class="prelude-val">None</span>)
     }
 
-    <span class="doccomment">/// Adds a watcher to to the slot. The watcher will fire whenever slot&#39;s</span>
-    <span class="doccomment">/// value changes.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">watch</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">watcher</span>: <span class="kw">impl</span> <span class="ident">Fn</span>(<span class="kw-2">&amp;</span><span class="ident">T</span>) <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> <span class="op">+</span> <span class="lifetime">&#39;static</span>) {
+    <span class="doccomment">/// Adds a watcher to to the slot. The watcher will fire whenever slot&#39;s
+    /// value changes.
+    </span><span class="kw">pub fn </span>watch(<span class="kw-2">&amp;</span><span class="self">self</span>, watcher: <span class="kw">impl </span>Fn(<span class="kw-2">&amp;</span>T) + Send + Sync + <span class="lifetime">&#39;static</span>) {
         <span class="macro">tracing::trace!</span>(<span class="string">&quot;Adding new watcher&quot;</span>);
-        <span class="self">self</span>.<span class="ident">watcher</span>.<span class="ident">store</span>(<span class="prelude-val">Some</span>(<span class="ident">Arc::new</span>(<span class="ident">Box::new</span>(<span class="ident">watcher</span>))));
+        <span class="self">self</span>.watcher.store(<span class="prelude-val">Some</span>(Arc::new(Box::new(watcher))));
     }
 
-    <span class="doccomment">/// Returns whether any data is present in the slot.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_some</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">bool</span> {
-        <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">load</span>().<span class="ident">is_some</span>()
+    <span class="doccomment">/// Returns whether any data is present in the slot.
+    </span><span class="kw">pub fn </span>is_some(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="self">self</span>.inner.load().is_some()
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Default</span><span class="op">&gt;</span> <span class="ident">Slot</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Creates a new slot containing the default instance of `T`.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_default</span>() -&gt; <span class="self">Self</span> {
-        <span class="ident"><span class="self">Self</span>::new</span>(<span class="ident">T::default</span>())
+<span class="kw">impl</span>&lt;T: Default&gt; Slot&lt;T&gt; {
+    <span class="doccomment">/// Creates a new slot containing the default instance of `T`.
+    </span><span class="kw">pub fn </span>with_default() -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::new(T::default())
     }
 
-    <span class="doccomment">/// Triggers the `watcher` function, if present.</span>
-    <span class="kw">fn</span> <span class="ident">call_watcher</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) {
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">watcher</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="self">self</span>.<span class="ident">watcher</span>.<span class="ident">load</span>() {
+    <span class="doccomment">/// Triggers the `watcher` function, if present.
+    </span><span class="kw">fn </span>call_watcher(<span class="kw-2">&amp;</span><span class="self">self</span>) {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(watcher) = <span class="kw-2">&amp;*</span><span class="self">self</span>.watcher.load() {
             <span class="macro">tracing::trace!</span>(<span class="string">&quot;calling watcher&quot;</span>);
-            (<span class="ident">watcher</span>)(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">load</span>());
+            (watcher)(<span class="kw-2">&amp;</span><span class="self">self</span>.load());
         }
     }
 
-    <span class="doccomment">/// Provides a reference to the underlying data.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">load</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">load_full</span>().<span class="ident">unwrap_or_default</span>()
+    <span class="doccomment">/// Provides a reference to the underlying data.
+    </span><span class="kw">pub fn </span>load(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Arc&lt;T&gt; {
+        <span class="self">self</span>.inner.load_full().unwrap_or_default()
     }
 
-    <span class="kw">fn</span> <span class="ident">store_opt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">value</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>) {
+    <span class="kw">fn </span>store_opt(<span class="kw-2">&amp;</span><span class="self">self</span>, value: <span class="prelude-ty">Option</span>&lt;Arc&lt;T&gt;&gt;) {
         <span class="macro">tracing::trace!</span>(<span class="string">&quot;storing new value&quot;</span>);
-        <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">store</span>(<span class="ident">value</span>);
-        <span class="self">self</span>.<span class="ident">call_watcher</span>();
+        <span class="self">self</span>.inner.store(value);
+        <span class="self">self</span>.call_watcher();
     }
 
-    <span class="doccomment">/// Replaces the data in the slot with `value`.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">store</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">value</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) {
-        <span class="self">self</span>.<span class="ident">store_opt</span>(<span class="prelude-val">Some</span>(<span class="ident">value</span>));
+    <span class="doccomment">/// Replaces the data in the slot with `value`.
+    </span><span class="kw">pub fn </span>store(<span class="kw-2">&amp;</span><span class="self">self</span>, value: Arc&lt;T&gt;) {
+        <span class="self">self</span>.store_opt(<span class="prelude-val">Some</span>(value));
     }
 
-    <span class="doccomment">/// Removes any data from the slot.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) {
-        <span class="self">self</span>.<span class="ident">store_opt</span>(<span class="prelude-val">None</span>);
+    <span class="doccomment">/// Removes any data from the slot.
+    </span><span class="kw">pub fn </span>remove(<span class="kw-2">&amp;</span><span class="self">self</span>) {
+        <span class="self">self</span>.store_opt(<span class="prelude-val">None</span>);
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Default</span> <span class="op">+</span> <span class="ident">PartialEq</span><span class="op">&gt;</span> <span class="ident">Slot</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Replaces the current data in the slot with `value`&#39;s data, if present.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">try_replace</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">value</span>: <span class="self">Self</span>) {
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">value</span>) <span class="op">=</span> <span class="ident">value</span>
-            .<span class="ident">inner</span>
-            .<span class="ident">load_full</span>()
-            .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">value</span><span class="op">|</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">load</span>() <span class="op">!</span><span class="op">=</span> <span class="ident">value</span>)
+<span class="kw">impl</span>&lt;T: Default + PartialEq&gt; Slot&lt;T&gt; {
+    <span class="doccomment">/// Replaces the current data in the slot with `value`&#39;s data, if present.
+    </span><span class="kw">pub fn </span>try_replace(<span class="kw-2">&amp;</span><span class="self">self</span>, value: <span class="self">Self</span>) {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(value) = value
+            .inner
+            .load_full()
+            .filter(|value| <span class="kw-2">&amp;</span><span class="self">self</span>.load() != value)
         {
-            <span class="self">self</span>.<span class="ident">store</span>(<span class="ident">value</span>);
+            <span class="self">self</span>.store(value);
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Default</span><span class="op">&gt;</span> <span class="ident">Slot</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Provides a view into a mutable reference of the current data in the</span>
-    <span class="doccomment">/// slot. Any changes made will update the value in the slot.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">modify</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut</span> <span class="ident">modify</span>: <span class="kw">impl</span> <span class="ident">FnMut</span>(<span class="kw-2">&amp;mut</span> <span class="ident">T</span>)) {
-        <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">rcu</span>(<span class="op">|</span><span class="ident">value</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">current</span> <span class="op">=</span> <span class="ident">value</span>
-                .<span class="ident">as_deref</span>()
-                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">value</span><span class="op">|</span> <span class="ident">T::clone</span>(<span class="ident">value</span>))
-                .<span class="ident">unwrap_or_default</span>();
-            (<span class="ident">modify</span>)(<span class="kw-2">&amp;mut</span> <span class="ident">current</span>);
-            <span class="prelude-val">Some</span>(<span class="ident">Arc::new</span>(<span class="ident">current</span>))
+<span class="kw">impl</span>&lt;T: Clone + Default&gt; Slot&lt;T&gt; {
+    <span class="doccomment">/// Provides a view into a mutable reference of the current data in the
+    /// slot. Any changes made will update the value in the slot.
+    </span><span class="kw">pub fn </span>modify(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut </span>modify: <span class="kw">impl </span>FnMut(<span class="kw-2">&amp;mut </span>T)) {
+        <span class="self">self</span>.inner.rcu(|value| {
+            <span class="kw">let </span><span class="kw-2">mut </span>current = value
+                .as_deref()
+                .map(|value| T::clone(value))
+                .unwrap_or_default();
+            (modify)(<span class="kw-2">&amp;mut </span>current);
+            <span class="prelude-val">Some</span>(Arc::new(current))
         });
-        <span class="self">self</span>.<span class="ident">call_watcher</span>();
+        <span class="self">self</span>.call_watcher();
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Default</span><span class="op">&gt;</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">Slot</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">inner</span>: <span class="ident">Arc::new</span>(<span class="ident">ArcSwapOption::new</span>(<span class="prelude-val">Some</span>(<span class="ident">Default::default</span>()))),
-            <span class="ident">watcher</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
+<span class="kw">impl</span>&lt;T: Default&gt; Default <span class="kw">for </span>Slot&lt;T&gt; {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            inner: Arc::new(ArcSwapOption::new(<span class="prelude-val">Some</span>(Default::default()))),
+            watcher: &lt;<span class="kw">_</span>&gt;::default(),
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">std::fmt::Debug</span><span class="op">&gt;</span> <span class="ident">std::fmt::Debug</span> <span class="kw">for</span> <span class="ident">Slot</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;mut</span> <span class="ident">std::fmt::Formatter</span>) -&gt; <span class="ident">std::fmt::Result</span> {
-        <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">load</span>().<span class="ident">fmt</span>(<span class="ident">f</span>)
+<span class="kw">impl</span>&lt;T: std::fmt::Debug&gt; std::fmt::Debug <span class="kw">for </span>Slot&lt;T&gt; {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter) -&gt; std::fmt::Result {
+        <span class="self">self</span>.inner.load().fmt(f)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">PartialEq</span><span class="op">&gt;</span> <span class="ident">PartialEq</span> <span class="kw">for</span> <span class="ident">Slot</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">eq</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">rhs</span>: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="ident">bool</span> {
-        <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">load</span>() <span class="op">==</span> <span class="kw-2">*</span><span class="ident">rhs</span>.<span class="ident">inner</span>.<span class="ident">load</span>()
+<span class="kw">impl</span>&lt;T: PartialEq&gt; PartialEq <span class="kw">for </span>Slot&lt;T&gt; {
+    <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, rhs: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; bool {
+        <span class="kw-2">*</span><span class="self">self</span>.inner.load() == <span class="kw-2">*</span>rhs.inner.load()
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Slot</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">data</span>: <span class="ident">T</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident"><span class="self">Self</span>::new</span>(<span class="ident">data</span>)
+<span class="kw">impl</span>&lt;T&gt; From&lt;T&gt; <span class="kw">for </span>Slot&lt;T&gt; {
+    <span class="kw">fn </span>from(data: T) -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::new(data)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Slot</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">data</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident"><span class="self">Self</span>::new</span>(<span class="ident">data</span>)
+<span class="kw">impl</span>&lt;T&gt; From&lt;<span class="prelude-ty">Option</span>&lt;T&gt;&gt; <span class="kw">for </span>Slot&lt;T&gt; {
+    <span class="kw">fn </span>from(data: <span class="prelude-ty">Option</span>&lt;T&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::new(data)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">serde::Serialize</span><span class="op">&gt;</span> <span class="ident">serde::Serialize</span> <span class="kw">for</span> <span class="ident">Slot</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">serialize</span><span class="op">&lt;</span><span class="ident">S</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">serializer</span>: <span class="ident">S</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">S::Ok</span>, <span class="ident">S::Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">S</span>: <span class="ident">serde::Serializer</span>,
+<span class="kw">impl</span>&lt;T: serde::Serialize&gt; serde::Serialize <span class="kw">for </span>Slot&lt;T&gt; {
+    <span class="kw">fn </span>serialize&lt;S&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, serializer: S) -&gt; <span class="prelude-ty">Result</span>&lt;S::Ok, S::Error&gt;
+    <span class="kw">where
+        </span>S: serde::Serializer,
     {
-        <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">load</span>().<span class="ident">serialize</span>(<span class="ident">serializer</span>)
+        <span class="self">self</span>.inner.load().serialize(serializer)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span>, <span class="ident">T</span>: <span class="ident">serde::Deserialize</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">serde::Deserialize</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Slot</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">deserialize</span><span class="op">&lt;</span><span class="ident">D</span><span class="op">&gt;</span>(<span class="ident">deserializer</span>: <span class="ident">D</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">D::Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">D</span>: <span class="ident">serde::Deserializer</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;de</span>, T: serde::Deserialize&lt;<span class="lifetime">&#39;de</span>&gt;&gt; serde::Deserialize&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>Slot&lt;T&gt; {
+    <span class="kw">fn </span>deserialize&lt;D&gt;(deserializer: D) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, D::Error&gt;
+    <span class="kw">where
+        </span>D: serde::Deserializer&lt;<span class="lifetime">&#39;de</span>&gt;,
     {
-        <span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::deserialize</span>(<span class="ident">deserializer</span>).<span class="ident">map</span>(<span class="ident">Slot::new</span>)
+        &lt;<span class="prelude-ty">Option</span>&lt;T&gt;&gt;::deserialize(deserializer).map(Slot::new)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">JsonSchema</span> <span class="op">+</span> <span class="ident">Default</span><span class="op">&gt;</span> <span class="ident">JsonSchema</span> <span class="kw">for</span> <span class="ident">Slot</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">schema_name</span>() -&gt; <span class="ident">String</span> {
-        <span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::schema_name</span>()
+<span class="kw">impl</span>&lt;T: JsonSchema + Default&gt; JsonSchema <span class="kw">for </span>Slot&lt;T&gt; {
+    <span class="kw">fn </span>schema_name() -&gt; String {
+        &lt;<span class="prelude-ty">Option</span>&lt;T&gt;&gt;::schema_name()
     }
-    <span class="kw">fn</span> <span class="ident">json_schema</span>(<span class="ident">gen</span>: <span class="kw-2">&amp;mut</span> <span class="ident">schemars::gen::SchemaGenerator</span>) -&gt; <span class="ident">schemars::schema::Schema</span> {
-        <span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::json_schema</span>(<span class="ident">gen</span>)
-    }
-
-    <span class="kw">fn</span> <span class="ident">is_referenceable</span>() -&gt; <span class="ident">bool</span> {
-        <span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::is_referenceable</span>()
-    }
-}
-
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident"><span class="kw">crate</span>::filters::Filter</span> <span class="op">+</span> <span class="ident">Default</span><span class="op">&gt;</span> <span class="ident"><span class="kw">crate</span>::filters::Filter</span> <span class="kw">for</span> <span class="ident">Slot</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ReadContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">load</span>().<span class="ident">read</span>(<span class="ident">ctx</span>)
+    <span class="kw">fn </span>json_schema(gen: <span class="kw-2">&amp;mut </span>schemars::gen::SchemaGenerator) -&gt; schemars::schema::Schema {
+        &lt;<span class="prelude-ty">Option</span>&lt;T&gt;&gt;::json_schema(gen)
     }
 
-    <span class="kw">fn</span> <span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">WriteContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">load</span>().<span class="ident">write</span>(<span class="ident">ctx</span>)
+    <span class="kw">fn </span>is_referenceable() -&gt; bool {
+        &lt;<span class="prelude-ty">Option</span>&lt;T&gt;&gt;::is_referenceable()
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
+<span class="kw">impl</span>&lt;T: <span class="kw">crate</span>::filters::Filter + Default&gt; <span class="kw">crate</span>::filters::Filter <span class="kw">for </span>Slot&lt;T&gt; {
+    <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt; {
+        <span class="self">self</span>.load().read(ctx)
+    }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">watch</span>() {
-        <span class="kw">static</span> <span class="ident">BOOLEAN</span>: <span class="ident">std::sync::atomic::AtomicBool</span> <span class="op">=</span> <span class="ident">std::sync::atomic::AtomicBool::new</span>(<span class="bool-val">false</span>);
+    <span class="kw">fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt; {
+        <span class="self">self</span>.load().write(ctx)
+    }
+}
 
-        <span class="kw">let</span> <span class="ident">slot</span> <span class="op">=</span> <span class="ident">Slot::new</span>(<span class="bool-val">false</span>);
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
+    <span class="kw">use super</span>::<span class="kw-2">*</span>;
 
-        <span class="ident">slot</span>.<span class="ident">watch</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
-            <span class="ident">BOOLEAN</span>.<span class="ident">store</span>(<span class="bool-val">true</span>, <span class="ident">std::sync::atomic::Ordering::SeqCst</span>);
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>watch() {
+        <span class="kw">static </span>BOOLEAN: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(<span class="bool-val">false</span>);
+
+        <span class="kw">let </span>slot = Slot::new(<span class="bool-val">false</span>);
+
+        slot.watch(|<span class="kw">_</span>| {
+            BOOLEAN.store(<span class="bool-val">true</span>, std::sync::atomic::Ordering::SeqCst);
         });
 
-        <span class="ident">slot</span>.<span class="ident">store</span>(<span class="ident">Arc::new</span>(<span class="bool-val">true</span>));
+        slot.store(Arc::new(<span class="bool-val">true</span>));
 
         <span class="macro">assert_eq!</span>(
-            <span class="ident">BOOLEAN</span>.<span class="ident">load</span>(<span class="ident">std::sync::atomic::Ordering::SeqCst</span>),
-            <span class="kw-2">*</span><span class="ident">slot</span>.<span class="ident">load</span>()
+            BOOLEAN.load(std::sync::atomic::Ordering::SeqCst),
+            <span class="kw-2">*</span>slot.load()
         );
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

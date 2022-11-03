@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/config/config_type.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>config_type.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../quilkin/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/config/config_type.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>config_type.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../normalize.css"><link rel="stylesheet" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../ayu.css" disabled><link rel="stylesheet" href="../../../dark.css" disabled><link rel="stylesheet" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../quilkin/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -169,148 +169,148 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */</span>
+ */
 
-<span class="kw">use</span> <span class="ident">std::convert::TryFrom</span>;
+</span><span class="kw">use </span>std::convert::TryFrom;
 
-<span class="kw">use</span> <span class="ident">bytes::Bytes</span>;
+<span class="kw">use </span>bytes::Bytes;
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters::Error</span>;
+<span class="kw">use </span><span class="kw">crate</span>::filters::Error;
 
-<span class="doccomment">/// The configuration of a [`Filter`][crate::filters::Filter] from either a</span>
-<span class="doccomment">/// static or dynamic source.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">schemars::JsonSchema</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ConfigType</span> {
-    <span class="doccomment">/// Static configuration from YAML.</span>
-    <span class="attribute">#[<span class="ident">schemars</span>(<span class="ident">with</span> <span class="op">=</span> <span class="string">&quot;serde_json::Value&quot;</span>)]</span>
-    <span class="ident">Static</span>(<span class="ident">serde_json::Value</span>),
-    <span class="doccomment">/// Dynamic configuration from Protobuf.</span>
-    <span class="attribute">#[<span class="ident">schemars</span>(<span class="ident">skip</span>)]</span>
-    <span class="ident">Dynamic</span>(<span class="ident">prost_types::Any</span>),
+<span class="doccomment">/// The configuration of a [`Filter`][crate::filters::Filter] from either a
+/// static or dynamic source.
+</span><span class="attribute">#[derive(Clone, Debug, PartialEq, schemars::JsonSchema)]
+</span><span class="kw">pub enum </span>ConfigType {
+    <span class="doccomment">/// Static configuration from YAML.
+    </span><span class="attribute">#[schemars(with = <span class="string">&quot;serde_json::Value&quot;</span>)]
+    </span>Static(serde_json::Value),
+    <span class="doccomment">/// Dynamic configuration from Protobuf.
+    </span><span class="attribute">#[schemars(skip)]
+    </span>Dynamic(prost_types::Any),
 }
 
-<span class="kw">impl</span> <span class="ident">ConfigType</span> {
-    <span class="doccomment">/// Deserializes takes two type arguments `Static` and `Dynamic` representing</span>
-    <span class="doccomment">/// the types of a static and dynamic configuration respectively.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// If the configuration input is a [ConfigType::Static], then it is directly</span>
-    <span class="doccomment">/// deserialized into the returned `Static` instance.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Otherwise if the input is a [ConfigType::Dynamic] then the contained Protobuf</span>
-    <span class="doccomment">/// data is decoded into a type `Dynamic` instance, after which the decoded</span>
-    <span class="doccomment">/// value is converted into the returned `Static` instance.</span>
-    <span class="doccomment">/// As a result [TryFrom] must be implemented from the `Dynamic` to the `Static`</span>
-    <span class="doccomment">/// type.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// It returns both the deserialized, as well as, a JSON representation</span>
-    <span class="doccomment">/// of the provided config.</span>
-    <span class="doccomment">/// It returns an error if any of the serialization or deserialization steps fail.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">deserialize</span><span class="op">&lt;</span><span class="ident">TextConfiguration</span>, <span class="ident">BinaryConfiguration</span><span class="op">&gt;</span>(
+<span class="kw">impl </span>ConfigType {
+    <span class="doccomment">/// Deserializes takes two type arguments `Static` and `Dynamic` representing
+    /// the types of a static and dynamic configuration respectively.
+    ///
+    /// If the configuration input is a [ConfigType::Static], then it is directly
+    /// deserialized into the returned `Static` instance.
+    ///
+    /// Otherwise if the input is a [ConfigType::Dynamic] then the contained Protobuf
+    /// data is decoded into a type `Dynamic` instance, after which the decoded
+    /// value is converted into the returned `Static` instance.
+    /// As a result [TryFrom] must be implemented from the `Dynamic` to the `Static`
+    /// type.
+    ///
+    /// It returns both the deserialized, as well as, a JSON representation
+    /// of the provided config.
+    /// It returns an error if any of the serialization or deserialization steps fail.
+    </span><span class="kw">pub fn </span>deserialize&lt;TextConfiguration, BinaryConfiguration&gt;(
         <span class="self">self</span>,
-        <span class="ident">filter_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">serde_json::Value</span>, <span class="ident">TextConfiguration</span>), <span class="ident">Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">BinaryConfiguration</span>: <span class="ident">prost::Message</span> <span class="op">+</span> <span class="ident">Default</span>,
-        <span class="ident">TextConfiguration</span>:
-            <span class="ident">serde::Serialize</span> <span class="op">+</span> <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span> <span class="ident">serde::Deserialize</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident">BinaryConfiguration</span><span class="op">&gt;</span>,
-        <span class="ident">Error</span>: <span class="ident">From</span><span class="op">&lt;</span><span class="op">&lt;</span><span class="ident">BinaryConfiguration</span> <span class="kw">as</span> <span class="ident">TryInto</span><span class="op">&lt;</span><span class="ident">TextConfiguration</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::Error</span><span class="op">&gt;</span>,
+        filter_name: <span class="kw-2">&amp;</span>str,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(serde_json::Value, TextConfiguration), Error&gt;
+    <span class="kw">where
+        </span>BinaryConfiguration: prost::Message + Default,
+        TextConfiguration:
+            serde::Serialize + <span class="kw">for</span>&lt;<span class="lifetime">&#39;de</span>&gt; serde::Deserialize&lt;<span class="lifetime">&#39;de</span>&gt; + TryFrom&lt;BinaryConfiguration&gt;,
+        Error: From&lt;&lt;BinaryConfiguration <span class="kw">as </span>TryInto&lt;TextConfiguration&gt;&gt;::Error&gt;,
     {
-        <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">ConfigType::Static</span>(<span class="kw-2">ref</span> <span class="ident">config</span>) =&gt; <span class="ident">serde_yaml::to_string</span>(<span class="ident">config</span>)
-                .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">raw_config</span><span class="op">|</span> {
-                    <span class="ident">serde_yaml::from_str</span>::<span class="op">&lt;</span><span class="ident">TextConfiguration</span><span class="op">&gt;</span>(<span class="ident">raw_config</span>.<span class="ident">as_str</span>())
+        <span class="kw">match </span><span class="self">self </span>{
+            ConfigType::Static(<span class="kw-2">ref </span>config) =&gt; serde_yaml::to_string(config)
+                .and_then(|raw_config| {
+                    serde_yaml::from_str::&lt;TextConfiguration&gt;(raw_config.as_str())
                 })
-                .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-                    <span class="ident">Error::DeserializeFailed</span>(<span class="macro">format!</span>(
+                .map_err(|err| {
+                    Error::DeserializeFailed(<span class="macro">format!</span>(
                         <span class="string">&quot;filter `{filter_name}`: failed to YAML deserialize config: {err}&quot;</span>,
                     ))
                 })
-                .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">config</span><span class="op">|</span> {
-                    <span class="ident"><span class="self">Self</span>::get_json_config</span>(<span class="ident">filter_name</span>, <span class="kw-2">&amp;</span><span class="ident">config</span>)
-                        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">config_json</span><span class="op">|</span> (<span class="ident">config_json</span>, <span class="ident">config</span>))
+                .and_then(|config| {
+                    <span class="self">Self</span>::get_json_config(filter_name, <span class="kw-2">&amp;</span>config)
+                        .map(|config_json| (config_json, config))
                 }),
-            <span class="ident">ConfigType::Dynamic</span>(<span class="ident">config</span>) =&gt; <span class="ident">prost::Message::decode</span>(<span class="ident">Bytes::from</span>(<span class="ident">config</span>.<span class="ident">value</span>))
-                .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-                    <span class="ident">Error::DeserializeFailed</span>(<span class="macro">format!</span>(
+            ConfigType::Dynamic(config) =&gt; prost::Message::decode(Bytes::from(config.value))
+                .map_err(|err| {
+                    Error::DeserializeFailed(<span class="macro">format!</span>(
                         <span class="string">&quot;filter `{filter_name}`: config decode error: {err}&quot;</span>,
                     ))
                 })
-                .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">config</span><span class="op">|</span> <span class="ident">TextConfiguration::try_from</span>(<span class="ident">config</span>).<span class="ident">map_err</span>(<span class="ident">From::from</span>))
-                .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">config</span><span class="op">|</span> {
-                    <span class="ident"><span class="self">Self</span>::get_json_config</span>(<span class="ident">filter_name</span>, <span class="kw-2">&amp;</span><span class="ident">config</span>)
-                        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">config_json</span><span class="op">|</span> (<span class="ident">config_json</span>, <span class="ident">config</span>))
+                .and_then(|config| TextConfiguration::try_from(config).map_err(From::from))
+                .and_then(|config| {
+                    <span class="self">Self</span>::get_json_config(filter_name, <span class="kw-2">&amp;</span>config)
+                        .map(|config_json| (config_json, config))
                 }),
         }
     }
 
-    <span class="comment">// Returns an equivalent json value for the passed in config.</span>
-    <span class="kw">fn</span> <span class="ident">get_json_config</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="ident">filter_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">T</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">serde_json::Value</span>, <span class="ident">Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">T</span>: <span class="ident">serde::Serialize</span> <span class="op">+</span> <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span> <span class="ident">serde::Deserialize</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span>,
+    <span class="comment">// Returns an equivalent json value for the passed in config.
+    </span><span class="kw">fn </span>get_json_config&lt;T&gt;(filter_name: <span class="kw-2">&amp;</span>str, config: <span class="kw-2">&amp;</span>T) -&gt; <span class="prelude-ty">Result</span>&lt;serde_json::Value, Error&gt;
+    <span class="kw">where
+        </span>T: serde::Serialize + <span class="kw">for</span>&lt;<span class="lifetime">&#39;de</span>&gt; serde::Deserialize&lt;<span class="lifetime">&#39;de</span>&gt;,
     {
-        <span class="ident">serde_json::to_value</span>(<span class="ident">config</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-            <span class="ident">Error::DeserializeFailed</span>(<span class="macro">format!</span>(
+        serde_json::to_value(config).map_err(|err| {
+            Error::DeserializeFailed(<span class="macro">format!</span>(
                 <span class="string">&quot;filter `{filter_name}`: failed to serialize config to json: {err}&quot;</span>,
             ))
         })
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span> <span class="ident">serde::Deserialize</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ConfigType</span> {
-    <span class="kw">fn</span> <span class="ident">deserialize</span><span class="op">&lt;</span><span class="ident">D</span><span class="op">&gt;</span>(<span class="ident">de</span>: <span class="ident">D</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">D::Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">D</span>: <span class="ident">serde::Deserializer</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;de</span>&gt; serde::Deserialize&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>ConfigType {
+    <span class="kw">fn </span>deserialize&lt;D&gt;(de: D) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, D::Error&gt;
+    <span class="kw">where
+        </span>D: serde::Deserializer&lt;<span class="lifetime">&#39;de</span>&gt;,
     {
-        <span class="ident">serde_json::Value::deserialize</span>(<span class="ident">de</span>).<span class="ident">map</span>(<span class="ident">ConfigType::Static</span>)
+        serde_json::Value::deserialize(de).map(ConfigType::Static)
     }
 }
 
-<span class="kw">impl</span> <span class="ident">serde::Serialize</span> <span class="kw">for</span> <span class="ident">ConfigType</span> {
-    <span class="kw">fn</span> <span class="ident">serialize</span><span class="op">&lt;</span><span class="ident">S</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ser</span>: <span class="ident">S</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">S::Ok</span>, <span class="ident">S::Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">S</span>: <span class="ident">serde::Serializer</span>,
+<span class="kw">impl </span>serde::Serialize <span class="kw">for </span>ConfigType {
+    <span class="kw">fn </span>serialize&lt;S&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, ser: S) -&gt; <span class="prelude-ty">Result</span>&lt;S::Ok, S::Error&gt;
+    <span class="kw">where
+        </span>S: serde::Serializer,
     {
-        <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident"><span class="self">Self</span>::Static</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>.<span class="ident">serialize</span>(<span class="ident">ser</span>),
-            <span class="ident"><span class="self">Self</span>::Dynamic</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Err</span>(<span class="ident">serde::ser::Error::custom</span>(
+        <span class="kw">match </span><span class="self">self </span>{
+            <span class="self">Self</span>::Static(value) =&gt; value.serialize(ser),
+            <span class="self">Self</span>::Dynamic(<span class="kw">_</span>) =&gt; <span class="prelude-val">Err</span>(serde::ser::Error::custom(
                 <span class="string">&quot;Protobuf configs can&#39;t be serialized.&quot;</span>,
             )),
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">serde_json::Value</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ConfigType</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">value</span>: <span class="ident">serde_json::Value</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident"><span class="self">Self</span>::Static</span>(<span class="ident">value</span>)
+<span class="kw">impl </span>From&lt;serde_json::Value&gt; <span class="kw">for </span>ConfigType {
+    <span class="kw">fn </span>from(value: serde_json::Value) -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::Static(value)
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::ConfigType</span>;
-    <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
+    <span class="kw">use </span><span class="kw">super</span>::ConfigType;
+    <span class="kw">use </span>serde::{Deserialize, Serialize};
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">get_json_config</span>() {
-        <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">Clone</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
-        <span class="kw">struct</span> <span class="ident">TestConfig</span> {
-            <span class="ident">name</span>: <span class="ident">String</span>,
-            <span class="ident">value</span>: <span class="ident">usize</span>,
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>get_json_config() {
+        <span class="attribute">#[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize)]
+        </span><span class="kw">struct </span>TestConfig {
+            name: String,
+            value: usize,
         }
-        <span class="kw">let</span> <span class="ident">expected_config</span> <span class="op">=</span> <span class="ident">TestConfig</span> {
-            <span class="ident">name</span>: <span class="string">&quot;bebop&quot;</span>.<span class="ident">into</span>(),
-            <span class="ident">value</span>: <span class="number">98</span>,
+        <span class="kw">let </span>expected_config = TestConfig {
+            name: <span class="string">&quot;bebop&quot;</span>.into(),
+            value: <span class="number">98</span>,
         };
-        <span class="kw">let</span> <span class="ident">config_json</span> <span class="op">=</span> <span class="ident">ConfigType::get_json_config</span>(<span class="string">&quot;my-filter&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">expected_config</span>).<span class="ident">unwrap</span>();
+        <span class="kw">let </span>config_json = ConfigType::get_json_config(<span class="string">&quot;my-filter&quot;</span>, <span class="kw-2">&amp;</span>expected_config).unwrap();
 
         <span class="macro">assert_eq!</span>(
             <span class="macro">serde_json::json!</span>({
                 <span class="string">&quot;name&quot;</span>: <span class="string">&quot;bebop&quot;</span>,
                 <span class="string">&quot;value&quot;</span>: <span class="number">98</span>,
             }),
-            <span class="ident">config_json</span>
+            config_json
         )
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

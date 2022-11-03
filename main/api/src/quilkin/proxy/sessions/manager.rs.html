@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/proxy/sessions/manager.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>manager.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../../storage.js"></script><script defer src="../../../../source-script.js"></script><script defer src="../../../../source-files.js"></script><script defer src="../../../../main.js"></script><noscript><link rel="stylesheet" href="../../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../quilkin/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/proxy/sessions/manager.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>manager.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../../normalize.css"><link rel="stylesheet" href="../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../../ayu.css" disabled><link rel="stylesheet" href="../../../../dark.css" disabled><link rel="stylesheet" href="../../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../../storage.js"></script><script defer src="../../../../source-script.js"></script><script defer src="../../../../source-files.js"></script><script defer src="../../../../main.js"></script><noscript><link rel="stylesheet" href="../../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../quilkin/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -255,67 +255,67 @@
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- */</span>
+ */
 
-<span class="kw">use</span> <span class="ident">std::collections::HashMap</span>;
-<span class="kw">use</span> <span class="ident">std::sync::Arc</span>;
-<span class="kw">use</span> <span class="ident">std::time</span>::{<span class="ident">Duration</span>, <span class="ident">SystemTime</span>, <span class="ident">UNIX_EPOCH</span>};
+</span><span class="kw">use </span>std::collections::HashMap;
+<span class="kw">use </span>std::sync::Arc;
+<span class="kw">use </span>std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-<span class="kw">use</span> <span class="ident">tokio::sync</span>::{<span class="ident">watch</span>, <span class="ident">RwLock</span>, <span class="ident">RwLockReadGuard</span>, <span class="ident">RwLockWriteGuard</span>};
+<span class="kw">use </span>tokio::sync::{watch, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::proxy::sessions</span>::{<span class="ident">Session</span>, <span class="ident">SessionKey</span>};
+<span class="kw">use </span><span class="kw">crate</span>::proxy::sessions::{Session, SessionKey};
 
-<span class="comment">// Tracks current sessions by their [`SessionKey`]</span>
-<span class="kw">type</span> <span class="ident">SessionsMap</span> <span class="op">=</span> <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">SessionKey</span>, <span class="ident">Session</span><span class="op">&gt;</span>;
-<span class="kw">type</span> <span class="ident">Sessions</span> <span class="op">=</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">SessionsMap</span><span class="op">&gt;</span><span class="op">&gt;</span>;
+<span class="comment">// Tracks current sessions by their [`SessionKey`]
+</span><span class="kw">type </span>SessionsMap = HashMap&lt;SessionKey, Session&gt;;
+<span class="kw">type </span>Sessions = Arc&lt;RwLock&lt;SessionsMap&gt;&gt;;
 
-<span class="doccomment">/// SESSION_TIMEOUT_SECONDS is the default session timeout.</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">SESSION_TIMEOUT_SECONDS</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">60</span>;
+<span class="doccomment">/// SESSION_TIMEOUT_SECONDS is the default session timeout.
+</span><span class="kw">pub const </span>SESSION_TIMEOUT_SECONDS: u64 = <span class="number">60</span>;
 
-<span class="doccomment">/// SESSION_EXPIRY_POLL_INTERVAL is the default interval to check for expired sessions.</span>
-<span class="kw">const</span> <span class="ident">SESSION_EXPIRY_POLL_INTERVAL</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">60</span>;
+<span class="doccomment">/// SESSION_EXPIRY_POLL_INTERVAL is the default interval to check for expired sessions.
+</span><span class="kw">const </span>SESSION_EXPIRY_POLL_INTERVAL: u64 = <span class="number">60</span>;
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SessionManager</span>(<span class="ident">Sessions</span>);
+<span class="attribute">#[derive(Clone)]
+</span><span class="kw">pub struct </span>SessionManager(Sessions);
 
-<span class="kw">impl</span> <span class="ident">SessionManager</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">shutdown_rx</span>: <span class="ident">watch::Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">poll_interval</span> <span class="op">=</span> <span class="ident">Duration::from_secs</span>(<span class="ident">SESSION_EXPIRY_POLL_INTERVAL</span>);
-        <span class="kw">let</span> <span class="ident">sessions</span>: <span class="ident">Sessions</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">RwLock::new</span>(<span class="ident">HashMap::new</span>()));
+<span class="kw">impl </span>SessionManager {
+    <span class="kw">pub fn </span>new(shutdown_rx: watch::Receiver&lt;()&gt;) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span>poll_interval = Duration::from_secs(SESSION_EXPIRY_POLL_INTERVAL);
+        <span class="kw">let </span>sessions: Sessions = Arc::new(RwLock::new(HashMap::new()));
 
-        <span class="ident"><span class="self">Self</span>::run_prune_sessions</span>(<span class="ident">sessions</span>.<span class="ident">clone</span>(), <span class="ident">poll_interval</span>, <span class="ident">shutdown_rx</span>);
+        <span class="self">Self</span>::run_prune_sessions(sessions.clone(), poll_interval, shutdown_rx);
 
-        <span class="self">Self</span>(<span class="ident">sessions</span>)
+        <span class="self">Self</span>(sessions)
     }
 
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">get_sessions</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">RwLockReadGuard</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">SessionsMap</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">read</span>().<span class="kw">await</span>
-    }
+    <span class="kw">pub async fn </span>get_sessions(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RwLockReadGuard&lt;<span class="lifetime">&#39;_</span>, SessionsMap&gt; {
+        <span class="self">self</span>.<span class="number">0</span>.read().<span class="kw">await
+    </span>}
 
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">get_sessions_mut</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">RwLockWriteGuard</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">SessionsMap</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">write</span>().<span class="kw">await</span>
-    }
+    <span class="kw">pub async fn </span>get_sessions_mut(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RwLockWriteGuard&lt;<span class="lifetime">&#39;_</span>, SessionsMap&gt; {
+        <span class="self">self</span>.<span class="number">0</span>.write().<span class="kw">await
+    </span>}
 
-    <span class="doccomment">/// run_prune_sessions starts the timer for pruning sessions and runs prune_sessions every</span>
-    <span class="doccomment">/// SESSION_TIMEOUT_SECONDS, via a tokio::spawn, i.e. it&#39;s non-blocking.</span>
-    <span class="doccomment">/// Pruning will occur ~ every interval period. So the timeout expiration may sometimes</span>
-    <span class="doccomment">/// exceed the expected, but we don&#39;t have to write lock the Sessions map as often to clean up.</span>
-    <span class="kw">fn</span> <span class="ident">run_prune_sessions</span>(
-        <span class="kw-2">mut</span> <span class="ident">sessions</span>: <span class="ident">Sessions</span>,
-        <span class="ident">poll_interval</span>: <span class="ident">Duration</span>,
-        <span class="kw-2">mut</span> <span class="ident">shutdown_rx</span>: <span class="ident">watch::Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
+    <span class="doccomment">/// run_prune_sessions starts the timer for pruning sessions and runs prune_sessions every
+    /// SESSION_TIMEOUT_SECONDS, via a tokio::spawn, i.e. it&#39;s non-blocking.
+    /// Pruning will occur ~ every interval period. So the timeout expiration may sometimes
+    /// exceed the expected, but we don&#39;t have to write lock the Sessions map as often to clean up.
+    </span><span class="kw">fn </span>run_prune_sessions(
+        <span class="kw-2">mut </span>sessions: Sessions,
+        poll_interval: Duration,
+        <span class="kw-2">mut </span>shutdown_rx: watch::Receiver&lt;()&gt;,
     ) {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">interval</span> <span class="op">=</span> <span class="ident">tokio::time::interval</span>(<span class="ident">poll_interval</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>interval = tokio::time::interval(poll_interval);
 
-        <span class="ident">tokio::spawn</span>(<span class="kw">async</span> <span class="kw">move</span> {
-            <span class="kw">loop</span> {
-                <span class="macro">tokio::select!</span> {
-                    <span class="kw">_</span> <span class="op">=</span> <span class="ident">shutdown_rx</span>.<span class="ident">changed</span>() =&gt; {
+        tokio::spawn(<span class="kw">async move </span>{
+            <span class="kw">loop </span>{
+                <span class="macro">tokio::select! </span>{
+                    <span class="kw">_ </span>= shutdown_rx.changed() =&gt; {
                         <span class="macro">tracing::debug!</span>(<span class="string">&quot;Exiting Prune Sessions due to shutdown signal.&quot;</span>);
                         <span class="kw">break</span>;
                     }
-                    <span class="kw">_</span> <span class="op">=</span> <span class="ident">interval</span>.<span class="ident">tick</span>() =&gt; {
-                        <span class="ident"><span class="self">Self</span>::prune_sessions</span>(<span class="kw-2">&amp;mut</span> <span class="ident">sessions</span>).<span class="kw">await</span>;
+                    <span class="kw">_ </span>= interval.tick() =&gt; {
+                        <span class="self">Self</span>::prune_sessions(<span class="kw-2">&amp;mut </span>sessions).<span class="kw">await</span>;
 
                     }
                 }
@@ -323,166 +323,166 @@
         });
     }
 
-    <span class="doccomment">/// Removes expired [`Session`]s from `sessions`. This should be run</span>
-    <span class="doccomment">/// regularly such as on a time interval. This will only write lock</span>
-    <span class="doccomment">/// `sessions` if it first finds expired sessions.</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">prune_sessions</span>(<span class="ident">sessions</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Sessions</span>) {
-        <span class="kw">let</span> <span class="ident">now</span> <span class="op">=</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">now</span>) <span class="op">=</span> <span class="ident">SystemTime::now</span>().<span class="ident">duration_since</span>(<span class="ident">UNIX_EPOCH</span>) {
-            <span class="ident">now</span>.<span class="ident">as_secs</span>()
-        } <span class="kw">else</span> {
+    <span class="doccomment">/// Removes expired [`Session`]s from `sessions`. This should be run
+    /// regularly such as on a time interval. This will only write lock
+    /// `sessions` if it first finds expired sessions.
+    </span><span class="kw">async fn </span>prune_sessions(sessions: <span class="kw-2">&amp;mut </span>Sessions) {
+        <span class="kw">let </span>now = <span class="kw">if let </span><span class="prelude-val">Ok</span>(now) = SystemTime::now().duration_since(UNIX_EPOCH) {
+            now.as_secs()
+        } <span class="kw">else </span>{
             <span class="macro">tracing::warn!</span>(<span class="string">&quot;Failed to get current time when pruning sessions&quot;</span>);
             <span class="kw">return</span>;
         };
 
-        <span class="kw">let</span> <span class="ident">expired_keys</span> <span class="op">=</span> (<span class="kw-2">*</span><span class="ident">sessions</span>.<span class="ident">read</span>().<span class="kw">await</span>)
-            .<span class="ident">iter</span>()
-            .<span class="ident">filter</span>(<span class="op">|</span>(<span class="kw">_</span>, <span class="ident">session</span>)<span class="op">|</span> <span class="ident">session</span>.<span class="ident">expiration</span>() <span class="op">&lt;</span><span class="op">=</span> <span class="ident">now</span>)
-            .<span class="ident">count</span>();
+        <span class="kw">let </span>expired_keys = (<span class="kw-2">*</span>sessions.read().<span class="kw">await</span>)
+            .iter()
+            .filter(|(<span class="kw">_</span>, session)| session.expiration() &lt;= now)
+            .count();
 
-        <span class="kw">if</span> <span class="ident">expired_keys</span> <span class="op">!</span><span class="op">=</span> <span class="number">0</span> {
+        <span class="kw">if </span>expired_keys != <span class="number">0 </span>{
             <span class="macro">tracing::debug!</span>(<span class="string">&quot;pruning expired sessions&quot;</span>);
-            <span class="comment">// Go over the whole sessions map again in case anything expired</span>
-            <span class="comment">// since acquiring the write lock.</span>
-            <span class="ident">sessions</span>
-                .<span class="ident">write</span>()
-                .<span class="kw">await</span>
-                .<span class="ident">retain</span>(<span class="op">|</span><span class="kw">_</span>, <span class="ident">session</span><span class="op">|</span> <span class="ident">session</span>.<span class="ident">expiration</span>() <span class="op">&gt;</span> <span class="ident">now</span>);
+            <span class="comment">// Go over the whole sessions map again in case anything expired
+            // since acquiring the write lock.
+            </span>sessions
+                .write()
+                .<span class="kw">await
+                </span>.retain(|<span class="kw">_</span>, session| session.expiration() &gt; now);
         }
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections::HashMap</span>, <span class="ident">ops::Add</span>, <span class="ident">sync::Arc</span>, <span class="ident">time::Duration</span>};
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
+    <span class="kw">use </span>std::{collections::HashMap, ops::Add, sync::Arc, time::Duration};
 
-    <span class="kw">use</span> <span class="ident">tokio::sync</span>::{<span class="ident">watch</span>, <span class="ident">RwLock</span>};
+    <span class="kw">use </span>tokio::sync::{watch, RwLock};
 
-    <span class="kw">use</span> <span class="kw">crate</span>::{
-        <span class="ident">endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">EndpointAddress</span>},
-        <span class="ident">proxy::sessions</span>::{<span class="ident">manager::Sessions</span>, <span class="ident">SessionArgs</span>, <span class="ident">SessionKey</span>},
-        <span class="ident">test_utils::create_socket</span>,
+    <span class="kw">use crate</span>::{
+        endpoint::{Endpoint, EndpointAddress},
+        proxy::sessions::{manager::Sessions, SessionArgs, SessionKey},
+        test_utils::create_socket,
     };
 
-    <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::SessionManager</span>;
+    <span class="kw">use </span><span class="kw">super</span>::SessionManager;
 
-    <span class="kw">fn</span> <span class="ident">address_pair</span>() -&gt; (<span class="ident">EndpointAddress</span>, <span class="ident">EndpointAddress</span>) {
+    <span class="kw">fn </span>address_pair() -&gt; (EndpointAddress, EndpointAddress) {
         (
-            (<span class="ident">std::net::Ipv4Addr::LOCALHOST</span>, <span class="number">7000</span>).<span class="ident">into</span>(),
-            (<span class="ident">std::net::Ipv4Addr::LOCALHOST</span>, <span class="number">7001</span>).<span class="ident">into</span>(),
+            (std::net::Ipv4Addr::LOCALHOST, <span class="number">7000</span>).into(),
+            (std::net::Ipv4Addr::LOCALHOST, <span class="number">7001</span>).into(),
         )
     }
 
-    <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">run_prune_sessions</span>() {
-        <span class="kw">let</span> <span class="ident">sessions</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">RwLock::new</span>(<span class="ident">HashMap::new</span>()));
-        <span class="kw">let</span> (<span class="ident">from</span>, <span class="ident">to</span>) <span class="op">=</span> <span class="ident">address_pair</span>();
-        <span class="kw">let</span> (<span class="ident">_shutdown_tx</span>, <span class="ident">shutdown_rx</span>) <span class="op">=</span> <span class="ident">watch::channel</span>(());
-        <span class="kw">let</span> <span class="ident">socket</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">create_socket</span>().<span class="kw">await</span>);
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>run_prune_sessions() {
+        <span class="kw">let </span>sessions = Arc::new(RwLock::new(HashMap::new()));
+        <span class="kw">let </span>(from, to) = address_pair();
+        <span class="kw">let </span>(_shutdown_tx, shutdown_rx) = watch::channel(());
+        <span class="kw">let </span>socket = Arc::new(create_socket().<span class="kw">await</span>);
 
-        <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="ident">Endpoint::new</span>(<span class="ident">to</span>.<span class="ident">clone</span>());
+        <span class="kw">let </span>endpoint = Endpoint::new(to.clone());
 
-        <span class="kw">let</span> <span class="ident">ttl</span> <span class="op">=</span> <span class="ident">Duration::from_secs</span>(<span class="number">1</span>);
-        <span class="kw">let</span> <span class="ident">poll_interval</span> <span class="op">=</span> <span class="ident">Duration::from_millis</span>(<span class="number">1</span>);
+        <span class="kw">let </span>ttl = Duration::from_secs(<span class="number">1</span>);
+        <span class="kw">let </span>poll_interval = Duration::from_millis(<span class="number">1</span>);
 
-        <span class="comment">//let config = Arc::new(config_with_dummy_endpoint().build());</span>
-        <span class="comment">//let server = Builder::from(config).validate().unwrap().build();</span>
-        <span class="ident">SessionManager::run_prune_sessions</span>(<span class="ident">sessions</span>.<span class="ident">clone</span>(), <span class="ident">poll_interval</span>, <span class="ident">shutdown_rx</span>);
+        <span class="comment">//let config = Arc::new(config_with_dummy_endpoint().build());
+        //let server = Builder::from(config).validate().unwrap().build();
+        </span>SessionManager::run_prune_sessions(sessions.clone(), poll_interval, shutdown_rx);
 
-        <span class="kw">let</span> <span class="ident">key</span> <span class="op">=</span> <span class="ident">SessionKey::from</span>((<span class="ident">from</span>.<span class="ident">clone</span>(), <span class="ident">to</span>.<span class="ident">clone</span>()));
+        <span class="kw">let </span>key = SessionKey::from((from.clone(), to.clone()));
 
-        <span class="comment">// Insert key.</span>
-        {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">sessions</span> <span class="op">=</span> <span class="ident">sessions</span>.<span class="ident">write</span>().<span class="kw">await</span>;
-            <span class="kw">let</span> <span class="ident">session_args</span> <span class="op">=</span> <span class="ident">SessionArgs</span> {
-                <span class="ident">config</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
-                <span class="ident">source</span>: <span class="ident">from</span>,
-                <span class="ident">downstream_socket</span>: <span class="ident">socket</span>,
-                <span class="ident">dest</span>: <span class="ident">endpoint</span>.<span class="ident">clone</span>(),
-                <span class="ident">ttl</span>,
+        <span class="comment">// Insert key.
+        </span>{
+            <span class="kw">let </span><span class="kw-2">mut </span>sessions = sessions.write().<span class="kw">await</span>;
+            <span class="kw">let </span>session_args = SessionArgs {
+                config: &lt;<span class="kw">_</span>&gt;::default(),
+                source: from,
+                downstream_socket: socket,
+                dest: endpoint.clone(),
+                ttl,
             };
-            <span class="ident">sessions</span>.<span class="ident">insert</span>(<span class="ident">key</span>.<span class="ident">clone</span>(), <span class="ident">session_args</span>.<span class="ident">into_session</span>().<span class="kw">await</span>.<span class="ident">unwrap</span>());
+            sessions.insert(key.clone(), session_args.into_session().<span class="kw">await</span>.unwrap());
         }
 
-        <span class="comment">// session map should be the same since, we haven&#39;t passed expiry</span>
-        {
-            <span class="kw">let</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">sessions</span>.<span class="ident">read</span>().<span class="kw">await</span>;
+        <span class="comment">// session map should be the same since, we haven&#39;t passed expiry
+        </span>{
+            <span class="kw">let </span>map = sessions.read().<span class="kw">await</span>;
 
-            <span class="macro">assert!</span>(<span class="ident">map</span>.<span class="ident">contains_key</span>(<span class="kw-2">&amp;</span><span class="ident">key</span>));
-            <span class="macro">assert_eq!</span>(<span class="number">1</span>, <span class="ident">map</span>.<span class="ident">len</span>());
+            <span class="macro">assert!</span>(map.contains_key(<span class="kw-2">&amp;</span>key));
+            <span class="macro">assert_eq!</span>(<span class="number">1</span>, map.len());
         }
 
-        <span class="comment">// Wait until the key has expired.</span>
-        <span class="ident">tokio::time::sleep_until</span>(<span class="ident">tokio::time::Instant::now</span>().<span class="ident">add</span>(<span class="ident">ttl</span>)).<span class="kw">await</span>;
+        <span class="comment">// Wait until the key has expired.
+        </span>tokio::time::sleep_until(tokio::time::Instant::now().add(ttl)).<span class="kw">await</span>;
 
-        <span class="comment">// poll, since cleanup is async, and may not have happened yet</span>
-        <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">1</span>..<span class="number">10000</span> {
-            <span class="ident">tokio::time::sleep</span>(<span class="ident">Duration::from_millis</span>(<span class="number">1</span>)).<span class="kw">await</span>;
-            <span class="kw">let</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">sessions</span>.<span class="ident">read</span>().<span class="kw">await</span>;
-            <span class="kw">if</span> <span class="op">!</span><span class="ident">map</span>.<span class="ident">contains_key</span>(<span class="kw-2">&amp;</span><span class="ident">key</span>) <span class="op">&amp;&amp;</span> <span class="ident">map</span>.<span class="ident">len</span>() <span class="op">==</span> <span class="number">0</span> {
+        <span class="comment">// poll, since cleanup is async, and may not have happened yet
+        </span><span class="kw">for _ in </span><span class="number">1</span>..<span class="number">10000 </span>{
+            tokio::time::sleep(Duration::from_millis(<span class="number">1</span>)).<span class="kw">await</span>;
+            <span class="kw">let </span>map = sessions.read().<span class="kw">await</span>;
+            <span class="kw">if </span>!map.contains_key(<span class="kw-2">&amp;</span>key) &amp;&amp; map.len() == <span class="number">0 </span>{
                 <span class="kw">break</span>;
             }
         }
-        <span class="comment">// do final assertion</span>
-        {
-            <span class="kw">let</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">sessions</span>.<span class="ident">read</span>().<span class="kw">await</span>;
+        <span class="comment">// do final assertion
+        </span>{
+            <span class="kw">let </span>map = sessions.read().<span class="kw">await</span>;
             <span class="macro">assert!</span>(
-                <span class="op">!</span><span class="ident">map</span>.<span class="ident">contains_key</span>(<span class="kw-2">&amp;</span><span class="ident">key</span>),
-                <span class="string">&quot;should not contain the key after prune&quot;</span>
-            );
-            <span class="macro">assert_eq!</span>(<span class="number">0</span>, <span class="ident">map</span>.<span class="ident">len</span>(), <span class="string">&quot;len should be 0, bit is {}&quot;</span>, <span class="ident">map</span>.<span class="ident">len</span>());
+                !map.contains_key(<span class="kw-2">&amp;</span>key),
+                <span class="string">&quot;should not contain the key after prune&quot;
+            </span>);
+            <span class="macro">assert_eq!</span>(<span class="number">0</span>, map.len(), <span class="string">&quot;len should be 0, bit is {}&quot;</span>, map.len());
         }
     }
 
-    <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">prune_sessions</span>() {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">sessions</span>: <span class="ident">Sessions</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">RwLock::new</span>(<span class="ident">HashMap::new</span>()));
-        <span class="kw">let</span> (<span class="ident">from</span>, <span class="ident">to</span>) <span class="op">=</span> <span class="ident">address_pair</span>();
-        <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="ident">Endpoint::new</span>(<span class="ident">to</span>.<span class="ident">clone</span>());
-        <span class="kw">let</span> <span class="ident">socket</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">create_socket</span>().<span class="kw">await</span>);
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>prune_sessions() {
+        <span class="kw">let </span><span class="kw-2">mut </span>sessions: Sessions = Arc::new(RwLock::new(HashMap::new()));
+        <span class="kw">let </span>(from, to) = address_pair();
+        <span class="kw">let </span>endpoint = Endpoint::new(to.clone());
+        <span class="kw">let </span>socket = Arc::new(create_socket().<span class="kw">await</span>);
 
-        <span class="kw">let</span> <span class="ident">key</span> <span class="op">=</span> <span class="ident">SessionKey::from</span>((<span class="ident">from</span>.<span class="ident">clone</span>(), <span class="ident">to</span>.<span class="ident">clone</span>()));
-        <span class="kw">let</span> <span class="ident">ttl</span> <span class="op">=</span> <span class="ident">Duration::from_secs</span>(<span class="number">1</span>);
+        <span class="kw">let </span>key = SessionKey::from((from.clone(), to.clone()));
+        <span class="kw">let </span>ttl = Duration::from_secs(<span class="number">1</span>);
 
         {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">sessions</span> <span class="op">=</span> <span class="ident">sessions</span>.<span class="ident">write</span>().<span class="kw">await</span>;
-            <span class="kw">let</span> <span class="ident">session_args</span> <span class="op">=</span> <span class="ident">SessionArgs</span> {
-                <span class="ident">config</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
-                <span class="ident">source</span>: <span class="ident">from</span>,
-                <span class="ident">downstream_socket</span>: <span class="ident">socket</span>,
-                <span class="ident">dest</span>: <span class="ident">endpoint</span>.<span class="ident">clone</span>(),
-                <span class="ident">ttl</span>,
+            <span class="kw">let </span><span class="kw-2">mut </span>sessions = sessions.write().<span class="kw">await</span>;
+            <span class="kw">let </span>session_args = SessionArgs {
+                config: &lt;<span class="kw">_</span>&gt;::default(),
+                source: from,
+                downstream_socket: socket,
+                dest: endpoint.clone(),
+                ttl,
             };
-            <span class="ident">sessions</span>.<span class="ident">insert</span>(<span class="ident">key</span>.<span class="ident">clone</span>(), <span class="ident">session_args</span>.<span class="ident">into_session</span>().<span class="kw">await</span>.<span class="ident">unwrap</span>());
+            sessions.insert(key.clone(), session_args.into_session().<span class="kw">await</span>.unwrap());
         }
 
-        <span class="comment">// Insert key.</span>
-        {
-            <span class="kw">let</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">sessions</span>.<span class="ident">read</span>().<span class="kw">await</span>;
-            <span class="macro">assert!</span>(<span class="ident">map</span>.<span class="ident">contains_key</span>(<span class="kw-2">&amp;</span><span class="ident">key</span>));
-            <span class="macro">assert_eq!</span>(<span class="number">1</span>, <span class="ident">map</span>.<span class="ident">len</span>());
+        <span class="comment">// Insert key.
+        </span>{
+            <span class="kw">let </span>map = sessions.read().<span class="kw">await</span>;
+            <span class="macro">assert!</span>(map.contains_key(<span class="kw-2">&amp;</span>key));
+            <span class="macro">assert_eq!</span>(<span class="number">1</span>, map.len());
         }
 
-        <span class="comment">// session map should be the same since, we haven&#39;t passed expiry</span>
-        <span class="ident">SessionManager::prune_sessions</span>(<span class="kw-2">&amp;mut</span> <span class="ident">sessions</span>).<span class="kw">await</span>;
+        <span class="comment">// session map should be the same since, we haven&#39;t passed expiry
+        </span>SessionManager::prune_sessions(<span class="kw-2">&amp;mut </span>sessions).<span class="kw">await</span>;
         {
-            <span class="kw">let</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">sessions</span>.<span class="ident">read</span>().<span class="kw">await</span>;
-            <span class="macro">assert!</span>(<span class="ident">map</span>.<span class="ident">contains_key</span>(<span class="kw-2">&amp;</span><span class="ident">key</span>));
-            <span class="macro">assert_eq!</span>(<span class="number">1</span>, <span class="ident">map</span>.<span class="ident">len</span>());
+            <span class="kw">let </span>map = sessions.read().<span class="kw">await</span>;
+            <span class="macro">assert!</span>(map.contains_key(<span class="kw-2">&amp;</span>key));
+            <span class="macro">assert_eq!</span>(<span class="number">1</span>, map.len());
         }
 
-        <span class="comment">// Wait until the key has expired.</span>
-        <span class="ident">tokio::time::sleep_until</span>(<span class="ident">tokio::time::Instant::now</span>().<span class="ident">add</span>(<span class="ident">ttl</span>)).<span class="kw">await</span>;
+        <span class="comment">// Wait until the key has expired.
+        </span>tokio::time::sleep_until(tokio::time::Instant::now().add(ttl)).<span class="kw">await</span>;
 
-        <span class="ident">SessionManager::prune_sessions</span>(<span class="kw-2">&amp;mut</span> <span class="ident">sessions</span>).<span class="kw">await</span>;
+        SessionManager::prune_sessions(<span class="kw-2">&amp;mut </span>sessions).<span class="kw">await</span>;
         {
-            <span class="kw">let</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">sessions</span>.<span class="ident">read</span>().<span class="kw">await</span>;
+            <span class="kw">let </span>map = sessions.read().<span class="kw">await</span>;
             <span class="macro">assert!</span>(
-                <span class="op">!</span><span class="ident">map</span>.<span class="ident">contains_key</span>(<span class="kw-2">&amp;</span><span class="ident">key</span>),
-                <span class="string">&quot;should not contain the key after prune&quot;</span>
-            );
-            <span class="macro">assert_eq!</span>(<span class="number">0</span>, <span class="ident">map</span>.<span class="ident">len</span>(), <span class="string">&quot;len should be 0, bit is {}&quot;</span>, <span class="ident">map</span>.<span class="ident">len</span>());
+                !map.contains_key(<span class="kw-2">&amp;</span>key),
+                <span class="string">&quot;should not contain the key after prune&quot;
+            </span>);
+            <span class="macro">assert_eq!</span>(<span class="number">0</span>, map.len(), <span class="string">&quot;len should be 0, bit is {}&quot;</span>, map.len());
         }
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

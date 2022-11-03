@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/filters/chain.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>chain.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../quilkin/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/filters/chain.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>chain.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../normalize.css"><link rel="stylesheet" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../ayu.css" disabled><link rel="stylesheet" href="../../../dark.css" disabled><link rel="stylesheet" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../quilkin/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -483,254 +483,254 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */</span>
+ */
 
-<span class="kw">use</span> <span class="ident">prometheus</span>::{<span class="ident">exponential_buckets</span>, <span class="ident">Histogram</span>};
+</span><span class="kw">use </span>prometheus::{exponential_buckets, Histogram};
 
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">config::Filter</span> <span class="kw">as</span> <span class="ident">FilterConfig</span>,
-    <span class="ident">filters</span>::{<span class="ident">prelude</span>::<span class="kw-2">*</span>, <span class="ident">FilterRegistry</span>},
-    <span class="ident">metrics</span>::{<span class="ident">histogram_opts</span>, <span class="ident">CollectorExt</span>},
+<span class="kw">use crate</span>::{
+    config::Filter <span class="kw">as </span>FilterConfig,
+    filters::{prelude::<span class="kw-2">*</span>, FilterRegistry},
+    metrics::{histogram_opts, CollectorExt},
 };
 
-<span class="kw">const</span> <span class="ident">FILTER_LABEL</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;filter&quot;</span>;
+<span class="kw">const </span>FILTER_LABEL: <span class="kw-2">&amp;</span>str = <span class="string">&quot;filter&quot;</span>;
 
-<span class="doccomment">/// Start the histogram bucket at an eighth of a millisecond, as we bucketed the full filter</span>
-<span class="doccomment">/// chain processing starting at a quarter of a millisecond, so we we will want finer granularity</span>
-<span class="doccomment">/// here.</span>
-<span class="kw">const</span> <span class="ident">BUCKET_START</span>: <span class="ident">f64</span> <span class="op">=</span> <span class="number">0.000125</span>;
+<span class="doccomment">/// Start the histogram bucket at an eighth of a millisecond, as we bucketed the full filter
+/// chain processing starting at a quarter of a millisecond, so we we will want finer granularity
+/// here.
+</span><span class="kw">const </span>BUCKET_START: f64 = <span class="number">0.000125</span>;
 
-<span class="kw">const</span> <span class="ident">BUCKET_FACTOR</span>: <span class="ident">f64</span> <span class="op">=</span> <span class="number">2.5</span>;
+<span class="kw">const </span>BUCKET_FACTOR: f64 = <span class="number">2.5</span>;
 
-<span class="doccomment">/// At an exponential factor of 2.5 (BUCKET_FACTOR), 11 iterations gets us to just over half a</span>
-<span class="doccomment">/// second. Any processing that occurs over half a second is far too long, so we end</span>
-<span class="doccomment">/// the bucketing there as we don&#39;t care about granularity past this value.</span>
-<span class="kw">const</span> <span class="ident">BUCKET_COUNT</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">11</span>;
+<span class="doccomment">/// At an exponential factor of 2.5 (BUCKET_FACTOR), 11 iterations gets us to just over half a
+/// second. Any processing that occurs over half a second is far too long, so we end
+/// the bucketing there as we don&#39;t care about granularity past this value.
+</span><span class="kw">const </span>BUCKET_COUNT: usize = <span class="number">11</span>;
 
-<span class="doccomment">/// A chain of [`Filter`]s to be executed in order.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// Executes each filter, passing the [`ReadContext`] and [`WriteContext`]</span>
-<span class="doccomment">/// between each filter&#39;s execution, returning the result of data that has gone</span>
-<span class="doccomment">/// through all of the filters in the chain. If any of the filters in the chain</span>
-<span class="doccomment">/// return `None`, then the chain is broken, and `None` is returned.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Default</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">FilterChain</span> {
-    <span class="ident">filters</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">String</span>, <span class="ident">FilterInstance</span>)<span class="op">&gt;</span>,
-    <span class="ident">filter_read_duration_seconds</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Histogram</span><span class="op">&gt;</span>,
-    <span class="ident">filter_write_duration_seconds</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Histogram</span><span class="op">&gt;</span>,
+<span class="doccomment">/// A chain of [`Filter`]s to be executed in order.
+///
+/// Executes each filter, passing the [`ReadContext`] and [`WriteContext`]
+/// between each filter&#39;s execution, returning the result of data that has gone
+/// through all of the filters in the chain. If any of the filters in the chain
+/// return `None`, then the chain is broken, and `None` is returned.
+</span><span class="attribute">#[derive(Clone, Default)]
+</span><span class="kw">pub struct </span>FilterChain {
+    filters: Vec&lt;(String, FilterInstance)&gt;,
+    filter_read_duration_seconds: Vec&lt;Histogram&gt;,
+    filter_write_duration_seconds: Vec&lt;Histogram&gt;,
 }
 
-<span class="kw">impl</span> <span class="ident">FilterChain</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">filters</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">String</span>, <span class="ident">FilterInstance</span>)<span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">subsystem</span> <span class="op">=</span> <span class="string">&quot;filter&quot;</span>;
+<span class="kw">impl </span>FilterChain {
+    <span class="kw">pub fn </span>new(filters: Vec&lt;(String, FilterInstance)&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+        <span class="kw">let </span>subsystem = <span class="string">&quot;filter&quot;</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
-            <span class="ident">filter_read_duration_seconds</span>: <span class="ident">filters</span>
-                .<span class="ident">iter</span>()
-                .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">name</span>, <span class="kw">_</span>)<span class="op">|</span> {
-                    <span class="ident">Histogram::with_opts</span>(
-                        <span class="ident">histogram_opts</span>(
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
+            filter_read_duration_seconds: filters
+                .iter()
+                .map(|(name, <span class="kw">_</span>)| {
+                    Histogram::with_opts(
+                        histogram_opts(
                             <span class="string">&quot;read_duration_seconds&quot;</span>,
-                            <span class="ident">subsystem</span>,
+                            subsystem,
                             <span class="string">&quot;Seconds taken to execute a given filter&#39;s `read`.&quot;</span>,
                             <span class="prelude-val">Some</span>(
-                                <span class="ident">exponential_buckets</span>(<span class="ident">BUCKET_START</span>, <span class="ident">BUCKET_FACTOR</span>, <span class="ident">BUCKET_COUNT</span>)
-                                    .<span class="ident">unwrap</span>(),
+                                exponential_buckets(BUCKET_START, BUCKET_FACTOR, BUCKET_COUNT)
+                                    .unwrap(),
                             ),
                         )
-                        .<span class="ident">const_label</span>(<span class="ident">FILTER_LABEL</span>, <span class="ident">name</span>),
+                        .const_label(FILTER_LABEL, name),
                     )
-                    .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">histogram</span><span class="op">|</span> <span class="ident">histogram</span>.<span class="ident">register_if_not_exists</span>())
+                    .and_then(|histogram| histogram.register_if_not_exists())
                 })
-                .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="kw">_</span>, <span class="ident">prometheus::Error</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>,
-            <span class="ident">filter_write_duration_seconds</span>: <span class="ident">filters</span>
-                .<span class="ident">iter</span>()
-                .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">name</span>, <span class="kw">_</span>)<span class="op">|</span> {
-                    <span class="ident">Histogram::with_opts</span>(
-                        <span class="ident">histogram_opts</span>(
+                .collect::&lt;<span class="prelude-ty">Result</span>&lt;<span class="kw">_</span>, prometheus::Error&gt;&gt;()<span class="question-mark">?</span>,
+            filter_write_duration_seconds: filters
+                .iter()
+                .map(|(name, <span class="kw">_</span>)| {
+                    Histogram::with_opts(
+                        histogram_opts(
                             <span class="string">&quot;write_duration_seconds&quot;</span>,
-                            <span class="ident">subsystem</span>,
+                            subsystem,
                             <span class="string">&quot;Seconds taken to execute a given filter&#39;s `write`.&quot;</span>,
-                            <span class="prelude-val">Some</span>(<span class="ident">exponential_buckets</span>(<span class="number">0.000125</span>, <span class="number">2.5</span>, <span class="number">11</span>).<span class="ident">unwrap</span>()),
+                            <span class="prelude-val">Some</span>(exponential_buckets(<span class="number">0.000125</span>, <span class="number">2.5</span>, <span class="number">11</span>).unwrap()),
                         )
-                        .<span class="ident">const_label</span>(<span class="ident">FILTER_LABEL</span>, <span class="ident">name</span>),
+                        .const_label(FILTER_LABEL, name),
                     )
-                    .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">histogram</span><span class="op">|</span> <span class="ident">histogram</span>.<span class="ident">register_if_not_exists</span>())
+                    .and_then(|histogram| histogram.register_if_not_exists())
                 })
-                .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="kw">_</span>, <span class="ident">prometheus::Error</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>,
-            <span class="ident">filters</span>,
+                .collect::&lt;<span class="prelude-ty">Result</span>&lt;<span class="kw">_</span>, prometheus::Error&gt;&gt;()<span class="question-mark">?</span>,
+            filters,
         })
     }
 
-    <span class="doccomment">/// Validates the filter configurations in the provided config and constructs</span>
-    <span class="doccomment">/// a FilterChain if all configurations are valid.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">try_create</span>(<span class="ident">filter_configs</span>: <span class="kw-2">&amp;</span>[<span class="ident">FilterConfig</span>]) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="ident"><span class="self">Self</span>::try_from</span>(<span class="ident">filter_configs</span>)
+    <span class="doccomment">/// Validates the filter configurations in the provided config and constructs
+    /// a FilterChain if all configurations are valid.
+    </span><span class="kw">pub fn </span>try_create(filter_configs: <span class="kw-2">&amp;</span>[FilterConfig]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+        <span class="self">Self</span>::try_from(filter_configs)
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">len</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">usize</span> {
-        <span class="self">self</span>.<span class="ident">filters</span>.<span class="ident">len</span>()
+    <span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+        <span class="self">self</span>.filters.len()
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">iter</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident"><span class="kw">crate</span>::config::Filter</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;_</span> {
-        <span class="self">self</span>.<span class="ident">filters</span>
-            .<span class="ident">iter</span>()
-            .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">name</span>, <span class="ident">instance</span>)<span class="op">|</span> <span class="ident"><span class="kw">crate</span>::config::Filter</span> {
-                <span class="ident">name</span>: <span class="ident">name</span>.<span class="ident">clone</span>(),
-                <span class="ident">config</span>: <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">instance</span>.<span class="ident">config</span> {
-                    <span class="ident">serde_json::Value::Null</span> =&gt; <span class="prelude-val">None</span>,
-                    <span class="ident">value</span> =&gt; <span class="prelude-val">Some</span>(<span class="ident">value</span>.<span class="ident">clone</span>()),
+    <span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw">impl </span>Iterator&lt;Item = <span class="kw">crate</span>::config::Filter&gt; + <span class="lifetime">&#39;_ </span>{
+        <span class="self">self</span>.filters
+            .iter()
+            .map(|(name, instance)| <span class="kw">crate</span>::config::Filter {
+                name: name.clone(),
+                config: <span class="kw">match </span><span class="kw-2">&amp;*</span>instance.config {
+                    serde_json::Value::Null =&gt; <span class="prelude-val">None</span>,
+                    value =&gt; <span class="prelude-val">Some</span>(value.clone()),
                 },
             })
     }
 }
 
-<span class="kw">impl</span> <span class="ident">std::fmt::Debug</span> <span class="kw">for</span> <span class="ident">FilterChain</span> {
-    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;mut</span> <span class="ident">std::fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="ident">std::fmt::Result</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">filters</span> <span class="op">=</span> <span class="ident">f</span>.<span class="ident">debug_struct</span>(<span class="string">&quot;Filters&quot;</span>);
+<span class="kw">impl </span>std::fmt::Debug <span class="kw">for </span>FilterChain {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
+        <span class="kw">let </span><span class="kw-2">mut </span>filters = f.debug_struct(<span class="string">&quot;Filters&quot;</span>);
 
-        <span class="kw">for</span> (<span class="ident">id</span>, <span class="ident">instance</span>) <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">filters</span> {
-            <span class="ident">filters</span>.<span class="ident">field</span>(<span class="ident">id</span>, <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">instance</span>.<span class="ident">config</span>);
+        <span class="kw">for </span>(id, instance) <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.filters {
+            filters.field(id, <span class="kw-2">&amp;*</span>instance.config);
         }
 
-        <span class="ident">filters</span>.<span class="ident">finish</span>()
+        filters.finish()
     }
 }
 
-<span class="kw">impl</span> <span class="ident">PartialEq</span> <span class="kw">for</span> <span class="ident">FilterChain</span> {
-    <span class="kw">fn</span> <span class="ident">eq</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">rhs</span>: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="ident">bool</span> {
-        <span class="self">self</span>.<span class="ident">filters</span>.<span class="ident">iter</span>().<span class="ident">zip</span>(<span class="kw-2">&amp;</span><span class="ident">rhs</span>.<span class="ident">filters</span>).<span class="ident">all</span>(
-            <span class="op">|</span>((<span class="ident">lhs_name</span>, <span class="ident">lhs_instance</span>), (<span class="ident">rhs_name</span>, <span class="ident">rhs_instance</span>))<span class="op">|</span> {
-                <span class="ident">lhs_name</span> <span class="op">==</span> <span class="ident">rhs_name</span> <span class="op">&amp;&amp;</span> <span class="ident">lhs_instance</span>.<span class="ident">config</span> <span class="op">==</span> <span class="ident">rhs_instance</span>.<span class="ident">config</span>
+<span class="kw">impl </span>PartialEq <span class="kw">for </span>FilterChain {
+    <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, rhs: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; bool {
+        <span class="self">self</span>.filters.iter().zip(<span class="kw-2">&amp;</span>rhs.filters).all(
+            |((lhs_name, lhs_instance), (rhs_name, rhs_instance))| {
+                lhs_name == rhs_name &amp;&amp; lhs_instance.config == rhs_instance.config
             },
         )
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="kw-2">&amp;</span>[<span class="ident">FilterConfig</span>; <span class="ident">N</span>]<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">FilterChain</span> {
-    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">Error</span>;
+<span class="kw">impl</span>&lt;<span class="kw">const </span>N: usize&gt; TryFrom&lt;<span class="kw-2">&amp;</span>[FilterConfig; N]&gt; <span class="kw">for </span>FilterChain {
+    <span class="kw">type </span>Error = Error;
 
-    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">filter_configs</span>: <span class="kw-2">&amp;</span>[<span class="ident">FilterConfig</span>; <span class="ident">N</span>]) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="ident"><span class="self">Self</span>::try_from</span>(<span class="kw-2">&amp;</span><span class="ident">filter_configs</span>[..])
+    <span class="kw">fn </span>try_from(filter_configs: <span class="kw-2">&amp;</span>[FilterConfig; N]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+        <span class="self">Self</span>::try_from(<span class="kw-2">&amp;</span>filter_configs[..])
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">TryFrom</span><span class="op">&lt;</span>[<span class="ident">FilterConfig</span>; <span class="ident">N</span>]<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">FilterChain</span> {
-    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">Error</span>;
+<span class="kw">impl</span>&lt;<span class="kw">const </span>N: usize&gt; TryFrom&lt;[FilterConfig; N]&gt; <span class="kw">for </span>FilterChain {
+    <span class="kw">type </span>Error = Error;
 
-    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">filter_configs</span>: [<span class="ident">FilterConfig</span>; <span class="ident">N</span>]) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="ident"><span class="self">Self</span>::try_from</span>(<span class="kw-2">&amp;</span><span class="ident">filter_configs</span>[..])
+    <span class="kw">fn </span>try_from(filter_configs: [FilterConfig; N]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+        <span class="self">Self</span>::try_from(<span class="kw-2">&amp;</span>filter_configs[..])
     }
 }
 
-<span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">FilterConfig</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">FilterChain</span> {
-    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">Error</span>;
+<span class="kw">impl </span>TryFrom&lt;Vec&lt;FilterConfig&gt;&gt; <span class="kw">for </span>FilterChain {
+    <span class="kw">type </span>Error = Error;
 
-    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">filter_configs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">FilterConfig</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="ident"><span class="self">Self</span>::try_from</span>(<span class="kw-2">&amp;</span><span class="ident">filter_configs</span>[..])
+    <span class="kw">fn </span>try_from(filter_configs: Vec&lt;FilterConfig&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+        <span class="self">Self</span>::try_from(<span class="kw-2">&amp;</span>filter_configs[..])
     }
 }
 
-<span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="kw-2">&amp;</span>[<span class="ident">FilterConfig</span>]<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">FilterChain</span> {
-    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">Error</span>;
+<span class="kw">impl </span>TryFrom&lt;<span class="kw-2">&amp;</span>[FilterConfig]&gt; <span class="kw">for </span>FilterChain {
+    <span class="kw">type </span>Error = Error;
 
-    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">filter_configs</span>: <span class="kw-2">&amp;</span>[<span class="ident">FilterConfig</span>]) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">filters</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
+    <span class="kw">fn </span>try_from(filter_configs: <span class="kw-2">&amp;</span>[FilterConfig]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>filters = Vec::new();
 
-        <span class="kw">for</span> <span class="ident">filter_config</span> <span class="kw">in</span> <span class="ident">filter_configs</span> {
-            <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">FilterRegistry::get</span>(
-                <span class="kw-2">&amp;</span><span class="ident">filter_config</span>.<span class="ident">name</span>,
-                <span class="ident">CreateFilterArgs::fixed</span>(<span class="ident">filter_config</span>.<span class="ident">config</span>.<span class="ident">clone</span>()),
+        <span class="kw">for </span>filter_config <span class="kw">in </span>filter_configs {
+            <span class="kw">let </span>filter = FilterRegistry::get(
+                <span class="kw-2">&amp;</span>filter_config.name,
+                CreateFilterArgs::fixed(filter_config.config.clone()),
             )<span class="question-mark">?</span>;
 
-            <span class="ident">filters</span>.<span class="ident">push</span>((<span class="ident">filter_config</span>.<span class="ident">name</span>.<span class="ident">clone</span>(), <span class="ident">filter</span>));
+            filters.push((filter_config.name.clone(), filter));
         }
 
-        <span class="ident"><span class="self">Self</span>::new</span>(<span class="ident">filters</span>)
+        <span class="self">Self</span>::new(filters)
     }
 }
 
-<span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident">FilterChain</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident"><span class="kw">crate</span>::xds::config::listener::v3::FilterChain</span> {
-    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">Error</span>;
+<span class="kw">impl </span>TryFrom&lt;FilterChain&gt; <span class="kw">for </span><span class="kw">crate</span>::xds::config::listener::v3::FilterChain {
+    <span class="kw">type </span>Error = Error;
 
-    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">chain</span>: <span class="ident">FilterChain</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="ident"><span class="self">Self</span>::try_from</span>(<span class="kw-2">&amp;</span><span class="ident">chain</span>)
+    <span class="kw">fn </span>try_from(chain: FilterChain) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+        <span class="self">Self</span>::try_from(<span class="kw-2">&amp;</span>chain)
     }
 }
 
-<span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;_</span> <span class="ident">FilterChain</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident"><span class="kw">crate</span>::xds::config::listener::v3::FilterChain</span> {
-    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">Error</span>;
+<span class="kw">impl </span>TryFrom&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span>FilterChain&gt; <span class="kw">for </span><span class="kw">crate</span>::xds::config::listener::v3::FilterChain {
+    <span class="kw">type </span>Error = Error;
 
-    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">chain</span>: <span class="kw-2">&amp;</span><span class="ident">FilterChain</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
-            <span class="ident">filters</span>: <span class="ident">chain</span>
-                .<span class="ident">iter</span>()
-                .<span class="ident">map</span>(<span class="ident">TryFrom::try_from</span>)
-                .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="kw">_</span>, <span class="ident"><span class="self">Self</span>::Error</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>,
-            ..<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>()
+    <span class="kw">fn </span>try_from(chain: <span class="kw-2">&amp;</span>FilterChain) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
+            filters: chain
+                .iter()
+                .map(TryFrom::try_from)
+                .collect::&lt;<span class="prelude-ty">Result</span>&lt;<span class="kw">_</span>, <span class="self">Self</span>::Error&gt;&gt;()<span class="question-mark">?</span>,
+            ..&lt;<span class="kw">_</span>&gt;::default()
         })
     }
 }
 
-<span class="kw">impl</span> <span class="ident">std::ops::Index</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">FilterChain</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> (<span class="ident">String</span>, <span class="ident">FilterInstance</span>);
+<span class="kw">impl </span>std::ops::Index&lt;usize&gt; <span class="kw">for </span>FilterChain {
+    <span class="kw">type </span>Output = (String, FilterInstance);
 
-    <span class="kw">fn</span> <span class="ident">index</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">index</span>: <span class="ident">usize</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Output</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">filters</span>[<span class="ident">index</span>]
+    <span class="kw">fn </span>index(<span class="kw-2">&amp;</span><span class="self">self</span>, index: usize) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Output {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.filters[index]
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span> <span class="ident">serde::Deserialize</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">FilterChain</span> {
-    <span class="kw">fn</span> <span class="ident">deserialize</span><span class="op">&lt;</span><span class="ident">D</span>: <span class="ident">serde::Deserializer</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="ident">de</span>: <span class="ident">D</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">D::Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">filters</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">FilterConfig</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::deserialize</span>(<span class="ident">de</span>)<span class="question-mark">?</span>;
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;de</span>&gt; serde::Deserialize&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>FilterChain {
+    <span class="kw">fn </span>deserialize&lt;D: serde::Deserializer&lt;<span class="lifetime">&#39;de</span>&gt;&gt;(de: D) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, D::Error&gt; {
+        <span class="kw">let </span>filters = &lt;Vec&lt;FilterConfig&gt;&gt;::deserialize(de)<span class="question-mark">?</span>;
 
-        <span class="ident"><span class="self">Self</span>::try_from</span>(<span class="ident">filters</span>).<span class="ident">map_err</span>(<span class="ident">serde::de::Error::custom</span>)
+        <span class="self">Self</span>::try_from(filters).map_err(serde::de::Error::custom)
     }
 }
 
-<span class="kw">impl</span> <span class="ident">serde::Serialize</span> <span class="kw">for</span> <span class="ident">FilterChain</span> {
-    <span class="kw">fn</span> <span class="ident">serialize</span><span class="op">&lt;</span><span class="ident">S</span>: <span class="ident">serde::Serializer</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ser</span>: <span class="ident">S</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">S::Ok</span>, <span class="ident">S::Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">filters</span> <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">filters</span>
-            .<span class="ident">iter</span>()
-            .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">name</span>, <span class="ident">instance</span>)<span class="op">|</span> <span class="ident"><span class="kw">crate</span>::config::Filter</span> {
-                <span class="ident">name</span>: <span class="ident">name</span>.<span class="ident">clone</span>(),
-                <span class="ident">config</span>: <span class="prelude-val">Some</span>(<span class="ident">serde_json::Value::clone</span>(<span class="kw-2">&amp;</span><span class="ident">instance</span>.<span class="ident">config</span>)),
+<span class="kw">impl </span>serde::Serialize <span class="kw">for </span>FilterChain {
+    <span class="kw">fn </span>serialize&lt;S: serde::Serializer&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, ser: S) -&gt; <span class="prelude-ty">Result</span>&lt;S::Ok, S::Error&gt; {
+        <span class="kw">let </span>filters = <span class="self">self
+            </span>.filters
+            .iter()
+            .map(|(name, instance)| <span class="kw">crate</span>::config::Filter {
+                name: name.clone(),
+                config: <span class="prelude-val">Some</span>(serde_json::Value::clone(<span class="kw-2">&amp;</span>instance.config)),
             })
-            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
+            .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 
-        <span class="ident">filters</span>.<span class="ident">serialize</span>(<span class="ident">ser</span>)
+        filters.serialize(ser)
     }
 }
 
-<span class="kw">impl</span> <span class="ident">schemars::JsonSchema</span> <span class="kw">for</span> <span class="ident">FilterChain</span> {
-    <span class="kw">fn</span> <span class="ident">schema_name</span>() -&gt; <span class="ident">String</span> {
-        <span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">FilterConfig</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::schema_name</span>()
+<span class="kw">impl </span>schemars::JsonSchema <span class="kw">for </span>FilterChain {
+    <span class="kw">fn </span>schema_name() -&gt; String {
+        &lt;Vec&lt;FilterConfig&gt;&gt;::schema_name()
     }
-    <span class="kw">fn</span> <span class="ident">json_schema</span>(<span class="ident">gen</span>: <span class="kw-2">&amp;mut</span> <span class="ident">schemars::gen::SchemaGenerator</span>) -&gt; <span class="ident">schemars::schema::Schema</span> {
-        <span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">FilterConfig</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::json_schema</span>(<span class="ident">gen</span>)
+    <span class="kw">fn </span>json_schema(gen: <span class="kw-2">&amp;mut </span>schemars::gen::SchemaGenerator) -&gt; schemars::schema::Schema {
+        &lt;Vec&lt;FilterConfig&gt;&gt;::json_schema(gen)
     }
 
-    <span class="kw">fn</span> <span class="ident">is_referenceable</span>() -&gt; <span class="ident">bool</span> {
-        <span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">FilterConfig</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::is_referenceable</span>()
+    <span class="kw">fn </span>is_referenceable() -&gt; bool {
+        &lt;Vec&lt;FilterConfig&gt;&gt;::is_referenceable()
     }
 }
 
-<span class="kw">impl</span> <span class="ident">Filter</span> <span class="kw">for</span> <span class="ident">FilterChain</span> {
-    <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ReadContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">filters</span>
-            .<span class="ident">iter</span>()
-            .<span class="ident">zip</span>(<span class="self">self</span>.<span class="ident">filter_read_duration_seconds</span>.<span class="ident">iter</span>())
-            .<span class="ident">try_fold</span>((), <span class="op">|</span><span class="kw">_</span>, ((<span class="ident">id</span>, <span class="ident">instance</span>), <span class="ident">histogram</span>)<span class="op">|</span> {
-                <span class="macro">tracing::trace!</span>(<span class="op">%</span><span class="ident">id</span>, <span class="string">&quot;read filtering packet&quot;</span>);
-                <span class="kw">match</span> <span class="ident">histogram</span>.<span class="ident">observe_closure_duration</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">instance</span>.<span class="ident">filter</span>.<span class="ident">read</span>(<span class="ident">ctx</span>)) {
+<span class="kw">impl </span>Filter <span class="kw">for </span>FilterChain {
+    <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt; {
+        <span class="self">self</span>.filters
+            .iter()
+            .zip(<span class="self">self</span>.filter_read_duration_seconds.iter())
+            .try_fold((), |<span class="kw">_</span>, ((id, instance), histogram)| {
+                <span class="macro">tracing::trace!</span>(%id, <span class="string">&quot;read filtering packet&quot;</span>);
+                <span class="kw">match </span>histogram.observe_closure_duration(|| instance.filter.read(ctx)) {
                     <span class="prelude-val">Some</span>(()) =&gt; {
-                        <span class="macro">tracing::trace!</span>(<span class="op">%</span><span class="ident">id</span>, <span class="string">&quot;read passing packet&quot;</span>);
+                        <span class="macro">tracing::trace!</span>(%id, <span class="string">&quot;read passing packet&quot;</span>);
                     }
-                    <span class="prelude-val">None</span> =&gt; {
-                        <span class="macro">tracing::trace!</span>(<span class="op">%</span><span class="ident">id</span>, <span class="string">&quot;read dropping packet&quot;</span>);
-                        <span class="ident"><span class="kw">crate</span>::metrics::packets_dropped</span>(<span class="ident"><span class="kw">crate</span>::metrics::READ</span>, <span class="ident">id</span>).<span class="ident">inc</span>();
-                        <span class="kw">return</span> <span class="prelude-val">None</span>;
+                    <span class="prelude-val">None </span>=&gt; {
+                        <span class="macro">tracing::trace!</span>(%id, <span class="string">&quot;read dropping packet&quot;</span>);
+                        <span class="kw">crate</span>::metrics::packets_dropped(<span class="kw">crate</span>::metrics::READ, id).inc();
+                        <span class="kw">return </span><span class="prelude-val">None</span>;
                     }
                 }
 
@@ -738,207 +738,207 @@
             })
     }
 
-    <span class="kw">fn</span> <span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">WriteContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">filters</span>
-            .<span class="ident">iter</span>()
-            .<span class="ident">rev</span>()
-            .<span class="ident">zip</span>(<span class="self">self</span>.<span class="ident">filter_write_duration_seconds</span>.<span class="ident">iter</span>().<span class="ident">rev</span>())
-            .<span class="ident">try_fold</span>((), <span class="op">|</span><span class="kw">_</span>, ((<span class="ident">id</span>, <span class="ident">instance</span>), <span class="ident">histogram</span>)<span class="op">|</span> {
-                <span class="macro">tracing::trace!</span>(<span class="op">%</span><span class="ident">id</span>, <span class="string">&quot;write filtering packet&quot;</span>);
-                <span class="kw">match</span> <span class="ident">histogram</span>.<span class="ident">observe_closure_duration</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">instance</span>.<span class="ident">filter</span>.<span class="ident">write</span>(<span class="ident">ctx</span>)) {
+    <span class="kw">fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt; {
+        <span class="self">self</span>.filters
+            .iter()
+            .rev()
+            .zip(<span class="self">self</span>.filter_write_duration_seconds.iter().rev())
+            .try_fold((), |<span class="kw">_</span>, ((id, instance), histogram)| {
+                <span class="macro">tracing::trace!</span>(%id, <span class="string">&quot;write filtering packet&quot;</span>);
+                <span class="kw">match </span>histogram.observe_closure_duration(|| instance.filter.write(ctx)) {
                     <span class="prelude-val">Some</span>(()) =&gt; {
-                        <span class="macro">tracing::trace!</span>(<span class="op">%</span><span class="ident">id</span>, <span class="string">&quot;write passing packet&quot;</span>);
+                        <span class="macro">tracing::trace!</span>(%id, <span class="string">&quot;write passing packet&quot;</span>);
                         <span class="prelude-val">Some</span>(())
                     }
-                    <span class="prelude-val">None</span> =&gt; {
-                        <span class="macro">tracing::trace!</span>(<span class="op">%</span><span class="ident">id</span>, <span class="string">&quot;write dropping packet&quot;</span>);
-                        <span class="ident"><span class="kw">crate</span>::metrics::packets_dropped</span>(<span class="ident"><span class="kw">crate</span>::metrics::WRITE</span>, <span class="ident">id</span>).<span class="ident">inc</span>();
-                        <span class="prelude-val">None</span>
-                    }
+                    <span class="prelude-val">None </span>=&gt; {
+                        <span class="macro">tracing::trace!</span>(%id, <span class="string">&quot;write dropping packet&quot;</span>);
+                        <span class="kw">crate</span>::metrics::packets_dropped(<span class="kw">crate</span>::metrics::WRITE, id).inc();
+                        <span class="prelude-val">None
+                    </span>}
                 }
             })
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="ident">std::sync::Arc</span>;
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
+    <span class="kw">use </span>std::sync::Arc;
 
-    <span class="kw">use</span> <span class="kw">crate</span>::{
-        <span class="ident">config</span>,
-        <span class="ident">endpoint::Endpoint</span>,
-        <span class="ident">filters::Debug</span>,
-        <span class="ident">test_utils</span>::{<span class="ident">new_test_config</span>, <span class="ident">TestFilter</span>},
+    <span class="kw">use crate</span>::{
+        config,
+        endpoint::Endpoint,
+        filters::Debug,
+        test_utils::{new_test_config, TestFilter},
     };
 
-    <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
+    <span class="kw">use super</span>::<span class="kw-2">*</span>;
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">from_config</span>() {
-        <span class="kw">let</span> <span class="ident">provider</span> <span class="op">=</span> <span class="ident">Debug::factory</span>();
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>from_config() {
+        <span class="kw">let </span>provider = Debug::factory();
 
-        <span class="comment">// everything is fine</span>
-        <span class="kw">let</span> <span class="ident">filter_configs</span> <span class="op">=</span> <span class="kw-2">&amp;</span>[<span class="ident">config::Filter</span> {
-            <span class="ident">name</span>: <span class="ident">provider</span>.<span class="ident">name</span>().<span class="ident">into</span>(),
-            <span class="ident">config</span>: <span class="prelude-val">Some</span>(<span class="ident">serde_json::Map::default</span>().<span class="ident">into</span>()),
+        <span class="comment">// everything is fine
+        </span><span class="kw">let </span>filter_configs = <span class="kw-2">&amp;</span>[config::Filter {
+            name: provider.name().into(),
+            config: <span class="prelude-val">Some</span>(serde_json::Map::default().into()),
         }];
 
-        <span class="kw">let</span> <span class="ident">chain</span> <span class="op">=</span> <span class="ident">FilterChain::try_create</span>(<span class="ident">filter_configs</span>).<span class="ident">unwrap</span>();
-        <span class="macro">assert_eq!</span>(<span class="number">1</span>, <span class="ident">chain</span>.<span class="ident">filters</span>.<span class="ident">len</span>());
+        <span class="kw">let </span>chain = FilterChain::try_create(filter_configs).unwrap();
+        <span class="macro">assert_eq!</span>(<span class="number">1</span>, chain.filters.len());
 
-        <span class="comment">// uh oh, something went wrong</span>
-        <span class="kw">let</span> <span class="ident">filter_configs</span> <span class="op">=</span> <span class="kw-2">&amp;</span>[<span class="ident">config::Filter</span> {
-            <span class="ident">name</span>: <span class="string">&quot;this is so wrong&quot;</span>.<span class="ident">into</span>(),
-            <span class="ident">config</span>: <span class="ident">Default::default</span>(),
+        <span class="comment">// uh oh, something went wrong
+        </span><span class="kw">let </span>filter_configs = <span class="kw-2">&amp;</span>[config::Filter {
+            name: <span class="string">&quot;this is so wrong&quot;</span>.into(),
+            config: Default::default(),
         }];
-        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">FilterChain::try_create</span>(<span class="ident">filter_configs</span>);
-        <span class="macro">assert!</span>(<span class="ident">result</span>.<span class="ident">is_err</span>());
+        <span class="kw">let </span>result = FilterChain::try_create(filter_configs);
+        <span class="macro">assert!</span>(result.is_err());
     }
 
-    <span class="kw">fn</span> <span class="ident">endpoints</span>() -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Endpoint</span><span class="op">&gt;</span> {
+    <span class="kw">fn </span>endpoints() -&gt; Vec&lt;Endpoint&gt; {
         <span class="macro">vec!</span>[
-            <span class="ident">Endpoint::new</span>(<span class="string">&quot;127.0.0.1:80&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>()),
-            <span class="ident">Endpoint::new</span>(<span class="string">&quot;127.0.0.1:90&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>()),
+            Endpoint::new(<span class="string">&quot;127.0.0.1:80&quot;</span>.parse().unwrap()),
+            Endpoint::new(<span class="string">&quot;127.0.0.1:90&quot;</span>.parse().unwrap()),
         ]
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">chain_single_test_filter</span>() {
-        <span class="ident"><span class="kw">crate</span>::test_utils::load_test_filters</span>();
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">new_test_config</span>();
-        <span class="kw">let</span> <span class="ident">endpoints_fixture</span> <span class="op">=</span> <span class="ident">endpoints</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">context</span> <span class="op">=</span> <span class="ident">ReadContext::new</span>(
-            <span class="ident">endpoints_fixture</span>.<span class="ident">clone</span>(),
-            <span class="string">&quot;127.0.0.1:70&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
-            <span class="string">b&quot;hello&quot;</span>.<span class="ident">to_vec</span>(),
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>chain_single_test_filter() {
+        <span class="kw">crate</span>::test_utils::load_test_filters();
+        <span class="kw">let </span>config = new_test_config();
+        <span class="kw">let </span>endpoints_fixture = endpoints();
+        <span class="kw">let </span><span class="kw-2">mut </span>context = ReadContext::new(
+            endpoints_fixture.clone(),
+            <span class="string">&quot;127.0.0.1:70&quot;</span>.parse().unwrap(),
+            <span class="string">b&quot;hello&quot;</span>.to_vec(),
         );
 
-        <span class="ident">config</span>.<span class="ident">filters</span>.<span class="ident">read</span>(<span class="kw-2">&amp;mut</span> <span class="ident">context</span>).<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="ident">expected</span> <span class="op">=</span> <span class="ident">endpoints_fixture</span>.<span class="ident">clone</span>();
+        config.filters.read(<span class="kw-2">&amp;mut </span>context).unwrap();
+        <span class="kw">let </span>expected = endpoints_fixture.clone();
 
-        <span class="macro">assert_eq!</span>(<span class="ident">expected</span>, <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">context</span>.<span class="ident">endpoints</span>);
-        <span class="macro">assert_eq!</span>(<span class="string">b&quot;hello:odr:127.0.0.1:70&quot;</span>, <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">context</span>.<span class="ident">contents</span>);
+        <span class="macro">assert_eq!</span>(expected, <span class="kw-2">&amp;*</span>context.endpoints);
+        <span class="macro">assert_eq!</span>(<span class="string">b&quot;hello:odr:127.0.0.1:70&quot;</span>, <span class="kw-2">&amp;*</span>context.contents);
         <span class="macro">assert_eq!</span>(
             <span class="string">&quot;receive&quot;</span>,
-            <span class="ident">context</span>.<span class="ident">metadata</span>[<span class="kw-2">&amp;</span><span class="string">&quot;downstream&quot;</span>.<span class="ident">into</span>()].<span class="ident">as_string</span>().<span class="ident">unwrap</span>()
+            context.metadata[<span class="kw-2">&amp;</span><span class="string">&quot;downstream&quot;</span>.into()].as_string().unwrap()
         );
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">context</span> <span class="op">=</span> <span class="ident">WriteContext::new</span>(
-            <span class="ident">endpoints_fixture</span>[<span class="number">0</span>].<span class="ident">clone</span>(),
-            <span class="ident">endpoints_fixture</span>[<span class="number">0</span>].<span class="ident">address</span>.<span class="ident">clone</span>(),
-            <span class="string">&quot;127.0.0.1:70&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
-            <span class="string">b&quot;hello&quot;</span>.<span class="ident">to_vec</span>(),
+        <span class="kw">let </span><span class="kw-2">mut </span>context = WriteContext::new(
+            endpoints_fixture[<span class="number">0</span>].clone(),
+            endpoints_fixture[<span class="number">0</span>].address.clone(),
+            <span class="string">&quot;127.0.0.1:70&quot;</span>.parse().unwrap(),
+            <span class="string">b&quot;hello&quot;</span>.to_vec(),
         );
-        <span class="ident">config</span>.<span class="ident">filters</span>.<span class="ident">write</span>(<span class="kw-2">&amp;mut</span> <span class="ident">context</span>).<span class="ident">unwrap</span>();
+        config.filters.write(<span class="kw-2">&amp;mut </span>context).unwrap();
 
         <span class="macro">assert_eq!</span>(
             <span class="string">&quot;receive&quot;</span>,
-            <span class="ident">context</span>.<span class="ident">metadata</span>[<span class="kw-2">&amp;</span><span class="string">&quot;upstream&quot;</span>.<span class="ident">into</span>()].<span class="ident">as_string</span>().<span class="ident">unwrap</span>()
+            context.metadata[<span class="kw-2">&amp;</span><span class="string">&quot;upstream&quot;</span>.into()].as_string().unwrap()
         );
-        <span class="macro">assert_eq!</span>(<span class="string">b&quot;hello:our:127.0.0.1:80:127.0.0.1:70&quot;</span>, <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">context</span>.<span class="ident">contents</span>,);
+        <span class="macro">assert_eq!</span>(<span class="string">b&quot;hello:our:127.0.0.1:80:127.0.0.1:70&quot;</span>, <span class="kw-2">&amp;*</span>context.contents,);
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">chain_double_test_filter</span>() {
-        <span class="kw">let</span> <span class="ident">chain</span> <span class="op">=</span> <span class="ident">FilterChain::new</span>(<span class="macro">vec!</span>[
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>chain_double_test_filter() {
+        <span class="kw">let </span>chain = FilterChain::new(<span class="macro">vec!</span>[
             (
-                <span class="ident">TestFilter::NAME</span>.<span class="ident">into</span>(),
-                <span class="ident">FilterInstance</span> {
-                    <span class="ident">config</span>: <span class="ident">Arc::new</span>(<span class="macro">serde_json::json!</span>(<span class="ident">null</span>)),
-                    <span class="ident">filter</span>: <span class="ident">Arc::new</span>(<span class="ident">TestFilter</span>),
+                TestFilter::NAME.into(),
+                FilterInstance {
+                    config: Arc::new(<span class="macro">serde_json::json!</span>(null)),
+                    filter: Arc::new(TestFilter),
                 },
             ),
             (
-                <span class="ident">TestFilter::NAME</span>.<span class="ident">into</span>(),
-                <span class="ident">FilterInstance</span> {
-                    <span class="ident">config</span>: <span class="ident">Arc::new</span>(<span class="macro">serde_json::json!</span>(<span class="ident">null</span>)),
-                    <span class="ident">filter</span>: <span class="ident">Arc::new</span>(<span class="ident">TestFilter</span>),
+                TestFilter::NAME.into(),
+                FilterInstance {
+                    config: Arc::new(<span class="macro">serde_json::json!</span>(null)),
+                    filter: Arc::new(TestFilter),
                 },
             ),
         ])
-        .<span class="ident">unwrap</span>();
+        .unwrap();
 
-        <span class="kw">let</span> <span class="ident">endpoints_fixture</span> <span class="op">=</span> <span class="ident">endpoints</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">context</span> <span class="op">=</span> <span class="ident">ReadContext::new</span>(
-            <span class="ident">endpoints_fixture</span>.<span class="ident">clone</span>(),
-            <span class="string">&quot;127.0.0.1:70&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
-            <span class="string">b&quot;hello&quot;</span>.<span class="ident">to_vec</span>(),
+        <span class="kw">let </span>endpoints_fixture = endpoints();
+        <span class="kw">let </span><span class="kw-2">mut </span>context = ReadContext::new(
+            endpoints_fixture.clone(),
+            <span class="string">&quot;127.0.0.1:70&quot;</span>.parse().unwrap(),
+            <span class="string">b&quot;hello&quot;</span>.to_vec(),
         );
 
-        <span class="ident">chain</span>.<span class="ident">read</span>(<span class="kw-2">&amp;mut</span> <span class="ident">context</span>).<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="ident">expected</span> <span class="op">=</span> <span class="ident">endpoints_fixture</span>.<span class="ident">clone</span>();
-        <span class="macro">assert_eq!</span>(<span class="ident">expected</span>, <span class="ident">context</span>.<span class="ident">endpoints</span>.<span class="ident">to_vec</span>());
+        chain.read(<span class="kw-2">&amp;mut </span>context).unwrap();
+        <span class="kw">let </span>expected = endpoints_fixture.clone();
+        <span class="macro">assert_eq!</span>(expected, context.endpoints.to_vec());
         <span class="macro">assert_eq!</span>(
             <span class="string">b&quot;hello:odr:127.0.0.1:70:odr:127.0.0.1:70&quot;</span>,
-            <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">context</span>.<span class="ident">contents</span>
+            <span class="kw-2">&amp;*</span>context.contents
         );
         <span class="macro">assert_eq!</span>(
             <span class="string">&quot;receive:receive&quot;</span>,
-            <span class="ident">context</span>.<span class="ident">metadata</span>[<span class="kw-2">&amp;</span><span class="string">&quot;downstream&quot;</span>.<span class="ident">into</span>()].<span class="ident">as_string</span>().<span class="ident">unwrap</span>()
+            context.metadata[<span class="kw-2">&amp;</span><span class="string">&quot;downstream&quot;</span>.into()].as_string().unwrap()
         );
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">context</span> <span class="op">=</span> <span class="ident">WriteContext::new</span>(
-            <span class="ident">endpoints_fixture</span>[<span class="number">0</span>].<span class="ident">clone</span>(),
-            <span class="ident">endpoints_fixture</span>[<span class="number">0</span>].<span class="ident">address</span>.<span class="ident">clone</span>(),
-            <span class="string">&quot;127.0.0.1:70&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
-            <span class="string">b&quot;hello&quot;</span>.<span class="ident">to_vec</span>(),
+        <span class="kw">let </span><span class="kw-2">mut </span>context = WriteContext::new(
+            endpoints_fixture[<span class="number">0</span>].clone(),
+            endpoints_fixture[<span class="number">0</span>].address.clone(),
+            <span class="string">&quot;127.0.0.1:70&quot;</span>.parse().unwrap(),
+            <span class="string">b&quot;hello&quot;</span>.to_vec(),
         );
 
-        <span class="ident">chain</span>.<span class="ident">write</span>(<span class="kw-2">&amp;mut</span> <span class="ident">context</span>).<span class="ident">unwrap</span>();
+        chain.write(<span class="kw-2">&amp;mut </span>context).unwrap();
         <span class="macro">assert_eq!</span>(
             <span class="string">b&quot;hello:our:127.0.0.1:80:127.0.0.1:70:our:127.0.0.1:80:127.0.0.1:70&quot;</span>,
-            <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">context</span>.<span class="ident">contents</span>,
+            <span class="kw-2">&amp;*</span>context.contents,
         );
         <span class="macro">assert_eq!</span>(
             <span class="string">&quot;receive:receive&quot;</span>,
-            <span class="ident">context</span>.<span class="ident">metadata</span>[<span class="kw-2">&amp;</span><span class="string">&quot;upstream&quot;</span>.<span class="ident">into</span>()].<span class="ident">as_string</span>().<span class="ident">unwrap</span>()
+            context.metadata[<span class="kw-2">&amp;</span><span class="string">&quot;upstream&quot;</span>.into()].as_string().unwrap()
         );
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">get_configs</span>() {
-        <span class="kw">struct</span> <span class="ident">TestFilter2</span>;
-        <span class="kw">impl</span> <span class="ident">Filter</span> <span class="kw">for</span> <span class="ident">TestFilter2</span> {}
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>get_configs() {
+        <span class="kw">struct </span>TestFilter2;
+        <span class="kw">impl </span>Filter <span class="kw">for </span>TestFilter2 {}
 
-        <span class="kw">let</span> <span class="ident">filter_chain</span> <span class="op">=</span> <span class="ident">FilterChain::new</span>(<span class="macro">vec!</span>[
+        <span class="kw">let </span>filter_chain = FilterChain::new(<span class="macro">vec!</span>[
             (
-                <span class="string">&quot;TestFilter&quot;</span>.<span class="ident">into</span>(),
-                <span class="ident">FilterInstance</span> {
-                    <span class="ident">config</span>: <span class="ident">Arc::new</span>(<span class="macro">serde_json::json!</span>(<span class="ident">null</span>)),
-                    <span class="ident">filter</span>: <span class="ident">Arc::new</span>(<span class="ident">TestFilter</span>),
+                <span class="string">&quot;TestFilter&quot;</span>.into(),
+                FilterInstance {
+                    config: Arc::new(<span class="macro">serde_json::json!</span>(null)),
+                    filter: Arc::new(TestFilter),
                 },
             ),
             (
-                <span class="string">&quot;TestFilter2&quot;</span>.<span class="ident">into</span>(),
-                <span class="ident">FilterInstance</span> {
-                    <span class="ident">config</span>: <span class="ident">Arc::new</span>(<span class="macro">serde_json::json!</span>({
+                <span class="string">&quot;TestFilter2&quot;</span>.into(),
+                FilterInstance {
+                    config: Arc::new(<span class="macro">serde_json::json!</span>({
                         <span class="string">&quot;k1&quot;</span>: <span class="string">&quot;v1&quot;</span>,
-                        <span class="string">&quot;k2&quot;</span>: <span class="number">2</span>
-                    })),
-                    <span class="ident">filter</span>: <span class="ident">Arc::new</span>(<span class="ident">TestFilter2</span>),
+                        <span class="string">&quot;k2&quot;</span>: <span class="number">2
+                    </span>})),
+                    filter: Arc::new(TestFilter2),
                 },
             ),
         ])
-        .<span class="ident">unwrap</span>();
+        .unwrap();
 
-        <span class="kw">let</span> <span class="ident">configs</span> <span class="op">=</span> <span class="ident">filter_chain</span>.<span class="ident">iter</span>().<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
+        <span class="kw">let </span>configs = filter_chain.iter().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
         <span class="macro">assert_eq!</span>(
             <span class="macro">vec!</span>[
-                <span class="ident"><span class="kw">crate</span>::config::Filter</span> {
-                    <span class="ident">name</span>: <span class="string">&quot;TestFilter&quot;</span>.<span class="ident">into</span>(),
-                    <span class="ident">config</span>: <span class="prelude-val">None</span>,
+                <span class="kw">crate</span>::config::Filter {
+                    name: <span class="string">&quot;TestFilter&quot;</span>.into(),
+                    config: <span class="prelude-val">None</span>,
                 },
-                <span class="ident"><span class="kw">crate</span>::config::Filter</span> {
-                    <span class="ident">name</span>: <span class="string">&quot;TestFilter2&quot;</span>.<span class="ident">into</span>(),
-                    <span class="ident">config</span>: <span class="prelude-val">Some</span>(<span class="macro">serde_json::json!</span>({
+                <span class="kw">crate</span>::config::Filter {
+                    name: <span class="string">&quot;TestFilter2&quot;</span>.into(),
+                    config: <span class="prelude-val">Some</span>(<span class="macro">serde_json::json!</span>({
                         <span class="string">&quot;k1&quot;</span>: <span class="string">&quot;v1&quot;</span>,
-                        <span class="string">&quot;k2&quot;</span>: <span class="number">2</span>
-                    }))
+                        <span class="string">&quot;k2&quot;</span>: <span class="number">2
+                    </span>}))
                 },
             ],
-            <span class="ident">configs</span>
+            configs
         )
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

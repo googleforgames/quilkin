@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/filters/firewall/config.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>config.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../../storage.js"></script><script defer src="../../../../source-script.js"></script><script defer src="../../../../source-files.js"></script><script defer src="../../../../main.js"></script><noscript><link rel="stylesheet" href="../../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../quilkin/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/filters/firewall/config.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>config.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../../normalize.css"><link rel="stylesheet" href="../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../../ayu.css" disabled><link rel="stylesheet" href="../../../../dark.css" disabled><link rel="stylesheet" href="../../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../../storage.js"></script><script defer src="../../../../source-script.js"></script><script defer src="../../../../source-files.js"></script><script defer src="../../../../main.js"></script><noscript><link rel="stylesheet" href="../../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../quilkin/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -399,282 +399,282 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */</span>
+ */
 
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">convert::TryFrom</span>, <span class="ident">fmt</span>, <span class="ident">fmt::Formatter</span>, <span class="ident">net::SocketAddr</span>, <span class="ident">ops::Range</span>};
+</span><span class="kw">use </span>std::{convert::TryFrom, fmt, fmt::Formatter, net::SocketAddr, ops::Range};
 
-<span class="kw">use</span> <span class="ident">ipnetwork::IpNetwork</span>;
-<span class="kw">use</span> <span class="ident">schemars::JsonSchema</span>;
-<span class="kw">use</span> <span class="ident">serde::de</span>::{<span class="self">self</span>, <span class="ident">Visitor</span>};
-<span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Deserializer</span>, <span class="ident">Serialize</span>, <span class="ident">Serializer</span>};
+<span class="kw">use </span>ipnetwork::IpNetwork;
+<span class="kw">use </span>schemars::JsonSchema;
+<span class="kw">use </span>serde::de::{<span class="self">self</span>, Visitor};
+<span class="kw">use </span>serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">filters::ConvertProtoConfigError</span>, <span class="ident">map_proto_enum</span>};
+<span class="kw">use crate</span>::{filters::ConvertProtoConfigError, map_proto_enum};
 
-<span class="kw">use</span> <span class="ident"><span class="kw">super</span>::proto</span>;
+<span class="kw">use </span><span class="kw">super</span>::proto;
 
-<span class="doccomment">/// Represents how a Firewall filter is configured for read and write</span>
-<span class="doccomment">/// operations.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Deserialize</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>, <span class="ident">JsonSchema</span>)]</span>
-<span class="attribute">#[<span class="ident">non_exhaustive</span>]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Config</span> {
-    <span class="kw">pub</span> <span class="ident">on_read</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Rule</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span> <span class="ident">on_write</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Rule</span><span class="op">&gt;</span>,
+<span class="doccomment">/// Represents how a Firewall filter is configured for read and write
+/// operations.
+</span><span class="attribute">#[derive(Clone, Deserialize, Debug, Eq, PartialEq, Serialize, JsonSchema)]
+#[non_exhaustive]
+</span><span class="kw">pub struct </span>Config {
+    <span class="kw">pub </span>on_read: Vec&lt;Rule&gt;,
+    <span class="kw">pub </span>on_write: Vec&lt;Rule&gt;,
 }
 
-<span class="doccomment">/// Whether or not a matching [Rule] should Allow or Deny access</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Deserialize</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>, <span class="ident">JsonSchema</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Action</span> {
-    <span class="doccomment">/// Matching rules will allow packets through.</span>
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;ALLOW&quot;</span>)]</span>
-    <span class="ident">Allow</span>,
-    <span class="doccomment">/// Matching rules will block packets.</span>
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;DENY&quot;</span>)]</span>
-    <span class="ident">Deny</span>,
+<span class="doccomment">/// Whether or not a matching [Rule] should Allow or Deny access
+</span><span class="attribute">#[derive(Clone, Deserialize, Debug, Eq, PartialEq, Serialize, JsonSchema)]
+</span><span class="kw">pub enum </span>Action {
+    <span class="doccomment">/// Matching rules will allow packets through.
+    </span><span class="attribute">#[serde(rename = <span class="string">&quot;ALLOW&quot;</span>)]
+    </span>Allow,
+    <span class="doccomment">/// Matching rules will block packets.
+    </span><span class="attribute">#[serde(rename = <span class="string">&quot;DENY&quot;</span>)]
+    </span>Deny,
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">Action</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">proto::firewall::Action</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">action</span>: <span class="ident">Action</span>) -&gt; <span class="self">Self</span> {
-        <span class="kw">match</span> <span class="ident">action</span> {
-            <span class="ident">Action::Allow</span> =&gt; <span class="ident"><span class="self">Self</span>::Allow</span>,
-            <span class="ident">Action::Deny</span> =&gt; <span class="ident"><span class="self">Self</span>::Deny</span>,
+<span class="kw">impl </span>From&lt;Action&gt; <span class="kw">for </span>proto::firewall::Action {
+    <span class="kw">fn </span>from(action: Action) -&gt; <span class="self">Self </span>{
+        <span class="kw">match </span>action {
+            Action::Allow =&gt; <span class="self">Self</span>::Allow,
+            Action::Deny =&gt; <span class="self">Self</span>::Deny,
         }
     }
 }
 
-<span class="doccomment">/// Combination of CIDR range, port range and action to take.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Deserialize</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>, <span class="ident">JsonSchema</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Rule</span> {
-    <span class="kw">pub</span> <span class="ident">action</span>: <span class="ident">Action</span>,
-    <span class="doccomment">/// ipv4 or ipv6 CIDR address.</span>
-    <span class="attribute">#[<span class="ident">schemars</span>(<span class="ident">with</span> <span class="op">=</span> <span class="string">&quot;String&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">source</span>: <span class="ident">IpNetwork</span>,
-    <span class="kw">pub</span> <span class="ident">ports</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">PortRange</span><span class="op">&gt;</span>,
+<span class="doccomment">/// Combination of CIDR range, port range and action to take.
+</span><span class="attribute">#[derive(Clone, Deserialize, Debug, Eq, PartialEq, Serialize, JsonSchema)]
+</span><span class="kw">pub struct </span>Rule {
+    <span class="kw">pub </span>action: Action,
+    <span class="doccomment">/// ipv4 or ipv6 CIDR address.
+    </span><span class="attribute">#[schemars(with = <span class="string">&quot;String&quot;</span>)]
+    </span><span class="kw">pub </span>source: IpNetwork,
+    <span class="kw">pub </span>ports: Vec&lt;PortRange&gt;,
 }
 
-<span class="kw">impl</span> <span class="ident">Rule</span> {
-    <span class="doccomment">/// Returns `true` if `address` matches the provided CIDR address as well</span>
-    <span class="doccomment">/// as at least one of the port ranges in the [Rule].</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// # Examples</span>
-    <span class="doccomment">/// ```</span>
-    <span class="doccomment">/// use quilkin::filters::firewall::{Action, PortRange};</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// let rule = quilkin::filters::firewall::Rule {</span>
-    <span class="doccomment">///    action: Action::Allow,</span>
-    <span class="doccomment">///    source: &quot;192.168.75.0/24&quot;.parse().unwrap(),</span>
-    <span class="doccomment">///    ports: vec![PortRange::new(10, 100).unwrap()],</span>
-    <span class="doccomment">/// };</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// let ip = [192, 168, 75, 10];</span>
-    <span class="doccomment">/// assert!(rule.contains((ip, 50).into()));</span>
-    <span class="doccomment">/// assert!(rule.contains((ip, 99).into()));</span>
-    <span class="doccomment">/// assert!(rule.contains((ip, 10).into()));</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// assert!(!rule.contains((ip, 5).into()));</span>
-    <span class="doccomment">/// assert!(!rule.contains((ip, 1000).into()));</span>
-    <span class="doccomment">/// assert!(!rule.contains(([192, 168, 76, 10], 40).into()));</span>
-    <span class="doccomment">/// ```</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">address</span>: <span class="ident">SocketAddr</span>) -&gt; <span class="ident">bool</span> {
-        <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">source</span>.<span class="ident">contains</span>(<span class="ident">address</span>.<span class="ident">ip</span>()) {
-            <span class="kw">return</span> <span class="bool-val">false</span>;
+<span class="kw">impl </span>Rule {
+    <span class="doccomment">/// Returns `true` if `address` matches the provided CIDR address as well
+    /// as at least one of the port ranges in the [Rule].
+    ///
+    /// # Examples
+    /// ```
+    /// use quilkin::filters::firewall::{Action, PortRange};
+    ///
+    /// let rule = quilkin::filters::firewall::Rule {
+    ///    action: Action::Allow,
+    ///    source: &quot;192.168.75.0/24&quot;.parse().unwrap(),
+    ///    ports: vec![PortRange::new(10, 100).unwrap()],
+    /// };
+    ///
+    /// let ip = [192, 168, 75, 10];
+    /// assert!(rule.contains((ip, 50).into()));
+    /// assert!(rule.contains((ip, 99).into()));
+    /// assert!(rule.contains((ip, 10).into()));
+    ///
+    /// assert!(!rule.contains((ip, 5).into()));
+    /// assert!(!rule.contains((ip, 1000).into()));
+    /// assert!(!rule.contains(([192, 168, 76, 10], 40).into()));
+    /// ```
+    </span><span class="kw">pub fn </span>contains(<span class="kw-2">&amp;</span><span class="self">self</span>, address: SocketAddr) -&gt; bool {
+        <span class="kw">if </span>!<span class="self">self</span>.source.contains(address.ip()) {
+            <span class="kw">return </span><span class="bool-val">false</span>;
         }
 
-        <span class="self">self</span>.<span class="ident">ports</span>
-            .<span class="ident">iter</span>()
-            .<span class="ident">any</span>(<span class="op">|</span><span class="ident">range</span><span class="op">|</span> <span class="ident">range</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">address</span>.<span class="ident">port</span>()))
+        <span class="self">self</span>.ports
+            .iter()
+            .any(|range| range.contains(<span class="kw-2">&amp;</span>address.port()))
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">Rule</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">proto::firewall::Rule</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">rule</span>: <span class="ident">Rule</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">action</span>: <span class="ident">proto::firewall::Action::from</span>(<span class="ident">rule</span>.<span class="ident">action</span>) <span class="kw">as</span> <span class="ident">i32</span>,
-            <span class="ident">source</span>: <span class="ident">rule</span>.<span class="ident">source</span>.<span class="ident">to_string</span>(),
-            <span class="ident">ports</span>: <span class="ident">rule</span>.<span class="ident">ports</span>.<span class="ident">into_iter</span>().<span class="ident">map</span>(<span class="ident">From::from</span>).<span class="ident">collect</span>(),
+<span class="kw">impl </span>From&lt;Rule&gt; <span class="kw">for </span>proto::firewall::Rule {
+    <span class="kw">fn </span>from(rule: Rule) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            action: proto::firewall::Action::from(rule.action) <span class="kw">as </span>i32,
+            source: rule.source.to_string(),
+            ports: rule.ports.into_iter().map(From::from).collect(),
         }
     }
 }
 
-<span class="doccomment">/// Invalid min and max values for a [PortRange].</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">thiserror::Error</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">PortRangeError</span> {
-    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;invalid port range: min {min:?} is greater than or equal to max {max:?}&quot;</span>)]</span>
-    <span class="ident">InvalidRange</span> { <span class="ident">min</span>: <span class="ident">u16</span>, <span class="ident">max</span>: <span class="ident">u16</span> },
+<span class="doccomment">/// Invalid min and max values for a [PortRange].
+</span><span class="attribute">#[derive(Debug, thiserror::Error)]
+</span><span class="kw">pub enum </span>PortRangeError {
+    <span class="attribute">#[error(<span class="string">&quot;invalid port range: min {min:?} is greater than or equal to max {max:?}&quot;</span>)]
+    </span>InvalidRange { min: u16, max: u16 },
 }
 
-<span class="doccomment">/// Range of matching ports that are configured against a [Rule].</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">JsonSchema</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">PortRange</span>(<span class="ident">Range</span><span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span>);
+<span class="doccomment">/// Range of matching ports that are configured against a [Rule].
+</span><span class="attribute">#[derive(Clone, Debug, Eq, PartialEq, JsonSchema)]
+</span><span class="kw">pub struct </span>PortRange(Range&lt;u16&gt;);
 
-<span class="kw">impl</span> <span class="ident">PortRange</span> {
-    <span class="doccomment">/// Creates a new [PortRange], where min is inclusive, max is exclusive.</span>
-    <span class="doccomment">/// [Result] will be a [PortRangeError] if `min &gt;= max`.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">min</span>: <span class="ident">u16</span>, <span class="ident">max</span>: <span class="ident">u16</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">PortRangeError</span><span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="ident">min</span> <span class="op">&gt;</span><span class="op">=</span> <span class="ident">max</span> {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">PortRangeError::InvalidRange</span> { <span class="ident">min</span>, <span class="ident">max</span> });
+<span class="kw">impl </span>PortRange {
+    <span class="doccomment">/// Creates a new [PortRange], where min is inclusive, max is exclusive.
+    /// [Result] will be a [PortRangeError] if `min &gt;= max`.
+    </span><span class="kw">pub fn </span>new(min: u16, max: u16) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, PortRangeError&gt; {
+        <span class="kw">if </span>min &gt;= max {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(PortRangeError::InvalidRange { min, max });
         }
 
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span>(<span class="ident">Range</span> {
-            <span class="ident">start</span>: <span class="ident">min</span>,
-            <span class="ident">end</span>: <span class="ident">max</span>,
+        <span class="prelude-val">Ok</span>(<span class="self">Self</span>(Range {
+            start: min,
+            end: max,
         }))
     }
 
-    <span class="doccomment">/// Returns true if the range contain the given `port`.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">port</span>: <span class="kw-2">&amp;</span><span class="ident">u16</span>) -&gt; <span class="ident">bool</span> {
-        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">contains</span>(<span class="ident">port</span>)
+    <span class="doccomment">/// Returns true if the range contain the given `port`.
+    </span><span class="kw">pub fn </span>contains(<span class="kw-2">&amp;</span><span class="self">self</span>, port: <span class="kw-2">&amp;</span>u16) -&gt; bool {
+        <span class="self">self</span>.<span class="number">0</span>.contains(port)
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">PortRange</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">proto::firewall::PortRange</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">range</span>: <span class="ident">PortRange</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">min</span>: <span class="ident">range</span>.<span class="number">0</span>.<span class="ident">start</span>.<span class="ident">into</span>(),
-            <span class="ident">max</span>: <span class="ident">range</span>.<span class="number">0</span>.<span class="ident">end</span>.<span class="ident">into</span>(),
+<span class="kw">impl </span>From&lt;PortRange&gt; <span class="kw">for </span>proto::firewall::PortRange {
+    <span class="kw">fn </span>from(range: PortRange) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            min: range.<span class="number">0</span>.start.into(),
+            max: range.<span class="number">0</span>.end.into(),
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">Serialize</span> <span class="kw">for</span> <span class="ident">PortRange</span> {
-    <span class="doccomment">/// Serialise the [PortRange] into a single digit if min and max are the same</span>
-    <span class="doccomment">/// otherwise, serialise it to &quot;min-max&quot;.</span>
-    <span class="kw">fn</span> <span class="ident">serialize</span><span class="op">&lt;</span><span class="ident">S</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">serializer</span>: <span class="ident">S</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">S::Ok</span>, <span class="ident">S::Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">S</span>: <span class="ident">Serializer</span>,
+<span class="kw">impl </span>Serialize <span class="kw">for </span>PortRange {
+    <span class="doccomment">/// Serialise the [PortRange] into a single digit if min and max are the same
+    /// otherwise, serialise it to &quot;min-max&quot;.
+    </span><span class="kw">fn </span>serialize&lt;S&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, serializer: S) -&gt; <span class="prelude-ty">Result</span>&lt;S::Ok, S::Error&gt;
+    <span class="kw">where
+        </span>S: Serializer,
     {
-        <span class="kw">if</span> <span class="self">self</span>.<span class="number">0</span>.<span class="ident">start</span> <span class="op">==</span> (<span class="self">self</span>.<span class="number">0</span>.<span class="ident">end</span> <span class="op">-</span> <span class="number">1</span>) {
-            <span class="kw">return</span> <span class="ident">serializer</span>.<span class="ident">serialize_str</span>(<span class="self">self</span>.<span class="number">0</span>.<span class="ident">start</span>.<span class="ident">to_string</span>().<span class="ident">as_str</span>());
+        <span class="kw">if </span><span class="self">self</span>.<span class="number">0</span>.start == (<span class="self">self</span>.<span class="number">0</span>.end - <span class="number">1</span>) {
+            <span class="kw">return </span>serializer.serialize_str(<span class="self">self</span>.<span class="number">0</span>.start.to_string().as_str());
         }
 
-        <span class="kw">let</span> <span class="ident">range</span> <span class="op">=</span> <span class="macro">format!</span>(<span class="string">&quot;{}-{}&quot;</span>, <span class="self">self</span>.<span class="number">0</span>.<span class="ident">start</span>, <span class="self">self</span>.<span class="number">0</span>.<span class="ident">end</span>);
-        <span class="ident">serializer</span>.<span class="ident">serialize_str</span>(<span class="ident">range</span>.<span class="ident">as_str</span>())
+        <span class="kw">let </span>range = <span class="macro">format!</span>(<span class="string">&quot;{}-{}&quot;</span>, <span class="self">self</span>.<span class="number">0</span>.start, <span class="self">self</span>.<span class="number">0</span>.end);
+        serializer.serialize_str(range.as_str())
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span> <span class="ident">Deserialize</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">PortRange</span> {
-    <span class="doccomment">/// Port ranges can be specified in yaml as either &quot;10&quot; as as single value</span>
-    <span class="doccomment">/// or as &quot;10-20&quot; as a range, between a minimum and a maximum.</span>
-    <span class="doccomment">/// This deserializes either format into a [PortRange].</span>
-    <span class="kw">fn</span> <span class="ident">deserialize</span><span class="op">&lt;</span><span class="ident">D</span><span class="op">&gt;</span>(<span class="ident">deserializer</span>: <span class="ident">D</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">D::Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">D</span>: <span class="ident">Deserializer</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;de</span>&gt; Deserialize&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>PortRange {
+    <span class="doccomment">/// Port ranges can be specified in yaml as either &quot;10&quot; as as single value
+    /// or as &quot;10-20&quot; as a range, between a minimum and a maximum.
+    /// This deserializes either format into a [PortRange].
+    </span><span class="kw">fn </span>deserialize&lt;D&gt;(deserializer: D) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, D::Error&gt;
+    <span class="kw">where
+        </span>D: Deserializer&lt;<span class="lifetime">&#39;de</span>&gt;,
     {
-        <span class="kw">struct</span> <span class="ident">PortRangeVisitor</span>;
+        <span class="kw">struct </span>PortRangeVisitor;
 
-        <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span> <span class="ident">Visitor</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">PortRangeVisitor</span> {
-            <span class="kw">type</span> <span class="ident">Value</span> <span class="op">=</span> <span class="ident">PortRange</span>;
+        <span class="kw">impl</span>&lt;<span class="lifetime">&#39;de</span>&gt; Visitor&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>PortRangeVisitor {
+            <span class="kw">type </span>Value = PortRange;
 
-            <span class="kw">fn</span> <span class="ident">expecting</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Formatter</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">fmt::Error</span><span class="op">&gt;</span> {
-                <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="string">&quot;A port range in the format of &#39;10&#39; or &#39;10-20&#39;&quot;</span>)
+            <span class="kw">fn </span>expecting(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter) -&gt; <span class="prelude-ty">Result</span>&lt;(), fmt::Error&gt; {
+                f.write_str(<span class="string">&quot;A port range in the format of &#39;10&#39; or &#39;10-20&#39;&quot;</span>)
             }
 
-            <span class="kw">fn</span> <span class="ident">visit_str</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>(<span class="self">self</span>, <span class="ident">v</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Value</span>, <span class="ident">E</span><span class="op">&gt;</span>
-            <span class="kw">where</span>
-                <span class="ident">E</span>: <span class="ident">de::Error</span>,
+            <span class="kw">fn </span>visit_str&lt;E&gt;(<span class="self">self</span>, v: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Value, E&gt;
+            <span class="kw">where
+                </span>E: de::Error,
             {
-                <span class="kw">match</span> <span class="ident">v</span>.<span class="ident">split_once</span>(<span class="string">&#39;-&#39;</span>) {
-                    <span class="prelude-val">None</span> =&gt; {
-                        <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">v</span>.<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span>().<span class="ident">map_err</span>(<span class="ident">de::Error::custom</span>)<span class="question-mark">?</span>;
-                        <span class="ident">PortRange::new</span>(<span class="ident">value</span>, <span class="ident">value</span> <span class="op">+</span> <span class="number">1</span>).<span class="ident">map_err</span>(<span class="ident">de::Error::custom</span>)
+                <span class="kw">match </span>v.split_once(<span class="string">&#39;-&#39;</span>) {
+                    <span class="prelude-val">None </span>=&gt; {
+                        <span class="kw">let </span>value = v.parse::&lt;u16&gt;().map_err(de::Error::custom)<span class="question-mark">?</span>;
+                        PortRange::new(value, value + <span class="number">1</span>).map_err(de::Error::custom)
                     }
-                    <span class="prelude-val">Some</span>(<span class="ident">split</span>) =&gt; {
-                        <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="ident">split</span>.<span class="number">0</span>.<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span>().<span class="ident">map_err</span>(<span class="ident">de::Error::custom</span>)<span class="question-mark">?</span>;
-                        <span class="kw">let</span> <span class="ident">end</span> <span class="op">=</span> <span class="ident">split</span>.<span class="number">1</span>.<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span>().<span class="ident">map_err</span>(<span class="ident">de::Error::custom</span>)<span class="question-mark">?</span>;
-                        <span class="ident">PortRange::new</span>(<span class="ident">start</span>, <span class="ident">end</span>).<span class="ident">map_err</span>(<span class="ident">de::Error::custom</span>)
+                    <span class="prelude-val">Some</span>(split) =&gt; {
+                        <span class="kw">let </span>start = split.<span class="number">0</span>.parse::&lt;u16&gt;().map_err(de::Error::custom)<span class="question-mark">?</span>;
+                        <span class="kw">let </span>end = split.<span class="number">1</span>.parse::&lt;u16&gt;().map_err(de::Error::custom)<span class="question-mark">?</span>;
+                        PortRange::new(start, end).map_err(de::Error::custom)
                     }
                 }
             }
         }
 
-        <span class="ident">deserializer</span>.<span class="ident">deserialize_str</span>(<span class="ident">PortRangeVisitor</span>)
+        deserializer.deserialize_str(PortRangeVisitor)
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">Config</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">proto::Firewall</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">config</span>: <span class="ident">Config</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">on_read</span>: <span class="ident">config</span>.<span class="ident">on_read</span>.<span class="ident">into_iter</span>().<span class="ident">map</span>(<span class="ident">From::from</span>).<span class="ident">collect</span>(),
-            <span class="ident">on_write</span>: <span class="ident">config</span>.<span class="ident">on_write</span>.<span class="ident">into_iter</span>().<span class="ident">map</span>(<span class="ident">From::from</span>).<span class="ident">collect</span>(),
+<span class="kw">impl </span>From&lt;Config&gt; <span class="kw">for </span>proto::Firewall {
+    <span class="kw">fn </span>from(config: Config) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            on_read: config.on_read.into_iter().map(From::from).collect(),
+            on_write: config.on_write.into_iter().map(From::from).collect(),
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident">proto::Firewall</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Config</span> {
-    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">ConvertProtoConfigError</span>;
+<span class="kw">impl </span>TryFrom&lt;proto::Firewall&gt; <span class="kw">for </span>Config {
+    <span class="kw">type </span>Error = ConvertProtoConfigError;
 
-    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">p</span>: <span class="ident">proto::Firewall</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident"><span class="self">Self</span>::Error</span><span class="op">&gt;</span> {
-        <span class="kw">fn</span> <span class="ident">convert_port</span>(
-            <span class="ident">range</span>: <span class="kw-2">&amp;</span><span class="ident">proto::firewall::PortRange</span>,
-        ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">PortRange</span>, <span class="ident">ConvertProtoConfigError</span><span class="op">&gt;</span> {
-            <span class="kw">let</span> <span class="ident">min</span> <span class="op">=</span> <span class="ident">u16::try_from</span>(<span class="ident">range</span>.<span class="ident">min</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-                <span class="ident">ConvertProtoConfigError::new</span>(
+    <span class="kw">fn </span>try_from(p: proto::Firewall) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
+        <span class="kw">fn </span>convert_port(
+            range: <span class="kw-2">&amp;</span>proto::firewall::PortRange,
+        ) -&gt; <span class="prelude-ty">Result</span>&lt;PortRange, ConvertProtoConfigError&gt; {
+            <span class="kw">let </span>min = u16::try_from(range.min).map_err(|err| {
+                ConvertProtoConfigError::new(
                     <span class="macro">format!</span>(<span class="string">&quot;min too large: {err}&quot;</span>),
-                    <span class="prelude-val">Some</span>(<span class="string">&quot;port.min&quot;</span>.<span class="ident">into</span>()),
+                    <span class="prelude-val">Some</span>(<span class="string">&quot;port.min&quot;</span>.into()),
                 )
             })<span class="question-mark">?</span>;
 
-            <span class="kw">let</span> <span class="ident">max</span> <span class="op">=</span> <span class="ident">u16::try_from</span>(<span class="ident">range</span>.<span class="ident">max</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-                <span class="ident">ConvertProtoConfigError::new</span>(
+            <span class="kw">let </span>max = u16::try_from(range.max).map_err(|err| {
+                ConvertProtoConfigError::new(
                     <span class="macro">format!</span>(<span class="string">&quot;max too large: {err}&quot;</span>),
-                    <span class="prelude-val">Some</span>(<span class="string">&quot;port.max&quot;</span>.<span class="ident">into</span>()),
+                    <span class="prelude-val">Some</span>(<span class="string">&quot;port.max&quot;</span>.into()),
                 )
             })<span class="question-mark">?</span>;
 
-            <span class="ident">PortRange::new</span>(<span class="ident">min</span>, <span class="ident">max</span>)
-                .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="ident">ConvertProtoConfigError::new</span>(<span class="macro">format!</span>(<span class="string">&quot;{err}&quot;</span>), <span class="prelude-val">Some</span>(<span class="string">&quot;ports&quot;</span>.<span class="ident">into</span>())))
+            PortRange::new(min, max)
+                .map_err(|err| ConvertProtoConfigError::new(<span class="macro">format!</span>(<span class="string">&quot;{err}&quot;</span>), <span class="prelude-val">Some</span>(<span class="string">&quot;ports&quot;</span>.into())))
         }
 
-        <span class="kw">fn</span> <span class="ident">convert_rule</span>(<span class="ident">rule</span>: <span class="kw-2">&amp;</span><span class="ident">proto::firewall::Rule</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Rule</span>, <span class="ident">ConvertProtoConfigError</span><span class="op">&gt;</span> {
-            <span class="kw">let</span> <span class="ident">action</span> <span class="op">=</span> <span class="macro">map_proto_enum!</span>(
-                <span class="ident">value</span> <span class="op">=</span> <span class="ident">rule</span>.<span class="ident">action</span>,
-                <span class="ident">field</span> <span class="op">=</span> <span class="string">&quot;policy&quot;</span>,
-                <span class="ident">proto_enum_type</span> <span class="op">=</span> <span class="ident">proto::firewall::Action</span>,
-                <span class="ident">target_enum_type</span> <span class="op">=</span> <span class="ident">Action</span>,
-                <span class="ident">variants</span> <span class="op">=</span> [<span class="ident">Allow</span>, <span class="ident">Deny</span>]
+        <span class="kw">fn </span>convert_rule(rule: <span class="kw-2">&amp;</span>proto::firewall::Rule) -&gt; <span class="prelude-ty">Result</span>&lt;Rule, ConvertProtoConfigError&gt; {
+            <span class="kw">let </span>action = <span class="macro">map_proto_enum!</span>(
+                value = rule.action,
+                field = <span class="string">&quot;policy&quot;</span>,
+                proto_enum_type = proto::firewall::Action,
+                target_enum_type = Action,
+                variants = [Allow, Deny]
             )<span class="question-mark">?</span>;
 
-            <span class="kw">let</span> <span class="ident">source</span> <span class="op">=</span> <span class="ident">IpNetwork::try_from</span>(<span class="ident">rule</span>.<span class="ident">source</span>.<span class="ident">as_str</span>()).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-                <span class="ident">ConvertProtoConfigError::new</span>(
+            <span class="kw">let </span>source = IpNetwork::try_from(rule.source.as_str()).map_err(|err| {
+                ConvertProtoConfigError::new(
                     <span class="macro">format!</span>(<span class="string">&quot;invalid source: {err:?}&quot;</span>),
-                    <span class="prelude-val">Some</span>(<span class="string">&quot;source&quot;</span>.<span class="ident">into</span>()),
+                    <span class="prelude-val">Some</span>(<span class="string">&quot;source&quot;</span>.into()),
                 )
             })<span class="question-mark">?</span>;
 
-            <span class="kw">let</span> <span class="ident">ports</span> <span class="op">=</span> <span class="ident">rule</span>
-                .<span class="ident">ports</span>
-                .<span class="ident">iter</span>()
-                .<span class="ident">map</span>(<span class="ident">convert_port</span>)
-                .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">PortRange</span><span class="op">&gt;</span>, <span class="ident">ConvertProtoConfigError</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+            <span class="kw">let </span>ports = rule
+                .ports
+                .iter()
+                .map(convert_port)
+                .collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;PortRange&gt;, ConvertProtoConfigError&gt;&gt;()<span class="question-mark">?</span>;
 
-            <span class="prelude-val">Ok</span>(<span class="ident">Rule</span> {
-                <span class="ident">action</span>,
-                <span class="ident">source</span>,
-                <span class="ident">ports</span>,
+            <span class="prelude-val">Ok</span>(Rule {
+                action,
+                source,
+                ports,
             })
         }
 
-        <span class="prelude-val">Ok</span>(<span class="ident">Config</span> {
-            <span class="ident">on_read</span>: <span class="ident">p</span>
-                .<span class="ident">on_read</span>
-                .<span class="ident">iter</span>()
-                .<span class="ident">map</span>(<span class="ident">convert_rule</span>)
-                .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Rule</span><span class="op">&gt;</span>, <span class="ident">ConvertProtoConfigError</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>,
-            <span class="ident">on_write</span>: <span class="ident">p</span>
-                .<span class="ident">on_write</span>
-                .<span class="ident">iter</span>()
-                .<span class="ident">map</span>(<span class="ident">convert_rule</span>)
-                .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Rule</span><span class="op">&gt;</span>, <span class="ident">ConvertProtoConfigError</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>,
+        <span class="prelude-val">Ok</span>(Config {
+            on_read: p
+                .on_read
+                .iter()
+                .map(convert_rule)
+                .collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;Rule&gt;, ConvertProtoConfigError&gt;&gt;()<span class="question-mark">?</span>,
+            on_write: p
+                .on_write
+                .iter()
+                .map(convert_rule)
+                .collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;Rule&gt;, ConvertProtoConfigError&gt;&gt;()<span class="question-mark">?</span>,
         })
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
+    <span class="kw">use super</span>::<span class="kw-2">*</span>;
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">deserialize_yaml</span>() {
-        <span class="kw">let</span> <span class="ident">yaml</span> <span class="op">=</span> <span class="string">&quot;
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>deserialize_yaml() {
+        <span class="kw">let </span>yaml = <span class="string">&quot;
 on_read:
   - action: ALLOW
     source: 192.168.51.0/24
@@ -688,89 +688,89 @@ on_write:
        - 7000
         &quot;</span>;
 
-        <span class="kw">let</span> <span class="ident">config</span>: <span class="ident">Config</span> <span class="op">=</span> <span class="ident">serde_yaml::from_str</span>(<span class="ident">yaml</span>).<span class="ident">unwrap</span>();
+        <span class="kw">let </span>config: Config = serde_yaml::from_str(yaml).unwrap();
 
-        <span class="kw">let</span> <span class="ident">rule1</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">on_read</span>[<span class="number">0</span>].<span class="ident">clone</span>();
-        <span class="macro">assert_eq!</span>(<span class="ident">rule1</span>.<span class="ident">action</span>, <span class="ident">Action::Allow</span>);
-        <span class="macro">assert_eq!</span>(<span class="ident">rule1</span>.<span class="ident">source</span>, <span class="string">&quot;192.168.51.0/24&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>());
-        <span class="macro">assert_eq!</span>(<span class="number">2</span>, <span class="ident">rule1</span>.<span class="ident">ports</span>.<span class="ident">len</span>());
-        <span class="macro">assert_eq!</span>(<span class="number">10</span>, <span class="ident">rule1</span>.<span class="ident">ports</span>[<span class="number">0</span>].<span class="number">0</span>.<span class="ident">start</span>);
-        <span class="macro">assert_eq!</span>(<span class="number">11</span>, <span class="ident">rule1</span>.<span class="ident">ports</span>[<span class="number">0</span>].<span class="number">0</span>.<span class="ident">end</span>);
-        <span class="macro">assert_eq!</span>(<span class="number">1000</span>, <span class="ident">rule1</span>.<span class="ident">ports</span>[<span class="number">1</span>].<span class="number">0</span>.<span class="ident">start</span>);
-        <span class="macro">assert_eq!</span>(<span class="number">7000</span>, <span class="ident">rule1</span>.<span class="ident">ports</span>[<span class="number">1</span>].<span class="number">0</span>.<span class="ident">end</span>);
+        <span class="kw">let </span>rule1 = config.on_read[<span class="number">0</span>].clone();
+        <span class="macro">assert_eq!</span>(rule1.action, Action::Allow);
+        <span class="macro">assert_eq!</span>(rule1.source, <span class="string">&quot;192.168.51.0/24&quot;</span>.parse().unwrap());
+        <span class="macro">assert_eq!</span>(<span class="number">2</span>, rule1.ports.len());
+        <span class="macro">assert_eq!</span>(<span class="number">10</span>, rule1.ports[<span class="number">0</span>].<span class="number">0</span>.start);
+        <span class="macro">assert_eq!</span>(<span class="number">11</span>, rule1.ports[<span class="number">0</span>].<span class="number">0</span>.end);
+        <span class="macro">assert_eq!</span>(<span class="number">1000</span>, rule1.ports[<span class="number">1</span>].<span class="number">0</span>.start);
+        <span class="macro">assert_eq!</span>(<span class="number">7000</span>, rule1.ports[<span class="number">1</span>].<span class="number">0</span>.end);
 
-        <span class="kw">let</span> <span class="ident">rule2</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">on_write</span>[<span class="number">0</span>].<span class="ident">clone</span>();
-        <span class="macro">assert_eq!</span>(<span class="ident">rule2</span>.<span class="ident">action</span>, <span class="ident">Action::Deny</span>);
-        <span class="macro">assert_eq!</span>(<span class="ident">rule2</span>.<span class="ident">source</span>, <span class="string">&quot;192.168.75.0/24&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>());
-        <span class="macro">assert_eq!</span>(<span class="number">1</span>, <span class="ident">rule2</span>.<span class="ident">ports</span>.<span class="ident">len</span>());
-        <span class="macro">assert_eq!</span>(<span class="number">7000</span>, <span class="ident">rule2</span>.<span class="ident">ports</span>[<span class="number">0</span>].<span class="number">0</span>.<span class="ident">start</span>);
-        <span class="macro">assert_eq!</span>(<span class="number">7001</span>, <span class="ident">rule2</span>.<span class="ident">ports</span>[<span class="number">0</span>].<span class="number">0</span>.<span class="ident">end</span>);
+        <span class="kw">let </span>rule2 = config.on_write[<span class="number">0</span>].clone();
+        <span class="macro">assert_eq!</span>(rule2.action, Action::Deny);
+        <span class="macro">assert_eq!</span>(rule2.source, <span class="string">&quot;192.168.75.0/24&quot;</span>.parse().unwrap());
+        <span class="macro">assert_eq!</span>(<span class="number">1</span>, rule2.ports.len());
+        <span class="macro">assert_eq!</span>(<span class="number">7000</span>, rule2.ports[<span class="number">0</span>].<span class="number">0</span>.start);
+        <span class="macro">assert_eq!</span>(<span class="number">7001</span>, rule2.ports[<span class="number">0</span>].<span class="number">0</span>.end);
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">portrange_contains</span>() {
-        <span class="kw">let</span> <span class="ident">range</span> <span class="op">=</span> <span class="ident">PortRange::new</span>(<span class="number">10</span>, <span class="number">100</span>).<span class="ident">unwrap</span>();
-        <span class="macro">assert!</span>(<span class="ident">range</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="number">10</span>));
-        <span class="macro">assert!</span>(<span class="op">!</span><span class="ident">range</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="number">100</span>));
-        <span class="macro">assert!</span>(<span class="ident">range</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="number">50</span>));
-        <span class="macro">assert!</span>(<span class="op">!</span><span class="ident">range</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="number">200</span>));
-        <span class="macro">assert!</span>(<span class="op">!</span><span class="ident">range</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="number">5</span>));
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>portrange_contains() {
+        <span class="kw">let </span>range = PortRange::new(<span class="number">10</span>, <span class="number">100</span>).unwrap();
+        <span class="macro">assert!</span>(range.contains(<span class="kw-2">&amp;</span><span class="number">10</span>));
+        <span class="macro">assert!</span>(!range.contains(<span class="kw-2">&amp;</span><span class="number">100</span>));
+        <span class="macro">assert!</span>(range.contains(<span class="kw-2">&amp;</span><span class="number">50</span>));
+        <span class="macro">assert!</span>(!range.contains(<span class="kw-2">&amp;</span><span class="number">200</span>));
+        <span class="macro">assert!</span>(!range.contains(<span class="kw-2">&amp;</span><span class="number">5</span>));
 
-        <span class="comment">// single value</span>
-        <span class="kw">let</span> <span class="ident">single</span> <span class="op">=</span> <span class="ident">PortRange::new</span>(<span class="number">10</span>, <span class="number">11</span>).<span class="ident">unwrap</span>();
-        <span class="macro">assert!</span>(<span class="ident">single</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="number">10</span>));
-        <span class="macro">assert!</span>(<span class="op">!</span><span class="ident">single</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="number">11</span>));
+        <span class="comment">// single value
+        </span><span class="kw">let </span>single = PortRange::new(<span class="number">10</span>, <span class="number">11</span>).unwrap();
+        <span class="macro">assert!</span>(single.contains(<span class="kw-2">&amp;</span><span class="number">10</span>));
+        <span class="macro">assert!</span>(!single.contains(<span class="kw-2">&amp;</span><span class="number">11</span>));
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">convert</span>() {
-        <span class="kw">let</span> <span class="ident">proto_config</span> <span class="op">=</span> <span class="ident">proto::Firewall</span> {
-            <span class="ident">on_read</span>: <span class="macro">vec!</span>[<span class="ident">proto::firewall::Rule</span> {
-                <span class="ident">action</span>: <span class="ident">proto::firewall::Action::Allow</span> <span class="kw">as</span> <span class="ident">i32</span>,
-                <span class="ident">source</span>: <span class="string">&quot;192.168.75.0/24&quot;</span>.<span class="ident">into</span>(),
-                <span class="ident">ports</span>: <span class="macro">vec!</span>[<span class="ident">proto::firewall::PortRange</span> { <span class="ident">min</span>: <span class="number">10</span>, <span class="ident">max</span>: <span class="number">100</span> }],
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>convert() {
+        <span class="kw">let </span>proto_config = proto::Firewall {
+            on_read: <span class="macro">vec!</span>[proto::firewall::Rule {
+                action: proto::firewall::Action::Allow <span class="kw">as </span>i32,
+                source: <span class="string">&quot;192.168.75.0/24&quot;</span>.into(),
+                ports: <span class="macro">vec!</span>[proto::firewall::PortRange { min: <span class="number">10</span>, max: <span class="number">100 </span>}],
             }],
-            <span class="ident">on_write</span>: <span class="macro">vec!</span>[<span class="ident">proto::firewall::Rule</span> {
-                <span class="ident">action</span>: <span class="ident">proto::firewall::Action::Deny</span> <span class="kw">as</span> <span class="ident">i32</span>,
-                <span class="ident">source</span>: <span class="string">&quot;192.168.124.0/24&quot;</span>.<span class="ident">into</span>(),
-                <span class="ident">ports</span>: <span class="macro">vec!</span>[<span class="ident">proto::firewall::PortRange</span> { <span class="ident">min</span>: <span class="number">50</span>, <span class="ident">max</span>: <span class="number">51</span> }],
+            on_write: <span class="macro">vec!</span>[proto::firewall::Rule {
+                action: proto::firewall::Action::Deny <span class="kw">as </span>i32,
+                source: <span class="string">&quot;192.168.124.0/24&quot;</span>.into(),
+                ports: <span class="macro">vec!</span>[proto::firewall::PortRange { min: <span class="number">50</span>, max: <span class="number">51 </span>}],
             }],
         };
 
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">Config::try_from</span>(<span class="ident">proto_config</span>).<span class="ident">unwrap</span>();
+        <span class="kw">let </span>config = Config::try_from(proto_config).unwrap();
 
-        <span class="kw">let</span> <span class="ident">rule1</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">on_read</span>[<span class="number">0</span>].<span class="ident">clone</span>();
-        <span class="macro">assert_eq!</span>(<span class="ident">rule1</span>.<span class="ident">action</span>, <span class="ident">Action::Allow</span>);
-        <span class="macro">assert_eq!</span>(<span class="ident">rule1</span>.<span class="ident">source</span>, <span class="string">&quot;192.168.75.0/24&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>());
-        <span class="macro">assert_eq!</span>(<span class="number">1</span>, <span class="ident">rule1</span>.<span class="ident">ports</span>.<span class="ident">len</span>());
-        <span class="macro">assert_eq!</span>(<span class="number">10</span>, <span class="ident">rule1</span>.<span class="ident">ports</span>[<span class="number">0</span>].<span class="number">0</span>.<span class="ident">start</span>);
-        <span class="macro">assert_eq!</span>(<span class="number">100</span>, <span class="ident">rule1</span>.<span class="ident">ports</span>[<span class="number">0</span>].<span class="number">0</span>.<span class="ident">end</span>);
+        <span class="kw">let </span>rule1 = config.on_read[<span class="number">0</span>].clone();
+        <span class="macro">assert_eq!</span>(rule1.action, Action::Allow);
+        <span class="macro">assert_eq!</span>(rule1.source, <span class="string">&quot;192.168.75.0/24&quot;</span>.parse().unwrap());
+        <span class="macro">assert_eq!</span>(<span class="number">1</span>, rule1.ports.len());
+        <span class="macro">assert_eq!</span>(<span class="number">10</span>, rule1.ports[<span class="number">0</span>].<span class="number">0</span>.start);
+        <span class="macro">assert_eq!</span>(<span class="number">100</span>, rule1.ports[<span class="number">0</span>].<span class="number">0</span>.end);
 
-        <span class="kw">let</span> <span class="ident">rule2</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">on_write</span>[<span class="number">0</span>].<span class="ident">clone</span>();
-        <span class="macro">assert_eq!</span>(<span class="ident">rule2</span>.<span class="ident">action</span>, <span class="ident">Action::Deny</span>);
-        <span class="macro">assert_eq!</span>(<span class="ident">rule2</span>.<span class="ident">source</span>, <span class="string">&quot;192.168.124.0/24&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>());
-        <span class="macro">assert_eq!</span>(<span class="number">1</span>, <span class="ident">rule2</span>.<span class="ident">ports</span>.<span class="ident">len</span>());
-        <span class="macro">assert_eq!</span>(<span class="number">50</span>, <span class="ident">rule2</span>.<span class="ident">ports</span>[<span class="number">0</span>].<span class="number">0</span>.<span class="ident">start</span>);
-        <span class="macro">assert_eq!</span>(<span class="number">51</span>, <span class="ident">rule2</span>.<span class="ident">ports</span>[<span class="number">0</span>].<span class="number">0</span>.<span class="ident">end</span>);
+        <span class="kw">let </span>rule2 = config.on_write[<span class="number">0</span>].clone();
+        <span class="macro">assert_eq!</span>(rule2.action, Action::Deny);
+        <span class="macro">assert_eq!</span>(rule2.source, <span class="string">&quot;192.168.124.0/24&quot;</span>.parse().unwrap());
+        <span class="macro">assert_eq!</span>(<span class="number">1</span>, rule2.ports.len());
+        <span class="macro">assert_eq!</span>(<span class="number">50</span>, rule2.ports[<span class="number">0</span>].<span class="number">0</span>.start);
+        <span class="macro">assert_eq!</span>(<span class="number">51</span>, rule2.ports[<span class="number">0</span>].<span class="number">0</span>.end);
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">rule_contains</span>() {
-        <span class="kw">let</span> <span class="ident">rule</span> <span class="op">=</span> <span class="ident">Rule</span> {
-            <span class="ident">action</span>: <span class="ident">Action::Allow</span>,
-            <span class="ident">source</span>: <span class="string">&quot;192.168.75.0/24&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
-            <span class="ident">ports</span>: <span class="macro">vec!</span>[<span class="ident">PortRange::new</span>(<span class="number">10</span>, <span class="number">100</span>).<span class="ident">unwrap</span>()],
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>rule_contains() {
+        <span class="kw">let </span>rule = Rule {
+            action: Action::Allow,
+            source: <span class="string">&quot;192.168.75.0/24&quot;</span>.parse().unwrap(),
+            ports: <span class="macro">vec!</span>[PortRange::new(<span class="number">10</span>, <span class="number">100</span>).unwrap()],
         };
 
-        <span class="kw">let</span> <span class="ident">ip</span> <span class="op">=</span> [<span class="number">192</span>, <span class="number">168</span>, <span class="number">75</span>, <span class="number">10</span>];
-        <span class="macro">assert!</span>(<span class="ident">rule</span>.<span class="ident">contains</span>((<span class="ident">ip</span>, <span class="number">50</span>).<span class="ident">into</span>()));
-        <span class="macro">assert!</span>(<span class="ident">rule</span>.<span class="ident">contains</span>((<span class="ident">ip</span>, <span class="number">99</span>).<span class="ident">into</span>()));
-        <span class="macro">assert!</span>(<span class="ident">rule</span>.<span class="ident">contains</span>((<span class="ident">ip</span>, <span class="number">10</span>).<span class="ident">into</span>()));
+        <span class="kw">let </span>ip = [<span class="number">192</span>, <span class="number">168</span>, <span class="number">75</span>, <span class="number">10</span>];
+        <span class="macro">assert!</span>(rule.contains((ip, <span class="number">50</span>).into()));
+        <span class="macro">assert!</span>(rule.contains((ip, <span class="number">99</span>).into()));
+        <span class="macro">assert!</span>(rule.contains((ip, <span class="number">10</span>).into()));
 
-        <span class="macro">assert!</span>(<span class="op">!</span><span class="ident">rule</span>.<span class="ident">contains</span>((<span class="ident">ip</span>, <span class="number">5</span>).<span class="ident">into</span>()));
-        <span class="macro">assert!</span>(<span class="op">!</span><span class="ident">rule</span>.<span class="ident">contains</span>((<span class="ident">ip</span>, <span class="number">1000</span>).<span class="ident">into</span>()));
-        <span class="macro">assert!</span>(<span class="op">!</span><span class="ident">rule</span>.<span class="ident">contains</span>(([<span class="number">192</span>, <span class="number">168</span>, <span class="number">76</span>, <span class="number">10</span>], <span class="number">40</span>).<span class="ident">into</span>()));
+        <span class="macro">assert!</span>(!rule.contains((ip, <span class="number">5</span>).into()));
+        <span class="macro">assert!</span>(!rule.contains((ip, <span class="number">1000</span>).into()));
+        <span class="macro">assert!</span>(!rule.contains(([<span class="number">192</span>, <span class="number">168</span>, <span class="number">76</span>, <span class="number">10</span>], <span class="number">40</span>).into()));
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/config/watch/agones/crd.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>crd.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../../../storage.js"></script><script defer src="../../../../../source-script.js"></script><script defer src="../../../../../source-files.js"></script><script defer src="../../../../../main.js"></script><noscript><link rel="stylesheet" href="../../../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../../quilkin/index.html"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/config/watch/agones/crd.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>crd.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../../../normalize.css"><link rel="stylesheet" href="../../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../../../ayu.css" disabled><link rel="stylesheet" href="../../../../../dark.css" disabled><link rel="stylesheet" href="../../../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../../../storage.js"></script><script defer src="../../../../../source-script.js"></script><script defer src="../../../../../source-files.js"></script><script defer src="../../../../../main.js"></script><noscript><link rel="stylesheet" href="../../../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../../quilkin/index.html"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -608,587 +608,587 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */</span>
+ */
 
-<span class="kw">use</span> <span class="ident">k8s_openapi</span>::{
-    <span class="ident">apiextensions_apiserver::pkg::apis::apiextensions::v1</span>::{
-        <span class="ident">CustomResourceDefinition</span>, <span class="ident">CustomResourceDefinitionNames</span>, <span class="ident">CustomResourceDefinitionSpec</span>,
-        <span class="ident">CustomResourceDefinitionVersion</span>, <span class="ident">CustomResourceValidation</span>,
+</span><span class="kw">use </span>k8s_openapi::{
+    apiextensions_apiserver::pkg::apis::apiextensions::v1::{
+        CustomResourceDefinition, CustomResourceDefinitionNames, CustomResourceDefinitionSpec,
+        CustomResourceDefinitionVersion, CustomResourceValidation,
     },
-    <span class="ident">apimachinery::pkg</span>::{<span class="ident">apis::meta::v1::ObjectMeta</span>, <span class="ident">util::intstr::IntOrString</span>},
+    apimachinery::pkg::{apis::meta::v1::ObjectMeta, util::intstr::IntOrString},
 };
-<span class="kw">use</span> <span class="ident">kube</span>::{<span class="ident">core::Resource</span>, <span class="ident">CustomResource</span>};
-<span class="kw">use</span> <span class="ident">schemars::JsonSchema</span>;
-<span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
+<span class="kw">use </span>kube::{core::Resource, CustomResource};
+<span class="kw">use </span>schemars::JsonSchema;
+<span class="kw">use </span>serde::{Deserialize, Serialize};
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::endpoint::Endpoint</span>;
+<span class="kw">use </span><span class="kw">crate</span>::endpoint::Endpoint;
 
-<span class="kw">const</span> <span class="ident">QUILKIN_TOKEN_LABEL</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;quilkin.dev/tokens&quot;</span>;
+<span class="kw">const </span>QUILKIN_TOKEN_LABEL: <span class="kw-2">&amp;</span>str = <span class="string">&quot;quilkin.dev/tokens&quot;</span>;
 
-<span class="doccomment">/// Auto-generated derived type for GameServerSpec via `CustomResource`</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">schemars::JsonSchema</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;camelCase&quot;</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GameServer</span> {
-    <span class="attribute">#[<span class="ident">schemars</span>(<span class="ident">skip</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">metadata</span>: <span class="ident">ObjectMeta</span>,
-    <span class="kw">pub</span> <span class="ident">spec</span>: <span class="ident">GameServerSpec</span>,
-    <span class="kw">pub</span> <span class="ident">status</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">GameServerStatus</span><span class="op">&gt;</span>,
+<span class="doccomment">/// Auto-generated derived type for GameServerSpec via `CustomResource`
+</span><span class="attribute">#[derive(Clone, Debug, schemars::JsonSchema)]
+#[serde(rename_all = <span class="string">&quot;camelCase&quot;</span>)]
+</span><span class="kw">pub struct </span>GameServer {
+    <span class="attribute">#[schemars(skip)]
+    </span><span class="kw">pub </span>metadata: ObjectMeta,
+    <span class="kw">pub </span>spec: GameServerSpec,
+    <span class="kw">pub </span>status: <span class="prelude-ty">Option</span>&lt;GameServerStatus&gt;,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">schemars::JsonSchema</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;camelCase&quot;</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Inner</span> {
-    <span class="attribute">#[<span class="ident">schemars</span>(<span class="ident">skip</span>)]</span>
-    <span class="ident">metadata</span>: <span class="ident">ObjectMeta</span>,
-    <span class="ident">spec</span>: <span class="ident">GameServerSpec</span>,
-    <span class="ident">status</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">GameServerStatus</span><span class="op">&gt;</span>,
+<span class="attribute">#[derive(Clone, Debug, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = <span class="string">&quot;camelCase&quot;</span>)]
+</span><span class="kw">pub struct </span>Inner {
+    <span class="attribute">#[schemars(skip)]
+    </span>metadata: ObjectMeta,
+    spec: GameServerSpec,
+    status: <span class="prelude-ty">Option</span>&lt;GameServerStatus&gt;,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span> <span class="ident">serde::Deserialize</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">GameServer</span> {
-    <span class="kw">fn</span> <span class="ident">deserialize</span><span class="op">&lt;</span><span class="ident">D</span>: <span class="ident">serde::Deserializer</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="ident">de</span>: <span class="ident">D</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">D::Error</span><span class="op">&gt;</span> {
-        <span class="kw">use</span> <span class="ident">serde::de::Error</span>;
-        <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">serde_json::Value::deserialize</span>(<span class="ident">de</span>).<span class="ident">unwrap</span>();
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;de</span>&gt; serde::Deserialize&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>GameServer {
+    <span class="kw">fn </span>deserialize&lt;D: serde::Deserializer&lt;<span class="lifetime">&#39;de</span>&gt;&gt;(de: D) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, D::Error&gt; {
+        <span class="kw">use </span>serde::de::Error;
+        <span class="kw">let </span>value = serde_json::Value::deserialize(de).unwrap();
 
-        <span class="ident">serde_json::from_value</span>::<span class="op">&lt;</span><span class="ident">Inner</span><span class="op">&gt;</span>(<span class="ident">value</span>.<span class="ident">clone</span>())
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
-                <span class="macro">tracing::trace!</span>(<span class="op">%</span><span class="ident">error</span>, <span class="op">%</span><span class="ident">value</span>, <span class="string">&quot;gameserver failed&quot;</span>);
-                <span class="ident">Error::custom</span>(<span class="ident">error</span>)
+        serde_json::from_value::&lt;Inner&gt;(value.clone())
+            .map_err(|error| {
+                <span class="macro">tracing::trace!</span>(%error, %value, <span class="string">&quot;gameserver failed&quot;</span>);
+                Error::custom(error)
             })
-            .<span class="ident">map</span>(
-                <span class="op">|</span><span class="ident">Inner</span> {
-                     <span class="ident">metadata</span>,
-                     <span class="ident">spec</span>,
-                     <span class="ident">status</span>,
-                 }<span class="op">|</span> <span class="self">Self</span> {
-                    <span class="ident">metadata</span>,
-                    <span class="ident">spec</span>,
-                    <span class="ident">status</span>,
+            .map(
+                |Inner {
+                     metadata,
+                     spec,
+                     status,
+                 }| <span class="self">Self </span>{
+                    metadata,
+                    spec,
+                    status,
                 },
             )
     }
 }
 
-<span class="kw">impl</span> <span class="ident">GameServer</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">spec</span>: <span class="ident">GameServerSpec</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">metadata</span>: <span class="ident">ObjectMeta</span> {
-                <span class="ident">name</span>: <span class="prelude-val">Some</span>(<span class="ident">name</span>.<span class="ident">to_string</span>()),
-                ..<span class="ident">Default::default</span>()
+<span class="kw">impl </span>GameServer {
+    <span class="kw">pub fn </span>new(name: <span class="kw-2">&amp;</span>str, spec: GameServerSpec) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            metadata: ObjectMeta {
+                name: <span class="prelude-val">Some</span>(name.to_string()),
+                ..Default::default()
             },
-            <span class="ident">spec</span>,
-            <span class="ident">status</span>: <span class="prelude-val">None</span>,
+            spec,
+            status: <span class="prelude-val">None</span>,
         }
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_allocated</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">bool</span> {
-        <span class="self">self</span>.<span class="ident">status</span>.<span class="ident">as_ref</span>().<span class="ident">map_or</span>(<span class="bool-val">false</span>, <span class="op">|</span><span class="ident">status</span><span class="op">|</span> {
-            <span class="macro">tracing::trace!</span>(<span class="op">%</span><span class="ident">status</span>.<span class="ident">address</span>, <span class="question-mark">?</span><span class="ident">status</span>.<span class="ident">state</span>, <span class="string">&quot;checking gameserver&quot;</span>);
-            <span class="macro">matches!</span>(<span class="ident">status</span>.<span class="ident">state</span>, <span class="ident">GameServerState::Allocated</span>)
+    <span class="kw">pub fn </span>is_allocated(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="self">self</span>.status.as_ref().map_or(<span class="bool-val">false</span>, |status| {
+            <span class="macro">tracing::trace!</span>(%status.address, <span class="question-mark">?</span>status.state, <span class="string">&quot;checking gameserver&quot;</span>);
+            <span class="macro">matches!</span>(status.state, GameServerState::Allocated)
         })
     }
 }
 
-<span class="kw">impl</span> <span class="ident">serde::Serialize</span> <span class="kw">for</span> <span class="ident">GameServer</span> {
-    <span class="kw">fn</span> <span class="ident">serialize</span><span class="op">&lt;</span><span class="ident">S</span>: <span class="ident">serde::Serializer</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ser</span>: <span class="ident">S</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">S::Ok</span>, <span class="ident">S::Error</span><span class="op">&gt;</span> {
-        <span class="kw">use</span> <span class="ident">serde::ser::SerializeStruct</span>;
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">obj</span> <span class="op">=</span> <span class="ident">ser</span>.<span class="ident">serialize_struct</span>(<span class="string">&quot;GameServer&quot;</span>, <span class="number">5</span>)<span class="question-mark">?</span>;
-        <span class="ident">obj</span>.<span class="ident">serialize_field</span>(<span class="string">&quot;apiVersion&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">GameServer::api_version</span>(<span class="kw-2">&amp;</span>()))<span class="question-mark">?</span>;
-        <span class="ident">obj</span>.<span class="ident">serialize_field</span>(<span class="string">&quot;kind&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">GameServer::kind</span>(<span class="kw-2">&amp;</span>()))<span class="question-mark">?</span>;
-        <span class="ident">obj</span>.<span class="ident">serialize_field</span>(<span class="string">&quot;metadata&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">metadata</span>)<span class="question-mark">?</span>;
-        <span class="ident">obj</span>.<span class="ident">serialize_field</span>(<span class="string">&quot;spec&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">spec</span>)<span class="question-mark">?</span>;
-        <span class="ident">obj</span>.<span class="ident">serialize_field</span>(<span class="string">&quot;status&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">status</span>)<span class="question-mark">?</span>;
-        <span class="ident">obj</span>.<span class="ident">end</span>()
+<span class="kw">impl </span>serde::Serialize <span class="kw">for </span>GameServer {
+    <span class="kw">fn </span>serialize&lt;S: serde::Serializer&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, ser: S) -&gt; <span class="prelude-ty">Result</span>&lt;S::Ok, S::Error&gt; {
+        <span class="kw">use </span>serde::ser::SerializeStruct;
+        <span class="kw">let </span><span class="kw-2">mut </span>obj = ser.serialize_struct(<span class="string">&quot;GameServer&quot;</span>, <span class="number">5</span>)<span class="question-mark">?</span>;
+        obj.serialize_field(<span class="string">&quot;apiVersion&quot;</span>, <span class="kw-2">&amp;</span>GameServer::api_version(<span class="kw-2">&amp;</span>()))<span class="question-mark">?</span>;
+        obj.serialize_field(<span class="string">&quot;kind&quot;</span>, <span class="kw-2">&amp;</span>GameServer::kind(<span class="kw-2">&amp;</span>()))<span class="question-mark">?</span>;
+        obj.serialize_field(<span class="string">&quot;metadata&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.metadata)<span class="question-mark">?</span>;
+        obj.serialize_field(<span class="string">&quot;spec&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.spec)<span class="question-mark">?</span>;
+        obj.serialize_field(<span class="string">&quot;status&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.status)<span class="question-mark">?</span>;
+        obj.end()
     }
 }
 
-<span class="kw">impl</span> <span class="ident">Resource</span> <span class="kw">for</span> <span class="ident">GameServer</span> {
-    <span class="kw">type</span> <span class="ident">DynamicType</span> <span class="op">=</span> ();
-    <span class="kw">type</span> <span class="ident">Scope</span> <span class="op">=</span> <span class="ident">kube::core::NamespaceResourceScope</span>;
+<span class="kw">impl </span>Resource <span class="kw">for </span>GameServer {
+    <span class="kw">type </span>DynamicType = ();
+    <span class="kw">type </span>Scope = kube::core::NamespaceResourceScope;
 
-    <span class="kw">fn</span> <span class="ident">group</span>(<span class="kw">_</span>: <span class="kw-2">&amp;</span>()) -&gt; <span class="ident">std::borrow::Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">str</span><span class="op">&gt;</span> {
-        <span class="string">&quot;agones.dev&quot;</span>.<span class="ident">into</span>()
+    <span class="kw">fn </span>group(<span class="kw">_</span>: <span class="kw-2">&amp;</span>()) -&gt; std::borrow::Cow&lt;<span class="lifetime">&#39;_</span>, str&gt; {
+        <span class="string">&quot;agones.dev&quot;</span>.into()
     }
 
-    <span class="kw">fn</span> <span class="ident">kind</span>(<span class="kw">_</span>: <span class="kw-2">&amp;</span>()) -&gt; <span class="ident">std::borrow::Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">str</span><span class="op">&gt;</span> {
-        <span class="string">&quot;GameServer&quot;</span>.<span class="ident">into</span>()
+    <span class="kw">fn </span>kind(<span class="kw">_</span>: <span class="kw-2">&amp;</span>()) -&gt; std::borrow::Cow&lt;<span class="lifetime">&#39;_</span>, str&gt; {
+        <span class="string">&quot;GameServer&quot;</span>.into()
     }
 
-    <span class="kw">fn</span> <span class="ident">version</span>(<span class="kw">_</span>: <span class="kw-2">&amp;</span>()) -&gt; <span class="ident">std::borrow::Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">str</span><span class="op">&gt;</span> {
-        <span class="string">&quot;v1&quot;</span>.<span class="ident">into</span>()
+    <span class="kw">fn </span>version(<span class="kw">_</span>: <span class="kw-2">&amp;</span>()) -&gt; std::borrow::Cow&lt;<span class="lifetime">&#39;_</span>, str&gt; {
+        <span class="string">&quot;v1&quot;</span>.into()
     }
 
-    <span class="kw">fn</span> <span class="ident">api_version</span>(<span class="kw">_</span>: <span class="kw-2">&amp;</span>()) -&gt; <span class="ident">std::borrow::Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">str</span><span class="op">&gt;</span> {
-        <span class="string">&quot;agones.dev/v1&quot;</span>.<span class="ident">into</span>()
+    <span class="kw">fn </span>api_version(<span class="kw">_</span>: <span class="kw-2">&amp;</span>()) -&gt; std::borrow::Cow&lt;<span class="lifetime">&#39;_</span>, str&gt; {
+        <span class="string">&quot;agones.dev/v1&quot;</span>.into()
     }
 
-    <span class="kw">fn</span> <span class="ident">plural</span>(<span class="kw">_</span>: <span class="kw-2">&amp;</span>()) -&gt; <span class="ident">std::borrow::Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">str</span><span class="op">&gt;</span> {
-        <span class="string">&quot;gameservers&quot;</span>.<span class="ident">into</span>()
+    <span class="kw">fn </span>plural(<span class="kw">_</span>: <span class="kw-2">&amp;</span>()) -&gt; std::borrow::Cow&lt;<span class="lifetime">&#39;_</span>, str&gt; {
+        <span class="string">&quot;gameservers&quot;</span>.into()
     }
 
-    <span class="kw">fn</span> <span class="ident">meta</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">ObjectMeta</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">metadata</span>
+    <span class="kw">fn </span>meta(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>ObjectMeta {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.metadata
     }
 
-    <span class="kw">fn</span> <span class="ident">meta_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut</span> <span class="ident">ObjectMeta</span> {
-        <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">metadata</span>
+    <span class="kw">fn </span>meta_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>ObjectMeta {
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>.metadata
     }
 }
 
-<span class="kw">impl</span> <span class="ident">kube::core::crd::v1::CustomResourceExt</span> <span class="kw">for</span> <span class="ident">GameServer</span> {
-    <span class="kw">fn</span> <span class="ident">crd</span>() -&gt; <span class="ident">CustomResourceDefinition</span> {
-        <span class="kw">let</span> <span class="ident">open_api_v3_schema</span> <span class="op">=</span> <span class="prelude-val">Some</span>(
-            <span class="ident">schemars::gen::SchemaSettings::openapi3</span>()
-                .<span class="ident">with</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> {
-                    <span class="ident">s</span>.<span class="ident">inline_subschemas</span> <span class="op">=</span> <span class="bool-val">true</span>;
-                    <span class="ident">s</span>.<span class="ident">meta_schema</span> <span class="op">=</span> <span class="prelude-val">None</span>;
+<span class="kw">impl </span>kube::core::crd::v1::CustomResourceExt <span class="kw">for </span>GameServer {
+    <span class="kw">fn </span>crd() -&gt; CustomResourceDefinition {
+        <span class="kw">let </span>open_api_v3_schema = <span class="prelude-val">Some</span>(
+            schemars::gen::SchemaSettings::openapi3()
+                .with(|s| {
+                    s.inline_subschemas = <span class="bool-val">true</span>;
+                    s.meta_schema = <span class="prelude-val">None</span>;
                 })
-                .<span class="ident">with_visitor</span>(<span class="ident">kube::core::schema::StructuralSchemaRewriter</span>)
-                .<span class="ident">into_generator</span>()
-                .<span class="ident">into_root_schema_for</span>::<span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>(),
+                .with_visitor(kube::core::schema::StructuralSchemaRewriter)
+                .into_generator()
+                .into_root_schema_for::&lt;<span class="self">Self</span>&gt;(),
         );
 
-        <span class="ident">CustomResourceDefinition</span> {
-            <span class="ident">metadata</span>: <span class="ident">ObjectMeta</span> {
-                <span class="ident">name</span>: <span class="prelude-val">Some</span>(<span class="string">&quot;gameservers.agones.dev&quot;</span>.<span class="ident">into</span>()),
-                ..<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>()
+        CustomResourceDefinition {
+            metadata: ObjectMeta {
+                name: <span class="prelude-val">Some</span>(<span class="string">&quot;gameservers.agones.dev&quot;</span>.into()),
+                ..&lt;<span class="kw">_</span>&gt;::default()
             },
-            <span class="ident">spec</span>: <span class="ident">CustomResourceDefinitionSpec</span> {
-                <span class="ident">group</span>: <span class="string">&quot;agones.dev&quot;</span>.<span class="ident">into</span>(),
-                <span class="ident">scope</span>: <span class="string">&quot;Namespaced&quot;</span>.<span class="ident">into</span>(),
-                <span class="ident">names</span>: <span class="ident">CustomResourceDefinitionNames</span> {
-                    <span class="ident">plural</span>: <span class="string">&quot;gameservers&quot;</span>.<span class="ident">into</span>(),
-                    <span class="ident">singular</span>: <span class="prelude-val">Some</span>(<span class="string">&quot;gameserver&quot;</span>.<span class="ident">into</span>()),
-                    <span class="ident">kind</span>: <span class="string">&quot;GameServer&quot;</span>.<span class="ident">into</span>(),
-                    ..<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>()
+            spec: CustomResourceDefinitionSpec {
+                group: <span class="string">&quot;agones.dev&quot;</span>.into(),
+                scope: <span class="string">&quot;Namespaced&quot;</span>.into(),
+                names: CustomResourceDefinitionNames {
+                    plural: <span class="string">&quot;gameservers&quot;</span>.into(),
+                    singular: <span class="prelude-val">Some</span>(<span class="string">&quot;gameserver&quot;</span>.into()),
+                    kind: <span class="string">&quot;GameServer&quot;</span>.into(),
+                    ..&lt;<span class="kw">_</span>&gt;::default()
                 },
-                <span class="ident">versions</span>: <span class="macro">vec!</span>[<span class="ident">CustomResourceDefinitionVersion</span> {
-                    <span class="ident">name</span>: <span class="string">&quot;v1&quot;</span>.<span class="ident">into</span>(),
-                    <span class="ident">served</span>: <span class="bool-val">true</span>,
-                    <span class="ident">storage</span>: <span class="bool-val">true</span>,
-                    <span class="ident">schema</span>: <span class="prelude-val">Some</span>(<span class="ident">CustomResourceValidation</span> {
-                        <span class="comment">// Hack to get around k8s and schemars having different</span>
-                        <span class="comment">// root JSON schema types. Replace this with a From impl</span>
-                        <span class="ident">open_api_v3_schema</span>: <span class="ident">serde_json::from_value</span>(
-                            <span class="ident">serde_json::to_value</span>(<span class="kw-2">&amp;</span><span class="ident">open_api_v3_schema</span>).<span class="ident">unwrap</span>(),
+                versions: <span class="macro">vec!</span>[CustomResourceDefinitionVersion {
+                    name: <span class="string">&quot;v1&quot;</span>.into(),
+                    served: <span class="bool-val">true</span>,
+                    storage: <span class="bool-val">true</span>,
+                    schema: <span class="prelude-val">Some</span>(CustomResourceValidation {
+                        <span class="comment">// Hack to get around k8s and schemars having different
+                        // root JSON schema types. Replace this with a From impl
+                        </span>open_api_v3_schema: serde_json::from_value(
+                            serde_json::to_value(<span class="kw-2">&amp;</span>open_api_v3_schema).unwrap(),
                         )
-                        .<span class="ident">unwrap</span>(),
+                        .unwrap(),
                     }),
-                    ..<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>()
+                    ..&lt;<span class="kw">_</span>&gt;::default()
                 }],
-                ..<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>()
+                ..&lt;<span class="kw">_</span>&gt;::default()
             },
-            <span class="ident">status</span>: <span class="prelude-val">None</span>,
+            status: <span class="prelude-val">None</span>,
         }
     }
 
-    <span class="kw">fn</span> <span class="ident">crd_name</span>() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
-        <span class="string">&quot;gameservers.agones.dev&quot;</span>
+    <span class="kw">fn </span>crd_name() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
+        <span class="string">&quot;gameservers.agones.dev&quot;
+    </span>}
+
+    <span class="kw">fn </span>api_resource() -&gt; kube::core::dynamic::ApiResource {
+        kube::core::dynamic::ApiResource::erase::&lt;<span class="self">Self</span>&gt;(<span class="kw-2">&amp;</span>())
     }
 
-    <span class="kw">fn</span> <span class="ident">api_resource</span>() -&gt; <span class="ident">kube::core::dynamic::ApiResource</span> {
-        <span class="ident">kube::core::dynamic::ApiResource::erase</span>::<span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span>())
-    }
-
-    <span class="kw">fn</span> <span class="ident">shortnames</span>() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> [<span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>] {
+    <span class="kw">fn </span>shortnames() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>[<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str] {
         <span class="kw-2">&amp;</span>[]
     }
 }
 
-<span class="kw">impl</span> <span class="ident">kube::core::object::HasSpec</span> <span class="kw">for</span> <span class="ident">GameServer</span> {
-    <span class="kw">type</span> <span class="ident">Spec</span> <span class="op">=</span> <span class="ident">GameServerSpec</span>;
+<span class="kw">impl </span>kube::core::object::HasSpec <span class="kw">for </span>GameServer {
+    <span class="kw">type </span>Spec = GameServerSpec;
 
-    <span class="kw">fn</span> <span class="ident">spec</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">GameServerSpec</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">spec</span>
+    <span class="kw">fn </span>spec(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>GameServerSpec {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.spec
     }
-    <span class="kw">fn</span> <span class="ident">spec_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut</span> <span class="ident">GameServerSpec</span> {
-        <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">spec</span>
+    <span class="kw">fn </span>spec_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>GameServerSpec {
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>.spec
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>, <span class="ident">JsonSchema</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;camelCase&quot;</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GameServerSpec</span> {
-    <span class="doccomment">/// Container specifies which Pod container is the game server. Only</span>
-    <span class="doccomment">/// required if there is more than one container defined.</span>
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">skip_serializing_if</span> <span class="op">=</span> <span class="string">&quot;Option::is_none&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">container</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// Ports are the array of ports that can be exposed via the game server</span>
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">ports</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">GameServerPort</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// Configures health checking</span>
-    <span class="kw">pub</span> <span class="ident">health</span>: <span class="ident">Health</span>,
-    <span class="doccomment">/// Scheduling strategy. Defaults to &quot;Packed&quot;</span>
-    <span class="kw">pub</span> <span class="ident">scheduling</span>: <span class="ident">SchedulingStrategy</span>,
-    <span class="doccomment">/// Specifies parameters for the Agones SDK Server sidecar container.</span>
-    <span class="kw">pub</span> <span class="ident">sdk_server</span>: <span class="ident">SdkServer</span>,
-    <span class="doccomment">/// Describes the Pod that will be created for the [`GameServer`].</span>
-    <span class="kw">pub</span> <span class="ident">template</span>: <span class="ident">k8s_openapi::api::core::v1::PodTemplateSpec</span>,
+<span class="attribute">#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = <span class="string">&quot;camelCase&quot;</span>)]
+</span><span class="kw">pub struct </span>GameServerSpec {
+    <span class="doccomment">/// Container specifies which Pod container is the game server. Only
+    /// required if there is more than one container defined.
+    </span><span class="attribute">#[serde(default, skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>)]
+    </span><span class="kw">pub </span>container: <span class="prelude-ty">Option</span>&lt;String&gt;,
+    <span class="doccomment">/// Ports are the array of ports that can be exposed via the game server
+    </span><span class="attribute">#[serde(default)]
+    </span><span class="kw">pub </span>ports: Vec&lt;GameServerPort&gt;,
+    <span class="doccomment">/// Configures health checking
+    </span><span class="kw">pub </span>health: Health,
+    <span class="doccomment">/// Scheduling strategy. Defaults to &quot;Packed&quot;
+    </span><span class="kw">pub </span>scheduling: SchedulingStrategy,
+    <span class="doccomment">/// Specifies parameters for the Agones SDK Server sidecar container.
+    </span><span class="kw">pub </span>sdk_server: SdkServer,
+    <span class="doccomment">/// Describes the Pod that will be created for the [`GameServer`].
+    </span><span class="kw">pub </span>template: k8s_openapi::api::core::v1::PodTemplateSpec,
 }
 
-<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">GameServerSpec</span> {
-    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">container</span>: <span class="prelude-val">None</span>,
-            <span class="ident">ports</span>: <span class="macro">vec!</span>[],
-            <span class="ident">health</span>: <span class="ident">Default::default</span>(),
-            <span class="ident">scheduling</span>: <span class="ident">SchedulingStrategy::Packed</span>,
-            <span class="ident">sdk_server</span>: <span class="ident">Default::default</span>(),
-            <span class="ident">template</span>: <span class="ident">Default::default</span>(),
+<span class="kw">impl </span>Default <span class="kw">for </span>GameServerSpec {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            container: <span class="prelude-val">None</span>,
+            ports: <span class="macro">vec!</span>[],
+            health: Default::default(),
+            scheduling: SchedulingStrategy::Packed,
+            sdk_server: Default::default(),
+            template: Default::default(),
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident">GameServer</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Endpoint</span> {
-    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">tonic::Status</span>;
+<span class="kw">impl </span>TryFrom&lt;GameServer&gt; <span class="kw">for </span>Endpoint {
+    <span class="kw">type </span>Error = tonic::Status;
 
-    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">server</span>: <span class="ident">GameServer</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident"><span class="self">Self</span>::Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">status</span> <span class="op">=</span> <span class="ident">server</span>
-            .<span class="ident">status</span>
-            .<span class="ident">as_ref</span>()
-            .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">tonic::Status::internal</span>(<span class="string">&quot;No status found for game server&quot;</span>))<span class="question-mark">?</span>;
+    <span class="kw">fn </span>try_from(server: GameServer) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
+        <span class="kw">let </span>status = server
+            .status
+            .as_ref()
+            .ok_or_else(|| tonic::Status::internal(<span class="string">&quot;No status found for game server&quot;</span>))<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">tokens</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">server</span>.<span class="ident">metadata</span>.<span class="ident">annotations</span>.<span class="ident">as_ref</span>() {
-            <span class="prelude-val">Some</span>(<span class="ident">annotations</span>) =&gt; <span class="ident">annotations</span>
-                .<span class="ident">get</span>(<span class="ident">QUILKIN_TOKEN_LABEL</span>)
-                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">value</span><span class="op">|</span> {
-                    <span class="ident">value</span>
-                        .<span class="ident">split</span>(<span class="string">&#39;,&#39;</span>)
-                        .<span class="ident">map</span>(<span class="ident">String::from</span>)
-                        .<span class="ident">map</span>(<span class="ident">base64::decode</span>)
-                        .<span class="ident">filter_map</span>(<span class="ident">Result::ok</span>)
-                        .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">std::collections::BTreeSet</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
+        <span class="kw">let </span>tokens = <span class="kw">match </span>server.metadata.annotations.as_ref() {
+            <span class="prelude-val">Some</span>(annotations) =&gt; annotations
+                .get(QUILKIN_TOKEN_LABEL)
+                .map(|value| {
+                    value
+                        .split(<span class="string">&#39;,&#39;</span>)
+                        .map(String::from)
+                        .map(base64::decode)
+                        .filter_map(Result::ok)
+                        .collect::&lt;std::collections::BTreeSet&lt;<span class="kw">_</span>&gt;&gt;()
                 })
-                .<span class="ident">unwrap_or_default</span>(),
-            <span class="prelude-val">None</span> =&gt; <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
+                .unwrap_or_default(),
+            <span class="prelude-val">None </span>=&gt; &lt;<span class="kw">_</span>&gt;::default(),
         };
 
-        <span class="kw">let</span> <span class="ident">address</span> <span class="op">=</span> <span class="ident">status</span>.<span class="ident">address</span>.<span class="ident">clone</span>();
-        <span class="kw">let</span> <span class="ident">port</span> <span class="op">=</span> <span class="ident">status</span>
-            .<span class="ident">ports</span>
-            .<span class="ident">as_ref</span>()
-            .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">ports</span><span class="op">|</span> <span class="ident">ports</span>.<span class="ident">first</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">status</span><span class="op">|</span> <span class="ident">status</span>.<span class="ident">port</span>))
-            .<span class="ident">unwrap_or_default</span>();
-        <span class="kw">let</span> <span class="ident">filter_metadata</span> <span class="op">=</span> <span class="ident"><span class="kw">crate</span>::endpoint::Metadata</span> { <span class="ident">tokens</span> };
-        <span class="prelude-val">Ok</span>(<span class="ident"><span class="self">Self</span>::with_metadata</span>((<span class="ident">address</span>, <span class="ident">port</span>).<span class="ident">into</span>(), <span class="ident">filter_metadata</span>))
+        <span class="kw">let </span>address = status.address.clone();
+        <span class="kw">let </span>port = status
+            .ports
+            .as_ref()
+            .and_then(|ports| ports.first().map(|status| status.port))
+            .unwrap_or_default();
+        <span class="kw">let </span>filter_metadata = <span class="kw">crate</span>::endpoint::Metadata { tokens };
+        <span class="prelude-val">Ok</span>(<span class="self">Self</span>::with_metadata((address, port).into(), filter_metadata))
     }
 }
 
-<span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">GameServer</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident"><span class="kw">crate</span>::endpoint::LocalityEndpoints</span> {
-    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">tonic::Status</span>;
+<span class="kw">impl </span>TryFrom&lt;Vec&lt;GameServer&gt;&gt; <span class="kw">for </span><span class="kw">crate</span>::endpoint::LocalityEndpoints {
+    <span class="kw">type </span>Error = tonic::Status;
 
-    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">servers</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">GameServer</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident"><span class="self">Self</span>::Error</span><span class="op">&gt;</span> {
-        <span class="prelude-val">Ok</span>(<span class="ident">servers</span>
-            .<span class="ident">into_iter</span>()
-            .<span class="ident">map</span>(<span class="ident">Endpoint::try_from</span>)
-            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">std::collections::BTreeSet</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>
-            .<span class="ident">into</span>())
+    <span class="kw">fn </span>try_from(servers: Vec&lt;GameServer&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
+        <span class="prelude-val">Ok</span>(servers
+            .into_iter()
+            .map(Endpoint::try_from)
+            .collect::&lt;<span class="prelude-ty">Result</span>&lt;std::collections::BTreeSet&lt;<span class="kw">_</span>&gt;, <span class="kw">_</span>&gt;&gt;()<span class="question-mark">?
+            </span>.into())
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>, <span class="ident">JsonSchema</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Health</span> {
-    <span class="doccomment">/// Whether health checking is disabled or not</span>
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
-    <span class="ident">disabled</span>: <span class="ident">bool</span>,
-    <span class="doccomment">/// The number of seconds each health ping has to occur in</span>
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;periodSeconds&quot;</span>, <span class="ident">default</span> <span class="op">=</span> <span class="string">&quot;default_period_seconds&quot;</span>)]</span>
-    <span class="ident">period_seconds</span>: <span class="ident">i32</span>,
-    <span class="doccomment">/// How many failures in a row constitutes unhealthy</span>
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;failureThreshold&quot;</span>, <span class="ident">default</span> <span class="op">=</span> <span class="string">&quot;default_failure_threshold&quot;</span>)]</span>
-    <span class="ident">failure_threshold</span>: <span class="ident">i32</span>,
-    <span class="doccomment">/// Initial delay before checking health</span>
-    <span class="attribute">#[<span class="ident">serde</span>(
-        <span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;initialDelaySeconds&quot;</span>,
-        <span class="ident">default</span> <span class="op">=</span> <span class="string">&quot;default_initial_delay_seconds&quot;</span>
-    )]</span>
-    <span class="ident">initial_delay_seconds</span>: <span class="ident">i32</span>,
+<span class="attribute">#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
+</span><span class="kw">pub struct </span>Health {
+    <span class="doccomment">/// Whether health checking is disabled or not
+    </span><span class="attribute">#[serde(default)]
+    </span>disabled: bool,
+    <span class="doccomment">/// The number of seconds each health ping has to occur in
+    </span><span class="attribute">#[serde(rename = <span class="string">&quot;periodSeconds&quot;</span>, default = <span class="string">&quot;default_period_seconds&quot;</span>)]
+    </span>period_seconds: i32,
+    <span class="doccomment">/// How many failures in a row constitutes unhealthy
+    </span><span class="attribute">#[serde(rename = <span class="string">&quot;failureThreshold&quot;</span>, default = <span class="string">&quot;default_failure_threshold&quot;</span>)]
+    </span>failure_threshold: i32,
+    <span class="doccomment">/// Initial delay before checking health
+    </span><span class="attribute">#[serde(
+        rename = <span class="string">&quot;initialDelaySeconds&quot;</span>,
+        default = <span class="string">&quot;default_initial_delay_seconds&quot;
+    </span>)]
+    </span>initial_delay_seconds: i32,
 }
 
-<span class="kw">fn</span> <span class="ident">default_period_seconds</span>() -&gt; <span class="ident">i32</span> {
-    <span class="number">5</span>
-}
-<span class="kw">fn</span> <span class="ident">default_initial_delay_seconds</span>() -&gt; <span class="ident">i32</span> {
-    <span class="number">5</span>
-}
-<span class="kw">fn</span> <span class="ident">default_failure_threshold</span>() -&gt; <span class="ident">i32</span> {
-    <span class="number">5</span>
-}
+<span class="kw">fn </span>default_period_seconds() -&gt; i32 {
+    <span class="number">5
+</span>}
+<span class="kw">fn </span>default_initial_delay_seconds() -&gt; i32 {
+    <span class="number">5
+</span>}
+<span class="kw">fn </span>default_failure_threshold() -&gt; i32 {
+    <span class="number">5
+</span>}
 
-<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">Health</span> {
-    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">disabled</span>: <span class="bool-val">false</span>,
-            <span class="ident">period_seconds</span>: <span class="ident">default_period_seconds</span>(),
-            <span class="ident">failure_threshold</span>: <span class="ident">default_failure_threshold</span>(),
-            <span class="ident">initial_delay_seconds</span>: <span class="ident">default_failure_threshold</span>(),
+<span class="kw">impl </span>Default <span class="kw">for </span>Health {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            disabled: <span class="bool-val">false</span>,
+            period_seconds: default_period_seconds(),
+            failure_threshold: default_failure_threshold(),
+            initial_delay_seconds: default_failure_threshold(),
         }
     }
 }
 
-<span class="doccomment">/// Defines a set of Ports that are to be exposed via the [`GameServer`].</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>, <span class="ident">JsonSchema</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;camelCase&quot;</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GameServerPort</span> {
-    <span class="doccomment">/// Name is the descriptive name of the port</span>
-    <span class="kw">pub</span> <span class="ident">name</span>: <span class="ident">String</span>,
-    <span class="doccomment">/// PortPolicy defines the policy for how the HostPort is populated.</span>
-    <span class="doccomment">/// Dynamic port will allocate a HostPort within the selected MIN_PORT and MAX_PORT range passed to the controller</span>
-    <span class="doccomment">/// at installation time.</span>
-    <span class="doccomment">/// When `Static` portPolicy is specified, `HostPort` is required, to specify the port that game clients will</span>
-    <span class="doccomment">/// connect to</span>
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">port_policy</span>: <span class="ident">PortPolicy</span>,
-    <span class="doccomment">/// The name of the container on which to open the port. Defaults to the</span>
-    <span class="doccomment">/// game server container.</span>
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">skip_serializing_if</span> <span class="op">=</span> <span class="string">&quot;Option::is_none&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">container</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// The port that is being opened on the specified container&#39;s process</span>
-    <span class="kw">pub</span> <span class="ident">container_port</span>: <span class="ident">u16</span>,
-    <span class="doccomment">/// The port exposed on the host for clients to connect to</span>
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">skip_serializing_if</span> <span class="op">=</span> <span class="string">&quot;Option::is_none&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">host_port</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// Protocol is the network protocol being used. Defaults to UDP. TCP and TCPUDP are other options.</span>
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">protocol</span>: <span class="ident">Protocol</span>,
+<span class="doccomment">/// Defines a set of Ports that are to be exposed via the [`GameServer`].
+</span><span class="attribute">#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = <span class="string">&quot;camelCase&quot;</span>)]
+</span><span class="kw">pub struct </span>GameServerPort {
+    <span class="doccomment">/// Name is the descriptive name of the port
+    </span><span class="kw">pub </span>name: String,
+    <span class="doccomment">/// PortPolicy defines the policy for how the HostPort is populated.
+    /// Dynamic port will allocate a HostPort within the selected MIN_PORT and MAX_PORT range passed to the controller
+    /// at installation time.
+    /// When `Static` portPolicy is specified, `HostPort` is required, to specify the port that game clients will
+    /// connect to
+    </span><span class="attribute">#[serde(default)]
+    </span><span class="kw">pub </span>port_policy: PortPolicy,
+    <span class="doccomment">/// The name of the container on which to open the port. Defaults to the
+    /// game server container.
+    </span><span class="attribute">#[serde(default, skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>)]
+    </span><span class="kw">pub </span>container: <span class="prelude-ty">Option</span>&lt;String&gt;,
+    <span class="doccomment">/// The port that is being opened on the specified container&#39;s process
+    </span><span class="kw">pub </span>container_port: u16,
+    <span class="doccomment">/// The port exposed on the host for clients to connect to
+    </span><span class="attribute">#[serde(default, skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>)]
+    </span><span class="kw">pub </span>host_port: <span class="prelude-ty">Option</span>&lt;u16&gt;,
+    <span class="doccomment">/// Protocol is the network protocol being used. Defaults to UDP. TCP and TCPUDP are other options.
+    </span><span class="attribute">#[serde(default)]
+    </span><span class="kw">pub </span>protocol: Protocol,
 }
 
-<span class="doccomment">/// The status for a [`GameServer`] resource.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>, <span class="ident">JsonSchema</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;camelCase&quot;</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GameServerStatus</span> {
-    <span class="doccomment">/// The current state of a [`GameServer`].</span>
-    <span class="kw">pub</span> <span class="ident">state</span>: <span class="ident">GameServerState</span>,
-    <span class="kw">pub</span> <span class="ident">ports</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">GameServerStatusPort</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span> <span class="ident">address</span>: <span class="ident">String</span>,
-    <span class="kw">pub</span> <span class="ident">node_name</span>: <span class="ident">String</span>,
-    <span class="kw">pub</span> <span class="ident">reserved_until</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">k8s_openapi::apimachinery::pkg::apis::meta::v1::Time</span><span class="op">&gt;</span>,
+<span class="doccomment">/// The status for a [`GameServer`] resource.
+</span><span class="attribute">#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = <span class="string">&quot;camelCase&quot;</span>)]
+</span><span class="kw">pub struct </span>GameServerStatus {
+    <span class="doccomment">/// The current state of a [`GameServer`].
+    </span><span class="kw">pub </span>state: GameServerState,
+    <span class="kw">pub </span>ports: <span class="prelude-ty">Option</span>&lt;Vec&lt;GameServerStatusPort&gt;&gt;,
+    <span class="kw">pub </span>address: String,
+    <span class="kw">pub </span>node_name: String,
+    <span class="kw">pub </span>reserved_until: <span class="prelude-ty">Option</span>&lt;k8s_openapi::apimachinery::pkg::apis::meta::v1::Time&gt;,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>, <span class="ident">JsonSchema</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">GameServerState</span> {
-    <span class="doccomment">/// A dynamically allocating GameServer is being created, an open port needs</span>
-    <span class="doccomment">/// to be allocated</span>
-    <span class="ident">PortAllocation</span>,
-    <span class="doccomment">/// The Pod for the GameServer is being created.</span>
-    <span class="ident">Creating</span>,
-    <span class="doccomment">/// The Pods for the GameServer are being created but are not yet Scheduled</span>
-    <span class="ident">Starting</span>,
-    <span class="doccomment">/// We have determined that the Pod has been scheduled in the cluster --</span>
-    <span class="doccomment">/// basically, we have a NodeName</span>
-    <span class="ident">Scheduled</span>,
-    <span class="doccomment">/// The GameServer has declared that it is ready</span>
-    <span class="ident">RequestReady</span>,
-    <span class="doccomment">/// The GameServer is ready to take connections from game clients.</span>
-    <span class="ident">Ready</span>,
-    <span class="doccomment">/// The GameServer has shutdown and everything needs to be deleted from the cluster</span>
-    <span class="ident">Shutdown</span>,
-    <span class="doccomment">/// Something has gone wrong with the Gameserver and it cannot be resolved</span>
-    <span class="ident">Error</span>,
-    <span class="doccomment">/// The GameServer has failed its health checks</span>
-    <span class="ident">Unhealthy</span>,
-    <span class="doccomment">/// The GameServer is reserved and therefore can be allocated but not removed</span>
-    <span class="ident">Reserved</span>,
-    <span class="doccomment">/// The GameServer has been allocated to a session</span>
-    <span class="ident">Allocated</span>,
+<span class="attribute">#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
+</span><span class="kw">pub enum </span>GameServerState {
+    <span class="doccomment">/// A dynamically allocating GameServer is being created, an open port needs
+    /// to be allocated
+    </span>PortAllocation,
+    <span class="doccomment">/// The Pod for the GameServer is being created.
+    </span>Creating,
+    <span class="doccomment">/// The Pods for the GameServer are being created but are not yet Scheduled
+    </span>Starting,
+    <span class="doccomment">/// We have determined that the Pod has been scheduled in the cluster --
+    /// basically, we have a NodeName
+    </span>Scheduled,
+    <span class="doccomment">/// The GameServer has declared that it is ready
+    </span>RequestReady,
+    <span class="doccomment">/// The GameServer is ready to take connections from game clients.
+    </span>Ready,
+    <span class="doccomment">/// The GameServer has shutdown and everything needs to be deleted from the cluster
+    </span>Shutdown,
+    <span class="doccomment">/// Something has gone wrong with the Gameserver and it cannot be resolved
+    </span>Error,
+    <span class="doccomment">/// The GameServer has failed its health checks
+    </span>Unhealthy,
+    <span class="doccomment">/// The GameServer is reserved and therefore can be allocated but not removed
+    </span>Reserved,
+    <span class="doccomment">/// The GameServer has been allocated to a session
+    </span>Allocated,
 }
 
-<span class="doccomment">/// The port that was allocated to a GameServer.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>, <span class="ident">JsonSchema</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GameServerStatusPort</span> {
-    <span class="kw">pub</span> <span class="ident">name</span>: <span class="ident">String</span>,
-    <span class="kw">pub</span> <span class="ident">port</span>: <span class="ident">u16</span>,
+<span class="doccomment">/// The port that was allocated to a GameServer.
+</span><span class="attribute">#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
+</span><span class="kw">pub struct </span>GameServerStatusPort {
+    <span class="kw">pub </span>name: String,
+    <span class="kw">pub </span>port: u16,
 }
 
-<span class="doccomment">/// Parameters for the Agones SDK Server sidecar container</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>, <span class="ident">JsonSchema</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;camelCase&quot;</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SdkServer</span> {
-    <span class="doccomment">/// LogLevel for SDK server (sidecar) logs. Defaults to &quot;Info&quot;</span>
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">log_level</span>: <span class="ident">SdkServerLogLevel</span>,
-    <span class="doccomment">/// GRPCPort is the port on which the SDK Server binds the gRPC server to accept incoming connections</span>
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span> <span class="op">=</span> <span class="string">&quot;default_sdk_grpc_port&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">grpc_port</span>: <span class="ident">u16</span>,
-    <span class="doccomment">/// HTTPPort is the port on which the SDK Server binds the HTTP gRPC gateway server to accept incoming connections</span>
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span> <span class="op">=</span> <span class="string">&quot;default_sdk_http_port&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">http_port</span>: <span class="ident">u16</span>,
+<span class="doccomment">/// Parameters for the Agones SDK Server sidecar container
+</span><span class="attribute">#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = <span class="string">&quot;camelCase&quot;</span>)]
+</span><span class="kw">pub struct </span>SdkServer {
+    <span class="doccomment">/// LogLevel for SDK server (sidecar) logs. Defaults to &quot;Info&quot;
+    </span><span class="attribute">#[serde(default)]
+    </span><span class="kw">pub </span>log_level: SdkServerLogLevel,
+    <span class="doccomment">/// GRPCPort is the port on which the SDK Server binds the gRPC server to accept incoming connections
+    </span><span class="attribute">#[serde(default = <span class="string">&quot;default_sdk_grpc_port&quot;</span>)]
+    </span><span class="kw">pub </span>grpc_port: u16,
+    <span class="doccomment">/// HTTPPort is the port on which the SDK Server binds the HTTP gRPC gateway server to accept incoming connections
+    </span><span class="attribute">#[serde(default = <span class="string">&quot;default_sdk_http_port&quot;</span>)]
+    </span><span class="kw">pub </span>http_port: u16,
 }
 
-<span class="kw">fn</span> <span class="ident">default_sdk_grpc_port</span>() -&gt; <span class="ident">u16</span> {
-    <span class="number">9357</span>
-}
-<span class="kw">fn</span> <span class="ident">default_sdk_http_port</span>() -&gt; <span class="ident">u16</span> {
-    <span class="number">9358</span>
-}
+<span class="kw">fn </span>default_sdk_grpc_port() -&gt; u16 {
+    <span class="number">9357
+</span>}
+<span class="kw">fn </span>default_sdk_http_port() -&gt; u16 {
+    <span class="number">9358
+</span>}
 
-<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">SdkServer</span> {
-    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">log_level</span>: <span class="ident">Default::default</span>(),
-            <span class="ident">grpc_port</span>: <span class="ident">default_sdk_grpc_port</span>(),
-            <span class="ident">http_port</span>: <span class="ident">default_sdk_http_port</span>(),
+<span class="kw">impl </span>Default <span class="kw">for </span>SdkServer {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            log_level: Default::default(),
+            grpc_port: default_sdk_grpc_port(),
+            http_port: default_sdk_http_port(),
         }
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>, <span class="ident">JsonSchema</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">SdkServerLogLevel</span> {
-    <span class="doccomment">/// Output all messages except for debug messages.</span>
-    <span class="ident">Info</span>,
-    <span class="doccomment">/// Output all messages including debug messages.</span>
-    <span class="ident">Debug</span>,
-    <span class="doccomment">/// Only output error messages.</span>
-    <span class="ident">Error</span>,
+<span class="attribute">#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
+</span><span class="kw">pub enum </span>SdkServerLogLevel {
+    <span class="doccomment">/// Output all messages except for debug messages.
+    </span>Info,
+    <span class="doccomment">/// Output all messages including debug messages.
+    </span>Debug,
+    <span class="doccomment">/// Only output error messages.
+    </span>Error,
 }
 
-<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">SdkServerLogLevel</span> {
-    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
-        <span class="ident"><span class="self">Self</span>::Info</span>
+<span class="kw">impl </span>Default <span class="kw">for </span>SdkServerLogLevel {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::Info
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>, <span class="ident">JsonSchema</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">PortPolicy</span> {
-    <span class="doccomment">/// The user defines the host port to be used in the configuration.</span>
-    <span class="ident">Static</span>,
-    <span class="doccomment">/// The system will choose an open port for the [`GameServer`] in question.</span>
-    <span class="ident">Dynamic</span>,
-    <span class="doccomment">/// Dynamically sets the container port to the same value as the dynamically</span>
-    <span class="doccomment">/// selected host port. This will mean that users will need to lookup what</span>
-    <span class="doccomment">/// port has been opened through the server side SDK.</span>
-    <span class="ident">Passthrough</span>,
+<span class="attribute">#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
+</span><span class="kw">pub enum </span>PortPolicy {
+    <span class="doccomment">/// The user defines the host port to be used in the configuration.
+    </span>Static,
+    <span class="doccomment">/// The system will choose an open port for the [`GameServer`] in question.
+    </span>Dynamic,
+    <span class="doccomment">/// Dynamically sets the container port to the same value as the dynamically
+    /// selected host port. This will mean that users will need to lookup what
+    /// port has been opened through the server side SDK.
+    </span>Passthrough,
 }
 
-<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">PortPolicy</span> {
-    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
-        <span class="ident"><span class="self">Self</span>::Dynamic</span>
+<span class="kw">impl </span>Default <span class="kw">for </span>PortPolicy {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::Dynamic
     }
 }
 
-<span class="doccomment">/// the strategy that a Fleet &amp; GameServers will use when scheduling</span>
-<span class="doccomment">/// GameServers&#39; Pods across a cluster. In future versions, this will also</span>
-<span class="doccomment">/// impact Fleet scale down, and Pod Scheduling.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>, <span class="ident">JsonSchema</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">SchedulingStrategy</span> {
-    <span class="doccomment">/// Prioritise allocating GameServers on Nodes with the most Allocated, and</span>
-    <span class="doccomment">/// then Ready GameServers to bin pack as many Allocated GameServers on a</span>
-    <span class="doccomment">/// single node.  This is most useful for dynamic Kubernetes clusters - such</span>
-    <span class="doccomment">/// as on Cloud Providers.</span>
-    <span class="ident">Packed</span>,
-    <span class="doccomment">/// prioritise allocating GameServers on Nodes with the least Allocated, and</span>
-    <span class="doccomment">/// then Ready GameServers to distribute Allocated GameServers across many</span>
-    <span class="doccomment">/// nodes. This is most useful for statically sized Kubernetes clusters -</span>
-    <span class="doccomment">/// such as on physical hardware.</span>
-    <span class="ident">Distributed</span>,
+<span class="doccomment">/// the strategy that a Fleet &amp; GameServers will use when scheduling
+/// GameServers&#39; Pods across a cluster. In future versions, this will also
+/// impact Fleet scale down, and Pod Scheduling.
+</span><span class="attribute">#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
+</span><span class="kw">pub enum </span>SchedulingStrategy {
+    <span class="doccomment">/// Prioritise allocating GameServers on Nodes with the most Allocated, and
+    /// then Ready GameServers to bin pack as many Allocated GameServers on a
+    /// single node.  This is most useful for dynamic Kubernetes clusters - such
+    /// as on Cloud Providers.
+    </span>Packed,
+    <span class="doccomment">/// prioritise allocating GameServers on Nodes with the least Allocated, and
+    /// then Ready GameServers to distribute Allocated GameServers across many
+    /// nodes. This is most useful for statically sized Kubernetes clusters -
+    /// such as on physical hardware.
+    </span>Distributed,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>, <span class="ident">JsonSchema</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Protocol</span> {
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;UDP&quot;</span>)]</span>
-    <span class="ident">Udp</span>,
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;TCP&quot;</span>)]</span>
-    <span class="ident">Tcp</span>,
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;TCPUDP&quot;</span>)]</span>
-    <span class="ident">UdpTcp</span>,
+<span class="attribute">#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
+</span><span class="kw">pub enum </span>Protocol {
+    <span class="attribute">#[serde(rename = <span class="string">&quot;UDP&quot;</span>)]
+    </span>Udp,
+    <span class="attribute">#[serde(rename = <span class="string">&quot;TCP&quot;</span>)]
+    </span>Tcp,
+    <span class="attribute">#[serde(rename = <span class="string">&quot;TCPUDP&quot;</span>)]
+    </span>UdpTcp,
 }
 
-<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">Protocol</span> {
-    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
-        <span class="ident"><span class="self">Self</span>::Udp</span>
+<span class="kw">impl </span>Default <span class="kw">for </span>Protocol {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::Udp
     }
 }
 
-<span class="doccomment">/// FleetSpec is the spec for a Fleet. More info: &lt;https://agones.dev/site/docs/reference/agones_crd_api_reference/#agones.dev/v1.Fleet&gt;</span>
-<span class="doccomment">/// Fleet CRD mostly autogenerated with &lt;https://github.com/kube-rs/kopium&gt;</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">CustomResource</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">JsonSchema</span>, <span class="ident">Default</span>)]</span>
-<span class="attribute">#[<span class="ident">kube</span>(
-    <span class="ident">group</span> <span class="op">=</span> <span class="string">&quot;agones.dev&quot;</span>,
-    <span class="ident">version</span> <span class="op">=</span> <span class="string">&quot;v1&quot;</span>,
-    <span class="ident">kind</span> <span class="op">=</span> <span class="string">&quot;Fleet&quot;</span>,
-    <span class="ident">plural</span> <span class="op">=</span> <span class="string">&quot;fleets&quot;</span>
-)]</span>
-<span class="attribute">#[<span class="ident">kube</span>(<span class="ident">namespaced</span>)]</span>
-<span class="attribute">#[<span class="ident">kube</span>(<span class="ident">status</span> <span class="op">=</span> <span class="string">&quot;FleetStatus&quot;</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">FleetSpec</span> {
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">skip_serializing_if</span> <span class="op">=</span> <span class="string">&quot;Option::is_none&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">replicas</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">i64</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">skip_serializing_if</span> <span class="op">=</span> <span class="string">&quot;Option::is_none&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">scheduling</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">FleetScheduling</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">skip_serializing_if</span> <span class="op">=</span> <span class="string">&quot;Option::is_none&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">strategy</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">FleetStrategy</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// GameServer is the data structure for a GameServer resource.</span>
-    <span class="kw">pub</span> <span class="ident">template</span>: <span class="ident">GameServerTemplateSpec</span>,
+<span class="doccomment">/// FleetSpec is the spec for a Fleet. More info: &lt;https://agones.dev/site/docs/reference/agones_crd_api_reference/#agones.dev/v1.Fleet&gt;
+/// Fleet CRD mostly autogenerated with &lt;https://github.com/kube-rs/kopium&gt;
+</span><span class="attribute">#[derive(CustomResource, Serialize, Deserialize, Clone, Debug, JsonSchema, Default)]
+#[kube(
+    group = <span class="string">&quot;agones.dev&quot;</span>,
+    version = <span class="string">&quot;v1&quot;</span>,
+    kind = <span class="string">&quot;Fleet&quot;</span>,
+    plural = <span class="string">&quot;fleets&quot;
+</span>)]
+#[kube(namespaced)]
+#[kube(status = <span class="string">&quot;FleetStatus&quot;</span>)]
+</span><span class="kw">pub struct </span>FleetSpec {
+    <span class="attribute">#[serde(default, skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>)]
+    </span><span class="kw">pub </span>replicas: <span class="prelude-ty">Option</span>&lt;i64&gt;,
+    <span class="attribute">#[serde(default, skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>)]
+    </span><span class="kw">pub </span>scheduling: <span class="prelude-ty">Option</span>&lt;FleetScheduling&gt;,
+    <span class="attribute">#[serde(default, skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>)]
+    </span><span class="kw">pub </span>strategy: <span class="prelude-ty">Option</span>&lt;FleetStrategy&gt;,
+    <span class="doccomment">/// GameServer is the data structure for a GameServer resource.
+    </span><span class="kw">pub </span>template: GameServerTemplateSpec,
 }
 
-<span class="doccomment">/// FleetSpec is the spec for a Fleet. More info: &lt;https://agones.dev/site/docs/reference/agones_crd_api_reference/#agones.dev/v1.Fleet&gt;</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">JsonSchema</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">FleetScheduling</span> {
-    <span class="ident">Packed</span>,
-    <span class="ident">Distributed</span>,
+<span class="doccomment">/// FleetSpec is the spec for a Fleet. More info: &lt;https://agones.dev/site/docs/reference/agones_crd_api_reference/#agones.dev/v1.Fleet&gt;
+</span><span class="attribute">#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
+</span><span class="kw">pub enum </span>FleetScheduling {
+    Packed,
+    Distributed,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">JsonSchema</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">FleetStrategy</span> {
-    <span class="attribute">#[<span class="ident">serde</span>(
-        <span class="ident">default</span>,
-        <span class="ident">skip_serializing_if</span> <span class="op">=</span> <span class="string">&quot;Option::is_none&quot;</span>,
-        <span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;rollingUpdate&quot;</span>
-    )]</span>
-    <span class="kw">pub</span> <span class="ident">rolling_update</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">FleetStrategyRollingUpdate</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">skip_serializing_if</span> <span class="op">=</span> <span class="string">&quot;Option::is_none&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">r#type</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">FleetStrategyType</span><span class="op">&gt;</span>,
+<span class="attribute">#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
+</span><span class="kw">pub struct </span>FleetStrategy {
+    <span class="attribute">#[serde(
+        default,
+        skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>,
+        rename = <span class="string">&quot;rollingUpdate&quot;
+    </span>)]
+    </span><span class="kw">pub </span>rolling_update: <span class="prelude-ty">Option</span>&lt;FleetStrategyRollingUpdate&gt;,
+    <span class="attribute">#[serde(default, skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>)]
+    </span><span class="kw">pub </span>r#type: <span class="prelude-ty">Option</span>&lt;FleetStrategyType&gt;,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">JsonSchema</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">FleetStrategyRollingUpdate</span> {
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">skip_serializing_if</span> <span class="op">=</span> <span class="string">&quot;Option::is_none&quot;</span>, <span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;maxSurge&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">max_surge</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">IntOrString</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">serde</span>(
-        <span class="ident">default</span>,
-        <span class="ident">skip_serializing_if</span> <span class="op">=</span> <span class="string">&quot;Option::is_none&quot;</span>,
-        <span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;maxUnavailable&quot;</span>
-    )]</span>
-    <span class="kw">pub</span> <span class="ident">max_unavailable</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">IntOrString</span><span class="op">&gt;</span>,
+<span class="attribute">#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
+</span><span class="kw">pub struct </span>FleetStrategyRollingUpdate {
+    <span class="attribute">#[serde(default, skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>, rename = <span class="string">&quot;maxSurge&quot;</span>)]
+    </span><span class="kw">pub </span>max_surge: <span class="prelude-ty">Option</span>&lt;IntOrString&gt;,
+    <span class="attribute">#[serde(
+        default,
+        skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>,
+        rename = <span class="string">&quot;maxUnavailable&quot;
+    </span>)]
+    </span><span class="kw">pub </span>max_unavailable: <span class="prelude-ty">Option</span>&lt;IntOrString&gt;,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">JsonSchema</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">FleetStrategyType</span> {
-    <span class="ident">Recreate</span>,
-    <span class="ident">RollingUpdate</span>,
+<span class="attribute">#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
+</span><span class="kw">pub enum </span>FleetStrategyType {
+    Recreate,
+    RollingUpdate,
 }
 
-<span class="doccomment">/// GameServer is the data structure for a GameServer resource.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">JsonSchema</span>, <span class="ident">Default</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GameServerTemplateSpec</span> {
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">skip_serializing_if</span> <span class="op">=</span> <span class="string">&quot;Option::is_none&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">metadata</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ObjectMeta</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// GameServerSpec is the spec for a GameServer resource. More info: &lt;https://agones.dev/site/docs/reference/agones_crd_api_reference/#agones.dev/v1.GameServer&gt;</span>
-    <span class="kw">pub</span> <span class="ident">spec</span>: <span class="ident">GameServerSpec</span>,
+<span class="doccomment">/// GameServer is the data structure for a GameServer resource.
+</span><span class="attribute">#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema, Default)]
+</span><span class="kw">pub struct </span>GameServerTemplateSpec {
+    <span class="attribute">#[serde(default, skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>)]
+    </span><span class="kw">pub </span>metadata: <span class="prelude-ty">Option</span>&lt;ObjectMeta&gt;,
+    <span class="doccomment">/// GameServerSpec is the spec for a GameServer resource. More info: &lt;https://agones.dev/site/docs/reference/agones_crd_api_reference/#agones.dev/v1.GameServer&gt;
+    </span><span class="kw">pub </span>spec: GameServerSpec,
 }
 
-<span class="doccomment">/// FleetStatus is the status of a Fleet. More info: &lt;https://agones.dev/site/docs/reference/agones_crd_api_reference/#agones.dev/v1.Fleet&gt;</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">JsonSchema</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">FleetStatus</span> {
-    <span class="attribute">#[<span class="ident">serde</span>(
-        <span class="ident">default</span>,
-        <span class="ident">skip_serializing_if</span> <span class="op">=</span> <span class="string">&quot;Option::is_none&quot;</span>,
-        <span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;allocatedReplicas&quot;</span>
-    )]</span>
-    <span class="kw">pub</span> <span class="ident">allocated_replicas</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">i64</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">serde</span>(
-        <span class="ident">default</span>,
-        <span class="ident">skip_serializing_if</span> <span class="op">=</span> <span class="string">&quot;Option::is_none&quot;</span>,
-        <span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;readyReplicas&quot;</span>
-    )]</span>
-    <span class="kw">pub</span> <span class="ident">ready_replicas</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">i64</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">skip_serializing_if</span> <span class="op">=</span> <span class="string">&quot;Option::is_none&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">replicas</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">i64</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">serde</span>(
-        <span class="ident">default</span>,
-        <span class="ident">skip_serializing_if</span> <span class="op">=</span> <span class="string">&quot;Option::is_none&quot;</span>,
-        <span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;reservedReplicas&quot;</span>
-    )]</span>
-    <span class="kw">pub</span> <span class="ident">reserved_replicas</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">i64</span><span class="op">&gt;</span>,
+<span class="doccomment">/// FleetStatus is the status of a Fleet. More info: &lt;https://agones.dev/site/docs/reference/agones_crd_api_reference/#agones.dev/v1.Fleet&gt;
+</span><span class="attribute">#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
+</span><span class="kw">pub struct </span>FleetStatus {
+    <span class="attribute">#[serde(
+        default,
+        skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>,
+        rename = <span class="string">&quot;allocatedReplicas&quot;
+    </span>)]
+    </span><span class="kw">pub </span>allocated_replicas: <span class="prelude-ty">Option</span>&lt;i64&gt;,
+    <span class="attribute">#[serde(
+        default,
+        skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>,
+        rename = <span class="string">&quot;readyReplicas&quot;
+    </span>)]
+    </span><span class="kw">pub </span>ready_replicas: <span class="prelude-ty">Option</span>&lt;i64&gt;,
+    <span class="attribute">#[serde(default, skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>)]
+    </span><span class="kw">pub </span>replicas: <span class="prelude-ty">Option</span>&lt;i64&gt;,
+    <span class="attribute">#[serde(
+        default,
+        skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>,
+        rename = <span class="string">&quot;reservedReplicas&quot;
+    </span>)]
+    </span><span class="kw">pub </span>reserved_replicas: <span class="prelude-ty">Option</span>&lt;i64&gt;,
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

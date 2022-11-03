@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/ttl_map.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>ttl_map.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../quilkin/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/ttl_map.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>ttl_map.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../quilkin/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -685,303 +685,303 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */</span>
+ */
 
-<span class="kw">use</span> <span class="ident">dashmap::mapref::entry::Entry</span> <span class="kw">as</span> <span class="ident">DashMapEntry</span>;
-<span class="kw">use</span> <span class="ident">dashmap::mapref::one</span>::{<span class="ident">Ref</span>, <span class="ident">RefMut</span>};
-<span class="kw">use</span> <span class="ident">dashmap::DashMap</span>;
-<span class="kw">use</span> <span class="ident">tracing::warn</span>;
+</span><span class="kw">use </span>dashmap::mapref::entry::Entry <span class="kw">as </span>DashMapEntry;
+<span class="kw">use </span>dashmap::mapref::one::{Ref, RefMut};
+<span class="kw">use </span>dashmap::DashMap;
+<span class="kw">use </span>tracing::warn;
 
-<span class="kw">use</span> <span class="ident">std::hash::Hash</span>;
-<span class="kw">use</span> <span class="ident">std::sync::atomic</span>::{<span class="ident">AtomicU64</span>, <span class="ident">Ordering</span>};
-<span class="kw">use</span> <span class="ident">std::sync::Arc</span>;
-<span class="kw">use</span> <span class="ident">std::time::Duration</span>;
-<span class="kw">use</span> <span class="ident">tokio::sync::oneshot</span>::{<span class="ident">channel</span>, <span class="ident">Receiver</span>, <span class="ident">Sender</span>};
+<span class="kw">use </span>std::hash::Hash;
+<span class="kw">use </span>std::sync::atomic::{AtomicU64, Ordering};
+<span class="kw">use </span>std::sync::Arc;
+<span class="kw">use </span>std::time::Duration;
+<span class="kw">use </span>tokio::sync::oneshot::{channel, Receiver, Sender};
 
-<span class="comment">// Clippy isn&#39;t recognizing that these imports are used conditionally.</span>
-<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">unused_imports</span>)]</span>
-<span class="kw">use</span> <span class="ident">std::time</span>::{<span class="ident">SystemTime</span>, <span class="ident">UNIX_EPOCH</span>};
-<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">unused_imports</span>)]</span>
-<span class="kw">use</span> <span class="ident">tokio::time::Instant</span>;
+<span class="comment">// Clippy isn&#39;t recognizing that these imports are used conditionally.
+</span><span class="attribute">#[allow(unused_imports)]
+</span><span class="kw">use </span>std::time::{SystemTime, UNIX_EPOCH};
+<span class="attribute">#[allow(unused_imports)]
+</span><span class="kw">use </span>tokio::time::Instant;
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::endpoint::EndpointAddress</span>;
+<span class="kw">use </span><span class="kw">crate</span>::endpoint::EndpointAddress;
 
-<span class="doccomment">/// A wrapper around the value of an entry in the map.</span>
-<span class="doccomment">/// It contains the value&#39;s ttl.</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span> <span class="ident">value</span>: <span class="ident">V</span>,
-    <span class="ident">expires_at</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">AtomicU64</span><span class="op">&gt;</span>,
-    <span class="ident">clock</span>: <span class="ident">Clock</span>,
+<span class="doccomment">/// A wrapper around the value of an entry in the map.
+/// It contains the value&#39;s ttl.
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>Value&lt;V&gt; {
+    <span class="kw">pub </span>value: V,
+    expires_at: Arc&lt;AtomicU64&gt;,
+    clock: Clock,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">value</span>: <span class="ident">V</span>, <span class="ident">ttl</span>: <span class="ident">Duration</span>, <span class="ident">clock</span>: <span class="ident">Clock</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">Value</span> {
-            <span class="ident">value</span>,
-            <span class="ident">expires_at</span>: <span class="ident">Arc::new</span>(<span class="ident">AtomicU64::new</span>(<span class="number">0</span>)),
-            <span class="ident">clock</span>,
+<span class="kw">impl</span>&lt;V&gt; Value&lt;V&gt; {
+    <span class="kw">fn </span>new(value: V, ttl: Duration, clock: Clock) -&gt; Value&lt;V&gt; {
+        <span class="kw">let </span>value = Value {
+            value,
+            expires_at: Arc::new(AtomicU64::new(<span class="number">0</span>)),
+            clock,
         };
-        <span class="ident">value</span>.<span class="ident">update_expiration</span>(<span class="ident">ttl</span>);
-        <span class="ident">value</span>
+        value.update_expiration(ttl);
+        value
     }
 
-    <span class="doccomment">/// Get the expiration time for this value. The returned value is the</span>
-    <span class="doccomment">/// number of seconds relative to some reference point (e.g UNIX_EPOCH), based</span>
-    <span class="doccomment">/// on the clock being used.</span>
-    <span class="kw">fn</span> <span class="ident">expiration_secs</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">u64</span> {
-        <span class="self">self</span>.<span class="ident">expires_at</span>.<span class="ident">load</span>(<span class="ident">Ordering::Relaxed</span>)
+    <span class="doccomment">/// Get the expiration time for this value. The returned value is the
+    /// number of seconds relative to some reference point (e.g UNIX_EPOCH), based
+    /// on the clock being used.
+    </span><span class="kw">fn </span>expiration_secs(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
+        <span class="self">self</span>.expires_at.load(Ordering::Relaxed)
     }
 
-    <span class="doccomment">/// Update the value&#39;s expiration time to (now + TTL).</span>
-    <span class="kw">fn</span> <span class="ident">update_expiration</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ttl</span>: <span class="ident">Duration</span>) {
-        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">clock</span>.<span class="ident">compute_expiration_secs</span>(<span class="ident">ttl</span>) {
-            <span class="prelude-val">Ok</span>(<span class="ident">new_expiration_time</span>) =&gt; {
-                <span class="self">self</span>.<span class="ident">expires_at</span>
-                    .<span class="ident">store</span>(<span class="ident">new_expiration_time</span>, <span class="ident">Ordering::Relaxed</span>);
+    <span class="doccomment">/// Update the value&#39;s expiration time to (now + TTL).
+    </span><span class="kw">fn </span>update_expiration(<span class="kw-2">&amp;</span><span class="self">self</span>, ttl: Duration) {
+        <span class="kw">match </span><span class="self">self</span>.clock.compute_expiration_secs(ttl) {
+            <span class="prelude-val">Ok</span>(new_expiration_time) =&gt; {
+                <span class="self">self</span>.expires_at
+                    .store(new_expiration_time, Ordering::Relaxed);
             }
-            <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; {
-                <span class="macro">warn!</span>(<span class="string">&quot;failed to increment key expiration: {}&quot;</span>, <span class="ident">err</span>);
+            <span class="prelude-val">Err</span>(err) =&gt; {
+                <span class="macro">warn!</span>(<span class="string">&quot;failed to increment key expiration: {}&quot;</span>, err);
             }
         }
     }
 }
 
-<span class="doccomment">/// Map contains the hash map implementation.</span>
-<span class="kw">struct</span> <span class="ident">Map</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span> {
-    <span class="ident">inner</span>: <span class="ident">DashMap</span><span class="op">&lt;</span><span class="ident">EndpointAddress</span>, <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">ttl</span>: <span class="ident">Duration</span>,
-    <span class="ident">clock</span>: <span class="ident">Clock</span>,
-    <span class="ident">shutdown_tx</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Sender</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span>,
+<span class="doccomment">/// Map contains the hash map implementation.
+</span><span class="kw">struct </span>Map&lt;V&gt; {
+    inner: DashMap&lt;EndpointAddress, Value&lt;V&gt;&gt;,
+    ttl: Duration,
+    clock: Clock,
+    shutdown_tx: <span class="prelude-ty">Option</span>&lt;Sender&lt;()&gt;&gt;,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">Map</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) {
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">shutdown_tx</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">shutdown_tx</span>.<span class="ident">take</span>() {
-            <span class="ident">shutdown_tx</span>.<span class="ident">send</span>(()).<span class="ident">ok</span>();
+<span class="kw">impl</span>&lt;V&gt; Drop <span class="kw">for </span>Map&lt;V&gt; {
+    <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(shutdown_tx) = <span class="self">self</span>.shutdown_tx.take() {
+            shutdown_tx.send(()).ok();
         }
     }
 }
 
-<span class="doccomment">/// TtlMap is a key value hash map where entries are associated with a TTL.</span>
-<span class="doccomment">/// When the TTL for an entry elapses, the entry is removed from the map.</span>
-<span class="doccomment">/// The TTL is reset each time the entry is (re)inserted or read via [`TtlMap::get`],</span>
-<span class="doccomment">/// [`TtlMap::get_mut`] functions, or via the [`TtlMap::entry`] interface.</span>
-<span class="doccomment">/// During tests, the internal clock implementation is driven by [`tokio::time`] so</span>
-<span class="doccomment">/// functions like [`tokio::time::pause`] and [`tokio::time::advance`] can be used.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">TtlMap</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span>(<span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Map</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span><span class="op">&gt;</span>);
+<span class="doccomment">/// TtlMap is a key value hash map where entries are associated with a TTL.
+/// When the TTL for an entry elapses, the entry is removed from the map.
+/// The TTL is reset each time the entry is (re)inserted or read via [`TtlMap::get`],
+/// [`TtlMap::get_mut`] functions, or via the [`TtlMap::entry`] interface.
+/// During tests, the internal clock implementation is driven by [`tokio::time`] so
+/// functions like [`tokio::time::pause`] and [`tokio::time::advance`] can be used.
+</span><span class="attribute">#[derive(Clone)]
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>TtlMap&lt;V&gt;(Arc&lt;Map&lt;V&gt;&gt;);
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span> <span class="ident">TtlMap</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">V</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> <span class="op">+</span> <span class="lifetime">&#39;static</span>,
+<span class="kw">impl</span>&lt;V&gt; TtlMap&lt;V&gt;
+<span class="kw">where
+    </span>V: Send + Sync + <span class="lifetime">&#39;static</span>,
 {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">ttl</span>: <span class="ident">Duration</span>, <span class="ident">poll_interval</span>: <span class="ident">Duration</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident"><span class="self">Self</span>::initialize</span>(<span class="ident">DashMap::new</span>(), <span class="ident">ttl</span>, <span class="ident">poll_interval</span>)
+    <span class="kw">pub fn </span>new(ttl: Duration, poll_interval: Duration) -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::initialize(DashMap::new(), ttl, poll_interval)
     }
 
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_capacity</span>(<span class="ident">ttl</span>: <span class="ident">Duration</span>, <span class="ident">poll_interval</span>: <span class="ident">Duration</span>, <span class="ident">capacity</span>: <span class="ident">usize</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident"><span class="self">Self</span>::initialize</span>(<span class="ident">DashMap::with_capacity</span>(<span class="ident">capacity</span>), <span class="ident">ttl</span>, <span class="ident">poll_interval</span>)
+    <span class="attribute">#[allow(dead_code)]
+    </span><span class="kw">pub fn </span>with_capacity(ttl: Duration, poll_interval: Duration, capacity: usize) -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::initialize(DashMap::with_capacity(capacity), ttl, poll_interval)
     }
 
-    <span class="kw">fn</span> <span class="ident">initialize</span>(
-        <span class="ident">inner</span>: <span class="ident">DashMap</span><span class="op">&lt;</span><span class="ident">EndpointAddress</span>, <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-        <span class="ident">ttl</span>: <span class="ident">Duration</span>,
-        <span class="ident">poll_interval</span>: <span class="ident">Duration</span>,
-    ) -&gt; <span class="self">Self</span> {
-        <span class="kw">let</span> (<span class="ident">shutdown_tx</span>, <span class="ident">shutdown_rx</span>) <span class="op">=</span> <span class="ident">channel</span>();
-        <span class="kw">let</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">TtlMap</span>(<span class="ident">Arc::new</span>(<span class="ident">Map</span> {
-            <span class="ident">inner</span>,
-            <span class="ident">shutdown_tx</span>: <span class="prelude-val">Some</span>(<span class="ident">shutdown_tx</span>),
-            <span class="ident">ttl</span>,
-            <span class="ident">clock</span>: <span class="ident">Clock::new</span>(),
+    <span class="kw">fn </span>initialize(
+        inner: DashMap&lt;EndpointAddress, Value&lt;V&gt;&gt;,
+        ttl: Duration,
+        poll_interval: Duration,
+    ) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span>(shutdown_tx, shutdown_rx) = channel();
+        <span class="kw">let </span>map = TtlMap(Arc::new(Map {
+            inner,
+            shutdown_tx: <span class="prelude-val">Some</span>(shutdown_tx),
+            ttl,
+            clock: Clock::new(),
         }));
-        <span class="ident">spawn_cleanup_task</span>(
-            <span class="ident">map</span>.<span class="number">0</span>.<span class="ident">clone</span>(),
-            <span class="ident">poll_interval</span>,
-            <span class="ident">map</span>.<span class="number">0</span>.<span class="ident">clock</span>.<span class="ident">clone</span>(),
-            <span class="ident">shutdown_rx</span>,
+        spawn_cleanup_task(
+            map.<span class="number">0</span>.clone(),
+            poll_interval,
+            map.<span class="number">0</span>.clock.clone(),
+            shutdown_rx,
         );
-        <span class="ident">map</span>
+        map
     }
 
-    <span class="doccomment">/// Returns the current time as the number of seconds relative to some initial</span>
-    <span class="doccomment">/// reference point (e.g UNIX_EPOCH), based on the clock implementation being used.</span>
-    <span class="doccomment">/// In tests, this will be driven by [`tokio::time`]</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">now_relative_secs</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">u64</span> {
-        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">clock</span>.<span class="ident">now_relative_secs</span>().<span class="ident">unwrap_or_default</span>()
+    <span class="doccomment">/// Returns the current time as the number of seconds relative to some initial
+    /// reference point (e.g UNIX_EPOCH), based on the clock implementation being used.
+    /// In tests, this will be driven by [`tokio::time`]
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>now_relative_secs(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
+        <span class="self">self</span>.<span class="number">0</span>.clock.now_relative_secs().unwrap_or_default()
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span> <span class="ident">TtlMap</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">V</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span>,
+<span class="kw">impl</span>&lt;V&gt; TtlMap&lt;V&gt;
+<span class="kw">where
+    </span>V: Send + Sync,
 {
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
-    <span class="doccomment">/// Returns a reference to value corresponding to key.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">key</span>: <span class="kw-2">&amp;</span><span class="ident">EndpointAddress</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Ref</span><span class="op">&lt;</span><span class="ident">EndpointAddress</span>, <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="self">self</span>.<span class="number">0</span>.<span class="ident">inner</span>.<span class="ident">get</span>(<span class="ident">key</span>);
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="kw-2">ref</span> <span class="ident">value</span>) <span class="op">=</span> <span class="ident">value</span> {
-            <span class="ident">value</span>.<span class="ident">update_expiration</span>(<span class="self">self</span>.<span class="number">0</span>.<span class="ident">ttl</span>)
+    <span class="attribute">#[allow(dead_code)]
+    </span><span class="doccomment">/// Returns a reference to value corresponding to key.
+    </span><span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>EndpointAddress) -&gt; <span class="prelude-ty">Option</span>&lt;Ref&lt;EndpointAddress, Value&lt;V&gt;&gt;&gt; {
+        <span class="kw">let </span>value = <span class="self">self</span>.<span class="number">0</span>.inner.get(key);
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>value) = value {
+            value.update_expiration(<span class="self">self</span>.<span class="number">0</span>.ttl)
         }
 
-        <span class="ident">value</span>
+        value
     }
 
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
-    <span class="doccomment">/// Returns a mutable reference to value corresponding to key.</span>
-    <span class="doccomment">/// The value will be reset to expire at the configured TTL after the time of retrieval.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">key</span>: <span class="kw-2">&amp;</span><span class="ident">EndpointAddress</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">RefMut</span><span class="op">&lt;</span><span class="ident">EndpointAddress</span>, <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="self">self</span>.<span class="number">0</span>.<span class="ident">inner</span>.<span class="ident">get_mut</span>(<span class="ident">key</span>);
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="kw-2">ref</span> <span class="ident">value</span>) <span class="op">=</span> <span class="ident">value</span> {
-            <span class="ident">value</span>.<span class="ident">update_expiration</span>(<span class="self">self</span>.<span class="number">0</span>.<span class="ident">ttl</span>);
+    <span class="attribute">#[allow(dead_code)]
+    </span><span class="doccomment">/// Returns a mutable reference to value corresponding to key.
+    /// The value will be reset to expire at the configured TTL after the time of retrieval.
+    </span><span class="kw">pub fn </span>get_mut(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>EndpointAddress) -&gt; <span class="prelude-ty">Option</span>&lt;RefMut&lt;EndpointAddress, Value&lt;V&gt;&gt;&gt; {
+        <span class="kw">let </span>value = <span class="self">self</span>.<span class="number">0</span>.inner.get_mut(key);
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>value) = value {
+            value.update_expiration(<span class="self">self</span>.<span class="number">0</span>.ttl);
         }
 
-        <span class="ident">value</span>
+        value
     }
 
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
-    <span class="doccomment">/// Returns the number of entries in the map.</span>
-    <span class="doccomment">/// The value will be reset to expire at the configured TTL after the time of retrieval.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">len</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">usize</span> {
-        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">inner</span>.<span class="ident">len</span>()
+    <span class="attribute">#[allow(dead_code)]
+    </span><span class="doccomment">/// Returns the number of entries in the map.
+    /// The value will be reset to expire at the configured TTL after the time of retrieval.
+    </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+        <span class="self">self</span>.<span class="number">0</span>.inner.len()
     }
 
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
-    <span class="doccomment">/// Returns true if the map contains a value for the specified key.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">contains_key</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">key</span>: <span class="kw-2">&amp;</span><span class="ident">EndpointAddress</span>) -&gt; <span class="ident">bool</span> {
-        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">inner</span>.<span class="ident">contains_key</span>(<span class="ident">key</span>)
+    <span class="attribute">#[allow(dead_code)]
+    </span><span class="doccomment">/// Returns true if the map contains a value for the specified key.
+    </span><span class="kw">pub fn </span>contains_key(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>EndpointAddress) -&gt; bool {
+        <span class="self">self</span>.<span class="number">0</span>.inner.contains_key(key)
     }
 
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
-    <span class="doccomment">/// Inserts a key-value pair into the map.</span>
-    <span class="doccomment">/// The value will be set to expire at the configured TTL after the time of insertion.</span>
-    <span class="doccomment">/// If a previous value existed for this key, that value is returned.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">key</span>: <span class="ident">EndpointAddress</span>, <span class="ident">value</span>: <span class="ident">V</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="number">0</span>
-            .<span class="ident">inner</span>
-            .<span class="ident">insert</span>(<span class="ident">key</span>, <span class="ident">Value::new</span>(<span class="ident">value</span>, <span class="self">self</span>.<span class="number">0</span>.<span class="ident">ttl</span>, <span class="self">self</span>.<span class="number">0</span>.<span class="ident">clock</span>.<span class="ident">clone</span>()))
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">value</span><span class="op">|</span> <span class="ident">value</span>.<span class="ident">value</span>)
+    <span class="attribute">#[allow(dead_code)]
+    </span><span class="doccomment">/// Inserts a key-value pair into the map.
+    /// The value will be set to expire at the configured TTL after the time of insertion.
+    /// If a previous value existed for this key, that value is returned.
+    </span><span class="kw">pub fn </span>insert(<span class="kw-2">&amp;</span><span class="self">self</span>, key: EndpointAddress, value: V) -&gt; <span class="prelude-ty">Option</span>&lt;V&gt; {
+        <span class="self">self</span>.<span class="number">0
+            </span>.inner
+            .insert(key, Value::new(value, <span class="self">self</span>.<span class="number">0</span>.ttl, <span class="self">self</span>.<span class="number">0</span>.clock.clone()))
+            .map(|value| value.value)
     }
 
-    <span class="doccomment">/// Returns an API for in-place updates of the specified key-value pair.</span>
-    <span class="doccomment">/// Note: This acquires a write lock on the map&#39;s shard that corresponds</span>
-    <span class="doccomment">/// to the entry.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">entry</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">key</span>: <span class="ident">EndpointAddress</span>) -&gt; <span class="ident">Entry</span><span class="op">&lt;</span><span class="ident">EndpointAddress</span>, <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">ttl</span> <span class="op">=</span> <span class="self">self</span>.<span class="number">0</span>.<span class="ident">ttl</span>;
-        <span class="kw">match</span> <span class="self">self</span>.<span class="number">0</span>.<span class="ident">inner</span>.<span class="ident">entry</span>(<span class="ident">key</span>) {
-            <span class="ident">inner</span> @ <span class="ident">DashMapEntry::Occupied</span>(<span class="kw">_</span>) =&gt; <span class="ident">Entry::Occupied</span>(<span class="ident">OccupiedEntry</span> {
-                <span class="ident">inner</span>,
-                <span class="ident">ttl</span>,
-                <span class="ident">clock</span>: <span class="self">self</span>.<span class="number">0</span>.<span class="ident">clock</span>.<span class="ident">clone</span>(),
+    <span class="doccomment">/// Returns an API for in-place updates of the specified key-value pair.
+    /// Note: This acquires a write lock on the map&#39;s shard that corresponds
+    /// to the entry.
+    </span><span class="kw">pub fn </span>entry(<span class="kw-2">&amp;</span><span class="self">self</span>, key: EndpointAddress) -&gt; Entry&lt;EndpointAddress, Value&lt;V&gt;&gt; {
+        <span class="kw">let </span>ttl = <span class="self">self</span>.<span class="number">0</span>.ttl;
+        <span class="kw">match </span><span class="self">self</span>.<span class="number">0</span>.inner.entry(key) {
+            inner @ DashMapEntry::Occupied(<span class="kw">_</span>) =&gt; Entry::Occupied(OccupiedEntry {
+                inner,
+                ttl,
+                clock: <span class="self">self</span>.<span class="number">0</span>.clock.clone(),
             }),
-            <span class="ident">inner</span> @ <span class="ident">DashMapEntry::Vacant</span>(<span class="kw">_</span>) =&gt; <span class="ident">Entry::Vacant</span>(<span class="ident">VacantEntry</span> {
-                <span class="ident">inner</span>,
-                <span class="ident">ttl</span>,
-                <span class="ident">clock</span>: <span class="self">self</span>.<span class="number">0</span>.<span class="ident">clock</span>.<span class="ident">clone</span>(),
+            inner @ DashMapEntry::Vacant(<span class="kw">_</span>) =&gt; Entry::Vacant(VacantEntry {
+                inner,
+                ttl,
+                clock: <span class="self">self</span>.<span class="number">0</span>.clock.clone(),
             }),
         }
     }
 }
 
-<span class="doccomment">/// A view into an occupied entry in the map.</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">OccupiedEntry</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">K</span>, <span class="ident">V</span><span class="op">&gt;</span> {
-    <span class="ident">inner</span>: <span class="ident">DashMapEntry</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">K</span>, <span class="ident">V</span><span class="op">&gt;</span>,
-    <span class="ident">ttl</span>: <span class="ident">Duration</span>,
-    <span class="ident">clock</span>: <span class="ident">Clock</span>,
+<span class="doccomment">/// A view into an occupied entry in the map.
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>OccupiedEntry&lt;<span class="lifetime">&#39;a</span>, K, V&gt; {
+    inner: DashMapEntry&lt;<span class="lifetime">&#39;a</span>, K, V&gt;,
+    ttl: Duration,
+    clock: Clock,
 }
 
-<span class="doccomment">/// A view into a vacant entry in the map.</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">VacantEntry</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">K</span>, <span class="ident">V</span><span class="op">&gt;</span> {
-    <span class="ident">inner</span>: <span class="ident">DashMapEntry</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">K</span>, <span class="ident">V</span><span class="op">&gt;</span>,
-    <span class="ident">ttl</span>: <span class="ident">Duration</span>,
-    <span class="ident">clock</span>: <span class="ident">Clock</span>,
+<span class="doccomment">/// A view into a vacant entry in the map.
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>VacantEntry&lt;<span class="lifetime">&#39;a</span>, K, V&gt; {
+    inner: DashMapEntry&lt;<span class="lifetime">&#39;a</span>, K, V&gt;,
+    ttl: Duration,
+    clock: Clock,
 }
 
-<span class="doccomment">/// A view into an entry in the map.</span>
-<span class="doccomment">/// It may either be [`VacantEntry`] or [`OccupiedEntry`]</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">enum</span> <span class="ident">Entry</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">K</span>, <span class="ident">V</span><span class="op">&gt;</span> {
-    <span class="ident">Occupied</span>(<span class="ident">OccupiedEntry</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">K</span>, <span class="ident">V</span><span class="op">&gt;</span>),
-    <span class="ident">Vacant</span>(<span class="ident">VacantEntry</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">K</span>, <span class="ident">V</span><span class="op">&gt;</span>),
+<span class="doccomment">/// A view into an entry in the map.
+/// It may either be [`VacantEntry`] or [`OccupiedEntry`]
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">enum </span>Entry&lt;<span class="lifetime">&#39;a</span>, K, V&gt; {
+    Occupied(OccupiedEntry&lt;<span class="lifetime">&#39;a</span>, K, V&gt;),
+    Vacant(VacantEntry&lt;<span class="lifetime">&#39;a</span>, K, V&gt;),
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">K</span>, <span class="ident">V</span><span class="op">&gt;</span> <span class="ident">OccupiedEntry</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">K</span>, <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">K</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Hash</span>,
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, K, V&gt; OccupiedEntry&lt;<span class="lifetime">&#39;a</span>, K, Value&lt;V&gt;&gt;
+<span class="kw">where
+    </span>K: Eq + Hash,
 {
-    <span class="doccomment">/// Returns a reference to the entry&#39;s value.</span>
-    <span class="doccomment">/// The value will be reset to expire at the configured TTL after the time of retrieval.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span> {
-        <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">inner</span> {
-            <span class="ident">DashMapEntry::Occupied</span>(<span class="ident">entry</span>) =&gt; {
-                <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">entry</span>.<span class="ident">get</span>();
-                <span class="ident">value</span>.<span class="ident">update_expiration</span>(<span class="self">self</span>.<span class="ident">ttl</span>);
-                <span class="ident">value</span>
+    <span class="doccomment">/// Returns a reference to the entry&#39;s value.
+    /// The value will be reset to expire at the configured TTL after the time of retrieval.
+    </span><span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Value&lt;V&gt; {
+        <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.inner {
+            DashMapEntry::Occupied(entry) =&gt; {
+                <span class="kw">let </span>value = entry.get();
+                value.update_expiration(<span class="self">self</span>.ttl);
+                value
             }
-            <span class="kw">_</span> =&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;BUG: entry type should be occupied&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;BUG: entry type should be occupied&quot;</span>),
         }
     }
 
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
-    <span class="doccomment">/// Returns a mutable reference to the entry&#39;s value.</span>
-    <span class="doccomment">/// The value will be reset to expire at the configured TTL after the time of retrieval.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span> {
-        <span class="kw">match</span> <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">inner</span> {
-            <span class="ident">DashMapEntry::Occupied</span>(<span class="ident">entry</span>) =&gt; {
-                <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">entry</span>.<span class="ident">get_mut</span>();
-                <span class="ident">value</span>.<span class="ident">update_expiration</span>(<span class="self">self</span>.<span class="ident">ttl</span>);
-                <span class="ident">value</span>
+    <span class="attribute">#[allow(dead_code)]
+    </span><span class="doccomment">/// Returns a mutable reference to the entry&#39;s value.
+    /// The value will be reset to expire at the configured TTL after the time of retrieval.
+    </span><span class="kw">pub fn </span>get_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>Value&lt;V&gt; {
+        <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.inner {
+            DashMapEntry::Occupied(entry) =&gt; {
+                <span class="kw">let </span>value = entry.get_mut();
+                value.update_expiration(<span class="self">self</span>.ttl);
+                value
             }
-            <span class="kw">_</span> =&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;BUG: entry type should be occupied&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;BUG: entry type should be occupied&quot;</span>),
         }
     }
 
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
-    <span class="doccomment">/// Replace the entry&#39;s value with a new value, returning the old value.</span>
-    <span class="doccomment">/// The value will be set to expire at the configured TTL after the time of insertion.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">insert</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">value</span>: <span class="ident">V</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span> {
-        <span class="kw">match</span> <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">inner</span> {
-            <span class="ident">DashMapEntry::Occupied</span>(<span class="ident">entry</span>) =&gt; {
-                <span class="ident">entry</span>.<span class="ident">insert</span>(<span class="ident">Value::new</span>(<span class="ident">value</span>, <span class="self">self</span>.<span class="ident">ttl</span>, <span class="self">self</span>.<span class="ident">clock</span>.<span class="ident">clone</span>()))
+    <span class="attribute">#[allow(dead_code)]
+    </span><span class="doccomment">/// Replace the entry&#39;s value with a new value, returning the old value.
+    /// The value will be set to expire at the configured TTL after the time of insertion.
+    </span><span class="kw">pub fn </span>insert(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: V) -&gt; Value&lt;V&gt; {
+        <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.inner {
+            DashMapEntry::Occupied(entry) =&gt; {
+                entry.insert(Value::new(value, <span class="self">self</span>.ttl, <span class="self">self</span>.clock.clone()))
             }
-            <span class="kw">_</span> =&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;BUG: entry type should be occupied&quot;</span>),
-        }
-    }
-}
-
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">K</span>, <span class="ident">V</span><span class="op">&gt;</span> <span class="ident">VacantEntry</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">K</span>, <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">K</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Hash</span>,
-{
-    <span class="doccomment">/// Set an entry&#39;s value.</span>
-    <span class="doccomment">/// The value will be set to expire at the configured TTL after the time of insertion.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">insert</span>(<span class="self">self</span>, <span class="ident">value</span>: <span class="ident">V</span>) -&gt; <span class="ident">RefMut</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">K</span>, <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">inner</span> {
-            <span class="ident">DashMapEntry::Vacant</span>(<span class="ident">entry</span>) =&gt; {
-                <span class="ident">entry</span>.<span class="ident">insert</span>(<span class="ident">Value::new</span>(<span class="ident">value</span>, <span class="self">self</span>.<span class="ident">ttl</span>, <span class="self">self</span>.<span class="ident">clock</span>.<span class="ident">clone</span>()))
-            }
-            <span class="kw">_</span> =&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;BUG: entry type should be vacant&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;BUG: entry type should be occupied&quot;</span>),
         }
     }
 }
 
-<span class="kw">fn</span> <span class="ident">spawn_cleanup_task</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span>(
-    <span class="ident">map</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Map</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">poll_interval</span>: <span class="ident">Duration</span>,
-    <span class="ident">clock</span>: <span class="ident">Clock</span>,
-    <span class="kw-2">mut</span> <span class="ident">shutdown_rx</span>: <span class="ident">Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
-) <span class="kw">where</span>
-    <span class="ident">V</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> <span class="op">+</span> <span class="lifetime">&#39;static</span>,
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, K, V&gt; VacantEntry&lt;<span class="lifetime">&#39;a</span>, K, Value&lt;V&gt;&gt;
+<span class="kw">where
+    </span>K: Eq + Hash,
 {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">interval</span> <span class="op">=</span> <span class="ident">tokio::time::interval</span>(<span class="ident">poll_interval</span>);
+    <span class="doccomment">/// Set an entry&#39;s value.
+    /// The value will be set to expire at the configured TTL after the time of insertion.
+    </span><span class="kw">pub fn </span>insert(<span class="self">self</span>, value: V) -&gt; RefMut&lt;<span class="lifetime">&#39;a</span>, K, Value&lt;V&gt;&gt; {
+        <span class="kw">match </span><span class="self">self</span>.inner {
+            DashMapEntry::Vacant(entry) =&gt; {
+                entry.insert(Value::new(value, <span class="self">self</span>.ttl, <span class="self">self</span>.clock.clone()))
+            }
+            <span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;BUG: entry type should be vacant&quot;</span>),
+        }
+    }
+}
 
-    <span class="ident">tokio::spawn</span>(<span class="kw">async</span> <span class="kw">move</span> {
-        <span class="kw">loop</span> {
-            <span class="macro">tokio::select!</span> {
-                <span class="kw">_</span> <span class="op">=</span> <span class="ident">interval</span>.<span class="ident">tick</span>() =&gt; {
-                    <span class="ident">prune_entries</span>( <span class="kw-2">&amp;</span><span class="ident">map</span>, <span class="kw-2">&amp;</span><span class="ident">clock</span>).<span class="kw">await</span>;
+<span class="kw">fn </span>spawn_cleanup_task&lt;V&gt;(
+    map: Arc&lt;Map&lt;V&gt;&gt;,
+    poll_interval: Duration,
+    clock: Clock,
+    <span class="kw-2">mut </span>shutdown_rx: Receiver&lt;()&gt;,
+) <span class="kw">where
+    </span>V: Send + Sync + <span class="lifetime">&#39;static</span>,
+{
+    <span class="kw">let </span><span class="kw-2">mut </span>interval = tokio::time::interval(poll_interval);
+
+    tokio::spawn(<span class="kw">async move </span>{
+        <span class="kw">loop </span>{
+            <span class="macro">tokio::select! </span>{
+                <span class="kw">_ </span>= interval.tick() =&gt; {
+                    prune_entries( <span class="kw-2">&amp;</span>map, <span class="kw-2">&amp;</span>clock).<span class="kw">await</span>;
                 }
-                <span class="kw">_</span> <span class="op">=</span> <span class="kw-2">&amp;mut</span> <span class="ident">shutdown_rx</span> =&gt; {
+                <span class="kw">_ </span>= <span class="kw-2">&amp;mut </span>shutdown_rx =&gt; {
                     <span class="kw">return</span>;
                 }
             }
@@ -989,360 +989,360 @@
     });
 }
 
-<span class="kw">async</span> <span class="kw">fn</span> <span class="ident">prune_entries</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span>(<span class="ident">map</span>: <span class="kw-2">&amp;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Map</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">clock</span>: <span class="kw-2">&amp;</span><span class="ident">Clock</span>)
-<span class="kw">where</span>
-    <span class="ident">V</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> <span class="op">+</span> <span class="lifetime">&#39;static</span>,
+<span class="kw">async fn </span>prune_entries&lt;V&gt;(map: <span class="kw-2">&amp;</span>Arc&lt;Map&lt;V&gt;&gt;, clock: <span class="kw-2">&amp;</span>Clock)
+<span class="kw">where
+    </span>V: Send + Sync + <span class="lifetime">&#39;static</span>,
 {
-    <span class="kw">let</span> <span class="ident">now_secs</span> <span class="op">=</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">now_secs</span>) <span class="op">=</span> <span class="ident">clock</span>.<span class="ident">now_relative_secs</span>() {
-        <span class="ident">now_secs</span>
-    } <span class="kw">else</span> {
+    <span class="kw">let </span>now_secs = <span class="kw">if let </span><span class="prelude-val">Ok</span>(now_secs) = clock.now_relative_secs() {
+        now_secs
+    } <span class="kw">else </span>{
         <span class="macro">warn!</span>(<span class="string">&quot;Failed to get current time when pruning sessions&quot;</span>);
         <span class="kw">return</span>;
     };
 
-    <span class="comment">// Take a read lock first and check if there is at least 1 item to remove.</span>
-    <span class="kw">let</span> <span class="ident">has_expired_keys</span> <span class="op">=</span> <span class="ident">map</span>
-        .<span class="ident">inner</span>
-        .<span class="ident">iter</span>()
-        .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">entry</span><span class="op">|</span> <span class="ident">entry</span>.<span class="ident">value</span>().<span class="ident">expiration_secs</span>() <span class="op">&lt;</span><span class="op">=</span> <span class="ident">now_secs</span>)
-        .<span class="ident">take</span>(<span class="number">1</span>)
-        .<span class="ident">next</span>()
-        .<span class="ident">is_some</span>();
+    <span class="comment">// Take a read lock first and check if there is at least 1 item to remove.
+    </span><span class="kw">let </span>has_expired_keys = map
+        .inner
+        .iter()
+        .filter(|entry| entry.value().expiration_secs() &lt;= now_secs)
+        .take(<span class="number">1</span>)
+        .next()
+        .is_some();
 
-    <span class="comment">// If we have work to do then, take a write lock.</span>
-    <span class="kw">if</span> <span class="ident">has_expired_keys</span> {
-        <span class="comment">// Go over the whole map in case anything expired</span>
-        <span class="comment">// since acquiring the write lock.</span>
-        <span class="ident">map</span>.<span class="ident">inner</span>
-            .<span class="ident">retain</span>(<span class="op">|</span><span class="kw">_</span>, <span class="ident">value</span><span class="op">|</span> <span class="ident">value</span>.<span class="ident">expiration_secs</span>() <span class="op">&gt;</span> <span class="ident">now_secs</span>);
+    <span class="comment">// If we have work to do then, take a write lock.
+    </span><span class="kw">if </span>has_expired_keys {
+        <span class="comment">// Go over the whole map in case anything expired
+        // since acquiring the write lock.
+        </span>map.inner
+            .retain(|<span class="kw">_</span>, value| value.expiration_secs() &gt; now_secs);
     }
 }
 
-<span class="doccomment">/// A wrapper over functions to generate relative timestamps and ttl.</span>
-<span class="doccomment">/// During test it is driven via [`tokio::time`], otherwise it uses system time.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
-<span class="kw">struct</span> <span class="ident">Clock</span> {
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-    <span class="ident">base</span>: <span class="ident">Instant</span>,
+<span class="doccomment">/// A wrapper over functions to generate relative timestamps and ttl.
+/// During test it is driven via [`tokio::time`], otherwise it uses system time.
+</span><span class="attribute">#[derive(Clone)]
+</span><span class="kw">struct </span>Clock {
+    <span class="attribute">#[cfg(test)]
+    </span>base: Instant,
 }
 
-<span class="kw">impl</span> <span class="ident">Clock</span> {
-    <span class="kw">fn</span> <span class="ident">new</span>() -&gt; <span class="ident">Clock</span> {
-        <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">test</span>))]</span>
-        <span class="kw">return</span> <span class="ident">Clock</span> {};
+<span class="kw">impl </span>Clock {
+    <span class="kw">fn </span>new() -&gt; Clock {
+        <span class="attribute">#[cfg(not(test))]
+        </span><span class="kw">return </span>Clock {};
 
-        <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-        <span class="kw">return</span> <span class="ident">Clock</span> {
-            <span class="ident">base</span>: <span class="ident">Instant::now</span>(),
+        <span class="attribute">#[cfg(test)]
+        </span><span class="kw">return </span>Clock {
+            base: Instant::now(),
         };
     }
 
-    <span class="doccomment">/// Returns the current time in seconds, relative to some base time instant.</span>
-    <span class="doccomment">/// For non test cases, relative to UNIX_EPOCH, while during test, a random</span>
-    <span class="doccomment">/// point in the past is used.</span>
-    <span class="kw">fn</span> <span class="ident">now_relative_secs</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">u64</span>, <span class="ident">String</span><span class="op">&gt;</span> {
-        <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">test</span>))]</span>
-        <span class="kw">return</span> <span class="ident">SystemTime::now</span>()
-            .<span class="ident">duration_since</span>(<span class="ident">UNIX_EPOCH</span>)
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
-                <span class="ident">String::from</span>(<span class="string">&quot;duration_since was called with time later than the current time&quot;</span>)
+    <span class="doccomment">/// Returns the current time in seconds, relative to some base time instant.
+    /// For non test cases, relative to UNIX_EPOCH, while during test, a random
+    /// point in the past is used.
+    </span><span class="kw">fn </span>now_relative_secs(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;u64, String&gt; {
+        <span class="attribute">#[cfg(not(test))]
+        </span><span class="kw">return </span>SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_err(|<span class="kw">_</span>| {
+                String::from(<span class="string">&quot;duration_since was called with time later than the current time&quot;</span>)
             })
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">t</span><span class="op">|</span> <span class="ident">t</span>.<span class="ident">as_secs</span>());
+            .map(|t| t.as_secs());
 
-        <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-        <span class="kw">return</span> <span class="prelude-val">Ok</span>((<span class="ident">Instant::now</span>()).<span class="ident">duration_since</span>(<span class="self">self</span>.<span class="ident">base</span>).<span class="ident">as_secs</span>());
+        <span class="attribute">#[cfg(test)]
+        </span><span class="kw">return </span><span class="prelude-val">Ok</span>((Instant::now()).duration_since(<span class="self">self</span>.base).as_secs());
     }
 
-    <span class="doccomment">/// Returns the expiration time from now in seconds for the given ttl.</span>
-    <span class="kw">fn</span> <span class="ident">compute_expiration_secs</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ttl</span>: <span class="ident">Duration</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">u64</span>, <span class="ident">String</span><span class="op">&gt;</span> {
-        <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">test</span>))]</span>
-        <span class="kw">return</span> (<span class="ident">SystemTime::now</span>() <span class="op">+</span> <span class="ident">ttl</span>)
-            .<span class="ident">duration_since</span>(<span class="ident">UNIX_EPOCH</span>)
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
-                <span class="ident">String::from</span>(<span class="string">&quot;duration_since was called with time later than the current time&quot;</span>)
+    <span class="doccomment">/// Returns the expiration time from now in seconds for the given ttl.
+    </span><span class="kw">fn </span>compute_expiration_secs(<span class="kw-2">&amp;</span><span class="self">self</span>, ttl: Duration) -&gt; <span class="prelude-ty">Result</span>&lt;u64, String&gt; {
+        <span class="attribute">#[cfg(not(test))]
+        </span><span class="kw">return </span>(SystemTime::now() + ttl)
+            .duration_since(UNIX_EPOCH)
+            .map_err(|<span class="kw">_</span>| {
+                String::from(<span class="string">&quot;duration_since was called with time later than the current time&quot;</span>)
             })
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">t</span><span class="op">|</span> <span class="ident">t</span>.<span class="ident">as_secs</span>());
+            .map(|t| t.as_secs());
 
-        <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-        <span class="kw">return</span> <span class="prelude-val">Ok</span>((<span class="ident">Instant::now</span>() <span class="op">+</span> <span class="ident">ttl</span>).<span class="ident">duration_since</span>(<span class="self">self</span>.<span class="ident">base</span>).<span class="ident">as_secs</span>());
+        <span class="attribute">#[cfg(test)]
+        </span><span class="kw">return </span><span class="prelude-val">Ok</span>((Instant::now() + ttl).duration_since(<span class="self">self</span>.base).as_secs());
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
-    <span class="kw">use</span> <span class="ident">std::net::Ipv4Addr</span>;
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
+    <span class="kw">use super</span>::<span class="kw-2">*</span>;
+    <span class="kw">use </span>std::net::Ipv4Addr;
 
-    <span class="kw">use</span> <span class="ident">tokio::time</span>;
+    <span class="kw">use </span>tokio::time;
 
-    <span class="kw">fn</span> <span class="ident">address_pair</span>() -&gt; (<span class="ident">EndpointAddress</span>, <span class="ident">EndpointAddress</span>) {
+    <span class="kw">fn </span>address_pair() -&gt; (EndpointAddress, EndpointAddress) {
         (
-            (<span class="ident">Ipv4Addr::LOCALHOST</span>, <span class="number">8080</span>).<span class="ident">into</span>(),
-            ([<span class="number">127</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">2</span>], <span class="number">8080</span>).<span class="ident">into</span>(),
+            (Ipv4Addr::LOCALHOST, <span class="number">8080</span>).into(),
+            ([<span class="number">127</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">2</span>], <span class="number">8080</span>).into(),
         )
     }
 
-    <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">len</span>() {
-        <span class="kw">let</span> (<span class="ident">one</span>, <span class="ident">two</span>) <span class="op">=</span> <span class="ident">address_pair</span>();
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>len() {
+        <span class="kw">let </span>(one, two) = address_pair();
 
-        <span class="kw">let</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">TtlMap</span>::<span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="ident">::new</span>(<span class="ident">Duration::from_secs</span>(<span class="number">10</span>), <span class="ident">Duration::from_millis</span>(<span class="number">10</span>));
-        <span class="ident">map</span>.<span class="ident">insert</span>(<span class="ident">one</span>, <span class="number">1</span>);
-        <span class="macro">assert_eq!</span>(<span class="ident">map</span>.<span class="ident">len</span>(), <span class="number">1</span>);
-        <span class="ident">map</span>.<span class="ident">insert</span>(<span class="ident">two</span>, <span class="number">2</span>);
-        <span class="macro">assert_eq!</span>(<span class="ident">map</span>.<span class="ident">len</span>(), <span class="number">2</span>);
+        <span class="kw">let </span>map = TtlMap::&lt;usize&gt;::new(Duration::from_secs(<span class="number">10</span>), Duration::from_millis(<span class="number">10</span>));
+        map.insert(one, <span class="number">1</span>);
+        <span class="macro">assert_eq!</span>(map.len(), <span class="number">1</span>);
+        map.insert(two, <span class="number">2</span>);
+        <span class="macro">assert_eq!</span>(map.len(), <span class="number">2</span>);
     }
 
-    <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">insert_and_get</span>() {
-        <span class="kw">let</span> (<span class="ident">one</span>, <span class="ident">two</span>) <span class="op">=</span> <span class="ident">address_pair</span>();
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>insert_and_get() {
+        <span class="kw">let </span>(one, two) = address_pair();
 
-        <span class="kw">let</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">TtlMap</span>::<span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="ident">::new</span>(<span class="ident">Duration::from_secs</span>(<span class="number">10</span>), <span class="ident">Duration::from_millis</span>(<span class="number">10</span>));
-        <span class="ident">map</span>.<span class="ident">insert</span>(<span class="ident">one</span>.<span class="ident">clone</span>(), <span class="number">1</span>);
-        <span class="ident">map</span>.<span class="ident">insert</span>(<span class="ident">two</span>.<span class="ident">clone</span>(), <span class="number">2</span>);
+        <span class="kw">let </span>map = TtlMap::&lt;usize&gt;::new(Duration::from_secs(<span class="number">10</span>), Duration::from_millis(<span class="number">10</span>));
+        map.insert(one.clone(), <span class="number">1</span>);
+        map.insert(two.clone(), <span class="number">2</span>);
 
-        <span class="macro">assert_eq!</span>(<span class="ident">map</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">one</span>).<span class="ident">unwrap</span>().<span class="ident">value</span>, <span class="number">1</span>);
-        <span class="macro">assert_eq!</span>(<span class="ident">map</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">two</span>).<span class="ident">unwrap</span>().<span class="ident">value</span>, <span class="number">2</span>);
+        <span class="macro">assert_eq!</span>(map.get(<span class="kw-2">&amp;</span>one).unwrap().value, <span class="number">1</span>);
+        <span class="macro">assert_eq!</span>(map.get(<span class="kw-2">&amp;</span>two).unwrap().value, <span class="number">2</span>);
     }
 
-    <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">insert_and_get_expiration</span>() {
-        <span class="comment">// Test that when we insert or retrieve an item, we update its expiration.</span>
-        <span class="ident">time::pause</span>();
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>insert_and_get_expiration() {
+        <span class="comment">// Test that when we insert or retrieve an item, we update its expiration.
+        </span>time::pause();
 
-        <span class="kw">let</span> (<span class="ident">one</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">address_pair</span>();
+        <span class="kw">let </span>(one, <span class="kw">_</span>) = address_pair();
 
-        <span class="kw">let</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">TtlMap</span>::<span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="ident">::new</span>(<span class="ident">Duration::from_secs</span>(<span class="number">10</span>), <span class="ident">Duration::from_millis</span>(<span class="number">10</span>));
-        <span class="ident">map</span>.<span class="ident">insert</span>(<span class="ident">one</span>.<span class="ident">clone</span>(), <span class="number">1</span>);
+        <span class="kw">let </span>map = TtlMap::&lt;usize&gt;::new(Duration::from_secs(<span class="number">10</span>), Duration::from_millis(<span class="number">10</span>));
+        map.insert(one.clone(), <span class="number">1</span>);
 
-        <span class="kw">let</span> <span class="ident">exp1</span> <span class="op">=</span> <span class="ident">map</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">one</span>).<span class="ident">unwrap</span>().<span class="ident">expiration_secs</span>();
+        <span class="kw">let </span>exp1 = map.get(<span class="kw-2">&amp;</span>one).unwrap().expiration_secs();
 
-        <span class="ident">time::advance</span>(<span class="ident">Duration::from_secs</span>(<span class="number">2</span>)).<span class="kw">await</span>;
-        <span class="kw">let</span> <span class="ident">exp2</span> <span class="op">=</span> <span class="ident">map</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">one</span>).<span class="ident">unwrap</span>().<span class="ident">expiration_secs</span>();
+        time::advance(Duration::from_secs(<span class="number">2</span>)).<span class="kw">await</span>;
+        <span class="kw">let </span>exp2 = map.get(<span class="kw-2">&amp;</span>one).unwrap().expiration_secs();
 
-        <span class="ident">time::advance</span>(<span class="ident">Duration::from_secs</span>(<span class="number">3</span>)).<span class="kw">await</span>;
-        <span class="kw">let</span> <span class="ident">exp3</span> <span class="op">=</span> <span class="ident">map</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">one</span>).<span class="ident">unwrap</span>().<span class="ident">expiration_secs</span>();
+        time::advance(Duration::from_secs(<span class="number">3</span>)).<span class="kw">await</span>;
+        <span class="kw">let </span>exp3 = map.get(<span class="kw-2">&amp;</span>one).unwrap().expiration_secs();
 
-        <span class="macro">assert!</span>(<span class="ident">exp1</span> <span class="op">&lt;</span> <span class="ident">exp2</span>);
-        <span class="macro">assert_eq!</span>(<span class="number">2</span>, <span class="ident">exp2</span> <span class="op">-</span> <span class="ident">exp1</span>);
-        <span class="macro">assert!</span>(<span class="ident">exp2</span> <span class="op">&lt;</span> <span class="ident">exp3</span>);
-        <span class="macro">assert_eq!</span>(<span class="number">3</span>, <span class="ident">exp3</span> <span class="op">-</span> <span class="ident">exp2</span>);
+        <span class="macro">assert!</span>(exp1 &lt; exp2);
+        <span class="macro">assert_eq!</span>(<span class="number">2</span>, exp2 - exp1);
+        <span class="macro">assert!</span>(exp2 &lt; exp3);
+        <span class="macro">assert_eq!</span>(<span class="number">3</span>, exp3 - exp2);
     }
 
-    <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">contains_key</span>() {
-        <span class="kw">let</span> (<span class="ident">one</span>, <span class="ident">two</span>) <span class="op">=</span> <span class="ident">address_pair</span>();
-        <span class="kw">let</span> <span class="ident">three</span> <span class="op">=</span> ([<span class="number">127</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">3</span>], <span class="number">8080</span>).<span class="ident">into</span>();
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>contains_key() {
+        <span class="kw">let </span>(one, two) = address_pair();
+        <span class="kw">let </span>three = ([<span class="number">127</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">3</span>], <span class="number">8080</span>).into();
 
-        <span class="kw">let</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">TtlMap</span>::<span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="ident">::new</span>(<span class="ident">Duration::from_secs</span>(<span class="number">10</span>), <span class="ident">Duration::from_millis</span>(<span class="number">10</span>));
-        <span class="ident">map</span>.<span class="ident">insert</span>(<span class="ident">one</span>.<span class="ident">clone</span>(), <span class="number">1</span>);
-        <span class="ident">map</span>.<span class="ident">insert</span>(<span class="ident">two</span>.<span class="ident">clone</span>(), <span class="number">2</span>);
+        <span class="kw">let </span>map = TtlMap::&lt;usize&gt;::new(Duration::from_secs(<span class="number">10</span>), Duration::from_millis(<span class="number">10</span>));
+        map.insert(one.clone(), <span class="number">1</span>);
+        map.insert(two.clone(), <span class="number">2</span>);
 
-        <span class="macro">assert!</span>(<span class="ident">map</span>.<span class="ident">contains_key</span>(<span class="kw-2">&amp;</span><span class="ident">one</span>));
-        <span class="macro">assert!</span>(<span class="op">!</span><span class="ident">map</span>.<span class="ident">contains_key</span>(<span class="kw-2">&amp;</span><span class="ident">three</span>));
-        <span class="macro">assert!</span>(<span class="ident">map</span>.<span class="ident">contains_key</span>(<span class="kw-2">&amp;</span><span class="ident">two</span>));
+        <span class="macro">assert!</span>(map.contains_key(<span class="kw-2">&amp;</span>one));
+        <span class="macro">assert!</span>(!map.contains_key(<span class="kw-2">&amp;</span>three));
+        <span class="macro">assert!</span>(map.contains_key(<span class="kw-2">&amp;</span>two));
     }
 
-    <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">entry_occupied_insert_and_get</span>() {
-        <span class="kw">let</span> (<span class="ident">one</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">address_pair</span>();
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>entry_occupied_insert_and_get() {
+        <span class="kw">let </span>(one, <span class="kw">_</span>) = address_pair();
 
-        <span class="kw">let</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">TtlMap</span>::<span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="ident">::new</span>(<span class="ident">Duration::from_secs</span>(<span class="number">10</span>), <span class="ident">Duration::from_millis</span>(<span class="number">10</span>));
-        <span class="ident">map</span>.<span class="ident">insert</span>(<span class="ident">one</span>.<span class="ident">clone</span>(), <span class="number">1</span>);
+        <span class="kw">let </span>map = TtlMap::&lt;usize&gt;::new(Duration::from_secs(<span class="number">10</span>), Duration::from_millis(<span class="number">10</span>));
+        map.insert(one.clone(), <span class="number">1</span>);
 
-        <span class="kw">match</span> <span class="ident">map</span>.<span class="ident">entry</span>(<span class="ident">one</span>.<span class="ident">clone</span>()) {
-            <span class="ident">Entry::Occupied</span>(<span class="kw-2">mut</span> <span class="ident">entry</span>) =&gt; {
-                <span class="macro">assert_eq!</span>(<span class="ident">entry</span>.<span class="ident">get</span>().<span class="ident">value</span>, <span class="number">1</span>);
-                <span class="ident">entry</span>.<span class="ident">insert</span>(<span class="number">5</span>);
+        <span class="kw">match </span>map.entry(one.clone()) {
+            Entry::Occupied(<span class="kw-2">mut </span>entry) =&gt; {
+                <span class="macro">assert_eq!</span>(entry.get().value, <span class="number">1</span>);
+                entry.insert(<span class="number">5</span>);
             }
-            <span class="kw">_</span> =&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;expected occupied entry&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;expected occupied entry&quot;</span>),
         }
 
-        <span class="macro">assert_eq!</span>(<span class="ident">map</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">one</span>).<span class="ident">unwrap</span>().<span class="ident">value</span>, <span class="number">5</span>);
+        <span class="macro">assert_eq!</span>(map.get(<span class="kw-2">&amp;</span>one).unwrap().value, <span class="number">5</span>);
     }
 
-    <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">entry_occupied_get_mut</span>() {
-        <span class="kw">let</span> (<span class="ident">one</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">address_pair</span>();
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>entry_occupied_get_mut() {
+        <span class="kw">let </span>(one, <span class="kw">_</span>) = address_pair();
 
-        <span class="kw">let</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">TtlMap</span>::<span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="ident">::new</span>(<span class="ident">Duration::from_secs</span>(<span class="number">10</span>), <span class="ident">Duration::from_millis</span>(<span class="number">10</span>));
-        <span class="ident">map</span>.<span class="ident">insert</span>(<span class="ident">one</span>.<span class="ident">clone</span>(), <span class="number">1</span>);
+        <span class="kw">let </span>map = TtlMap::&lt;usize&gt;::new(Duration::from_secs(<span class="number">10</span>), Duration::from_millis(<span class="number">10</span>));
+        map.insert(one.clone(), <span class="number">1</span>);
 
-        <span class="kw">match</span> <span class="ident">map</span>.<span class="ident">entry</span>(<span class="ident">one</span>.<span class="ident">clone</span>()) {
-            <span class="ident">Entry::Occupied</span>(<span class="kw-2">mut</span> <span class="ident">entry</span>) =&gt; {
-                <span class="ident">entry</span>.<span class="ident">get_mut</span>().<span class="ident">value</span> <span class="op">=</span> <span class="number">5</span>;
+        <span class="kw">match </span>map.entry(one.clone()) {
+            Entry::Occupied(<span class="kw-2">mut </span>entry) =&gt; {
+                entry.get_mut().value = <span class="number">5</span>;
             }
-            <span class="kw">_</span> =&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;expected occupied entry&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;expected occupied entry&quot;</span>),
         }
 
-        <span class="macro">assert_eq!</span>(<span class="ident">map</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">one</span>).<span class="ident">unwrap</span>().<span class="ident">value</span>, <span class="number">5</span>);
+        <span class="macro">assert_eq!</span>(map.get(<span class="kw-2">&amp;</span>one).unwrap().value, <span class="number">5</span>);
     }
 
-    <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">entry_vacant_insert</span>() {
-        <span class="kw">let</span> (<span class="ident">one</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">address_pair</span>();
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>entry_vacant_insert() {
+        <span class="kw">let </span>(one, <span class="kw">_</span>) = address_pair();
 
-        <span class="kw">let</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">TtlMap</span>::<span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="ident">::new</span>(<span class="ident">Duration::from_secs</span>(<span class="number">10</span>), <span class="ident">Duration::from_millis</span>(<span class="number">10</span>));
+        <span class="kw">let </span>map = TtlMap::&lt;usize&gt;::new(Duration::from_secs(<span class="number">10</span>), Duration::from_millis(<span class="number">10</span>));
 
-        <span class="kw">match</span> <span class="ident">map</span>.<span class="ident">entry</span>(<span class="ident">one</span>.<span class="ident">clone</span>()) {
-            <span class="ident">Entry::Vacant</span>(<span class="ident">entry</span>) =&gt; {
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">e</span> <span class="op">=</span> <span class="ident">entry</span>.<span class="ident">insert</span>(<span class="number">1</span>);
-                <span class="macro">assert_eq!</span>(<span class="ident">e</span>.<span class="ident">value</span>, <span class="number">1</span>);
-                <span class="ident">e</span>.<span class="ident">value</span> <span class="op">=</span> <span class="number">5</span>;
+        <span class="kw">match </span>map.entry(one.clone()) {
+            Entry::Vacant(entry) =&gt; {
+                <span class="kw">let </span><span class="kw-2">mut </span>e = entry.insert(<span class="number">1</span>);
+                <span class="macro">assert_eq!</span>(e.value, <span class="number">1</span>);
+                e.value = <span class="number">5</span>;
             }
-            <span class="kw">_</span> =&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;expected occupied entry&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;expected occupied entry&quot;</span>),
         }
 
-        <span class="macro">assert_eq!</span>(<span class="ident">map</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">one</span>).<span class="ident">unwrap</span>().<span class="ident">value</span>, <span class="number">5</span>);
+        <span class="macro">assert_eq!</span>(map.get(<span class="kw-2">&amp;</span>one).unwrap().value, <span class="number">5</span>);
     }
 
-    <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">entry_occupied_get_expiration</span>() {
-        <span class="comment">// Test that when we get a value via OccupiedEntry, we update its expiration.</span>
-        <span class="ident">time::pause</span>();
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>entry_occupied_get_expiration() {
+        <span class="comment">// Test that when we get a value via OccupiedEntry, we update its expiration.
+        </span>time::pause();
 
-        <span class="kw">let</span> (<span class="ident">one</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">address_pair</span>();
+        <span class="kw">let </span>(one, <span class="kw">_</span>) = address_pair();
 
-        <span class="kw">let</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">TtlMap</span>::<span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="ident">::new</span>(<span class="ident">Duration::from_secs</span>(<span class="number">10</span>), <span class="ident">Duration::from_millis</span>(<span class="number">10</span>));
-        <span class="ident">map</span>.<span class="ident">insert</span>(<span class="ident">one</span>.<span class="ident">clone</span>(), <span class="number">1</span>);
+        <span class="kw">let </span>map = TtlMap::&lt;usize&gt;::new(Duration::from_secs(<span class="number">10</span>), Duration::from_millis(<span class="number">10</span>));
+        map.insert(one.clone(), <span class="number">1</span>);
 
-        <span class="kw">let</span> <span class="ident">exp1</span> <span class="op">=</span> <span class="ident">map</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">one</span>).<span class="ident">unwrap</span>().<span class="ident">expiration_secs</span>();
+        <span class="kw">let </span>exp1 = map.get(<span class="kw-2">&amp;</span>one).unwrap().expiration_secs();
 
-        <span class="ident">time::advance</span>(<span class="ident">Duration::from_secs</span>(<span class="number">2</span>)).<span class="kw">await</span>;
+        time::advance(Duration::from_secs(<span class="number">2</span>)).<span class="kw">await</span>;
 
-        <span class="kw">let</span> <span class="ident">exp2</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">map</span>.<span class="ident">entry</span>(<span class="ident">one</span>.<span class="ident">clone</span>()) {
-            <span class="ident">Entry::Occupied</span>(<span class="ident">entry</span>) =&gt; <span class="ident">entry</span>.<span class="ident">get</span>().<span class="ident">expiration_secs</span>(),
-            <span class="kw">_</span> =&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;expected occupied entry&quot;</span>),
+        <span class="kw">let </span>exp2 = <span class="kw">match </span>map.entry(one.clone()) {
+            Entry::Occupied(entry) =&gt; entry.get().expiration_secs(),
+            <span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;expected occupied entry&quot;</span>),
         };
 
-        <span class="macro">assert!</span>(<span class="ident">exp1</span> <span class="op">&lt;</span> <span class="ident">exp2</span>);
-        <span class="macro">assert_eq!</span>(<span class="number">2</span>, <span class="ident">exp2</span> <span class="op">-</span> <span class="ident">exp1</span>);
+        <span class="macro">assert!</span>(exp1 &lt; exp2);
+        <span class="macro">assert_eq!</span>(<span class="number">2</span>, exp2 - exp1);
     }
 
-    <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">entry_occupied_get_mut_expiration</span>() {
-        <span class="comment">// Test that when we get_mut a value via OccupiedEntry, we update its expiration.</span>
-        <span class="ident">time::pause</span>();
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>entry_occupied_get_mut_expiration() {
+        <span class="comment">// Test that when we get_mut a value via OccupiedEntry, we update its expiration.
+        </span>time::pause();
 
-        <span class="kw">let</span> (<span class="ident">one</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">address_pair</span>();
+        <span class="kw">let </span>(one, <span class="kw">_</span>) = address_pair();
 
-        <span class="kw">let</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">TtlMap</span>::<span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="ident">::new</span>(<span class="ident">Duration::from_secs</span>(<span class="number">10</span>), <span class="ident">Duration::from_millis</span>(<span class="number">10</span>));
-        <span class="ident">map</span>.<span class="ident">insert</span>(<span class="ident">one</span>.<span class="ident">clone</span>(), <span class="number">1</span>);
+        <span class="kw">let </span>map = TtlMap::&lt;usize&gt;::new(Duration::from_secs(<span class="number">10</span>), Duration::from_millis(<span class="number">10</span>));
+        map.insert(one.clone(), <span class="number">1</span>);
 
-        <span class="kw">let</span> <span class="ident">exp1</span> <span class="op">=</span> <span class="ident">map</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">one</span>).<span class="ident">unwrap</span>().<span class="ident">expiration_secs</span>();
+        <span class="kw">let </span>exp1 = map.get(<span class="kw-2">&amp;</span>one).unwrap().expiration_secs();
 
-        <span class="ident">time::advance</span>(<span class="ident">Duration::from_secs</span>(<span class="number">2</span>)).<span class="kw">await</span>;
+        time::advance(Duration::from_secs(<span class="number">2</span>)).<span class="kw">await</span>;
 
-        <span class="kw">let</span> <span class="ident">exp2</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">map</span>.<span class="ident">entry</span>(<span class="ident">one</span>) {
-            <span class="ident">Entry::Occupied</span>(<span class="kw-2">mut</span> <span class="ident">entry</span>) =&gt; <span class="ident">entry</span>.<span class="ident">get_mut</span>().<span class="ident">expiration_secs</span>(),
-            <span class="kw">_</span> =&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;expected occupied entry&quot;</span>),
+        <span class="kw">let </span>exp2 = <span class="kw">match </span>map.entry(one) {
+            Entry::Occupied(<span class="kw-2">mut </span>entry) =&gt; entry.get_mut().expiration_secs(),
+            <span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;expected occupied entry&quot;</span>),
         };
 
-        <span class="macro">assert!</span>(<span class="ident">exp1</span> <span class="op">&lt;</span> <span class="ident">exp2</span>);
-        <span class="macro">assert_eq!</span>(<span class="number">2</span>, <span class="ident">exp2</span> <span class="op">-</span> <span class="ident">exp1</span>);
+        <span class="macro">assert!</span>(exp1 &lt; exp2);
+        <span class="macro">assert_eq!</span>(<span class="number">2</span>, exp2 - exp1);
     }
 
-    <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">entry_occupied_insert_expiration</span>() {
-        <span class="comment">// Test that when we replace a value via OccupiedEntry, we update its expiration.</span>
-        <span class="ident">time::pause</span>();
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>entry_occupied_insert_expiration() {
+        <span class="comment">// Test that when we replace a value via OccupiedEntry, we update its expiration.
+        </span>time::pause();
 
-        <span class="kw">let</span> (<span class="ident">one</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">address_pair</span>();
+        <span class="kw">let </span>(one, <span class="kw">_</span>) = address_pair();
 
-        <span class="kw">let</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">TtlMap</span>::<span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="ident">::new</span>(<span class="ident">Duration::from_secs</span>(<span class="number">10</span>), <span class="ident">Duration::from_millis</span>(<span class="number">10</span>));
-        <span class="ident">map</span>.<span class="ident">insert</span>(<span class="ident">one</span>.<span class="ident">clone</span>(), <span class="number">1</span>);
+        <span class="kw">let </span>map = TtlMap::&lt;usize&gt;::new(Duration::from_secs(<span class="number">10</span>), Duration::from_millis(<span class="number">10</span>));
+        map.insert(one.clone(), <span class="number">1</span>);
 
-        <span class="kw">let</span> <span class="ident">exp1</span> <span class="op">=</span> <span class="ident">map</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">one</span>).<span class="ident">unwrap</span>().<span class="ident">expiration_secs</span>();
+        <span class="kw">let </span>exp1 = map.get(<span class="kw-2">&amp;</span>one).unwrap().expiration_secs();
 
-        <span class="ident">time::advance</span>(<span class="ident">Duration::from_secs</span>(<span class="number">2</span>)).<span class="kw">await</span>;
+        time::advance(Duration::from_secs(<span class="number">2</span>)).<span class="kw">await</span>;
 
-        <span class="kw">let</span> <span class="ident">old_exp1</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">map</span>.<span class="ident">entry</span>(<span class="ident">one</span>.<span class="ident">clone</span>()) {
-            <span class="ident">Entry::Occupied</span>(<span class="kw-2">mut</span> <span class="ident">entry</span>) =&gt; <span class="ident">entry</span>.<span class="ident">insert</span>(<span class="number">9</span>).<span class="ident">expiration_secs</span>(),
-            <span class="kw">_</span> =&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;expected occupied entry&quot;</span>),
+        <span class="kw">let </span>old_exp1 = <span class="kw">match </span>map.entry(one.clone()) {
+            Entry::Occupied(<span class="kw-2">mut </span>entry) =&gt; entry.insert(<span class="number">9</span>).expiration_secs(),
+            <span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;expected occupied entry&quot;</span>),
         };
 
-        <span class="kw">let</span> <span class="ident">exp2</span> <span class="op">=</span> <span class="ident">map</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">one</span>).<span class="ident">unwrap</span>().<span class="ident">expiration_secs</span>();
+        <span class="kw">let </span>exp2 = map.get(<span class="kw-2">&amp;</span>one).unwrap().expiration_secs();
 
-        <span class="macro">assert_eq!</span>(<span class="ident">exp1</span>, <span class="ident">old_exp1</span>);
-        <span class="macro">assert!</span>(<span class="ident">exp1</span> <span class="op">&lt;</span> <span class="ident">exp2</span>);
-        <span class="macro">assert_eq!</span>(<span class="number">2</span>, <span class="ident">exp2</span> <span class="op">-</span> <span class="ident">exp1</span>);
+        <span class="macro">assert_eq!</span>(exp1, old_exp1);
+        <span class="macro">assert!</span>(exp1 &lt; exp2);
+        <span class="macro">assert_eq!</span>(<span class="number">2</span>, exp2 - exp1);
     }
 
-    <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">entry_occupied_vacant_expiration</span>() {
-        <span class="comment">// Test that when we insert a value via VacantEntry, we update its expiration.</span>
-        <span class="ident">time::pause</span>();
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>entry_occupied_vacant_expiration() {
+        <span class="comment">// Test that when we insert a value via VacantEntry, we update its expiration.
+        </span>time::pause();
 
-        <span class="kw">let</span> (<span class="ident">one</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">address_pair</span>();
+        <span class="kw">let </span>(one, <span class="kw">_</span>) = address_pair();
 
-        <span class="kw">let</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">TtlMap</span>::<span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="ident">::new</span>(<span class="ident">Duration::from_secs</span>(<span class="number">10</span>), <span class="ident">Duration::from_millis</span>(<span class="number">10</span>));
+        <span class="kw">let </span>map = TtlMap::&lt;usize&gt;::new(Duration::from_secs(<span class="number">10</span>), Duration::from_millis(<span class="number">10</span>));
 
-        <span class="kw">let</span> <span class="ident">exp1</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">map</span>.<span class="ident">entry</span>(<span class="ident">one</span>.<span class="ident">clone</span>()) {
-            <span class="ident">Entry::Vacant</span>(<span class="ident">entry</span>) =&gt; <span class="ident">entry</span>.<span class="ident">insert</span>(<span class="number">9</span>).<span class="ident">expiration_secs</span>(),
-            <span class="kw">_</span> =&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;expected vacant entry&quot;</span>),
+        <span class="kw">let </span>exp1 = <span class="kw">match </span>map.entry(one.clone()) {
+            Entry::Vacant(entry) =&gt; entry.insert(<span class="number">9</span>).expiration_secs(),
+            <span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;expected vacant entry&quot;</span>),
         };
 
-        <span class="ident">time::advance</span>(<span class="ident">Duration::from_secs</span>(<span class="number">2</span>)).<span class="kw">await</span>;
+        time::advance(Duration::from_secs(<span class="number">2</span>)).<span class="kw">await</span>;
 
-        <span class="kw">let</span> <span class="ident">exp2</span> <span class="op">=</span> <span class="ident">map</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">one</span>).<span class="ident">unwrap</span>().<span class="ident">expiration_secs</span>();
+        <span class="kw">let </span>exp2 = map.get(<span class="kw-2">&amp;</span>one).unwrap().expiration_secs();
 
-        <span class="comment">// Initial expiration should be set at our configured ttl.</span>
-        <span class="macro">assert_eq!</span>(<span class="number">10</span>, <span class="ident">exp1</span>);
+        <span class="comment">// Initial expiration should be set at our configured ttl.
+        </span><span class="macro">assert_eq!</span>(<span class="number">10</span>, exp1);
 
-        <span class="macro">assert!</span>(<span class="ident">exp1</span> <span class="op">&lt;</span> <span class="ident">exp2</span>);
-        <span class="macro">assert_eq!</span>(<span class="number">2</span>, <span class="ident">exp2</span> <span class="op">-</span> <span class="ident">exp1</span>);
+        <span class="macro">assert!</span>(exp1 &lt; exp2);
+        <span class="macro">assert_eq!</span>(<span class="number">2</span>, exp2 - exp1);
     }
 
-    <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">expiration_ttl</span>() {
-        <span class="comment">// Test that when we expire entries at our configured ttl.</span>
-        <span class="ident">time::pause</span>();
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>expiration_ttl() {
+        <span class="comment">// Test that when we expire entries at our configured ttl.
+        </span>time::pause();
 
-        <span class="kw">let</span> (<span class="ident">one</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">address_pair</span>();
+        <span class="kw">let </span>(one, <span class="kw">_</span>) = address_pair();
 
-        <span class="kw">let</span> <span class="ident">ttl</span> <span class="op">=</span> <span class="ident">Duration::from_secs</span>(<span class="number">12</span>);
-        <span class="kw">let</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">TtlMap</span>::<span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="ident">::new</span>(<span class="ident">ttl</span>, <span class="ident">Duration::from_millis</span>(<span class="number">10</span>));
+        <span class="kw">let </span>ttl = Duration::from_secs(<span class="number">12</span>);
+        <span class="kw">let </span>map = TtlMap::&lt;usize&gt;::new(ttl, Duration::from_millis(<span class="number">10</span>));
 
-        <span class="kw">let</span> <span class="ident">exp</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">map</span>.<span class="ident">entry</span>(<span class="ident">one</span>) {
-            <span class="ident">Entry::Vacant</span>(<span class="ident">entry</span>) =&gt; <span class="ident">entry</span>.<span class="ident">insert</span>(<span class="number">9</span>).<span class="ident">expiration_secs</span>(),
-            <span class="kw">_</span> =&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;expected vacant entry&quot;</span>),
+        <span class="kw">let </span>exp = <span class="kw">match </span>map.entry(one) {
+            Entry::Vacant(entry) =&gt; entry.insert(<span class="number">9</span>).expiration_secs(),
+            <span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;expected vacant entry&quot;</span>),
         };
 
-        <span class="comment">// Check that it expires at our configured TTL.</span>
-        <span class="macro">assert_eq!</span>(<span class="number">12</span>, <span class="ident">exp</span>);
+        <span class="comment">// Check that it expires at our configured TTL.
+        </span><span class="macro">assert_eq!</span>(<span class="number">12</span>, exp);
     }
 
-    <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">cleanup_expired_entries</span>() {
-        <span class="comment">// Test that we delete expired entries from the ttl map.</span>
-        <span class="ident">time::pause</span>();
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>cleanup_expired_entries() {
+        <span class="comment">// Test that we delete expired entries from the ttl map.
+        </span>time::pause();
 
-        <span class="kw">let</span> (<span class="ident">one</span>, <span class="ident">two</span>) <span class="op">=</span> <span class="ident">address_pair</span>();
+        <span class="kw">let </span>(one, two) = address_pair();
 
-        <span class="kw">let</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">TtlMap</span>::<span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="ident">::new</span>(<span class="ident">Duration::from_secs</span>(<span class="number">5</span>), <span class="ident">Duration::from_secs</span>(<span class="number">1</span>));
-        <span class="ident">map</span>.<span class="ident">insert</span>(<span class="ident">one</span>.<span class="ident">clone</span>(), <span class="number">1</span>);
-        <span class="ident">map</span>.<span class="ident">insert</span>(<span class="ident">two</span>.<span class="ident">clone</span>(), <span class="number">2</span>);
+        <span class="kw">let </span>map = TtlMap::&lt;usize&gt;::new(Duration::from_secs(<span class="number">5</span>), Duration::from_secs(<span class="number">1</span>));
+        map.insert(one.clone(), <span class="number">1</span>);
+        map.insert(two.clone(), <span class="number">2</span>);
 
-        <span class="macro">assert!</span>(<span class="ident">map</span>.<span class="ident">contains_key</span>(<span class="kw-2">&amp;</span><span class="ident">one</span>));
-        <span class="macro">assert!</span>(<span class="ident">map</span>.<span class="ident">contains_key</span>(<span class="kw-2">&amp;</span><span class="ident">two</span>));
+        <span class="macro">assert!</span>(map.contains_key(<span class="kw-2">&amp;</span>one));
+        <span class="macro">assert!</span>(map.contains_key(<span class="kw-2">&amp;</span>two));
 
-        <span class="ident">time::advance</span>(<span class="ident">Duration::from_secs</span>(<span class="number">4</span>)).<span class="kw">await</span>;
+        time::advance(Duration::from_secs(<span class="number">4</span>)).<span class="kw">await</span>;
 
-        <span class="comment">// Read one key so that it does not expire at the original ttl.</span>
-        <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">map</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">two</span>).<span class="ident">unwrap</span>();
+        <span class="comment">// Read one key so that it does not expire at the original ttl.
+        </span><span class="kw">let _ </span>= map.get(<span class="kw-2">&amp;</span>two).unwrap();
 
-        <span class="comment">// Check that only the un-read key is deleted.</span>
-        <span class="ident">time::advance</span>(<span class="ident">Duration::from_secs</span>(<span class="number">4</span>)).<span class="kw">await</span>;
-        <span class="macro">assert!</span>(<span class="op">!</span><span class="ident">map</span>.<span class="ident">contains_key</span>(<span class="kw-2">&amp;</span><span class="ident">one</span>));
-        <span class="macro">assert!</span>(<span class="ident">map</span>.<span class="ident">contains_key</span>(<span class="kw-2">&amp;</span><span class="ident">two</span>));
-        <span class="macro">assert_eq!</span>(<span class="ident">map</span>.<span class="ident">len</span>(), <span class="number">1</span>);
+        <span class="comment">// Check that only the un-read key is deleted.
+        </span>time::advance(Duration::from_secs(<span class="number">4</span>)).<span class="kw">await</span>;
+        <span class="macro">assert!</span>(!map.contains_key(<span class="kw-2">&amp;</span>one));
+        <span class="macro">assert!</span>(map.contains_key(<span class="kw-2">&amp;</span>two));
+        <span class="macro">assert_eq!</span>(map.len(), <span class="number">1</span>);
 
-        <span class="comment">// Check that the second key is eventually deleted.</span>
-        <span class="ident">time::advance</span>(<span class="ident">Duration::from_secs</span>(<span class="number">3</span>)).<span class="kw">await</span>;
-        <span class="macro">assert!</span>(<span class="op">!</span><span class="ident">map</span>.<span class="ident">contains_key</span>(<span class="kw-2">&amp;</span><span class="ident">one</span>));
-        <span class="macro">assert!</span>(<span class="op">!</span><span class="ident">map</span>.<span class="ident">contains_key</span>(<span class="kw-2">&amp;</span><span class="ident">two</span>));
-        <span class="macro">assert_eq!</span>(<span class="ident">map</span>.<span class="ident">len</span>(), <span class="number">0</span>);
+        <span class="comment">// Check that the second key is eventually deleted.
+        </span>time::advance(Duration::from_secs(<span class="number">3</span>)).<span class="kw">await</span>;
+        <span class="macro">assert!</span>(!map.contains_key(<span class="kw-2">&amp;</span>one));
+        <span class="macro">assert!</span>(!map.contains_key(<span class="kw-2">&amp;</span>two));
+        <span class="macro">assert_eq!</span>(map.len(), <span class="number">0</span>);
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

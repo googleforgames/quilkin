@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/filters.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>filters.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../quilkin/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/filters.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>filters.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../quilkin/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -225,204 +225,204 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */</span>
+ */
 
-<span class="doccomment">//! Filters for processing packets.</span>
+</span><span class="doccomment">//! Filters for processing packets.
 
-<span class="kw">mod</span> <span class="ident">chain</span>;
-<span class="kw">mod</span> <span class="ident">error</span>;
-<span class="kw">mod</span> <span class="ident">factory</span>;
-<span class="kw">mod</span> <span class="ident">metadata</span>;
-<span class="kw">mod</span> <span class="ident">read</span>;
-<span class="kw">mod</span> <span class="ident">registry</span>;
-<span class="kw">mod</span> <span class="ident">set</span>;
-<span class="kw">mod</span> <span class="ident">write</span>;
+</span><span class="kw">mod </span>chain;
+<span class="kw">mod </span>error;
+<span class="kw">mod </span>factory;
+<span class="kw">mod </span>metadata;
+<span class="kw">mod </span>read;
+<span class="kw">mod </span>registry;
+<span class="kw">mod </span>set;
+<span class="kw">mod </span>write;
 
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">capture</span>;
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">compress</span>;
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">concatenate_bytes</span>;
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">debug</span>;
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">drop</span>;
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">firewall</span>;
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">load_balancer</span>;
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">local_rate_limit</span>;
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">r#match</span>;
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">pass</span>;
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">timestamp</span>;
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">token_router</span>;
+<span class="kw">pub mod </span>capture;
+<span class="kw">pub mod </span>compress;
+<span class="kw">pub mod </span>concatenate_bytes;
+<span class="kw">pub mod </span>debug;
+<span class="kw">pub mod </span>drop;
+<span class="kw">pub mod </span>firewall;
+<span class="kw">pub mod </span>load_balancer;
+<span class="kw">pub mod </span>local_rate_limit;
+<span class="kw">pub mod </span>r#match;
+<span class="kw">pub mod </span>pass;
+<span class="kw">pub mod </span>timestamp;
+<span class="kw">pub mod </span>token_router;
 
-<span class="doccomment">/// Prelude containing all types and traits required to implement [`Filter`] and</span>
-<span class="doccomment">/// [`FilterFactory`].</span>
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">prelude</span> {
-    <span class="kw">pub</span> <span class="kw">use</span> <span class="kw">super</span>::{
-        <span class="ident">ConvertProtoConfigError</span>, <span class="ident">CreateFilterArgs</span>, <span class="ident">Error</span>, <span class="ident">Filter</span>, <span class="ident">FilterInstance</span>, <span class="ident">ReadContext</span>,
-        <span class="ident">StaticFilter</span>, <span class="ident">WriteContext</span>,
+<span class="doccomment">/// Prelude containing all types and traits required to implement [`Filter`] and
+/// [`FilterFactory`].
+</span><span class="kw">pub mod </span>prelude {
+    <span class="kw">pub use super</span>::{
+        ConvertProtoConfigError, CreateFilterArgs, Error, Filter, FilterInstance, ReadContext,
+        StaticFilter, WriteContext,
     };
 }
 
-<span class="comment">// Core Filter types</span>
-<span class="attribute">#[<span class="ident">doc</span>(<span class="ident">inline</span>)]</span>
-<span class="kw">pub</span> <span class="kw">use</span> <span class="self">self</span>::{
-    <span class="ident">capture::Capture</span>,
-    <span class="ident">compress::Compress</span>,
-    <span class="ident">concatenate_bytes::ConcatenateBytes</span>,
-    <span class="ident">debug::Debug</span>,
-    <span class="ident">drop::Drop</span>,
-    <span class="ident">error</span>::{<span class="ident">ConvertProtoConfigError</span>, <span class="ident">Error</span>},
-    <span class="ident">factory</span>::{<span class="ident">CreateFilterArgs</span>, <span class="ident">DynFilterFactory</span>, <span class="ident">FilterFactory</span>, <span class="ident">FilterInstance</span>},
-    <span class="ident">firewall::Firewall</span>,
-    <span class="ident">load_balancer::LoadBalancer</span>,
-    <span class="ident">local_rate_limit::LocalRateLimit</span>,
-    <span class="ident">pass::Pass</span>,
-    <span class="ident">r#match</span><span class="ident">::Match</span>,
-    <span class="ident">read::ReadContext</span>,
-    <span class="ident">registry::FilterRegistry</span>,
-    <span class="ident">set</span>::{<span class="ident">FilterMap</span>, <span class="ident">FilterSet</span>},
-    <span class="ident">timestamp::Timestamp</span>,
-    <span class="ident">token_router::TokenRouter</span>,
-    <span class="ident">write::WriteContext</span>,
+<span class="comment">// Core Filter types
+</span><span class="attribute">#[doc(inline)]
+</span><span class="kw">pub use </span><span class="self">self</span>::{
+    capture::Capture,
+    compress::Compress,
+    concatenate_bytes::ConcatenateBytes,
+    debug::Debug,
+    drop::Drop,
+    error::{ConvertProtoConfigError, Error},
+    factory::{CreateFilterArgs, DynFilterFactory, FilterFactory, FilterInstance},
+    firewall::Firewall,
+    load_balancer::LoadBalancer,
+    local_rate_limit::LocalRateLimit,
+    pass::Pass,
+    r#match::Match,
+    read::ReadContext,
+    registry::FilterRegistry,
+    set::{FilterMap, FilterSet},
+    timestamp::Timestamp,
+    token_router::TokenRouter,
+    write::WriteContext,
 };
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">use</span> <span class="ident"><span class="self">self</span>::chain::FilterChain</span>;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">use </span><span class="self">self</span>::chain::FilterChain;
 
-<span class="doccomment">/// Statically safe version of [`Filter`], if you&#39;re writing a Rust filter, you</span>
-<span class="doccomment">/// should implement [`StaticFilter`] in addition to [`Filter`], as</span>
-<span class="doccomment">/// [`StaticFilter`] guarantees all of the required properties through the type</span>
-<span class="doccomment">/// system, allowing Quilkin take care of the virtual table boilerplate</span>
-<span class="doccomment">/// automatically at compile-time.</span>
-<span class="doccomment">/// ```</span>
-<span class="doccomment">/// use quilkin::filters::prelude::*;</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// struct Greet;</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// impl Filter for Greet {</span>
-<span class="doccomment">///     fn read(&amp;self, ctx: &amp;mut ReadContext) -&gt; Option&lt;()&gt; {</span>
-<span class="doccomment">///         ctx.contents.splice(0..0, b&quot;Hello &quot;.into_iter().copied());</span>
-<span class="doccomment">///         Some(())</span>
-<span class="doccomment">///     }</span>
-<span class="doccomment">///     fn write(&amp;self, ctx: &amp;mut WriteContext) -&gt; Option&lt;()&gt; {</span>
-<span class="doccomment">///         ctx.contents.splice(0..0, b&quot;Goodbye &quot;.into_iter().copied());</span>
-<span class="doccomment">///         Some(())</span>
-<span class="doccomment">///     }</span>
-<span class="doccomment">/// }</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// impl StaticFilter for Greet {</span>
-<span class="doccomment">///     const NAME: &amp;&#39;static str = &quot;greet.v1&quot;;</span>
-<span class="doccomment">///     type Configuration = ();</span>
-<span class="doccomment">///     type BinaryConfiguration = ();</span>
-<span class="doccomment">///</span>
-<span class="doccomment">///     fn try_from_config(_: Option&lt;Self::Configuration&gt;) -&gt; Result&lt;Self, quilkin::filters::Error&gt; {</span>
-<span class="doccomment">///         Ok(Self)</span>
-<span class="doccomment">///     }</span>
-<span class="doccomment">/// }</span>
-<span class="doccomment">/// ```</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">StaticFilter</span>: <span class="ident">Filter</span> <span class="op">+</span> <span class="ident">Sized</span>
-<span class="comment">// This where clause simply states that `Configuration`&#39;s and</span>
-<span class="comment">// `BinaryConfiguration`&#39;s `Error` types are compatible with `filters::Error`.</span>
-<span class="kw">where</span>
-    <span class="ident">Error</span>: <span class="ident">From</span><span class="op">&lt;</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Configuration</span> <span class="kw">as</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::BinaryConfiguration</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::Error</span><span class="op">&gt;</span>
-        <span class="op">+</span> <span class="ident">From</span><span class="op">&lt;</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::BinaryConfiguration</span> <span class="kw">as</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Configuration</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::Error</span><span class="op">&gt;</span>,
+<span class="doccomment">/// Statically safe version of [`Filter`], if you&#39;re writing a Rust filter, you
+/// should implement [`StaticFilter`] in addition to [`Filter`], as
+/// [`StaticFilter`] guarantees all of the required properties through the type
+/// system, allowing Quilkin take care of the virtual table boilerplate
+/// automatically at compile-time.
+/// ```
+/// use quilkin::filters::prelude::*;
+///
+/// struct Greet;
+///
+/// impl Filter for Greet {
+///     fn read(&amp;self, ctx: &amp;mut ReadContext) -&gt; Option&lt;()&gt; {
+///         ctx.contents.splice(0..0, b&quot;Hello &quot;.into_iter().copied());
+///         Some(())
+///     }
+///     fn write(&amp;self, ctx: &amp;mut WriteContext) -&gt; Option&lt;()&gt; {
+///         ctx.contents.splice(0..0, b&quot;Goodbye &quot;.into_iter().copied());
+///         Some(())
+///     }
+/// }
+///
+/// impl StaticFilter for Greet {
+///     const NAME: &amp;&#39;static str = &quot;greet.v1&quot;;
+///     type Configuration = ();
+///     type BinaryConfiguration = ();
+///
+///     fn try_from_config(_: Option&lt;Self::Configuration&gt;) -&gt; Result&lt;Self, quilkin::filters::Error&gt; {
+///         Ok(Self)
+///     }
+/// }
+/// ```
+</span><span class="kw">pub trait </span>StaticFilter: Filter + Sized
+<span class="comment">// This where clause simply states that `Configuration`&#39;s and
+// `BinaryConfiguration`&#39;s `Error` types are compatible with `filters::Error`.
+</span><span class="kw">where
+    </span>Error: From&lt;&lt;<span class="self">Self</span>::Configuration <span class="kw">as </span>TryFrom&lt;<span class="self">Self</span>::BinaryConfiguration&gt;&gt;::Error&gt;
+        + From&lt;&lt;<span class="self">Self</span>::BinaryConfiguration <span class="kw">as </span>TryFrom&lt;<span class="self">Self</span>::Configuration&gt;&gt;::Error&gt;,
 {
-    <span class="doccomment">/// The globally unique name of the filter.</span>
-    <span class="kw">const</span> <span class="ident">NAME</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>;
-    <span class="doccomment">/// The human-readable configuration of the filter. **Must** be [`serde`]</span>
-    <span class="doccomment">/// compatible, have a JSON schema, and be convertible to and</span>
-    <span class="doccomment">/// from [`Self::BinaryConfiguration`].</span>
-    <span class="kw">type</span> <span class="ident">Configuration</span>: <span class="ident">schemars::JsonSchema</span>
-        <span class="op">+</span> <span class="ident">serde::Serialize</span>
-        <span class="op">+</span> <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span> <span class="ident">serde::Deserialize</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span>
-        <span class="op">+</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::BinaryConfiguration</span><span class="op">&gt;</span>;
-    <span class="doccomment">/// The binary configuration of the filter. **Must** be [`prost`] compatible,</span>
-    <span class="doccomment">/// and be convertible to and from [`Self::Configuration`].</span>
-    <span class="kw">type</span> <span class="ident">BinaryConfiguration</span>: <span class="ident">prost::Message</span>
-        <span class="op">+</span> <span class="ident">Default</span>
-        <span class="op">+</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Configuration</span><span class="op">&gt;</span>
-        <span class="op">+</span> <span class="ident">Send</span>
-        <span class="op">+</span> <span class="ident">Sync</span>
-        <span class="op">+</span> <span class="ident">Sized</span>;
+    <span class="doccomment">/// The globally unique name of the filter.
+    </span><span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str;
+    <span class="doccomment">/// The human-readable configuration of the filter. **Must** be [`serde`]
+    /// compatible, have a JSON schema, and be convertible to and
+    /// from [`Self::BinaryConfiguration`].
+    </span><span class="kw">type </span>Configuration: schemars::JsonSchema
+        + serde::Serialize
+        + <span class="kw">for</span>&lt;<span class="lifetime">&#39;de</span>&gt; serde::Deserialize&lt;<span class="lifetime">&#39;de</span>&gt;
+        + TryFrom&lt;<span class="self">Self</span>::BinaryConfiguration&gt;;
+    <span class="doccomment">/// The binary configuration of the filter. **Must** be [`prost`] compatible,
+    /// and be convertible to and from [`Self::Configuration`].
+    </span><span class="kw">type </span>BinaryConfiguration: prost::Message
+        + Default
+        + TryFrom&lt;<span class="self">Self</span>::Configuration&gt;
+        + Send
+        + Sync
+        + Sized;
 
-    <span class="doccomment">/// Instantiates a new [`StaticFilter`] from the given configuration, if any.</span>
-    <span class="doccomment">/// # Errors</span>
-    <span class="doccomment">/// If the provided configuration is invalid.</span>
-    <span class="kw">fn</span> <span class="ident">try_from_config</span>(<span class="ident">config</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Configuration</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
+    <span class="doccomment">/// Instantiates a new [`StaticFilter`] from the given configuration, if any.
+    /// # Errors
+    /// If the provided configuration is invalid.
+    </span><span class="kw">fn </span>try_from_config(config: <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Configuration&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt;;
 
-    <span class="doccomment">/// Instantiates a new [`StaticFilter`] from the given configuration, if any.</span>
-    <span class="doccomment">/// # Panics</span>
-    <span class="doccomment">/// If the provided configuration is invalid.</span>
-    <span class="kw">fn</span> <span class="ident">from_config</span>(<span class="ident">config</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Configuration</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident"><span class="self">Self</span>::try_from_config</span>(<span class="ident">config</span>).<span class="ident">unwrap</span>()
+    <span class="doccomment">/// Instantiates a new [`StaticFilter`] from the given configuration, if any.
+    /// # Panics
+    /// If the provided configuration is invalid.
+    </span><span class="kw">fn </span>from_config(config: <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Configuration&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::try_from_config(config).unwrap()
     }
 
-    <span class="doccomment">/// Creates a new dynamic [`FilterFactory`] virtual table.</span>
-    <span class="kw">fn</span> <span class="ident">factory</span>() -&gt; <span class="ident">DynFilterFactory</span>
-    <span class="kw">where</span>
-        <span class="self">Self</span>: <span class="lifetime">&#39;static</span>,
+    <span class="doccomment">/// Creates a new dynamic [`FilterFactory`] virtual table.
+    </span><span class="kw">fn </span>factory() -&gt; DynFilterFactory
+    <span class="kw">where
+        </span><span class="self">Self</span>: <span class="lifetime">&#39;static</span>,
     {
-        <span class="ident">Box::from</span>(<span class="ident">std::marker::PhantomData</span>::<span class="op">&lt;</span><span class="kw">fn</span>() -&gt; <span class="self">Self</span><span class="op">&gt;</span>)
+        Box::from(std::marker::PhantomData::&lt;<span class="kw">fn</span>() -&gt; <span class="self">Self</span>&gt;)
     }
 
-    <span class="doccomment">/// Convenience method for providing a consistent error message for filters</span>
-    <span class="doccomment">/// which require a fully initialized [`Self::Configuration`].</span>
-    <span class="kw">fn</span> <span class="ident">ensure_config_exists</span>(
-        <span class="ident">config</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Configuration</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Configuration</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="ident">config</span>.<span class="ident">ok_or</span>(<span class="ident">Error::MissingConfig</span>(<span class="ident"><span class="self">Self</span>::NAME</span>))
+    <span class="doccomment">/// Convenience method for providing a consistent error message for filters
+    /// which require a fully initialized [`Self::Configuration`].
+    </span><span class="kw">fn </span>ensure_config_exists(
+        config: <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Configuration&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Configuration, Error&gt; {
+        config.ok_or(Error::MissingConfig(<span class="self">Self</span>::NAME))
     }
 
-    <span class="kw">fn</span> <span class="ident">as_filter_config</span>(
-        <span class="ident">config</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Configuration</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="kw">crate</span>::config::Filter</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="prelude-val">Ok</span>(<span class="ident"><span class="kw">crate</span>::config::Filter</span> {
-            <span class="ident">name</span>: <span class="ident"><span class="self">Self</span>::NAME</span>.<span class="ident">into</span>(),
-            <span class="ident">config</span>: <span class="ident">config</span>
-                .<span class="ident">into</span>()
-                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">config</span><span class="op">|</span> <span class="ident">serde_json::to_value</span>(<span class="kw-2">&amp;</span><span class="ident">config</span>))
-                .<span class="ident">transpose</span>()<span class="question-mark">?</span>,
+    <span class="kw">fn </span>as_filter_config(
+        config: <span class="kw">impl </span>Into&lt;<span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Configuration&gt;&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw">crate</span>::config::Filter, Error&gt; {
+        <span class="prelude-val">Ok</span>(<span class="kw">crate</span>::config::Filter {
+            name: <span class="self">Self</span>::NAME.into(),
+            config: config
+                .into()
+                .map(|config| serde_json::to_value(<span class="kw-2">&amp;</span>config))
+                .transpose()<span class="question-mark">?</span>,
         })
     }
 }
 
-<span class="doccomment">/// Trait for routing and manipulating packets.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// An implementation of [`Filter`] provides a `read` and a `write` method. Both</span>
-<span class="doccomment">/// methods are invoked by the proxy when it consults the filter chain - their</span>
-<span class="doccomment">/// arguments contain information about the packet being processed.</span>
-<span class="doccomment">/// - `read` is invoked when a packet is received on the local downstream port</span>
-<span class="doccomment">///   and is to be sent to an upstream endpoint.</span>
-<span class="doccomment">/// - `write` is invoked in the opposite direction when a packet is received</span>
-<span class="doccomment">///   from an upstream endpoint and is to be sent to a downstream client.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// **Metrics**</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// * `filter_read_duration_seconds` The duration it took for a `filter`&#39;s</span>
-<span class="doccomment">///   `read` implementation to execute.</span>
-<span class="doccomment">///   * Labels</span>
-<span class="doccomment">///     * `filter` The name of the filter being executed.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// * `filter_write_duration_seconds` The duration it took for a `filter`&#39;s</span>
-<span class="doccomment">///   `write` implementation to execute.</span>
-<span class="doccomment">///   * Labels</span>
-<span class="doccomment">///     * `filter` The name of the filter being executed.</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">Filter</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> {
-    <span class="doccomment">/// [`Filter::read`] is invoked when the proxy receives data from a</span>
-    <span class="doccomment">/// downstream connection on the listening port.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// This function should return an `Some` if the packet processing should</span>
-    <span class="doccomment">/// proceed. If the packet should be rejected, it will return [`None`]</span>
-    <span class="doccomment">/// instead. By default, the context passes through unchanged.</span>
-    <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ReadContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+<span class="doccomment">/// Trait for routing and manipulating packets.
+///
+/// An implementation of [`Filter`] provides a `read` and a `write` method. Both
+/// methods are invoked by the proxy when it consults the filter chain - their
+/// arguments contain information about the packet being processed.
+/// - `read` is invoked when a packet is received on the local downstream port
+///   and is to be sent to an upstream endpoint.
+/// - `write` is invoked in the opposite direction when a packet is received
+///   from an upstream endpoint and is to be sent to a downstream client.
+///
+/// **Metrics**
+///
+/// * `filter_read_duration_seconds` The duration it took for a `filter`&#39;s
+///   `read` implementation to execute.
+///   * Labels
+///     * `filter` The name of the filter being executed.
+///
+/// * `filter_write_duration_seconds` The duration it took for a `filter`&#39;s
+///   `write` implementation to execute.
+///   * Labels
+///     * `filter` The name of the filter being executed.
+</span><span class="kw">pub trait </span>Filter: Send + Sync {
+    <span class="doccomment">/// [`Filter::read`] is invoked when the proxy receives data from a
+    /// downstream connection on the listening port.
+    ///
+    /// This function should return an `Some` if the packet processing should
+    /// proceed. If the packet should be rejected, it will return [`None`]
+    /// instead. By default, the context passes through unchanged.
+    </span><span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt; {
         <span class="prelude-val">Some</span>(())
     }
 
-    <span class="doccomment">/// [`Filter::write`] is invoked when the proxy is about to send data to a</span>
-    <span class="doccomment">/// downstream connection via the listening port after receiving it via one</span>
-    <span class="doccomment">/// of the upstream Endpoints.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// This function should return an `Some` if the packet processing should</span>
-    <span class="doccomment">/// proceed. If the packet should be rejected, it will return [`None`]</span>
-    <span class="kw">fn</span> <span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;mut</span> <span class="ident">WriteContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="doccomment">/// [`Filter::write`] is invoked when the proxy is about to send data to a
+    /// downstream connection via the listening port after receiving it via one
+    /// of the upstream Endpoints.
+    ///
+    /// This function should return an `Some` if the packet processing should
+    /// proceed. If the packet should be rejected, it will return [`None`]
+    </span><span class="kw">fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt; {
         <span class="prelude-val">Some</span>(())
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

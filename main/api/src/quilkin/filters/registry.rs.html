@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/filters/registry.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>registry.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../quilkin/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/filters/registry.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>registry.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../normalize.css"><link rel="stylesheet" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../ayu.css" disabled><link rel="stylesheet" href="../../../dark.css" disabled><link rel="stylesheet" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../quilkin/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -127,106 +127,106 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */</span>
+ */
 
-<span class="kw">use</span> <span class="ident">arc_swap::ArcSwap</span>;
-<span class="kw">use</span> <span class="ident">once_cell::sync::Lazy</span>;
+</span><span class="kw">use </span>arc_swap::ArcSwap;
+<span class="kw">use </span>once_cell::sync::Lazy;
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters</span>::{<span class="ident">CreateFilterArgs</span>, <span class="ident">DynFilterFactory</span>, <span class="ident">Error</span>, <span class="ident">FilterInstance</span>, <span class="ident">FilterSet</span>};
+<span class="kw">use </span><span class="kw">crate</span>::filters::{CreateFilterArgs, DynFilterFactory, Error, FilterInstance, FilterSet};
 
-<span class="kw">static</span> <span class="ident">REGISTRY</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">ArcSwap</span><span class="op">&lt;</span><span class="ident">FilterSet</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span>
-    <span class="ident">Lazy::new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">ArcSwap::new</span>(<span class="ident">std::sync::Arc::new</span>(<span class="ident">FilterSet::default</span>())));
+<span class="kw">static </span>REGISTRY: Lazy&lt;ArcSwap&lt;FilterSet&gt;&gt; =
+    Lazy::new(|| ArcSwap::new(std::sync::Arc::new(FilterSet::default())));
 
-<span class="doccomment">/// Registry of all [`Filter`][crate::filters::Filter]s that can be applied in the system.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// **Note:** Cloning [`FilterRegistry`], clones a new reference to the data and</span>
-<span class="doccomment">/// does not clone the data itself. In other words the clone is &quot;shallow&quot; and</span>
-<span class="doccomment">/// not deep.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">FilterRegistry</span>;
+<span class="doccomment">/// Registry of all [`Filter`][crate::filters::Filter]s that can be applied in the system.
+///
+/// **Note:** Cloning [`FilterRegistry`], clones a new reference to the data and
+/// does not clone the data itself. In other words the clone is &quot;shallow&quot; and
+/// not deep.
+</span><span class="attribute">#[derive(Debug)]
+</span><span class="kw">pub struct </span>FilterRegistry;
 
-<span class="kw">impl</span> <span class="ident">FilterRegistry</span> {
-    <span class="doccomment">/// Loads the provided [`FilterSet`] into the registry of available filters.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">register</span>(<span class="ident">factories</span>: <span class="kw">impl</span> <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">DynFilterFactory</span><span class="op">&gt;</span>) {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">registry</span> <span class="op">=</span> <span class="ident">FilterSet::clone</span>(<span class="kw-2">&amp;</span><span class="ident">REGISTRY</span>.<span class="ident">load_full</span>());
-        <span class="kw">for</span> <span class="ident">factory</span> <span class="kw">in</span> <span class="ident">factories</span> {
-            <span class="ident">registry</span>.<span class="ident">insert</span>(<span class="ident">factory</span>);
+<span class="kw">impl </span>FilterRegistry {
+    <span class="doccomment">/// Loads the provided [`FilterSet`] into the registry of available filters.
+    </span><span class="kw">pub fn </span>register(factories: <span class="kw">impl </span>IntoIterator&lt;Item = DynFilterFactory&gt;) {
+        <span class="kw">let </span><span class="kw-2">mut </span>registry = FilterSet::clone(<span class="kw-2">&amp;</span>REGISTRY.load_full());
+        <span class="kw">for </span>factory <span class="kw">in </span>factories {
+            registry.insert(factory);
         }
 
-        <span class="ident">REGISTRY</span>.<span class="ident">store</span>(<span class="ident">std::sync::Arc::from</span>(<span class="ident">registry</span>));
+        REGISTRY.store(std::sync::Arc::from(registry));
     }
 
-    <span class="doccomment">/// Creates and returns a new dynamic instance of [`Filter`][crate::filters::Filter] for a given</span>
-    <span class="doccomment">/// `key`. Errors if the filter cannot be found, or if there is a</span>
-    <span class="doccomment">/// configuration issue.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get</span>(<span class="ident">key</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">args</span>: <span class="ident">CreateFilterArgs</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">FilterInstance</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">match</span> <span class="ident">REGISTRY</span>.<span class="ident">load</span>().<span class="ident">get</span>(<span class="ident">key</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">p</span><span class="op">|</span> <span class="ident">p</span>.<span class="ident">create_filter</span>(<span class="ident">args</span>)) {
-            <span class="prelude-val">None</span> =&gt; <span class="prelude-val">Err</span>(<span class="ident">Error::NotFound</span>(<span class="ident">key</span>.<span class="ident">to_owned</span>())),
-            <span class="prelude-val">Some</span>(<span class="ident">filter</span>) =&gt; <span class="ident">filter</span>,
+    <span class="doccomment">/// Creates and returns a new dynamic instance of [`Filter`][crate::filters::Filter] for a given
+    /// `key`. Errors if the filter cannot be found, or if there is a
+    /// configuration issue.
+    </span><span class="kw">pub fn </span>get(key: <span class="kw-2">&amp;</span>str, args: CreateFilterArgs) -&gt; <span class="prelude-ty">Result</span>&lt;FilterInstance, Error&gt; {
+        <span class="kw">match </span>REGISTRY.load().get(key).map(|p| p.create_filter(args)) {
+            <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(Error::NotFound(key.to_owned())),
+            <span class="prelude-val">Some</span>(filter) =&gt; filter,
         }
     }
 
-    <span class="doccomment">/// Returns a [`DynFilterFactory`] for a given `key`. Returning `None` if the</span>
-    <span class="doccomment">/// factory cannot be found.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_factory</span>(<span class="ident">key</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">std::sync::Arc</span><span class="op">&lt;</span><span class="ident">DynFilterFactory</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="ident">REGISTRY</span>.<span class="ident">load</span>().<span class="ident">get</span>(<span class="ident">key</span>).<span class="ident">cloned</span>()
+    <span class="doccomment">/// Returns a [`DynFilterFactory`] for a given `key`. Returning `None` if the
+    /// factory cannot be found.
+    </span><span class="kw">pub fn </span>get_factory(key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;std::sync::Arc&lt;DynFilterFactory&gt;&gt; {
+        REGISTRY.load().get(key).cloned()
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="ident">std::net::Ipv4Addr</span>;
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
+    <span class="kw">use </span>std::net::Ipv4Addr;
 
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::test_utils::load_test_filters</span>;
+    <span class="kw">use </span><span class="kw">crate</span>::test_utils::load_test_filters;
 
-    <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">EndpointAddress</span>};
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters</span>::{<span class="ident">Filter</span>, <span class="ident">FilterRegistry</span>, <span class="ident">ReadContext</span>, <span class="ident">WriteContext</span>};
+    <span class="kw">use super</span>::<span class="kw-2">*</span>;
+    <span class="kw">use </span><span class="kw">crate</span>::endpoint::{Endpoint, EndpointAddress};
+    <span class="kw">use </span><span class="kw">crate</span>::filters::{Filter, FilterRegistry, ReadContext, WriteContext};
 
-    <span class="kw">struct</span> <span class="ident">TestFilter</span> {}
+    <span class="kw">struct </span>TestFilter {}
 
-    <span class="kw">impl</span> <span class="ident">Filter</span> <span class="kw">for</span> <span class="ident">TestFilter</span> {
-        <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ReadContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-            <span class="prelude-val">None</span>
-        }
+    <span class="kw">impl </span>Filter <span class="kw">for </span>TestFilter {
+        <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt; {
+            <span class="prelude-val">None
+        </span>}
 
-        <span class="kw">fn</span> <span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;mut</span> <span class="ident">WriteContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-            <span class="prelude-val">None</span>
-        }
+        <span class="kw">fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt; {
+            <span class="prelude-val">None
+        </span>}
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">insert_and_get</span>() {
-        <span class="ident">load_test_filters</span>();
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>insert_and_get() {
+        load_test_filters();
 
-        <span class="kw">match</span> <span class="ident">FilterRegistry::get</span>(<span class="kw-2">&amp;</span><span class="ident">String::from</span>(<span class="string">&quot;not.found&quot;</span>), <span class="ident">CreateFilterArgs::fixed</span>(<span class="prelude-val">None</span>)) {
+        <span class="kw">match </span>FilterRegistry::get(<span class="kw-2">&amp;</span>String::from(<span class="string">&quot;not.found&quot;</span>), CreateFilterArgs::fixed(<span class="prelude-val">None</span>)) {
             <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;should not be filter&quot;</span>),
-            <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; <span class="macro">assert_eq!</span>(<span class="ident">Error::NotFound</span>(<span class="string">&quot;not.found&quot;</span>.<span class="ident">to_string</span>()), <span class="ident">err</span>),
+            <span class="prelude-val">Err</span>(err) =&gt; <span class="macro">assert_eq!</span>(Error::NotFound(<span class="string">&quot;not.found&quot;</span>.to_string()), err),
         };
 
         <span class="macro">assert!</span>(
-            <span class="ident">FilterRegistry::get</span>(<span class="kw-2">&amp;</span><span class="ident">String::from</span>(<span class="string">&quot;TestFilter&quot;</span>), <span class="ident">CreateFilterArgs::fixed</span>(<span class="prelude-val">None</span>)).<span class="ident">is_ok</span>()
+            FilterRegistry::get(<span class="kw-2">&amp;</span>String::from(<span class="string">&quot;TestFilter&quot;</span>), CreateFilterArgs::fixed(<span class="prelude-val">None</span>)).is_ok()
         );
 
-        <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span>
-            <span class="ident">FilterRegistry::get</span>(<span class="kw-2">&amp;</span><span class="ident">String::from</span>(<span class="string">&quot;TestFilter&quot;</span>), <span class="ident">CreateFilterArgs::fixed</span>(<span class="prelude-val">None</span>))
-                .<span class="ident">unwrap</span>()
-                .<span class="ident">filter</span>;
+        <span class="kw">let </span>filter =
+            FilterRegistry::get(<span class="kw-2">&amp;</span>String::from(<span class="string">&quot;TestFilter&quot;</span>), CreateFilterArgs::fixed(<span class="prelude-val">None</span>))
+                .unwrap()
+                .filter;
 
-        <span class="kw">let</span> <span class="ident">addr</span>: <span class="ident">EndpointAddress</span> <span class="op">=</span> (<span class="ident">Ipv4Addr::LOCALHOST</span>, <span class="number">8080</span>).<span class="ident">into</span>();
-        <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="ident">Endpoint::new</span>(<span class="ident">addr</span>.<span class="ident">clone</span>());
+        <span class="kw">let </span>addr: EndpointAddress = (Ipv4Addr::LOCALHOST, <span class="number">8080</span>).into();
+        <span class="kw">let </span>endpoint = Endpoint::new(addr.clone());
 
-        <span class="macro">assert!</span>(<span class="ident">filter</span>
-            .<span class="ident">read</span>(<span class="kw-2">&amp;mut</span> <span class="ident">ReadContext::new</span>(
-                <span class="macro">vec!</span>[<span class="ident">endpoint</span>.<span class="ident">clone</span>()],
-                <span class="ident">addr</span>.<span class="ident">clone</span>(),
+        <span class="macro">assert!</span>(filter
+            .read(<span class="kw-2">&amp;mut </span>ReadContext::new(
+                <span class="macro">vec!</span>[endpoint.clone()],
+                addr.clone(),
                 <span class="macro">vec!</span>[]
             ))
-            .<span class="ident">is_some</span>());
-        <span class="macro">assert!</span>(<span class="ident">filter</span>
-            .<span class="ident">write</span>(<span class="kw-2">&amp;mut</span> <span class="ident">WriteContext::new</span>(<span class="ident">endpoint</span>, <span class="ident">addr</span>.<span class="ident">clone</span>(), <span class="ident">addr</span>, <span class="macro">vec!</span>[],))
-            .<span class="ident">is_some</span>());
+            .is_some());
+        <span class="macro">assert!</span>(filter
+            .write(<span class="kw-2">&amp;mut </span>WriteContext::new(endpoint, addr.clone(), addr, <span class="macro">vec!</span>[],))
+            .is_some());
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

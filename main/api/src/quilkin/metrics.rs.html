@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/metrics.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>metrics.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../quilkin/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/metrics.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>metrics.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../quilkin/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -221,200 +221,200 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */</span>
+ */
 
-<span class="kw">use</span> <span class="ident">once_cell::sync::Lazy</span>;
-<span class="kw">use</span> <span class="ident">prometheus</span>::{
-    <span class="ident">core::Collector</span>, <span class="ident">Histogram</span>, <span class="ident">HistogramOpts</span>, <span class="ident">HistogramVec</span>, <span class="ident">IntCounter</span>, <span class="ident">IntCounterVec</span>, <span class="ident">Opts</span>,
-    <span class="ident">Registry</span>, <span class="ident">DEFAULT_BUCKETS</span>,
+</span><span class="kw">use </span>once_cell::sync::Lazy;
+<span class="kw">use </span>prometheus::{
+    core::Collector, Histogram, HistogramOpts, HistogramVec, IntCounter, IntCounterVec, Opts,
+    Registry, DEFAULT_BUCKETS,
 };
 
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">prometheus::Result</span>;
+<span class="kw">pub use </span>prometheus::Result;
 
-<span class="doccomment">/// &quot;metadata_key&quot; is used as a label for metrics that can apply metrics based</span>
-<span class="doccomment">/// on specific metadata.</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">METADATA_KEY_LABEL</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;metadata_key&quot;</span>;
+<span class="doccomment">/// &quot;metadata_key&quot; is used as a label for metrics that can apply metrics based
+/// on specific metadata.
+</span><span class="kw">pub const </span>METADATA_KEY_LABEL: <span class="kw-2">&amp;</span>str = <span class="string">&quot;metadata_key&quot;</span>;
 
-<span class="doccomment">/// &quot;event&quot; is used as a label for Metrics that can apply to both Filter</span>
-<span class="doccomment">/// `read` and `write` executions.</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">DIRECTION_LABEL</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;event&quot;</span>;
+<span class="doccomment">/// &quot;event&quot; is used as a label for Metrics that can apply to both Filter
+/// `read` and `write` executions.
+</span><span class="kw">pub const </span>DIRECTION_LABEL: <span class="kw-2">&amp;</span>str = <span class="string">&quot;event&quot;</span>;
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const</span> <span class="ident">READ</span>: <span class="ident">Direction</span> <span class="op">=</span> <span class="ident">Direction::Read</span>;
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const</span> <span class="ident">WRITE</span>: <span class="ident">Direction</span> <span class="op">=</span> <span class="ident">Direction::Write</span>;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>READ: Direction = Direction::Read;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>WRITE: Direction = Direction::Write;
 
-<span class="doccomment">/// Label value for [DIRECTION_LABEL] for `read` events</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">READ_DIRECTION_LABEL</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;read&quot;</span>;
-<span class="doccomment">/// Label value for [DIRECTION_LABEL] for `write` events</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">WRITE_DIRECTION_LABEL</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;write&quot;</span>;
+<span class="doccomment">/// Label value for [DIRECTION_LABEL] for `read` events
+</span><span class="kw">pub const </span>READ_DIRECTION_LABEL: <span class="kw-2">&amp;</span>str = <span class="string">&quot;read&quot;</span>;
+<span class="doccomment">/// Label value for [DIRECTION_LABEL] for `write` events
+</span><span class="kw">pub const </span>WRITE_DIRECTION_LABEL: <span class="kw-2">&amp;</span>str = <span class="string">&quot;write&quot;</span>;
 
-<span class="doccomment">/// Returns the [prometheus::Registry] containing all the metrics</span>
-<span class="doccomment">/// registered in Quilkin.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">registry</span>() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">Registry</span> {
-    <span class="kw">static</span> <span class="ident">REGISTRY</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">Registry</span><span class="op">&gt;</span> <span class="op">=</span>
-        <span class="ident">Lazy::new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Registry::new_custom</span>(<span class="prelude-val">Some</span>(<span class="string">&quot;quilkin&quot;</span>.<span class="ident">into</span>()), <span class="prelude-val">None</span>).<span class="ident">unwrap</span>());
+<span class="doccomment">/// Returns the [prometheus::Registry] containing all the metrics
+/// registered in Quilkin.
+</span><span class="kw">pub fn </span>registry() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Registry {
+    <span class="kw">static </span>REGISTRY: Lazy&lt;Registry&gt; =
+        Lazy::new(|| Registry::new_custom(<span class="prelude-val">Some</span>(<span class="string">&quot;quilkin&quot;</span>.into()), <span class="prelude-val">None</span>).unwrap());
 
-    <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">REGISTRY</span>
+    <span class="kw-2">&amp;</span>REGISTRY
 }
 
-<span class="doccomment">/// Start the histogram bucket at a quarter of a millisecond, as number below a millisecond are</span>
-<span class="doccomment">/// what we are aiming for, but some granularity below a millisecond is useful for performance</span>
-<span class="doccomment">/// profiling.</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const</span> <span class="ident">BUCKET_START</span>: <span class="ident">f64</span> <span class="op">=</span> <span class="number">0.00025</span>;
+<span class="doccomment">/// Start the histogram bucket at a quarter of a millisecond, as number below a millisecond are
+/// what we are aiming for, but some granularity below a millisecond is useful for performance
+/// profiling.
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>BUCKET_START: f64 = <span class="number">0.00025</span>;
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const</span> <span class="ident">BUCKET_FACTOR</span>: <span class="ident">f64</span> <span class="op">=</span> <span class="number">2.0</span>;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>BUCKET_FACTOR: f64 = <span class="number">2.0</span>;
 
-<span class="doccomment">/// At an exponential factor of 2.0 (BUCKET_FACTOR), 13 iterations gets us to just over 1 second.</span>
-<span class="doccomment">/// Any processing that occurs over a second is far too long, so we end bucketing there as we don&#39;t</span>
-<span class="doccomment">/// care about granularity past 1 second.</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const</span> <span class="ident">BUCKET_COUNT</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">13</span>;
+<span class="doccomment">/// At an exponential factor of 2.0 (BUCKET_FACTOR), 13 iterations gets us to just over 1 second.
+/// Any processing that occurs over a second is far too long, so we end bucketing there as we don&#39;t
+/// care about granularity past 1 second.
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>BUCKET_COUNT: usize = <span class="number">13</span>;
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Direction</span> {
-    <span class="ident">Read</span>,
-    <span class="ident">Write</span>,
+<span class="attribute">#[derive(Clone, Copy, Debug)]
+</span><span class="kw">pub enum </span>Direction {
+    Read,
+    Write,
 }
 
-<span class="kw">impl</span> <span class="ident">Direction</span> {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const</span> <span class="ident">LABEL</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> <span class="op">=</span> <span class="ident">DIRECTION_LABEL</span>;
+<span class="kw">impl </span>Direction {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>LABEL: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str = DIRECTION_LABEL;
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">label</span>(<span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
-        <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident"><span class="self">Self</span>::Read</span> =&gt; <span class="ident">READ_DIRECTION_LABEL</span>,
-            <span class="ident"><span class="self">Self</span>::Write</span> =&gt; <span class="ident">WRITE_DIRECTION_LABEL</span>,
+    <span class="kw">pub fn </span>label(<span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
+        <span class="kw">match </span><span class="self">self </span>{
+            <span class="self">Self</span>::Read =&gt; READ_DIRECTION_LABEL,
+            <span class="self">Self</span>::Write =&gt; WRITE_DIRECTION_LABEL,
         }
     }
 }
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">processing_time</span>(<span class="ident">direction</span>: <span class="ident">Direction</span>) -&gt; <span class="ident">Histogram</span> {
-    <span class="kw">static</span> <span class="ident">PROCESSING_TIME</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">HistogramVec</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy::new</span>(<span class="op">|</span><span class="op">|</span> {
-        <span class="macro">prometheus::register_histogram_vec_with_registry!</span> {
-            <span class="macro">prometheus::histogram_opts!</span> {
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>processing_time(direction: Direction) -&gt; Histogram {
+    <span class="kw">static </span>PROCESSING_TIME: Lazy&lt;HistogramVec&gt; = Lazy::new(|| {
+        <span class="macro">prometheus::register_histogram_vec_with_registry! </span>{
+            <span class="macro">prometheus::histogram_opts! </span>{
                 <span class="string">&quot;packets_processing_duration_seconds&quot;</span>,
                 <span class="string">&quot;Total processing time for a packet&quot;</span>,
-                <span class="ident">prometheus::exponential_buckets</span>(<span class="ident">BUCKET_START</span>, <span class="ident">BUCKET_FACTOR</span>, <span class="ident">BUCKET_COUNT</span>).<span class="ident">unwrap</span>(),
+                prometheus::exponential_buckets(BUCKET_START, BUCKET_FACTOR, BUCKET_COUNT).unwrap(),
             },
-            <span class="kw-2">&amp;</span>[<span class="ident">Direction::LABEL</span>],
-            <span class="ident">registry</span>(),
+            <span class="kw-2">&amp;</span>[Direction::LABEL],
+            registry(),
         }
-        .<span class="ident">unwrap</span>()
+        .unwrap()
     });
 
-    <span class="ident">PROCESSING_TIME</span>.<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident">direction</span>.<span class="ident">label</span>()])
+    PROCESSING_TIME.with_label_values(<span class="kw-2">&amp;</span>[direction.label()])
 }
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">bytes_total</span>(<span class="ident">direction</span>: <span class="ident">Direction</span>) -&gt; <span class="ident">IntCounter</span> {
-    <span class="kw">static</span> <span class="ident">BYTES_TOTAL</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">IntCounterVec</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy::new</span>(<span class="op">|</span><span class="op">|</span> {
-        <span class="macro">prometheus::register_int_counter_vec_with_registry!</span> {
-            <span class="macro">prometheus::opts!</span> {
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>bytes_total(direction: Direction) -&gt; IntCounter {
+    <span class="kw">static </span>BYTES_TOTAL: Lazy&lt;IntCounterVec&gt; = Lazy::new(|| {
+        <span class="macro">prometheus::register_int_counter_vec_with_registry! </span>{
+            <span class="macro">prometheus::opts! </span>{
                 <span class="string">&quot;bytes_total&quot;</span>,
                 <span class="string">&quot;total number of bytes&quot;</span>,
             },
-            <span class="kw-2">&amp;</span>[<span class="ident">Direction::LABEL</span>],
-            <span class="ident">registry</span>(),
+            <span class="kw-2">&amp;</span>[Direction::LABEL],
+            registry(),
         }
-        .<span class="ident">unwrap</span>()
+        .unwrap()
     });
 
-    <span class="ident">BYTES_TOTAL</span>.<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident">direction</span>.<span class="ident">label</span>()])
+    BYTES_TOTAL.with_label_values(<span class="kw-2">&amp;</span>[direction.label()])
 }
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">errors_total</span>(<span class="ident">direction</span>: <span class="ident">Direction</span>) -&gt; <span class="ident">IntCounter</span> {
-    <span class="kw">static</span> <span class="ident">ERRORS_TOTAL</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">IntCounterVec</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy::new</span>(<span class="op">|</span><span class="op">|</span> {
-        <span class="macro">prometheus::register_int_counter_vec_with_registry!</span> {
-            <span class="macro">prometheus::opts!</span> {
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>errors_total(direction: Direction) -&gt; IntCounter {
+    <span class="kw">static </span>ERRORS_TOTAL: Lazy&lt;IntCounterVec&gt; = Lazy::new(|| {
+        <span class="macro">prometheus::register_int_counter_vec_with_registry! </span>{
+            <span class="macro">prometheus::opts! </span>{
                 <span class="string">&quot;errors_total&quot;</span>,
                 <span class="string">&quot;total number of errors sending packets&quot;</span>,
             },
-            <span class="kw-2">&amp;</span>[<span class="ident">Direction::LABEL</span>],
-            <span class="ident">registry</span>(),
+            <span class="kw-2">&amp;</span>[Direction::LABEL],
+            registry(),
         }
-        .<span class="ident">unwrap</span>()
+        .unwrap()
     });
 
-    <span class="ident">ERRORS_TOTAL</span>.<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident">direction</span>.<span class="ident">label</span>()])
+    ERRORS_TOTAL.with_label_values(<span class="kw-2">&amp;</span>[direction.label()])
 }
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">packets_total</span>(<span class="ident">direction</span>: <span class="ident">Direction</span>) -&gt; <span class="ident">IntCounter</span> {
-    <span class="kw">static</span> <span class="ident">PACKETS_TOTAL</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">IntCounterVec</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy::new</span>(<span class="op">|</span><span class="op">|</span> {
-        <span class="macro">prometheus::register_int_counter_vec_with_registry!</span> {
-            <span class="macro">prometheus::opts!</span> {
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>packets_total(direction: Direction) -&gt; IntCounter {
+    <span class="kw">static </span>PACKETS_TOTAL: Lazy&lt;IntCounterVec&gt; = Lazy::new(|| {
+        <span class="macro">prometheus::register_int_counter_vec_with_registry! </span>{
+            <span class="macro">prometheus::opts! </span>{
                 <span class="string">&quot;packets_total&quot;</span>,
                 <span class="string">&quot;Total number of packets&quot;</span>,
             },
-            <span class="kw-2">&amp;</span>[<span class="ident">Direction::LABEL</span>],
-            <span class="ident">registry</span>(),
+            <span class="kw-2">&amp;</span>[Direction::LABEL],
+            registry(),
         }
-        .<span class="ident">unwrap</span>()
+        .unwrap()
     });
 
-    <span class="ident">PACKETS_TOTAL</span>.<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident">direction</span>.<span class="ident">label</span>()])
+    PACKETS_TOTAL.with_label_values(<span class="kw-2">&amp;</span>[direction.label()])
 }
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">packets_dropped</span>(<span class="ident">direction</span>: <span class="ident">Direction</span>, <span class="ident">reason</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="ident">IntCounter</span> {
-    <span class="kw">static</span> <span class="ident">PACKETS_DROPPED</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">IntCounterVec</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy::new</span>(<span class="op">|</span><span class="op">|</span> {
-        <span class="macro">prometheus::register_int_counter_vec_with_registry!</span> {
-            <span class="macro">prometheus::opts!</span> {
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>packets_dropped(direction: Direction, reason: <span class="kw-2">&amp;</span>str) -&gt; IntCounter {
+    <span class="kw">static </span>PACKETS_DROPPED: Lazy&lt;IntCounterVec&gt; = Lazy::new(|| {
+        <span class="macro">prometheus::register_int_counter_vec_with_registry! </span>{
+            <span class="macro">prometheus::opts! </span>{
                 <span class="string">&quot;packets_dropped&quot;</span>,
                 <span class="string">&quot;Total number of dropped packets&quot;</span>,
             },
-            <span class="kw-2">&amp;</span>[<span class="ident">Direction::LABEL</span>, <span class="string">&quot;reason&quot;</span>],
-            <span class="ident">registry</span>(),
+            <span class="kw-2">&amp;</span>[Direction::LABEL, <span class="string">&quot;reason&quot;</span>],
+            registry(),
         }
-        .<span class="ident">unwrap</span>()
+        .unwrap()
     });
 
-    <span class="ident">PACKETS_DROPPED</span>.<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident">direction</span>.<span class="ident">label</span>(), <span class="ident">reason</span>])
+    PACKETS_DROPPED.with_label_values(<span class="kw-2">&amp;</span>[direction.label(), reason])
 }
 
-<span class="doccomment">/// Create a generic metrics options.</span>
-<span class="doccomment">/// Use [filter_opts] instead if the intended target is a filter.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">opts</span>(<span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">subsystem</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">description</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="ident">Opts</span> {
-    <span class="ident">Opts::new</span>(<span class="ident">name</span>, <span class="ident">description</span>).<span class="ident">subsystem</span>(<span class="ident">subsystem</span>)
+<span class="doccomment">/// Create a generic metrics options.
+/// Use [filter_opts] instead if the intended target is a filter.
+</span><span class="kw">pub fn </span>opts(name: <span class="kw-2">&amp;</span>str, subsystem: <span class="kw-2">&amp;</span>str, description: <span class="kw-2">&amp;</span>str) -&gt; Opts {
+    Opts::new(name, description).subsystem(subsystem)
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">histogram_opts</span>(
-    <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
-    <span class="ident">subsystem</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
-    <span class="ident">description</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
-    <span class="ident">buckets</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">f64</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-) -&gt; <span class="ident">HistogramOpts</span> {
-    <span class="ident">HistogramOpts</span> {
-        <span class="ident">common_opts</span>: <span class="ident">opts</span>(<span class="ident">name</span>, <span class="ident">subsystem</span>, <span class="ident">description</span>),
-        <span class="ident">buckets</span>: <span class="ident">buckets</span>
-            .<span class="ident">into</span>()
-            .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Vec::from</span>(<span class="ident">DEFAULT_BUCKETS</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> [<span class="ident">f64</span>])),
+<span class="kw">pub fn </span>histogram_opts(
+    name: <span class="kw-2">&amp;</span>str,
+    subsystem: <span class="kw-2">&amp;</span>str,
+    description: <span class="kw-2">&amp;</span>str,
+    buckets: <span class="kw">impl </span>Into&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;f64&gt;&gt;&gt;,
+) -&gt; HistogramOpts {
+    HistogramOpts {
+        common_opts: opts(name, subsystem, description),
+        buckets: buckets
+            .into()
+            .unwrap_or_else(|| Vec::from(DEFAULT_BUCKETS <span class="kw">as </span><span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>[f64])),
     }
 }
 
-<span class="doccomment">/// Create a generic metrics options for a filter.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">filter_opts</span>(<span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">filter_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">description</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="ident">Opts</span> {
-    <span class="ident">opts</span>(<span class="ident">name</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;filter_{filter_name}&quot;</span>), <span class="ident">description</span>)
+<span class="doccomment">/// Create a generic metrics options for a filter.
+</span><span class="kw">pub fn </span>filter_opts(name: <span class="kw-2">&amp;</span>str, filter_name: <span class="kw-2">&amp;</span>str, description: <span class="kw-2">&amp;</span>str) -&gt; Opts {
+    opts(name, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;filter_{filter_name}&quot;</span>), description)
 }
 
-<span class="doccomment">/// Registers the current metric collector with the provided registry.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// # Panics</span>
-<span class="doccomment">/// A collector with the same name has already been registered.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">register</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Collector</span> <span class="op">+</span> <span class="ident">Sized</span> <span class="op">+</span> <span class="ident">Clone</span> <span class="op">+</span> <span class="lifetime">&#39;static</span><span class="op">&gt;</span>(<span class="ident">collector</span>: <span class="ident">T</span>) -&gt; <span class="ident">T</span> {
-    <span class="kw">let</span> <span class="ident">return_value</span> <span class="op">=</span> <span class="ident">collector</span>.<span class="ident">clone</span>();
+<span class="doccomment">/// Registers the current metric collector with the provided registry.
+///
+/// # Panics
+/// A collector with the same name has already been registered.
+</span><span class="kw">pub fn </span>register&lt;T: Collector + Sized + Clone + <span class="lifetime">&#39;static</span>&gt;(collector: T) -&gt; T {
+    <span class="kw">let </span>return_value = collector.clone();
 
-    <span class="ident"><span class="self">self</span>::registry</span>()
-        .<span class="ident">register</span>(<span class="ident">Box::from</span>(<span class="ident">collector</span>))
-        .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">return_value</span>)
-        .<span class="ident">unwrap</span>()
+    <span class="self">self</span>::registry()
+        .register(Box::from(collector))
+        .map(|<span class="kw">_</span>| return_value)
+        .unwrap()
 }
 
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">CollectorExt</span>: <span class="ident">Collector</span> <span class="op">+</span> <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Sized</span> <span class="op">+</span> <span class="lifetime">&#39;static</span> {
-    <span class="doccomment">/// Registers the current metric collector with the provided registry</span>
-    <span class="doccomment">/// if not already registered.</span>
-    <span class="kw">fn</span> <span class="ident">register_if_not_exists</span>(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="kw">match</span> <span class="ident">registry</span>().<span class="ident">register</span>(<span class="ident">Box::from</span>(<span class="self">self</span>.<span class="ident">clone</span>())) {
-            <span class="prelude-val">Ok</span>(<span class="kw">_</span>) <span class="op">|</span> <span class="prelude-val">Err</span>(<span class="ident">prometheus::Error::AlreadyReg</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="self">self</span>),
-            <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; <span class="prelude-val">Err</span>(<span class="ident">err</span>),
+<span class="kw">pub trait </span>CollectorExt: Collector + Clone + Sized + <span class="lifetime">&#39;static </span>{
+    <span class="doccomment">/// Registers the current metric collector with the provided registry
+    /// if not already registered.
+    </span><span class="kw">fn </span>register_if_not_exists(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">match </span>registry().register(Box::from(<span class="self">self</span>.clone())) {
+            <span class="prelude-val">Ok</span>(<span class="kw">_</span>) | <span class="prelude-val">Err</span>(prometheus::Error::AlreadyReg) =&gt; <span class="prelude-val">Ok</span>(<span class="self">self</span>),
+            <span class="prelude-val">Err</span>(err) =&gt; <span class="prelude-val">Err</span>(err),
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">Collector</span> <span class="op">+</span> <span class="ident">Clone</span> <span class="op">+</span> <span class="lifetime">&#39;static</span><span class="op">&gt;</span> <span class="ident">CollectorExt</span> <span class="kw">for</span> <span class="ident">C</span> {}
+<span class="kw">impl</span>&lt;C: Collector + Clone + <span class="lifetime">&#39;static</span>&gt; CollectorExt <span class="kw">for </span>C {}
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

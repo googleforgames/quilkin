@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/filters/error.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>error.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../quilkin/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/filters/error.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>error.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../normalize.css"><link rel="stylesheet" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../ayu.css" disabled><link rel="stylesheet" href="../../../dark.css" disabled><link rel="stylesheet" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../quilkin/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -180,159 +180,159 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */</span>
+ */
 
-<span class="kw">use</span> <span class="ident">prometheus::Error</span> <span class="kw">as</span> <span class="ident">MetricsError</span>;
+</span><span class="kw">use </span>prometheus::Error <span class="kw">as </span>MetricsError;
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">doc</span>)]</span>
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters</span>::{<span class="ident">Filter</span>, <span class="ident">FilterFactory</span>};
+<span class="attribute">#[cfg(doc)]
+</span><span class="kw">use </span><span class="kw">crate</span>::filters::{Filter, FilterFactory};
 
-<span class="doccomment">/// An error that occurred when attempting to create a [`Filter`] from</span>
-<span class="doccomment">/// a [`FilterFactory`].</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">thiserror::Error</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Error</span> {
-    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;filter `{}` not found&quot;</span>, .<span class="number">0</span>)]</span>
-    <span class="ident">NotFound</span>(<span class="ident">String</span>),
-    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Expected &lt;{}&gt; message, received &lt;{}&gt; &quot;</span>, <span class="ident">expected</span>, <span class="ident">actual</span>)]</span>
-    <span class="ident">MismatchedTypes</span> { <span class="ident">expected</span>: <span class="ident">String</span>, <span class="ident">actual</span>: <span class="ident">String</span> },
-    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;filter `{}` requires configuration, but none provided&quot;</span>, .<span class="number">0</span>)]</span>
-    <span class="ident">MissingConfig</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>),
-    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;field `{}` is invalid, reason: {}&quot;</span>, <span class="ident">field</span>, <span class="ident">reason</span>)]</span>
-    <span class="ident">FieldInvalid</span> { <span class="ident">field</span>: <span class="ident">String</span>, <span class="ident">reason</span>: <span class="ident">String</span> },
-    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Deserialization failed: {}&quot;</span>, .<span class="number">0</span>)]</span>
-    <span class="ident">DeserializeFailed</span>(<span class="ident">String</span>),
-    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Failed to initialize metrics: {}&quot;</span>, .<span class="number">0</span>)]</span>
-    <span class="ident">InitializeMetricsFailed</span>(<span class="ident">String</span>),
-    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Protobuf error: {}&quot;</span>, .<span class="number">0</span>)]</span>
-    <span class="ident">ConvertProtoConfig</span>(<span class="ident">ConvertProtoConfigError</span>),
-    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Infallible! This should never occur&quot;</span>)]</span>
-    <span class="ident">Infallible</span>,
+<span class="doccomment">/// An error that occurred when attempting to create a [`Filter`] from
+/// a [`FilterFactory`].
+</span><span class="attribute">#[derive(Debug, Eq, PartialEq, thiserror::Error)]
+</span><span class="kw">pub enum </span>Error {
+    <span class="attribute">#[error(<span class="string">&quot;filter `{}` not found&quot;</span>, .<span class="number">0</span>)]
+    </span>NotFound(String),
+    <span class="attribute">#[error(<span class="string">&quot;Expected &lt;{}&gt; message, received &lt;{}&gt; &quot;</span>, expected, actual)]
+    </span>MismatchedTypes { expected: String, actual: String },
+    <span class="attribute">#[error(<span class="string">&quot;filter `{}` requires configuration, but none provided&quot;</span>, .<span class="number">0</span>)]
+    </span>MissingConfig(<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str),
+    <span class="attribute">#[error(<span class="string">&quot;field `{}` is invalid, reason: {}&quot;</span>, field, reason)]
+    </span>FieldInvalid { field: String, reason: String },
+    <span class="attribute">#[error(<span class="string">&quot;Deserialization failed: {}&quot;</span>, .<span class="number">0</span>)]
+    </span>DeserializeFailed(String),
+    <span class="attribute">#[error(<span class="string">&quot;Failed to initialize metrics: {}&quot;</span>, .<span class="number">0</span>)]
+    </span>InitializeMetricsFailed(String),
+    <span class="attribute">#[error(<span class="string">&quot;Protobuf error: {}&quot;</span>, .<span class="number">0</span>)]
+    </span>ConvertProtoConfig(ConvertProtoConfigError),
+    <span class="attribute">#[error(<span class="string">&quot;Infallible! This should never occur&quot;</span>)]
+    </span>Infallible,
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">std::convert::Infallible</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Error</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="kw">_</span>: <span class="ident">std::convert::Infallible</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident"><span class="self">Self</span>::Infallible</span>
+<span class="kw">impl </span>From&lt;std::convert::Infallible&gt; <span class="kw">for </span>Error {
+    <span class="kw">fn </span>from(<span class="kw">_</span>: std::convert::Infallible) -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::Infallible
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">MetricsError</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Error</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">error</span>: <span class="ident">MetricsError</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">Error::InitializeMetricsFailed</span>(<span class="ident">error</span>.<span class="ident">to_string</span>())
+<span class="kw">impl </span>From&lt;MetricsError&gt; <span class="kw">for </span>Error {
+    <span class="kw">fn </span>from(error: MetricsError) -&gt; <span class="self">Self </span>{
+        Error::InitializeMetricsFailed(error.to_string())
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">serde_yaml::Error</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Error</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">error</span>: <span class="ident">serde_yaml::Error</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident"><span class="self">Self</span>::DeserializeFailed</span>(<span class="ident">error</span>.<span class="ident">to_string</span>())
+<span class="kw">impl </span>From&lt;serde_yaml::Error&gt; <span class="kw">for </span>Error {
+    <span class="kw">fn </span>from(error: serde_yaml::Error) -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::DeserializeFailed(error.to_string())
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">serde_json::Error</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Error</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">error</span>: <span class="ident">serde_json::Error</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident"><span class="self">Self</span>::DeserializeFailed</span>(<span class="ident">error</span>.<span class="ident">to_string</span>())
+<span class="kw">impl </span>From&lt;serde_json::Error&gt; <span class="kw">for </span>Error {
+    <span class="kw">fn </span>from(error: serde_json::Error) -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::DeserializeFailed(error.to_string())
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">prost::EncodeError</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Error</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">error</span>: <span class="ident">prost::EncodeError</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident"><span class="self">Self</span>::ConvertProtoConfig</span>(<span class="ident">ConvertProtoConfigError::new</span>(<span class="ident">error</span>, <span class="prelude-val">None</span>))
+<span class="kw">impl </span>From&lt;prost::EncodeError&gt; <span class="kw">for </span>Error {
+    <span class="kw">fn </span>from(error: prost::EncodeError) -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::ConvertProtoConfig(ConvertProtoConfigError::new(error, <span class="prelude-val">None</span>))
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">prost::DecodeError</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Error</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">error</span>: <span class="ident">prost::DecodeError</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident"><span class="self">Self</span>::ConvertProtoConfig</span>(<span class="ident">ConvertProtoConfigError::new</span>(<span class="ident">error</span>, <span class="prelude-val">None</span>))
+<span class="kw">impl </span>From&lt;prost::DecodeError&gt; <span class="kw">for </span>Error {
+    <span class="kw">fn </span>from(error: prost::DecodeError) -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::ConvertProtoConfig(ConvertProtoConfigError::new(error, <span class="prelude-val">None</span>))
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">ConvertProtoConfigError</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Error</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">error</span>: <span class="ident">ConvertProtoConfigError</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident"><span class="self">Self</span>::ConvertProtoConfig</span>(<span class="ident">error</span>)
+<span class="kw">impl </span>From&lt;ConvertProtoConfigError&gt; <span class="kw">for </span>Error {
+    <span class="kw">fn </span>from(error: ConvertProtoConfigError) -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::ConvertProtoConfig(error)
     }
 }
 
-<span class="doccomment">/// An error representing failure to convert a filter&#39;s protobuf configuration</span>
-<span class="doccomment">/// to its static representation.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">thiserror::Error</span>)]</span>
-<span class="attribute">#[<span class="ident">error</span>(
+<span class="doccomment">/// An error representing failure to convert a filter&#39;s protobuf configuration
+/// to its static representation.
+</span><span class="attribute">#[derive(Debug, Eq, PartialEq, thiserror::Error)]
+#[error(
     <span class="string">&quot;{}failed to convert protobuf config: {}&quot;</span>,
-    <span class="self">self</span>.<span class="ident">field</span>.<span class="ident">as_ref</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">f</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;Field `{f}`&quot;</span>)).<span class="ident">unwrap_or_default</span>(),
-    <span class="ident">reason</span>
-)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ConvertProtoConfigError</span> {
-    <span class="doccomment">/// Reason for the failure.</span>
-    <span class="ident">reason</span>: <span class="ident">String</span>,
-    <span class="doccomment">/// Set if the failure is specific to a single field in the config.</span>
-    <span class="ident">field</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="self">self</span>.field.as_ref().map(|f| <span class="macro">format!</span>(<span class="string">&quot;Field `{f}`&quot;</span>)).unwrap_or_default(),
+    reason
+)]
+</span><span class="kw">pub struct </span>ConvertProtoConfigError {
+    <span class="doccomment">/// Reason for the failure.
+    </span>reason: String,
+    <span class="doccomment">/// Set if the failure is specific to a single field in the config.
+    </span>field: <span class="prelude-ty">Option</span>&lt;String&gt;,
 }
 
-<span class="kw">impl</span> <span class="ident">ConvertProtoConfigError</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">reason</span>: <span class="kw">impl</span> <span class="ident">std::fmt::Display</span>, <span class="ident">field</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">reason</span>: <span class="ident">reason</span>.<span class="ident">to_string</span>(),
-            <span class="ident">field</span>,
+<span class="kw">impl </span>ConvertProtoConfigError {
+    <span class="kw">pub fn </span>new(reason: <span class="kw">impl </span>std::fmt::Display, field: <span class="prelude-ty">Option</span>&lt;String&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            reason: reason.to_string(),
+            field,
         }
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">missing_field</span>(<span class="ident">field</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">reason</span>: <span class="macro">format!</span>(<span class="string">&quot;`{field}` is required but not found&quot;</span>),
-            <span class="ident">field</span>: <span class="prelude-val">Some</span>(<span class="ident">field</span>.<span class="ident">into</span>()),
+    <span class="kw">pub fn </span>missing_field(field: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            reason: <span class="macro">format!</span>(<span class="string">&quot;`{field}` is required but not found&quot;</span>),
+            field: <span class="prelude-val">Some</span>(field.into()),
         }
     }
 }
 
-<span class="doccomment">/// Returns a [`ConvertProtoConfigError`] with an error message when</span>
-<span class="doccomment">/// an invalid proto enum value was provided in a filter&#39;s proto config.</span>
-<span class="attribute">#[<span class="ident">macro_export</span>]</span>
-<span class="macro">macro_rules!</span> <span class="ident">enum_no_match_error</span> {
+<span class="doccomment">/// Returns a [`ConvertProtoConfigError`] with an error message when
+/// an invalid proto enum value was provided in a filter&#39;s proto config.
+</span><span class="attribute">#[macro_export]
+</span><span class="macro">macro_rules! </span>enum_no_match_error {
     (
-        <span class="ident">field</span> <span class="op">=</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">field</span>:<span class="ident">literal</span>,
-        <span class="ident">invalid_value</span> <span class="op">=</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">invalid_value</span>:<span class="ident">ident</span>,
-        <span class="ident">enum_type</span> <span class="op">=</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">enum_type</span>:<span class="ident">ty</span>,
-        <span class="ident">allowed_values</span> <span class="op">=</span> [ $( <span class="macro-nonterminal">$</span><span class="macro-nonterminal">allowed_value</span>:<span class="ident">tt</span> ),<span class="op">+</span> ]
+        field = <span class="macro-nonterminal">$field</span>:literal,
+        invalid_value = <span class="macro-nonterminal">$invalid_value</span>:ident,
+        enum_type = <span class="macro-nonterminal">$enum_type</span>:ty,
+        allowed_values = [ $( <span class="macro-nonterminal">$allowed_value</span>:tt ),+ ]
     ) =&gt; {
-        <span class="prelude-val">Err</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">crate::filters::error::ConvertProtoConfigError::new</span>(
+        <span class="prelude-val">Err</span>(<span class="macro-nonterminal">$crate::filters::error::ConvertProtoConfigError::new</span>(
             <span class="macro">format!</span>(
               <span class="string">&quot;invalid value `{}` provided: allowed values are {}&quot;</span>,
-              <span class="macro-nonterminal">$</span><span class="macro-nonterminal">invalid_value</span>,
+              <span class="macro-nonterminal">$invalid_value</span>,
               <span class="macro">vec!</span>[
-                $( (<span class="macro">stringify!</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">allowed_value</span>), <span class="op">&lt;</span><span class="macro-nonterminal">$</span><span class="macro-nonterminal">enum_type</span><span class="op">&gt;</span>::<span class="macro-nonterminal">$</span><span class="macro-nonterminal">allowed_value</span> <span class="kw">as</span> <span class="ident">i32</span>) ),<span class="op">+</span>
+                $( (<span class="macro">stringify!</span>(<span class="macro-nonterminal">$allowed_value</span>), &lt;<span class="macro-nonterminal">$enum_type</span>&gt;::<span class="macro-nonterminal">$allowed_value </span><span class="kw">as </span>i32) ),+
               ]
-              .<span class="ident">into_iter</span>()
-              .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">a</span>, <span class="ident">b</span>)<span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;{a} =&gt; {}&quot;</span>, <span class="ident">b</span> <span class="kw">as</span> <span class="ident">i32</span>))
-              .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
-              .<span class="ident">join</span>(<span class="string">&quot;, &quot;</span>)
+              .into_iter()
+              .map(|(a, b)| <span class="macro">format!</span>(<span class="string">&quot;{a} =&gt; {}&quot;</span>, b <span class="kw">as </span>i32))
+              .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
+              .join(<span class="string">&quot;, &quot;</span>)
             ),
-            <span class="prelude-val">Some</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">field</span>.<span class="ident">into</span>()),
+            <span class="prelude-val">Some</span>(<span class="macro-nonterminal">$field</span>.into()),
         ))
     };
 }
 
-<span class="doccomment">/// Maps an integer from a protobuf enum value to a target enum variant.</span>
-<span class="doccomment">/// Both protobuf and target enum must have similar variants.</span>
-<span class="doccomment">/// The protobuf enum variant should be cast-able to an i32</span>
-<span class="doccomment">/// Returns an `OK` Result with the target enum variant otherwise [`ConvertProtoConfigError`]</span>
-<span class="doccomment">/// if the provided value does not map to any enum variant.</span>
-<span class="attribute">#[<span class="ident">macro_export</span>]</span>
-<span class="macro">macro_rules!</span> <span class="ident">map_proto_enum</span> {
+<span class="doccomment">/// Maps an integer from a protobuf enum value to a target enum variant.
+/// Both protobuf and target enum must have similar variants.
+/// The protobuf enum variant should be cast-able to an i32
+/// Returns an `OK` Result with the target enum variant otherwise [`ConvertProtoConfigError`]
+/// if the provided value does not map to any enum variant.
+</span><span class="attribute">#[macro_export]
+</span><span class="macro">macro_rules! </span>map_proto_enum {
     (
-        <span class="ident">value</span> <span class="op">=</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">value</span>:<span class="ident">expr</span>,
-        <span class="ident">field</span> <span class="op">=</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">field</span>:<span class="ident">literal</span>,
-        <span class="ident">proto_enum_type</span> <span class="op">=</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">proto_enum_type</span>:<span class="ident">ty</span>,
-        <span class="ident">target_enum_type</span> <span class="op">=</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">target_enum_type</span>:<span class="ident">ty</span>,
-        <span class="ident">variants</span> <span class="op">=</span> [ $( <span class="macro-nonterminal">$</span><span class="macro-nonterminal">variant</span>:<span class="ident">tt</span> ),<span class="op">+</span> ]
+        value = <span class="macro-nonterminal">$value</span>:expr,
+        field = <span class="macro-nonterminal">$field</span>:literal,
+        proto_enum_type = <span class="macro-nonterminal">$proto_enum_type</span>:ty,
+        target_enum_type = <span class="macro-nonterminal">$target_enum_type</span>:ty,
+        variants = [ $( <span class="macro-nonterminal">$variant</span>:tt ),+ ]
     ) =&gt; {
-        <span class="kw">match</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">value</span> {
-            $( <span class="ident">v</span> <span class="kw">if</span> <span class="ident">v</span> <span class="op">==</span> <span class="op">&lt;</span><span class="macro-nonterminal">$</span><span class="macro-nonterminal">proto_enum_type</span><span class="op">&gt;</span>::<span class="macro-nonterminal">$</span><span class="macro-nonterminal">variant</span> <span class="kw">as</span> <span class="ident">i32</span> =&gt; <span class="prelude-val">Ok</span>(<span class="op">&lt;</span><span class="macro-nonterminal">$</span><span class="macro-nonterminal">target_enum_type</span><span class="op">&gt;</span>::<span class="macro-nonterminal">$</span><span class="macro-nonterminal">variant</span>) ),<span class="op">+</span>,
-            <span class="ident">invalid</span> =&gt; <span class="macro-nonterminal">$</span><span class="macro">crate::enum_no_match_error!</span>(
-                <span class="macro-nonterminal">field</span> <span class="op">=</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">field</span>,
-                <span class="ident">invalid_value</span> <span class="op">=</span> <span class="ident">invalid</span>,
-                <span class="ident">enum_type</span> <span class="op">=</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">proto_enum_type</span>,
-                <span class="ident">allowed_values</span> <span class="op">=</span> [ $( <span class="macro-nonterminal">$</span><span class="macro-nonterminal">variant</span> ),<span class="op">+</span> ]
+        <span class="kw">match </span><span class="macro-nonterminal">$value </span>{
+            $( v <span class="kw">if </span>v == &lt;<span class="macro-nonterminal">$proto_enum_type</span>&gt;::<span class="macro-nonterminal">$variant </span><span class="kw">as </span>i32 =&gt; <span class="prelude-val">Ok</span>(&lt;<span class="macro-nonterminal">$target_enum_type</span>&gt;::<span class="macro-nonterminal">$variant</span>) ),+,
+            invalid =&gt; <span class="macro-nonterminal">$</span><span class="macro">crate::enum_no_match_error!</span>(
+                <span class="macro-nonterminal">field </span>= <span class="macro-nonterminal">$field</span>,
+                invalid_value = invalid,
+                enum_type = <span class="macro-nonterminal">$proto_enum_type</span>,
+                allowed_values = [ $( <span class="macro-nonterminal">$variant </span>),+ ]
             )
         }
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/filters/compress.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>compress.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../quilkin/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/filters/compress.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>compress.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../normalize.css"><link rel="stylesheet" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../ayu.css" disabled><link rel="stylesheet" href="../../../dark.css" disabled><link rel="stylesheet" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../quilkin/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -532,511 +532,511 @@
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- */</span>
+ */
 
-<span class="kw">mod</span> <span class="ident">compressor</span>;
-<span class="kw">mod</span> <span class="ident">config</span>;
-<span class="kw">mod</span> <span class="ident">metrics</span>;
+</span><span class="kw">mod </span>compressor;
+<span class="kw">mod </span>config;
+<span class="kw">mod </span>metrics;
 
 <span class="macro">crate::include_proto!</span>(<span class="string">&quot;quilkin.filters.compress.v1alpha1&quot;</span>);
 
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">config::LOG_SAMPLING_RATE</span>, <span class="ident">filters::prelude</span>::<span class="kw-2">*</span>};
-<span class="kw">use</span> <span class="ident">tracing::warn</span>;
+<span class="kw">use crate</span>::{config::LOG_SAMPLING_RATE, filters::prelude::<span class="kw-2">*</span>};
+<span class="kw">use </span>tracing::warn;
 
-<span class="kw">use</span> <span class="ident"><span class="self">self</span>::quilkin::filters::compress::v1alpha1</span> <span class="kw">as</span> <span class="ident">proto</span>;
-<span class="kw">use</span> <span class="ident">compressor::Compressor</span>;
-<span class="kw">use</span> <span class="ident">metrics::Metrics</span>;
+<span class="kw">use </span><span class="self">self</span>::quilkin::filters::compress::v1alpha1 <span class="kw">as </span>proto;
+<span class="kw">use </span>compressor::Compressor;
+<span class="kw">use </span>metrics::Metrics;
 
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">config</span>::{<span class="ident">Action</span>, <span class="ident">Config</span>, <span class="ident">Mode</span>};
+<span class="kw">pub use </span>config::{Action, Config, Mode};
 
-<span class="doccomment">/// Filter for compressing and decompressing packet data</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Compress</span> {
-    <span class="ident">metrics</span>: <span class="ident">Metrics</span>,
-    <span class="ident">compression_mode</span>: <span class="ident">Mode</span>,
-    <span class="ident">on_read</span>: <span class="ident">Action</span>,
-    <span class="ident">on_write</span>: <span class="ident">Action</span>,
-    <span class="ident">compressor</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Compressor</span> <span class="op">+</span> <span class="ident">Sync</span> <span class="op">+</span> <span class="ident">Send</span><span class="op">&gt;</span>,
+<span class="doccomment">/// Filter for compressing and decompressing packet data
+</span><span class="kw">pub struct </span>Compress {
+    metrics: Metrics,
+    compression_mode: Mode,
+    on_read: Action,
+    on_write: Action,
+    compressor: Box&lt;<span class="kw">dyn </span>Compressor + Sync + Send&gt;,
 }
 
-<span class="kw">impl</span> <span class="ident">Compress</span> {
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">config</span>: <span class="ident">Config</span>, <span class="ident">metrics</span>: <span class="ident">Metrics</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">metrics</span>,
-            <span class="ident">compressor</span>: <span class="ident">config</span>.<span class="ident">mode</span>.<span class="ident">as_compressor</span>(),
-            <span class="ident">compression_mode</span>: <span class="ident">config</span>.<span class="ident">mode</span>,
-            <span class="ident">on_read</span>: <span class="ident">config</span>.<span class="ident">on_read</span>,
-            <span class="ident">on_write</span>: <span class="ident">config</span>.<span class="ident">on_write</span>,
+<span class="kw">impl </span>Compress {
+    <span class="kw">fn </span>new(config: Config, metrics: Metrics) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            metrics,
+            compressor: config.mode.as_compressor(),
+            compression_mode: config.mode,
+            on_read: config.on_read,
+            on_write: config.on_write,
         }
     }
 
-    <span class="doccomment">/// Track a failed attempt at compression</span>
-    <span class="kw">fn</span> <span class="ident">failed_compression</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">err</span>: <span class="kw-2">&amp;</span><span class="kw">dyn</span> <span class="ident">std::error::Error</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_compress</span>.<span class="ident">get</span>() <span class="op">%</span> <span class="ident">LOG_SAMPLING_RATE</span> <span class="op">==</span> <span class="number">0</span> {
-            <span class="macro">warn!</span>(<span class="ident">mode</span> <span class="op">=</span> <span class="question-mark">?</span><span class="self">self</span>.<span class="ident">compression_mode</span>, <span class="ident">error</span> <span class="op">=</span> <span class="op">%</span><span class="ident">err</span>, <span class="ident">count</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_compress</span>.<span class="ident">get</span>(),
+    <span class="doccomment">/// Track a failed attempt at compression
+    </span><span class="kw">fn </span>failed_compression&lt;T&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, err: <span class="kw-2">&amp;</span><span class="kw">dyn </span>std::error::Error) -&gt; <span class="prelude-ty">Option</span>&lt;T&gt; {
+        <span class="kw">if </span><span class="self">self</span>.metrics.packets_dropped_compress.get() % LOG_SAMPLING_RATE == <span class="number">0 </span>{
+            <span class="macro">warn!</span>(mode = <span class="question-mark">?</span><span class="self">self</span>.compression_mode, error = %err, count = <span class="self">self</span>.metrics.packets_dropped_compress.get(),
             <span class="string">&quot;Packets are being dropped as they could not be compressed&quot;</span>);
         }
-        <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_compress</span>.<span class="ident">inc</span>();
-        <span class="prelude-val">None</span>
-    }
+        <span class="self">self</span>.metrics.packets_dropped_compress.inc();
+        <span class="prelude-val">None
+    </span>}
 
-    <span class="doccomment">/// Track a failed attempt at decompression</span>
-    <span class="kw">fn</span> <span class="ident">failed_decompression</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">err</span>: <span class="kw-2">&amp;</span><span class="kw">dyn</span> <span class="ident">std::error::Error</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_decompress</span>.<span class="ident">get</span>() <span class="op">%</span> <span class="ident">LOG_SAMPLING_RATE</span> <span class="op">==</span> <span class="number">0</span> {
-            <span class="macro">warn!</span>(<span class="ident">mode</span> <span class="op">=</span> <span class="question-mark">?</span><span class="self">self</span>.<span class="ident">compression_mode</span>, <span class="ident">error</span> <span class="op">=</span> <span class="op">%</span><span class="ident">err</span>, <span class="ident">count</span> <span class="op">=</span> <span class="question-mark">?</span><span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_decompress</span>.<span class="ident">get</span>(),
+    <span class="doccomment">/// Track a failed attempt at decompression
+    </span><span class="kw">fn </span>failed_decompression&lt;T&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, err: <span class="kw-2">&amp;</span><span class="kw">dyn </span>std::error::Error) -&gt; <span class="prelude-ty">Option</span>&lt;T&gt; {
+        <span class="kw">if </span><span class="self">self</span>.metrics.packets_dropped_decompress.get() % LOG_SAMPLING_RATE == <span class="number">0 </span>{
+            <span class="macro">warn!</span>(mode = <span class="question-mark">?</span><span class="self">self</span>.compression_mode, error = %err, count = <span class="question-mark">?</span><span class="self">self</span>.metrics.packets_dropped_decompress.get(),
             <span class="string">&quot;Packets are being dropped as they could not be decompressed&quot;</span>);
         }
-        <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_decompress</span>.<span class="ident">inc</span>();
-        <span class="prelude-val">None</span>
-    }
+        <span class="self">self</span>.metrics.packets_dropped_decompress.inc();
+        <span class="prelude-val">None
+    </span>}
 }
 
-<span class="kw">impl</span> <span class="ident">Filter</span> <span class="kw">for</span> <span class="ident">Compress</span> {
-    <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;instrument&quot;</span>, <span class="ident">tracing::instrument</span>(<span class="ident">skip</span>(<span class="self">self</span>, <span class="ident">ctx</span>)))]</span>
-    <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ReadContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">original_size</span> <span class="op">=</span> <span class="ident">ctx</span>.<span class="ident">contents</span>.<span class="ident">len</span>();
+<span class="kw">impl </span>Filter <span class="kw">for </span>Compress {
+    <span class="attribute">#[cfg_attr(feature = <span class="string">&quot;instrument&quot;</span>, tracing::instrument(skip(<span class="self">self</span>, ctx)))]
+    </span><span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt; {
+        <span class="kw">let </span>original_size = ctx.contents.len();
 
-        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">on_read</span> {
-            <span class="ident">Action::Compress</span> =&gt; <span class="kw">match</span> <span class="self">self</span>.<span class="ident">compressor</span>.<span class="ident">encode</span>(<span class="kw-2">&amp;mut</span> <span class="ident">ctx</span>.<span class="ident">contents</span>) {
+        <span class="kw">match </span><span class="self">self</span>.on_read {
+            Action::Compress =&gt; <span class="kw">match </span><span class="self">self</span>.compressor.encode(<span class="kw-2">&amp;mut </span>ctx.contents) {
                 <span class="prelude-val">Ok</span>(()) =&gt; {
-                    <span class="self">self</span>.<span class="ident">metrics</span>
-                        .<span class="ident">decompressed_bytes_total</span>
-                        .<span class="ident">inc_by</span>(<span class="ident">original_size</span> <span class="kw">as</span> <span class="ident">u64</span>);
-                    <span class="self">self</span>.<span class="ident">metrics</span>
-                        .<span class="ident">compressed_bytes_total</span>
-                        .<span class="ident">inc_by</span>(<span class="ident">ctx</span>.<span class="ident">contents</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u64</span>);
+                    <span class="self">self</span>.metrics
+                        .decompressed_bytes_total
+                        .inc_by(original_size <span class="kw">as </span>u64);
+                    <span class="self">self</span>.metrics
+                        .compressed_bytes_total
+                        .inc_by(ctx.contents.len() <span class="kw">as </span>u64);
                     <span class="prelude-val">Some</span>(())
                 }
-                <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; <span class="self">self</span>.<span class="ident">failed_compression</span>(<span class="kw-2">&amp;</span><span class="ident">err</span>),
+                <span class="prelude-val">Err</span>(err) =&gt; <span class="self">self</span>.failed_compression(<span class="kw-2">&amp;</span>err),
             },
-            <span class="ident">Action::Decompress</span> =&gt; <span class="kw">match</span> <span class="self">self</span>.<span class="ident">compressor</span>.<span class="ident">decode</span>(<span class="kw-2">&amp;mut</span> <span class="ident">ctx</span>.<span class="ident">contents</span>) {
+            Action::Decompress =&gt; <span class="kw">match </span><span class="self">self</span>.compressor.decode(<span class="kw-2">&amp;mut </span>ctx.contents) {
                 <span class="prelude-val">Ok</span>(()) =&gt; {
-                    <span class="self">self</span>.<span class="ident">metrics</span>
-                        .<span class="ident">compressed_bytes_total</span>
-                        .<span class="ident">inc_by</span>(<span class="ident">original_size</span> <span class="kw">as</span> <span class="ident">u64</span>);
-                    <span class="self">self</span>.<span class="ident">metrics</span>
-                        .<span class="ident">decompressed_bytes_total</span>
-                        .<span class="ident">inc_by</span>(<span class="ident">ctx</span>.<span class="ident">contents</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u64</span>);
+                    <span class="self">self</span>.metrics
+                        .compressed_bytes_total
+                        .inc_by(original_size <span class="kw">as </span>u64);
+                    <span class="self">self</span>.metrics
+                        .decompressed_bytes_total
+                        .inc_by(ctx.contents.len() <span class="kw">as </span>u64);
                     <span class="prelude-val">Some</span>(())
                 }
-                <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; <span class="self">self</span>.<span class="ident">failed_decompression</span>(<span class="kw-2">&amp;</span><span class="ident">err</span>),
+                <span class="prelude-val">Err</span>(err) =&gt; <span class="self">self</span>.failed_decompression(<span class="kw-2">&amp;</span>err),
             },
-            <span class="ident">Action::DoNothing</span> =&gt; <span class="prelude-val">Some</span>(()),
+            Action::DoNothing =&gt; <span class="prelude-val">Some</span>(()),
         }
     }
 
-    <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;instrument&quot;</span>, <span class="ident">tracing::instrument</span>(<span class="ident">skip</span>(<span class="self">self</span>, <span class="ident">ctx</span>)))]</span>
-    <span class="kw">fn</span> <span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">WriteContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">original_size</span> <span class="op">=</span> <span class="ident">ctx</span>.<span class="ident">contents</span>.<span class="ident">len</span>();
-        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">on_write</span> {
-            <span class="ident">Action::Compress</span> =&gt; <span class="kw">match</span> <span class="self">self</span>.<span class="ident">compressor</span>.<span class="ident">encode</span>(<span class="kw-2">&amp;mut</span> <span class="ident">ctx</span>.<span class="ident">contents</span>) {
+    <span class="attribute">#[cfg_attr(feature = <span class="string">&quot;instrument&quot;</span>, tracing::instrument(skip(<span class="self">self</span>, ctx)))]
+    </span><span class="kw">fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt; {
+        <span class="kw">let </span>original_size = ctx.contents.len();
+        <span class="kw">match </span><span class="self">self</span>.on_write {
+            Action::Compress =&gt; <span class="kw">match </span><span class="self">self</span>.compressor.encode(<span class="kw-2">&amp;mut </span>ctx.contents) {
                 <span class="prelude-val">Ok</span>(()) =&gt; {
-                    <span class="self">self</span>.<span class="ident">metrics</span>
-                        .<span class="ident">decompressed_bytes_total</span>
-                        .<span class="ident">inc_by</span>(<span class="ident">original_size</span> <span class="kw">as</span> <span class="ident">u64</span>);
-                    <span class="self">self</span>.<span class="ident">metrics</span>
-                        .<span class="ident">compressed_bytes_total</span>
-                        .<span class="ident">inc_by</span>(<span class="ident">ctx</span>.<span class="ident">contents</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u64</span>);
+                    <span class="self">self</span>.metrics
+                        .decompressed_bytes_total
+                        .inc_by(original_size <span class="kw">as </span>u64);
+                    <span class="self">self</span>.metrics
+                        .compressed_bytes_total
+                        .inc_by(ctx.contents.len() <span class="kw">as </span>u64);
                     <span class="prelude-val">Some</span>(())
                 }
-                <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; <span class="self">self</span>.<span class="ident">failed_compression</span>(<span class="kw-2">&amp;</span><span class="ident">err</span>),
+                <span class="prelude-val">Err</span>(err) =&gt; <span class="self">self</span>.failed_compression(<span class="kw-2">&amp;</span>err),
             },
-            <span class="ident">Action::Decompress</span> =&gt; <span class="kw">match</span> <span class="self">self</span>.<span class="ident">compressor</span>.<span class="ident">decode</span>(<span class="kw-2">&amp;mut</span> <span class="ident">ctx</span>.<span class="ident">contents</span>) {
+            Action::Decompress =&gt; <span class="kw">match </span><span class="self">self</span>.compressor.decode(<span class="kw-2">&amp;mut </span>ctx.contents) {
                 <span class="prelude-val">Ok</span>(()) =&gt; {
-                    <span class="self">self</span>.<span class="ident">metrics</span>
-                        .<span class="ident">compressed_bytes_total</span>
-                        .<span class="ident">inc_by</span>(<span class="ident">original_size</span> <span class="kw">as</span> <span class="ident">u64</span>);
-                    <span class="self">self</span>.<span class="ident">metrics</span>
-                        .<span class="ident">decompressed_bytes_total</span>
-                        .<span class="ident">inc_by</span>(<span class="ident">ctx</span>.<span class="ident">contents</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u64</span>);
+                    <span class="self">self</span>.metrics
+                        .compressed_bytes_total
+                        .inc_by(original_size <span class="kw">as </span>u64);
+                    <span class="self">self</span>.metrics
+                        .decompressed_bytes_total
+                        .inc_by(ctx.contents.len() <span class="kw">as </span>u64);
                     <span class="prelude-val">Some</span>(())
                 }
 
-                <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; <span class="self">self</span>.<span class="ident">failed_decompression</span>(<span class="kw-2">&amp;</span><span class="ident">err</span>),
+                <span class="prelude-val">Err</span>(err) =&gt; <span class="self">self</span>.failed_decompression(<span class="kw-2">&amp;</span>err),
             },
-            <span class="ident">Action::DoNothing</span> =&gt; <span class="prelude-val">Some</span>(()),
+            Action::DoNothing =&gt; <span class="prelude-val">Some</span>(()),
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">StaticFilter</span> <span class="kw">for</span> <span class="ident">Compress</span> {
-    <span class="kw">const</span> <span class="ident">NAME</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;quilkin.filters.compress.v1alpha1.Compress&quot;</span>;
-    <span class="kw">type</span> <span class="ident">Configuration</span> <span class="op">=</span> <span class="ident">Config</span>;
-    <span class="kw">type</span> <span class="ident">BinaryConfiguration</span> <span class="op">=</span> <span class="ident">proto::Compress</span>;
+<span class="kw">impl </span>StaticFilter <span class="kw">for </span>Compress {
+    <span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str = <span class="string">&quot;quilkin.filters.compress.v1alpha1.Compress&quot;</span>;
+    <span class="kw">type </span>Configuration = Config;
+    <span class="kw">type </span>BinaryConfiguration = proto::Compress;
 
-    <span class="kw">fn</span> <span class="ident">try_from_config</span>(<span class="ident">config</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Configuration</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="prelude-val">Ok</span>(<span class="ident">Compress::new</span>(
-            <span class="ident"><span class="self">Self</span>::ensure_config_exists</span>(<span class="ident">config</span>)<span class="question-mark">?</span>,
-            <span class="ident">Metrics::new</span>()<span class="question-mark">?</span>,
+    <span class="kw">fn </span>try_from_config(config: <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Configuration&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+        <span class="prelude-val">Ok</span>(Compress::new(
+            <span class="self">Self</span>::ensure_config_exists(config)<span class="question-mark">?</span>,
+            Metrics::new()<span class="question-mark">?</span>,
         ))
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="ident">tracing_test::traced_test</span>;
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
+    <span class="kw">use </span>tracing_test::traced_test;
 
-    <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">endpoint::Endpoint</span>, <span class="ident">filters::compress::compressor::Snappy</span>};
+    <span class="kw">use crate</span>::{endpoint::Endpoint, filters::compress::compressor::Snappy};
 
-    <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
-    <span class="kw">use</span> <span class="ident">proto::compress</span>::{<span class="ident">Action</span> <span class="kw">as</span> <span class="ident">ProtoAction</span>, <span class="ident">ActionValue</span>, <span class="ident">Mode</span> <span class="kw">as</span> <span class="ident">ProtoMode</span>, <span class="ident">ModeValue</span>};
+    <span class="kw">use super</span>::<span class="kw-2">*</span>;
+    <span class="kw">use </span>proto::compress::{Action <span class="kw">as </span>ProtoAction, ActionValue, Mode <span class="kw">as </span>ProtoMode, ModeValue};
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">convert_proto_config</span>() {
-        <span class="kw">let</span> <span class="ident">test_cases</span> <span class="op">=</span> <span class="macro">vec!</span>[
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>convert_proto_config() {
+        <span class="kw">let </span>test_cases = <span class="macro">vec!</span>[
             (
                 <span class="string">&quot;should succeed when all valid values are provided&quot;</span>,
-                <span class="ident">proto::Compress</span> {
-                    <span class="ident">mode</span>: <span class="prelude-val">Some</span>(<span class="ident">ModeValue</span> {
-                        <span class="ident">value</span>: <span class="ident">ProtoMode::Snappy</span> <span class="kw">as</span> <span class="ident">i32</span>,
+                proto::Compress {
+                    mode: <span class="prelude-val">Some</span>(ModeValue {
+                        value: ProtoMode::Snappy <span class="kw">as </span>i32,
                     }),
-                    <span class="ident">on_read</span>: <span class="prelude-val">Some</span>(<span class="ident">ActionValue</span> {
-                        <span class="ident">value</span>: <span class="ident">ProtoAction::Compress</span> <span class="kw">as</span> <span class="ident">i32</span>,
+                    on_read: <span class="prelude-val">Some</span>(ActionValue {
+                        value: ProtoAction::Compress <span class="kw">as </span>i32,
                     }),
-                    <span class="ident">on_write</span>: <span class="prelude-val">Some</span>(<span class="ident">ActionValue</span> {
-                        <span class="ident">value</span>: <span class="ident">ProtoAction::Decompress</span> <span class="kw">as</span> <span class="ident">i32</span>,
+                    on_write: <span class="prelude-val">Some</span>(ActionValue {
+                        value: ProtoAction::Decompress <span class="kw">as </span>i32,
                     }),
                 },
-                <span class="prelude-val">Some</span>(<span class="ident">Config</span> {
-                    <span class="ident">mode</span>: <span class="ident">Mode::Snappy</span>,
-                    <span class="ident">on_read</span>: <span class="ident">Action::Compress</span>,
-                    <span class="ident">on_write</span>: <span class="ident">Action::Decompress</span>,
+                <span class="prelude-val">Some</span>(Config {
+                    mode: Mode::Snappy,
+                    on_read: Action::Compress,
+                    on_write: Action::Decompress,
                 }),
             ),
             (
                 <span class="string">&quot;should fail when invalid mode is provided&quot;</span>,
-                <span class="ident">proto::Compress</span> {
-                    <span class="ident">mode</span>: <span class="prelude-val">Some</span>(<span class="ident">ModeValue</span> { <span class="ident">value</span>: <span class="number">42</span> }),
-                    <span class="ident">on_read</span>: <span class="prelude-val">Some</span>(<span class="ident">ActionValue</span> {
-                        <span class="ident">value</span>: <span class="ident">ProtoAction::Compress</span> <span class="kw">as</span> <span class="ident">i32</span>,
+                proto::Compress {
+                    mode: <span class="prelude-val">Some</span>(ModeValue { value: <span class="number">42 </span>}),
+                    on_read: <span class="prelude-val">Some</span>(ActionValue {
+                        value: ProtoAction::Compress <span class="kw">as </span>i32,
                     }),
-                    <span class="ident">on_write</span>: <span class="prelude-val">Some</span>(<span class="ident">ActionValue</span> {
-                        <span class="ident">value</span>: <span class="ident">ProtoAction::Decompress</span> <span class="kw">as</span> <span class="ident">i32</span>,
+                    on_write: <span class="prelude-val">Some</span>(ActionValue {
+                        value: ProtoAction::Decompress <span class="kw">as </span>i32,
                     }),
                 },
                 <span class="prelude-val">None</span>,
             ),
             (
                 <span class="string">&quot;should fail when invalid on_read is provided&quot;</span>,
-                <span class="ident">proto::Compress</span> {
-                    <span class="ident">mode</span>: <span class="prelude-val">Some</span>(<span class="ident">ModeValue</span> {
-                        <span class="ident">value</span>: <span class="ident">ProtoMode::Snappy</span> <span class="kw">as</span> <span class="ident">i32</span>,
+                proto::Compress {
+                    mode: <span class="prelude-val">Some</span>(ModeValue {
+                        value: ProtoMode::Snappy <span class="kw">as </span>i32,
                     }),
-                    <span class="ident">on_read</span>: <span class="prelude-val">Some</span>(<span class="ident">ActionValue</span> { <span class="ident">value</span>: <span class="number">73</span> }),
-                    <span class="ident">on_write</span>: <span class="prelude-val">Some</span>(<span class="ident">ActionValue</span> {
-                        <span class="ident">value</span>: <span class="ident">ProtoAction::Decompress</span> <span class="kw">as</span> <span class="ident">i32</span>,
+                    on_read: <span class="prelude-val">Some</span>(ActionValue { value: <span class="number">73 </span>}),
+                    on_write: <span class="prelude-val">Some</span>(ActionValue {
+                        value: ProtoAction::Decompress <span class="kw">as </span>i32,
                     }),
                 },
                 <span class="prelude-val">None</span>,
             ),
             (
                 <span class="string">&quot;should fail when invalid on_write is provided&quot;</span>,
-                <span class="ident">proto::Compress</span> {
-                    <span class="ident">mode</span>: <span class="prelude-val">Some</span>(<span class="ident">ModeValue</span> {
-                        <span class="ident">value</span>: <span class="ident">ProtoMode::Snappy</span> <span class="kw">as</span> <span class="ident">i32</span>,
+                proto::Compress {
+                    mode: <span class="prelude-val">Some</span>(ModeValue {
+                        value: ProtoMode::Snappy <span class="kw">as </span>i32,
                     }),
-                    <span class="ident">on_read</span>: <span class="prelude-val">Some</span>(<span class="ident">ActionValue</span> {
-                        <span class="ident">value</span>: <span class="ident">ProtoAction::Decompress</span> <span class="kw">as</span> <span class="ident">i32</span>,
+                    on_read: <span class="prelude-val">Some</span>(ActionValue {
+                        value: ProtoAction::Decompress <span class="kw">as </span>i32,
                     }),
-                    <span class="ident">on_write</span>: <span class="prelude-val">Some</span>(<span class="ident">ActionValue</span> { <span class="ident">value</span>: <span class="number">73</span> }),
+                    on_write: <span class="prelude-val">Some</span>(ActionValue { value: <span class="number">73 </span>}),
                 },
                 <span class="prelude-val">None</span>,
             ),
             (
                 <span class="string">&quot;should use correct default values&quot;</span>,
-                <span class="ident">proto::Compress</span> {
-                    <span class="ident">mode</span>: <span class="prelude-val">None</span>,
-                    <span class="ident">on_read</span>: <span class="prelude-val">None</span>,
-                    <span class="ident">on_write</span>: <span class="prelude-val">None</span>,
+                proto::Compress {
+                    mode: <span class="prelude-val">None</span>,
+                    on_read: <span class="prelude-val">None</span>,
+                    on_write: <span class="prelude-val">None</span>,
                 },
-                <span class="prelude-val">Some</span>(<span class="ident">Config::default</span>()),
+                <span class="prelude-val">Some</span>(Config::default()),
             ),
         ];
-        <span class="kw">for</span> (<span class="ident">name</span>, <span class="ident">proto_config</span>, <span class="ident">expected</span>) <span class="kw">in</span> <span class="ident">test_cases</span> {
-            <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">Config::try_from</span>(<span class="ident">proto_config</span>);
+        <span class="kw">for </span>(name, proto_config, expected) <span class="kw">in </span>test_cases {
+            <span class="kw">let </span>result = Config::try_from(proto_config);
             <span class="macro">assert_eq!</span>(
-                <span class="ident">result</span>.<span class="ident">is_err</span>(),
-                <span class="ident">expected</span>.<span class="ident">is_none</span>(),
+                result.is_err(),
+                expected.is_none(),
                 <span class="string">&quot;{}: error expectation does not match&quot;</span>,
-                <span class="ident">name</span>
+                name
             );
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">expected</span>) <span class="op">=</span> <span class="ident">expected</span> {
-                <span class="macro">assert_eq!</span>(<span class="ident">expected</span>, <span class="ident">result</span>.<span class="ident">unwrap</span>(), <span class="string">&quot;{}&quot;</span>, <span class="ident">name</span>);
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(expected) = expected {
+                <span class="macro">assert_eq!</span>(expected, result.unwrap(), <span class="string">&quot;{}&quot;</span>, name);
             }
         }
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">default_mode_factory</span>() {
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="macro">serde_json::json!</span>({
-            <span class="string">&quot;on_read&quot;</span>: <span class="string">&quot;DECOMPRESS&quot;</span>.<span class="ident">to_string</span>(),
-            <span class="string">&quot;on_write&quot;</span>: <span class="string">&quot;COMPRESS&quot;</span>.<span class="ident">to_string</span>(),
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>default_mode_factory() {
+        <span class="kw">let </span>config = <span class="macro">serde_json::json!</span>({
+            <span class="string">&quot;on_read&quot;</span>: <span class="string">&quot;DECOMPRESS&quot;</span>.to_string(),
+            <span class="string">&quot;on_write&quot;</span>: <span class="string">&quot;COMPRESS&quot;</span>.to_string(),
 
         });
-        <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">Compress::from_config</span>(<span class="prelude-val">Some</span>(<span class="ident">serde_json::from_value</span>(<span class="ident">config</span>).<span class="ident">unwrap</span>()));
-        <span class="ident">assert_downstream</span>(<span class="kw-2">&amp;</span><span class="ident">filter</span>);
+        <span class="kw">let </span>filter = Compress::from_config(<span class="prelude-val">Some</span>(serde_json::from_value(config).unwrap()));
+        assert_downstream(<span class="kw-2">&amp;</span>filter);
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">config_factory</span>() {
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="macro">serde_json::json!</span>({
-            <span class="string">&quot;mode&quot;</span>: <span class="string">&quot;SNAPPY&quot;</span>.<span class="ident">to_string</span>(),
-            <span class="string">&quot;on_read&quot;</span>: <span class="string">&quot;DECOMPRESS&quot;</span>.<span class="ident">to_string</span>(),
-            <span class="string">&quot;on_write&quot;</span>: <span class="string">&quot;COMPRESS&quot;</span>.<span class="ident">to_string</span>(),
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>config_factory() {
+        <span class="kw">let </span>config = <span class="macro">serde_json::json!</span>({
+            <span class="string">&quot;mode&quot;</span>: <span class="string">&quot;SNAPPY&quot;</span>.to_string(),
+            <span class="string">&quot;on_read&quot;</span>: <span class="string">&quot;DECOMPRESS&quot;</span>.to_string(),
+            <span class="string">&quot;on_write&quot;</span>: <span class="string">&quot;COMPRESS&quot;</span>.to_string(),
 
         });
-        <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">Compress::from_config</span>(<span class="prelude-val">Some</span>(<span class="ident">serde_json::from_value</span>(<span class="ident">config</span>).<span class="ident">unwrap</span>()));
-        <span class="ident">assert_downstream</span>(<span class="kw-2">&amp;</span><span class="ident">filter</span>);
+        <span class="kw">let </span>filter = Compress::from_config(<span class="prelude-val">Some</span>(serde_json::from_value(config).unwrap()));
+        assert_downstream(<span class="kw-2">&amp;</span>filter);
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">upstream</span>() {
-        <span class="kw">let</span> <span class="ident">compress</span> <span class="op">=</span> <span class="ident">Compress::new</span>(
-            <span class="ident">Config</span> {
-                <span class="ident">mode</span>: <span class="ident">Default::default</span>(),
-                <span class="ident">on_read</span>: <span class="ident">Action::Compress</span>,
-                <span class="ident">on_write</span>: <span class="ident">Action::Decompress</span>,
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>upstream() {
+        <span class="kw">let </span>compress = Compress::new(
+            Config {
+                mode: Default::default(),
+                on_read: Action::Compress,
+                on_write: Action::Decompress,
             },
-            <span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>(),
+            Metrics::new().unwrap(),
         );
-        <span class="kw">let</span> <span class="ident">expected</span> <span class="op">=</span> <span class="ident">contents_fixture</span>();
+        <span class="kw">let </span>expected = contents_fixture();
 
-        <span class="comment">// read compress</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">read_context</span> <span class="op">=</span> <span class="ident">ReadContext::new</span>(
-            <span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(<span class="string">&quot;127.0.0.1:80&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>())],
-            <span class="string">&quot;127.0.0.1:8080&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
-            <span class="ident">expected</span>.<span class="ident">clone</span>(),
+        <span class="comment">// read compress
+        </span><span class="kw">let </span><span class="kw-2">mut </span>read_context = ReadContext::new(
+            <span class="macro">vec!</span>[Endpoint::new(<span class="string">&quot;127.0.0.1:80&quot;</span>.parse().unwrap())],
+            <span class="string">&quot;127.0.0.1:8080&quot;</span>.parse().unwrap(),
+            expected.clone(),
         );
-        <span class="ident">compress</span>.<span class="ident">read</span>(<span class="kw-2">&amp;mut</span> <span class="ident">read_context</span>).<span class="ident">expect</span>(<span class="string">&quot;should compress&quot;</span>);
+        compress.read(<span class="kw-2">&amp;mut </span>read_context).expect(<span class="string">&quot;should compress&quot;</span>);
 
-        <span class="macro">assert_ne!</span>(<span class="ident">expected</span>, <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">read_context</span>.<span class="ident">contents</span>);
+        <span class="macro">assert_ne!</span>(expected, <span class="kw-2">&amp;*</span>read_context.contents);
         <span class="macro">assert!</span>(
-            <span class="ident">expected</span>.<span class="ident">len</span>() <span class="op">&gt;</span> <span class="ident">read_context</span>.<span class="ident">contents</span>.<span class="ident">len</span>(),
+            expected.len() &gt; read_context.contents.len(),
             <span class="string">&quot;Original: {}. Compressed: {}&quot;</span>,
-            <span class="ident">expected</span>.<span class="ident">len</span>(),
-            <span class="ident">read_context</span>.<span class="ident">contents</span>.<span class="ident">len</span>()
+            expected.len(),
+            read_context.contents.len()
         );
         <span class="macro">assert_eq!</span>(
-            <span class="ident">expected</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u64</span>,
-            <span class="ident">compress</span>.<span class="ident">metrics</span>.<span class="ident">decompressed_bytes_total</span>.<span class="ident">get</span>()
+            expected.len() <span class="kw">as </span>u64,
+            compress.metrics.decompressed_bytes_total.get()
         );
         <span class="macro">assert_eq!</span>(
-            <span class="ident">read_context</span>.<span class="ident">contents</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u64</span>,
-            <span class="ident">compress</span>.<span class="ident">metrics</span>.<span class="ident">compressed_bytes_total</span>.<span class="ident">get</span>()
+            read_context.contents.len() <span class="kw">as </span>u64,
+            compress.metrics.compressed_bytes_total.get()
         );
 
-        <span class="comment">// write decompress</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">write_context</span> <span class="op">=</span> <span class="ident">WriteContext::new</span>(
-            <span class="ident">Endpoint::new</span>(<span class="string">&quot;127.0.0.1:80&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>()),
-            <span class="string">&quot;127.0.0.1:8080&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
-            <span class="string">&quot;127.0.0.1:8081&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
-            <span class="ident">read_context</span>.<span class="ident">contents</span>.<span class="ident">clone</span>(),
+        <span class="comment">// write decompress
+        </span><span class="kw">let </span><span class="kw-2">mut </span>write_context = WriteContext::new(
+            Endpoint::new(<span class="string">&quot;127.0.0.1:80&quot;</span>.parse().unwrap()),
+            <span class="string">&quot;127.0.0.1:8080&quot;</span>.parse().unwrap(),
+            <span class="string">&quot;127.0.0.1:8081&quot;</span>.parse().unwrap(),
+            read_context.contents.clone(),
         );
 
-        <span class="ident">compress</span>
-            .<span class="ident">write</span>(<span class="kw-2">&amp;mut</span> <span class="ident">write_context</span>)
-            .<span class="ident">expect</span>(<span class="string">&quot;should decompress&quot;</span>);
+        compress
+            .write(<span class="kw-2">&amp;mut </span>write_context)
+            .expect(<span class="string">&quot;should decompress&quot;</span>);
 
-        <span class="macro">assert_eq!</span>(<span class="ident">expected</span>, <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">write_context</span>.<span class="ident">contents</span>);
+        <span class="macro">assert_eq!</span>(expected, <span class="kw-2">&amp;*</span>write_context.contents);
 
-        <span class="macro">assert_eq!</span>(<span class="number">0</span>, <span class="ident">compress</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_decompress</span>.<span class="ident">get</span>());
-        <span class="macro">assert_eq!</span>(<span class="number">0</span>, <span class="ident">compress</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_compress</span>.<span class="ident">get</span>());
-        <span class="comment">// multiply by two, because data was sent both upstream and downstream</span>
+        <span class="macro">assert_eq!</span>(<span class="number">0</span>, compress.metrics.packets_dropped_decompress.get());
+        <span class="macro">assert_eq!</span>(<span class="number">0</span>, compress.metrics.packets_dropped_compress.get());
+        <span class="comment">// multiply by two, because data was sent both upstream and downstream
+        </span><span class="macro">assert_eq!</span>(
+            (read_context.contents.len() * <span class="number">2</span>) <span class="kw">as </span>u64,
+            compress.metrics.compressed_bytes_total.get()
+        );
         <span class="macro">assert_eq!</span>(
-            (<span class="ident">read_context</span>.<span class="ident">contents</span>.<span class="ident">len</span>() <span class="op">*</span> <span class="number">2</span>) <span class="kw">as</span> <span class="ident">u64</span>,
-            <span class="ident">compress</span>.<span class="ident">metrics</span>.<span class="ident">compressed_bytes_total</span>.<span class="ident">get</span>()
-        );
-        <span class="macro">assert_eq!</span>(
-            (<span class="ident">expected</span>.<span class="ident">len</span>() <span class="op">*</span> <span class="number">2</span>) <span class="kw">as</span> <span class="ident">u64</span>,
-            <span class="ident">compress</span>.<span class="ident">metrics</span>.<span class="ident">decompressed_bytes_total</span>.<span class="ident">get</span>()
+            (expected.len() * <span class="number">2</span>) <span class="kw">as </span>u64,
+            compress.metrics.decompressed_bytes_total.get()
         );
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">downstream</span>() {
-        <span class="kw">let</span> <span class="ident">compress</span> <span class="op">=</span> <span class="ident">Compress::new</span>(
-            <span class="ident">Config</span> {
-                <span class="ident">mode</span>: <span class="ident">Default::default</span>(),
-                <span class="ident">on_read</span>: <span class="ident">Action::Decompress</span>,
-                <span class="ident">on_write</span>: <span class="ident">Action::Compress</span>,
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>downstream() {
+        <span class="kw">let </span>compress = Compress::new(
+            Config {
+                mode: Default::default(),
+                on_read: Action::Decompress,
+                on_write: Action::Compress,
             },
-            <span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>(),
+            Metrics::new().unwrap(),
         );
 
-        <span class="kw">let</span> (<span class="ident">expected</span>, <span class="ident">compressed</span>) <span class="op">=</span> <span class="ident">assert_downstream</span>(<span class="kw-2">&amp;</span><span class="ident">compress</span>);
+        <span class="kw">let </span>(expected, compressed) = assert_downstream(<span class="kw-2">&amp;</span>compress);
 
-        <span class="comment">// multiply by two, because data was sent both downstream and upstream</span>
+        <span class="comment">// multiply by two, because data was sent both downstream and upstream
+        </span><span class="macro">assert_eq!</span>(
+            (compressed.len() * <span class="number">2</span>) <span class="kw">as </span>u64,
+            compress.metrics.compressed_bytes_total.get()
+        );
         <span class="macro">assert_eq!</span>(
-            (<span class="ident">compressed</span>.<span class="ident">len</span>() <span class="op">*</span> <span class="number">2</span>) <span class="kw">as</span> <span class="ident">u64</span>,
-            <span class="ident">compress</span>.<span class="ident">metrics</span>.<span class="ident">compressed_bytes_total</span>.<span class="ident">get</span>()
-        );
-        <span class="macro">assert_eq!</span>(
-            (<span class="ident">expected</span>.<span class="ident">len</span>() <span class="op">*</span> <span class="number">2</span>) <span class="kw">as</span> <span class="ident">u64</span>,
-            <span class="ident">compress</span>.<span class="ident">metrics</span>.<span class="ident">decompressed_bytes_total</span>.<span class="ident">get</span>()
+            (expected.len() * <span class="number">2</span>) <span class="kw">as </span>u64,
+            compress.metrics.decompressed_bytes_total.get()
         );
 
-        <span class="macro">assert_eq!</span>(<span class="number">0</span>, <span class="ident">compress</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_decompress</span>.<span class="ident">get</span>());
-        <span class="macro">assert_eq!</span>(<span class="number">0</span>, <span class="ident">compress</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_compress</span>.<span class="ident">get</span>());
+        <span class="macro">assert_eq!</span>(<span class="number">0</span>, compress.metrics.packets_dropped_decompress.get());
+        <span class="macro">assert_eq!</span>(<span class="number">0</span>, compress.metrics.packets_dropped_compress.get());
     }
 
-    <span class="attribute">#[<span class="ident">traced_test</span>]</span>
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">failed_decompress</span>() {
-        <span class="kw">let</span> <span class="ident">compression</span> <span class="op">=</span> <span class="ident">Compress::new</span>(
-            <span class="ident">Config</span> {
-                <span class="ident">mode</span>: <span class="ident">Default::default</span>(),
-                <span class="ident">on_read</span>: <span class="ident">Action::Compress</span>,
-                <span class="ident">on_write</span>: <span class="ident">Action::Decompress</span>,
+    <span class="attribute">#[traced_test]
+    #[test]
+    </span><span class="kw">fn </span>failed_decompress() {
+        <span class="kw">let </span>compression = Compress::new(
+            Config {
+                mode: Default::default(),
+                on_read: Action::Compress,
+                on_write: Action::Decompress,
             },
-            <span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>(),
+            Metrics::new().unwrap(),
         );
 
-        <span class="macro">assert!</span>(<span class="ident">compression</span>
-            .<span class="ident">write</span>(<span class="kw-2">&amp;mut</span> <span class="ident">WriteContext::new</span>(
-                <span class="ident">Endpoint::new</span>(<span class="string">&quot;127.0.0.1:80&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>()),
-                <span class="string">&quot;127.0.0.1:8080&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
-                <span class="string">&quot;127.0.0.1:8081&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
-                <span class="string">b&quot;hello&quot;</span>.<span class="ident">to_vec</span>(),
+        <span class="macro">assert!</span>(compression
+            .write(<span class="kw-2">&amp;mut </span>WriteContext::new(
+                Endpoint::new(<span class="string">&quot;127.0.0.1:80&quot;</span>.parse().unwrap()),
+                <span class="string">&quot;127.0.0.1:8080&quot;</span>.parse().unwrap(),
+                <span class="string">&quot;127.0.0.1:8081&quot;</span>.parse().unwrap(),
+                <span class="string">b&quot;hello&quot;</span>.to_vec(),
             ))
-            .<span class="ident">is_none</span>());
+            .is_none());
 
-        <span class="macro">assert_eq!</span>(<span class="number">1</span>, <span class="ident">compression</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_decompress</span>.<span class="ident">get</span>());
-        <span class="macro">assert_eq!</span>(<span class="number">0</span>, <span class="ident">compression</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_compress</span>.<span class="ident">get</span>());
+        <span class="macro">assert_eq!</span>(<span class="number">1</span>, compression.metrics.packets_dropped_decompress.get());
+        <span class="macro">assert_eq!</span>(<span class="number">0</span>, compression.metrics.packets_dropped_compress.get());
 
-        <span class="kw">let</span> <span class="ident">compression</span> <span class="op">=</span> <span class="ident">Compress::new</span>(
-            <span class="ident">Config</span> {
-                <span class="ident">mode</span>: <span class="ident">Default::default</span>(),
-                <span class="ident">on_read</span>: <span class="ident">Action::Decompress</span>,
-                <span class="ident">on_write</span>: <span class="ident">Action::Compress</span>,
+        <span class="kw">let </span>compression = Compress::new(
+            Config {
+                mode: Default::default(),
+                on_read: Action::Decompress,
+                on_write: Action::Compress,
             },
-            <span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>(),
+            Metrics::new().unwrap(),
         );
 
-        <span class="macro">assert!</span>(<span class="ident">compression</span>
-            .<span class="ident">read</span>(<span class="kw-2">&amp;mut</span> <span class="ident">ReadContext::new</span>(
-                <span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(<span class="string">&quot;127.0.0.1:80&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>())],
-                <span class="string">&quot;127.0.0.1:8080&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
-                <span class="string">b&quot;hello&quot;</span>.<span class="ident">to_vec</span>(),
+        <span class="macro">assert!</span>(compression
+            .read(<span class="kw-2">&amp;mut </span>ReadContext::new(
+                <span class="macro">vec!</span>[Endpoint::new(<span class="string">&quot;127.0.0.1:80&quot;</span>.parse().unwrap())],
+                <span class="string">&quot;127.0.0.1:8080&quot;</span>.parse().unwrap(),
+                <span class="string">b&quot;hello&quot;</span>.to_vec(),
             ))
-            .<span class="ident">is_none</span>());
+            .is_none());
 
-        <span class="macro">assert!</span>(<span class="ident">logs_contain</span>(
-            <span class="string">&quot;Packets are being dropped as they could not be decompressed&quot;</span>
-        ));
-        <span class="macro">assert!</span>(<span class="ident">logs_contain</span>(<span class="string">&quot;quilkin::filters::compress&quot;</span>)); <span class="comment">// the given name to the the logger by tracing</span>
+        <span class="macro">assert!</span>(logs_contain(
+            <span class="string">&quot;Packets are being dropped as they could not be decompressed&quot;
+        </span>));
+        <span class="macro">assert!</span>(logs_contain(<span class="string">&quot;quilkin::filters::compress&quot;</span>)); <span class="comment">// the given name to the the logger by tracing
 
-        <span class="macro">assert_eq!</span>(<span class="number">1</span>, <span class="ident">compression</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_decompress</span>.<span class="ident">get</span>());
-        <span class="macro">assert_eq!</span>(<span class="number">0</span>, <span class="ident">compression</span>.<span class="ident">metrics</span>.<span class="ident">packets_dropped_compress</span>.<span class="ident">get</span>());
-        <span class="macro">assert_eq!</span>(<span class="number">0</span>, <span class="ident">compression</span>.<span class="ident">metrics</span>.<span class="ident">compressed_bytes_total</span>.<span class="ident">get</span>());
-        <span class="macro">assert_eq!</span>(<span class="number">0</span>, <span class="ident">compression</span>.<span class="ident">metrics</span>.<span class="ident">decompressed_bytes_total</span>.<span class="ident">get</span>());
+        </span><span class="macro">assert_eq!</span>(<span class="number">1</span>, compression.metrics.packets_dropped_decompress.get());
+        <span class="macro">assert_eq!</span>(<span class="number">0</span>, compression.metrics.packets_dropped_compress.get());
+        <span class="macro">assert_eq!</span>(<span class="number">0</span>, compression.metrics.compressed_bytes_total.get());
+        <span class="macro">assert_eq!</span>(<span class="number">0</span>, compression.metrics.decompressed_bytes_total.get());
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">do_nothing</span>() {
-        <span class="kw">let</span> <span class="ident">compression</span> <span class="op">=</span> <span class="ident">Compress::new</span>(
-            <span class="ident">Config</span> {
-                <span class="ident">mode</span>: <span class="ident">Default::default</span>(),
-                <span class="ident">on_read</span>: <span class="ident">Action::default</span>(),
-                <span class="ident">on_write</span>: <span class="ident">Action::default</span>(),
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>do_nothing() {
+        <span class="kw">let </span>compression = Compress::new(
+            Config {
+                mode: Default::default(),
+                on_read: Action::default(),
+                on_write: Action::default(),
             },
-            <span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>(),
+            Metrics::new().unwrap(),
         );
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">read_context</span> <span class="op">=</span> <span class="ident">ReadContext::new</span>(
-            <span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(<span class="string">&quot;127.0.0.1:80&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>())],
-            <span class="string">&quot;127.0.0.1:8080&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
-            <span class="string">b&quot;hello&quot;</span>.<span class="ident">to_vec</span>(),
+        <span class="kw">let </span><span class="kw-2">mut </span>read_context = ReadContext::new(
+            <span class="macro">vec!</span>[Endpoint::new(<span class="string">&quot;127.0.0.1:80&quot;</span>.parse().unwrap())],
+            <span class="string">&quot;127.0.0.1:8080&quot;</span>.parse().unwrap(),
+            <span class="string">b&quot;hello&quot;</span>.to_vec(),
         );
-        <span class="ident">compression</span>.<span class="ident">read</span>(<span class="kw-2">&amp;mut</span> <span class="ident">read_context</span>).<span class="ident">unwrap</span>();
-        <span class="macro">assert_eq!</span>(<span class="string">b&quot;hello&quot;</span>, <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">read_context</span>.<span class="ident">contents</span>);
+        compression.read(<span class="kw-2">&amp;mut </span>read_context).unwrap();
+        <span class="macro">assert_eq!</span>(<span class="string">b&quot;hello&quot;</span>, <span class="kw-2">&amp;*</span>read_context.contents);
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">write_context</span> <span class="op">=</span> <span class="ident">WriteContext::new</span>(
-            <span class="ident">Endpoint::new</span>(<span class="string">&quot;127.0.0.1:80&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>()),
-            <span class="string">&quot;127.0.0.1:8080&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
-            <span class="string">&quot;127.0.0.1:8081&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
-            <span class="string">b&quot;hello&quot;</span>.<span class="ident">to_vec</span>(),
+        <span class="kw">let </span><span class="kw-2">mut </span>write_context = WriteContext::new(
+            Endpoint::new(<span class="string">&quot;127.0.0.1:80&quot;</span>.parse().unwrap()),
+            <span class="string">&quot;127.0.0.1:8080&quot;</span>.parse().unwrap(),
+            <span class="string">&quot;127.0.0.1:8081&quot;</span>.parse().unwrap(),
+            <span class="string">b&quot;hello&quot;</span>.to_vec(),
         );
 
-        <span class="ident">compression</span>.<span class="ident">write</span>(<span class="kw-2">&amp;mut</span> <span class="ident">write_context</span>).<span class="ident">unwrap</span>();
+        compression.write(<span class="kw-2">&amp;mut </span>write_context).unwrap();
 
-        <span class="macro">assert_eq!</span>(<span class="string">b&quot;hello&quot;</span>.<span class="ident">to_vec</span>(), <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">write_context</span>.<span class="ident">contents</span>)
+        <span class="macro">assert_eq!</span>(<span class="string">b&quot;hello&quot;</span>.to_vec(), <span class="kw-2">&amp;*</span>write_context.contents)
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">snappy</span>() {
-        <span class="kw">let</span> <span class="ident">expected</span> <span class="op">=</span> <span class="ident">contents_fixture</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">contents</span> <span class="op">=</span> <span class="ident">expected</span>.<span class="ident">clone</span>();
-        <span class="kw">let</span> <span class="ident">snappy</span> <span class="op">=</span> <span class="ident">Snappy</span> {};
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>snappy() {
+        <span class="kw">let </span>expected = contents_fixture();
+        <span class="kw">let </span><span class="kw-2">mut </span>contents = expected.clone();
+        <span class="kw">let </span>snappy = Snappy {};
 
-        <span class="kw">let</span> <span class="ident">ok</span> <span class="op">=</span> <span class="ident">snappy</span>.<span class="ident">encode</span>(<span class="kw-2">&amp;mut</span> <span class="ident">contents</span>);
-        <span class="macro">assert!</span>(<span class="ident">ok</span>.<span class="ident">is_ok</span>());
+        <span class="kw">let </span>ok = snappy.encode(<span class="kw-2">&amp;mut </span>contents);
+        <span class="macro">assert!</span>(ok.is_ok());
         <span class="macro">assert!</span>(
-            <span class="op">!</span><span class="ident">contents</span>.<span class="ident">is_empty</span>(),
-            <span class="string">&quot;compressed array should be greater than 0&quot;</span>
-        );
+            !contents.is_empty(),
+            <span class="string">&quot;compressed array should be greater than 0&quot;
+        </span>);
         <span class="macro">assert_ne!</span>(
-            <span class="ident">expected</span>, <span class="ident">contents</span>,
-            <span class="string">&quot;should not be equal, as one should be compressed&quot;</span>
-        );
+            expected, contents,
+            <span class="string">&quot;should not be equal, as one should be compressed&quot;
+        </span>);
         <span class="macro">assert!</span>(
-            <span class="ident">expected</span>.<span class="ident">len</span>() <span class="op">&gt;</span> <span class="ident">contents</span>.<span class="ident">len</span>(),
+            expected.len() &gt; contents.len(),
             <span class="string">&quot;Original: {}. Compressed: {}&quot;</span>,
-            <span class="ident">expected</span>.<span class="ident">len</span>(),
-            <span class="ident">contents</span>.<span class="ident">len</span>()
-        ); <span class="comment">// 45000 bytes uncompressed, 276 bytes compressed</span>
+            expected.len(),
+            contents.len()
+        ); <span class="comment">// 45000 bytes uncompressed, 276 bytes compressed
 
-        <span class="kw">let</span> <span class="ident">ok</span> <span class="op">=</span> <span class="ident">snappy</span>.<span class="ident">decode</span>(<span class="kw-2">&amp;mut</span> <span class="ident">contents</span>);
-        <span class="macro">assert!</span>(<span class="ident">ok</span>.<span class="ident">is_ok</span>());
+        </span><span class="kw">let </span>ok = snappy.decode(<span class="kw-2">&amp;mut </span>contents);
+        <span class="macro">assert!</span>(ok.is_ok());
         <span class="macro">assert_eq!</span>(
-            <span class="ident">expected</span>, <span class="ident">contents</span>,
-            <span class="string">&quot;should be equal, as decompressed state should go back to normal&quot;</span>
-        );
+            expected, contents,
+            <span class="string">&quot;should be equal, as decompressed state should go back to normal&quot;
+        </span>);
     }
 
-    <span class="doccomment">/// At small data packets, compression will add data, so let&#39;s give a bigger data packet!</span>
-    <span class="kw">fn</span> <span class="ident">contents_fixture</span>() -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
-        <span class="ident">String::from</span>(<span class="string">&quot;hello my name is mark and I like to do things&quot;</span>)
-            .<span class="ident">repeat</span>(<span class="number">100</span>)
-            .<span class="ident">as_bytes</span>()
-            .<span class="ident">to_vec</span>()
+    <span class="doccomment">/// At small data packets, compression will add data, so let&#39;s give a bigger data packet!
+    </span><span class="kw">fn </span>contents_fixture() -&gt; Vec&lt;u8&gt; {
+        String::from(<span class="string">&quot;hello my name is mark and I like to do things&quot;</span>)
+            .repeat(<span class="number">100</span>)
+            .as_bytes()
+            .to_vec()
     }
 
-    <span class="doccomment">/// assert compression work with decompress on read and compress on write</span>
-    <span class="doccomment">/// Returns the original data packet, and the compressed version</span>
-    <span class="kw">fn</span> <span class="ident">assert_downstream</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>(<span class="ident">filter</span>: <span class="kw-2">&amp;</span><span class="ident">F</span>) -&gt; (<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>)
-    <span class="kw">where</span>
-        <span class="ident">F</span>: <span class="ident">Filter</span> <span class="op">+</span> <span class="question-mark">?</span><span class="ident">Sized</span>,
+    <span class="doccomment">/// assert compression work with decompress on read and compress on write
+    /// Returns the original data packet, and the compressed version
+    </span><span class="kw">fn </span>assert_downstream&lt;F&gt;(filter: <span class="kw-2">&amp;</span>F) -&gt; (Vec&lt;u8&gt;, Vec&lt;u8&gt;)
+    <span class="kw">where
+        </span>F: Filter + <span class="question-mark">?</span>Sized,
     {
-        <span class="kw">let</span> <span class="ident">expected</span> <span class="op">=</span> <span class="ident">contents_fixture</span>();
-        <span class="comment">// write compress</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">write_context</span> <span class="op">=</span> <span class="ident">WriteContext::new</span>(
-            <span class="ident">Endpoint::new</span>(<span class="string">&quot;127.0.0.1:80&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>()),
-            <span class="string">&quot;127.0.0.1:8080&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
-            <span class="string">&quot;127.0.0.1:8081&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
-            <span class="ident">expected</span>.<span class="ident">clone</span>(),
+        <span class="kw">let </span>expected = contents_fixture();
+        <span class="comment">// write compress
+        </span><span class="kw">let </span><span class="kw-2">mut </span>write_context = WriteContext::new(
+            Endpoint::new(<span class="string">&quot;127.0.0.1:80&quot;</span>.parse().unwrap()),
+            <span class="string">&quot;127.0.0.1:8080&quot;</span>.parse().unwrap(),
+            <span class="string">&quot;127.0.0.1:8081&quot;</span>.parse().unwrap(),
+            expected.clone(),
         );
 
-        <span class="ident">filter</span>.<span class="ident">write</span>(<span class="kw-2">&amp;mut</span> <span class="ident">write_context</span>).<span class="ident">expect</span>(<span class="string">&quot;should compress&quot;</span>);
+        filter.write(<span class="kw-2">&amp;mut </span>write_context).expect(<span class="string">&quot;should compress&quot;</span>);
 
-        <span class="macro">assert_ne!</span>(<span class="ident">expected</span>, <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">write_context</span>.<span class="ident">contents</span>);
+        <span class="macro">assert_ne!</span>(expected, <span class="kw-2">&amp;*</span>write_context.contents);
         <span class="macro">assert!</span>(
-            <span class="ident">expected</span>.<span class="ident">len</span>() <span class="op">&gt;</span> <span class="ident">write_context</span>.<span class="ident">contents</span>.<span class="ident">len</span>(),
+            expected.len() &gt; write_context.contents.len(),
             <span class="string">&quot;Original: {}. Compressed: {}&quot;</span>,
-            <span class="ident">expected</span>.<span class="ident">len</span>(),
-            <span class="ident">write_context</span>.<span class="ident">contents</span>.<span class="ident">len</span>()
+            expected.len(),
+            write_context.contents.len()
         );
 
-        <span class="comment">// read decompress</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">read_context</span> <span class="op">=</span> <span class="ident">ReadContext::new</span>(
-            <span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(<span class="string">&quot;127.0.0.1:80&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>())],
-            <span class="string">&quot;127.0.0.1:8080&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
-            <span class="ident">write_context</span>.<span class="ident">contents</span>.<span class="ident">clone</span>(),
+        <span class="comment">// read decompress
+        </span><span class="kw">let </span><span class="kw-2">mut </span>read_context = ReadContext::new(
+            <span class="macro">vec!</span>[Endpoint::new(<span class="string">&quot;127.0.0.1:80&quot;</span>.parse().unwrap())],
+            <span class="string">&quot;127.0.0.1:8080&quot;</span>.parse().unwrap(),
+            write_context.contents.clone(),
         );
 
-        <span class="ident">filter</span>.<span class="ident">read</span>(<span class="kw-2">&amp;mut</span> <span class="ident">read_context</span>).<span class="ident">expect</span>(<span class="string">&quot;should decompress&quot;</span>);
+        filter.read(<span class="kw-2">&amp;mut </span>read_context).expect(<span class="string">&quot;should decompress&quot;</span>);
 
-        <span class="macro">assert_eq!</span>(<span class="ident">expected</span>, <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">read_context</span>.<span class="ident">contents</span>);
-        (<span class="ident">expected</span>, <span class="ident">write_context</span>.<span class="ident">contents</span>.<span class="ident">to_vec</span>())
+        <span class="macro">assert_eq!</span>(expected, <span class="kw-2">&amp;*</span>read_context.contents);
+        (expected, write_context.contents.to_vec())
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

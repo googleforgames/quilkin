@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/xds/resource.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>resource.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../quilkin/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/xds/resource.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>resource.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../normalize.css"><link rel="stylesheet" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../ayu.css" disabled><link rel="stylesheet" href="../../../dark.css" disabled><link rel="stylesheet" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../quilkin/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -213,192 +213,192 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */</span>
+ */
 
-<span class="kw">use</span> <span class="ident">prost::Message</span>;
+</span><span class="kw">use </span>prost::Message;
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::xds::config</span>::{
-    <span class="ident">cluster::v3::Cluster</span>, <span class="ident">endpoint::v3::ClusterLoadAssignment</span>, <span class="ident">listener::v3::Listener</span>,
+<span class="kw">use </span><span class="kw">crate</span>::xds::config::{
+    cluster::v3::Cluster, endpoint::v3::ClusterLoadAssignment, listener::v3::Listener,
 };
 
-<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">ResourceMap</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">enum_map::EnumMap</span><span class="op">&lt;</span><span class="ident">ResourceType</span>, <span class="ident">V</span><span class="op">&gt;</span>;
+<span class="kw">pub type </span>ResourceMap&lt;V&gt; = enum_map::EnumMap&lt;ResourceType, V&gt;;
 
-<span class="macro">macro_rules!</span> <span class="ident">type_urls</span> {
-     ($(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">base_url</span>:<span class="ident">literal</span> : {$(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">const_name</span>:<span class="ident">ident</span> <span class="op">=</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">type_url</span>:<span class="ident">literal</span>),<span class="op">+</span> $(,)<span class="question-mark">?</span>})<span class="op">+</span>) =&gt; {
+<span class="macro">macro_rules! </span>type_urls {
+     ($(<span class="macro-nonterminal">$base_url</span>:literal : {$(<span class="macro-nonterminal">$const_name</span>:ident = <span class="macro-nonterminal">$type_url</span>:literal),+ $(,)<span class="question-mark">?</span>})+) =&gt; {
          $(
              $(
-                 <span class="kw">const</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">const_name</span> : <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="macro">concat!</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">base_url</span>, <span class="string">&quot;/&quot;</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">type_url</span>);
-             )<span class="op">+</span>
-         )<span class="op">+</span>
+                 <span class="kw">const </span><span class="macro-nonterminal">$const_name </span>: <span class="kw-2">&amp;</span>str = <span class="macro">concat!</span>(<span class="macro-nonterminal">$base_url</span>, <span class="string">&quot;/&quot;</span>, <span class="macro-nonterminal">$type_url</span>);
+             )+
+         )+
      }
  }
 
-<span class="macro">type_urls!</span> {
+<span class="macro">type_urls! </span>{
     <span class="string">&quot;type.googleapis.com&quot;</span>: {
-        <span class="ident">CLUSTER_TYPE</span> <span class="op">=</span> <span class="string">&quot;envoy.config.cluster.v3.Cluster&quot;</span>,
-        <span class="ident">ENDPOINT_TYPE</span> <span class="op">=</span> <span class="string">&quot;envoy.config.endpoint.v3.ClusterLoadAssignment&quot;</span>,
-        <span class="ident">EXTENSION_CONFIG_TYPE</span> <span class="op">=</span> <span class="string">&quot;envoy.config.core.v3.TypedExtensionConfig&quot;</span>,
-        <span class="ident">LISTENER_TYPE</span> <span class="op">=</span> <span class="string">&quot;envoy.config.listener.v3.Listener&quot;</span>,
-        <span class="ident">ROUTE_TYPE</span> <span class="op">=</span> <span class="string">&quot;envoy.config.route.v3.RouteConfiguration&quot;</span>,
-        <span class="ident">RUNTIME_TYPE</span> <span class="op">=</span> <span class="string">&quot;envoy.service.runtime.v3.Runtime&quot;</span>,
-        <span class="ident">SCOPED_ROUTE_TYPE</span> <span class="op">=</span> <span class="string">&quot;envoy.config.route.v3.ScopedRouteConfiguration&quot;</span>,
-        <span class="ident">SECRET_TYPE</span> <span class="op">=</span> <span class="string">&quot;envoy.extensions.transport_sockets.tls.v3.Secret&quot;</span>,
-        <span class="ident">VIRTUAL_HOST_TYPE</span> <span class="op">=</span> <span class="string">&quot;envoy.config.route.v3.VirtualHost&quot;</span>,
+        CLUSTER_TYPE = <span class="string">&quot;envoy.config.cluster.v3.Cluster&quot;</span>,
+        ENDPOINT_TYPE = <span class="string">&quot;envoy.config.endpoint.v3.ClusterLoadAssignment&quot;</span>,
+        EXTENSION_CONFIG_TYPE = <span class="string">&quot;envoy.config.core.v3.TypedExtensionConfig&quot;</span>,
+        LISTENER_TYPE = <span class="string">&quot;envoy.config.listener.v3.Listener&quot;</span>,
+        ROUTE_TYPE = <span class="string">&quot;envoy.config.route.v3.RouteConfiguration&quot;</span>,
+        RUNTIME_TYPE = <span class="string">&quot;envoy.service.runtime.v3.Runtime&quot;</span>,
+        SCOPED_ROUTE_TYPE = <span class="string">&quot;envoy.config.route.v3.ScopedRouteConfiguration&quot;</span>,
+        SECRET_TYPE = <span class="string">&quot;envoy.extensions.transport_sockets.tls.v3.Secret&quot;</span>,
+        VIRTUAL_HOST_TYPE = <span class="string">&quot;envoy.config.route.v3.VirtualHost&quot;</span>,
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Resource</span> {
-    <span class="ident">Cluster</span>(<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">Cluster</span><span class="op">&gt;</span>),
-    <span class="ident">Endpoint</span>(<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">ClusterLoadAssignment</span><span class="op">&gt;</span>),
-    <span class="ident">Listener</span>(<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">Listener</span><span class="op">&gt;</span>),
+<span class="attribute">#[derive(Clone, Debug)]
+</span><span class="kw">pub enum </span>Resource {
+    Cluster(Box&lt;Cluster&gt;),
+    Endpoint(Box&lt;ClusterLoadAssignment&gt;),
+    Listener(Box&lt;Listener&gt;),
 }
 
-<span class="kw">impl</span> <span class="ident">Resource</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">name</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">str</span> {
-        <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident"><span class="self">Self</span>::Endpoint</span>(<span class="ident">endpoint</span>) =&gt; <span class="kw-2">&amp;</span><span class="ident">endpoint</span>.<span class="ident">cluster_name</span>,
-            <span class="ident"><span class="self">Self</span>::Cluster</span>(<span class="ident">cluster</span>) =&gt; <span class="kw-2">&amp;</span><span class="ident">cluster</span>.<span class="ident">name</span>,
-            <span class="ident"><span class="self">Self</span>::Listener</span>(<span class="ident">listener</span>) =&gt; <span class="kw-2">&amp;</span><span class="ident">listener</span>.<span class="ident">name</span>,
+<span class="kw">impl </span>Resource {
+    <span class="kw">pub fn </span>name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>str {
+        <span class="kw">match </span><span class="self">self </span>{
+            <span class="self">Self</span>::Endpoint(endpoint) =&gt; <span class="kw-2">&amp;</span>endpoint.cluster_name,
+            <span class="self">Self</span>::Cluster(cluster) =&gt; <span class="kw-2">&amp;</span>cluster.name,
+            <span class="self">Self</span>::Listener(listener) =&gt; <span class="kw-2">&amp;</span>listener.name,
         }
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">resource_type</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">ResourceType</span> {
-        <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident"><span class="self">Self</span>::Cluster</span>(<span class="kw">_</span>) =&gt; <span class="ident">ResourceType::Cluster</span>,
-            <span class="ident"><span class="self">Self</span>::Endpoint</span>(<span class="kw">_</span>) =&gt; <span class="ident">ResourceType::Endpoint</span>,
-            <span class="ident"><span class="self">Self</span>::Listener</span>(<span class="kw">_</span>) =&gt; <span class="ident">ResourceType::Listener</span>,
+    <span class="kw">pub fn </span>resource_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ResourceType {
+        <span class="kw">match </span><span class="self">self </span>{
+            <span class="self">Self</span>::Cluster(<span class="kw">_</span>) =&gt; ResourceType::Cluster,
+            <span class="self">Self</span>::Endpoint(<span class="kw">_</span>) =&gt; ResourceType::Endpoint,
+            <span class="self">Self</span>::Listener(<span class="kw">_</span>) =&gt; ResourceType::Listener,
         }
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">type_url</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">str</span> {
-        <span class="self">self</span>.<span class="ident">resource_type</span>().<span class="ident">type_url</span>()
+    <span class="kw">pub fn </span>type_url(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>str {
+        <span class="self">self</span>.resource_type().type_url()
     }
 }
 
-<span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident">prost_types::Any</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Resource</span> {
-    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">eyre::Error</span>;
+<span class="kw">impl </span>TryFrom&lt;prost_types::Any&gt; <span class="kw">for </span>Resource {
+    <span class="kw">type </span>Error = eyre::Error;
 
-    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">any</span>: <span class="ident">prost_types::Any</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident"><span class="self">Self</span>::Error</span><span class="op">&gt;</span> {
-        <span class="prelude-val">Ok</span>(<span class="kw">match</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">any</span>.<span class="ident">type_url</span> {
-            <span class="ident">CLUSTER_TYPE</span> =&gt; <span class="ident">Resource::Cluster</span>(<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::decode</span>(<span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">any</span>.<span class="ident">value</span>)<span class="question-mark">?</span>),
-            <span class="ident">ENDPOINT_TYPE</span> =&gt; <span class="ident">Resource::Endpoint</span>(<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::decode</span>(<span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">any</span>.<span class="ident">value</span>)<span class="question-mark">?</span>),
-            <span class="ident">LISTENER_TYPE</span> =&gt; <span class="ident">Resource::Listener</span>(<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::decode</span>(<span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">any</span>.<span class="ident">value</span>)<span class="question-mark">?</span>),
-            <span class="ident">url</span> =&gt; <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">UnknownResourceType</span>(<span class="ident">url</span>.<span class="ident">into</span>()).<span class="ident">into</span>()),
+    <span class="kw">fn </span>try_from(any: prost_types::Any) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
+        <span class="prelude-val">Ok</span>(<span class="kw">match </span><span class="kw-2">&amp;*</span>any.type_url {
+            CLUSTER_TYPE =&gt; Resource::Cluster(&lt;<span class="kw">_</span>&gt;::decode(<span class="kw-2">&amp;*</span>any.value)<span class="question-mark">?</span>),
+            ENDPOINT_TYPE =&gt; Resource::Endpoint(&lt;<span class="kw">_</span>&gt;::decode(<span class="kw-2">&amp;*</span>any.value)<span class="question-mark">?</span>),
+            LISTENER_TYPE =&gt; Resource::Listener(&lt;<span class="kw">_</span>&gt;::decode(<span class="kw-2">&amp;*</span>any.value)<span class="question-mark">?</span>),
+            url =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(UnknownResourceType(url.into()).into()),
         })
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>, <span class="ident">Ord</span>, <span class="ident">PartialEq</span>, <span class="ident">PartialOrd</span>, <span class="ident">enum_map::Enum</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ResourceType</span> {
-    <span class="ident">Cluster</span>,
-    <span class="ident">Endpoint</span>,
-    <span class="ident">ExtensionConfig</span>,
-    <span class="ident">Listener</span>,
-    <span class="ident">Route</span>,
-    <span class="ident">Runtime</span>,
-    <span class="ident">ScopedRoute</span>,
-    <span class="ident">Secret</span>,
-    <span class="ident">VirtualHost</span>,
+<span class="attribute">#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, enum_map::Enum)]
+</span><span class="kw">pub enum </span>ResourceType {
+    Cluster,
+    Endpoint,
+    ExtensionConfig,
+    Listener,
+    Route,
+    Runtime,
+    ScopedRoute,
+    Secret,
+    VirtualHost,
 }
 
-<span class="kw">impl</span> <span class="ident">ResourceType</span> {
-    <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">VARIANTS</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> [<span class="self">Self</span>] <span class="op">=</span> <span class="kw-2">&amp;</span>[
-        <span class="ident"><span class="self">Self</span>::Cluster</span>,
-        <span class="ident"><span class="self">Self</span>::Endpoint</span>,
-        <span class="ident"><span class="self">Self</span>::ExtensionConfig</span>,
-        <span class="ident"><span class="self">Self</span>::Listener</span>,
-        <span class="ident"><span class="self">Self</span>::Route</span>,
-        <span class="ident"><span class="self">Self</span>::Runtime</span>,
-        <span class="ident"><span class="self">Self</span>::ScopedRoute</span>,
-        <span class="ident"><span class="self">Self</span>::Secret</span>,
-        <span class="ident"><span class="self">Self</span>::VirtualHost</span>,
+<span class="kw">impl </span>ResourceType {
+    <span class="kw">pub const </span>VARIANTS: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>[<span class="self">Self</span>] = <span class="kw-2">&amp;</span>[
+        <span class="self">Self</span>::Cluster,
+        <span class="self">Self</span>::Endpoint,
+        <span class="self">Self</span>::ExtensionConfig,
+        <span class="self">Self</span>::Listener,
+        <span class="self">Self</span>::Route,
+        <span class="self">Self</span>::Runtime,
+        <span class="self">Self</span>::ScopedRoute,
+        <span class="self">Self</span>::Secret,
+        <span class="self">Self</span>::VirtualHost,
     ];
 
-    <span class="doccomment">/// Returns the corresponding type URL for the response type.</span>
-    <span class="kw">pub</span> <span class="kw">const</span> <span class="kw">fn</span> <span class="ident">type_url</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
-        <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident"><span class="self">Self</span>::Cluster</span> =&gt; <span class="ident">CLUSTER_TYPE</span>,
-            <span class="ident"><span class="self">Self</span>::Endpoint</span> =&gt; <span class="ident">ENDPOINT_TYPE</span>,
-            <span class="ident"><span class="self">Self</span>::ExtensionConfig</span> =&gt; <span class="ident">EXTENSION_CONFIG_TYPE</span>,
-            <span class="ident"><span class="self">Self</span>::Listener</span> =&gt; <span class="ident">LISTENER_TYPE</span>,
-            <span class="ident"><span class="self">Self</span>::Route</span> =&gt; <span class="ident">ROUTE_TYPE</span>,
-            <span class="ident"><span class="self">Self</span>::Runtime</span> =&gt; <span class="ident">RUNTIME_TYPE</span>,
-            <span class="ident"><span class="self">Self</span>::ScopedRoute</span> =&gt; <span class="ident">SCOPED_ROUTE_TYPE</span>,
-            <span class="ident"><span class="self">Self</span>::Secret</span> =&gt; <span class="ident">SECRET_TYPE</span>,
-            <span class="ident"><span class="self">Self</span>::VirtualHost</span> =&gt; <span class="ident">VIRTUAL_HOST_TYPE</span>,
+    <span class="doccomment">/// Returns the corresponding type URL for the response type.
+    </span><span class="kw">pub const fn </span>type_url(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
+        <span class="kw">match </span><span class="self">self </span>{
+            <span class="self">Self</span>::Cluster =&gt; CLUSTER_TYPE,
+            <span class="self">Self</span>::Endpoint =&gt; ENDPOINT_TYPE,
+            <span class="self">Self</span>::ExtensionConfig =&gt; EXTENSION_CONFIG_TYPE,
+            <span class="self">Self</span>::Listener =&gt; LISTENER_TYPE,
+            <span class="self">Self</span>::Route =&gt; ROUTE_TYPE,
+            <span class="self">Self</span>::Runtime =&gt; RUNTIME_TYPE,
+            <span class="self">Self</span>::ScopedRoute =&gt; SCOPED_ROUTE_TYPE,
+            <span class="self">Self</span>::Secret =&gt; SECRET_TYPE,
+            <span class="self">Self</span>::VirtualHost =&gt; VIRTUAL_HOST_TYPE,
         }
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">encode_to_any</span><span class="op">&lt;</span><span class="ident">M</span>: <span class="ident">prost::Message</span><span class="op">&gt;</span>(
+    <span class="kw">pub fn </span>encode_to_any&lt;M: prost::Message&gt;(
         <span class="self">self</span>,
-        <span class="ident">message</span>: <span class="kw-2">&amp;</span><span class="ident">M</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">prost_types::Any</span>, <span class="ident">prost::EncodeError</span><span class="op">&gt;</span> {
-        <span class="prelude-val">Ok</span>(<span class="ident">prost_types::Any</span> {
-            <span class="ident">type_url</span>: <span class="self">self</span>.<span class="ident">type_url</span>().<span class="ident">into</span>(),
-            <span class="ident">value</span>: <span class="ident"><span class="kw">crate</span>::prost::encode</span>(<span class="ident">message</span>)<span class="question-mark">?</span>,
+        message: <span class="kw-2">&amp;</span>M,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;prost_types::Any, prost::EncodeError&gt; {
+        <span class="prelude-val">Ok</span>(prost_types::Any {
+            type_url: <span class="self">self</span>.type_url().into(),
+            value: <span class="kw">crate</span>::prost::encode(message)<span class="question-mark">?</span>,
         })
     }
 }
 
-<span class="kw">impl</span> <span class="ident">std::fmt::Display</span> <span class="kw">for</span> <span class="ident">ResourceType</span> {
-    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;mut</span> <span class="ident">std::fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="ident">std::fmt::Result</span> {
-        <span class="ident">f</span>.<span class="ident">write_str</span>(<span class="self">self</span>.<span class="ident">type_url</span>())
+<span class="kw">impl </span>std::fmt::Display <span class="kw">for </span>ResourceType {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
+        f.write_str(<span class="self">self</span>.type_url())
     }
 }
 
-<span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;_</span> <span class="ident">str</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ResourceType</span> {
-    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">UnknownResourceType</span>;
+<span class="kw">impl </span>TryFrom&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span>str&gt; <span class="kw">for </span>ResourceType {
+    <span class="kw">type </span>Error = UnknownResourceType;
 
-    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">url</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">UnknownResourceType</span><span class="op">&gt;</span> {
-        <span class="prelude-val">Ok</span>(<span class="kw">match</span> <span class="ident">url</span> {
-            <span class="ident">CLUSTER_TYPE</span> =&gt; <span class="ident"><span class="self">Self</span>::Cluster</span>,
-            <span class="ident">ENDPOINT_TYPE</span> =&gt; <span class="ident"><span class="self">Self</span>::Endpoint</span>,
-            <span class="ident">EXTENSION_CONFIG_TYPE</span> =&gt; <span class="ident"><span class="self">Self</span>::ExtensionConfig</span>,
-            <span class="ident">LISTENER_TYPE</span> =&gt; <span class="ident"><span class="self">Self</span>::Listener</span>,
-            <span class="ident">ROUTE_TYPE</span> =&gt; <span class="ident"><span class="self">Self</span>::Route</span>,
-            <span class="ident">RUNTIME_TYPE</span> =&gt; <span class="ident"><span class="self">Self</span>::Runtime</span>,
-            <span class="ident">SCOPED_ROUTE_TYPE</span> =&gt; <span class="ident"><span class="self">Self</span>::ScopedRoute</span>,
-            <span class="ident">SECRET_TYPE</span> =&gt; <span class="ident"><span class="self">Self</span>::Secret</span>,
-            <span class="ident">VIRTUAL_HOST_TYPE</span> =&gt; <span class="ident"><span class="self">Self</span>::VirtualHost</span>,
-            <span class="ident">unknown</span> =&gt; <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">UnknownResourceType</span>(<span class="ident">unknown</span>.<span class="ident">to_owned</span>())),
+    <span class="kw">fn </span>try_from(url: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, UnknownResourceType&gt; {
+        <span class="prelude-val">Ok</span>(<span class="kw">match </span>url {
+            CLUSTER_TYPE =&gt; <span class="self">Self</span>::Cluster,
+            ENDPOINT_TYPE =&gt; <span class="self">Self</span>::Endpoint,
+            EXTENSION_CONFIG_TYPE =&gt; <span class="self">Self</span>::ExtensionConfig,
+            LISTENER_TYPE =&gt; <span class="self">Self</span>::Listener,
+            ROUTE_TYPE =&gt; <span class="self">Self</span>::Route,
+            RUNTIME_TYPE =&gt; <span class="self">Self</span>::Runtime,
+            SCOPED_ROUTE_TYPE =&gt; <span class="self">Self</span>::ScopedRoute,
+            SECRET_TYPE =&gt; <span class="self">Self</span>::Secret,
+            VIRTUAL_HOST_TYPE =&gt; <span class="self">Self</span>::VirtualHost,
+            unknown =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(UnknownResourceType(unknown.to_owned())),
         })
     }
 }
 
-<span class="kw">impl</span> <span class="ident">std::str::FromStr</span> <span class="kw">for</span> <span class="ident">ResourceType</span> {
-    <span class="kw">type</span> <span class="prelude-val">Err</span> <span class="op">=</span> <span class="ident">UnknownResourceType</span>;
+<span class="kw">impl </span>std::str::FromStr <span class="kw">for </span>ResourceType {
+    <span class="kw">type </span><span class="prelude-val">Err </span>= UnknownResourceType;
 
-    <span class="kw">fn</span> <span class="ident">from_str</span>(<span class="ident">string</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident"><span class="self">Self</span>::Err</span><span class="op">&gt;</span> {
-        <span class="ident"><span class="self">Self</span>::try_from</span>(<span class="ident">string</span>)
+    <span class="kw">fn </span>from_str(string: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Err&gt; {
+        <span class="self">Self</span>::try_from(string)
     }
 }
 
-<span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ResourceType</span> {
-    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">UnknownResourceType</span>;
+<span class="kw">impl </span>TryFrom&lt;String&gt; <span class="kw">for </span>ResourceType {
+    <span class="kw">type </span>Error = UnknownResourceType;
 
-    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">url</span>: <span class="ident">String</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">UnknownResourceType</span><span class="op">&gt;</span> {
-        <span class="ident"><span class="self">Self</span>::try_from</span>(<span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">url</span>)
+    <span class="kw">fn </span>try_from(url: String) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, UnknownResourceType&gt; {
+        <span class="self">Self</span>::try_from(<span class="kw-2">&amp;*</span>url)
     }
 }
 
-<span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;_</span> <span class="ident">String</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ResourceType</span> {
-    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">UnknownResourceType</span>;
+<span class="kw">impl </span>TryFrom&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span>String&gt; <span class="kw">for </span>ResourceType {
+    <span class="kw">type </span>Error = UnknownResourceType;
 
-    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">url</span>: <span class="kw-2">&amp;</span><span class="ident">String</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">UnknownResourceType</span><span class="op">&gt;</span> {
-        <span class="ident"><span class="self">Self</span>::try_from</span>(<span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">url</span>)
+    <span class="kw">fn </span>try_from(url: <span class="kw-2">&amp;</span>String) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, UnknownResourceType&gt; {
+        <span class="self">Self</span>::try_from(<span class="kw-2">&amp;**</span>url)
     }
 }
 
-<span class="doccomment">/// Error indicating an unknown resource type was found.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">thiserror::Error</span>)]</span>
-<span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Unknown resource type: {0}&quot;</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">UnknownResourceType</span>(<span class="ident">String</span>);
+<span class="doccomment">/// Error indicating an unknown resource type was found.
+</span><span class="attribute">#[derive(Debug, thiserror::Error)]
+#[error(<span class="string">&quot;Unknown resource type: {0}&quot;</span>)]
+</span><span class="kw">pub struct </span>UnknownResourceType(String);
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">UnknownResourceType</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">tonic::Status</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">error</span>: <span class="ident">UnknownResourceType</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">tonic::Status::invalid_argument</span>(<span class="ident">error</span>.<span class="ident">to_string</span>())
+<span class="kw">impl </span>From&lt;UnknownResourceType&gt; <span class="kw">for </span>tonic::Status {
+    <span class="kw">fn </span>from(error: UnknownResourceType) -&gt; <span class="self">Self </span>{
+        tonic::Status::invalid_argument(error.to_string())
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/xds.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>xds.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../quilkin/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/xds.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>xds.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../quilkin/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -372,351 +372,351 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */</span>
+ */
 
-<span class="comment">// We don&#39;t control the codegen, so disable any code warnings in the</span>
-<span class="comment">// proto modules.</span>
-<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">warnings</span>)]</span>
-<span class="kw">mod</span> <span class="ident">xds</span> {
-    <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">core</span> {
-        <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">v3</span> {
-            <span class="attribute">#![<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
-            <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;xds.core.v3&quot;</span>);
+// We don&#39;t control the codegen, so disable any code warnings in the
+// proto modules.
+</span><span class="attribute">#[allow(warnings)]
+</span><span class="kw">mod </span>xds {
+    <span class="kw">pub mod </span>core {
+        <span class="kw">pub mod </span>v3 {
+            <span class="attribute">#![doc(hidden)]
+            </span><span class="macro">tonic::include_proto!</span>(<span class="string">&quot;xds.core.v3&quot;</span>);
         }
     }
 
-    <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">r#type</span> {
-        <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">matcher</span> {
-            <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">v3</span> {
-                <span class="kw">pub</span> <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::config::common::matcher::v3</span>::<span class="kw-2">*</span>;
+    <span class="kw">pub mod </span>r#type {
+        <span class="kw">pub mod </span>matcher {
+            <span class="kw">pub mod </span>v3 {
+                <span class="kw">pub use </span><span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::config::common::matcher::v3::<span class="kw-2">*</span>;
                 <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;envoy.r#type.matcher.v3&quot;</span>);
             }
         }
-        <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">metadata</span> {
-            <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">v3</span> {
+        <span class="kw">pub mod </span>metadata {
+            <span class="kw">pub mod </span>v3 {
                 <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;envoy.r#type.metadata.v3&quot;</span>);
             }
         }
-        <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">tracing</span> {
-            <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">v3</span> {
+        <span class="kw">pub mod </span>tracing {
+            <span class="kw">pub mod </span>v3 {
                 <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;envoy.r#type.tracing.v3&quot;</span>);
             }
         }
-        <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">v3</span> {
+        <span class="kw">pub mod </span>v3 {
             <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;envoy.r#type.v3&quot;</span>);
         }
     }
-    <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">config</span> {
-        <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">accesslog</span> {
-            <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">v3</span> {
+    <span class="kw">pub mod </span>config {
+        <span class="kw">pub mod </span>accesslog {
+            <span class="kw">pub mod </span>v3 {
                 <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;envoy.config.accesslog.v3&quot;</span>);
             }
         }
-        <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">cluster</span> {
-            <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">v3</span> {
+        <span class="kw">pub mod </span>cluster {
+            <span class="kw">pub mod </span>v3 {
                 <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;envoy.config.cluster.v3&quot;</span>);
             }
         }
-        <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">common</span> {
-            <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">matcher</span> {
-                <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">v3</span> {
+        <span class="kw">pub mod </span>common {
+            <span class="kw">pub mod </span>matcher {
+                <span class="kw">pub mod </span>v3 {
                     <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;envoy.config.common.matcher.v3&quot;</span>);
                 }
             }
         }
-        <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">core</span> {
-            <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">v3</span> {
+        <span class="kw">pub mod </span>core {
+            <span class="kw">pub mod </span>v3 {
                 <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;envoy.config.core.v3&quot;</span>);
             }
         }
-        <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">endpoint</span> {
-            <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">v3</span> {
+        <span class="kw">pub mod </span>endpoint {
+            <span class="kw">pub mod </span>v3 {
                 <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;envoy.config.endpoint.v3&quot;</span>);
             }
         }
-        <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">listener</span> {
-            <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">v3</span> {
+        <span class="kw">pub mod </span>listener {
+            <span class="kw">pub mod </span>v3 {
                 <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;envoy.config.listener.v3&quot;</span>);
             }
         }
-        <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">route</span> {
-            <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">v3</span> {
+        <span class="kw">pub mod </span>route {
+            <span class="kw">pub mod </span>v3 {
                 <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;envoy.config.route.v3&quot;</span>);
             }
         }
     }
-    <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">service</span> {
-        <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">discovery</span> {
-            <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">v3</span> {
+    <span class="kw">pub mod </span>service {
+        <span class="kw">pub mod </span>discovery {
+            <span class="kw">pub mod </span>v3 {
                 <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;envoy.service.discovery.v3&quot;</span>);
 
-                <span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident">DiscoveryResponse</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">DiscoveryRequest</span> {
-                    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">eyre::Error</span>;
+                <span class="kw">impl </span>TryFrom&lt;DiscoveryResponse&gt; <span class="kw">for </span>DiscoveryRequest {
+                    <span class="kw">type </span>Error = eyre::Error;
 
-                    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">response</span>: <span class="ident">DiscoveryResponse</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident"><span class="self">Self</span>::Error</span><span class="op">&gt;</span> {
-                        <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
-                            <span class="ident">version_info</span>: <span class="ident">response</span>.<span class="ident">version_info</span>,
-                            <span class="ident">resource_names</span>: <span class="ident">response</span>
-                                .<span class="ident">resources</span>
-                                .<span class="ident">into_iter</span>()
-                                .<span class="ident">map</span>(<span class="ident"><span class="kw">crate</span>::xds::Resource::try_from</span>)
-                                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">result</span><span class="op">|</span> <span class="ident">result</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">resource</span><span class="op">|</span> <span class="ident">resource</span>.<span class="ident">name</span>().<span class="ident">to_owned</span>()))
-                                .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>,
-                            <span class="ident">type_url</span>: <span class="ident">response</span>.<span class="ident">type_url</span>,
-                            <span class="ident">response_nonce</span>: <span class="ident">response</span>.<span class="ident">nonce</span>,
-                            ..<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>()
+                    <span class="kw">fn </span>try_from(response: DiscoveryResponse) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
+                        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
+                            version_info: response.version_info,
+                            resource_names: response
+                                .resources
+                                .into_iter()
+                                .map(<span class="kw">crate</span>::xds::Resource::try_from)
+                                .map(|result| result.map(|resource| resource.name().to_owned()))
+                                .collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, <span class="kw">_</span>&gt;&gt;()<span class="question-mark">?</span>,
+                            type_url: response.type_url,
+                            response_nonce: response.nonce,
+                            ..&lt;<span class="kw">_</span>&gt;::default()
                         })
                     }
                 }
             }
         }
-        <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">cluster</span> {
-            <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">v3</span> {
+        <span class="kw">pub mod </span>cluster {
+            <span class="kw">pub mod </span>v3 {
                 <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;envoy.service.cluster.v3&quot;</span>);
             }
         }
     }
 }
 
-<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">warnings</span>)]</span>
-<span class="kw">mod</span> <span class="ident">google</span> {
-    <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">rpc</span> {
+<span class="attribute">#[allow(warnings)]
+</span><span class="kw">mod </span>google {
+    <span class="kw">pub mod </span>rpc {
         <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;google.rpc&quot;</span>);
     }
 }
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod</span> <span class="ident">client</span>;
-<span class="kw">mod</span> <span class="ident">metrics</span>;
-<span class="kw">mod</span> <span class="ident">resource</span>;
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod</span> <span class="ident">server</span>;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>client;
+<span class="kw">mod </span>metrics;
+<span class="kw">mod </span>resource;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>server;
 
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">client::Client</span>;
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">resource</span>::{<span class="ident">Resource</span>, <span class="ident">ResourceType</span>};
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">server::ControlPlane</span>;
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">service::discovery::v3::aggregated_discovery_service_client::AggregatedDiscoveryServiceClient</span>;
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">xds</span>::<span class="kw-2">*</span>;
+<span class="kw">pub use </span>client::Client;
+<span class="kw">pub use </span>resource::{Resource, ResourceType};
+<span class="kw">pub use </span>server::ControlPlane;
+<span class="kw">pub use </span>service::discovery::v3::aggregated_discovery_service_client::AggregatedDiscoveryServiceClient;
+<span class="kw">pub use </span>xds::<span class="kw-2">*</span>;
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
+    <span class="kw">use super</span>::<span class="kw-2">*</span>;
 
-    <span class="kw">use</span> <span class="ident">std::sync::Arc</span>;
+    <span class="kw">use </span>std::sync::Arc;
 
-    <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">config::Config</span>, <span class="ident">endpoint::Endpoint</span>, <span class="ident">filters</span>::<span class="kw-2">*</span>};
+    <span class="kw">use crate</span>::{config::Config, endpoint::Endpoint, filters::<span class="kw-2">*</span>};
 
-    <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">token_routing</span>() {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">helper</span> <span class="op">=</span> <span class="ident"><span class="kw">crate</span>::test_utils::TestHelper::default</span>();
-        <span class="kw">let</span> <span class="ident">token</span> <span class="op">=</span> <span class="ident">uuid::Uuid::new_v4</span>().<span class="ident">into_bytes</span>();
-        <span class="kw">let</span> <span class="ident">address</span> <span class="op">=</span> {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">addr</span> <span class="op">=</span> <span class="ident">Endpoint::new</span>(<span class="ident">helper</span>.<span class="ident">run_echo_server</span>().<span class="kw">await</span>);
-            <span class="ident">addr</span>.<span class="ident">metadata</span>.<span class="ident">known</span>.<span class="ident">tokens</span>.<span class="ident">insert</span>(<span class="ident">token</span>.<span class="ident">into</span>());
-            <span class="ident">addr</span>
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>token_routing() {
+        <span class="kw">let </span><span class="kw-2">mut </span>helper = <span class="kw">crate</span>::test_utils::TestHelper::default();
+        <span class="kw">let </span>token = uuid::Uuid::new_v4().into_bytes();
+        <span class="kw">let </span>address = {
+            <span class="kw">let </span><span class="kw-2">mut </span>addr = Endpoint::new(helper.run_echo_server().<span class="kw">await</span>);
+            addr.metadata.known.tokens.insert(token.into());
+            addr
         };
-        <span class="kw">let</span> <span class="ident">localities</span> <span class="op">=</span> <span class="ident"><span class="kw">crate</span>::endpoint::LocalityEndpoints::from</span>(<span class="ident">address</span>.<span class="ident">clone</span>());
+        <span class="kw">let </span>localities = <span class="kw">crate</span>::endpoint::LocalityEndpoints::from(address.clone());
 
-        <span class="kw">let</span> <span class="ident">xds_port</span> <span class="op">=</span> <span class="ident"><span class="kw">crate</span>::test_utils::available_addr</span>().<span class="kw">await</span>.<span class="ident">port</span>();
-        <span class="kw">let</span> <span class="ident">xds_config</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Config</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">serde_json::from_value</span>(<span class="macro">serde_json::json!</span>({
-            <span class="string">&quot;admin&quot;</span>: <span class="ident">null</span>,
+        <span class="kw">let </span>xds_port = <span class="kw">crate</span>::test_utils::available_addr().<span class="kw">await</span>.port();
+        <span class="kw">let </span>xds_config: Arc&lt;Config&gt; = serde_json::from_value(<span class="macro">serde_json::json!</span>({
+            <span class="string">&quot;admin&quot;</span>: null,
             <span class="string">&quot;version&quot;</span>: <span class="string">&quot;v1alpha1&quot;</span>,
             <span class="string">&quot;id&quot;</span>: <span class="string">&quot;test-proxy&quot;</span>,
-            <span class="string">&quot;port&quot;</span>: <span class="ident">xds_port</span>,
+            <span class="string">&quot;port&quot;</span>: xds_port,
             <span class="string">&quot;clusters&quot;</span>: {
                 <span class="string">&quot;default&quot;</span>: {
-                    <span class="string">&quot;localities&quot;</span>: [<span class="ident">localities</span>]
+                    <span class="string">&quot;localities&quot;</span>: [localities]
                 }
             },
         }))
-        .<span class="ident">map</span>(<span class="ident">Arc::new</span>)
-        .<span class="ident">unwrap</span>();
+        .map(Arc::new)
+        .unwrap();
 
-        <span class="kw">let</span> <span class="ident">client_addr</span> <span class="op">=</span> <span class="ident"><span class="kw">crate</span>::test_utils::available_addr</span>().<span class="kw">await</span>;
-        <span class="kw">let</span> <span class="ident">client_config</span>: <span class="ident">Config</span> <span class="op">=</span> <span class="ident">serde_json::from_value</span>(<span class="macro">serde_json::json!</span>({
+        <span class="kw">let </span>client_addr = <span class="kw">crate</span>::test_utils::available_addr().<span class="kw">await</span>;
+        <span class="kw">let </span>client_config: Config = serde_json::from_value(<span class="macro">serde_json::json!</span>({
             <span class="string">&quot;version&quot;</span>: <span class="string">&quot;v1alpha1&quot;</span>,
-            <span class="string">&quot;admin&quot;</span>: <span class="ident">null</span>,
+            <span class="string">&quot;admin&quot;</span>: null,
             <span class="string">&quot;id&quot;</span>: <span class="string">&quot;test-proxy&quot;</span>,
-            <span class="string">&quot;port&quot;</span>: <span class="ident">client_addr</span>.<span class="ident">port</span>(),
+            <span class="string">&quot;port&quot;</span>: client_addr.port(),
             <span class="string">&quot;management_servers&quot;</span>: [{
-                <span class="string">&quot;address&quot;</span>: <span class="macro">format!</span>(<span class="string">&quot;http://0.0.0.0:{}&quot;</span>, <span class="ident">xds_port</span>),
+                <span class="string">&quot;address&quot;</span>: <span class="macro">format!</span>(<span class="string">&quot;http://0.0.0.0:{}&quot;</span>, xds_port),
             }]
         }))
-        .<span class="ident">unwrap</span>();
+        .unwrap();
 
-        <span class="comment">// Test that the client can handle the manager dropping out.</span>
-        <span class="kw">let</span> <span class="ident">handle</span> <span class="op">=</span> <span class="ident">tokio::spawn</span>(<span class="ident">server::spawn</span>(<span class="ident">xds_config</span>.<span class="ident">clone</span>()));
+        <span class="comment">// Test that the client can handle the manager dropping out.
+        </span><span class="kw">let </span>handle = tokio::spawn(server::spawn(xds_config.clone()));
 
-        <span class="ident">tokio::time::sleep</span>(<span class="ident">std::time::Duration::from_millis</span>(<span class="number">50</span>)).<span class="kw">await</span>;
-        <span class="kw">let</span> (<span class="ident">_shutdown_tx</span>, <span class="ident">shutdown_rx</span>) <span class="op">=</span> <span class="ident">tokio::sync::watch::channel</span>(());
-        <span class="ident">tokio::spawn</span>(<span class="ident">server::spawn</span>(<span class="ident">xds_config</span>.<span class="ident">clone</span>()));
-        <span class="ident">tokio::spawn</span>(
-            <span class="ident"><span class="kw">crate</span>::Proxy::try_from</span>(<span class="ident">client_config</span>)
-                .<span class="ident">unwrap</span>()
-                .<span class="ident">run</span>(<span class="ident">shutdown_rx</span>),
+        tokio::time::sleep(std::time::Duration::from_millis(<span class="number">50</span>)).<span class="kw">await</span>;
+        <span class="kw">let </span>(_shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(());
+        tokio::spawn(server::spawn(xds_config.clone()));
+        tokio::spawn(
+            <span class="kw">crate</span>::Proxy::try_from(client_config)
+                .unwrap()
+                .run(shutdown_rx),
         );
-        <span class="ident">tokio::time::sleep</span>(<span class="ident">std::time::Duration::from_millis</span>(<span class="number">50</span>)).<span class="kw">await</span>;
+        tokio::time::sleep(std::time::Duration::from_millis(<span class="number">50</span>)).<span class="kw">await</span>;
 
-        <span class="ident">tokio::time::sleep</span>(<span class="ident">std::time::Duration::from_millis</span>(<span class="number">50</span>)).<span class="kw">await</span>;
-        <span class="ident">handle</span>.<span class="ident">abort</span>();
-        <span class="ident">tokio::time::sleep</span>(<span class="ident">std::time::Duration::from_millis</span>(<span class="number">50</span>)).<span class="kw">await</span>;
-        <span class="ident">tokio::spawn</span>(<span class="ident">server::spawn</span>(<span class="ident">xds_config</span>.<span class="ident">clone</span>()));
-        <span class="ident">tokio::time::sleep</span>(<span class="ident">std::time::Duration::from_millis</span>(<span class="number">50</span>)).<span class="kw">await</span>;
+        tokio::time::sleep(std::time::Duration::from_millis(<span class="number">50</span>)).<span class="kw">await</span>;
+        handle.abort();
+        tokio::time::sleep(std::time::Duration::from_millis(<span class="number">50</span>)).<span class="kw">await</span>;
+        tokio::spawn(server::spawn(xds_config.clone()));
+        tokio::time::sleep(std::time::Duration::from_millis(<span class="number">50</span>)).<span class="kw">await</span>;
 
-        <span class="kw">const</span> <span class="ident">VERSION_KEY</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;quilkin.dev/load_balancer/version&quot;</span>;
-        <span class="kw">const</span> <span class="ident">TOKEN_KEY</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;quilkin.dev/load_balancer/token&quot;</span>;
+        <span class="kw">const </span>VERSION_KEY: <span class="kw-2">&amp;</span>str = <span class="string">&quot;quilkin.dev/load_balancer/version&quot;</span>;
+        <span class="kw">const </span>TOKEN_KEY: <span class="kw-2">&amp;</span>str = <span class="string">&quot;quilkin.dev/load_balancer/token&quot;</span>;
 
-        <span class="ident">xds_config</span>.<span class="ident">filters</span>.<span class="ident">store</span>(<span class="ident">Arc::new</span>(
+        xds_config.filters.store(Arc::new(
             [
-                <span class="ident">Capture::as_filter_config</span>(<span class="ident">capture::Config</span> {
-                    <span class="ident">metadata_key</span>: <span class="ident">VERSION_KEY</span>.<span class="ident">into</span>(),
-                    <span class="ident">strategy</span>: <span class="ident">capture::Suffix</span> {
-                        <span class="ident">size</span>: <span class="number">1</span>,
-                        <span class="ident">remove</span>: <span class="bool-val">true</span>,
+                Capture::as_filter_config(capture::Config {
+                    metadata_key: VERSION_KEY.into(),
+                    strategy: capture::Suffix {
+                        size: <span class="number">1</span>,
+                        remove: <span class="bool-val">true</span>,
                     }
-                    .<span class="ident">into</span>(),
+                    .into(),
                 })
-                .<span class="ident">unwrap</span>(),
-                <span class="ident">Match::as_filter_config</span>(<span class="ident">r#match</span><span class="ident">::Config</span> {
-                    <span class="ident">on_write</span>: <span class="prelude-val">None</span>,
-                    <span class="ident">on_read</span>: <span class="prelude-val">Some</span>(<span class="ident">r#match</span><span class="ident">::DirectionalConfig</span> {
-                        <span class="ident">metadata_key</span>: <span class="ident">VERSION_KEY</span>.<span class="ident">into</span>(),
-                        <span class="ident">branches</span>: <span class="macro">vec!</span>[<span class="ident">r#match</span><span class="ident">::Branch</span> {
-                            <span class="ident">value</span>: <span class="number">1</span>.<span class="ident">into</span>(),
-                            <span class="ident">filter</span>: <span class="ident">Capture::as_filter_config</span>(<span class="ident">capture::Config</span> {
-                                <span class="ident">metadata_key</span>: <span class="ident">TOKEN_KEY</span>.<span class="ident">into</span>(),
-                                <span class="ident">strategy</span>: <span class="ident">capture::Suffix</span> {
-                                    <span class="ident">size</span>: <span class="number">16</span>,
-                                    <span class="ident">remove</span>: <span class="bool-val">true</span>,
+                .unwrap(),
+                Match::as_filter_config(r#match::Config {
+                    on_write: <span class="prelude-val">None</span>,
+                    on_read: <span class="prelude-val">Some</span>(r#match::DirectionalConfig {
+                        metadata_key: VERSION_KEY.into(),
+                        branches: <span class="macro">vec!</span>[r#match::Branch {
+                            value: <span class="number">1</span>.into(),
+                            filter: Capture::as_filter_config(capture::Config {
+                                metadata_key: TOKEN_KEY.into(),
+                                strategy: capture::Suffix {
+                                    size: <span class="number">16</span>,
+                                    remove: <span class="bool-val">true</span>,
                                 }
-                                .<span class="ident">into</span>(),
+                                .into(),
                             })
-                            .<span class="ident">unwrap</span>(),
+                            .unwrap(),
                         }],
-                        <span class="ident">fallthrough</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
+                        fallthrough: &lt;<span class="kw">_</span>&gt;::default(),
                     }),
                 })
-                .<span class="ident">unwrap</span>(),
-                <span class="ident">Match::as_filter_config</span>(<span class="ident">r#match</span><span class="ident">::Config</span> {
-                    <span class="ident">on_write</span>: <span class="prelude-val">None</span>,
-                    <span class="ident">on_read</span>: <span class="prelude-val">Some</span>(<span class="ident">r#match</span><span class="ident">::DirectionalConfig</span> {
-                        <span class="ident">metadata_key</span>: <span class="ident">VERSION_KEY</span>.<span class="ident">into</span>(),
-                        <span class="ident">branches</span>: <span class="macro">vec!</span>[<span class="ident">r#match</span><span class="ident">::Branch</span> {
-                            <span class="ident">value</span>: <span class="number">1</span>.<span class="ident">into</span>(),
-                            <span class="ident">filter</span>: <span class="ident">TokenRouter::as_filter_config</span>(<span class="ident">token_router::Config</span> {
-                                <span class="ident">metadata_key</span>: <span class="ident">TOKEN_KEY</span>.<span class="ident">into</span>(),
+                .unwrap(),
+                Match::as_filter_config(r#match::Config {
+                    on_write: <span class="prelude-val">None</span>,
+                    on_read: <span class="prelude-val">Some</span>(r#match::DirectionalConfig {
+                        metadata_key: VERSION_KEY.into(),
+                        branches: <span class="macro">vec!</span>[r#match::Branch {
+                            value: <span class="number">1</span>.into(),
+                            filter: TokenRouter::as_filter_config(token_router::Config {
+                                metadata_key: TOKEN_KEY.into(),
                             })
-                            .<span class="ident">unwrap</span>(),
+                            .unwrap(),
                         }],
-                        <span class="ident">fallthrough</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
+                        fallthrough: &lt;<span class="kw">_</span>&gt;::default(),
                     }),
                 })
-                .<span class="ident">unwrap</span>(),
+                .unwrap(),
             ]
-            .<span class="ident">try_into</span>()
-            .<span class="ident">unwrap</span>(),
+            .try_into()
+            .unwrap(),
         ));
 
-        <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">tokio::net::UdpSocket::bind</span>((<span class="ident">std::net::Ipv4Addr::UNSPECIFIED</span>, <span class="number">0</span>))
-            .<span class="kw">await</span>
-            .<span class="ident">unwrap</span>();
+        <span class="kw">let </span>client = tokio::net::UdpSocket::bind((std::net::Ipv4Addr::UNSPECIFIED, <span class="number">0</span>))
+            .<span class="kw">await
+            </span>.unwrap();
 
-        <span class="kw">let</span> <span class="ident">data</span> <span class="op">=</span> <span class="string">&quot;Hello World!&quot;</span>.<span class="ident">as_bytes</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">packet</span> <span class="op">=</span> <span class="ident">data</span>.<span class="ident">to_vec</span>();
-        <span class="ident">packet</span>.<span class="ident">extend</span>(<span class="ident">token</span>);
-        <span class="ident">packet</span>.<span class="ident">push</span>(<span class="number">1</span>);
+        <span class="kw">let </span>data = <span class="string">&quot;Hello World!&quot;</span>.as_bytes();
+        <span class="kw">let </span><span class="kw-2">mut </span>packet = data.to_vec();
+        packet.extend(token);
+        packet.push(<span class="number">1</span>);
 
-        <span class="ident">client</span>
-            .<span class="ident">send_to</span>(
-                <span class="kw-2">&amp;</span><span class="ident">packet</span>,
-                (<span class="ident">std::net::Ipv4Addr::UNSPECIFIED</span>, <span class="ident">client_addr</span>.<span class="ident">port</span>()),
+        client
+            .send_to(
+                <span class="kw-2">&amp;</span>packet,
+                (std::net::Ipv4Addr::UNSPECIFIED, client_addr.port()),
             )
-            .<span class="kw">await</span>
-            .<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buf</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="number">0</span>; <span class="number">12</span>];
-        <span class="ident">tokio::time::timeout</span>(
-            <span class="ident">std::time::Duration::from_secs</span>(<span class="number">1</span>),
-            <span class="ident">client</span>.<span class="ident">recv_from</span>(<span class="kw-2">&amp;mut</span> <span class="ident">buf</span>),
+            .<span class="kw">await
+            </span>.unwrap();
+        <span class="kw">let </span><span class="kw-2">mut </span>buf = <span class="macro">vec!</span>[<span class="number">0</span>; <span class="number">12</span>];
+        tokio::time::timeout(
+            std::time::Duration::from_secs(<span class="number">1</span>),
+            client.recv_from(<span class="kw-2">&amp;mut </span>buf),
         )
-        .<span class="kw">await</span>
-        .<span class="ident">unwrap</span>()
-        .<span class="ident">unwrap</span>();
+        .<span class="kw">await
+        </span>.unwrap()
+        .unwrap();
 
-        <span class="macro">assert_eq!</span>(<span class="ident">data</span>, <span class="ident">buf</span>);
+        <span class="macro">assert_eq!</span>(data, buf);
     }
 
-    <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">basic</span>() {
-        <span class="kw">let</span> <span class="ident">config</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Config</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">serde_json::from_value</span>(<span class="macro">serde_json::json!</span>({
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>basic() {
+        <span class="kw">let </span>config: Arc&lt;Config&gt; = serde_json::from_value(<span class="macro">serde_json::json!</span>({
             <span class="string">&quot;version&quot;</span>: <span class="string">&quot;v1alpha1&quot;</span>,
-            <span class="string">&quot;admin&quot;</span>: <span class="ident">null</span>,
+            <span class="string">&quot;admin&quot;</span>: null,
             <span class="string">&quot;id&quot;</span>: <span class="string">&quot;test-proxy&quot;</span>,
             <span class="string">&quot;port&quot;</span>: <span class="number">23456u16</span>,
             <span class="string">&quot;management_servers&quot;</span>: [{
                 <span class="string">&quot;address&quot;</span>: <span class="string">&quot;http://127.0.0.1:23456&quot;</span>,
             }]
         }))
-        .<span class="ident">map</span>(<span class="ident">Arc::new</span>)
-        .<span class="ident">unwrap</span>();
+        .map(Arc::new)
+        .unwrap();
 
-        <span class="ident">tokio::spawn</span>(<span class="ident">server::spawn</span>(<span class="ident">config</span>.<span class="ident">clone</span>()));
-        <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">Client::connect</span>(<span class="ident">config</span>.<span class="ident">clone</span>()).<span class="kw">await</span>.<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">stream</span> <span class="op">=</span> <span class="ident">client</span>.<span class="ident">stream</span>().<span class="kw">await</span>.<span class="ident">unwrap</span>();
+        tokio::spawn(server::spawn(config.clone()));
+        <span class="kw">let </span>client = Client::connect(config.clone()).<span class="kw">await</span>.unwrap();
+        <span class="kw">let </span><span class="kw-2">mut </span>stream = client.stream().<span class="kw">await</span>.unwrap();
 
-        <span class="comment">// Each time, we create a new upstream endpoint and send a cluster update for it.</span>
-        <span class="kw">let</span> <span class="ident">concat_bytes</span> <span class="op">=</span> <span class="macro">vec!</span>[(<span class="string">&quot;b&quot;</span>, <span class="string">&quot;c,&quot;</span>), (<span class="string">&quot;d&quot;</span>, <span class="string">&quot;e&quot;</span>)];
-        <span class="kw">for</span> (<span class="ident">b1</span>, <span class="ident">b2</span>) <span class="kw">in</span> <span class="ident">concat_bytes</span>.<span class="ident">into_iter</span>() {
-            <span class="kw">let</span> <span class="ident">socket</span> <span class="op">=</span> <span class="ident">std::net::UdpSocket::bind</span>((<span class="ident">std::net::Ipv4Addr::UNSPECIFIED</span>, <span class="number">0</span>)).<span class="ident">unwrap</span>();
-            <span class="kw">let</span> <span class="ident">local_addr</span>: <span class="ident"><span class="kw">crate</span>::endpoint::EndpointAddress</span> <span class="op">=</span> <span class="ident">socket</span>.<span class="ident">local_addr</span>().<span class="ident">unwrap</span>().<span class="ident">into</span>();
+        <span class="comment">// Each time, we create a new upstream endpoint and send a cluster update for it.
+        </span><span class="kw">let </span>concat_bytes = <span class="macro">vec!</span>[(<span class="string">&quot;b&quot;</span>, <span class="string">&quot;c,&quot;</span>), (<span class="string">&quot;d&quot;</span>, <span class="string">&quot;e&quot;</span>)];
+        <span class="kw">for </span>(b1, b2) <span class="kw">in </span>concat_bytes.into_iter() {
+            <span class="kw">let </span>socket = std::net::UdpSocket::bind((std::net::Ipv4Addr::UNSPECIFIED, <span class="number">0</span>)).unwrap();
+            <span class="kw">let </span>local_addr: <span class="kw">crate</span>::endpoint::EndpointAddress = socket.local_addr().unwrap().into();
 
-            <span class="ident">config</span>.<span class="ident">clusters</span>.<span class="ident">modify</span>(<span class="op">|</span><span class="ident">clusters</span><span class="op">|</span> {
-                <span class="kw">let</span> <span class="ident">cluster</span> <span class="op">=</span> <span class="ident">clusters</span>.<span class="ident">default_cluster_mut</span>();
-                <span class="ident">cluster</span>.<span class="ident">localities</span>.<span class="ident">clear</span>();
-                <span class="ident">cluster</span>.<span class="ident">insert</span>(<span class="ident">Endpoint::new</span>(<span class="ident">local_addr</span>.<span class="ident">clone</span>()))
+            config.clusters.modify(|clusters| {
+                <span class="kw">let </span>cluster = clusters.default_cluster_mut();
+                cluster.localities.clear();
+                cluster.insert(Endpoint::new(local_addr.clone()))
             });
 
-            <span class="kw">let</span> <span class="ident">filters</span> <span class="op">=</span> <span class="ident"><span class="kw">crate</span>::filters::FilterChain::try_from</span>(<span class="macro">vec!</span>[
-                <span class="ident">ConcatenateBytes::as_filter_config</span>(<span class="ident">concatenate_bytes::Config</span> {
-                    <span class="ident">on_read</span>: <span class="ident">concatenate_bytes::Strategy::Append</span>,
-                    <span class="ident">on_write</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
-                    <span class="ident">bytes</span>: <span class="ident">b1</span>.<span class="ident">as_bytes</span>().<span class="ident">to_vec</span>(),
+            <span class="kw">let </span>filters = <span class="kw">crate</span>::filters::FilterChain::try_from(<span class="macro">vec!</span>[
+                ConcatenateBytes::as_filter_config(concatenate_bytes::Config {
+                    on_read: concatenate_bytes::Strategy::Append,
+                    on_write: &lt;<span class="kw">_</span>&gt;::default(),
+                    bytes: b1.as_bytes().to_vec(),
                 })
-                .<span class="ident">unwrap</span>(),
-                <span class="ident">ConcatenateBytes::as_filter_config</span>(<span class="ident">concatenate_bytes::Config</span> {
-                    <span class="ident">on_read</span>: <span class="ident">concatenate_bytes::Strategy::Append</span>,
-                    <span class="ident">on_write</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
-                    <span class="ident">bytes</span>: <span class="ident">b2</span>.<span class="ident">as_bytes</span>().<span class="ident">to_vec</span>(),
+                .unwrap(),
+                ConcatenateBytes::as_filter_config(concatenate_bytes::Config {
+                    on_read: concatenate_bytes::Strategy::Append,
+                    on_write: &lt;<span class="kw">_</span>&gt;::default(),
+                    bytes: b2.as_bytes().to_vec(),
                 })
-                .<span class="ident">unwrap</span>(),
+                .unwrap(),
             ])
-            .<span class="ident">unwrap</span>();
+            .unwrap();
 
-            <span class="ident">config</span>.<span class="ident">filters</span>.<span class="ident">modify</span>(<span class="op">|</span><span class="ident">chain</span><span class="op">|</span> <span class="kw-2">*</span><span class="ident">chain</span> <span class="op">=</span> <span class="ident">filters</span>.<span class="ident">clone</span>());
+            config.filters.modify(|chain| <span class="kw-2">*</span>chain = filters.clone());
 
-            <span class="ident">stream</span>.<span class="ident">send</span>(<span class="ident">ResourceType::Cluster</span>, <span class="kw-2">&amp;</span>[]).<span class="kw">await</span>.<span class="ident">unwrap</span>();
-            <span class="ident">tokio::time::sleep</span>(<span class="ident">std::time::Duration::from_millis</span>(<span class="number">100</span>)).<span class="kw">await</span>;
+            stream.send(ResourceType::Cluster, <span class="kw-2">&amp;</span>[]).<span class="kw">await</span>.unwrap();
+            tokio::time::sleep(std::time::Duration::from_millis(<span class="number">100</span>)).<span class="kw">await</span>;
             <span class="macro">assert_eq!</span>(
-                <span class="ident">local_addr</span>,
-                <span class="ident">config</span>
-                    .<span class="ident">clusters</span>
-                    .<span class="ident">load</span>()
-                    .<span class="ident">get_default</span>()
-                    .<span class="ident">unwrap</span>()
-                    .<span class="ident">endpoints</span>()
-                    .<span class="ident">next</span>()
-                    .<span class="ident">unwrap</span>()
-                    .<span class="ident">address</span>
+                local_addr,
+                config
+                    .clusters
+                    .load()
+                    .get_default()
+                    .unwrap()
+                    .endpoints()
+                    .next()
+                    .unwrap()
+                    .address
             );
 
-            <span class="ident">stream</span>.<span class="ident">send</span>(<span class="ident">ResourceType::Listener</span>, <span class="kw-2">&amp;</span>[]).<span class="kw">await</span>.<span class="ident">unwrap</span>();
-            <span class="ident">tokio::time::sleep</span>(<span class="ident">std::time::Duration::from_millis</span>(<span class="number">100</span>)).<span class="kw">await</span>;
-            <span class="kw">let</span> <span class="ident">changed_filters</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">filters</span>.<span class="ident">load</span>();
+            stream.send(ResourceType::Listener, <span class="kw-2">&amp;</span>[]).<span class="kw">await</span>.unwrap();
+            tokio::time::sleep(std::time::Duration::from_millis(<span class="number">100</span>)).<span class="kw">await</span>;
+            <span class="kw">let </span>changed_filters = config.filters.load();
 
-            <span class="macro">assert_eq!</span>(<span class="ident">changed_filters</span>.<span class="ident">len</span>(), <span class="number">2</span>);
+            <span class="macro">assert_eq!</span>(changed_filters.len(), <span class="number">2</span>);
 
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">iter</span> <span class="op">=</span> <span class="ident">changed_filters</span>.<span class="ident">iter</span>();
-            <span class="macro">assert_eq!</span>(<span class="ident">iter</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>(), <span class="ident">filters</span>[<span class="number">0</span>].<span class="ident">clone</span>().<span class="ident">into</span>());
-            <span class="macro">assert_eq!</span>(<span class="ident">iter</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>(), <span class="ident">filters</span>[<span class="number">1</span>].<span class="ident">clone</span>().<span class="ident">into</span>());
+            <span class="kw">let </span><span class="kw-2">mut </span>iter = changed_filters.iter();
+            <span class="macro">assert_eq!</span>(iter.next().unwrap(), filters[<span class="number">0</span>].clone().into());
+            <span class="macro">assert_eq!</span>(iter.next().unwrap(), filters[<span class="number">1</span>].clone().into());
         }
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

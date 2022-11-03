@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/endpoint/address.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>address.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../quilkin/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/endpoint/address.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>address.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../normalize.css"><link rel="stylesheet" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../ayu.css" disabled><link rel="stylesheet" href="../../../dark.css" disabled><link rel="stylesheet" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../quilkin/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -336,315 +336,315 @@
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- */</span>
+ */
 
-<span class="kw">use</span> <span class="ident">std</span>::{
-    <span class="ident">convert</span>::{<span class="ident">TryFrom</span>, <span class="ident">TryInto</span>},
-    <span class="ident">fmt</span>,
-    <span class="ident">net</span>::{<span class="ident">IpAddr</span>, <span class="ident">Ipv4Addr</span>, <span class="ident">Ipv6Addr</span>, <span class="ident">SocketAddr</span>, <span class="ident">ToSocketAddrs</span>},
-    <span class="ident">str::FromStr</span>,
+</span><span class="kw">use </span>std::{
+    convert::{TryFrom, TryInto},
+    fmt,
+    net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, ToSocketAddrs},
+    str::FromStr,
 };
 
-<span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
+<span class="kw">use </span>serde::{Deserialize, Serialize};
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::xds::config::core::v3</span>::{
-    <span class="ident">address::Address</span> <span class="kw">as</span> <span class="ident">EnvoyAddress</span>, <span class="ident">SocketAddress</span> <span class="kw">as</span> <span class="ident">EnvoySocketAddress</span>,
+<span class="kw">use </span><span class="kw">crate</span>::xds::config::core::v3::{
+    address::Address <span class="kw">as </span>EnvoyAddress, SocketAddress <span class="kw">as </span>EnvoySocketAddress,
 };
 
-<span class="doccomment">/// A valid socket address. This differs from `std::net::SocketAddr`, in that it</span>
-<span class="doccomment">/// it supports parsing Domain Names in addition to IP addresses. Domain Names</span>
-<span class="doccomment">/// are resolved when `ToSocketAddrs::to_socket_addrs` is called.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Clone</span>, <span class="ident">PartialOrd</span>, <span class="ident">Ord</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">EndpointAddress</span> {
-    <span class="doccomment">/// A valid name or IP address that resolves to a address.</span>
-    <span class="kw">pub</span> <span class="ident">host</span>: <span class="ident">AddressKind</span>,
-    <span class="doccomment">/// The port of the socket address, if present.</span>
-    <span class="kw">pub</span> <span class="ident">port</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span>,
+<span class="doccomment">/// A valid socket address. This differs from `std::net::SocketAddr`, in that it
+/// it supports parsing Domain Names in addition to IP addresses. Domain Names
+/// are resolved when `ToSocketAddrs::to_socket_addrs` is called.
+</span><span class="attribute">#[derive(Debug, PartialEq, Clone, PartialOrd, Ord, Eq, Hash)]
+</span><span class="kw">pub struct </span>EndpointAddress {
+    <span class="doccomment">/// A valid name or IP address that resolves to a address.
+    </span><span class="kw">pub </span>host: AddressKind,
+    <span class="doccomment">/// The port of the socket address, if present.
+    </span><span class="kw">pub </span>port: <span class="prelude-ty">Option</span>&lt;u16&gt;,
 }
 
-<span class="kw">impl</span> <span class="ident">EndpointAddress</span> {
-    <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">UNSPECIFIED</span>: <span class="self">Self</span> <span class="op">=</span> <span class="self">Self</span> {
-        <span class="ident">host</span>: <span class="ident">AddressKind::Ip</span>(<span class="ident">IpAddr::V4</span>(<span class="ident">Ipv4Addr::UNSPECIFIED</span>)),
-        <span class="ident">port</span>: <span class="prelude-val">Some</span>(<span class="number">0</span>),
+<span class="kw">impl </span>EndpointAddress {
+    <span class="kw">pub const </span>UNSPECIFIED: <span class="self">Self </span>= <span class="self">Self </span>{
+        host: AddressKind::Ip(IpAddr::V4(Ipv4Addr::UNSPECIFIED)),
+        port: <span class="prelude-val">Some</span>(<span class="number">0</span>),
     };
-    <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">LOCALHOST</span>: <span class="self">Self</span> <span class="op">=</span> <span class="self">Self</span> {
-        <span class="ident">host</span>: <span class="ident">AddressKind::Ip</span>(<span class="ident">IpAddr::V4</span>(<span class="ident">Ipv4Addr::LOCALHOST</span>)),
-        <span class="ident">port</span>: <span class="prelude-val">Some</span>(<span class="number">0</span>),
+    <span class="kw">pub const </span>LOCALHOST: <span class="self">Self </span>= <span class="self">Self </span>{
+        host: AddressKind::Ip(IpAddr::V4(Ipv4Addr::LOCALHOST)),
+        port: <span class="prelude-val">Some</span>(<span class="number">0</span>),
     };
 }
 
-<span class="kw">impl</span> <span class="ident">EndpointAddress</span> {
-    <span class="doccomment">/// Returns the port for the endpoint address, or `0` if no port</span>
-    <span class="doccomment">/// was specified.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">port</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">u16</span> {
-        <span class="self">self</span>.<span class="ident">port</span>.<span class="ident">unwrap_or</span>(<span class="number">0</span>)
+<span class="kw">impl </span>EndpointAddress {
+    <span class="doccomment">/// Returns the port for the endpoint address, or `0` if no port
+    /// was specified.
+    </span><span class="kw">pub fn </span>port(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u16 {
+        <span class="self">self</span>.port.unwrap_or(<span class="number">0</span>)
     }
 
-    <span class="doccomment">/// Returns the socket address for the endpoint, resolving any DNS entries</span>
-    <span class="doccomment">/// if present.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">to_socket_addr</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SocketAddr</span>, <span class="ident">ToSocketAddrError</span><span class="op">&gt;</span> {
-        <span class="comment">// These unwraps after `to_socket_addr` are guarenteed not to panic as</span>
-        <span class="comment">// all the types we use provide either one address or error.</span>
-        <span class="prelude-val">Ok</span>(<span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">port</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">port</span> {
-            <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">host</span> {
-                <span class="ident">AddressKind::Ip</span>(<span class="ident">ip</span>) =&gt; (<span class="kw-2">*</span><span class="ident">ip</span>, <span class="ident">port</span>).<span class="ident">to_socket_addrs</span>()<span class="question-mark">?</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>(),
-                <span class="ident">AddressKind::Name</span>(<span class="ident">name</span>) =&gt; (<span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">name</span>, <span class="ident">port</span>).<span class="ident">to_socket_addrs</span>()<span class="question-mark">?</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>(),
+    <span class="doccomment">/// Returns the socket address for the endpoint, resolving any DNS entries
+    /// if present.
+    </span><span class="kw">pub fn </span>to_socket_addr(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;SocketAddr, ToSocketAddrError&gt; {
+        <span class="comment">// These unwraps after `to_socket_addr` are guarenteed not to panic as
+        // all the types we use provide either one address or error.
+        </span><span class="prelude-val">Ok</span>(<span class="kw">if let </span><span class="prelude-val">Some</span>(port) = <span class="self">self</span>.port {
+            <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.host {
+                AddressKind::Ip(ip) =&gt; (<span class="kw-2">*</span>ip, port).to_socket_addrs()<span class="question-mark">?</span>.next().unwrap(),
+                AddressKind::Name(name) =&gt; (<span class="kw-2">&amp;**</span>name, port).to_socket_addrs()<span class="question-mark">?</span>.next().unwrap(),
             }
-        } <span class="kw">else</span> {
-            <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">host</span> {
-                <span class="ident">AddressKind::Ip</span>(<span class="kw">_</span>) =&gt; <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">ToSocketAddrError::NoPort</span>),
-                <span class="ident">AddressKind::Name</span>(<span class="ident">name</span>) =&gt; <span class="ident">name</span>.<span class="ident">to_socket_addrs</span>()<span class="question-mark">?</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>(),
+        } <span class="kw">else </span>{
+            <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.host {
+                AddressKind::Ip(<span class="kw">_</span>) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(ToSocketAddrError::NoPort),
+                AddressKind::Name(name) =&gt; name.to_socket_addrs()<span class="question-mark">?</span>.next().unwrap(),
             }
         })
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">thiserror::Error</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ToSocketAddrError</span> {
-    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;no port provided for address&quot;</span>)]</span>
-    <span class="ident">NoPort</span>,
-    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;not valid address: {0}&quot;</span>)]</span>
-    <span class="ident">NotValidAddress</span>(<span class="attribute">#[<span class="ident">from</span>]</span> <span class="ident">std::io::Error</span>),
+<span class="attribute">#[derive(Debug, thiserror::Error)]
+</span><span class="kw">pub enum </span>ToSocketAddrError {
+    <span class="attribute">#[error(<span class="string">&quot;no port provided for address&quot;</span>)]
+    </span>NoPort,
+    <span class="attribute">#[error(<span class="string">&quot;not valid address: {0}&quot;</span>)]
+    </span>NotValidAddress(<span class="attribute">#[from] </span>std::io::Error),
 }
 
-<span class="doccomment">/// Forwards the deserialisation to use [`std::net::ToSocketAddrs`] instead of</span>
-<span class="doccomment">/// [`FromStr`] for validation which allows us to resolve DNS hostnames such as</span>
-<span class="doccomment">/// `localhost` or container network names at parse-time.</span>
-<span class="kw">impl</span> <span class="ident">FromStr</span> <span class="kw">for</span> <span class="ident">EndpointAddress</span> {
-    <span class="kw">type</span> <span class="prelude-val">Err</span> <span class="op">=</span> <span class="ident">eyre::Report</span>;
+<span class="doccomment">/// Forwards the deserialisation to use [`std::net::ToSocketAddrs`] instead of
+/// [`FromStr`] for validation which allows us to resolve DNS hostnames such as
+/// `localhost` or container network names at parse-time.
+</span><span class="kw">impl </span>FromStr <span class="kw">for </span>EndpointAddress {
+    <span class="kw">type </span><span class="prelude-val">Err </span>= eyre::Report;
 
-    <span class="kw">fn</span> <span class="ident">from_str</span>(<span class="ident">string</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident"><span class="self">Self</span>::Err</span><span class="op">&gt;</span> {
-        <span class="ident">string</span>
-            .<span class="ident">to_socket_addrs</span>()<span class="question-mark">?</span>
-            .<span class="ident">next</span>()
-            .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">eyre::eyre!</span>(<span class="string">&quot;No valid socket address found.&quot;</span>))<span class="question-mark">?</span>;
+    <span class="kw">fn </span>from_str(string: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Err&gt; {
+        string
+            .to_socket_addrs()<span class="question-mark">?
+            </span>.next()
+            .ok_or_else(|| <span class="macro">eyre::eyre!</span>(<span class="string">&quot;No valid socket address found.&quot;</span>))<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="kw">match</span> <span class="ident">string</span>.<span class="ident">split_once</span>(<span class="string">&#39;:&#39;</span>) {
-            <span class="prelude-val">Some</span>((<span class="ident">host</span>, <span class="ident">port</span>)) =&gt; {
-                <span class="kw">let</span> <span class="ident">host</span> <span class="op">=</span> <span class="ident">host</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>();
-                <span class="kw">let</span> <span class="ident">port</span> <span class="op">=</span> <span class="ident">port</span>.<span class="ident">parse</span>()<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(<span class="kw">match </span>string.split_once(<span class="string">&#39;:&#39;</span>) {
+            <span class="prelude-val">Some</span>((host, port)) =&gt; {
+                <span class="kw">let </span>host = host.parse().unwrap();
+                <span class="kw">let </span>port = port.parse()<span class="question-mark">?</span>;
 
-                <span class="self">Self</span> {
-                    <span class="ident">host</span>,
-                    <span class="ident">port</span>: <span class="prelude-val">Some</span>(<span class="ident">port</span>),
+                <span class="self">Self </span>{
+                    host,
+                    port: <span class="prelude-val">Some</span>(port),
                 }
             }
-            <span class="kw">_</span> =&gt; <span class="self">Self</span> {
-                <span class="ident">host</span>: <span class="ident">string</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
-                <span class="ident">port</span>: <span class="prelude-val">None</span>,
+            <span class="kw">_ </span>=&gt; <span class="self">Self </span>{
+                host: string.parse().unwrap(),
+                port: <span class="prelude-val">None</span>,
             },
         })
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">SocketAddr</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">EndpointAddress</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">socket</span>: <span class="ident">SocketAddr</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">host</span>: <span class="ident">AddressKind::Ip</span>(<span class="ident">socket</span>.<span class="ident">ip</span>()),
-            <span class="ident">port</span>: <span class="prelude-val">Some</span>(<span class="ident">socket</span>.<span class="ident">port</span>()),
+<span class="kw">impl </span>From&lt;SocketAddr&gt; <span class="kw">for </span>EndpointAddress {
+    <span class="kw">fn </span>from(socket: SocketAddr) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            host: AddressKind::Ip(socket.ip()),
+            port: <span class="prelude-val">Some</span>(socket.port()),
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span>(<span class="ident">IpAddr</span>, <span class="ident">u16</span>)<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">EndpointAddress</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>((<span class="ident">ip</span>, <span class="ident">port</span>): (<span class="ident">IpAddr</span>, <span class="ident">u16</span>)) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">host</span>: <span class="ident">AddressKind::Ip</span>(<span class="ident">ip</span>),
-            <span class="ident">port</span>: <span class="prelude-val">Some</span>(<span class="ident">port</span>),
+<span class="kw">impl </span>From&lt;(IpAddr, u16)&gt; <span class="kw">for </span>EndpointAddress {
+    <span class="kw">fn </span>from((ip, port): (IpAddr, u16)) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            host: AddressKind::Ip(ip),
+            port: <span class="prelude-val">Some</span>(port),
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span>(<span class="ident">Ipv4Addr</span>, <span class="ident">u16</span>)<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">EndpointAddress</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>((<span class="ident">ip</span>, <span class="ident">port</span>): (<span class="ident">Ipv4Addr</span>, <span class="ident">u16</span>)) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">host</span>: <span class="ident">AddressKind::Ip</span>(<span class="ident">IpAddr::V4</span>(<span class="ident">ip</span>)),
-            <span class="ident">port</span>: <span class="prelude-val">Some</span>(<span class="ident">port</span>),
+<span class="kw">impl </span>From&lt;(Ipv4Addr, u16)&gt; <span class="kw">for </span>EndpointAddress {
+    <span class="kw">fn </span>from((ip, port): (Ipv4Addr, u16)) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            host: AddressKind::Ip(IpAddr::V4(ip)),
+            port: <span class="prelude-val">Some</span>(port),
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span>([<span class="ident">u8</span>; <span class="number">4</span>], <span class="ident">u16</span>)<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">EndpointAddress</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>((<span class="ident">ip</span>, <span class="ident">port</span>): ([<span class="ident">u8</span>; <span class="number">4</span>], <span class="ident">u16</span>)) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">host</span>: <span class="ident">AddressKind::Ip</span>(<span class="ident">IpAddr::V4</span>(<span class="ident">ip</span>.<span class="ident">into</span>())),
-            <span class="ident">port</span>: <span class="prelude-val">Some</span>(<span class="ident">port</span>),
+<span class="kw">impl </span>From&lt;([u8; <span class="number">4</span>], u16)&gt; <span class="kw">for </span>EndpointAddress {
+    <span class="kw">fn </span>from((ip, port): ([u8; <span class="number">4</span>], u16)) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            host: AddressKind::Ip(IpAddr::V4(ip.into())),
+            port: <span class="prelude-val">Some</span>(port),
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span>(<span class="ident">Ipv6Addr</span>, <span class="ident">u16</span>)<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">EndpointAddress</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>((<span class="ident">ip</span>, <span class="ident">port</span>): (<span class="ident">Ipv6Addr</span>, <span class="ident">u16</span>)) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">host</span>: <span class="ident">AddressKind::Ip</span>(<span class="ident">IpAddr::V6</span>(<span class="ident">ip</span>)),
-            <span class="ident">port</span>: <span class="prelude-val">Some</span>(<span class="ident">port</span>),
+<span class="kw">impl </span>From&lt;(Ipv6Addr, u16)&gt; <span class="kw">for </span>EndpointAddress {
+    <span class="kw">fn </span>from((ip, port): (Ipv6Addr, u16)) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            host: AddressKind::Ip(IpAddr::V6(ip)),
+            port: <span class="prelude-val">Some</span>(port),
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span>(<span class="ident">String</span>, <span class="ident">u16</span>)<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">EndpointAddress</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>((<span class="ident">ip</span>, <span class="ident">port</span>): (<span class="ident">String</span>, <span class="ident">u16</span>)) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">host</span>: <span class="ident">ip</span>.<span class="ident">parse</span>().<span class="ident">unwrap_or</span>(<span class="ident">AddressKind::Name</span>(<span class="ident">ip</span>)),
-            <span class="ident">port</span>: <span class="prelude-val">Some</span>(<span class="ident">port</span>),
+<span class="kw">impl </span>From&lt;(String, u16)&gt; <span class="kw">for </span>EndpointAddress {
+    <span class="kw">fn </span>from((ip, port): (String, u16)) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            host: ip.parse().unwrap_or(AddressKind::Name(ip)),
+            port: <span class="prelude-val">Some</span>(port),
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">EndpointAddress</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">EnvoySocketAddress</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">address</span>: <span class="ident">EndpointAddress</span>) -&gt; <span class="self">Self</span> {
-        <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::xds::config::core::v3::socket_address</span>::{<span class="ident">PortSpecifier</span>, <span class="ident">Protocol</span>};
+<span class="kw">impl </span>From&lt;EndpointAddress&gt; <span class="kw">for </span>EnvoySocketAddress {
+    <span class="kw">fn </span>from(address: EndpointAddress) -&gt; <span class="self">Self </span>{
+        <span class="kw">use </span><span class="kw">crate</span>::xds::config::core::v3::socket_address::{PortSpecifier, Protocol};
 
-        <span class="self">Self</span> {
-            <span class="ident">protocol</span>: <span class="ident">Protocol::Udp</span> <span class="kw">as</span> <span class="ident">i32</span>,
-            <span class="ident">address</span>: <span class="ident">address</span>.<span class="ident">host</span>.<span class="ident">to_string</span>(),
-            <span class="ident">port_specifier</span>: <span class="ident">address</span>.<span class="ident">port</span>.<span class="ident">map</span>(<span class="ident">u32::from</span>).<span class="ident">map</span>(<span class="ident">PortSpecifier::PortValue</span>),
-            ..<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>()
+        <span class="self">Self </span>{
+            protocol: Protocol::Udp <span class="kw">as </span>i32,
+            address: address.host.to_string(),
+            port_specifier: address.port.map(u32::from).map(PortSpecifier::PortValue),
+            ..&lt;<span class="kw">_</span>&gt;::default()
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident">EnvoySocketAddress</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">EndpointAddress</span> {
-    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">eyre::Error</span>;
+<span class="kw">impl </span>TryFrom&lt;EnvoySocketAddress&gt; <span class="kw">for </span>EndpointAddress {
+    <span class="kw">type </span>Error = eyre::Error;
 
-    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">value</span>: <span class="ident">EnvoySocketAddress</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident"><span class="self">Self</span>::Error</span><span class="op">&gt;</span> {
-        <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::xds::config::core::v3::socket_address::PortSpecifier</span>;
+    <span class="kw">fn </span>try_from(value: EnvoySocketAddress) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
+        <span class="kw">use </span><span class="kw">crate</span>::xds::config::core::v3::socket_address::PortSpecifier;
 
-        <span class="kw">let</span> <span class="ident">address</span> <span class="op">=</span> <span class="self">Self</span> {
-            <span class="ident">host</span>: <span class="ident">value</span>.<span class="ident">address</span>.<span class="ident">parse</span>()<span class="question-mark">?</span>,
-            <span class="ident">port</span>: <span class="kw">match</span> <span class="ident">value</span>.<span class="ident">port_specifier</span> {
-                <span class="prelude-val">Some</span>(<span class="ident">PortSpecifier::PortValue</span>(<span class="ident">value</span>)) =&gt; <span class="prelude-val">Some</span>(<span class="ident">value</span>.<span class="ident">try_into</span>()<span class="question-mark">?</span>),
-                <span class="prelude-val">Some</span>(<span class="ident">PortSpecifier::NamedPort</span>(<span class="kw">_</span>)) =&gt; {
-                    <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">&quot;Named ports are not supported.&quot;</span>))
+        <span class="kw">let </span>address = <span class="self">Self </span>{
+            host: value.address.parse()<span class="question-mark">?</span>,
+            port: <span class="kw">match </span>value.port_specifier {
+                <span class="prelude-val">Some</span>(PortSpecifier::PortValue(value)) =&gt; <span class="prelude-val">Some</span>(value.try_into()<span class="question-mark">?</span>),
+                <span class="prelude-val">Some</span>(PortSpecifier::NamedPort(<span class="kw">_</span>)) =&gt; {
+                    <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">&quot;Named ports are not supported.&quot;</span>))
                 }
-                <span class="prelude-val">None</span> =&gt; <span class="prelude-val">None</span>,
+                <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
             },
         };
 
-        <span class="comment">// Ensure the address from envoy resolves to an address.</span>
-        <span class="ident">address</span>.<span class="ident">to_socket_addrs</span>()<span class="question-mark">?</span>;
+        <span class="comment">// Ensure the address from envoy resolves to an address.
+        </span>address.to_socket_addrs()<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">address</span>)
+        <span class="prelude-val">Ok</span>(address)
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">EndpointAddress</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident"><span class="kw">crate</span>::xds::config::core::v3::Address</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">address</span>: <span class="ident">EndpointAddress</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">address</span>: <span class="prelude-val">Some</span>(<span class="ident">address</span>.<span class="ident">into</span>()),
+<span class="kw">impl </span>From&lt;EndpointAddress&gt; <span class="kw">for </span><span class="kw">crate</span>::xds::config::core::v3::Address {
+    <span class="kw">fn </span>from(address: EndpointAddress) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            address: <span class="prelude-val">Some</span>(address.into()),
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">EndpointAddress</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">EnvoyAddress</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">address</span>: <span class="ident">EndpointAddress</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident"><span class="self">Self</span>::SocketAddress</span>(<span class="ident">address</span>.<span class="ident">into</span>())
+<span class="kw">impl </span>From&lt;EndpointAddress&gt; <span class="kw">for </span>EnvoyAddress {
+    <span class="kw">fn </span>from(address: EndpointAddress) -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::SocketAddress(address.into())
     }
 }
 
-<span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident">EnvoyAddress</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">EndpointAddress</span> {
-    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">eyre::Error</span>;
+<span class="kw">impl </span>TryFrom&lt;EnvoyAddress&gt; <span class="kw">for </span>EndpointAddress {
+    <span class="kw">type </span>Error = eyre::Error;
 
-    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">value</span>: <span class="ident">EnvoyAddress</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident"><span class="self">Self</span>::Error</span><span class="op">&gt;</span> {
-        <span class="kw">match</span> <span class="ident">value</span> {
-            <span class="ident">EnvoyAddress::SocketAddress</span>(<span class="ident">address</span>) =&gt; <span class="ident">address</span>.<span class="ident">try_into</span>(),
-            <span class="kw">_</span> =&gt; <span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">&quot;Unsupported Envoy address type.&quot;</span>)),
+    <span class="kw">fn </span>try_from(value: EnvoyAddress) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
+        <span class="kw">match </span>value {
+            EnvoyAddress::SocketAddress(address) =&gt; address.try_into(),
+            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">&quot;Unsupported Envoy address type.&quot;</span>)),
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident"><span class="kw">crate</span>::xds::config::core::v3::Address</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">EndpointAddress</span> {
-    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">eyre::Error</span>;
+<span class="kw">impl </span>TryFrom&lt;<span class="kw">crate</span>::xds::config::core::v3::Address&gt; <span class="kw">for </span>EndpointAddress {
+    <span class="kw">type </span>Error = eyre::Error;
 
-    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">value</span>: <span class="ident"><span class="kw">crate</span>::xds::config::core::v3::Address</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident"><span class="self">Self</span>::Error</span><span class="op">&gt;</span> {
-        <span class="kw">match</span> <span class="ident">value</span>.<span class="ident">address</span> {
-            <span class="prelude-val">Some</span>(<span class="ident">address</span>) =&gt; <span class="ident"><span class="self">Self</span>::try_from</span>(<span class="ident">address</span>),
-            <span class="kw">_</span> =&gt; <span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">&quot;No address found&quot;</span>)),
+    <span class="kw">fn </span>try_from(value: <span class="kw">crate</span>::xds::config::core::v3::Address) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
+        <span class="kw">match </span>value.address {
+            <span class="prelude-val">Some</span>(address) =&gt; <span class="self">Self</span>::try_from(address),
+            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">&quot;No address found&quot;</span>)),
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident"><span class="kw">crate</span>::xds::config::endpoint::v3::Endpoint</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">EndpointAddress</span> {
-    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">eyre::Error</span>;
+<span class="kw">impl </span>TryFrom&lt;<span class="kw">crate</span>::xds::config::endpoint::v3::Endpoint&gt; <span class="kw">for </span>EndpointAddress {
+    <span class="kw">type </span>Error = eyre::Error;
 
-    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">value</span>: <span class="ident"><span class="kw">crate</span>::xds::config::endpoint::v3::Endpoint</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident"><span class="self">Self</span>::Error</span><span class="op">&gt;</span> {
-        <span class="kw">match</span> <span class="ident">value</span>.<span class="ident">address</span> {
-            <span class="prelude-val">Some</span>(<span class="ident">address</span>) =&gt; <span class="ident"><span class="self">Self</span>::try_from</span>(<span class="ident">address</span>),
-            <span class="kw">_</span> =&gt; <span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">&quot;Missing address in endpoint&quot;</span>)),
+    <span class="kw">fn </span>try_from(value: <span class="kw">crate</span>::xds::config::endpoint::v3::Endpoint) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
+        <span class="kw">match </span>value.address {
+            <span class="prelude-val">Some</span>(address) =&gt; <span class="self">Self</span>::try_from(address),
+            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">&quot;Missing address in endpoint&quot;</span>)),
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">fmt::Display</span> <span class="kw">for</span> <span class="ident">EndpointAddress</span> {
-    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;mut</span> <span class="ident">fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="ident">fmt::Result</span> {
-        <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="self">self</span>.<span class="ident">host</span>)<span class="question-mark">?</span>;
+<span class="kw">impl </span>fmt::Display <span class="kw">for </span>EndpointAddress {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
+        <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, <span class="self">self</span>.host)<span class="question-mark">?</span>;
 
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">port</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">port</span> {
-            <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;:{}&quot;</span>, <span class="ident">port</span>)<span class="question-mark">?</span>;
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(port) = <span class="self">self</span>.port {
+            <span class="macro">write!</span>(f, <span class="string">&quot;:{}&quot;</span>, port)<span class="question-mark">?</span>;
         }
 
         <span class="prelude-val">Ok</span>(())
     }
 }
 
-<span class="kw">impl</span> <span class="ident">ToSocketAddrs</span> <span class="kw">for</span> <span class="ident">EndpointAddress</span> {
-    <span class="kw">type</span> <span class="ident">Iter</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">std::net::SocketAddr</span> <span class="kw">as</span> <span class="ident">std::net::ToSocketAddrs</span><span class="op">&gt;</span><span class="ident">::Iter</span>;
+<span class="kw">impl </span>ToSocketAddrs <span class="kw">for </span>EndpointAddress {
+    <span class="kw">type </span>Iter = &lt;std::net::SocketAddr <span class="kw">as </span>std::net::ToSocketAddrs&gt;::Iter;
 
-    <span class="kw">fn</span> <span class="ident">to_socket_addrs</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">std::io::Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Iter</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">to_socket_addr</span>()
-            .<span class="ident">map</span>(<span class="prelude-val">Some</span>)
-            .<span class="ident">map</span>(<span class="ident">IntoIterator::into_iter</span>)
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="ident">std::io::Error::new</span>(<span class="ident">std::io::ErrorKind::Other</span>, <span class="ident">error</span>))
+    <span class="kw">fn </span>to_socket_addrs(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; std::io::Result&lt;<span class="self">Self</span>::Iter&gt; {
+        <span class="self">self</span>.to_socket_addr()
+            .map(<span class="prelude-val">Some</span>)
+            .map(IntoIterator::into_iter)
+            .map_err(|error| std::io::Error::new(std::io::ErrorKind::Other, error))
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span> <span class="ident">Deserialize</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">EndpointAddress</span> {
-    <span class="kw">fn</span> <span class="ident">deserialize</span><span class="op">&lt;</span><span class="ident">D</span><span class="op">&gt;</span>(<span class="ident">de</span>: <span class="ident">D</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">D::Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">D</span>: <span class="ident">serde::Deserializer</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;de</span>&gt; Deserialize&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>EndpointAddress {
+    <span class="kw">fn </span>deserialize&lt;D&gt;(de: D) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, D::Error&gt;
+    <span class="kw">where
+        </span>D: serde::Deserializer&lt;<span class="lifetime">&#39;de</span>&gt;,
     {
-        <span class="comment">// Accept borrowed or owned strings.</span>
-        <span class="kw">let</span> <span class="ident">string</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">std::borrow::Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span>, <span class="ident">str</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::deserialize</span>(<span class="ident">de</span>)<span class="question-mark">?</span>;
-        <span class="ident">string</span>.<span class="ident">parse</span>::<span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>().<span class="ident">map_err</span>(<span class="ident">serde::de::Error::custom</span>)
+        <span class="comment">// Accept borrowed or owned strings.
+        </span><span class="kw">let </span>string = &lt;std::borrow::Cow&lt;<span class="lifetime">&#39;de</span>, str&gt;&gt;::deserialize(de)<span class="question-mark">?</span>;
+        string.parse::&lt;<span class="self">Self</span>&gt;().map_err(serde::de::Error::custom)
     }
 }
 
-<span class="doccomment">/// The kind of address, such as Domain Name or IP address. **Note** that</span>
-<span class="doccomment">/// the `FromStr` implementation doesn&#39;t actually validate that the name is</span>
-<span class="doccomment">/// resolvable. Use [`EndpointAddress`] for complete address validation.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Clone</span>, <span class="ident">PartialOrd</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>, <span class="ident">Ord</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">untagged</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">AddressKind</span> {
-    <span class="ident">Name</span>(<span class="ident">String</span>),
-    <span class="ident">Ip</span>(<span class="ident">IpAddr</span>),
+<span class="doccomment">/// The kind of address, such as Domain Name or IP address. **Note** that
+/// the `FromStr` implementation doesn&#39;t actually validate that the name is
+/// resolvable. Use [`EndpointAddress`] for complete address validation.
+</span><span class="attribute">#[derive(Debug, PartialEq, Clone, PartialOrd, Eq, Hash, Ord, Serialize, Deserialize)]
+#[serde(untagged)]
+</span><span class="kw">pub enum </span>AddressKind {
+    Name(String),
+    Ip(IpAddr),
 }
 
-<span class="kw">impl</span> <span class="ident">FromStr</span> <span class="kw">for</span> <span class="ident">AddressKind</span> {
-    <span class="kw">type</span> <span class="prelude-val">Err</span> <span class="op">=</span> <span class="ident">std::convert::Infallible</span>;
+<span class="kw">impl </span>FromStr <span class="kw">for </span>AddressKind {
+    <span class="kw">type </span><span class="prelude-val">Err </span>= std::convert::Infallible;
 
-    <span class="kw">fn</span> <span class="ident">from_str</span>(<span class="ident">s</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident"><span class="self">Self</span>::Err</span><span class="op">&gt;</span> {
-        <span class="prelude-val">Ok</span>(<span class="ident">s</span>.<span class="ident">parse</span>()
-            .<span class="ident">map</span>(<span class="ident"><span class="self">Self</span>::Ip</span>)
-            .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident"><span class="self">Self</span>::Name</span>(<span class="ident">s</span>.<span class="ident">to_owned</span>())))
+    <span class="kw">fn </span>from_str(s: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Err&gt; {
+        <span class="prelude-val">Ok</span>(s.parse()
+            .map(<span class="self">Self</span>::Ip)
+            .unwrap_or_else(|<span class="kw">_</span>| <span class="self">Self</span>::Name(s.to_owned())))
     }
 }
 
-<span class="kw">impl</span> <span class="ident">fmt::Display</span> <span class="kw">for</span> <span class="ident">AddressKind</span> {
-    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;mut</span> <span class="ident">fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="ident">fmt::Result</span> {
-        <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident"><span class="self">Self</span>::Name</span>(<span class="ident">name</span>) =&gt; <span class="ident">name</span>.<span class="ident">fmt</span>(<span class="ident">f</span>),
-            <span class="ident"><span class="self">Self</span>::Ip</span>(<span class="ident">ip</span>) =&gt; <span class="ident">ip</span>.<span class="ident">fmt</span>(<span class="ident">f</span>),
+<span class="kw">impl </span>fmt::Display <span class="kw">for </span>AddressKind {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
+        <span class="kw">match </span><span class="self">self </span>{
+            <span class="self">Self</span>::Name(name) =&gt; name.fmt(f),
+            <span class="self">Self</span>::Ip(ip) =&gt; ip.fmt(f),
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">Serialize</span> <span class="kw">for</span> <span class="ident">EndpointAddress</span> {
-    <span class="kw">fn</span> <span class="ident">serialize</span><span class="op">&lt;</span><span class="ident">S</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">serializer</span>: <span class="ident">S</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">S::Ok</span>, <span class="ident">S::Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">S</span>: <span class="ident">serde::Serializer</span>,
+<span class="kw">impl </span>Serialize <span class="kw">for </span>EndpointAddress {
+    <span class="kw">fn </span>serialize&lt;S&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, serializer: S) -&gt; <span class="prelude-ty">Result</span>&lt;S::Ok, S::Error&gt;
+    <span class="kw">where
+        </span>S: serde::Serializer,
     {
-        <span class="ident">serializer</span>.<span class="ident">serialize_str</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">to_string</span>())
+        serializer.serialize_str(<span class="kw-2">&amp;</span><span class="self">self</span>.to_string())
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

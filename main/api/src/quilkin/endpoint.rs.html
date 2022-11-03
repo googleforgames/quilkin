@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/endpoint.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>endpoint.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../quilkin/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/endpoint.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>endpoint.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../quilkin/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -323,302 +323,302 @@
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- */</span>
+ */
 
-<span class="doccomment">//! Types representing where the data is the sent.</span>
+</span><span class="doccomment">//! Types representing where the data is the sent.
 
-<span class="kw">mod</span> <span class="ident">address</span>;
-<span class="kw">mod</span> <span class="ident">locality</span>;
+</span><span class="kw">mod </span>address;
+<span class="kw">mod </span>locality;
 
-<span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
+<span class="kw">use </span>serde::{Deserialize, Serialize};
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::xds::config::endpoint::v3</span>::{<span class="ident">lb_endpoint::HostIdentifier</span>, <span class="ident">Endpoint</span> <span class="kw">as</span> <span class="ident">EnvoyEndpoint</span>};
+<span class="kw">use </span><span class="kw">crate</span>::xds::config::endpoint::v3::{lb_endpoint::HostIdentifier, Endpoint <span class="kw">as </span>EnvoyEndpoint};
 
-<span class="kw">pub</span> <span class="kw">use</span> <span class="self">self</span>::{
-    <span class="ident">address</span>::{<span class="ident">EndpointAddress</span>, <span class="ident">ToSocketAddrError</span>},
-    <span class="ident">locality</span>::{<span class="ident">Locality</span>, <span class="ident">LocalityEndpoints</span>},
+<span class="kw">pub use </span><span class="self">self</span>::{
+    address::{EndpointAddress, ToSocketAddrError},
+    locality::{Locality, LocalityEndpoints},
 };
 
-<span class="kw">type</span> <span class="ident">EndpointMetadata</span> <span class="op">=</span> <span class="ident"><span class="kw">crate</span>::metadata::MetadataView</span><span class="op">&lt;</span><span class="ident">Metadata</span><span class="op">&gt;</span>;
+<span class="kw">type </span>EndpointMetadata = <span class="kw">crate</span>::metadata::MetadataView&lt;Metadata&gt;;
 
-<span class="doccomment">/// A destination endpoint with any associated metadata.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>, <span class="ident">PartialEq</span>, <span class="ident">Clone</span>, <span class="ident">Eq</span>, <span class="ident">schemars::JsonSchema</span>)]</span>
-<span class="attribute">#[<span class="ident">non_exhaustive</span>]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Endpoint</span> {
-    <span class="attribute">#[<span class="ident">schemars</span>(<span class="ident">with</span> <span class="op">=</span> <span class="string">&quot;String&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">address</span>: <span class="ident">EndpointAddress</span>,
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">metadata</span>: <span class="ident">EndpointMetadata</span>,
+<span class="doccomment">/// A destination endpoint with any associated metadata.
+</span><span class="attribute">#[derive(Debug, Deserialize, Serialize, PartialEq, Clone, Eq, schemars::JsonSchema)]
+#[non_exhaustive]
+#[serde(deny_unknown_fields)]
+</span><span class="kw">pub struct </span>Endpoint {
+    <span class="attribute">#[schemars(with = <span class="string">&quot;String&quot;</span>)]
+    </span><span class="kw">pub </span>address: EndpointAddress,
+    <span class="attribute">#[serde(default)]
+    </span><span class="kw">pub </span>metadata: EndpointMetadata,
 }
 
-<span class="kw">impl</span> <span class="ident">Endpoint</span> {
-    <span class="doccomment">/// Creates a new [`Endpoint`] with no metadata.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">address</span>: <span class="ident">EndpointAddress</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">address</span>,
-            ..<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>()
+<span class="kw">impl </span>Endpoint {
+    <span class="doccomment">/// Creates a new [`Endpoint`] with no metadata.
+    </span><span class="kw">pub fn </span>new(address: EndpointAddress) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            address,
+            ..&lt;<span class="kw">_</span>&gt;::default()
         }
     }
 
-    <span class="doccomment">/// Creates a new [`Endpoint`] with the specified `metadata`.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_metadata</span>(<span class="ident">address</span>: <span class="ident">EndpointAddress</span>, <span class="ident">metadata</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">EndpointMetadata</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">address</span>,
-            <span class="ident">metadata</span>: <span class="ident">metadata</span>.<span class="ident">into</span>(),
-            ..<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>()
-        }
-    }
-}
-
-<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">Endpoint</span> {
-    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">address</span>: <span class="ident">EndpointAddress::UNSPECIFIED</span>,
-            <span class="ident">metadata</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
+    <span class="doccomment">/// Creates a new [`Endpoint`] with the specified `metadata`.
+    </span><span class="kw">pub fn </span>with_metadata(address: EndpointAddress, metadata: <span class="kw">impl </span>Into&lt;EndpointMetadata&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            address,
+            metadata: metadata.into(),
+            ..&lt;<span class="kw">_</span>&gt;::default()
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">std::str::FromStr</span> <span class="kw">for</span> <span class="ident">Endpoint</span> {
-    <span class="kw">type</span> <span class="prelude-val">Err</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">EndpointAddress</span> <span class="kw">as</span> <span class="ident">std::str::FromStr</span><span class="op">&gt;</span><span class="ident">::Err</span>;
+<span class="kw">impl </span>Default <span class="kw">for </span>Endpoint {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            address: EndpointAddress::UNSPECIFIED,
+            metadata: &lt;<span class="kw">_</span>&gt;::default(),
+        }
+    }
+}
 
-    <span class="kw">fn</span> <span class="ident">from_str</span>(<span class="ident">s</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident"><span class="self">Self</span>::Err</span><span class="op">&gt;</span> {
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
-            <span class="ident">address</span>: <span class="ident">s</span>.<span class="ident">parse</span>()<span class="question-mark">?</span>,
-            ..<span class="ident"><span class="self">Self</span>::default</span>()
+<span class="kw">impl </span>std::str::FromStr <span class="kw">for </span>Endpoint {
+    <span class="kw">type </span><span class="prelude-val">Err </span>= &lt;EndpointAddress <span class="kw">as </span>std::str::FromStr&gt;::Err;
+
+    <span class="kw">fn </span>from_str(s: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Err&gt; {
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
+            address: s.parse()<span class="question-mark">?</span>,
+            ..<span class="self">Self</span>::default()
         })
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">Endpoint</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident"><span class="kw">crate</span>::xds::config::endpoint::v3::LbEndpoint</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">endpoint</span>: <span class="ident">Endpoint</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">host_identifier</span>: <span class="prelude-val">Some</span>(<span class="ident">HostIdentifier::Endpoint</span>(<span class="ident">EnvoyEndpoint</span> {
-                <span class="ident">address</span>: <span class="prelude-val">Some</span>(<span class="ident">endpoint</span>.<span class="ident">address</span>.<span class="ident">into</span>()),
-                ..<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>()
+<span class="kw">impl </span>From&lt;Endpoint&gt; <span class="kw">for </span><span class="kw">crate</span>::xds::config::endpoint::v3::LbEndpoint {
+    <span class="kw">fn </span>from(endpoint: Endpoint) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            host_identifier: <span class="prelude-val">Some</span>(HostIdentifier::Endpoint(EnvoyEndpoint {
+                address: <span class="prelude-val">Some</span>(endpoint.address.into()),
+                ..&lt;<span class="kw">_</span>&gt;::default()
             })),
-            <span class="ident">metadata</span>: <span class="prelude-val">Some</span>(<span class="ident">endpoint</span>.<span class="ident">metadata</span>.<span class="ident">into</span>()),
-            ..<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>()
+            metadata: <span class="prelude-val">Some</span>(endpoint.metadata.into()),
+            ..&lt;<span class="kw">_</span>&gt;::default()
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident"><span class="kw">crate</span>::xds::config::endpoint::v3::LbEndpoint</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Endpoint</span> {
-    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">eyre::Error</span>;
+<span class="kw">impl </span>TryFrom&lt;<span class="kw">crate</span>::xds::config::endpoint::v3::LbEndpoint&gt; <span class="kw">for </span>Endpoint {
+    <span class="kw">type </span>Error = eyre::Error;
 
-    <span class="kw">fn</span> <span class="ident">try_from</span>(
-        <span class="ident">endpoint</span>: <span class="ident"><span class="kw">crate</span>::xds::config::endpoint::v3::LbEndpoint</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident"><span class="self">Self</span>::Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">address</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">endpoint</span>.<span class="ident">host_identifier</span> {
-            <span class="prelude-val">Some</span>(<span class="ident">HostIdentifier::Endpoint</span>(<span class="ident">endpoint</span>)) =&gt; <span class="ident">EndpointAddress::try_from</span>(<span class="ident">endpoint</span>)<span class="question-mark">?</span>,
-            <span class="kw">_</span> =&gt; <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">&quot;Endpoint host identifier not supported&quot;</span>)),
+    <span class="kw">fn </span>try_from(
+        endpoint: <span class="kw">crate</span>::xds::config::endpoint::v3::LbEndpoint,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
+        <span class="kw">let </span>address = <span class="kw">match </span>endpoint.host_identifier {
+            <span class="prelude-val">Some</span>(HostIdentifier::Endpoint(endpoint)) =&gt; EndpointAddress::try_from(endpoint)<span class="question-mark">?</span>,
+            <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">&quot;Endpoint host identifier not supported&quot;</span>)),
         };
 
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
-            <span class="ident">address</span>,
-            <span class="ident">metadata</span>: <span class="ident">endpoint</span>
-                .<span class="ident">metadata</span>
-                .<span class="ident">map</span>(<span class="ident"><span class="kw">crate</span>::metadata::MetadataView::try_from</span>)
-                .<span class="ident">transpose</span>()<span class="question-mark">?</span>
-                .<span class="ident">unwrap_or_default</span>(),
-            ..<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>()
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
+            address,
+            metadata: endpoint
+                .metadata
+                .map(<span class="kw">crate</span>::metadata::MetadataView::try_from)
+                .transpose()<span class="question-mark">?
+                </span>.unwrap_or_default(),
+            ..&lt;<span class="kw">_</span>&gt;::default()
         })
     }
 }
 
-<span class="kw">impl</span> <span class="ident">std::cmp::PartialEq</span><span class="op">&lt;</span><span class="ident">EndpointAddress</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Endpoint</span> {
-    <span class="kw">fn</span> <span class="ident">eq</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">rhs</span>: <span class="kw-2">&amp;</span><span class="ident">EndpointAddress</span>) -&gt; <span class="ident">bool</span> {
-        <span class="self">self</span>.<span class="ident">address</span> <span class="op">==</span> <span class="kw-2">*</span><span class="ident">rhs</span>
+<span class="kw">impl </span>std::cmp::PartialEq&lt;EndpointAddress&gt; <span class="kw">for </span>Endpoint {
+    <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, rhs: <span class="kw-2">&amp;</span>EndpointAddress) -&gt; bool {
+        <span class="self">self</span>.address == <span class="kw-2">*</span>rhs
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">EndpointAddress</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Endpoint</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">value</span>: <span class="ident">T</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident"><span class="self">Self</span>::new</span>(<span class="ident">value</span>.<span class="ident">into</span>())
+<span class="kw">impl</span>&lt;T: Into&lt;EndpointAddress&gt;&gt; From&lt;T&gt; <span class="kw">for </span>Endpoint {
+    <span class="kw">fn </span>from(value: T) -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::new(value.into())
     }
 }
 
-<span class="kw">impl</span> <span class="ident">Ord</span> <span class="kw">for</span> <span class="ident">Endpoint</span> {
-    <span class="kw">fn</span> <span class="ident">cmp</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="ident">std::cmp::Ordering</span> {
-        <span class="self">self</span>.<span class="ident">address</span>.<span class="ident">cmp</span>(<span class="kw-2">&amp;</span><span class="ident">other</span>.<span class="ident">address</span>)
+<span class="kw">impl </span>Ord <span class="kw">for </span>Endpoint {
+    <span class="kw">fn </span>cmp(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; std::cmp::Ordering {
+        <span class="self">self</span>.address.cmp(<span class="kw-2">&amp;</span>other.address)
     }
 }
 
-<span class="kw">impl</span> <span class="ident">PartialOrd</span> <span class="kw">for</span> <span class="ident">Endpoint</span> {
-    <span class="kw">fn</span> <span class="ident">partial_cmp</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">std::cmp::Ordering</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">address</span>.<span class="ident">partial_cmp</span>(<span class="kw-2">&amp;</span><span class="ident">other</span>.<span class="ident">address</span>)
+<span class="kw">impl </span>PartialOrd <span class="kw">for </span>Endpoint {
+    <span class="kw">fn </span>partial_cmp(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;std::cmp::Ordering&gt; {
+        <span class="self">self</span>.address.partial_cmp(<span class="kw-2">&amp;</span>other.address)
     }
 }
 
-<span class="doccomment">/// Metadata specific to endpoints.</span>
-<span class="attribute">#[<span class="ident">derive</span>(
-    <span class="ident">Default</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>, <span class="ident">PartialEq</span>, <span class="ident">Clone</span>, <span class="ident">PartialOrd</span>, <span class="ident">Eq</span>, <span class="ident">schemars::JsonSchema</span>,
-)]</span>
-<span class="attribute">#[<span class="ident">non_exhaustive</span>]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Metadata</span> {
-    <span class="attribute">#[<span class="ident">serde</span>(
-        <span class="ident">serialize_with</span> <span class="op">=</span> <span class="string">&quot;base64_set::serialize&quot;</span>,
-        <span class="ident">deserialize_with</span> <span class="op">=</span> <span class="string">&quot;base64_set::deserialize&quot;</span>
-    )]</span>
-    <span class="kw">pub</span> <span class="ident">tokens</span>: <span class="ident">base64_set::Set</span>,
+<span class="doccomment">/// Metadata specific to endpoints.
+</span><span class="attribute">#[derive(
+    Default, Debug, Deserialize, Serialize, PartialEq, Clone, PartialOrd, Eq, schemars::JsonSchema,
+)]
+#[non_exhaustive]
+</span><span class="kw">pub struct </span>Metadata {
+    <span class="attribute">#[serde(
+        serialize_with = <span class="string">&quot;base64_set::serialize&quot;</span>,
+        deserialize_with = <span class="string">&quot;base64_set::deserialize&quot;
+    </span>)]
+    </span><span class="kw">pub </span>tokens: base64_set::Set,
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">Metadata</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">prost_types::Struct</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">metadata</span>: <span class="ident">Metadata</span>) -&gt; <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">tokens</span> <span class="op">=</span> <span class="ident">prost_types::Value</span> {
-            <span class="ident">kind</span>: <span class="prelude-val">Some</span>(<span class="ident">prost_types::value::Kind::ListValue</span>(
-                <span class="ident">prost_types::ListValue</span> {
-                    <span class="ident">values</span>: <span class="ident">metadata</span>
-                        .<span class="ident">tokens</span>
-                        .<span class="ident">into_iter</span>()
-                        .<span class="ident">map</span>(<span class="ident">base64::encode</span>)
-                        .<span class="ident">map</span>(<span class="ident">prost_types::value::Kind::StringValue</span>)
-                        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">k</span><span class="op">|</span> <span class="ident">prost_types::Value</span> { <span class="ident">kind</span>: <span class="prelude-val">Some</span>(<span class="ident">k</span>) })
-                        .<span class="ident">collect</span>(),
+<span class="kw">impl </span>From&lt;Metadata&gt; <span class="kw">for </span>prost_types::Struct {
+    <span class="kw">fn </span>from(metadata: Metadata) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span>tokens = prost_types::Value {
+            kind: <span class="prelude-val">Some</span>(prost_types::value::Kind::ListValue(
+                prost_types::ListValue {
+                    values: metadata
+                        .tokens
+                        .into_iter()
+                        .map(base64::encode)
+                        .map(prost_types::value::Kind::StringValue)
+                        .map(|k| prost_types::Value { kind: <span class="prelude-val">Some</span>(k) })
+                        .collect(),
                 },
             )),
         };
 
-        <span class="self">Self</span> {
-            <span class="ident">fields</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::from</span>([(<span class="string">&quot;tokens&quot;</span>.<span class="ident">into</span>(), <span class="ident">tokens</span>)]),
+        <span class="self">Self </span>{
+            fields: &lt;<span class="kw">_</span>&gt;::from([(<span class="string">&quot;tokens&quot;</span>.into(), tokens)]),
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">std::convert::TryFrom</span><span class="op">&lt;</span><span class="ident">prost_types::Struct</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Metadata</span> {
-    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">MetadataError</span>;
+<span class="kw">impl </span>std::convert::TryFrom&lt;prost_types::Struct&gt; <span class="kw">for </span>Metadata {
+    <span class="kw">type </span>Error = MetadataError;
 
-    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="kw-2">mut</span> <span class="ident">value</span>: <span class="ident">prost_types::Struct</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident"><span class="self">Self</span>::Error</span><span class="op">&gt;</span> {
-        <span class="kw">use</span> <span class="ident">prost_types::value::Kind</span>;
-        <span class="kw">const</span> <span class="ident">TOKENS</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;tokens&quot;</span>;
+    <span class="kw">fn </span>try_from(<span class="kw-2">mut </span>value: prost_types::Struct) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
+        <span class="kw">use </span>prost_types::value::Kind;
+        <span class="kw">const </span>TOKENS: <span class="kw-2">&amp;</span>str = <span class="string">&quot;tokens&quot;</span>;
 
-        <span class="kw">let</span> <span class="ident">tokens</span> <span class="op">=</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">kind</span>) <span class="op">=</span> <span class="ident">value</span>.<span class="ident">fields</span>.<span class="ident">remove</span>(<span class="ident">TOKENS</span>).<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="ident">kind</span>) {
-            <span class="kw">match</span> <span class="ident">kind</span> {
-                <span class="ident">Kind::ListValue</span>(<span class="ident">list</span>) =&gt; <span class="ident">list</span>
-                    .<span class="ident">values</span>
-                    .<span class="ident">into_iter</span>()
-                    .<span class="ident">filter_map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="ident">kind</span>)
-                    .<span class="ident">map</span>(<span class="op">|</span><span class="ident">kind</span><span class="op">|</span> {
-                        <span class="kw">if</span> <span class="kw">let</span> <span class="ident">Kind::StringValue</span>(<span class="ident">string</span>) <span class="op">=</span> <span class="ident">kind</span> {
-                            <span class="ident">base64::decode</span>(<span class="ident">string</span>).<span class="ident">map_err</span>(<span class="ident">MetadataError::InvalidBase64</span>)
-                        } <span class="kw">else</span> {
-                            <span class="prelude-val">Err</span>(<span class="ident">MetadataError::InvalidType</span> {
-                                <span class="ident">key</span>: <span class="string">&quot;quilkin.dev.tokens&quot;</span>,
-                                <span class="ident">expected</span>: <span class="string">&quot;base64 string&quot;</span>,
+        <span class="kw">let </span>tokens = <span class="kw">if let </span><span class="prelude-val">Some</span>(kind) = value.fields.remove(TOKENS).and_then(|v| v.kind) {
+            <span class="kw">match </span>kind {
+                Kind::ListValue(list) =&gt; list
+                    .values
+                    .into_iter()
+                    .filter_map(|v| v.kind)
+                    .map(|kind| {
+                        <span class="kw">if let </span>Kind::StringValue(string) = kind {
+                            base64::decode(string).map_err(MetadataError::InvalidBase64)
+                        } <span class="kw">else </span>{
+                            <span class="prelude-val">Err</span>(MetadataError::InvalidType {
+                                key: <span class="string">&quot;quilkin.dev.tokens&quot;</span>,
+                                expected: <span class="string">&quot;base64 string&quot;</span>,
                             })
                         }
                     })
-                    .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>,
-                <span class="ident">Kind::StringValue</span>(<span class="ident">string</span>) =&gt; {
-                    <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::from</span>([<span class="ident">base64::decode</span>(<span class="ident">string</span>).<span class="ident">map_err</span>(<span class="ident">MetadataError::InvalidBase64</span>)<span class="question-mark">?</span>])
+                    .collect::&lt;<span class="prelude-ty">Result</span>&lt;<span class="kw">_</span>, <span class="kw">_</span>&gt;&gt;()<span class="question-mark">?</span>,
+                Kind::StringValue(string) =&gt; {
+                    &lt;<span class="kw">_</span>&gt;::from([base64::decode(string).map_err(MetadataError::InvalidBase64)<span class="question-mark">?</span>])
                 }
-                <span class="kw">_</span> =&gt; <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">MetadataError::MissingKey</span>(<span class="ident">TOKENS</span>)),
+                <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(MetadataError::MissingKey(TOKENS)),
             }
-        } <span class="kw">else</span> {
-            <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>()
+        } <span class="kw">else </span>{
+            &lt;<span class="kw">_</span>&gt;::default()
         };
 
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span> { <span class="ident">tokens</span> })
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ tokens })
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">thiserror::Error</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">MetadataError</span> {
-    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Invalid bas64 encoded token: `{0}`.&quot;</span>)]</span>
-    <span class="ident">InvalidBase64</span>(<span class="ident">base64::DecodeError</span>),
-    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Missing required key `{0}`.&quot;</span>)]</span>
-    <span class="ident">MissingKey</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>),
-    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Invalid type ({expected}) given for `{key}`.&quot;</span>)]</span>
-    <span class="ident">InvalidType</span> {
-        <span class="ident">key</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>,
-        <span class="ident">expected</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>,
+<span class="attribute">#[derive(Debug, Clone, thiserror::Error)]
+</span><span class="kw">pub enum </span>MetadataError {
+    <span class="attribute">#[error(<span class="string">&quot;Invalid bas64 encoded token: `{0}`.&quot;</span>)]
+    </span>InvalidBase64(base64::DecodeError),
+    <span class="attribute">#[error(<span class="string">&quot;Missing required key `{0}`.&quot;</span>)]
+    </span>MissingKey(<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str),
+    <span class="attribute">#[error(<span class="string">&quot;Invalid type ({expected}) given for `{key}`.&quot;</span>)]
+    </span>InvalidType {
+        key: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
+        expected: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
     },
 }
 
-<span class="doccomment">/// A module for providing base64 encoding for a `BTreeSet` at the `serde`</span>
-<span class="doccomment">/// boundary. Accepts a list of strings representing Base64 encoded data,</span>
-<span class="doccomment">/// this list is then converted into its binary representation while in memory,</span>
-<span class="doccomment">/// and then encoded back as a list of base64 strings.</span>
-<span class="kw">mod</span> <span class="ident">base64_set</span> {
-    <span class="kw">use</span> <span class="ident">serde::de::Error</span>;
+<span class="doccomment">/// A module for providing base64 encoding for a `BTreeSet` at the `serde`
+/// boundary. Accepts a list of strings representing Base64 encoded data,
+/// this list is then converted into its binary representation while in memory,
+/// and then encoded back as a list of base64 strings.
+</span><span class="kw">mod </span>base64_set {
+    <span class="kw">use </span>serde::de::Error;
 
-    <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">Set</span><span class="op">&lt;</span><span class="ident">T</span> <span class="op">=</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">std::collections::BTreeSet</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>;
+    <span class="kw">pub type </span>Set&lt;T = Vec&lt;u8&gt;&gt; = std::collections::BTreeSet&lt;T&gt;;
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">serialize</span><span class="op">&lt;</span><span class="ident">S</span><span class="op">&gt;</span>(<span class="ident">set</span>: <span class="kw-2">&amp;</span><span class="ident">Set</span>, <span class="ident">ser</span>: <span class="ident">S</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">S::Ok</span>, <span class="ident">S::Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">S</span>: <span class="ident">serde::Serializer</span>,
+    <span class="kw">pub fn </span>serialize&lt;S&gt;(set: <span class="kw-2">&amp;</span>Set, ser: S) -&gt; <span class="prelude-ty">Result</span>&lt;S::Ok, S::Error&gt;
+    <span class="kw">where
+        </span>S: serde::Serializer,
     {
-        <span class="ident">serde::Serialize::serialize</span>(<span class="kw-2">&amp;</span><span class="ident">set</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="ident">base64::encode</span>).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>(), <span class="ident">ser</span>)
+        serde::Serialize::serialize(<span class="kw-2">&amp;</span>set.iter().map(base64::encode).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;(), ser)
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">deserialize</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span>, <span class="ident">D</span><span class="op">&gt;</span>(<span class="ident">de</span>: <span class="ident">D</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Set</span>, <span class="ident">D::Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">D</span>: <span class="ident">serde::Deserializer</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span>,
+    <span class="kw">pub fn </span>deserialize&lt;<span class="lifetime">&#39;de</span>, D&gt;(de: D) -&gt; <span class="prelude-ty">Result</span>&lt;Set, D::Error&gt;
+    <span class="kw">where
+        </span>D: serde::Deserializer&lt;<span class="lifetime">&#39;de</span>&gt;,
     {
-        <span class="kw">let</span> <span class="ident">items</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">serde::Deserialize</span><span class="op">&gt;</span><span class="ident">::deserialize</span>(<span class="ident">de</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">set</span> <span class="op">=</span> <span class="ident">items</span>.<span class="ident">iter</span>().<span class="ident">cloned</span>().<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Set</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span>();
+        <span class="kw">let </span>items = &lt;Vec&lt;String&gt; <span class="kw">as </span>serde::Deserialize&gt;::deserialize(de)<span class="question-mark">?</span>;
+        <span class="kw">let </span>set = items.iter().cloned().collect::&lt;Set&lt;String&gt;&gt;();
 
-        <span class="kw">if</span> <span class="ident">set</span>.<span class="ident">len</span>() <span class="op">!</span><span class="op">=</span> <span class="ident">items</span>.<span class="ident">len</span>() {
-            <span class="prelude-val">Err</span>(<span class="ident">D::Error::custom</span>(
+        <span class="kw">if </span>set.len() != items.len() {
+            <span class="prelude-val">Err</span>(D::Error::custom(
                 <span class="string">&quot;Found duplicate tokens in endpoint metadata.&quot;</span>,
             ))
-        } <span class="kw">else</span> {
-            <span class="ident">set</span>.<span class="ident">into_iter</span>()
-                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">string</span><span class="op">|</span> <span class="ident">base64::decode</span>(<span class="ident">string</span>).<span class="ident">map_err</span>(<span class="ident">D::Error::custom</span>))
-                .<span class="ident">collect</span>()
+        } <span class="kw">else </span>{
+            set.into_iter()
+                .map(|string| base64::decode(string).map_err(D::Error::custom))
+                .collect()
         }
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
+    <span class="kw">use super</span>::<span class="kw-2">*</span>;
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">endpoint_metadata</span>() {
-        <span class="kw">let</span> <span class="ident">metadata</span> <span class="op">=</span> <span class="ident">Metadata</span> {
-            <span class="ident">tokens</span>: <span class="macro">vec!</span>[<span class="string">&quot;Man&quot;</span>.<span class="ident">into</span>()].<span class="ident">into_iter</span>().<span class="ident">collect</span>(),
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>endpoint_metadata() {
+        <span class="kw">let </span>metadata = Metadata {
+            tokens: <span class="macro">vec!</span>[<span class="string">&quot;Man&quot;</span>.into()].into_iter().collect(),
         };
 
         <span class="macro">assert_eq!</span>(
-            <span class="ident">serde_json::to_value</span>(<span class="ident">EndpointMetadata::from</span>(<span class="ident">metadata</span>)).<span class="ident">unwrap</span>(),
+            serde_json::to_value(EndpointMetadata::from(metadata)).unwrap(),
             <span class="macro">serde_json::json!</span>({
-                <span class="ident"><span class="kw">crate</span>::metadata::KEY</span>: {
+                <span class="kw">crate</span>::metadata::KEY: {
                     <span class="string">&quot;tokens&quot;</span>: [<span class="string">&quot;TWFu&quot;</span>],
                 }
             })
         );
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">parse_dns_endpoints</span>() {
-        <span class="kw">let</span> <span class="ident">localhost</span> <span class="op">=</span> <span class="string">&quot;address: localhost:80&quot;</span>;
-        <span class="ident">serde_yaml::from_str</span>::<span class="op">&lt;</span><span class="ident">Endpoint</span><span class="op">&gt;</span>(<span class="ident">localhost</span>).<span class="ident">unwrap</span>();
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>parse_dns_endpoints() {
+        <span class="kw">let </span>localhost = <span class="string">&quot;address: localhost:80&quot;</span>;
+        serde_yaml::from_str::&lt;Endpoint&gt;(localhost).unwrap();
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">yaml_parse_invalid_endpoint_metadata</span>() {
-        <span class="kw">let</span> <span class="ident">not_a_list</span> <span class="op">=</span> <span class="string">&quot;
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>yaml_parse_invalid_endpoint_metadata() {
+        <span class="kw">let </span>not_a_list = <span class="string">&quot;
  quilkin.dev:
      tokens: OGdqM3YyaQ==
  &quot;</span>;
-        <span class="kw">let</span> <span class="ident">not_a_string_value</span> <span class="op">=</span> <span class="string">&quot;
+        <span class="kw">let </span>not_a_string_value = <span class="string">&quot;
  quilkin.dev:
      tokens:
          - map:
            a: b
  &quot;</span>;
-        <span class="kw">let</span> <span class="ident">not_a_base64_string</span> <span class="op">=</span> <span class="string">&quot;
+        <span class="kw">let </span>not_a_base64_string = <span class="string">&quot;
  quilkin.dev:
      tokens:
          - OGdqM3YyaQ== #8gj3v2i
          - iix
  &quot;</span>;
-        <span class="kw">for</span> <span class="ident">yaml</span> <span class="kw">in</span> <span class="kw-2">&amp;</span>[<span class="ident">not_a_list</span>, <span class="ident">not_a_string_value</span>, <span class="ident">not_a_base64_string</span>] {
-            <span class="ident">serde_yaml::from_str</span>::<span class="op">&lt;</span><span class="ident">EndpointMetadata</span><span class="op">&gt;</span>(<span class="ident">yaml</span>).<span class="ident">unwrap_err</span>();
+        <span class="kw">for </span>yaml <span class="kw">in </span><span class="kw-2">&amp;</span>[not_a_list, not_a_string_value, not_a_base64_string] {
+            serde_yaml::from_str::&lt;EndpointMetadata&gt;(yaml).unwrap_err();
         }
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/config.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>config.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../quilkin/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/config.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>config.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../quilkin/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -602,442 +602,442 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */</span>
+ */
 
-<span class="doccomment">//! Quilkin configuration.</span>
+</span><span class="doccomment">//! Quilkin configuration.
 
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">net::SocketAddr</span>, <span class="ident">sync::Arc</span>};
+</span><span class="kw">use </span>std::{net::SocketAddr, sync::Arc};
 
-<span class="kw">use</span> <span class="ident">base64_serde::base64_serde_type</span>;
-<span class="kw">use</span> <span class="ident">schemars::JsonSchema</span>;
-<span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
-<span class="kw">use</span> <span class="ident">uuid::Uuid</span>;
+<span class="kw">use </span>base64_serde::base64_serde_type;
+<span class="kw">use </span>schemars::JsonSchema;
+<span class="kw">use </span>serde::{Deserialize, Serialize};
+<span class="kw">use </span>uuid::Uuid;
 
-<span class="kw">mod</span> <span class="ident">builder</span>;
-<span class="kw">mod</span> <span class="ident">config_type</span>;
-<span class="kw">mod</span> <span class="ident">error</span>;
-<span class="kw">mod</span> <span class="ident">metrics</span>;
-<span class="kw">mod</span> <span class="ident">slot</span>;
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">watch</span>;
+<span class="kw">mod </span>builder;
+<span class="kw">mod </span>config_type;
+<span class="kw">mod </span>error;
+<span class="kw">mod </span>metrics;
+<span class="kw">mod </span>slot;
+<span class="kw">pub mod </span>watch;
 
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">cluster</span>::{<span class="ident">Cluster</span>, <span class="ident">ClusterMap</span>},
-    <span class="ident">filters::prelude</span>::<span class="kw-2">*</span>,
-    <span class="ident">xds</span>::{
-        <span class="ident">config</span>::{<span class="ident">endpoint::v3::ClusterLoadAssignment</span>, <span class="ident">listener::v3::Listener</span>},
-        <span class="ident">service::discovery::v3::DiscoveryResponse</span>,
-        <span class="ident">Resource</span>, <span class="ident">ResourceType</span>,
+<span class="kw">use crate</span>::{
+    cluster::{Cluster, ClusterMap},
+    filters::prelude::<span class="kw-2">*</span>,
+    xds::{
+        config::{endpoint::v3::ClusterLoadAssignment, listener::v3::Listener},
+        service::discovery::v3::DiscoveryResponse,
+        Resource, ResourceType,
     },
 };
 
-<span class="kw">use</span> <span class="ident">metrics::Metrics</span>;
+<span class="kw">use </span>metrics::Metrics;
 
-<span class="kw">pub</span> <span class="kw">use</span> <span class="self">self</span>::{<span class="ident">builder::Builder</span>, <span class="ident">config_type::ConfigType</span>, <span class="ident">error::ValidationError</span>, <span class="ident">slot::Slot</span>};
+<span class="kw">pub use </span><span class="self">self</span>::{builder::Builder, config_type::ConfigType, error::ValidationError, slot::Slot};
 
-<span class="macro">base64_serde_type!</span>(<span class="ident">Base64Standard</span>, <span class="ident">base64::STANDARD</span>);
+<span class="macro">base64_serde_type!</span>(Base64Standard, base64::STANDARD);
 
-<span class="comment">// For some log messages on the hot path (potentially per-packet), we log 1 out</span>
-<span class="comment">// of every `LOG_SAMPLING_RATE` occurrences to avoid spamming the logs.</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const</span> <span class="ident">LOG_SAMPLING_RATE</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">1000</span>;
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const</span> <span class="ident">BACKOFF_INITIAL_DELAY_MILLISECONDS</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">500</span>;
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const</span> <span class="ident">BACKOFF_MAX_DELAY_SECONDS</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">30</span>;
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const</span> <span class="ident">BACKOFF_MAX_JITTER_MILLISECONDS</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">2000</span>;
+<span class="comment">// For some log messages on the hot path (potentially per-packet), we log 1 out
+// of every `LOG_SAMPLING_RATE` occurrences to avoid spamming the logs.
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>LOG_SAMPLING_RATE: u64 = <span class="number">1000</span>;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>BACKOFF_INITIAL_DELAY_MILLISECONDS: u64 = <span class="number">500</span>;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>BACKOFF_MAX_DELAY_SECONDS: u64 = <span class="number">30</span>;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>BACKOFF_MAX_JITTER_MILLISECONDS: u64 = <span class="number">2000</span>;
 
-<span class="doccomment">/// Config is the configuration of a proxy</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>, <span class="ident">JsonSchema</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
-<span class="attribute">#[<span class="ident">non_exhaustive</span>]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Config</span> {
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span> <span class="op">=</span> <span class="string">&quot;Slot::&lt;Admin&gt;::with_default&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">admin</span>: <span class="ident">Slot</span><span class="op">&lt;</span><span class="ident">Admin</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">clusters</span>: <span class="ident">Slot</span><span class="op">&lt;</span><span class="ident">ClusterMap</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">filters</span>: <span class="ident">Slot</span><span class="op">&lt;</span><span class="ident"><span class="kw">crate</span>::filters::FilterChain</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span> <span class="op">=</span> <span class="string">&quot;default_proxy_id&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">id</span>: <span class="ident">Slot</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
-    <span class="attribute">#[<span class="ident">schemars</span>(<span class="ident">with</span> <span class="op">=</span> <span class="string">&quot;Vec::&lt;ManagementServer&gt;&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">management_servers</span>: <span class="ident">Slot</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ManagementServer</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span> <span class="op">=</span> <span class="string">&quot;default_proxy_port&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">port</span>: <span class="ident">Slot</span><span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">schemars</span>(<span class="ident">with</span> <span class="op">=</span> <span class="string">&quot;Option&lt;Version&gt;&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">version</span>: <span class="ident">Slot</span><span class="op">&lt;</span><span class="ident">Version</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span> <span class="op">=</span> <span class="string">&quot;Slot::&lt;crate::maxmind_db::Source&gt;::empty&quot;</span>)]</span>
-    <span class="attribute">#[<span class="ident">schemars</span>(<span class="ident">with</span> <span class="op">=</span> <span class="string">&quot;Option&lt;crate::maxmind_db::Source&gt;&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">maxmind_db</span>: <span class="ident">Slot</span><span class="op">&lt;</span><span class="ident"><span class="kw">crate</span>::maxmind_db::Source</span><span class="op">&gt;</span>,
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">skip</span>)]</span>
-    <span class="ident">metrics</span>: <span class="ident">Metrics</span>,
+<span class="doccomment">/// Config is the configuration of a proxy
+</span><span class="attribute">#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+#[non_exhaustive]
+</span><span class="kw">pub struct </span>Config {
+    <span class="attribute">#[serde(default = <span class="string">&quot;Slot::&lt;Admin&gt;::with_default&quot;</span>)]
+    </span><span class="kw">pub </span>admin: Slot&lt;Admin&gt;,
+    <span class="attribute">#[serde(default)]
+    </span><span class="kw">pub </span>clusters: Slot&lt;ClusterMap&gt;,
+    <span class="attribute">#[serde(default)]
+    </span><span class="kw">pub </span>filters: Slot&lt;<span class="kw">crate</span>::filters::FilterChain&gt;,
+    <span class="attribute">#[serde(default = <span class="string">&quot;default_proxy_id&quot;</span>)]
+    </span><span class="kw">pub </span>id: Slot&lt;String&gt;,
+    <span class="attribute">#[serde(default)]
+    #[schemars(with = <span class="string">&quot;Vec::&lt;ManagementServer&gt;&quot;</span>)]
+    </span><span class="kw">pub </span>management_servers: Slot&lt;Vec&lt;ManagementServer&gt;&gt;,
+    <span class="attribute">#[serde(default = <span class="string">&quot;default_proxy_port&quot;</span>)]
+    </span><span class="kw">pub </span>port: Slot&lt;u16&gt;,
+    <span class="attribute">#[schemars(with = <span class="string">&quot;Option&lt;Version&gt;&quot;</span>)]
+    </span><span class="kw">pub </span>version: Slot&lt;Version&gt;,
+    <span class="attribute">#[serde(default = <span class="string">&quot;Slot::&lt;crate::maxmind_db::Source&gt;::empty&quot;</span>)]
+    #[schemars(with = <span class="string">&quot;Option&lt;crate::maxmind_db::Source&gt;&quot;</span>)]
+    </span><span class="kw">pub </span>maxmind_db: Slot&lt;<span class="kw">crate</span>::maxmind_db::Source&gt;,
+    <span class="attribute">#[serde(default, skip)]
+    </span>metrics: Metrics,
 }
 
-<span class="kw">impl</span> <span class="ident">Config</span> {
-    <span class="doccomment">/// Returns a new empty [`Builder`] for [`Config`].</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">builder</span>() -&gt; <span class="ident">Builder</span> {
-        <span class="ident">Builder::default</span>()
+<span class="kw">impl </span>Config {
+    <span class="doccomment">/// Returns a new empty [`Builder`] for [`Config`].
+    </span><span class="kw">pub fn </span>builder() -&gt; Builder {
+        Builder::default()
     }
 
-    <span class="doccomment">/// Attempts to deserialize `input` as a YAML object representing `Self`.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_reader</span><span class="op">&lt;</span><span class="ident">R</span>: <span class="ident">std::io::Read</span><span class="op">&gt;</span>(<span class="ident">input</span>: <span class="ident">R</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">serde_yaml::Error</span><span class="op">&gt;</span> {
-        <span class="ident">serde_yaml::from_reader</span>(<span class="ident">input</span>)
+    <span class="doccomment">/// Attempts to deserialize `input` as a YAML object representing `Self`.
+    </span><span class="kw">pub fn </span>from_reader&lt;R: std::io::Read&gt;(input: R) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, serde_yaml::Error&gt; {
+        serde_yaml::from_reader(input)
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">update_from_json</span>(
+    <span class="kw">pub fn </span>update_from_json(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">map</span>: <span class="ident">serde_json::Map</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">serde_json::Value</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">eyre::Error</span><span class="op">&gt;</span> {
-        <span class="macro">macro_rules!</span> <span class="ident">replace_if_present</span> {
-            ($(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">field</span>:<span class="ident">ident</span>),<span class="op">+</span>) =&gt; {
+        map: serde_json::Map&lt;String, serde_json::Value&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), eyre::Error&gt; {
+        <span class="macro">macro_rules! </span>replace_if_present {
+            ($(<span class="macro-nonterminal">$field</span>:ident),+) =&gt; {
                 $(
-                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">value</span>) <span class="op">=</span> <span class="ident">map</span>.<span class="ident">get</span>(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">field</span>)) {
-                        <span class="self">self</span>.<span class="macro-nonterminal">$</span><span class="macro-nonterminal">field</span>.<span class="ident">try_replace</span>(<span class="ident">serde_json::from_value</span>(<span class="ident">value</span>.<span class="ident">clone</span>())<span class="question-mark">?</span>);
+                    <span class="kw">if let </span><span class="prelude-val">Some</span>(value) = map.get(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$field</span>)) {
+                        <span class="self">self</span>.<span class="macro-nonterminal">$field</span>.try_replace(serde_json::from_value(value.clone())<span class="question-mark">?</span>);
                     }
-                )<span class="op">+</span>
+                )+
             }
         }
 
         <span class="macro">replace_if_present!</span>(
-            <span class="ident">admin</span>,
-            <span class="ident">clusters</span>,
-            <span class="ident">filters</span>,
-            <span class="ident">management_servers</span>,
-            <span class="ident">port</span>,
-            <span class="ident">id</span>,
-            <span class="ident">version</span>
+            admin,
+            clusters,
+            filters,
+            management_servers,
+            port,
+            id,
+            version
         );
-        <span class="self">self</span>.<span class="ident">apply_metrics</span>();
+        <span class="self">self</span>.apply_metrics();
 
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">discovery_request</span>(
+    <span class="kw">pub fn </span>discovery_request(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">_node_id</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
-        <span class="ident">resource_type</span>: <span class="ident">ResourceType</span>,
-        <span class="ident">names</span>: <span class="kw-2">&amp;</span>[<span class="ident">String</span>],
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">DiscoveryResponse</span>, <span class="ident">eyre::Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">resources</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
-        <span class="kw">match</span> <span class="ident">resource_type</span> {
-            <span class="ident">ResourceType::Endpoint</span> =&gt; {
-                <span class="kw">for</span> <span class="ident">value</span> <span class="kw">in</span> <span class="self">self</span>.<span class="ident">clusters</span>.<span class="ident">load</span>().<span class="ident">values</span>() {
-                    <span class="ident">resources</span>.<span class="ident">push</span>(
-                        <span class="ident">resource_type</span>.<span class="ident">encode_to_any</span>(<span class="kw-2">&amp;</span><span class="ident">ClusterLoadAssignment::try_from</span>(<span class="ident">value</span>)<span class="question-mark">?</span>)<span class="question-mark">?</span>,
+        _node_id: <span class="kw-2">&amp;</span>str,
+        resource_type: ResourceType,
+        names: <span class="kw-2">&amp;</span>[String],
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;DiscoveryResponse, eyre::Error&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>resources = Vec::new();
+        <span class="kw">match </span>resource_type {
+            ResourceType::Endpoint =&gt; {
+                <span class="kw">for </span>value <span class="kw">in </span><span class="self">self</span>.clusters.load().values() {
+                    resources.push(
+                        resource_type.encode_to_any(<span class="kw-2">&amp;</span>ClusterLoadAssignment::try_from(value)<span class="question-mark">?</span>)<span class="question-mark">?</span>,
                     );
                 }
             }
-            <span class="ident">ResourceType::Listener</span> =&gt; {
-                <span class="ident">resources</span>.<span class="ident">push</span>(<span class="ident">resource_type</span>.<span class="ident">encode_to_any</span>(<span class="kw-2">&amp;</span><span class="ident">Listener</span> {
-                    <span class="ident">filter_chains</span>: <span class="macro">vec!</span>[(<span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="self">self</span>.<span class="ident">filters</span>.<span class="ident">load</span>()).<span class="ident">try_into</span>()<span class="question-mark">?</span>],
-                    ..<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>()
+            ResourceType::Listener =&gt; {
+                resources.push(resource_type.encode_to_any(<span class="kw-2">&amp;</span>Listener {
+                    filter_chains: <span class="macro">vec!</span>[(<span class="kw-2">&amp;*</span><span class="self">self</span>.filters.load()).try_into()<span class="question-mark">?</span>],
+                    ..&lt;<span class="kw">_</span>&gt;::default()
                 })<span class="question-mark">?</span>);
             }
-            <span class="ident">ResourceType::Cluster</span> =&gt; {
-                <span class="kw">let</span> <span class="ident">clusters</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">clusters</span>.<span class="ident">load</span>();
-                <span class="kw">for</span> <span class="ident">cluster</span> <span class="kw">in</span> <span class="ident">names</span>.<span class="ident">iter</span>().<span class="ident">filter_map</span>(<span class="op">|</span><span class="ident">name</span><span class="op">|</span> <span class="ident">clusters</span>.<span class="ident">get</span>(<span class="ident">name</span>)) {
-                    <span class="ident">resources</span>.<span class="ident">push</span>(<span class="ident">resource_type</span>.<span class="ident">encode_to_any</span>(
-                        <span class="kw-2">&amp;</span><span class="ident"><span class="kw">crate</span>::xds::config::cluster::v3::Cluster::try_from</span>(<span class="ident">cluster</span>)<span class="question-mark">?</span>,
+            ResourceType::Cluster =&gt; {
+                <span class="kw">let </span>clusters = <span class="self">self</span>.clusters.load();
+                <span class="kw">for </span>cluster <span class="kw">in </span>names.iter().filter_map(|name| clusters.get(name)) {
+                    resources.push(resource_type.encode_to_any(
+                        <span class="kw-2">&amp;</span><span class="kw">crate</span>::xds::config::cluster::v3::Cluster::try_from(cluster)<span class="question-mark">?</span>,
                     )<span class="question-mark">?</span>);
                 }
             }
-            <span class="ident">resource</span> =&gt; <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">&quot;Unsupported resource {}&quot;</span>, <span class="ident">resource</span>.<span class="ident">type_url</span>())),
+            resource =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">&quot;Unsupported resource {}&quot;</span>, resource.type_url())),
         };
 
-        <span class="prelude-val">Ok</span>(<span class="ident">DiscoveryResponse</span> {
-            <span class="ident">resources</span>,
-            <span class="ident">type_url</span>: <span class="ident">resource_type</span>.<span class="ident">type_url</span>().<span class="ident">into</span>(),
-            ..<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>()
+        <span class="prelude-val">Ok</span>(DiscoveryResponse {
+            resources,
+            type_url: resource_type.type_url().into(),
+            ..&lt;<span class="kw">_</span>&gt;::default()
         })
     }
 
-    <span class="attribute">#[<span class="ident">tracing::instrument</span>(<span class="ident">skip_all</span>, <span class="ident">fields</span>(<span class="ident">response</span> <span class="op">=</span> <span class="ident">response</span>.<span class="ident">type_url</span>()))]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">apply</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">response</span>: <span class="kw-2">&amp;</span><span class="ident">Resource</span>) -&gt; <span class="ident"><span class="kw">crate</span>::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">apply_cluster</span> <span class="op">=</span> <span class="op">|</span><span class="ident">cluster</span>: <span class="ident">Cluster</span><span class="op">|</span> {
-            <span class="kw">if</span> <span class="ident">cluster</span>.<span class="ident">endpoints</span>().<span class="ident">count</span>() <span class="op">==</span> <span class="number">0</span> {
+    <span class="attribute">#[tracing::instrument(skip_all, fields(response = response.type_url()))]
+    </span><span class="kw">pub fn </span>apply(<span class="kw-2">&amp;</span><span class="self">self</span>, response: <span class="kw-2">&amp;</span>Resource) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
+        <span class="kw">let </span>apply_cluster = |cluster: Cluster| {
+            <span class="kw">if </span>cluster.endpoints().count() == <span class="number">0 </span>{
                 <span class="kw">return</span>;
             }
 
-            <span class="macro">tracing::trace!</span>(<span class="ident">endpoints</span> <span class="op">=</span> <span class="op">%</span><span class="ident">serde_json::to_value</span>(<span class="kw-2">&amp;</span><span class="ident">cluster</span>).<span class="ident">unwrap</span>(), <span class="string">&quot;applying new endpoints&quot;</span>);
-            <span class="self">self</span>.<span class="ident">clusters</span>.<span class="ident">modify</span>(<span class="op">|</span><span class="ident">clusters</span><span class="op">|</span> {
-                <span class="ident">clusters</span>.<span class="ident">insert</span>(<span class="ident">cluster</span>.<span class="ident">clone</span>());
+            <span class="macro">tracing::trace!</span>(endpoints = %serde_json::to_value(<span class="kw-2">&amp;</span>cluster).unwrap(), <span class="string">&quot;applying new endpoints&quot;</span>);
+            <span class="self">self</span>.clusters.modify(|clusters| {
+                clusters.insert(cluster.clone());
             });
         };
 
-        <span class="kw">match</span> <span class="ident">response</span> {
-            <span class="ident">Resource::Endpoint</span>(<span class="ident">cla</span>) =&gt; {
-                <span class="kw">let</span> <span class="ident">cluster</span> <span class="op">=</span> <span class="ident">Cluster::try_from</span>(<span class="kw-2">*</span><span class="ident">cla</span>.<span class="ident">clone</span>()).<span class="ident">unwrap</span>();
-                (<span class="ident">apply_cluster</span>)(<span class="ident">cluster</span>)
+        <span class="kw">match </span>response {
+            Resource::Endpoint(cla) =&gt; {
+                <span class="kw">let </span>cluster = Cluster::try_from(<span class="kw-2">*</span>cla.clone()).unwrap();
+                (apply_cluster)(cluster)
             }
-            <span class="ident">Resource::Listener</span>(<span class="ident">listener</span>) =&gt; {
-                <span class="kw">let</span> <span class="ident">chain</span> <span class="op">=</span> <span class="ident">listener</span>
-                    .<span class="ident">filter_chains</span>
-                    .<span class="ident">get</span>(<span class="number">0</span>)
-                    .<span class="ident">map</span>(<span class="op">|</span><span class="ident">chain</span><span class="op">|</span> <span class="ident">chain</span>.<span class="ident">filters</span>.<span class="ident">clone</span>())
-                    .<span class="ident">unwrap_or_default</span>()
-                    .<span class="ident">into_iter</span>()
-                    .<span class="ident">map</span>(<span class="ident">Filter::try_from</span>)
-                    .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
-                <span class="self">self</span>.<span class="ident">filters</span>.<span class="ident">store</span>(<span class="ident">Arc::new</span>(<span class="ident">chain</span>.<span class="ident">try_into</span>()<span class="question-mark">?</span>));
+            Resource::Listener(listener) =&gt; {
+                <span class="kw">let </span>chain = listener
+                    .filter_chains
+                    .get(<span class="number">0</span>)
+                    .map(|chain| chain.filters.clone())
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(Filter::try_from)
+                    .collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, <span class="kw">_</span>&gt;&gt;()<span class="question-mark">?</span>;
+                <span class="self">self</span>.filters.store(Arc::new(chain.try_into()<span class="question-mark">?</span>));
             }
-            <span class="ident">Resource::Cluster</span>(<span class="ident">cluster</span>) =&gt; {
-                <span class="ident">cluster</span>
-                    .<span class="ident">load_assignment</span>
-                    .<span class="ident">clone</span>()
-                    .<span class="ident">map</span>(<span class="ident">Cluster::try_from</span>)
-                    .<span class="ident">transpose</span>()<span class="question-mark">?</span>
-                    .<span class="ident">map</span>(<span class="ident">apply_cluster</span>);
+            Resource::Cluster(cluster) =&gt; {
+                cluster
+                    .load_assignment
+                    .clone()
+                    .map(Cluster::try_from)
+                    .transpose()<span class="question-mark">?
+                    </span>.map(apply_cluster);
             }
         }
 
-        <span class="self">self</span>.<span class="ident">apply_metrics</span>();
+        <span class="self">self</span>.apply_metrics();
 
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">apply_metrics</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) {
-        <span class="kw">let</span> <span class="ident">endpoints</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">clusters</span>.<span class="ident">load</span>().<span class="ident">endpoints</span>().<span class="ident">count</span>();
+    <span class="kw">pub fn </span>apply_metrics(<span class="kw-2">&amp;</span><span class="self">self</span>) {
+        <span class="kw">let </span>endpoints = <span class="self">self</span>.clusters.load().endpoints().count();
 
-        <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">active_clusters</span>.<span class="ident">set</span>((<span class="ident">endpoints</span> <span class="op">==</span> <span class="number">0</span>) <span class="kw">as</span> <span class="ident">i64</span>);
-        <span class="self">self</span>.<span class="ident">metrics</span>.<span class="ident">active_endpoints</span>.<span class="ident">set</span>(<span class="ident">endpoints</span> <span class="kw">as</span> <span class="ident">i64</span>);
+        <span class="self">self</span>.metrics.active_clusters.set((endpoints == <span class="number">0</span>) <span class="kw">as </span>i64);
+        <span class="self">self</span>.metrics.active_endpoints.set(endpoints <span class="kw">as </span>i64);
     }
 }
 
-<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">Config</span> {
-    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">admin</span>: <span class="ident">Slot::with_default</span>(),
-            <span class="ident">clusters</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
-            <span class="ident">filters</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
-            <span class="ident">id</span>: <span class="ident">default_proxy_id</span>(),
-            <span class="ident">management_servers</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
-            <span class="ident">maxmind_db</span>: <span class="ident">Slot::empty</span>(),
-            <span class="ident">metrics</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
-            <span class="ident">port</span>: <span class="ident">default_proxy_port</span>(),
-            <span class="ident">version</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
+<span class="kw">impl </span>Default <span class="kw">for </span>Config {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            admin: Slot::with_default(),
+            clusters: &lt;<span class="kw">_</span>&gt;::default(),
+            filters: &lt;<span class="kw">_</span>&gt;::default(),
+            id: default_proxy_id(),
+            management_servers: &lt;<span class="kw">_</span>&gt;::default(),
+            maxmind_db: Slot::empty(),
+            metrics: &lt;<span class="kw">_</span>&gt;::default(),
+            port: default_proxy_port(),
+            version: &lt;<span class="kw">_</span>&gt;::default(),
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">PartialEq</span> <span class="kw">for</span> <span class="ident">Config</span> {
-    <span class="kw">fn</span> <span class="ident">eq</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">rhs</span>: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="ident">bool</span> {
-        <span class="self">self</span>.<span class="ident">admin</span> <span class="op">==</span> <span class="ident">rhs</span>.<span class="ident">admin</span>
-            <span class="op">&amp;&amp;</span> <span class="self">self</span>.<span class="ident">id</span> <span class="op">==</span> <span class="ident">rhs</span>.<span class="ident">id</span>
-            <span class="op">&amp;&amp;</span> <span class="self">self</span>.<span class="ident">port</span> <span class="op">==</span> <span class="ident">rhs</span>.<span class="ident">port</span>
-            <span class="op">&amp;&amp;</span> <span class="self">self</span>.<span class="ident">filters</span> <span class="op">==</span> <span class="ident">rhs</span>.<span class="ident">filters</span>
-            <span class="op">&amp;&amp;</span> <span class="self">self</span>.<span class="ident">management_servers</span> <span class="op">==</span> <span class="ident">rhs</span>.<span class="ident">management_servers</span>
-            <span class="op">&amp;&amp;</span> <span class="self">self</span>.<span class="ident">version</span> <span class="op">==</span> <span class="ident">rhs</span>.<span class="ident">version</span>
+<span class="kw">impl </span>PartialEq <span class="kw">for </span>Config {
+    <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, rhs: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; bool {
+        <span class="self">self</span>.admin == rhs.admin
+            &amp;&amp; <span class="self">self</span>.id == rhs.id
+            &amp;&amp; <span class="self">self</span>.port == rhs.port
+            &amp;&amp; <span class="self">self</span>.filters == rhs.filters
+            &amp;&amp; <span class="self">self</span>.management_servers == rhs.management_servers
+            &amp;&amp; <span class="self">self</span>.version == rhs.version
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Eq</span>, <span class="ident">Serialize</span>, <span class="ident">JsonSchema</span>, <span class="ident">PartialEq</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Version</span> {
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;v1alpha1&quot;</span>)]</span>
-    <span class="ident">V1Alpha1</span>,
+<span class="attribute">#[derive(Clone, Debug, Deserialize, Eq, Serialize, JsonSchema, PartialEq)]
+</span><span class="kw">pub enum </span>Version {
+    <span class="attribute">#[serde(rename = <span class="string">&quot;v1alpha1&quot;</span>)]
+    </span>V1Alpha1,
 }
 
-<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">Version</span> {
-    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
-        <span class="ident"><span class="self">Self</span>::V1Alpha1</span>
+<span class="kw">impl </span>Default <span class="kw">for </span>Version {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::V1Alpha1
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">target_os</span> <span class="op">=</span> <span class="string">&quot;linux&quot;</span>))]</span>
-<span class="kw">fn</span> <span class="ident">default_proxy_id</span>() -&gt; <span class="ident">Slot</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
-    <span class="ident">Slot::from</span>(<span class="ident">Uuid::new_v4</span>().<span class="ident">as_hyphenated</span>().<span class="ident">to_string</span>())
+<span class="attribute">#[cfg(not(target_os = <span class="string">&quot;linux&quot;</span>))]
+</span><span class="kw">fn </span>default_proxy_id() -&gt; Slot&lt;String&gt; {
+    Slot::from(Uuid::new_v4().as_hyphenated().to_string())
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">target_os</span> <span class="op">=</span> <span class="string">&quot;linux&quot;</span>)]</span>
-<span class="kw">fn</span> <span class="ident">default_proxy_id</span>() -&gt; <span class="ident">Slot</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
-    <span class="ident">Slot::from</span>(<span class="ident">sys_info::hostname</span>().<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">Uuid::new_v4</span>().<span class="ident">as_hyphenated</span>().<span class="ident">to_string</span>()))
+<span class="attribute">#[cfg(target_os = <span class="string">&quot;linux&quot;</span>)]
+</span><span class="kw">fn </span>default_proxy_id() -&gt; Slot&lt;String&gt; {
+    Slot::from(sys_info::hostname().unwrap_or_else(|<span class="kw">_</span>| Uuid::new_v4().as_hyphenated().to_string()))
 }
 
-<span class="kw">fn</span> <span class="ident">default_proxy_port</span>() -&gt; <span class="ident">Slot</span><span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span> {
-    <span class="ident">Slot::from</span>(<span class="number">7000</span>)
+<span class="kw">fn </span>default_proxy_port() -&gt; Slot&lt;u16&gt; {
+    Slot::from(<span class="number">7000</span>)
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Eq</span>, <span class="ident">Serialize</span>, <span class="ident">JsonSchema</span>, <span class="ident">PartialEq</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Admin</span> {
-    <span class="kw">pub</span> <span class="ident">address</span>: <span class="ident">SocketAddr</span>,
+<span class="attribute">#[derive(Clone, Debug, Deserialize, Eq, Serialize, JsonSchema, PartialEq)]
+#[serde(deny_unknown_fields)]
+</span><span class="kw">pub struct </span>Admin {
+    <span class="kw">pub </span>address: SocketAddr,
 }
 
-<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">Admin</span> {
-    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
-        <span class="ident">Admin</span> {
-            <span class="ident">address</span>: (<span class="ident">std::net::Ipv4Addr::UNSPECIFIED</span>, <span class="number">9091</span>).<span class="ident">into</span>(),
+<span class="kw">impl </span>Default <span class="kw">for </span>Admin {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        Admin {
+            address: (std::net::Ipv4Addr::UNSPECIFIED, <span class="number">9091</span>).into(),
         }
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Eq</span>, <span class="ident">Serialize</span>, <span class="ident">PartialEq</span>, <span class="ident">JsonSchema</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ManagementServer</span> {
-    <span class="kw">pub</span> <span class="ident">address</span>: <span class="ident">String</span>,
+<span class="attribute">#[derive(Clone, Debug, Deserialize, Eq, Serialize, PartialEq, JsonSchema)]
+#[serde(deny_unknown_fields)]
+</span><span class="kw">pub struct </span>ManagementServer {
+    <span class="kw">pub </span>address: String,
 }
 
-<span class="doccomment">/// Filter is the configuration for a single filter</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Eq</span>, <span class="ident">Serialize</span>, <span class="ident">PartialEq</span>, <span class="ident">JsonSchema</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Filter</span> {
-    <span class="kw">pub</span> <span class="ident">name</span>: <span class="ident">String</span>,
-    <span class="kw">pub</span> <span class="ident">config</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">serde_json::Value</span><span class="op">&gt;</span>,
+<span class="doccomment">/// Filter is the configuration for a single filter
+</span><span class="attribute">#[derive(Clone, Debug, Deserialize, Eq, Serialize, PartialEq, JsonSchema)]
+#[serde(deny_unknown_fields)]
+</span><span class="kw">pub struct </span>Filter {
+    <span class="kw">pub </span>name: String,
+    <span class="kw">pub </span>config: <span class="prelude-ty">Option</span>&lt;serde_json::Value&gt;,
 }
 
-<span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident"><span class="kw">crate</span>::xds::config::listener::v3::Filter</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Filter</span> {
-    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">Error</span>;
+<span class="kw">impl </span>TryFrom&lt;<span class="kw">crate</span>::xds::config::listener::v3::Filter&gt; <span class="kw">for </span>Filter {
+    <span class="kw">type </span>Error = Error;
 
-    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">filter</span>: <span class="ident"><span class="kw">crate</span>::xds::config::listener::v3::Filter</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident"><span class="self">Self</span>::Error</span><span class="op">&gt;</span> {
-        <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::xds::config::listener::v3::filter::ConfigType</span>;
+    <span class="kw">fn </span>try_from(filter: <span class="kw">crate</span>::xds::config::listener::v3::Filter) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
+        <span class="kw">use </span><span class="kw">crate</span>::xds::config::listener::v3::filter::ConfigType;
 
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">config_type</span>) <span class="op">=</span> <span class="ident">filter</span>.<span class="ident">config_type</span> {
-            <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">config_type</span> {
-                <span class="ident">ConfigType::TypedConfig</span>(<span class="ident">any</span>) =&gt; <span class="ident">any</span>,
-                <span class="ident">ConfigType::ConfigDiscovery</span>(<span class="kw">_</span>) =&gt; {
-                    <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error::FieldInvalid</span> {
-                        <span class="ident">field</span>: <span class="string">&quot;config_type&quot;</span>.<span class="ident">into</span>(),
-                        <span class="ident">reason</span>: <span class="string">&quot;ConfigDiscovery is currently unsupported&quot;</span>.<span class="ident">into</span>(),
+        <span class="kw">let </span>config = <span class="kw">if let </span><span class="prelude-val">Some</span>(config_type) = filter.config_type {
+            <span class="kw">let </span>config = <span class="kw">match </span>config_type {
+                ConfigType::TypedConfig(any) =&gt; any,
+                ConfigType::ConfigDiscovery(<span class="kw">_</span>) =&gt; {
+                    <span class="kw">return </span><span class="prelude-val">Err</span>(Error::FieldInvalid {
+                        field: <span class="string">&quot;config_type&quot;</span>.into(),
+                        reason: <span class="string">&quot;ConfigDiscovery is currently unsupported&quot;</span>.into(),
                     })
                 }
             };
             <span class="prelude-val">Some</span>(
-                <span class="ident"><span class="kw">crate</span>::filters::FilterRegistry::get_factory</span>(<span class="kw-2">&amp;</span><span class="ident">filter</span>.<span class="ident">name</span>)
-                    .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Error::NotFound</span>(<span class="ident">filter</span>.<span class="ident">name</span>.<span class="ident">clone</span>()))<span class="question-mark">?</span>
-                    .<span class="ident">encode_config_to_json</span>(<span class="ident">config</span>)<span class="question-mark">?</span>,
+                <span class="kw">crate</span>::filters::FilterRegistry::get_factory(<span class="kw-2">&amp;</span>filter.name)
+                    .ok_or_else(|| Error::NotFound(filter.name.clone()))<span class="question-mark">?
+                    </span>.encode_config_to_json(config)<span class="question-mark">?</span>,
             )
-        } <span class="kw">else</span> {
-            <span class="prelude-val">None</span>
-        };
+        } <span class="kw">else </span>{
+            <span class="prelude-val">None
+        </span>};
 
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
-            <span class="ident">name</span>: <span class="ident">filter</span>.<span class="ident">name</span>,
-            <span class="ident">config</span>,
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
+            name: filter.name,
+            config,
         })
     }
 }
 
-<span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident">Filter</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident"><span class="kw">crate</span>::xds::config::listener::v3::Filter</span> {
-    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">Error</span>;
+<span class="kw">impl </span>TryFrom&lt;Filter&gt; <span class="kw">for </span><span class="kw">crate</span>::xds::config::listener::v3::Filter {
+    <span class="kw">type </span>Error = Error;
 
-    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">filter</span>: <span class="ident">Filter</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident"><span class="self">Self</span>::Error</span><span class="op">&gt;</span> {
-        <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::xds::config::listener::v3::filter::ConfigType</span>;
+    <span class="kw">fn </span>try_from(filter: Filter) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
+        <span class="kw">use </span><span class="kw">crate</span>::xds::config::listener::v3::filter::ConfigType;
 
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">config</span>) <span class="op">=</span> <span class="ident">filter</span>.<span class="ident">config</span> {
+        <span class="kw">let </span>config = <span class="kw">if let </span><span class="prelude-val">Some</span>(config) = filter.config {
             <span class="prelude-val">Some</span>(
-                <span class="ident"><span class="kw">crate</span>::filters::FilterRegistry::get_factory</span>(<span class="kw-2">&amp;</span><span class="ident">filter</span>.<span class="ident">name</span>)
-                    .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Error::NotFound</span>(<span class="ident">filter</span>.<span class="ident">name</span>.<span class="ident">clone</span>()))<span class="question-mark">?</span>
-                    .<span class="ident">encode_config_to_protobuf</span>(<span class="ident">config</span>)<span class="question-mark">?</span>,
+                <span class="kw">crate</span>::filters::FilterRegistry::get_factory(<span class="kw-2">&amp;</span>filter.name)
+                    .ok_or_else(|| Error::NotFound(filter.name.clone()))<span class="question-mark">?
+                    </span>.encode_config_to_protobuf(config)<span class="question-mark">?</span>,
             )
-        } <span class="kw">else</span> {
-            <span class="prelude-val">None</span>
-        };
+        } <span class="kw">else </span>{
+            <span class="prelude-val">None
+        </span>};
 
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
-            <span class="ident">name</span>: <span class="ident">filter</span>.<span class="ident">name</span>,
-            <span class="ident">config_type</span>: <span class="ident">config</span>.<span class="ident">map</span>(<span class="ident">ConfigType::TypedConfig</span>),
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
+            name: filter.name,
+            config_type: config.map(ConfigType::TypedConfig),
         })
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span>(<span class="ident">String</span>, <span class="ident">FilterInstance</span>)<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Filter</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>((<span class="ident">name</span>, <span class="ident">instance</span>): (<span class="ident">String</span>, <span class="ident">FilterInstance</span>)) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">name</span>,
-            <span class="ident">config</span>: <span class="prelude-val">Some</span>(<span class="ident">serde_json::Value::clone</span>(<span class="kw-2">&amp;</span><span class="ident">instance</span>.<span class="ident">config</span>)),
+<span class="kw">impl </span>From&lt;(String, FilterInstance)&gt; <span class="kw">for </span>Filter {
+    <span class="kw">fn </span>from((name, instance): (String, FilterInstance)) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            name,
+            config: <span class="prelude-val">Some</span>(serde_json::Value::clone(<span class="kw-2">&amp;</span>instance.config)),
         }
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="ident">serde_json::json</span>;
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
+    <span class="kw">use </span>serde_json::json;
 
-    <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">Metadata</span>};
+    <span class="kw">use super</span>::<span class="kw-2">*</span>;
+    <span class="kw">use </span><span class="kw">crate</span>::endpoint::{Endpoint, Metadata};
 
-    <span class="kw">fn</span> <span class="ident">parse_config</span>(<span class="ident">yaml</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="ident">Config</span> {
-        <span class="ident">Config::from_reader</span>(<span class="ident">yaml</span>.<span class="ident">as_bytes</span>()).<span class="ident">unwrap</span>()
+    <span class="kw">fn </span>parse_config(yaml: <span class="kw-2">&amp;</span>str) -&gt; Config {
+        Config::from_reader(yaml.as_bytes()).unwrap()
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">deserialise_client</span>() {
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">Builder::default</span>()
-            .<span class="ident">port</span>(<span class="number">7000</span>)
-            .<span class="ident">endpoints</span>(<span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(<span class="string">&quot;127.0.0.1:25999&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>())])
-            .<span class="ident">build</span>()
-            .<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">serde_yaml::to_string</span>(<span class="kw-2">&amp;</span><span class="ident">config</span>).<span class="ident">unwrap</span>();
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>deserialise_client() {
+        <span class="kw">let </span>config = Builder::default()
+            .port(<span class="number">7000</span>)
+            .endpoints(<span class="macro">vec!</span>[Endpoint::new(<span class="string">&quot;127.0.0.1:25999&quot;</span>.parse().unwrap())])
+            .build()
+            .unwrap();
+        <span class="kw">let _ </span>= serde_yaml::to_string(<span class="kw-2">&amp;</span>config).unwrap();
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">deserialise_server</span>() {
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">Builder::default</span>()
-            .<span class="ident">port</span>(<span class="number">7000</span>)
-            .<span class="ident">endpoints</span>(<span class="macro">vec!</span>[
-                <span class="ident">Endpoint::new</span>(<span class="string">&quot;127.0.0.1:26000&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>()),
-                <span class="ident">Endpoint::new</span>(<span class="string">&quot;127.0.0.1:26001&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>()),
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>deserialise_server() {
+        <span class="kw">let </span>config = Builder::default()
+            .port(<span class="number">7000</span>)
+            .endpoints(<span class="macro">vec!</span>[
+                Endpoint::new(<span class="string">&quot;127.0.0.1:26000&quot;</span>.parse().unwrap()),
+                Endpoint::new(<span class="string">&quot;127.0.0.1:26001&quot;</span>.parse().unwrap()),
             ])
-            .<span class="ident">build</span>()
-            .<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">serde_yaml::to_string</span>(<span class="kw-2">&amp;</span><span class="ident">config</span>).<span class="ident">unwrap</span>();
+            .build()
+            .unwrap();
+        <span class="kw">let _ </span>= serde_yaml::to_string(<span class="kw-2">&amp;</span>config).unwrap();
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">parse_default_values</span>() {
-        <span class="kw">let</span> <span class="ident">config</span>: <span class="ident">Config</span> <span class="op">=</span> <span class="ident">serde_json::from_value</span>(<span class="macro">json!</span>({
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>parse_default_values() {
+        <span class="kw">let </span>config: Config = serde_json::from_value(<span class="macro">json!</span>({
             <span class="string">&quot;version&quot;</span>: <span class="string">&quot;v1alpha1&quot;</span>,
              <span class="string">&quot;clusters&quot;</span>:{}
         }))
-        .<span class="ident">unwrap</span>();
+        .unwrap();
 
-        <span class="macro">assert_eq!</span>(<span class="kw-2">*</span><span class="ident">config</span>.<span class="ident">port</span>.<span class="ident">load</span>(), <span class="number">7000</span>);
-        <span class="macro">assert!</span>(<span class="ident">config</span>.<span class="ident">id</span>.<span class="ident">load</span>().<span class="ident">len</span>() <span class="op">&gt;</span> <span class="number">1</span>);
+        <span class="macro">assert_eq!</span>(<span class="kw-2">*</span>config.port.load(), <span class="number">7000</span>);
+        <span class="macro">assert!</span>(config.id.load().len() &gt; <span class="number">1</span>);
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">parse_proxy</span>() {
-        <span class="kw">let</span> <span class="ident">yaml</span> <span class="op">=</span> <span class="string">&quot;
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>parse_proxy() {
+        <span class="kw">let </span>yaml = <span class="string">&quot;
 version: v1alpha1
 id: server-proxy
 port: 7000
   &quot;</span>;
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">parse_config</span>(<span class="ident">yaml</span>);
+        <span class="kw">let </span>config = parse_config(yaml);
 
-        <span class="macro">assert_eq!</span>(<span class="kw-2">*</span><span class="ident">config</span>.<span class="ident">port</span>.<span class="ident">load</span>(), <span class="number">7000</span>);
-        <span class="macro">assert_eq!</span>(<span class="ident">config</span>.<span class="ident">id</span>.<span class="ident">load</span>().<span class="ident">as_str</span>(), <span class="string">&quot;server-proxy&quot;</span>);
+        <span class="macro">assert_eq!</span>(<span class="kw-2">*</span>config.port.load(), <span class="number">7000</span>);
+        <span class="macro">assert_eq!</span>(config.id.load().as_str(), <span class="string">&quot;server-proxy&quot;</span>);
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">parse_client</span>() {
-        <span class="kw">let</span> <span class="ident">config</span>: <span class="ident">Config</span> <span class="op">=</span> <span class="ident">serde_json::from_value</span>(<span class="macro">json!</span>({
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>parse_client() {
+        <span class="kw">let </span>config: Config = serde_json::from_value(<span class="macro">json!</span>({
             <span class="string">&quot;version&quot;</span>: <span class="string">&quot;v1alpha1&quot;</span>,
             <span class="string">&quot;clusters&quot;</span>:{
                 <span class="string">&quot;default&quot;</span>:{
                     <span class="string">&quot;localities&quot;</span>: [{
                         <span class="string">&quot;endpoints&quot;</span>: [{
-                            <span class="string">&quot;address&quot;</span>: <span class="string">&quot;127.0.0.1:25999&quot;</span>
-                        }],
+                            <span class="string">&quot;address&quot;</span>: <span class="string">&quot;127.0.0.1:25999&quot;
+                        </span>}],
                     }]
                 }
             }
         }))
-        .<span class="ident">unwrap</span>();
+        .unwrap();
 
         <span class="macro">assert_eq!</span>(
-            <span class="kw-2">*</span><span class="ident">config</span>.<span class="ident">clusters</span>.<span class="ident">load</span>(),
-            <span class="ident">ClusterMap::new_with_default_cluster</span>(<span class="macro">vec!</span>[<span class="ident">Endpoint::new</span>(
-                (<span class="ident">std::net::Ipv4Addr::LOCALHOST</span>, <span class="number">25999</span>).<span class="ident">into</span>(),
+            <span class="kw-2">*</span>config.clusters.load(),
+            ClusterMap::new_with_default_cluster(<span class="macro">vec!</span>[Endpoint::new(
+                (std::net::Ipv4Addr::LOCALHOST, <span class="number">25999</span>).into(),
             )])
         )
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">parse_server</span>() {
-        <span class="kw">let</span> <span class="ident">config</span>: <span class="ident">Config</span> <span class="op">=</span> <span class="ident">serde_json::from_value</span>(<span class="macro">json!</span>({
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>parse_server() {
+        <span class="kw">let </span>config: Config = serde_json::from_value(<span class="macro">json!</span>({
             <span class="string">&quot;version&quot;</span>: <span class="string">&quot;v1alpha1&quot;</span>,
             <span class="string">&quot;clusters&quot;</span>:{
                 <span class="string">&quot;default&quot;</span>:{
                     <span class="string">&quot;localities&quot;</span>: [{
                         <span class="string">&quot;endpoints&quot;</span>: [
                             {
-                                <span class="string">&quot;address&quot;</span> : <span class="string">&quot;127.0.0.1:26000&quot;</span>,
+                                <span class="string">&quot;address&quot; </span>: <span class="string">&quot;127.0.0.1:26000&quot;</span>,
                                 <span class="string">&quot;metadata&quot;</span>: {
                                     <span class="string">&quot;quilkin.dev&quot;</span>: {
                                         <span class="string">&quot;tokens&quot;</span>: [<span class="string">&quot;MXg3aWp5Ng==&quot;</span>, <span class="string">&quot;OGdqM3YyaQ==&quot;</span>],
@@ -1045,7 +1045,7 @@ port: 7000
                                 }
                             },
                             {
-                                <span class="string">&quot;address&quot;</span> : <span class="string">&quot;127.0.0.1:26001&quot;</span>,
+                                <span class="string">&quot;address&quot; </span>: <span class="string">&quot;127.0.0.1:26001&quot;</span>,
                                 <span class="string">&quot;metadata&quot;</span>: {
                                     <span class="string">&quot;quilkin.dev&quot;</span>: {
                                         <span class="string">&quot;tokens&quot;</span>: [<span class="string">&quot;bmt1eTcweA==&quot;</span>],
@@ -1057,57 +1057,57 @@ port: 7000
                 }
             }
         }))
-        .<span class="ident">unwrap_or_default</span>();
+        .unwrap_or_default();
 
         <span class="macro">assert_eq!</span>(
-            <span class="kw-2">*</span><span class="ident">config</span>.<span class="ident">clusters</span>.<span class="ident">load</span>(),
-            <span class="ident">ClusterMap::new_with_default_cluster</span>(<span class="macro">vec!</span>[
-                <span class="ident">Endpoint::with_metadata</span>(
-                    <span class="string">&quot;127.0.0.1:26000&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
-                    <span class="ident">Metadata</span> {
-                        <span class="ident">tokens</span>: <span class="macro">vec!</span>[<span class="string">&quot;1x7ijy6&quot;</span>, <span class="string">&quot;8gj3v2i&quot;</span>]
-                            .<span class="ident">into_iter</span>()
-                            .<span class="ident">map</span>(<span class="ident">From::from</span>)
-                            .<span class="ident">collect</span>(),
+            <span class="kw-2">*</span>config.clusters.load(),
+            ClusterMap::new_with_default_cluster(<span class="macro">vec!</span>[
+                Endpoint::with_metadata(
+                    <span class="string">&quot;127.0.0.1:26000&quot;</span>.parse().unwrap(),
+                    Metadata {
+                        tokens: <span class="macro">vec!</span>[<span class="string">&quot;1x7ijy6&quot;</span>, <span class="string">&quot;8gj3v2i&quot;</span>]
+                            .into_iter()
+                            .map(From::from)
+                            .collect(),
                     },
                 ),
-                <span class="ident">Endpoint::with_metadata</span>(
-                    <span class="string">&quot;127.0.0.1:26001&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
-                    <span class="ident">Metadata</span> {
-                        <span class="ident">tokens</span>: <span class="macro">vec!</span>[<span class="string">&quot;nkuy70x&quot;</span>].<span class="ident">into_iter</span>().<span class="ident">map</span>(<span class="ident">From::from</span>).<span class="ident">collect</span>(),
+                Endpoint::with_metadata(
+                    <span class="string">&quot;127.0.0.1:26001&quot;</span>.parse().unwrap(),
+                    Metadata {
+                        tokens: <span class="macro">vec!</span>[<span class="string">&quot;nkuy70x&quot;</span>].into_iter().map(From::from).collect(),
                     },
                 ),
             ])
         );
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">parse_management_servers</span>() {
-        <span class="kw">let</span> <span class="ident">config</span>: <span class="ident">Config</span> <span class="op">=</span> <span class="ident">serde_json::from_value</span>(<span class="macro">json!</span>({
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>parse_management_servers() {
+        <span class="kw">let </span>config: Config = serde_json::from_value(<span class="macro">json!</span>({
             <span class="string">&quot;version&quot;</span>: <span class="string">&quot;v1alpha1&quot;</span>,
             <span class="string">&quot;management_servers&quot;</span>: [
-                { <span class="string">&quot;address&quot;</span>: <span class="string">&quot;127.0.0.1:25999&quot;</span> },
-                { <span class="string">&quot;address&quot;</span>: <span class="string">&quot;127.0.0.1:30000&quot;</span> },
+                { <span class="string">&quot;address&quot;</span>: <span class="string">&quot;127.0.0.1:25999&quot; </span>},
+                { <span class="string">&quot;address&quot;</span>: <span class="string">&quot;127.0.0.1:30000&quot; </span>},
             ],
         }))
-        .<span class="ident">unwrap</span>();
+        .unwrap();
 
         <span class="macro">assert_eq!</span>(
-            <span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">config</span>.<span class="ident">management_servers</span>.<span class="ident">load</span>(),
+            <span class="kw-2">**</span>config.management_servers.load(),
             <span class="macro">vec!</span>[
-                <span class="ident">ManagementServer</span> {
-                    <span class="ident">address</span>: <span class="string">&quot;127.0.0.1:25999&quot;</span>.<span class="ident">into</span>(),
+                ManagementServer {
+                    address: <span class="string">&quot;127.0.0.1:25999&quot;</span>.into(),
                 },
-                <span class="ident">ManagementServer</span> {
-                    <span class="ident">address</span>: <span class="string">&quot;127.0.0.1:30000&quot;</span>.<span class="ident">into</span>(),
+                ManagementServer {
+                    address: <span class="string">&quot;127.0.0.1:30000&quot;</span>.into(),
                 },
             ],
         );
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">deny_unused_fields</span>() {
-        <span class="kw">let</span> <span class="ident">configs</span> <span class="op">=</span> <span class="macro">vec!</span>[
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>deny_unused_fields() {
+        <span class="kw">let </span>configs = <span class="macro">vec!</span>[
             <span class="string">&quot;
 version: v1alpha1
 foo: bar
@@ -1164,19 +1164,19 @@ dynamic:
 &quot;</span>,
         ];
 
-        <span class="kw">for</span> <span class="ident">config</span> <span class="kw">in</span> <span class="ident">configs</span> {
-            <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">Config::from_reader</span>(<span class="ident">config</span>.<span class="ident">as_bytes</span>());
-            <span class="kw">let</span> <span class="ident">error</span> <span class="op">=</span> <span class="ident">result</span>.<span class="ident">unwrap_err</span>();
-            <span class="macro">println!</span>(<span class="string">&quot;here: {}&quot;</span>, <span class="ident">error</span>);
-            <span class="macro">assert!</span>(<span class="macro">format!</span>(<span class="string">&quot;{error:?}&quot;</span>).<span class="ident">contains</span>(<span class="string">&quot;unknown field&quot;</span>));
+        <span class="kw">for </span>config <span class="kw">in </span>configs {
+            <span class="kw">let </span>result = Config::from_reader(config.as_bytes());
+            <span class="kw">let </span>error = result.unwrap_err();
+            <span class="macro">println!</span>(<span class="string">&quot;here: {}&quot;</span>, error);
+            <span class="macro">assert!</span>(<span class="macro">format!</span>(<span class="string">&quot;{error:?}&quot;</span>).contains(<span class="string">&quot;unknown field&quot;</span>));
         }
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">config_default</span>() {
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">Config::default</span>();
-        <span class="macro">assert!</span>(<span class="ident">config</span>.<span class="ident">admin</span>.<span class="ident">is_some</span>());
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>config_default() {
+        <span class="kw">let </span>config = Config::default();
+        <span class="macro">assert!</span>(config.admin.is_some());
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

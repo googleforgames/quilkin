@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/filters/debug.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>debug.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../quilkin/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/filters/debug.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>debug.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../normalize.css"><link rel="stylesheet" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../ayu.css" disabled><link rel="stylesheet" href="../../../dark.css" disabled><link rel="stylesheet" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../quilkin/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -141,120 +141,120 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */</span>
+ */
 
-<span class="macro">crate::include_proto!</span>(<span class="string">&quot;quilkin.filters.debug.v1alpha1&quot;</span>);
+</span><span class="macro">crate::include_proto!</span>(<span class="string">&quot;quilkin.filters.debug.v1alpha1&quot;</span>);
 
-<span class="kw">use</span> <span class="ident">std::convert::TryFrom</span>;
+<span class="kw">use </span>std::convert::TryFrom;
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters::prelude</span>::<span class="kw-2">*</span>;
-<span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
-<span class="kw">use</span> <span class="ident">tracing::info</span>;
+<span class="kw">use </span><span class="kw">crate</span>::filters::prelude::<span class="kw-2">*</span>;
+<span class="kw">use </span>serde::{Deserialize, Serialize};
+<span class="kw">use </span>tracing::info;
 
-<span class="kw">use</span> <span class="ident"><span class="self">self</span>::quilkin::filters::debug::v1alpha1</span> <span class="kw">as</span> <span class="ident">proto</span>;
+<span class="kw">use </span><span class="self">self</span>::quilkin::filters::debug::v1alpha1 <span class="kw">as </span>proto;
 
-<span class="doccomment">/// Debug logs all incoming and outgoing packets</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Debug</span> {
-    <span class="ident">config</span>: <span class="ident">Config</span>,
+<span class="doccomment">/// Debug logs all incoming and outgoing packets
+</span><span class="attribute">#[derive(Debug)]
+</span><span class="kw">pub struct </span>Debug {
+    config: Config,
 }
 
-<span class="kw">impl</span> <span class="ident">Debug</span> {
-    <span class="doccomment">/// Constructor for the Debug. Pass in a &quot;id&quot; to append a string to your log messages from this</span>
-    <span class="doccomment">/// Filter.</span>
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">config</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Config</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">config</span>: <span class="ident">config</span>.<span class="ident">unwrap_or_default</span>(),
+<span class="kw">impl </span>Debug {
+    <span class="doccomment">/// Constructor for the Debug. Pass in a &quot;id&quot; to append a string to your log messages from this
+    /// Filter.
+    </span><span class="kw">fn </span>new(config: <span class="prelude-ty">Option</span>&lt;Config&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            config: config.unwrap_or_default(),
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">Filter</span> <span class="kw">for</span> <span class="ident">Debug</span> {
-    <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;instrument&quot;</span>, <span class="ident">tracing::instrument</span>(<span class="ident">skip</span>(<span class="self">self</span>, <span class="ident">ctx</span>)))]</span>
-    <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ReadContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="macro">info!</span>(<span class="ident">id</span> <span class="op">=</span> <span class="question-mark">?</span><span class="self">self</span>.<span class="ident">config</span>.<span class="ident">id</span>, <span class="ident">source</span> <span class="op">=</span> <span class="question-mark">?</span><span class="kw-2">&amp;</span><span class="ident">ctx</span>.<span class="ident">source</span>, <span class="ident">contents</span> <span class="op">=</span> <span class="question-mark">?</span><span class="ident">String::from_utf8_lossy</span>(<span class="kw-2">&amp;</span><span class="ident">ctx</span>.<span class="ident">contents</span>), <span class="string">&quot;Read filter event&quot;</span>);
+<span class="kw">impl </span>Filter <span class="kw">for </span>Debug {
+    <span class="attribute">#[cfg_attr(feature = <span class="string">&quot;instrument&quot;</span>, tracing::instrument(skip(<span class="self">self</span>, ctx)))]
+    </span><span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt; {
+        <span class="macro">info!</span>(id = <span class="question-mark">?</span><span class="self">self</span>.config.id, source = <span class="question-mark">?</span><span class="kw-2">&amp;</span>ctx.source, contents = <span class="question-mark">?</span>String::from_utf8_lossy(<span class="kw-2">&amp;</span>ctx.contents), <span class="string">&quot;Read filter event&quot;</span>);
         <span class="prelude-val">Some</span>(())
     }
 
-    <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;instrument&quot;</span>, <span class="ident">tracing::instrument</span>(<span class="ident">skip</span>(<span class="self">self</span>, <span class="ident">ctx</span>)))]</span>
-    <span class="kw">fn</span> <span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">WriteContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="macro">info!</span>(<span class="ident">id</span> <span class="op">=</span> <span class="question-mark">?</span><span class="self">self</span>.<span class="ident">config</span>.<span class="ident">id</span>, <span class="ident">endpoint</span> <span class="op">=</span> <span class="question-mark">?</span><span class="ident">ctx</span>.<span class="ident">endpoint</span>.<span class="ident">address</span>, <span class="ident">source</span> <span class="op">=</span> <span class="question-mark">?</span><span class="kw-2">&amp;</span><span class="ident">ctx</span>.<span class="ident">source</span>,
-            <span class="ident">dest</span> <span class="op">=</span> <span class="question-mark">?</span><span class="kw-2">&amp;</span><span class="ident">ctx</span>.<span class="ident">dest</span>, <span class="ident">contents</span> <span class="op">=</span> <span class="question-mark">?</span><span class="ident">String::from_utf8_lossy</span>(<span class="kw-2">&amp;</span><span class="ident">ctx</span>.<span class="ident">contents</span>), <span class="string">&quot;Write filter event&quot;</span>);
+    <span class="attribute">#[cfg_attr(feature = <span class="string">&quot;instrument&quot;</span>, tracing::instrument(skip(<span class="self">self</span>, ctx)))]
+    </span><span class="kw">fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt; {
+        <span class="macro">info!</span>(id = <span class="question-mark">?</span><span class="self">self</span>.config.id, endpoint = <span class="question-mark">?</span>ctx.endpoint.address, source = <span class="question-mark">?</span><span class="kw-2">&amp;</span>ctx.source,
+            dest = <span class="question-mark">?</span><span class="kw-2">&amp;</span>ctx.dest, contents = <span class="question-mark">?</span>String::from_utf8_lossy(<span class="kw-2">&amp;</span>ctx.contents), <span class="string">&quot;Write filter event&quot;</span>);
         <span class="prelude-val">Some</span>(())
     }
 }
 
-<span class="kw">impl</span> <span class="ident">StaticFilter</span> <span class="kw">for</span> <span class="ident">Debug</span> {
-    <span class="kw">const</span> <span class="ident">NAME</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;quilkin.filters.debug.v1alpha1.Debug&quot;</span>;
-    <span class="kw">type</span> <span class="ident">Configuration</span> <span class="op">=</span> <span class="ident">Config</span>;
-    <span class="kw">type</span> <span class="ident">BinaryConfiguration</span> <span class="op">=</span> <span class="ident">proto::Debug</span>;
+<span class="kw">impl </span>StaticFilter <span class="kw">for </span>Debug {
+    <span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str = <span class="string">&quot;quilkin.filters.debug.v1alpha1.Debug&quot;</span>;
+    <span class="kw">type </span>Configuration = Config;
+    <span class="kw">type </span>BinaryConfiguration = proto::Debug;
 
-    <span class="kw">fn</span> <span class="ident">try_from_config</span>(<span class="ident">config</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Configuration</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="prelude-val">Ok</span>(<span class="ident">Debug::new</span>(<span class="ident">config</span>))
+    <span class="kw">fn </span>try_from_config(config: <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Configuration&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+        <span class="prelude-val">Ok</span>(Debug::new(config))
     }
 }
 
-<span class="doccomment">/// A Debug filter&#39;s configuration.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Default</span>, <span class="ident">Deserialize</span>, <span class="ident">Debug</span>, <span class="ident">schemars::JsonSchema</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Config</span> {
-    <span class="doccomment">/// Identifier that will be optionally included with each log message.</span>
-    <span class="kw">pub</span> <span class="ident">id</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+<span class="doccomment">/// A Debug filter&#39;s configuration.
+</span><span class="attribute">#[derive(Serialize, Default, Deserialize, Debug, schemars::JsonSchema)]
+</span><span class="kw">pub struct </span>Config {
+    <span class="doccomment">/// Identifier that will be optionally included with each log message.
+    </span><span class="kw">pub </span>id: <span class="prelude-ty">Option</span>&lt;String&gt;,
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">Config</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">proto::Debug</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">config</span>: <span class="ident">Config</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> { <span class="ident">id</span>: <span class="ident">config</span>.<span class="ident">id</span> }
-    }
-}
-
-<span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident">proto::Debug</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Config</span> {
-    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">ConvertProtoConfigError</span>;
-
-    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">p</span>: <span class="ident">proto::Debug</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident"><span class="self">Self</span>::Error</span><span class="op">&gt;</span> {
-        <span class="prelude-val">Ok</span>(<span class="ident">Config</span> { <span class="ident">id</span>: <span class="ident">p</span>.<span class="ident">id</span> })
+<span class="kw">impl </span>From&lt;Config&gt; <span class="kw">for </span>proto::Debug {
+    <span class="kw">fn </span>from(config: Config) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{ id: config.id }
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::test_utils</span>::{<span class="ident">assert_filter_read_no_change</span>, <span class="ident">assert_write_no_change</span>};
-    <span class="kw">use</span> <span class="ident">tracing_test::traced_test</span>;
+<span class="kw">impl </span>TryFrom&lt;proto::Debug&gt; <span class="kw">for </span>Config {
+    <span class="kw">type </span>Error = ConvertProtoConfigError;
 
-    <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
+    <span class="kw">fn </span>try_from(p: proto::Debug) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
+        <span class="prelude-val">Ok</span>(Config { id: p.id })
+    }
+}
 
-    <span class="attribute">#[<span class="ident">traced_test</span>]</span>
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">read</span>() {
-        <span class="kw">let</span> <span class="ident">df</span> <span class="op">=</span> <span class="ident">Debug::new</span>(<span class="prelude-val">None</span>);
-        <span class="ident">assert_filter_read_no_change</span>(<span class="kw-2">&amp;</span><span class="ident">df</span>);
-        <span class="macro">assert!</span>(<span class="ident">logs_contain</span>(<span class="string">&quot;Read filter event&quot;</span>));
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
+    <span class="kw">use </span><span class="kw">crate</span>::test_utils::{assert_filter_read_no_change, assert_write_no_change};
+    <span class="kw">use </span>tracing_test::traced_test;
+
+    <span class="kw">use super</span>::<span class="kw-2">*</span>;
+
+    <span class="attribute">#[traced_test]
+    #[test]
+    </span><span class="kw">fn </span>read() {
+        <span class="kw">let </span>df = Debug::new(<span class="prelude-val">None</span>);
+        assert_filter_read_no_change(<span class="kw-2">&amp;</span>df);
+        <span class="macro">assert!</span>(logs_contain(<span class="string">&quot;Read filter event&quot;</span>));
     }
 
-    <span class="attribute">#[<span class="ident">traced_test</span>]</span>
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">write</span>() {
-        <span class="kw">let</span> <span class="ident">df</span> <span class="op">=</span> <span class="ident">Debug::new</span>(<span class="prelude-val">None</span>);
-        <span class="ident">assert_write_no_change</span>(<span class="kw-2">&amp;</span><span class="ident">df</span>);
-        <span class="macro">assert!</span>(<span class="ident">logs_contain</span>(<span class="string">&quot;Write filter event&quot;</span>));
-        <span class="macro">assert!</span>(<span class="ident">logs_contain</span>(<span class="string">&quot;quilkin::filters::debug&quot;</span>)); <span class="comment">// the given name to the the logger by tracing</span>
+    <span class="attribute">#[traced_test]
+    #[test]
+    </span><span class="kw">fn </span>write() {
+        <span class="kw">let </span>df = Debug::new(<span class="prelude-val">None</span>);
+        assert_write_no_change(<span class="kw-2">&amp;</span>df);
+        <span class="macro">assert!</span>(logs_contain(<span class="string">&quot;Write filter event&quot;</span>));
+        <span class="macro">assert!</span>(logs_contain(<span class="string">&quot;quilkin::filters::debug&quot;</span>)); <span class="comment">// the given name to the the logger by tracing
+    </span>}
+
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>from_config_with_id() {
+        <span class="kw">let </span>config = <span class="macro">serde_json::json!</span>({ <span class="string">&quot;id&quot;</span>: <span class="string">&quot;name&quot;</span>, });
+        Debug::from_config(<span class="prelude-val">Some</span>(serde_json::from_value(config).unwrap()));
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">from_config_with_id</span>() {
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="macro">serde_json::json!</span>({ <span class="string">&quot;id&quot;</span>: <span class="string">&quot;name&quot;</span>, });
-        <span class="ident">Debug::from_config</span>(<span class="prelude-val">Some</span>(<span class="ident">serde_json::from_value</span>(<span class="ident">config</span>).<span class="ident">unwrap</span>()));
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>from_config_without_id() {
+        <span class="kw">let </span>config = <span class="macro">serde_json::json!</span>({});
+        Debug::from_config(<span class="prelude-val">Some</span>(serde_json::from_value(config).unwrap()));
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">from_config_without_id</span>() {
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="macro">serde_json::json!</span>({});
-        <span class="ident">Debug::from_config</span>(<span class="prelude-val">Some</span>(<span class="ident">serde_json::from_value</span>(<span class="ident">config</span>).<span class="ident">unwrap</span>()));
-    }
-
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">from_config_should_error</span>() {
-        <span class="ident">serde_json::from_value</span>::<span class="op">&lt;</span><span class="ident">Config</span><span class="op">&gt;</span>(<span class="macro">serde_json::json!</span>({ <span class="string">&quot;id&quot;</span>: {} })).<span class="ident">unwrap_err</span>();
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>from_config_should_error() {
+        serde_json::from_value::&lt;Config&gt;(<span class="macro">serde_json::json!</span>({ <span class="string">&quot;id&quot;</span>: {} })).unwrap_err();
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

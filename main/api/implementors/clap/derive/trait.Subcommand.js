@@ -1,3 +1,3 @@
-(function() {var implementors = {};
-implementors["quilkin"] = [{"text":"impl Subcommand for <a class=\"enum\" href=\"quilkin/cli/enum.Providers.html\" title=\"enum quilkin::cli::Providers\">Providers</a>","synthetic":false,"types":["quilkin::cli::manage::Providers"]},{"text":"impl Subcommand for <a class=\"enum\" href=\"quilkin/cli/enum.Commands.html\" title=\"enum quilkin::cli::Commands\">Commands</a>","synthetic":false,"types":["quilkin::cli::Commands"]}];
-if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
+(function() {var implementors = {
+"quilkin":[["impl Subcommand for <a class=\"enum\" href=\"quilkin/cli/enum.Providers.html\" title=\"enum quilkin::cli::Providers\">Providers</a>"],["impl Subcommand for <a class=\"enum\" href=\"quilkin/cli/enum.Commands.html\" title=\"enum quilkin::cli::Commands\">Commands</a>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

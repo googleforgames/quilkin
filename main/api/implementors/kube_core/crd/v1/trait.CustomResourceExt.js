@@ -1,3 +1,3 @@
-(function() {var implementors = {};
-implementors["quilkin"] = [{"text":"impl CustomResourceExt for <a class=\"struct\" href=\"quilkin/config/watch/agones/crd/struct.GameServer.html\" title=\"struct quilkin::config::watch::agones::crd::GameServer\">GameServer</a>","synthetic":false,"types":["quilkin::config::watch::agones::crd::GameServer"]},{"text":"impl CustomResourceExt for <a class=\"struct\" href=\"quilkin/config/watch/agones/crd/struct.Fleet.html\" title=\"struct quilkin::config::watch::agones::crd::Fleet\">Fleet</a>","synthetic":false,"types":["quilkin::config::watch::agones::crd::Fleet"]}];
-if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
+(function() {var implementors = {
+"quilkin":[["impl CustomResourceExt for <a class=\"struct\" href=\"quilkin/config/watch/agones/crd/struct.GameServer.html\" title=\"struct quilkin::config::watch::agones::crd::GameServer\">GameServer</a>"],["impl CustomResourceExt for <a class=\"struct\" href=\"quilkin/config/watch/agones/crd/struct.Fleet.html\" title=\"struct quilkin::config::watch::agones::crd::Fleet\">Fleet</a>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

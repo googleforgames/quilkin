@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/cluster.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>cluster.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../quilkin/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/cluster.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>cluster.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../quilkin/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -404,383 +404,383 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */</span>
+ */
 
-<span class="kw">use</span> <span class="ident">schemars::JsonSchema</span>;
-<span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
-<span class="kw">use</span> <span class="ident">std::collections::HashMap</span>;
+</span><span class="kw">use </span>schemars::JsonSchema;
+<span class="kw">use </span>serde::{Deserialize, Serialize};
+<span class="kw">use </span>std::collections::HashMap;
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">EndpointAddress</span>, <span class="ident">Locality</span>, <span class="ident">LocalityEndpoints</span>};
+<span class="kw">use </span><span class="kw">crate</span>::endpoint::{Endpoint, EndpointAddress, Locality, LocalityEndpoints};
 
-<span class="kw">const</span> <span class="ident">DEFAULT_CLUSTER_NAME</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;default&quot;</span>;
+<span class="kw">const </span>DEFAULT_CLUSTER_NAME: <span class="kw-2">&amp;</span>str = <span class="string">&quot;default&quot;</span>;
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Default</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>, <span class="ident">JsonSchema</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Cluster</span> {
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">skip</span>, <span class="ident">default</span> <span class="op">=</span> <span class="string">&quot;default_cluster_name&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">name</span>: <span class="ident">String</span>,
-    <span class="kw">pub</span> <span class="ident">localities</span>: <span class="ident">LocalitySet</span>,
+<span class="attribute">#[derive(Clone, Default, Debug, Eq, PartialEq, Deserialize, Serialize, JsonSchema)]
+</span><span class="kw">pub struct </span>Cluster {
+    <span class="attribute">#[serde(skip, default = <span class="string">&quot;default_cluster_name&quot;</span>)]
+    </span><span class="kw">pub </span>name: String,
+    <span class="kw">pub </span>localities: LocalitySet,
 }
 
-<span class="kw">impl</span> <span class="ident">Cluster</span> {
-    <span class="doccomment">/// Creates a new `Cluster` called `name` containing `localities`.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">name</span>: <span class="ident">String</span>, <span class="ident">localities</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">LocalitySet</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">name</span>,
-            <span class="ident">localities</span>: <span class="ident">localities</span>.<span class="ident">into</span>(),
+<span class="kw">impl </span>Cluster {
+    <span class="doccomment">/// Creates a new `Cluster` called `name` containing `localities`.
+    </span><span class="kw">pub fn </span>new(name: String, localities: <span class="kw">impl </span>Into&lt;LocalitySet&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            name,
+            localities: localities.into(),
         }
     }
 
-    <span class="doccomment">/// Creates a new `Cluster` called `&quot;default&quot;` containing `endpoints`.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_default</span>(<span class="ident">endpoints</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">LocalitySet</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident"><span class="self">Self</span>::new</span>(<span class="string">&quot;default&quot;</span>.<span class="ident">into</span>(), <span class="ident">endpoints</span>)
+    <span class="doccomment">/// Creates a new `Cluster` called `&quot;default&quot;` containing `endpoints`.
+    </span><span class="kw">pub fn </span>new_default(endpoints: <span class="kw">impl </span>Into&lt;LocalitySet&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::new(<span class="string">&quot;default&quot;</span>.into(), endpoints)
     }
 
-    <span class="doccomment">/// Adds a new set of endpoints to the cluster.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">insert</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">endpoints</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">LocalityEndpoints</span><span class="op">&gt;</span>) {
-        <span class="self">self</span>.<span class="ident">localities</span>.<span class="ident">insert</span>(<span class="ident">endpoints</span>.<span class="ident">into</span>());
+    <span class="doccomment">/// Adds a new set of endpoints to the cluster.
+    </span><span class="kw">pub fn </span>insert(<span class="kw-2">&amp;mut </span><span class="self">self</span>, endpoints: <span class="kw">impl </span>Into&lt;LocalityEndpoints&gt;) {
+        <span class="self">self</span>.localities.insert(endpoints.into());
     }
 
-    <span class="doccomment">/// Provides a flat iterator over the list of endpoints.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">endpoints</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">Endpoint</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;_</span> {
-        <span class="self">self</span>.<span class="ident">localities</span>
-            .<span class="ident">iter</span>()
-            .<span class="ident">flat_map</span>(<span class="op">|</span><span class="ident">locality</span><span class="op">|</span> <span class="ident">locality</span>.<span class="ident">endpoints</span>.<span class="ident">iter</span>())
+    <span class="doccomment">/// Provides a flat iterator over the list of endpoints.
+    </span><span class="kw">pub fn </span>endpoints(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw">impl </span>Iterator&lt;Item = <span class="kw-2">&amp;</span>Endpoint&gt; + <span class="lifetime">&#39;_ </span>{
+        <span class="self">self</span>.localities
+            .iter()
+            .flat_map(|locality| locality.endpoints.iter())
     }
 }
 
-<span class="kw">fn</span> <span class="ident">default_cluster_name</span>() -&gt; <span class="ident">String</span> {
-    <span class="ident">DEFAULT_CLUSTER_NAME</span>.<span class="ident">into</span>()
+<span class="kw">fn </span>default_cluster_name() -&gt; String {
+    DEFAULT_CLUSTER_NAME.into()
 }
 
-<span class="doccomment">/// Represents a full snapshot of all clusters.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Default</span>, <span class="ident">Debug</span>, <span class="ident">Serialize</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">JsonSchema</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ClusterMap</span>(<span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Cluster</span><span class="op">&gt;</span>);
+<span class="doccomment">/// Represents a full snapshot of all clusters.
+</span><span class="attribute">#[derive(Clone, Default, Debug, Serialize, PartialEq, Eq, JsonSchema)]
+</span><span class="kw">pub struct </span>ClusterMap(HashMap&lt;String, Cluster&gt;);
 
-<span class="kw">impl</span> <span class="ident">ClusterMap</span> {
-    <span class="doccomment">/// Creates a new `Cluster` called `name` containing `endpoints`.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_with_default_cluster</span>(<span class="ident">localities</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">LocalityEndpoints</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident"><span class="self">Self</span>::from_iter</span>([<span class="ident">Cluster::new_default</span>(<span class="macro">vec!</span>[<span class="ident">localities</span>.<span class="ident">into</span>()])])
+<span class="kw">impl </span>ClusterMap {
+    <span class="doccomment">/// Creates a new `Cluster` called `name` containing `endpoints`.
+    </span><span class="kw">pub fn </span>new_with_default_cluster(localities: <span class="kw">impl </span>Into&lt;LocalityEndpoints&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::from_iter([Cluster::new_default(<span class="macro">vec!</span>[localities.into()])])
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">insert</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">cluster</span>: <span class="ident">Cluster</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Cluster</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">insert</span>(<span class="ident">cluster</span>.<span class="ident">name</span>.<span class="ident">clone</span>(), <span class="ident">cluster</span>)
+    <span class="kw">pub fn </span>insert(<span class="kw-2">&amp;mut </span><span class="self">self</span>, cluster: Cluster) -&gt; <span class="prelude-ty">Option</span>&lt;Cluster&gt; {
+        <span class="self">self</span>.<span class="number">0</span>.insert(cluster.name.clone(), cluster)
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">key</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Cluster</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">get</span>(<span class="ident">key</span>)
+    <span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Cluster&gt; {
+        <span class="self">self</span>.<span class="number">0</span>.get(key)
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">key</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;mut</span> <span class="ident">Cluster</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">get_mut</span>(<span class="ident">key</span>)
+    <span class="kw">pub fn </span>get_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>Cluster&gt; {
+        <span class="self">self</span>.<span class="number">0</span>.get_mut(key)
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_default</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Cluster</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">get</span>(<span class="ident">DEFAULT_CLUSTER_NAME</span>)
+    <span class="kw">pub fn </span>get_default(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Cluster&gt; {
+        <span class="self">self</span>.get(DEFAULT_CLUSTER_NAME)
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_default_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;mut</span> <span class="ident">Cluster</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">get_mut</span>(<span class="ident">DEFAULT_CLUSTER_NAME</span>)
+    <span class="kw">pub fn </span>get_default_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>Cluster&gt; {
+        <span class="self">self</span>.get_mut(DEFAULT_CLUSTER_NAME)
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">insert_default</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">cluster</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">LocalityEndpoints</span><span class="op">&gt;</span>) {
-        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">insert</span>(
-            <span class="ident">DEFAULT_CLUSTER_NAME</span>.<span class="ident">into</span>(),
-            <span class="ident">Cluster::new_default</span>(<span class="macro">vec!</span>[<span class="ident">cluster</span>.<span class="ident">into</span>()]),
+    <span class="kw">pub fn </span>insert_default(<span class="kw-2">&amp;mut </span><span class="self">self</span>, cluster: <span class="kw">impl </span>Into&lt;LocalityEndpoints&gt;) {
+        <span class="self">self</span>.<span class="number">0</span>.insert(
+            DEFAULT_CLUSTER_NAME.into(),
+            Cluster::new_default(<span class="macro">vec!</span>[cluster.into()]),
         );
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">default_cluster_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut</span> <span class="ident">Cluster</span> {
-        <span class="kw">let</span> <span class="ident">entry</span> <span class="op">=</span> <span class="self">self</span>.<span class="number">0</span>.<span class="ident">entry</span>(<span class="ident">DEFAULT_CLUSTER_NAME</span>.<span class="ident">into</span>()).<span class="ident">or_default</span>();
-        <span class="ident">entry</span>
-            .<span class="ident">name</span>
-            .<span class="ident">is_empty</span>()
-            .<span class="ident">then</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">entry</span>.<span class="ident">name</span> <span class="op">=</span> <span class="ident">DEFAULT_CLUSTER_NAME</span>.<span class="ident">into</span>());
-        <span class="ident">entry</span>
+    <span class="kw">pub fn </span>default_cluster_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>Cluster {
+        <span class="kw">let </span>entry = <span class="self">self</span>.<span class="number">0</span>.entry(DEFAULT_CLUSTER_NAME.into()).or_default();
+        entry
+            .name
+            .is_empty()
+            .then(|| entry.name = DEFAULT_CLUSTER_NAME.into());
+        entry
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">localities</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">LocalityEndpoints</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;_</span> {
-        <span class="self">self</span>.<span class="number">0</span>
-            .<span class="ident">values</span>()
-            .<span class="ident">flat_map</span>(<span class="op">|</span><span class="ident">cluster</span><span class="op">|</span> <span class="ident">cluster</span>.<span class="ident">localities</span>.<span class="ident">iter</span>())
+    <span class="kw">pub fn </span>localities(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw">impl </span>Iterator&lt;Item = <span class="kw-2">&amp;</span>LocalityEndpoints&gt; + <span class="lifetime">&#39;_ </span>{
+        <span class="self">self</span>.<span class="number">0
+            </span>.values()
+            .flat_map(|cluster| cluster.localities.iter())
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">endpoints</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">Endpoint</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;_</span> {
-        <span class="self">self</span>.<span class="ident">localities</span>()
-            .<span class="ident">flat_map</span>(<span class="op">|</span><span class="ident">locality</span><span class="op">|</span> <span class="ident">locality</span>.<span class="ident">endpoints</span>.<span class="ident">clone</span>())
+    <span class="kw">pub fn </span>endpoints(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw">impl </span>Iterator&lt;Item = Endpoint&gt; + <span class="lifetime">&#39;_ </span>{
+        <span class="self">self</span>.localities()
+            .flat_map(|locality| locality.endpoints.clone())
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">contains_only_unique_endpoints</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">bool</span> {
-        <span class="self">self</span>.<span class="ident">endpoints</span>()
-            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">std::collections::BTreeSet</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
-            .<span class="ident">len</span>()
-            <span class="op">==</span> <span class="self">self</span>.<span class="ident">endpoints</span>().<span class="ident">count</span>()
+    <span class="kw">pub fn </span>contains_only_unique_endpoints(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="self">self</span>.endpoints()
+            .collect::&lt;std::collections::BTreeSet&lt;<span class="kw">_</span>&gt;&gt;()
+            .len()
+            == <span class="self">self</span>.endpoints().count()
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span> <span class="ident">Deserialize</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ClusterMap</span> {
-    <span class="kw">fn</span> <span class="ident">deserialize</span><span class="op">&lt;</span><span class="ident">D</span><span class="op">&gt;</span>(<span class="ident">deserializer</span>: <span class="ident">D</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">D::Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">D</span>: <span class="ident">serde::Deserializer</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;de</span>&gt; Deserialize&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>ClusterMap {
+    <span class="kw">fn </span>deserialize&lt;D&gt;(deserializer: D) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, D::Error&gt;
+    <span class="kw">where
+        </span>D: serde::Deserializer&lt;<span class="lifetime">&#39;de</span>&gt;,
     {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">HashMap</span>::<span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Cluster</span><span class="op">&gt;</span><span class="ident">::deserialize</span>(<span class="ident">deserializer</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>map = HashMap::&lt;String, Cluster&gt;::deserialize(deserializer)<span class="question-mark">?</span>;
 
-        <span class="kw">for</span> (<span class="ident">key</span>, <span class="ident">value</span>) <span class="kw">in</span> <span class="ident">map</span>.<span class="ident">iter_mut</span>() {
-            <span class="ident">value</span>.<span class="ident">name</span> <span class="op">=</span> <span class="ident">key</span>.<span class="ident">clone</span>();
+        <span class="kw">for </span>(key, value) <span class="kw">in </span>map.iter_mut() {
+            value.name = key.clone();
         }
 
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span>(<span class="ident">map</span>))
+        <span class="prelude-val">Ok</span>(<span class="self">Self</span>(map))
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Cluster</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ClusterMap</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">value</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Cluster</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span>(<span class="ident">value</span>)
+<span class="kw">impl </span>From&lt;HashMap&lt;String, Cluster&gt;&gt; <span class="kw">for </span>ClusterMap {
+    <span class="kw">fn </span>from(value: HashMap&lt;String, Cluster&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>(value)
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">Cluster</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ClusterMap</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">value</span>: <span class="ident">Cluster</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident"><span class="self">Self</span>::from</span>([<span class="ident">value</span>])
+<span class="kw">impl </span>From&lt;Cluster&gt; <span class="kw">for </span>ClusterMap {
+    <span class="kw">fn </span>from(value: Cluster) -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::from([value])
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span>[<span class="ident">Cluster</span>; <span class="ident">N</span>]<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ClusterMap</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">value</span>: [<span class="ident">Cluster</span>; <span class="ident">N</span>]) -&gt; <span class="self">Self</span> {
-        <span class="ident"><span class="self">Self</span>::from_iter</span>(<span class="ident">value</span>)
+<span class="kw">impl</span>&lt;<span class="kw">const </span>N: usize&gt; From&lt;[Cluster; N]&gt; <span class="kw">for </span>ClusterMap {
+    <span class="kw">fn </span>from(value: [Cluster; N]) -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::from_iter(value)
     }
 }
 
-<span class="kw">impl</span> <span class="ident">FromIterator</span><span class="op">&lt;</span><span class="ident">Cluster</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ClusterMap</span> {
-    <span class="kw">fn</span> <span class="ident">from_iter</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="ident">iter</span>: <span class="ident">T</span>) -&gt; <span class="self">Self</span>
-    <span class="kw">where</span>
-        <span class="ident">T</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">Cluster</span><span class="op">&gt;</span>,
+<span class="kw">impl </span>FromIterator&lt;Cluster&gt; <span class="kw">for </span>ClusterMap {
+    <span class="kw">fn </span>from_iter&lt;T&gt;(iter: T) -&gt; <span class="self">Self
+    </span><span class="kw">where
+        </span>T: IntoIterator&lt;Item = Cluster&gt;,
     {
         <span class="self">Self</span>(
-            <span class="ident">iter</span>.<span class="ident">into_iter</span>()
-                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">cluster</span><span class="op">|</span> (<span class="ident">cluster</span>.<span class="ident">name</span>.<span class="ident">clone</span>(), <span class="ident">cluster</span>))
-                .<span class="ident">collect</span>(),
+            iter.into_iter()
+                .map(|cluster| (cluster.name.clone(), cluster))
+                .collect(),
         )
     }
 }
 
-<span class="kw">impl</span> <span class="ident">std::ops::Deref</span> <span class="kw">for</span> <span class="ident">ClusterMap</span> {
-    <span class="kw">type</span> <span class="ident">Target</span> <span class="op">=</span> <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Cluster</span><span class="op">&gt;</span>;
+<span class="kw">impl </span>std::ops::Deref <span class="kw">for </span>ClusterMap {
+    <span class="kw">type </span>Target = HashMap&lt;String, Cluster&gt;;
 
-    <span class="kw">fn</span> <span class="ident">deref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Target</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>
+    <span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Target {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0
+    </span>}
+}
+
+<span class="kw">impl </span>std::ops::DerefMut <span class="kw">for </span>ClusterMap {
+    <span class="kw">fn </span>deref_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span><span class="self">Self</span>::Target {
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>.<span class="number">0
+    </span>}
+}
+
+<span class="kw">impl</span>&lt;<span class="kw">const </span>N: usize&gt; From&lt;[(String, Cluster); N]&gt; <span class="kw">for </span>ClusterMap {
+    <span class="kw">fn </span>from(value: [(String, Cluster); N]) -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>(value.into())
     }
 }
 
-<span class="kw">impl</span> <span class="ident">std::ops::DerefMut</span> <span class="kw">for</span> <span class="ident">ClusterMap</span> {
-    <span class="kw">fn</span> <span class="ident">deref_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut</span> <span class="ident"><span class="self">Self</span>::Target</span> {
-        <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="number">0</span>
-    }
-}
-
-<span class="kw">impl</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span>[(<span class="ident">String</span>, <span class="ident">Cluster</span>); <span class="ident">N</span>]<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ClusterMap</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">value</span>: [(<span class="ident">String</span>, <span class="ident">Cluster</span>); <span class="ident">N</span>]) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span>(<span class="ident">value</span>.<span class="ident">into</span>())
-    }
-}
-
-<span class="kw">impl</span> <span class="ident">FromIterator</span><span class="op">&lt;</span>(<span class="ident">String</span>, <span class="ident">Cluster</span>)<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ClusterMap</span> {
-    <span class="kw">fn</span> <span class="ident">from_iter</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="ident">iter</span>: <span class="ident">T</span>) -&gt; <span class="self">Self</span>
-    <span class="kw">where</span>
-        <span class="ident">T</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> (<span class="ident">String</span>, <span class="ident">Cluster</span>)<span class="op">&gt;</span>,
+<span class="kw">impl </span>FromIterator&lt;(String, Cluster)&gt; <span class="kw">for </span>ClusterMap {
+    <span class="kw">fn </span>from_iter&lt;T&gt;(iter: T) -&gt; <span class="self">Self
+    </span><span class="kw">where
+        </span>T: IntoIterator&lt;Item = (String, Cluster)&gt;,
     {
-        <span class="self">Self</span>(<span class="ident">iter</span>.<span class="ident">into_iter</span>().<span class="ident">collect</span>())
+        <span class="self">Self</span>(iter.into_iter().collect())
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">Cluster</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident"><span class="kw">crate</span>::xds::config::endpoint::v3::ClusterLoadAssignment</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">cluster</span>: <span class="ident">Cluster</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">cluster_name</span>: <span class="ident">cluster</span>.<span class="ident">name</span>,
-            <span class="ident">endpoints</span>: <span class="ident">cluster</span>.<span class="ident">localities</span>.<span class="ident">into_iter</span>().<span class="ident">map</span>(<span class="ident">From::from</span>).<span class="ident">collect</span>(),
-            ..<span class="ident"><span class="self">Self</span>::default</span>()
+<span class="kw">impl </span>From&lt;Cluster&gt; <span class="kw">for </span><span class="kw">crate</span>::xds::config::endpoint::v3::ClusterLoadAssignment {
+    <span class="kw">fn </span>from(cluster: Cluster) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            cluster_name: cluster.name,
+            endpoints: cluster.localities.into_iter().map(From::from).collect(),
+            ..<span class="self">Self</span>::default()
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;_</span> <span class="ident">Cluster</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident"><span class="kw">crate</span>::xds::config::cluster::v3::Cluster</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">cluster</span>: <span class="kw-2">&amp;</span><span class="ident">Cluster</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">name</span>: <span class="ident">cluster</span>.<span class="ident">name</span>.<span class="ident">clone</span>(),
-            <span class="ident">load_assignment</span>: <span class="prelude-val">Some</span>(<span class="ident">cluster</span>.<span class="ident">into</span>()),
-            ..<span class="ident"><span class="self">Self</span>::default</span>()
+<span class="kw">impl </span>From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span>Cluster&gt; <span class="kw">for </span><span class="kw">crate</span>::xds::config::cluster::v3::Cluster {
+    <span class="kw">fn </span>from(cluster: <span class="kw-2">&amp;</span>Cluster) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            name: cluster.name.clone(),
+            load_assignment: <span class="prelude-val">Some</span>(cluster.into()),
+            ..<span class="self">Self</span>::default()
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;_</span> <span class="ident">Cluster</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident"><span class="kw">crate</span>::xds::config::endpoint::v3::ClusterLoadAssignment</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">cluster</span>: <span class="kw-2">&amp;</span><span class="ident">Cluster</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">cluster_name</span>: <span class="ident">cluster</span>.<span class="ident">name</span>.<span class="ident">clone</span>(),
-            <span class="ident">endpoints</span>: <span class="ident">cluster</span>.<span class="ident">localities</span>.<span class="ident">iter</span>().<span class="ident">cloned</span>().<span class="ident">map</span>(<span class="ident">From::from</span>).<span class="ident">collect</span>(),
-            ..<span class="ident"><span class="self">Self</span>::default</span>()
+<span class="kw">impl </span>From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span>Cluster&gt; <span class="kw">for </span><span class="kw">crate</span>::xds::config::endpoint::v3::ClusterLoadAssignment {
+    <span class="kw">fn </span>from(cluster: <span class="kw-2">&amp;</span>Cluster) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            cluster_name: cluster.name.clone(),
+            endpoints: cluster.localities.iter().cloned().map(From::from).collect(),
+            ..<span class="self">Self</span>::default()
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident"><span class="kw">crate</span>::xds::config::endpoint::v3::ClusterLoadAssignment</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Cluster</span> {
-    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">eyre::Error</span>;
+<span class="kw">impl </span>TryFrom&lt;<span class="kw">crate</span>::xds::config::endpoint::v3::ClusterLoadAssignment&gt; <span class="kw">for </span>Cluster {
+    <span class="kw">type </span>Error = eyre::Error;
 
-    <span class="kw">fn</span> <span class="ident">try_from</span>(
-        <span class="kw-2">mut</span> <span class="ident">cla</span>: <span class="ident"><span class="kw">crate</span>::xds::config::endpoint::v3::ClusterLoadAssignment</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident"><span class="self">Self</span>::Error</span><span class="op">&gt;</span> {
-        <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::xds::config::endpoint::v3::lb_endpoint</span>;
+    <span class="kw">fn </span>try_from(
+        <span class="kw-2">mut </span>cla: <span class="kw">crate</span>::xds::config::endpoint::v3::ClusterLoadAssignment,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
+        <span class="kw">use </span><span class="kw">crate</span>::xds::config::endpoint::v3::lb_endpoint;
 
-        <span class="kw">let</span> <span class="ident">localities</span> <span class="op">=</span> <span class="ident">cla</span>
-            .<span class="ident">endpoints</span>
-            .<span class="ident">into_iter</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">locality</span><span class="op">|</span> {
-                <span class="kw">let</span> <span class="ident">endpoints</span> <span class="op">=</span> <span class="ident">locality</span>
-                    .<span class="ident">lb_endpoints</span>
-                    .<span class="ident">into_iter</span>()
-                    .<span class="ident">map</span>(<span class="op">|</span><span class="ident">endpoint</span><span class="op">|</span> {
-                        <span class="kw">let</span> <span class="ident">metadata</span> <span class="op">=</span> <span class="ident">endpoint</span>.<span class="ident">metadata</span>;
-                        <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">endpoint</span>.<span class="ident">host_identifier</span> {
-                            <span class="prelude-val">Some</span>(<span class="ident">lb_endpoint::HostIdentifier::Endpoint</span>(<span class="ident">endpoint</span>)) =&gt; <span class="prelude-val">Ok</span>(<span class="ident">endpoint</span>),
-                            <span class="prelude-val">Some</span>(<span class="ident">lb_endpoint::HostIdentifier::EndpointName</span>(<span class="ident">name_reference</span>)) =&gt; {
-                                <span class="kw">match</span> <span class="ident">cla</span>.<span class="ident">named_endpoints</span>.<span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="ident">name_reference</span>) {
-                                    <span class="prelude-val">Some</span>(<span class="ident">endpoint</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="ident">endpoint</span>),
-                                    <span class="prelude-val">None</span> =&gt; <span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(
+        <span class="kw">let </span>localities = cla
+            .endpoints
+            .into_iter()
+            .map(|locality| {
+                <span class="kw">let </span>endpoints = locality
+                    .lb_endpoints
+                    .into_iter()
+                    .map(|endpoint| {
+                        <span class="kw">let </span>metadata = endpoint.metadata;
+                        <span class="kw">let </span>endpoint = <span class="kw">match </span>endpoint.host_identifier {
+                            <span class="prelude-val">Some</span>(lb_endpoint::HostIdentifier::Endpoint(endpoint)) =&gt; <span class="prelude-val">Ok</span>(endpoint),
+                            <span class="prelude-val">Some</span>(lb_endpoint::HostIdentifier::EndpointName(name_reference)) =&gt; {
+                                <span class="kw">match </span>cla.named_endpoints.remove(<span class="kw-2">&amp;</span>name_reference) {
+                                    <span class="prelude-val">Some</span>(endpoint) =&gt; <span class="prelude-val">Ok</span>(endpoint),
+                                    <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(
                                         <span class="string">&quot;no endpoint found name reference {}&quot;</span>,
-                                        <span class="ident">name_reference</span>
+                                        name_reference
                                     )),
                                 }
                             }
-                            <span class="prelude-val">None</span> =&gt; <span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">&quot;no host found for endpoint&quot;</span>)),
+                            <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">&quot;no host found for endpoint&quot;</span>)),
                         }<span class="question-mark">?</span>;
 
-                        <span class="comment">// Extract the endpoint&#39;s address.</span>
-                        <span class="kw">let</span> <span class="ident">address</span>: <span class="ident">EndpointAddress</span> <span class="op">=</span> <span class="ident">endpoint</span>
-                            .<span class="ident">address</span>
-                            .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">address</span><span class="op">|</span> <span class="ident">address</span>.<span class="ident">address</span>)
-                            .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">eyre::eyre!</span>(<span class="string">&quot;No address provided.&quot;</span>))<span class="question-mark">?</span>
-                            .<span class="ident">try_into</span>()<span class="question-mark">?</span>;
+                        <span class="comment">// Extract the endpoint&#39;s address.
+                        </span><span class="kw">let </span>address: EndpointAddress = endpoint
+                            .address
+                            .and_then(|address| address.address)
+                            .ok_or_else(|| <span class="macro">eyre::eyre!</span>(<span class="string">&quot;No address provided.&quot;</span>))<span class="question-mark">?
+                            </span>.try_into()<span class="question-mark">?</span>;
 
-                        <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="ident">Endpoint::with_metadata</span>(
-                            <span class="ident">address</span>,
-                            <span class="ident">metadata</span>
-                                .<span class="ident">map</span>(<span class="ident"><span class="kw">crate</span>::metadata::MetadataView::try_from</span>)
-                                .<span class="ident">transpose</span>()<span class="question-mark">?</span>
-                                .<span class="ident">unwrap_or_default</span>(),
+                        <span class="kw">let </span>endpoint = Endpoint::with_metadata(
+                            address,
+                            metadata
+                                .map(<span class="kw">crate</span>::metadata::MetadataView::try_from)
+                                .transpose()<span class="question-mark">?
+                                </span>.unwrap_or_default(),
                         );
-                        <span class="prelude-val">Ok</span>(<span class="ident">endpoint</span>)
+                        <span class="prelude-val">Ok</span>(endpoint)
                     })
-                    .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="kw">_</span>, <span class="ident">eyre::Error</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+                    .collect::&lt;<span class="prelude-ty">Result</span>&lt;<span class="kw">_</span>, eyre::Error&gt;&gt;()<span class="question-mark">?</span>;
 
-                <span class="kw">let</span> <span class="ident">locality</span> <span class="op">=</span> <span class="ident">locality</span>.<span class="ident">locality</span>.<span class="ident">map</span>(<span class="ident">From::from</span>);
+                <span class="kw">let </span>locality = locality.locality.map(From::from);
 
-                <span class="prelude-val">Ok</span>(<span class="ident">LocalityEndpoints::new</span>(<span class="ident">endpoints</span>).<span class="ident">with_locality</span>(<span class="ident">locality</span>))
+                <span class="prelude-val">Ok</span>(LocalityEndpoints::new(endpoints).with_locality(locality))
             })
-            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="kw">_</span>, <span class="ident">eyre::Error</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+            .collect::&lt;<span class="prelude-ty">Result</span>&lt;<span class="kw">_</span>, eyre::Error&gt;&gt;()<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">Cluster</span> {
-            <span class="ident">name</span>: <span class="ident">cla</span>.<span class="ident">cluster_name</span>,
-            <span class="ident">localities</span>,
+        <span class="prelude-val">Ok</span>(Cluster {
+            name: cla.cluster_name,
+            localities,
         })
     }
 }
 
-<span class="doccomment">/// Set around [`LocalityEndpoints`] to ensure that all unique localities are</span>
-<span class="doccomment">/// different entries. Any duplicate localities provided are merged.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Default</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">LocalitySet</span>(<span class="ident">HashMap</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Locality</span><span class="op">&gt;</span>, <span class="ident">LocalityEndpoints</span><span class="op">&gt;</span>);
+<span class="doccomment">/// Set around [`LocalityEndpoints`] to ensure that all unique localities are
+/// different entries. Any duplicate localities provided are merged.
+</span><span class="attribute">#[derive(Clone, Default, Debug, Eq, PartialEq)]
+</span><span class="kw">pub struct </span>LocalitySet(HashMap&lt;<span class="prelude-ty">Option</span>&lt;Locality&gt;, LocalityEndpoints&gt;);
 
-<span class="kw">impl</span> <span class="ident">LocalitySet</span> {
-    <span class="doccomment">/// Creates a new set from the provided localities.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">set</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">LocalityEndpoints</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident"><span class="self">Self</span>::from_iter</span>(<span class="ident">set</span>)
+<span class="kw">impl </span>LocalitySet {
+    <span class="doccomment">/// Creates a new set from the provided localities.
+    </span><span class="kw">pub fn </span>new(set: Vec&lt;LocalityEndpoints&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::from_iter(set)
     }
 
-    <span class="doccomment">/// Inserts a new locality of endpoints.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">insert</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="kw-2">mut</span> <span class="ident">locality</span>: <span class="ident">LocalityEndpoints</span>) {
-        <span class="self">self</span>.<span class="number">0</span>
-            .<span class="ident">entry</span>(<span class="ident">locality</span>.<span class="ident">locality</span>)
-            .<span class="ident">or_default</span>()
-            .<span class="ident">endpoints</span>
-            .<span class="ident">append</span>(<span class="kw-2">&amp;mut</span> <span class="ident">locality</span>.<span class="ident">endpoints</span>);
+    <span class="doccomment">/// Inserts a new locality of endpoints.
+    </span><span class="kw">pub fn </span>insert(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw-2">mut </span>locality: LocalityEndpoints) {
+        <span class="self">self</span>.<span class="number">0
+            </span>.entry(locality.locality)
+            .or_default()
+            .endpoints
+            .append(<span class="kw-2">&amp;mut </span>locality.endpoints);
     }
 
-    <span class="doccomment">/// Removes all localities.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">clear</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) {
-        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">clear</span>();
+    <span class="doccomment">/// Removes all localities.
+    </span><span class="kw">pub fn </span>clear(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+        <span class="self">self</span>.<span class="number">0</span>.clear();
     }
 
-    <span class="doccomment">/// Returns an iterator over the set of localities.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">iter</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">LocalityEndpoints</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;_</span> {
-        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">values</span>()
+    <span class="doccomment">/// Returns an iterator over the set of localities.
+    </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw">impl </span>Iterator&lt;Item = <span class="kw-2">&amp;</span>LocalityEndpoints&gt; + <span class="lifetime">&#39;_ </span>{
+        <span class="self">self</span>.<span class="number">0</span>.values()
     }
 
-    <span class="doccomment">/// Returns a mutable iterator over the set of localities.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">iter_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;mut</span> <span class="ident">LocalityEndpoints</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;_</span> {
-        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">values_mut</span>()
+    <span class="doccomment">/// Returns a mutable iterator over the set of localities.
+    </span><span class="kw">pub fn </span>iter_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw">impl </span>Iterator&lt;Item = <span class="kw-2">&amp;mut </span>LocalityEndpoints&gt; + <span class="lifetime">&#39;_ </span>{
+        <span class="self">self</span>.<span class="number">0</span>.values_mut()
     }
 }
 
-<span class="kw">impl</span> <span class="ident">Serialize</span> <span class="kw">for</span> <span class="ident">LocalitySet</span> {
-    <span class="kw">fn</span> <span class="ident">serialize</span><span class="op">&lt;</span><span class="ident">S</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">serializer</span>: <span class="ident">S</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">S::Ok</span>, <span class="ident">S::Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">S</span>: <span class="ident">serde::Serializer</span>,
+<span class="kw">impl </span>Serialize <span class="kw">for </span>LocalitySet {
+    <span class="kw">fn </span>serialize&lt;S&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, serializer: S) -&gt; <span class="prelude-ty">Result</span>&lt;S::Ok, S::Error&gt;
+    <span class="kw">where
+        </span>S: serde::Serializer,
     {
-        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">values</span>().<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>().<span class="ident">serialize</span>(<span class="ident">serializer</span>)
+        <span class="self">self</span>.<span class="number">0</span>.values().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;().serialize(serializer)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span> <span class="ident">Deserialize</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">LocalitySet</span> {
-    <span class="kw">fn</span> <span class="ident">deserialize</span><span class="op">&lt;</span><span class="ident">D</span><span class="op">&gt;</span>(<span class="ident">deserializer</span>: <span class="ident">D</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">D::Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">D</span>: <span class="ident">serde::Deserializer</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;de</span>&gt; Deserialize&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>LocalitySet {
+    <span class="kw">fn </span>deserialize&lt;D&gt;(deserializer: D) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, D::Error&gt;
+    <span class="kw">where
+        </span>D: serde::Deserializer&lt;<span class="lifetime">&#39;de</span>&gt;,
     {
-        <span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">LocalityEndpoints</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::deserialize</span>(<span class="ident">deserializer</span>).<span class="ident">map</span>(<span class="ident"><span class="self">Self</span>::new</span>)
+        &lt;Vec&lt;LocalityEndpoints&gt;&gt;::deserialize(deserializer).map(<span class="self">Self</span>::new)
     }
 }
 
-<span class="kw">impl</span> <span class="ident">schemars::JsonSchema</span> <span class="kw">for</span> <span class="ident">LocalitySet</span> {
-    <span class="kw">fn</span> <span class="ident">schema_name</span>() -&gt; <span class="ident">String</span> {
-        <span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">LocalityEndpoints</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::schema_name</span>()
+<span class="kw">impl </span>schemars::JsonSchema <span class="kw">for </span>LocalitySet {
+    <span class="kw">fn </span>schema_name() -&gt; String {
+        &lt;Vec&lt;LocalityEndpoints&gt;&gt;::schema_name()
     }
-    <span class="kw">fn</span> <span class="ident">json_schema</span>(<span class="ident">gen</span>: <span class="kw-2">&amp;mut</span> <span class="ident">schemars::gen::SchemaGenerator</span>) -&gt; <span class="ident">schemars::schema::Schema</span> {
-        <span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">LocalityEndpoints</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::json_schema</span>(<span class="ident">gen</span>)
+    <span class="kw">fn </span>json_schema(gen: <span class="kw-2">&amp;mut </span>schemars::gen::SchemaGenerator) -&gt; schemars::schema::Schema {
+        &lt;Vec&lt;LocalityEndpoints&gt;&gt;::json_schema(gen)
     }
 
-    <span class="kw">fn</span> <span class="ident">is_referenceable</span>() -&gt; <span class="ident">bool</span> {
-        <span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">LocalityEndpoints</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::is_referenceable</span>()
+    <span class="kw">fn </span>is_referenceable() -&gt; bool {
+        &lt;Vec&lt;LocalityEndpoints&gt;&gt;::is_referenceable()
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">LocalitySet</span>
-<span class="kw">where</span>
-    <span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">LocalityEndpoints</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;T&gt; From&lt;T&gt; <span class="kw">for </span>LocalitySet
+<span class="kw">where
+    </span>T: Into&lt;Vec&lt;LocalityEndpoints&gt;&gt;,
 {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">value</span>: <span class="ident">T</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident"><span class="self">Self</span>::new</span>(<span class="ident">value</span>.<span class="ident">into</span>())
+    <span class="kw">fn </span>from(value: T) -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::new(value.into())
     }
 }
 
-<span class="kw">impl</span> <span class="ident">FromIterator</span><span class="op">&lt;</span><span class="ident">LocalityEndpoints</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">LocalitySet</span> {
-    <span class="kw">fn</span> <span class="ident">from_iter</span><span class="op">&lt;</span><span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">LocalityEndpoints</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="ident">iter</span>: <span class="ident">I</span>) -&gt; <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">map</span> <span class="op">=</span> <span class="self">Self</span>(<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>());
+<span class="kw">impl </span>FromIterator&lt;LocalityEndpoints&gt; <span class="kw">for </span>LocalitySet {
+    <span class="kw">fn </span>from_iter&lt;I: IntoIterator&lt;Item = LocalityEndpoints&gt;&gt;(iter: I) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span><span class="kw-2">mut </span>map = <span class="self">Self</span>(&lt;<span class="kw">_</span>&gt;::default());
 
-        <span class="kw">for</span> <span class="ident">locality</span> <span class="kw">in</span> <span class="ident">iter</span> {
-            <span class="ident">map</span>.<span class="ident">insert</span>(<span class="ident">locality</span>);
+        <span class="kw">for </span>locality <span class="kw">in </span>iter {
+            map.insert(locality);
         }
 
-        <span class="ident">map</span>
+        map
     }
 }
 
-<span class="kw">impl</span> <span class="ident">IntoIterator</span> <span class="kw">for</span> <span class="ident">LocalitySet</span> {
-    <span class="kw">type</span> <span class="ident">Item</span> <span class="op">=</span> <span class="ident">LocalityEndpoints</span>;
-    <span class="kw">type</span> <span class="ident">IntoIter</span> <span class="op">=</span> <span class="ident">std::vec::IntoIter</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Item</span><span class="op">&gt;</span>;
+<span class="kw">impl </span>IntoIterator <span class="kw">for </span>LocalitySet {
+    <span class="kw">type </span>Item = LocalityEndpoints;
+    <span class="kw">type </span>IntoIter = std::vec::IntoIter&lt;<span class="self">Self</span>::Item&gt;;
 
-    <span class="kw">fn</span> <span class="ident">into_iter</span>(<span class="self">self</span>) -&gt; <span class="ident"><span class="self">Self</span>::IntoIter</span> {
-        <span class="comment">// Have to convert to vec to avoid `Values`&#39;s lifetime parameter.</span>
-        <span class="comment">// Remove once GAT&#39;s are stable.</span>
-        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">into_values</span>().<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>().<span class="ident">into_iter</span>()
+    <span class="kw">fn </span>into_iter(<span class="self">self</span>) -&gt; <span class="self">Self</span>::IntoIter {
+        <span class="comment">// Have to convert to vec to avoid `Values`&#39;s lifetime parameter.
+        // Remove once GAT&#39;s are stable.
+        </span><span class="self">self</span>.<span class="number">0</span>.into_values().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;().into_iter()
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

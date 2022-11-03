@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `agones/src/lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../agones/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../agones/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../agones/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `agones/src/lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../agones/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../agones/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../agones/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -425,404 +425,404 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */</span>
+ */
 
-<span class="kw">use</span> <span class="ident">std</span>::{
-    <span class="ident">collections::BTreeMap</span>,
-    <span class="ident">env</span>,
-    <span class="ident">time</span>::{<span class="ident">SystemTime</span>, <span class="ident">UNIX_EPOCH</span>},
+</span><span class="kw">use </span>std::{
+    collections::BTreeMap,
+    env,
+    time::{SystemTime, UNIX_EPOCH},
 };
 
-<span class="kw">use</span> <span class="ident">k8s_openapi</span>::{
-    <span class="ident">api</span>::{
-        <span class="ident">apps::v1::Deployment</span>,
-        <span class="ident">core::v1</span>::{
-            <span class="ident">ConfigMap</span>, <span class="ident">Container</span>, <span class="ident">EnvVar</span>, <span class="ident">HTTPGetAction</span>, <span class="ident">Namespace</span>, <span class="ident">Pod</span>, <span class="ident">PodSpec</span>, <span class="ident">PodTemplateSpec</span>,
-            <span class="ident">Probe</span>, <span class="ident">ResourceRequirements</span>, <span class="ident">ServiceAccount</span>, <span class="ident">VolumeMount</span>,
+<span class="kw">use </span>k8s_openapi::{
+    api::{
+        apps::v1::Deployment,
+        core::v1::{
+            ConfigMap, Container, EnvVar, HTTPGetAction, Namespace, Pod, PodSpec, PodTemplateSpec,
+            Probe, ResourceRequirements, ServiceAccount, VolumeMount,
         },
-        <span class="ident">rbac::v1</span>::{<span class="ident">RoleBinding</span>, <span class="ident">RoleRef</span>, <span class="ident">Subject</span>},
+        rbac::v1::{RoleBinding, RoleRef, Subject},
     },
-    <span class="ident">apimachinery::pkg</span>::{
-        <span class="ident">api::resource::Quantity</span>, <span class="ident">apis::meta::v1::ObjectMeta</span>, <span class="ident">util::intstr::IntOrString</span>,
+    apimachinery::pkg::{
+        api::resource::Quantity, apis::meta::v1::ObjectMeta, util::intstr::IntOrString,
     },
-    <span class="ident">chrono</span>,
+    chrono,
 };
-<span class="kw">use</span> <span class="ident">kube</span>::{
-    <span class="ident">api</span>::{<span class="ident">DeleteParams</span>, <span class="ident">ListParams</span>, <span class="ident">PostParams</span>},
-    <span class="ident">runtime::wait::Condition</span>,
-    <span class="ident">Api</span>, <span class="ident">Resource</span>, <span class="ident">ResourceExt</span>,
+<span class="kw">use </span>kube::{
+    api::{DeleteParams, ListParams, PostParams},
+    runtime::wait::Condition,
+    Api, Resource, ResourceExt,
 };
-<span class="kw">use</span> <span class="ident">tokio::sync::OnceCell</span>;
+<span class="kw">use </span>tokio::sync::OnceCell;
 
-<span class="kw">use</span> <span class="ident">quilkin::config::watch::agones::crd</span>::{
-    <span class="ident">Fleet</span>, <span class="ident">FleetSpec</span>, <span class="ident">GameServer</span>, <span class="ident">GameServerPort</span>, <span class="ident">GameServerSpec</span>, <span class="ident">GameServerState</span>,
-    <span class="ident">GameServerTemplateSpec</span>,
+<span class="kw">use </span>quilkin::config::watch::agones::crd::{
+    Fleet, FleetSpec, GameServer, GameServerPort, GameServerSpec, GameServerState,
+    GameServerTemplateSpec,
 };
 
-<span class="kw">mod</span> <span class="ident">pod</span>;
-<span class="kw">mod</span> <span class="ident">sidecar</span>;
-<span class="kw">mod</span> <span class="ident">xds</span>;
+<span class="kw">mod </span>pod;
+<span class="kw">mod </span>sidecar;
+<span class="kw">mod </span>xds;
 
-<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
-<span class="kw">static</span> <span class="ident">CLIENT</span>: <span class="ident">OnceCell</span><span class="op">&lt;</span><span class="ident">Client</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">OnceCell::const_new</span>();
-<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
-<span class="kw">const</span> <span class="ident">IMAGE_TAG</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;IMAGE_TAG&quot;</span>;
-<span class="kw">const</span> <span class="ident">DELETE_DELAY_SECONDS</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;DELETE_DELAY_SECONDS&quot;</span>;
-<span class="doccomment">/// A simple udp server that returns packets that are sent to it.</span>
-<span class="doccomment">/// See: &lt;https://github.com/googleforgames/agones/tree/main/examples/simple-game-server&gt;</span>
-<span class="doccomment">/// for more details.</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">GAMESERVER_IMAGE</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;gcr.io/agones-images/simple-game-server:0.13&quot;</span>;
+<span class="attribute">#[allow(dead_code)]
+</span><span class="kw">static </span>CLIENT: OnceCell&lt;Client&gt; = OnceCell::const_new();
+<span class="attribute">#[allow(dead_code)]
+</span><span class="kw">const </span>IMAGE_TAG: <span class="kw-2">&amp;</span>str = <span class="string">&quot;IMAGE_TAG&quot;</span>;
+<span class="kw">const </span>DELETE_DELAY_SECONDS: <span class="kw-2">&amp;</span>str = <span class="string">&quot;DELETE_DELAY_SECONDS&quot;</span>;
+<span class="doccomment">/// A simple udp server that returns packets that are sent to it.
+/// See: &lt;https://github.com/googleforgames/agones/tree/main/examples/simple-game-server&gt;
+/// for more details.
+</span><span class="kw">pub const </span>GAMESERVER_IMAGE: <span class="kw-2">&amp;</span>str = <span class="string">&quot;gcr.io/agones-images/simple-game-server:0.13&quot;</span>;
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Client</span> {
-    <span class="doccomment">/// The Kubernetes client</span>
-    <span class="kw">pub</span> <span class="ident">kubernetes</span>: <span class="ident">kube::Client</span>,
-    <span class="doccomment">/// The namespace the tests will happen in</span>
-    <span class="kw">pub</span> <span class="ident">namespace</span>: <span class="ident">String</span>,
-    <span class="doccomment">/// The name and tag of the Quilkin image being tested</span>
-    <span class="kw">pub</span> <span class="ident">quilkin_image</span>: <span class="ident">String</span>,
+<span class="attribute">#[derive(Clone)]
+</span><span class="kw">pub struct </span>Client {
+    <span class="doccomment">/// The Kubernetes client
+    </span><span class="kw">pub </span>kubernetes: kube::Client,
+    <span class="doccomment">/// The namespace the tests will happen in
+    </span><span class="kw">pub </span>namespace: String,
+    <span class="doccomment">/// The name and tag of the Quilkin image being tested
+    </span><span class="kw">pub </span>quilkin_image: String,
 }
 
-<span class="kw">impl</span> <span class="ident">Client</span> {
-    <span class="doccomment">/// Thread safe way to create a Clients across multiple tests.</span>
-    <span class="doccomment">/// Executes the setup required:</span>
-    <span class="doccomment">/// * Creates a test namespace for this test</span>
-    <span class="doccomment">/// * Removes previous test namespaces</span>
-    <span class="doccomment">/// * Retrieves the IMAGE_TAG to test from env vars, and panics if it if not available.</span>
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">new</span>() -&gt; <span class="ident">Client</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">CLIENT</span>
-            .<span class="ident">get_or_init</span>(<span class="op">|</span><span class="op">|</span> <span class="kw">async</span> {
-                <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">kube::Client::try_default</span>()
-                    .<span class="kw">await</span>
-                    .<span class="ident">expect</span>(<span class="string">&quot;Kubernetes client to be created&quot;</span>);
+<span class="kw">impl </span>Client {
+    <span class="doccomment">/// Thread safe way to create a Clients across multiple tests.
+    /// Executes the setup required:
+    /// * Creates a test namespace for this test
+    /// * Removes previous test namespaces
+    /// * Retrieves the IMAGE_TAG to test from env vars, and panics if it if not available.
+    </span><span class="kw">pub async fn </span>new() -&gt; Client {
+        <span class="kw">let </span><span class="kw-2">mut </span>client = CLIENT
+            .get_or_init(|| <span class="kw">async </span>{
+                <span class="kw">let </span>client = kube::Client::try_default()
+                    .<span class="kw">await
+                    </span>.expect(<span class="string">&quot;Kubernetes client to be created&quot;</span>);
 
-                <span class="ident">Client</span> {
-                    <span class="ident">kubernetes</span>: <span class="ident">client</span>.<span class="ident">clone</span>(),
-                    <span class="ident">namespace</span>: <span class="ident">setup_namespace</span>(<span class="ident">client</span>).<span class="kw">await</span>,
-                    <span class="ident">quilkin_image</span>: <span class="ident">env::var</span>(<span class="ident">IMAGE_TAG</span>).<span class="ident">unwrap</span>(),
+                Client {
+                    kubernetes: client.clone(),
+                    namespace: setup_namespace(client).<span class="kw">await</span>,
+                    quilkin_image: env::var(IMAGE_TAG).unwrap(),
                 }
             })
-            .<span class="kw">await</span>
-            .<span class="ident">clone</span>();
+            .<span class="kw">await
+            </span>.clone();
 
-        <span class="comment">// create a new client on each invocation, as the client can close</span>
-        <span class="comment">// at the end of each test.</span>
-        <span class="ident">client</span>.<span class="ident">kubernetes</span> <span class="op">=</span> <span class="ident">kube::Client::try_default</span>()
-            .<span class="kw">await</span>
-            .<span class="ident">expect</span>(<span class="string">&quot;Kubernetes client to be created&quot;</span>);
-        <span class="ident">client</span>
+        <span class="comment">// create a new client on each invocation, as the client can close
+        // at the end of each test.
+        </span>client.kubernetes = kube::Client::try_default()
+            .<span class="kw">await
+            </span>.expect(<span class="string">&quot;Kubernetes client to be created&quot;</span>);
+        client
     }
 
-    <span class="doccomment">/// Returns a typed API client for this client in this test namespace.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">namespaced_api</span><span class="op">&lt;</span><span class="ident">K</span>: <span class="ident">Resource</span><span class="op">&lt;</span><span class="ident">Scope</span> <span class="op">=</span> <span class="ident">kube::core::NamespaceResourceScope</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Api</span><span class="op">&lt;</span><span class="ident">K</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="op">&lt;</span><span class="ident">K</span> <span class="kw">as</span> <span class="ident">Resource</span><span class="op">&gt;</span><span class="ident">::DynamicType</span>: <span class="ident">Default</span>,
+    <span class="doccomment">/// Returns a typed API client for this client in this test namespace.
+    </span><span class="kw">pub fn </span>namespaced_api&lt;K: Resource&lt;Scope = kube::core::NamespaceResourceScope&gt;&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Api&lt;K&gt;
+    <span class="kw">where
+        </span>&lt;K <span class="kw">as </span>Resource&gt;::DynamicType: Default,
     {
-        <span class="ident">Api::namespaced</span>(<span class="self">self</span>.<span class="ident">kubernetes</span>.<span class="ident">clone</span>(), <span class="self">self</span>.<span class="ident">namespace</span>.<span class="ident">as_str</span>())
+        Api::namespaced(<span class="self">self</span>.kubernetes.clone(), <span class="self">self</span>.namespace.as_str())
     }
 }
 
-<span class="doccomment">/// Deletes old quilkin test namespaces, and then create</span>
-<span class="doccomment">/// a new namespace based on EPOCH time, and return its string value.</span>
-<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
-<span class="kw">async</span> <span class="kw">fn</span> <span class="ident">setup_namespace</span>(<span class="ident">client</span>: <span class="ident">kube::Client</span>) -&gt; <span class="ident">String</span> {
-    <span class="kw">let</span> <span class="ident">namespaces</span>: <span class="ident">Api</span><span class="op">&lt;</span><span class="ident">Namespace</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Api::all</span>(<span class="ident">client</span>.<span class="ident">clone</span>());
+<span class="doccomment">/// Deletes old quilkin test namespaces, and then create
+/// a new namespace based on EPOCH time, and return its string value.
+</span><span class="attribute">#[allow(dead_code)]
+</span><span class="kw">async fn </span>setup_namespace(client: kube::Client) -&gt; String {
+    <span class="kw">let </span>namespaces: Api&lt;Namespace&gt; = Api::all(client.clone());
 
-    <span class="kw">let</span> <span class="ident">lp</span> <span class="op">=</span> <span class="ident">ListParams::default</span>().<span class="ident">labels</span>(<span class="string">&quot;owner=quilkin-test&quot;</span>);
-    <span class="kw">let</span> <span class="ident">nss</span> <span class="op">=</span> <span class="ident">namespaces</span>.<span class="ident">list</span>(<span class="kw-2">&amp;</span><span class="ident">lp</span>).<span class="kw">await</span>.<span class="ident">unwrap</span>();
-    <span class="kw">let</span> <span class="ident">dp</span> <span class="op">=</span> <span class="ident">DeleteParams::default</span>();
+    <span class="kw">let </span>lp = ListParams::default().labels(<span class="string">&quot;owner=quilkin-test&quot;</span>);
+    <span class="kw">let </span>nss = namespaces.list(<span class="kw-2">&amp;</span>lp).<span class="kw">await</span>.unwrap();
+    <span class="kw">let </span>dp = DeleteParams::default();
 
-    <span class="kw">let</span> <span class="ident">delay</span> <span class="op">=</span> <span class="ident">env::var</span>(<span class="ident">DELETE_DELAY_SECONDS</span>)
-        .<span class="ident">ok</span>()
-        .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span>.<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">i64</span><span class="op">&gt;</span>().<span class="ident">ok</span>())
-        .<span class="ident">map</span>(<span class="ident">chrono::Duration::seconds</span>);
+    <span class="kw">let </span>delay = env::var(DELETE_DELAY_SECONDS)
+        .ok()
+        .and_then(|s| s.parse::&lt;i64&gt;().ok())
+        .map(chrono::Duration::seconds);
 
-    <span class="kw">for</span> <span class="ident">ns</span> <span class="kw">in</span> <span class="ident">nss</span> {
-        <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">ns</span>.<span class="ident">name_unchecked</span>();
+    <span class="kw">for </span>ns <span class="kw">in </span>nss {
+        <span class="kw">let </span>name = ns.name_unchecked();
 
-        <span class="kw">let</span> <span class="ident">delete</span> <span class="op">=</span> <span class="ident">delay</span>
-            .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">duration</span><span class="op">|</span> {
-                <span class="kw">let</span> <span class="ident">expiry</span> <span class="op">=</span> <span class="ident">ns</span>.<span class="ident">creation_timestamp</span>()<span class="question-mark">?</span>.<span class="number">0</span> <span class="op">+</span> <span class="ident">duration</span>;
-                <span class="prelude-val">Some</span>(<span class="ident">chrono::Utc::now</span>() <span class="op">&gt;</span> <span class="ident">expiry</span>)
+        <span class="kw">let </span>delete = delay
+            .and_then(|duration| {
+                <span class="kw">let </span>expiry = ns.creation_timestamp()<span class="question-mark">?</span>.<span class="number">0 </span>+ duration;
+                <span class="prelude-val">Some</span>(chrono::Utc::now() &gt; expiry)
             })
-            .<span class="ident">unwrap_or</span>(<span class="bool-val">true</span>);
-        <span class="kw">if</span> <span class="ident">delete</span> {
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="ident">namespaces</span>.<span class="ident">delete</span>(<span class="ident">name</span>.<span class="ident">as_str</span>(), <span class="kw-2">&amp;</span><span class="ident">dp</span>).<span class="kw">await</span> {
-                <span class="macro">println!</span>(<span class="string">&quot;Failure attempting to deleted namespace: {:?}, {err}&quot;</span>, <span class="ident">name</span>);
+            .unwrap_or(<span class="bool-val">true</span>);
+        <span class="kw">if </span>delete {
+            <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = namespaces.delete(name.as_str(), <span class="kw-2">&amp;</span>dp).<span class="kw">await </span>{
+                <span class="macro">println!</span>(<span class="string">&quot;Failure attempting to deleted namespace: {:?}, {err}&quot;</span>, name);
             }
         }
     }
 
-    <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">SystemTime::now</span>()
-        .<span class="ident">duration_since</span>(<span class="ident">UNIX_EPOCH</span>)
-        .<span class="ident">unwrap</span>()
-        .<span class="ident">as_secs</span>()
-        .<span class="ident">to_string</span>();
+    <span class="kw">let </span>name = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs()
+        .to_string();
 
-    <span class="kw">let</span> <span class="ident">metadata</span> <span class="op">=</span> <span class="ident">ObjectMeta</span> {
-        <span class="ident">name</span>: <span class="prelude-val">Some</span>(<span class="ident">name</span>),
-        <span class="ident">labels</span>: <span class="prelude-val">Some</span>(<span class="ident">BTreeMap::from</span>([(<span class="string">&quot;owner&quot;</span>.<span class="ident">into</span>(), <span class="string">&quot;quilkin-test&quot;</span>.<span class="ident">into</span>())])),
-        ..<span class="ident">Default::default</span>()
+    <span class="kw">let </span>metadata = ObjectMeta {
+        name: <span class="prelude-val">Some</span>(name),
+        labels: <span class="prelude-val">Some</span>(BTreeMap::from([(<span class="string">&quot;owner&quot;</span>.into(), <span class="string">&quot;quilkin-test&quot;</span>.into())])),
+        ..Default::default()
     };
-    <span class="kw">let</span> <span class="ident">test_namespace</span> <span class="op">=</span> <span class="ident">Namespace</span> {
-        <span class="ident">metadata</span>,
-        <span class="ident">spec</span>: <span class="prelude-val">None</span>,
-        <span class="ident">status</span>: <span class="prelude-val">None</span>,
+    <span class="kw">let </span>test_namespace = Namespace {
+        metadata,
+        spec: <span class="prelude-val">None</span>,
+        status: <span class="prelude-val">None</span>,
     };
 
-    <span class="kw">let</span> <span class="ident">pp</span> <span class="op">=</span> <span class="ident">PostParams::default</span>();
-    <span class="ident">namespaces</span>
-        .<span class="ident">create</span>(<span class="kw-2">&amp;</span><span class="ident">pp</span>, <span class="kw-2">&amp;</span><span class="ident">test_namespace</span>)
-        .<span class="kw">await</span>
-        .<span class="ident">expect</span>(<span class="string">&quot;namespace to be created&quot;</span>);
+    <span class="kw">let </span>pp = PostParams::default();
+    namespaces
+        .create(<span class="kw-2">&amp;</span>pp, <span class="kw-2">&amp;</span>test_namespace)
+        .<span class="kw">await
+        </span>.expect(<span class="string">&quot;namespace to be created&quot;</span>);
 
-    <span class="ident">add_agones_service_account</span>(<span class="ident">client</span>, <span class="ident">test_namespace</span>.<span class="ident">name_unchecked</span>()).<span class="kw">await</span>;
+    add_agones_service_account(client, test_namespace.name_unchecked()).<span class="kw">await</span>;
 
-    <span class="ident">test_namespace</span>.<span class="ident">name_unchecked</span>()
+    test_namespace.name_unchecked()
 }
 
-<span class="kw">async</span> <span class="kw">fn</span> <span class="ident">add_agones_service_account</span>(<span class="ident">client</span>: <span class="ident">kube::Client</span>, <span class="ident">namespace</span>: <span class="ident">String</span>) {
-    <span class="kw">let</span> <span class="ident">service_accounts</span>: <span class="ident">Api</span><span class="op">&lt;</span><span class="ident">ServiceAccount</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Api::namespaced</span>(<span class="ident">client</span>.<span class="ident">clone</span>(), <span class="ident">namespace</span>.<span class="ident">as_str</span>());
-    <span class="kw">let</span> <span class="ident">role_bindings</span>: <span class="ident">Api</span><span class="op">&lt;</span><span class="ident">RoleBinding</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Api::namespaced</span>(<span class="ident">client</span>, <span class="ident">namespace</span>.<span class="ident">as_str</span>());
-    <span class="kw">let</span> <span class="ident">pp</span> <span class="op">=</span> <span class="ident">PostParams::default</span>();
-    <span class="kw">let</span> <span class="ident">labels</span> <span class="op">=</span> <span class="ident">BTreeMap::from</span>([(<span class="string">&quot;app&quot;</span>.<span class="ident">to_string</span>(), <span class="string">&quot;agones&quot;</span>.<span class="ident">to_string</span>())]);
+<span class="kw">async fn </span>add_agones_service_account(client: kube::Client, namespace: String) {
+    <span class="kw">let </span>service_accounts: Api&lt;ServiceAccount&gt; = Api::namespaced(client.clone(), namespace.as_str());
+    <span class="kw">let </span>role_bindings: Api&lt;RoleBinding&gt; = Api::namespaced(client, namespace.as_str());
+    <span class="kw">let </span>pp = PostParams::default();
+    <span class="kw">let </span>labels = BTreeMap::from([(<span class="string">&quot;app&quot;</span>.to_string(), <span class="string">&quot;agones&quot;</span>.to_string())]);
 
-    <span class="kw">let</span> <span class="ident">service_account</span> <span class="op">=</span> <span class="ident">ServiceAccount</span> {
-        <span class="ident">metadata</span>: <span class="ident">ObjectMeta</span> {
-            <span class="ident">name</span>: <span class="prelude-val">Some</span>(<span class="string">&quot;agones-sdk&quot;</span>.<span class="ident">into</span>()),
-            <span class="ident">namespace</span>: <span class="prelude-val">Some</span>(<span class="ident">namespace</span>.<span class="ident">clone</span>()),
-            <span class="ident">labels</span>: <span class="prelude-val">Some</span>(<span class="ident">labels</span>.<span class="ident">clone</span>()),
-            ..<span class="ident">Default::default</span>()
+    <span class="kw">let </span>service_account = ServiceAccount {
+        metadata: ObjectMeta {
+            name: <span class="prelude-val">Some</span>(<span class="string">&quot;agones-sdk&quot;</span>.into()),
+            namespace: <span class="prelude-val">Some</span>(namespace.clone()),
+            labels: <span class="prelude-val">Some</span>(labels.clone()),
+            ..Default::default()
         },
-        ..<span class="ident">Default::default</span>()
+        ..Default::default()
     };
 
-    <span class="kw">let</span> <span class="ident">service_account</span> <span class="op">=</span> <span class="ident">service_accounts</span>
-        .<span class="ident">create</span>(<span class="kw-2">&amp;</span><span class="ident">pp</span>, <span class="kw-2">&amp;</span><span class="ident">service_account</span>)
-        .<span class="kw">await</span>
-        .<span class="ident">unwrap</span>();
+    <span class="kw">let </span>service_account = service_accounts
+        .create(<span class="kw-2">&amp;</span>pp, <span class="kw-2">&amp;</span>service_account)
+        .<span class="kw">await
+        </span>.unwrap();
 
-    <span class="kw">let</span> <span class="ident">role_binding</span> <span class="op">=</span> <span class="ident">RoleBinding</span> {
-        <span class="ident">metadata</span>: <span class="ident">ObjectMeta</span> {
-            <span class="ident">name</span>: <span class="prelude-val">Some</span>(<span class="string">&quot;agones-sdk-access&quot;</span>.<span class="ident">into</span>()),
-            <span class="ident">namespace</span>: <span class="prelude-val">Some</span>(<span class="ident">namespace</span>.<span class="ident">clone</span>()),
-            <span class="ident">labels</span>: <span class="prelude-val">Some</span>(<span class="ident">labels</span>),
-            ..<span class="ident">Default::default</span>()
+    <span class="kw">let </span>role_binding = RoleBinding {
+        metadata: ObjectMeta {
+            name: <span class="prelude-val">Some</span>(<span class="string">&quot;agones-sdk-access&quot;</span>.into()),
+            namespace: <span class="prelude-val">Some</span>(namespace.clone()),
+            labels: <span class="prelude-val">Some</span>(labels),
+            ..Default::default()
         },
-        <span class="ident">role_ref</span>: <span class="ident">RoleRef</span> {
-            <span class="ident">api_group</span>: <span class="string">&quot;rbac.authorization.k8s.io&quot;</span>.<span class="ident">into</span>(),
-            <span class="ident">kind</span>: <span class="string">&quot;ClusterRole&quot;</span>.<span class="ident">into</span>(),
-            <span class="ident">name</span>: <span class="string">&quot;agones-sdk&quot;</span>.<span class="ident">into</span>(),
+        role_ref: RoleRef {
+            api_group: <span class="string">&quot;rbac.authorization.k8s.io&quot;</span>.into(),
+            kind: <span class="string">&quot;ClusterRole&quot;</span>.into(),
+            name: <span class="string">&quot;agones-sdk&quot;</span>.into(),
         },
-        <span class="ident">subjects</span>: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="ident">Subject</span> {
-            <span class="ident">kind</span>: <span class="string">&quot;ServiceAccount&quot;</span>.<span class="ident">into</span>(),
-            <span class="ident">name</span>: <span class="ident">service_account</span>.<span class="ident">name_unchecked</span>(),
-            <span class="ident">namespace</span>: <span class="prelude-val">Some</span>(<span class="ident">namespace</span>),
-            <span class="ident">api_group</span>: <span class="prelude-val">None</span>,
+        subjects: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[Subject {
+            kind: <span class="string">&quot;ServiceAccount&quot;</span>.into(),
+            name: service_account.name_unchecked(),
+            namespace: <span class="prelude-val">Some</span>(namespace),
+            api_group: <span class="prelude-val">None</span>,
         }]),
     };
 
-    <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">role_bindings</span>.<span class="ident">create</span>(<span class="kw-2">&amp;</span><span class="ident">pp</span>, <span class="kw-2">&amp;</span><span class="ident">role_binding</span>).<span class="kw">await</span>.<span class="ident">unwrap</span>();
+    <span class="kw">let _ </span>= role_bindings.create(<span class="kw-2">&amp;</span>pp, <span class="kw-2">&amp;</span>role_binding).<span class="kw">await</span>.unwrap();
 }
 
-<span class="doccomment">/// Returns a test GameServer with the UDP test binary that is used for</span>
-<span class="doccomment">/// Agones e2e tests.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">game_server</span>() -&gt; <span class="ident">GameServer</span> {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">resources</span> <span class="op">=</span> <span class="ident">BTreeMap::new</span>();
+<span class="doccomment">/// Returns a test GameServer with the UDP test binary that is used for
+/// Agones e2e tests.
+</span><span class="kw">pub fn </span>game_server() -&gt; GameServer {
+    <span class="kw">let </span><span class="kw-2">mut </span>resources = BTreeMap::new();
 
-    <span class="ident">resources</span>.<span class="ident">insert</span>(<span class="string">&quot;cpu&quot;</span>.<span class="ident">into</span>(), <span class="ident">Quantity</span>(<span class="string">&quot;30m&quot;</span>.<span class="ident">into</span>()));
-    <span class="ident">resources</span>.<span class="ident">insert</span>(<span class="string">&quot;memory&quot;</span>.<span class="ident">into</span>(), <span class="ident">Quantity</span>(<span class="string">&quot;32Mi&quot;</span>.<span class="ident">into</span>()));
+    resources.insert(<span class="string">&quot;cpu&quot;</span>.into(), Quantity(<span class="string">&quot;30m&quot;</span>.into()));
+    resources.insert(<span class="string">&quot;memory&quot;</span>.into(), Quantity(<span class="string">&quot;32Mi&quot;</span>.into()));
 
-    <span class="ident">GameServer</span> {
-        <span class="ident">metadata</span>: <span class="ident">ObjectMeta</span> {
-            <span class="ident">generate_name</span>: <span class="prelude-val">Some</span>(<span class="string">&quot;gameserver-&quot;</span>.<span class="ident">into</span>()),
-            ..<span class="ident">Default::default</span>()
+    GameServer {
+        metadata: ObjectMeta {
+            generate_name: <span class="prelude-val">Some</span>(<span class="string">&quot;gameserver-&quot;</span>.into()),
+            ..Default::default()
         },
-        <span class="ident">spec</span>: <span class="ident">GameServerSpec</span> {
-            <span class="ident">ports</span>: <span class="macro">vec!</span>[<span class="ident">GameServerPort</span> {
-                <span class="ident">container_port</span>: <span class="number">7654</span>,
-                <span class="ident">host_port</span>: <span class="prelude-val">None</span>,
-                <span class="ident">name</span>: <span class="string">&quot;udp-port&quot;</span>.<span class="ident">into</span>(),
-                <span class="ident">port_policy</span>: <span class="ident">Default::default</span>(),
-                <span class="ident">container</span>: <span class="prelude-val">None</span>,
-                <span class="ident">protocol</span>: <span class="ident">Default::default</span>(),
+        spec: GameServerSpec {
+            ports: <span class="macro">vec!</span>[GameServerPort {
+                container_port: <span class="number">7654</span>,
+                host_port: <span class="prelude-val">None</span>,
+                name: <span class="string">&quot;udp-port&quot;</span>.into(),
+                port_policy: Default::default(),
+                container: <span class="prelude-val">None</span>,
+                protocol: Default::default(),
             }],
-            <span class="ident">template</span>: <span class="ident">PodTemplateSpec</span> {
-                <span class="ident">spec</span>: <span class="prelude-val">Some</span>(<span class="ident">PodSpec</span> {
-                    <span class="ident">containers</span>: <span class="macro">vec!</span>[<span class="ident">Container</span> {
-                        <span class="ident">name</span>: <span class="string">&quot;game-server&quot;</span>.<span class="ident">into</span>(),
-                        <span class="ident">image</span>: <span class="prelude-val">Some</span>(<span class="ident">GAMESERVER_IMAGE</span>.<span class="ident">into</span>()),
-                        <span class="ident">resources</span>: <span class="prelude-val">Some</span>(<span class="ident">ResourceRequirements</span> {
-                            <span class="ident">limits</span>: <span class="prelude-val">Some</span>(<span class="ident">resources</span>.<span class="ident">clone</span>()),
-                            <span class="ident">requests</span>: <span class="prelude-val">Some</span>(<span class="ident">resources</span>),
+            template: PodTemplateSpec {
+                spec: <span class="prelude-val">Some</span>(PodSpec {
+                    containers: <span class="macro">vec!</span>[Container {
+                        name: <span class="string">&quot;game-server&quot;</span>.into(),
+                        image: <span class="prelude-val">Some</span>(GAMESERVER_IMAGE.into()),
+                        resources: <span class="prelude-val">Some</span>(ResourceRequirements {
+                            limits: <span class="prelude-val">Some</span>(resources.clone()),
+                            requests: <span class="prelude-val">Some</span>(resources),
                         }),
-                        ..<span class="ident">Default::default</span>()
+                        ..Default::default()
                     }],
-                    ..<span class="ident">Default::default</span>()
+                    ..Default::default()
                 }),
-                ..<span class="ident">Default::default</span>()
+                ..Default::default()
             },
-            ..<span class="ident">Default::default</span>()
+            ..Default::default()
         },
-        <span class="ident">status</span>: <span class="prelude-val">None</span>,
+        status: <span class="prelude-val">None</span>,
     }
 }
 
-<span class="doccomment">/// Returns a Fleet of 3 replicas of the UDP testing GameServer</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">fleet</span>() -&gt; <span class="ident">Fleet</span> {
-    <span class="kw">let</span> <span class="ident">gs</span> <span class="op">=</span> <span class="ident">game_server</span>();
-    <span class="ident">Fleet</span> {
-        <span class="ident">metadata</span>: <span class="ident">ObjectMeta</span> {
-            <span class="ident">generate_name</span>: <span class="prelude-val">Some</span>(<span class="string">&quot;fleet-&quot;</span>.<span class="ident">into</span>()),
-            ..<span class="ident">Default::default</span>()
+<span class="doccomment">/// Returns a Fleet of 3 replicas of the UDP testing GameServer
+</span><span class="kw">pub fn </span>fleet() -&gt; Fleet {
+    <span class="kw">let </span>gs = game_server();
+    Fleet {
+        metadata: ObjectMeta {
+            generate_name: <span class="prelude-val">Some</span>(<span class="string">&quot;fleet-&quot;</span>.into()),
+            ..Default::default()
         },
-        <span class="ident">spec</span>: <span class="ident">FleetSpec</span> {
-            <span class="ident">replicas</span>: <span class="prelude-val">Some</span>(<span class="number">3</span>),
-            <span class="ident">template</span>: <span class="ident">GameServerTemplateSpec</span> {
-                <span class="ident">metadata</span>: <span class="prelude-val">None</span>,
-                <span class="ident">spec</span>: <span class="ident">gs</span>.<span class="ident">spec</span>,
+        spec: FleetSpec {
+            replicas: <span class="prelude-val">Some</span>(<span class="number">3</span>),
+            template: GameServerTemplateSpec {
+                metadata: <span class="prelude-val">None</span>,
+                spec: gs.spec,
             },
-            ..<span class="ident">Default::default</span>()
+            ..Default::default()
         },
-        <span class="ident">status</span>: <span class="prelude-val">None</span>,
+        status: <span class="prelude-val">None</span>,
     }
 }
 
-<span class="doccomment">/// Condition to wait for a GameServer to become Ready.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_gameserver_ready</span>() -&gt; <span class="kw">impl</span> <span class="ident">Condition</span><span class="op">&lt;</span><span class="ident">GameServer</span><span class="op">&gt;</span> {
-    <span class="op">|</span><span class="ident">obj</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">GameServer</span><span class="op">&gt;</span><span class="op">|</span> {
-        <span class="ident">obj</span>.<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">gs</span><span class="op">|</span> <span class="ident">gs</span>.<span class="ident">status</span>.<span class="ident">clone</span>())
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">status</span><span class="op">|</span> <span class="macro">matches!</span>(<span class="ident">status</span>.<span class="ident">state</span>, <span class="ident">GameServerState::Ready</span>))
-            .<span class="ident">unwrap_or</span>(<span class="bool-val">false</span>)
+<span class="doccomment">/// Condition to wait for a GameServer to become Ready.
+</span><span class="kw">pub fn </span>is_gameserver_ready() -&gt; <span class="kw">impl </span>Condition&lt;GameServer&gt; {
+    |obj: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>GameServer&gt;| {
+        obj.and_then(|gs| gs.status.clone())
+            .map(|status| <span class="macro">matches!</span>(status.state, GameServerState::Ready))
+            .unwrap_or(<span class="bool-val">false</span>)
     }
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_pod_ready</span>() -&gt; <span class="kw">impl</span> <span class="ident">Condition</span><span class="op">&lt;</span><span class="ident">Pod</span><span class="op">&gt;</span> {
-    <span class="op">|</span><span class="ident">obj</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Pod</span><span class="op">&gt;</span><span class="op">|</span> {
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">pod</span>) <span class="op">=</span> <span class="ident">obj</span> {
-            <span class="kw">return</span> <span class="ident">pod</span>
-                .<span class="ident">status</span>
-                .<span class="ident">as_ref</span>()
-                .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">status</span><span class="op">|</span> <span class="ident">status</span>.<span class="ident">conditions</span>.<span class="ident">as_ref</span>())
-                .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">conditions</span><span class="op">|</span> {
-                    <span class="ident">conditions</span>
-                        .<span class="ident">iter</span>()
-                        .<span class="ident">find</span>(<span class="op">|</span><span class="ident">condition</span><span class="op">|</span> <span class="ident">condition</span>.<span class="ident">type_</span> <span class="op">==</span> <span class="string">&quot;Ready&quot;</span> <span class="op">&amp;&amp;</span> <span class="ident">condition</span>.<span class="ident">status</span> <span class="op">==</span> <span class="string">&quot;True&quot;</span>)
+<span class="kw">pub fn </span>is_pod_ready() -&gt; <span class="kw">impl </span>Condition&lt;Pod&gt; {
+    |obj: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Pod&gt;| {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(pod) = obj {
+            <span class="kw">return </span>pod
+                .status
+                .as_ref()
+                .and_then(|status| status.conditions.as_ref())
+                .and_then(|conditions| {
+                    conditions
+                        .iter()
+                        .find(|condition| condition.type_ == <span class="string">&quot;Ready&quot; </span>&amp;&amp; condition.status == <span class="string">&quot;True&quot;</span>)
                 })
-                .<span class="ident">is_some</span>();
+                .is_some();
         }
-        <span class="bool-val">false</span>
-    }
+        <span class="bool-val">false
+    </span>}
 }
 
-<span class="doccomment">/// Condition to wait for a Deployment to have all the replicas it is expecting to be ready.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_deployment_ready</span>() -&gt; <span class="kw">impl</span> <span class="ident">Condition</span><span class="op">&lt;</span><span class="ident">Deployment</span><span class="op">&gt;</span> {
-    <span class="op">|</span><span class="ident">obj</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Deployment</span><span class="op">&gt;</span><span class="op">|</span> {
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">deployment</span>) <span class="op">=</span> <span class="ident">obj</span> {
-            <span class="kw">let</span> <span class="ident">expected</span> <span class="op">=</span> <span class="ident">deployment</span>.<span class="ident">spec</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>().<span class="ident">replicas</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>();
+<span class="doccomment">/// Condition to wait for a Deployment to have all the replicas it is expecting to be ready.
+</span><span class="kw">pub fn </span>is_deployment_ready() -&gt; <span class="kw">impl </span>Condition&lt;Deployment&gt; {
+    |obj: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Deployment&gt;| {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(deployment) = obj {
+            <span class="kw">let </span>expected = deployment.spec.as_ref().unwrap().replicas.as_ref().unwrap();
 
-            <span class="kw">return</span> <span class="ident">deployment</span>
-                .<span class="ident">status</span>
-                .<span class="ident">as_ref</span>()
-                .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">status</span><span class="op">|</span> <span class="ident">status</span>.<span class="ident">ready_replicas</span>)
-                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">replicas</span><span class="op">|</span> <span class="kw-2">&amp;</span><span class="ident">replicas</span> <span class="op">==</span> <span class="ident">expected</span>)
-                .<span class="ident">unwrap_or</span>(<span class="bool-val">false</span>);
+            <span class="kw">return </span>deployment
+                .status
+                .as_ref()
+                .and_then(|status| status.ready_replicas)
+                .map(|replicas| <span class="kw-2">&amp;</span>replicas == expected)
+                .unwrap_or(<span class="bool-val">false</span>);
         }
-        <span class="bool-val">false</span>
-    }
+        <span class="bool-val">false
+    </span>}
 }
 
-<span class="doccomment">/// Condition to wait for a Fleet to have all the replicas it is expecting to be ready.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_fleet_ready</span>() -&gt; <span class="kw">impl</span> <span class="ident">Condition</span><span class="op">&lt;</span><span class="ident">Fleet</span><span class="op">&gt;</span> {
-    <span class="op">|</span><span class="ident">obj</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Fleet</span><span class="op">&gt;</span><span class="op">|</span> {
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">fleet</span>) <span class="op">=</span> <span class="ident">obj</span> {
-            <span class="kw">let</span> <span class="ident">expected</span> <span class="op">=</span> <span class="ident">fleet</span>.<span class="ident">spec</span>.<span class="ident">replicas</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>();
+<span class="doccomment">/// Condition to wait for a Fleet to have all the replicas it is expecting to be ready.
+</span><span class="kw">pub fn </span>is_fleet_ready() -&gt; <span class="kw">impl </span>Condition&lt;Fleet&gt; {
+    |obj: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Fleet&gt;| {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(fleet) = obj {
+            <span class="kw">let </span>expected = fleet.spec.replicas.as_ref().unwrap();
 
-            <span class="kw">return</span> <span class="ident">fleet</span>
-                .<span class="ident">status</span>
-                .<span class="ident">as_ref</span>()
-                .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">status</span><span class="op">|</span> <span class="ident">status</span>.<span class="ident">ready_replicas</span>)
-                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">replicas</span><span class="op">|</span> <span class="kw-2">&amp;</span><span class="ident">replicas</span> <span class="op">==</span> <span class="ident">expected</span>)
-                .<span class="ident">unwrap_or</span>(<span class="bool-val">false</span>);
+            <span class="kw">return </span>fleet
+                .status
+                .as_ref()
+                .and_then(|status| status.ready_replicas)
+                .map(|replicas| <span class="kw-2">&amp;</span>replicas == expected)
+                .unwrap_or(<span class="bool-val">false</span>);
         }
-        <span class="bool-val">false</span>
-    }
+        <span class="bool-val">false
+    </span>}
 }
 
-<span class="doccomment">/// Returns a container for Quilkin, with an optional volume mount name</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">quilkin_container</span>(
-    <span class="ident">client</span>: <span class="kw-2">&amp;</span><span class="ident">Client</span>,
-    <span class="ident">args</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">volume_mount</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-) -&gt; <span class="ident">Container</span> {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">container</span> <span class="op">=</span> <span class="ident">Container</span> {
-        <span class="ident">name</span>: <span class="string">&quot;quilkin&quot;</span>.<span class="ident">into</span>(),
-        <span class="ident">image</span>: <span class="prelude-val">Some</span>(<span class="ident">client</span>.<span class="ident">quilkin_image</span>.<span class="ident">clone</span>()),
-        <span class="ident">args</span>,
-        <span class="ident">env</span>: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="ident">EnvVar</span> {
-            <span class="ident">name</span>: <span class="string">&quot;RUST_LOG&quot;</span>.<span class="ident">to_string</span>(),
-            <span class="ident">value</span>: <span class="prelude-val">Some</span>(<span class="string">&quot;quilkin=trace&quot;</span>.<span class="ident">into</span>()),
-            <span class="ident">value_from</span>: <span class="prelude-val">None</span>,
+<span class="doccomment">/// Returns a container for Quilkin, with an optional volume mount name
+</span><span class="kw">pub fn </span>quilkin_container(
+    client: <span class="kw-2">&amp;</span>Client,
+    args: <span class="prelude-ty">Option</span>&lt;Vec&lt;String&gt;&gt;,
+    volume_mount: <span class="prelude-ty">Option</span>&lt;String&gt;,
+) -&gt; Container {
+    <span class="kw">let </span><span class="kw-2">mut </span>container = Container {
+        name: <span class="string">&quot;quilkin&quot;</span>.into(),
+        image: <span class="prelude-val">Some</span>(client.quilkin_image.clone()),
+        args,
+        env: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[EnvVar {
+            name: <span class="string">&quot;RUST_LOG&quot;</span>.to_string(),
+            value: <span class="prelude-val">Some</span>(<span class="string">&quot;quilkin=trace&quot;</span>.into()),
+            value_from: <span class="prelude-val">None</span>,
         }]),
-        <span class="ident">liveness_probe</span>: <span class="prelude-val">Some</span>(<span class="ident">Probe</span> {
-            <span class="ident">http_get</span>: <span class="prelude-val">Some</span>(<span class="ident">HTTPGetAction</span> {
-                <span class="ident">path</span>: <span class="prelude-val">Some</span>(<span class="string">&quot;/live&quot;</span>.<span class="ident">into</span>()),
-                <span class="ident">port</span>: <span class="ident">IntOrString::Int</span>(<span class="number">9091</span>),
-                ..<span class="ident">Default::default</span>()
+        liveness_probe: <span class="prelude-val">Some</span>(Probe {
+            http_get: <span class="prelude-val">Some</span>(HTTPGetAction {
+                path: <span class="prelude-val">Some</span>(<span class="string">&quot;/live&quot;</span>.into()),
+                port: IntOrString::Int(<span class="number">9091</span>),
+                ..Default::default()
             }),
-            <span class="ident">initial_delay_seconds</span>: <span class="prelude-val">Some</span>(<span class="number">3</span>),
-            <span class="ident">period_seconds</span>: <span class="prelude-val">Some</span>(<span class="number">2</span>),
-            ..<span class="ident">Default::default</span>()
+            initial_delay_seconds: <span class="prelude-val">Some</span>(<span class="number">3</span>),
+            period_seconds: <span class="prelude-val">Some</span>(<span class="number">2</span>),
+            ..Default::default()
         }),
-        <span class="ident">readiness_probe</span>: <span class="prelude-val">Some</span>(<span class="ident">Probe</span> {
-            <span class="ident">http_get</span>: <span class="prelude-val">Some</span>(<span class="ident">HTTPGetAction</span> {
-                <span class="ident">path</span>: <span class="prelude-val">Some</span>(<span class="string">&quot;/ready&quot;</span>.<span class="ident">into</span>()),
-                <span class="ident">port</span>: <span class="ident">IntOrString::Int</span>(<span class="number">9091</span>),
-                ..<span class="ident">Default::default</span>()
+        readiness_probe: <span class="prelude-val">Some</span>(Probe {
+            http_get: <span class="prelude-val">Some</span>(HTTPGetAction {
+                path: <span class="prelude-val">Some</span>(<span class="string">&quot;/ready&quot;</span>.into()),
+                port: IntOrString::Int(<span class="number">9091</span>),
+                ..Default::default()
             }),
-            <span class="ident">initial_delay_seconds</span>: <span class="prelude-val">Some</span>(<span class="number">3</span>),
-            <span class="ident">period_seconds</span>: <span class="prelude-val">Some</span>(<span class="number">2</span>),
-            ..<span class="ident">Default::default</span>()
+            initial_delay_seconds: <span class="prelude-val">Some</span>(<span class="number">3</span>),
+            period_seconds: <span class="prelude-val">Some</span>(<span class="number">2</span>),
+            ..Default::default()
         }),
-        ..<span class="ident">Default::default</span>()
+        ..Default::default()
     };
 
-    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">name</span>) <span class="op">=</span> <span class="ident">volume_mount</span> {
-        <span class="ident">container</span>.<span class="ident">volume_mounts</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="ident">VolumeMount</span> {
-            <span class="ident">name</span>,
-            <span class="ident">mount_path</span>: <span class="string">&quot;/etc/quilkin&quot;</span>.<span class="ident">into</span>(),
-            ..<span class="ident">Default::default</span>()
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(name) = volume_mount {
+        container.volume_mounts = <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[VolumeMount {
+            name,
+            mount_path: <span class="string">&quot;/etc/quilkin&quot;</span>.into(),
+            ..Default::default()
         }])
     };
 
-    <span class="ident">container</span>
+    container
 }
 
-<span class="doccomment">/// Return a ConfigMap in the format that Quilkin expects it to be able to</span>
-<span class="doccomment">/// consume the config yaml.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">quilkin_config_map</span>(<span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="ident">ConfigMap</span> {
-    <span class="ident">ConfigMap</span> {
-        <span class="ident">metadata</span>: <span class="ident">ObjectMeta</span> {
-            <span class="ident">generate_name</span>: <span class="prelude-val">Some</span>(<span class="string">&quot;quilkin-config-&quot;</span>.<span class="ident">into</span>()),
-            ..<span class="ident">Default::default</span>()
+<span class="doccomment">/// Return a ConfigMap in the format that Quilkin expects it to be able to
+/// consume the config yaml.
+</span><span class="kw">pub fn </span>quilkin_config_map(config: <span class="kw-2">&amp;</span>str) -&gt; ConfigMap {
+    ConfigMap {
+        metadata: ObjectMeta {
+            generate_name: <span class="prelude-val">Some</span>(<span class="string">&quot;quilkin-config-&quot;</span>.into()),
+            ..Default::default()
         },
-        <span class="ident">data</span>: <span class="prelude-val">Some</span>(<span class="ident">BTreeMap::from</span>([(
-            <span class="string">&quot;quilkin.yaml&quot;</span>.<span class="ident">to_string</span>(),
-            <span class="ident">config</span>.<span class="ident">to_string</span>(),
+        data: <span class="prelude-val">Some</span>(BTreeMap::from([(
+            <span class="string">&quot;quilkin.yaml&quot;</span>.to_string(),
+            config.to_string(),
         )])),
-        ..<span class="ident">Default::default</span>()
+        ..Default::default()
     }
 }
 
-<span class="doccomment">/// Convenience function to return the address with the first port of GameServer</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">gameserver_address</span>(<span class="ident">gs</span>: <span class="kw-2">&amp;</span><span class="ident">GameServer</span>) -&gt; <span class="ident">String</span> {
-    <span class="kw">let</span> <span class="ident">status</span> <span class="op">=</span> <span class="ident">gs</span>.<span class="ident">status</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>();
-    <span class="kw">let</span> <span class="ident">address</span> <span class="op">=</span> <span class="macro">format!</span>(
+<span class="doccomment">/// Convenience function to return the address with the first port of GameServer
+</span><span class="kw">pub fn </span>gameserver_address(gs: <span class="kw-2">&amp;</span>GameServer) -&gt; String {
+    <span class="kw">let </span>status = gs.status.as_ref().unwrap();
+    <span class="kw">let </span>address = <span class="macro">format!</span>(
         <span class="string">&quot;{}:{}&quot;</span>,
-        <span class="ident">status</span>.<span class="ident">address</span>,
-        <span class="ident">status</span>.<span class="ident">ports</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>()[<span class="number">0</span>].<span class="ident">port</span>
+        status.address,
+        status.ports.as_ref().unwrap()[<span class="number">0</span>].port
     );
-    <span class="ident">address</span>
+    address
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="agones" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="agones" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

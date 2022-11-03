@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/filters/match.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>match.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../quilkin/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/filters/match.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>match.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../normalize.css"><link rel="stylesheet" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../ayu.css" disabled><link rel="stylesheet" href="../../../dark.css" disabled><link rel="stylesheet" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../quilkin/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -234,213 +234,213 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */</span>
+ */
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::xds</span> <span class="kw">as</span> <span class="ident">envoy</span>;
+</span><span class="kw">use </span><span class="kw">crate</span>::xds <span class="kw">as </span>envoy;
 
 <span class="macro">crate::include_proto!</span>(<span class="string">&quot;quilkin.filters.matches.v1alpha1&quot;</span>);
 
-<span class="kw">mod</span> <span class="ident">config</span>;
-<span class="kw">mod</span> <span class="ident">metrics</span>;
+<span class="kw">mod </span>config;
+<span class="kw">mod </span>metrics;
 
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">filters::prelude</span>::<span class="kw-2">*</span>, <span class="ident">metadata</span>};
+<span class="kw">use crate</span>::{filters::prelude::<span class="kw-2">*</span>, metadata};
 
-<span class="kw">use</span> <span class="ident"><span class="self">self</span>::quilkin::filters::matches::v1alpha1</span> <span class="kw">as</span> <span class="ident">proto</span>;
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::filters</span>::<span class="ident">r#match</span><span class="ident">::metrics::Metrics</span>;
+<span class="kw">use </span><span class="self">self</span>::quilkin::filters::matches::v1alpha1 <span class="kw">as </span>proto;
+<span class="kw">use </span><span class="kw">crate</span>::filters::r#match::metrics::Metrics;
 
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident"><span class="self">self</span>::config</span>::{<span class="ident">Branch</span>, <span class="ident">Config</span>, <span class="ident">DirectionalConfig</span>, <span class="ident">Fallthrough</span>};
+<span class="kw">pub use </span><span class="self">self</span>::config::{Branch, Config, DirectionalConfig, Fallthrough};
 
-<span class="kw">struct</span> <span class="ident">ConfigInstance</span> {
-    <span class="ident">metadata_key</span>: <span class="ident">metadata::Key</span>,
-    <span class="ident">branches</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">metadata::Value</span>, (<span class="ident">metadata::Key</span>, <span class="ident">FilterInstance</span>))<span class="op">&gt;</span>,
-    <span class="ident">fallthrough</span>: (<span class="ident">metadata::Key</span>, <span class="ident">FilterInstance</span>),
+<span class="kw">struct </span>ConfigInstance {
+    metadata_key: metadata::Key,
+    branches: Vec&lt;(metadata::Value, (metadata::Key, FilterInstance))&gt;,
+    fallthrough: (metadata::Key, FilterInstance),
 }
 
-<span class="kw">impl</span> <span class="ident">ConfigInstance</span> {
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">config</span>: <span class="ident">config::DirectionalConfig</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">map_to_instance</span> <span class="op">=</span>
-            <span class="op">|</span><span class="ident">filter</span>: <span class="ident">String</span>, <span class="ident">config_type</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">serde_json::Value</span><span class="op">&gt;</span><span class="op">|</span> -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="kw">_</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-                <span class="kw">let</span> <span class="ident">instance</span> <span class="op">=</span> <span class="ident"><span class="kw">crate</span>::filters::FilterRegistry::get</span>(
-                    <span class="kw-2">&amp;</span><span class="ident">filter</span>,
-                    <span class="ident">CreateFilterArgs::new</span>(<span class="ident">config_type</span>.<span class="ident">map</span>(<span class="ident">From::from</span>)),
+<span class="kw">impl </span>ConfigInstance {
+    <span class="kw">fn </span>new(config: config::DirectionalConfig) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+        <span class="kw">let </span>map_to_instance =
+            |filter: String, config_type: <span class="prelude-ty">Option</span>&lt;serde_json::Value&gt;| -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw">_</span>, Error&gt; {
+                <span class="kw">let </span>instance = <span class="kw">crate</span>::filters::FilterRegistry::get(
+                    <span class="kw-2">&amp;</span>filter,
+                    CreateFilterArgs::new(config_type.map(From::from)),
                 )<span class="question-mark">?</span>;
-                <span class="prelude-val">Ok</span>((<span class="ident">filter</span>.<span class="ident">into</span>(), <span class="ident">instance</span>))
+                <span class="prelude-val">Ok</span>((filter.into(), instance))
             };
 
-        <span class="kw">let</span> <span class="ident">branches</span> <span class="op">=</span> <span class="ident">config</span>
-            .<span class="ident">branches</span>
-            .<span class="ident">into_iter</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">branch</span><span class="op">|</span> {
-                <span class="ident">map_to_instance</span>(<span class="ident">branch</span>.<span class="ident">filter</span>.<span class="ident">name</span>, <span class="ident">branch</span>.<span class="ident">filter</span>.<span class="ident">config</span>.<span class="ident">clone</span>())
-                    .<span class="ident">map</span>(<span class="op">|</span><span class="ident">instance</span><span class="op">|</span> (<span class="ident">branch</span>.<span class="ident">value</span>.<span class="ident">clone</span>(), <span class="ident">instance</span>))
+        <span class="kw">let </span>branches = config
+            .branches
+            .into_iter()
+            .map(|branch| {
+                map_to_instance(branch.filter.name, branch.filter.config.clone())
+                    .map(|instance| (branch.value.clone(), instance))
             })
-            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+            .collect::&lt;<span class="prelude-ty">Result</span>&lt;<span class="kw">_</span>, <span class="kw">_</span>&gt;&gt;()<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
-            <span class="ident">metadata_key</span>: <span class="ident">config</span>.<span class="ident">metadata_key</span>,
-            <span class="ident">branches</span>,
-            <span class="ident">fallthrough</span>: <span class="ident">map_to_instance</span>(<span class="ident">config</span>.<span class="ident">fallthrough</span>.<span class="number">0</span>.<span class="ident">name</span>, <span class="ident">config</span>.<span class="ident">fallthrough</span>.<span class="number">0</span>.<span class="ident">config</span>)<span class="question-mark">?</span>,
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
+            metadata_key: config.metadata_key,
+            branches,
+            fallthrough: map_to_instance(config.fallthrough.<span class="number">0</span>.name, config.fallthrough.<span class="number">0</span>.config)<span class="question-mark">?</span>,
         })
     }
 }
 
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Match</span> {
-    <span class="ident">metrics</span>: <span class="ident">Metrics</span>,
-    <span class="ident">on_read_filters</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ConfigInstance</span><span class="op">&gt;</span>,
-    <span class="ident">on_write_filters</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ConfigInstance</span><span class="op">&gt;</span>,
+<span class="kw">pub struct </span>Match {
+    metrics: Metrics,
+    on_read_filters: <span class="prelude-ty">Option</span>&lt;ConfigInstance&gt;,
+    on_write_filters: <span class="prelude-ty">Option</span>&lt;ConfigInstance&gt;,
 }
 
-<span class="kw">impl</span> <span class="ident">Match</span> {
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">config</span>: <span class="ident">Config</span>, <span class="ident">metrics</span>: <span class="ident">Metrics</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">on_read_filters</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">on_read</span>.<span class="ident">map</span>(<span class="ident">ConfigInstance::new</span>).<span class="ident">transpose</span>()<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">on_write_filters</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">on_write</span>.<span class="ident">map</span>(<span class="ident">ConfigInstance::new</span>).<span class="ident">transpose</span>()<span class="question-mark">?</span>;
+<span class="kw">impl </span>Match {
+    <span class="kw">fn </span>new(config: Config, metrics: Metrics) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+        <span class="kw">let </span>on_read_filters = config.on_read.map(ConfigInstance::new).transpose()<span class="question-mark">?</span>;
+        <span class="kw">let </span>on_write_filters = config.on_write.map(ConfigInstance::new).transpose()<span class="question-mark">?</span>;
 
-        <span class="kw">if</span> <span class="ident">on_read_filters</span>.<span class="ident">is_none</span>() <span class="op">&amp;&amp;</span> <span class="ident">on_write_filters</span>.<span class="ident">is_none</span>() {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error::MissingConfig</span>(<span class="ident"><span class="self">Self</span>::NAME</span>));
+        <span class="kw">if </span>on_read_filters.is_none() &amp;&amp; on_write_filters.is_none() {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::MissingConfig(<span class="self">Self</span>::NAME));
         }
 
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
-            <span class="ident">metrics</span>,
-            <span class="ident">on_read_filters</span>,
-            <span class="ident">on_write_filters</span>,
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
+            metrics,
+            on_read_filters,
+            on_write_filters,
         })
     }
 }
 
-<span class="kw">fn</span> <span class="ident">match_filter</span><span class="op">&lt;</span><span class="lifetime">&#39;config</span>, <span class="lifetime">&#39;ctx</span>, <span class="ident">Ctx</span><span class="op">&gt;</span>(
-    <span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;config</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ConfigInstance</span><span class="op">&gt;</span>,
-    <span class="ident">metrics</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;config</span> <span class="ident">Metrics</span>,
-    <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;ctx</span> <span class="kw-2">mut</span> <span class="ident">Ctx</span>,
-    <span class="ident">get_metadata</span>: <span class="kw">impl</span> <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;value</span><span class="op">&gt;</span> <span class="ident">Fn</span>(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;value</span> <span class="ident">Ctx</span>,
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;config</span> <span class="ident">metadata::Key</span>,
-    ) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;value</span> <span class="ident">metadata::Value</span><span class="op">&gt;</span>,
-    <span class="ident">and_then</span>: <span class="kw">impl</span> <span class="ident">Fn</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;ctx</span> <span class="kw-2">mut</span> <span class="ident">Ctx</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;config</span> <span class="ident">FilterInstance</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
-) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>()<span class="op">&gt;</span>
-<span class="kw">where</span>
-{
-    <span class="kw">match</span> <span class="ident">config</span> {
-        <span class="prelude-val">Some</span>(<span class="ident">config</span>) =&gt; {
-            <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> (<span class="ident">get_metadata</span>)(<span class="ident">ctx</span>, <span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">metadata_key</span>)<span class="question-mark">?</span>;
+<span class="kw">fn </span>match_filter&lt;<span class="lifetime">&#39;config</span>, <span class="lifetime">&#39;ctx</span>, Ctx&gt;(
+    config: <span class="kw-2">&amp;</span><span class="lifetime">&#39;config </span><span class="prelude-ty">Option</span>&lt;ConfigInstance&gt;,
+    metrics: <span class="kw-2">&amp;</span><span class="lifetime">&#39;config </span>Metrics,
+    ctx: <span class="kw-2">&amp;</span><span class="lifetime">&#39;ctx </span><span class="kw-2">mut </span>Ctx,
+    get_metadata: <span class="kw">impl for</span>&lt;<span class="lifetime">&#39;value</span>&gt; Fn(
+        <span class="kw-2">&amp;</span><span class="lifetime">&#39;value </span>Ctx,
+        <span class="kw-2">&amp;</span><span class="lifetime">&#39;config </span>metadata::Key,
+    ) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;value </span>metadata::Value&gt;,
+    and_then: <span class="kw">impl </span>Fn(<span class="kw-2">&amp;</span><span class="lifetime">&#39;ctx </span><span class="kw-2">mut </span>Ctx, <span class="kw-2">&amp;</span><span class="lifetime">&#39;config </span>FilterInstance) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt;,
+) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt;
+<span class="kw">where
+</span>{
+    <span class="kw">match </span>config {
+        <span class="prelude-val">Some</span>(config) =&gt; {
+            <span class="kw">let </span>value = (get_metadata)(ctx, <span class="kw-2">&amp;</span>config.metadata_key)<span class="question-mark">?</span>;
 
-            <span class="kw">match</span> <span class="ident">config</span>.<span class="ident">branches</span>.<span class="ident">iter</span>().<span class="ident">find</span>(<span class="op">|</span>(<span class="ident">key</span>, <span class="kw">_</span>)<span class="op">|</span> <span class="ident">key</span> <span class="op">==</span> <span class="ident">value</span>) {
-                <span class="prelude-val">Some</span>((<span class="ident">value</span>, <span class="ident">instance</span>)) =&gt; {
-                    <span class="macro">tracing::trace!</span>(<span class="ident">key</span><span class="op">=</span><span class="op">%</span><span class="ident">config</span>.<span class="ident">metadata_key</span>, <span class="op">%</span><span class="ident">value</span>, <span class="ident">filter</span><span class="op">=</span><span class="op">%</span><span class="ident">instance</span>.<span class="number">0</span>, <span class="string">&quot;Matched against branch&quot;</span>);
-                    <span class="ident">metrics</span>.<span class="ident">packets_matched_total</span>.<span class="ident">inc</span>();
-                    (<span class="ident">and_then</span>)(<span class="ident">ctx</span>, <span class="kw-2">&amp;</span><span class="ident">instance</span>.<span class="number">1</span>)
+            <span class="kw">match </span>config.branches.iter().find(|(key, <span class="kw">_</span>)| key == value) {
+                <span class="prelude-val">Some</span>((value, instance)) =&gt; {
+                    <span class="macro">tracing::trace!</span>(key=%config.metadata_key, %value, filter=%instance.<span class="number">0</span>, <span class="string">&quot;Matched against branch&quot;</span>);
+                    metrics.packets_matched_total.inc();
+                    (and_then)(ctx, <span class="kw-2">&amp;</span>instance.<span class="number">1</span>)
                 }
-                <span class="prelude-val">None</span> =&gt; {
+                <span class="prelude-val">None </span>=&gt; {
                     <span class="macro">tracing::trace!</span>(
-                        <span class="ident">key</span> <span class="op">=</span> <span class="op">%</span><span class="ident">config</span>.<span class="ident">metadata_key</span>,
-                        <span class="ident">fallthrough</span> <span class="op">=</span> <span class="op">%</span><span class="ident">config</span>.<span class="ident">fallthrough</span>.<span class="number">0</span>,
-                        <span class="string">&quot;No match found, calling fallthrough&quot;</span>
-                    );
-                    <span class="ident">metrics</span>.<span class="ident">packets_fallthrough_total</span>.<span class="ident">inc</span>();
-                    (<span class="ident">and_then</span>)(<span class="ident">ctx</span>, <span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">fallthrough</span>.<span class="number">1</span>)
+                        key = %config.metadata_key,
+                        fallthrough = %config.fallthrough.<span class="number">0</span>,
+                        <span class="string">&quot;No match found, calling fallthrough&quot;
+                    </span>);
+                    metrics.packets_fallthrough_total.inc();
+                    (and_then)(ctx, <span class="kw-2">&amp;</span>config.fallthrough.<span class="number">1</span>)
                 }
             }
         }
-        <span class="prelude-val">None</span> =&gt; <span class="prelude-val">Some</span>(()),
+        <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Some</span>(()),
     }
 }
 
-<span class="kw">impl</span> <span class="ident">Filter</span> <span class="kw">for</span> <span class="ident">Match</span> {
-    <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;instrument&quot;</span>, <span class="ident">tracing::instrument</span>(<span class="ident">skip</span>(<span class="self">self</span>, <span class="ident">ctx</span>)))]</span>
-    <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ReadContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="macro">tracing::trace!</span>(<span class="ident">metadata</span><span class="op">=</span><span class="question-mark">?</span><span class="ident">ctx</span>.<span class="ident">metadata</span>);
-        <span class="ident">match_filter</span>(
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">on_read_filters</span>,
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">metrics</span>,
-            <span class="ident">ctx</span>,
-            <span class="op">|</span><span class="ident">ctx</span>, <span class="ident">metadata_key</span><span class="op">|</span> <span class="ident">ctx</span>.<span class="ident">metadata</span>.<span class="ident">get</span>(<span class="ident">metadata_key</span>),
-            <span class="op">|</span><span class="ident">ctx</span>, <span class="ident">instance</span><span class="op">|</span> <span class="ident">instance</span>.<span class="ident">filter</span>.<span class="ident">read</span>(<span class="ident">ctx</span>),
+<span class="kw">impl </span>Filter <span class="kw">for </span>Match {
+    <span class="attribute">#[cfg_attr(feature = <span class="string">&quot;instrument&quot;</span>, tracing::instrument(skip(<span class="self">self</span>, ctx)))]
+    </span><span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt; {
+        <span class="macro">tracing::trace!</span>(metadata=<span class="question-mark">?</span>ctx.metadata);
+        match_filter(
+            <span class="kw-2">&amp;</span><span class="self">self</span>.on_read_filters,
+            <span class="kw-2">&amp;</span><span class="self">self</span>.metrics,
+            ctx,
+            |ctx, metadata_key| ctx.metadata.get(metadata_key),
+            |ctx, instance| instance.filter.read(ctx),
         )
     }
 
-    <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;instrument&quot;</span>, <span class="ident">tracing::instrument</span>(<span class="ident">skip</span>(<span class="self">self</span>, <span class="ident">ctx</span>)))]</span>
-    <span class="kw">fn</span> <span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">WriteContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="ident">match_filter</span>(
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">on_write_filters</span>,
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">metrics</span>,
-            <span class="ident">ctx</span>,
-            <span class="op">|</span><span class="ident">ctx</span>, <span class="ident">metadata_key</span><span class="op">|</span> <span class="ident">ctx</span>.<span class="ident">metadata</span>.<span class="ident">get</span>(<span class="ident">metadata_key</span>),
-            <span class="op">|</span><span class="ident">ctx</span>, <span class="ident">instance</span><span class="op">|</span> <span class="ident">instance</span>.<span class="ident">filter</span>.<span class="ident">write</span>(<span class="ident">ctx</span>),
+    <span class="attribute">#[cfg_attr(feature = <span class="string">&quot;instrument&quot;</span>, tracing::instrument(skip(<span class="self">self</span>, ctx)))]
+    </span><span class="kw">fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt; {
+        match_filter(
+            <span class="kw-2">&amp;</span><span class="self">self</span>.on_write_filters,
+            <span class="kw-2">&amp;</span><span class="self">self</span>.metrics,
+            ctx,
+            |ctx, metadata_key| ctx.metadata.get(metadata_key),
+            |ctx, instance| instance.filter.write(ctx),
         )
     }
 }
 
-<span class="kw">impl</span> <span class="ident">StaticFilter</span> <span class="kw">for</span> <span class="ident">Match</span> {
-    <span class="kw">const</span> <span class="ident">NAME</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;quilkin.filters.match.v1alpha1.Match&quot;</span>;
-    <span class="kw">type</span> <span class="ident">Configuration</span> <span class="op">=</span> <span class="ident">Config</span>;
-    <span class="kw">type</span> <span class="ident">BinaryConfiguration</span> <span class="op">=</span> <span class="ident">proto::Match</span>;
+<span class="kw">impl </span>StaticFilter <span class="kw">for </span>Match {
+    <span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str = <span class="string">&quot;quilkin.filters.match.v1alpha1.Match&quot;</span>;
+    <span class="kw">type </span>Configuration = Config;
+    <span class="kw">type </span>BinaryConfiguration = proto::Match;
 
-    <span class="kw">fn</span> <span class="ident">try_from_config</span>(<span class="ident">config</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Configuration</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="ident"><span class="self">Self</span>::new</span>(<span class="ident"><span class="self">Self</span>::ensure_config_exists</span>(<span class="ident">config</span>)<span class="question-mark">?</span>, <span class="ident">Metrics::new</span>()<span class="question-mark">?</span>)
+    <span class="kw">fn </span>try_from_config(config: <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Configuration&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+        <span class="self">Self</span>::new(<span class="self">Self</span>::ensure_config_exists(config)<span class="question-mark">?</span>, Metrics::new()<span class="question-mark">?</span>)
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
+    <span class="kw">use super</span>::<span class="kw-2">*</span>;
 
-    <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">endpoint::Endpoint</span>, <span class="ident">filters</span>::<span class="kw-2">*</span>};
+    <span class="kw">use crate</span>::{endpoint::Endpoint, filters::<span class="kw-2">*</span>};
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">metrics</span>() {
-        <span class="kw">let</span> <span class="ident">metrics</span> <span class="op">=</span> <span class="ident">Metrics::new</span>().<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="ident">key</span> <span class="op">=</span> <span class="ident"><span class="kw">crate</span>::metadata::Key::from_static</span>(<span class="string">&quot;myapp.com/token&quot;</span>);
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">Config</span> {
-            <span class="ident">on_read</span>: <span class="prelude-val">Some</span>(<span class="ident">DirectionalConfig</span> {
-                <span class="ident">metadata_key</span>: <span class="ident">key</span>,
-                <span class="ident">branches</span>: <span class="macro">vec!</span>[<span class="ident">Branch</span> {
-                    <span class="ident">value</span>: <span class="string">&quot;abc&quot;</span>.<span class="ident">into</span>(),
-                    <span class="ident">filter</span>: <span class="ident">Pass::as_filter_config</span>(<span class="prelude-val">None</span>).<span class="ident">unwrap</span>(),
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>metrics() {
+        <span class="kw">let </span>metrics = Metrics::new().unwrap();
+        <span class="kw">let </span>key = <span class="kw">crate</span>::metadata::Key::from_static(<span class="string">&quot;myapp.com/token&quot;</span>);
+        <span class="kw">let </span>config = Config {
+            on_read: <span class="prelude-val">Some</span>(DirectionalConfig {
+                metadata_key: key,
+                branches: <span class="macro">vec!</span>[Branch {
+                    value: <span class="string">&quot;abc&quot;</span>.into(),
+                    filter: Pass::as_filter_config(<span class="prelude-val">None</span>).unwrap(),
                 }],
-                <span class="ident">fallthrough</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
+                fallthrough: &lt;<span class="kw">_</span>&gt;::default(),
             }),
-            <span class="ident">on_write</span>: <span class="prelude-val">None</span>,
+            on_write: <span class="prelude-val">None</span>,
         };
-        <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">Match::new</span>(<span class="ident">config</span>, <span class="ident">metrics</span>).<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="ident">endpoint</span>: <span class="ident">Endpoint</span> <span class="op">=</span> <span class="ident">Default::default</span>();
-        <span class="kw">let</span> <span class="ident">contents</span> <span class="op">=</span> <span class="string">&quot;hello&quot;</span>.<span class="ident">to_string</span>().<span class="ident">into_bytes</span>();
+        <span class="kw">let </span>filter = Match::new(config, metrics).unwrap();
+        <span class="kw">let </span>endpoint: Endpoint = Default::default();
+        <span class="kw">let </span>contents = <span class="string">&quot;hello&quot;</span>.to_string().into_bytes();
 
-        <span class="comment">// no config, so should make no change.</span>
-        <span class="ident">filter</span>
-            .<span class="ident">write</span>(<span class="kw-2">&amp;mut</span> <span class="ident">WriteContext::new</span>(
-                <span class="ident">endpoint</span>.<span class="ident">clone</span>(),
-                <span class="ident">endpoint</span>.<span class="ident">address</span>,
-                <span class="string">&quot;127.0.0.1:70&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
-                <span class="ident">contents</span>.<span class="ident">clone</span>(),
+        <span class="comment">// no config, so should make no change.
+        </span>filter
+            .write(<span class="kw-2">&amp;mut </span>WriteContext::new(
+                endpoint.clone(),
+                endpoint.address,
+                <span class="string">&quot;127.0.0.1:70&quot;</span>.parse().unwrap(),
+                contents.clone(),
             ))
-            .<span class="ident">unwrap</span>();
+            .unwrap();
 
-        <span class="macro">assert_eq!</span>(<span class="number">0</span>, <span class="ident">filter</span>.<span class="ident">metrics</span>.<span class="ident">packets_fallthrough_total</span>.<span class="ident">get</span>());
-        <span class="macro">assert_eq!</span>(<span class="number">0</span>, <span class="ident">filter</span>.<span class="ident">metrics</span>.<span class="ident">packets_matched_total</span>.<span class="ident">get</span>());
+        <span class="macro">assert_eq!</span>(<span class="number">0</span>, filter.metrics.packets_fallthrough_total.get());
+        <span class="macro">assert_eq!</span>(<span class="number">0</span>, filter.metrics.packets_matched_total.get());
 
-        <span class="comment">// config so we can test match and fallthrough.</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ctx</span> <span class="op">=</span> <span class="ident">ReadContext::new</span>(
-            <span class="macro">vec!</span>[<span class="ident">Default::default</span>()],
-            ([<span class="number">127</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">1</span>], <span class="number">7000</span>).<span class="ident">into</span>(),
-            <span class="ident">contents</span>.<span class="ident">clone</span>(),
+        <span class="comment">// config so we can test match and fallthrough.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>ctx = ReadContext::new(
+            <span class="macro">vec!</span>[Default::default()],
+            ([<span class="number">127</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">1</span>], <span class="number">7000</span>).into(),
+            contents.clone(),
         );
-        <span class="ident">ctx</span>.<span class="ident">metadata</span>.<span class="ident">insert</span>(<span class="ident">key</span>, <span class="string">&quot;abc&quot;</span>.<span class="ident">into</span>());
+        ctx.metadata.insert(key, <span class="string">&quot;abc&quot;</span>.into());
 
-        <span class="ident">filter</span>.<span class="ident">read</span>(<span class="kw-2">&amp;mut</span> <span class="ident">ctx</span>).<span class="ident">unwrap</span>();
-        <span class="macro">assert_eq!</span>(<span class="number">1</span>, <span class="ident">filter</span>.<span class="ident">metrics</span>.<span class="ident">packets_matched_total</span>.<span class="ident">get</span>());
-        <span class="macro">assert_eq!</span>(<span class="number">0</span>, <span class="ident">filter</span>.<span class="ident">metrics</span>.<span class="ident">packets_fallthrough_total</span>.<span class="ident">get</span>());
+        filter.read(<span class="kw-2">&amp;mut </span>ctx).unwrap();
+        <span class="macro">assert_eq!</span>(<span class="number">1</span>, filter.metrics.packets_matched_total.get());
+        <span class="macro">assert_eq!</span>(<span class="number">0</span>, filter.metrics.packets_fallthrough_total.get());
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ctx</span> <span class="op">=</span> <span class="ident">ReadContext::new</span>(
-            <span class="macro">vec!</span>[<span class="ident">Default::default</span>()],
-            ([<span class="number">127</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">1</span>], <span class="number">7000</span>).<span class="ident">into</span>(),
-            <span class="ident">contents</span>,
+        <span class="kw">let </span><span class="kw-2">mut </span>ctx = ReadContext::new(
+            <span class="macro">vec!</span>[Default::default()],
+            ([<span class="number">127</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">1</span>], <span class="number">7000</span>).into(),
+            contents,
         );
-        <span class="ident">ctx</span>.<span class="ident">metadata</span>.<span class="ident">insert</span>(<span class="ident">key</span>, <span class="string">&quot;xyz&quot;</span>.<span class="ident">into</span>());
+        ctx.metadata.insert(key, <span class="string">&quot;xyz&quot;</span>.into());
 
-        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">filter</span>.<span class="ident">read</span>(<span class="kw-2">&amp;mut</span> <span class="ident">ctx</span>);
-        <span class="macro">assert!</span>(<span class="ident">result</span>.<span class="ident">is_none</span>());
-        <span class="macro">assert_eq!</span>(<span class="number">1</span>, <span class="ident">filter</span>.<span class="ident">metrics</span>.<span class="ident">packets_matched_total</span>.<span class="ident">get</span>());
-        <span class="macro">assert_eq!</span>(<span class="number">1</span>, <span class="ident">filter</span>.<span class="ident">metrics</span>.<span class="ident">packets_fallthrough_total</span>.<span class="ident">get</span>());
+        <span class="kw">let </span>result = filter.read(<span class="kw-2">&amp;mut </span>ctx);
+        <span class="macro">assert!</span>(result.is_none());
+        <span class="macro">assert_eq!</span>(<span class="number">1</span>, filter.metrics.packets_matched_total.get());
+        <span class="macro">assert_eq!</span>(<span class="number">1</span>, filter.metrics.packets_fallthrough_total.get());
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

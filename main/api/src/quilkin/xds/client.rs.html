@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/xds/client.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>client.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../quilkin/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/xds/client.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>client.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../normalize.css"><link rel="stylesheet" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../ayu.css" disabled><link rel="stylesheet" href="../../../dark.css" disabled><link rel="stylesheet" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../quilkin/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -332,311 +332,311 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */</span>
+ */
 
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections::HashSet</span>, <span class="ident">sync::Arc</span>, <span class="ident">time::Duration</span>};
+</span><span class="kw">use </span>std::{collections::HashSet, sync::Arc, time::Duration};
 
-<span class="kw">use</span> <span class="ident">futures::StreamExt</span>;
-<span class="kw">use</span> <span class="ident">rand::Rng</span>;
-<span class="kw">use</span> <span class="ident">tokio::sync</span>::{<span class="ident">broadcast</span>, <span class="ident">Mutex</span>};
-<span class="kw">use</span> <span class="ident">tonic::transport</span>::{<span class="ident">channel::Channel</span> <span class="kw">as</span> <span class="ident">TonicChannel</span>, <span class="ident">Error</span> <span class="kw">as</span> <span class="ident">TonicError</span>};
-<span class="kw">use</span> <span class="ident">tracing::Instrument</span>;
-<span class="kw">use</span> <span class="ident">tryhard</span>::{
-    <span class="ident">backoff_strategies</span>::{<span class="ident">BackoffStrategy</span>, <span class="ident">ExponentialBackoff</span>},
-    <span class="ident">RetryFutureConfig</span>, <span class="ident">RetryPolicy</span>,
+<span class="kw">use </span>futures::StreamExt;
+<span class="kw">use </span>rand::Rng;
+<span class="kw">use </span>tokio::sync::{broadcast, Mutex};
+<span class="kw">use </span>tonic::transport::{channel::Channel <span class="kw">as </span>TonicChannel, Error <span class="kw">as </span>TonicError};
+<span class="kw">use </span>tracing::Instrument;
+<span class="kw">use </span>tryhard::{
+    backoff_strategies::{BackoffStrategy, ExponentialBackoff},
+    RetryFutureConfig, RetryPolicy,
 };
 
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">config::Config</span>,
-    <span class="ident">xds</span>::{
-        <span class="ident">config::core::v3::Node</span>,
-        <span class="ident">metrics</span>,
-        <span class="ident">service::discovery::v3</span>::{
-            <span class="ident">aggregated_discovery_service_client::AggregatedDiscoveryServiceClient</span>, <span class="ident">DiscoveryRequest</span>,
+<span class="kw">use crate</span>::{
+    config::Config,
+    xds::{
+        config::core::v3::Node,
+        metrics,
+        service::discovery::v3::{
+            aggregated_discovery_service_client::AggregatedDiscoveryServiceClient, DiscoveryRequest,
         },
-        <span class="ident">Resource</span>, <span class="ident">ResourceType</span>,
+        Resource, ResourceType,
     },
     <span class="prelude-ty">Result</span>,
 };
 
-<span class="kw">type</span> <span class="ident">AdsClient</span> <span class="op">=</span> <span class="ident">AggregatedDiscoveryServiceClient</span><span class="op">&lt;</span><span class="ident">TonicChannel</span><span class="op">&gt;</span>;
+<span class="kw">type </span>AdsClient = AggregatedDiscoveryServiceClient&lt;TonicChannel&gt;;
 
-<span class="doccomment">/// Client that can talk to an XDS server using the aDS protocol.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Client</span> {
-    <span class="ident">client</span>: <span class="ident">AdsClient</span>,
-    <span class="ident">config</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Config</span><span class="op">&gt;</span>,
+<span class="doccomment">/// Client that can talk to an XDS server using the aDS protocol.
+</span><span class="attribute">#[derive(Clone)]
+</span><span class="kw">pub struct </span>Client {
+    client: AdsClient,
+    config: Arc&lt;Config&gt;,
 }
 
-<span class="kw">impl</span> <span class="ident">Client</span> {
-    <span class="attribute">#[<span class="ident">tracing::instrument</span>(<span class="ident">skip_all</span>, <span class="ident">fields</span>(<span class="ident">servers</span> <span class="op">=</span> <span class="question-mark">?</span><span class="ident">config</span>.<span class="ident">management_servers</span>.<span class="ident">load</span>().<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">server</span><span class="op">|</span> <span class="kw-2">&amp;</span><span class="ident">server</span>.<span class="ident">address</span>).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()))]</span>
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">connect</span>(<span class="ident">config</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Config</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident"><span class="self">Self</span>::new_ads_client</span>(<span class="kw-2">&amp;</span><span class="ident">config</span>).<span class="kw">await</span><span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span> { <span class="ident">client</span>, <span class="ident">config</span> })
+<span class="kw">impl </span>Client {
+    <span class="attribute">#[tracing::instrument(skip_all, fields(servers = <span class="question-mark">?</span>config.management_servers.load().iter().map(|server| <span class="kw-2">&amp;</span>server.address).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()))]
+    </span><span class="kw">pub async fn </span>connect(config: Arc&lt;Config&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">let </span>client = <span class="self">Self</span>::new_ads_client(<span class="kw-2">&amp;</span>config).<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ client, config })
     }
 
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">new_ads_client</span>(<span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">Config</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">AdsClient</span><span class="op">&gt;</span> {
-        <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::config</span>::{
-            <span class="ident">BACKOFF_INITIAL_DELAY_MILLISECONDS</span>, <span class="ident">BACKOFF_MAX_DELAY_SECONDS</span>,
-            <span class="ident">BACKOFF_MAX_JITTER_MILLISECONDS</span>,
+    <span class="kw">async fn </span>new_ads_client(config: <span class="kw-2">&amp;</span>Config) -&gt; <span class="prelude-ty">Result</span>&lt;AdsClient&gt; {
+        <span class="kw">use </span><span class="kw">crate</span>::config::{
+            BACKOFF_INITIAL_DELAY_MILLISECONDS, BACKOFF_MAX_DELAY_SECONDS,
+            BACKOFF_MAX_JITTER_MILLISECONDS,
         };
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">backoff</span> <span class="op">=</span>
-            <span class="ident">ExponentialBackoff::new</span>(<span class="ident">Duration::from_millis</span>(<span class="ident">BACKOFF_INITIAL_DELAY_MILLISECONDS</span>));
-        <span class="kw">let</span> <span class="ident">max_delay</span> <span class="op">=</span> <span class="ident">Duration::from_secs</span>(<span class="ident">BACKOFF_MAX_DELAY_SECONDS</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>backoff =
+            ExponentialBackoff::new(Duration::from_millis(BACKOFF_INITIAL_DELAY_MILLISECONDS));
+        <span class="kw">let </span>max_delay = Duration::from_secs(BACKOFF_MAX_DELAY_SECONDS);
 
-        <span class="kw">let</span> <span class="ident">retry_config</span> <span class="op">=</span> <span class="ident">RetryFutureConfig::new</span>(<span class="ident">u32::MAX</span>).<span class="ident">custom_backoff</span>(<span class="op">|</span><span class="ident">attempt</span>, <span class="ident">error</span>: <span class="kw-2">&amp;</span><span class="kw">_</span><span class="op">|</span> {
-            <span class="macro">tracing::info!</span>(<span class="ident">attempt</span>, <span class="string">&quot;Retrying to connect&quot;</span>);
-            <span class="comment">// reset after success</span>
-            <span class="kw">if</span> <span class="ident">attempt</span> <span class="op">&lt;</span><span class="op">=</span> <span class="number">1</span> {
-                <span class="ident">backoff</span> <span class="op">=</span> <span class="ident">ExponentialBackoff::new</span>(<span class="ident">Duration::from_millis</span>(
-                    <span class="ident">BACKOFF_INITIAL_DELAY_MILLISECONDS</span>,
+        <span class="kw">let </span>retry_config = RetryFutureConfig::new(u32::MAX).custom_backoff(|attempt, error: <span class="kw-2">&amp;</span><span class="kw">_</span>| {
+            <span class="macro">tracing::info!</span>(attempt, <span class="string">&quot;Retrying to connect&quot;</span>);
+            <span class="comment">// reset after success
+            </span><span class="kw">if </span>attempt &lt;= <span class="number">1 </span>{
+                backoff = ExponentialBackoff::new(Duration::from_millis(
+                    BACKOFF_INITIAL_DELAY_MILLISECONDS,
                 ));
             }
 
-            <span class="comment">// max delay + jitter of up to 2 seconds</span>
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">delay</span> <span class="op">=</span> <span class="ident">backoff</span>.<span class="ident">delay</span>(<span class="ident">attempt</span>, <span class="kw-2">&amp;</span><span class="ident">error</span>);
-            <span class="kw">if</span> <span class="ident">delay</span> <span class="op">&gt;</span> <span class="ident">max_delay</span> {
-                <span class="ident">delay</span> <span class="op">=</span> <span class="ident">max_delay</span>;
+            <span class="comment">// max delay + jitter of up to 2 seconds
+            </span><span class="kw">let </span><span class="kw-2">mut </span>delay = backoff.delay(attempt, <span class="kw-2">&amp;</span>error);
+            <span class="kw">if </span>delay &gt; max_delay {
+                delay = max_delay;
             }
-            <span class="ident">delay</span> <span class="op">+</span><span class="op">=</span> <span class="ident">Duration::from_millis</span>(
-                <span class="ident">rand::thread_rng</span>().<span class="ident">gen_range</span>(<span class="number">0</span>..<span class="ident">BACKOFF_MAX_JITTER_MILLISECONDS</span>),
+            delay += Duration::from_millis(
+                rand::thread_rng().gen_range(<span class="number">0</span>..BACKOFF_MAX_JITTER_MILLISECONDS),
             );
 
-            <span class="kw">match</span> <span class="ident">error</span> {
-                <span class="ident">RpcSessionError::InitialConnect</span>(<span class="kw-2">ref</span> <span class="ident">error</span>) =&gt; {
-                    <span class="macro">tracing::warn!</span>(<span class="question-mark">?</span><span class="ident">error</span>, <span class="string">&quot;Unable to connect to the XDS server&quot;</span>);
+            <span class="kw">match </span>error {
+                RpcSessionError::InitialConnect(<span class="kw-2">ref </span>error) =&gt; {
+                    <span class="macro">tracing::warn!</span>(<span class="question-mark">?</span>error, <span class="string">&quot;Unable to connect to the XDS server&quot;</span>);
 
-                    <span class="comment">// Do not retry if this is an invalid URL error that we cannot recover from.</span>
-                    <span class="comment">// Need to use {:?} as the Display output only returns &#39;transport error&#39;</span>
-                    <span class="kw">let</span> <span class="ident">err_description</span> <span class="op">=</span> <span class="macro">format!</span>(<span class="string">&quot;{error:?}&quot;</span>);
-                    <span class="kw">if</span> <span class="ident">err_description</span>.<span class="ident">to_lowercase</span>().<span class="ident">contains</span>(<span class="string">&quot;invalid url&quot;</span>) {
-                        <span class="ident">RetryPolicy::Break</span>
-                    } <span class="kw">else</span> {
-                        <span class="ident">RetryPolicy::Delay</span>(<span class="ident">delay</span>)
+                    <span class="comment">// Do not retry if this is an invalid URL error that we cannot recover from.
+                    // Need to use {:?} as the Display output only returns &#39;transport error&#39;
+                    </span><span class="kw">let </span>err_description = <span class="macro">format!</span>(<span class="string">&quot;{error:?}&quot;</span>);
+                    <span class="kw">if </span>err_description.to_lowercase().contains(<span class="string">&quot;invalid url&quot;</span>) {
+                        RetryPolicy::Break
+                    } <span class="kw">else </span>{
+                        RetryPolicy::Delay(delay)
                     }
                 }
 
-                <span class="ident">RpcSessionError::Receive</span>(<span class="kw-2">ref</span> <span class="ident">status</span>) =&gt; {
-                    <span class="macro">tracing::warn!</span>(<span class="ident">status</span> <span class="op">=</span> <span class="question-mark">?</span><span class="ident">status</span>, <span class="string">&quot;Failed to receive response from XDS server&quot;</span>);
-                    <span class="ident">RetryPolicy::Delay</span>(<span class="ident">delay</span>)
+                RpcSessionError::Receive(<span class="kw-2">ref </span>status) =&gt; {
+                    <span class="macro">tracing::warn!</span>(status = <span class="question-mark">?</span>status, <span class="string">&quot;Failed to receive response from XDS server&quot;</span>);
+                    RetryPolicy::Delay(delay)
                 }
             }
         });
 
-        <span class="kw">let</span> <span class="ident">management_servers</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">management_servers</span>.<span class="ident">load</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">addresses</span> <span class="op">=</span> <span class="ident">management_servers</span>
-            .<span class="ident">iter</span>()
-            .<span class="ident">cycle</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">server</span><span class="op">|</span> <span class="ident">server</span>.<span class="ident">address</span>.<span class="ident">clone</span>());
-        <span class="kw">let</span> <span class="ident">connect_to_server</span> <span class="op">=</span> <span class="ident">tryhard::retry_fn</span>(<span class="op">|</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">address</span> <span class="op">=</span> <span class="ident">addresses</span>.<span class="ident">next</span>();
-            <span class="kw">async</span> {
-                <span class="kw">match</span> <span class="ident">address</span> {
-                    <span class="prelude-val">None</span> =&gt; <span class="prelude-val">Err</span>(<span class="ident">RpcSessionError::Receive</span>(<span class="ident">tonic::Status::internal</span>(
+        <span class="kw">let </span>management_servers = config.management_servers.load();
+        <span class="kw">let </span><span class="kw-2">mut </span>addresses = management_servers
+            .iter()
+            .cycle()
+            .map(|server| server.address.clone());
+        <span class="kw">let </span>connect_to_server = tryhard::retry_fn(|| {
+            <span class="kw">let </span>address = addresses.next();
+            <span class="kw">async </span>{
+                <span class="kw">match </span>address {
+                    <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(RpcSessionError::Receive(tonic::Status::internal(
                         <span class="string">&quot;Failed initial connection&quot;</span>,
                     ))),
-                    <span class="prelude-val">Some</span>(<span class="ident">endpoint</span>) =&gt; <span class="ident">AggregatedDiscoveryServiceClient::connect</span>(<span class="ident">endpoint</span>)
-                        .<span class="ident">instrument</span>(<span class="macro">tracing::debug_span!</span>(
-                            <span class="string">&quot;AggregatedDiscoveryServiceClient::connect&quot;</span>
-                        ))
-                        .<span class="kw">await</span>
-                        .<span class="ident">map_err</span>(<span class="ident">RpcSessionError::InitialConnect</span>),
+                    <span class="prelude-val">Some</span>(endpoint) =&gt; AggregatedDiscoveryServiceClient::connect(endpoint)
+                        .instrument(<span class="macro">tracing::debug_span!</span>(
+                            <span class="string">&quot;AggregatedDiscoveryServiceClient::connect&quot;
+                        </span>))
+                        .<span class="kw">await
+                        </span>.map_err(RpcSessionError::InitialConnect),
                 }
             }
         })
-        .<span class="ident">with_config</span>(<span class="ident">retry_config</span>);
+        .with_config(retry_config);
 
-        <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">connect_to_server</span>
-            .<span class="ident">instrument</span>(<span class="macro">tracing::trace_span!</span>(<span class="string">&quot;xds_client_connect&quot;</span>))
+        <span class="kw">let </span>client = connect_to_server
+            .instrument(<span class="macro">tracing::trace_span!</span>(<span class="string">&quot;xds_client_connect&quot;</span>))
             .<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="macro">tracing::info!</span>(<span class="string">&quot;Connected to xDS server&quot;</span>);
-        <span class="prelude-val">Ok</span>(<span class="ident">client</span>)
+        <span class="prelude-val">Ok</span>(client)
     }
 
-    <span class="doccomment">/// Starts a new stream to the xDS management server.</span>
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">stream</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Stream</span><span class="op">&gt;</span> {
-        <span class="ident">Stream::connect</span>(<span class="self">self</span>.<span class="ident">clone</span>()).<span class="kw">await</span>
-    }
+    <span class="doccomment">/// Starts a new stream to the xDS management server.
+    </span><span class="kw">pub async fn </span>stream(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Stream&gt; {
+        Stream::connect(<span class="self">self</span>.clone()).<span class="kw">await
+    </span>}
 }
 
-<span class="kw">type</span> <span class="ident">SubscribedResources</span> <span class="op">=</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Mutex</span><span class="op">&lt;</span><span class="ident">HashSet</span><span class="op">&lt;</span>(<span class="ident">ResourceType</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>)<span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>;
+<span class="kw">type </span>SubscribedResources = Arc&lt;Mutex&lt;HashSet&lt;(ResourceType, Vec&lt;String&gt;)&gt;&gt;&gt;;
 
-<span class="doccomment">/// An active xDS gRPC management stream.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Stream</span> {
-    <span class="ident">config</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Config</span><span class="op">&gt;</span>,
-    <span class="ident">requests</span>: <span class="ident">broadcast::Sender</span><span class="op">&lt;</span><span class="ident">DiscoveryRequest</span><span class="op">&gt;</span>,
-    <span class="ident">handle_discovery_response</span>: <span class="ident">tokio::task::JoinHandle</span><span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">subscribed_resources</span>: <span class="ident">SubscribedResources</span>,
+<span class="doccomment">/// An active xDS gRPC management stream.
+</span><span class="kw">pub struct </span>Stream {
+    config: Arc&lt;Config&gt;,
+    requests: broadcast::Sender&lt;DiscoveryRequest&gt;,
+    handle_discovery_response: tokio::task::JoinHandle&lt;<span class="prelude-ty">Result</span>&lt;()&gt;&gt;,
+    subscribed_resources: SubscribedResources,
 }
 
-<span class="kw">impl</span> <span class="ident">Stream</span> {
-    <span class="attribute">#[<span class="ident">tracing::instrument</span>(<span class="ident">skip_all</span>)]</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">connect</span>(<span class="ident">xds</span>: <span class="ident">Client</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> (<span class="ident">requests</span>, <span class="kw-2">mut</span> <span class="ident">rx</span>) <span class="op">=</span> <span class="ident">broadcast::channel</span>(<span class="number">12</span>);
-        <span class="kw">let</span> <span class="ident">Client</span> { <span class="kw-2">mut</span> <span class="ident">client</span>, <span class="ident">config</span> } <span class="op">=</span> <span class="ident">xds</span>;
-        <span class="kw">let</span> <span class="ident">subscribed_resources</span>: <span class="ident">SubscribedResources</span> <span class="op">=</span> <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>();
+<span class="kw">impl </span>Stream {
+    <span class="attribute">#[tracing::instrument(skip_all)]
+    </span><span class="kw">async fn </span>connect(xds: Client) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">let </span>(requests, <span class="kw-2">mut </span>rx) = broadcast::channel(<span class="number">12</span>);
+        <span class="kw">let </span>Client { <span class="kw-2">mut </span>client, config } = xds;
+        <span class="kw">let </span>subscribed_resources: SubscribedResources = &lt;<span class="kw">_</span>&gt;::default();
 
-        <span class="kw">let</span> <span class="ident">handle_discovery_response</span> <span class="op">=</span> <span class="ident">tokio::spawn</span>({
-            <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">clone</span>();
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">requests</span> <span class="op">=</span> <span class="ident">requests</span>.<span class="ident">clone</span>();
-            <span class="kw">let</span> <span class="ident">subscribed_resources</span> <span class="op">=</span> <span class="ident">subscribed_resources</span>.<span class="ident">clone</span>();
-            <span class="kw">async</span> <span class="kw">move</span> {
-                <span class="kw">loop</span> {
-                    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">responses</span> <span class="op">=</span> <span class="ident">client</span>
-                        .<span class="ident">stream_aggregated_resources</span>(
-                            <span class="ident">tokio_stream::wrappers::BroadcastStream::from</span>(<span class="ident">rx</span>)
-                                <span class="comment">// Errors only happen if the stream is behind, which</span>
-                                <span class="comment">// we don&#39;t care about, we only want the latest</span>
-                                <span class="comment">// state of the world.</span>
-                                .<span class="ident">filter_map</span>(<span class="op">|</span><span class="ident">result</span><span class="op">|</span> <span class="ident">futures::future::ready</span>(<span class="ident">result</span>.<span class="ident">ok</span>())),
+        <span class="kw">let </span>handle_discovery_response = tokio::spawn({
+            <span class="kw">let </span>config = config.clone();
+            <span class="kw">let </span><span class="kw-2">mut </span>requests = requests.clone();
+            <span class="kw">let </span>subscribed_resources = subscribed_resources.clone();
+            <span class="kw">async move </span>{
+                <span class="kw">loop </span>{
+                    <span class="kw">let </span><span class="kw-2">mut </span>responses = client
+                        .stream_aggregated_resources(
+                            tokio_stream::wrappers::BroadcastStream::from(rx)
+                                <span class="comment">// Errors only happen if the stream is behind, which
+                                // we don&#39;t care about, we only want the latest
+                                // state of the world.
+                                </span>.filter_map(|result| futures::future::ready(result.ok())),
                         )
-                        .<span class="ident">in_current_span</span>()
-                        .<span class="kw">await</span><span class="question-mark">?</span>
-                        .<span class="ident">into_inner</span>();
+                        .in_current_span()
+                        .<span class="kw">await</span><span class="question-mark">?
+                        </span>.into_inner();
 
-                    <span class="kw">while</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">response</span>) <span class="op">=</span> <span class="ident">responses</span>
-                        .<span class="ident">message</span>()
-                        .<span class="kw">await</span>
-                        .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">tracing::warn!</span>(<span class="op">%</span><span class="ident">error</span>, <span class="string">&quot;Error from xDS server&quot;</span>))
-                        .<span class="ident">ok</span>()
-                        .<span class="ident">flatten</span>()
+                    <span class="kw">while let </span><span class="prelude-val">Some</span>(response) = responses
+                        .message()
+                        .<span class="kw">await
+                        </span>.map_err(|error| <span class="macro">tracing::warn!</span>(%error, <span class="string">&quot;Error from xDS server&quot;</span>))
+                        .ok()
+                        .flatten()
                     {
-                        <span class="kw">let</span> <span class="ident">identifier</span> <span class="op">=</span> <span class="ident">response</span>
-                            .<span class="ident">control_plane</span>
-                            .<span class="ident">as_ref</span>()
-                            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">cp</span><span class="op">|</span> <span class="ident">cp</span>.<span class="ident">identifier</span>.<span class="ident">clone</span>())
-                            .<span class="ident">unwrap_or_default</span>();
-                        <span class="kw">let</span> <span class="ident">_stream_metrics</span> <span class="op">=</span>
-                            <span class="ident"><span class="kw">super</span>::metrics::StreamConnectionMetrics::new</span>(<span class="kw-2">&amp;</span><span class="ident">identifier</span>);
+                        <span class="kw">let </span>identifier = response
+                            .control_plane
+                            .as_ref()
+                            .map(|cp| cp.identifier.clone())
+                            .unwrap_or_default();
+                        <span class="kw">let </span>_stream_metrics =
+                            <span class="kw">super</span>::metrics::StreamConnectionMetrics::new(<span class="kw-2">&amp;</span>identifier);
                         <span class="macro">tracing::info!</span>(
-                            <span class="ident">id</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">response</span>.<span class="ident">version_info</span>,
-                            <span class="ident">r#type</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">response</span>.<span class="ident">type_url</span>,
-                            <span class="ident">nonce</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">response</span>.<span class="ident">nonce</span>,
-                            <span class="ident">control_plane</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">identifier</span>,
-                            <span class="string">&quot;Received response&quot;</span>
-                        );
+                            id = <span class="kw-2">&amp;*</span>response.version_info,
+                            r#type = <span class="kw-2">&amp;*</span>response.type_url,
+                            nonce = <span class="kw-2">&amp;*</span>response.nonce,
+                            control_plane = <span class="kw-2">&amp;*</span>identifier,
+                            <span class="string">&quot;Received response&quot;
+                        </span>);
 
-                        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">response</span>
-                            .<span class="ident">resources</span>
-                            .<span class="ident">iter</span>()
-                            .<span class="ident">cloned</span>()
-                            .<span class="ident">map</span>(<span class="ident">Resource::try_from</span>)
-                            .<span class="ident">try_for_each</span>(<span class="op">|</span><span class="ident">resource</span><span class="op">|</span> {
-                                <span class="kw">let</span> <span class="ident">resource</span> <span class="op">=</span> <span class="ident">resource</span><span class="question-mark">?</span>;
-                                <span class="ident">metrics::DISCOVERY_RESPONSES</span>
-                                    .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">identifier</span>, <span class="ident">resource</span>.<span class="ident">type_url</span>()])
-                                    .<span class="ident">inc</span>();
-                                <span class="ident">config</span>.<span class="ident">apply</span>(<span class="kw-2">&amp;</span><span class="ident">resource</span>)
+                        <span class="kw">let </span>result = response
+                            .resources
+                            .iter()
+                            .cloned()
+                            .map(Resource::try_from)
+                            .try_for_each(|resource| {
+                                <span class="kw">let </span>resource = resource<span class="question-mark">?</span>;
+                                metrics::DISCOVERY_RESPONSES
+                                    .with_label_values(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;*</span>identifier, resource.type_url()])
+                                    .inc();
+                                config.apply(<span class="kw-2">&amp;</span>resource)
                             });
 
-                        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">DiscoveryRequest::try_from</span>(<span class="ident">response</span>)<span class="question-mark">?</span>;
-                        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">error</span>) <span class="op">=</span> <span class="ident">result</span> {
-                            <span class="ident">metrics::NACKS</span>
-                                .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">identifier</span>, <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">request</span>.<span class="ident">type_url</span>])
-                                .<span class="ident">inc</span>();
-                            <span class="ident">request</span>.<span class="ident">error_detail</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident"><span class="kw">crate</span>::xds::google::rpc::Status</span> {
-                                <span class="ident">code</span>: <span class="number">3</span>,
-                                <span class="ident">message</span>: <span class="ident">error</span>.<span class="ident">to_string</span>(),
-                                ..<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>()
+                        <span class="kw">let </span><span class="kw-2">mut </span>request = DiscoveryRequest::try_from(response)<span class="question-mark">?</span>;
+                        <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = result {
+                            metrics::NACKS
+                                .with_label_values(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;*</span>identifier, <span class="kw-2">&amp;*</span>request.type_url])
+                                .inc();
+                            request.error_detail = <span class="prelude-val">Some</span>(<span class="kw">crate</span>::xds::google::rpc::Status {
+                                code: <span class="number">3</span>,
+                                message: error.to_string(),
+                                ..&lt;<span class="kw">_</span>&gt;::default()
                             });
-                        } <span class="kw">else</span> {
-                            <span class="ident">metrics::ACKS</span>
-                                .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">identifier</span>, <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">request</span>.<span class="ident">type_url</span>])
-                                .<span class="ident">inc</span>();
+                        } <span class="kw">else </span>{
+                            metrics::ACKS
+                                .with_label_values(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;*</span>identifier, <span class="kw-2">&amp;*</span>request.type_url])
+                                .inc();
                         }
 
-                        <span class="ident">requests</span>.<span class="ident">send</span>(<span class="ident">request</span>)<span class="question-mark">?</span>;
+                        requests.send(request)<span class="question-mark">?</span>;
                     }
 
                     <span class="macro">tracing::info!</span>(<span class="string">&quot;Lost connection to xDS, retrying&quot;</span>);
-                    <span class="comment">// If we&#39;ve reached here, something has gone wrong with the</span>
-                    <span class="comment">// connection, so we just create a new client and restart.</span>
-                    <span class="ident">client</span> <span class="op">=</span> <span class="ident">Client::new_ads_client</span>(<span class="kw-2">&amp;</span><span class="ident">config</span>).<span class="kw">await</span><span class="question-mark">?</span>;
-                    <span class="ident">rx</span> <span class="op">=</span> <span class="ident">requests</span>.<span class="ident">subscribe</span>();
+                    <span class="comment">// If we&#39;ve reached here, something has gone wrong with the
+                    // connection, so we just create a new client and restart.
+                    </span>client = Client::new_ads_client(<span class="kw-2">&amp;</span>config).<span class="kw">await</span><span class="question-mark">?</span>;
+                    rx = requests.subscribe();
 
-                    <span class="kw">for</span> (<span class="ident">resource</span>, <span class="ident">names</span>) <span class="kw">in</span> <span class="ident">subscribed_resources</span>.<span class="ident">lock</span>().<span class="kw">await</span>.<span class="ident">iter</span>() {
-                        <span class="ident"><span class="self">Self</span>::send_without_cache</span>(<span class="kw-2">&amp;</span><span class="ident">config</span>, <span class="kw-2">&amp;mut</span> <span class="ident">requests</span>, <span class="kw-2">*</span><span class="ident">resource</span>, <span class="ident">names</span>)<span class="question-mark">?</span>;
+                    <span class="kw">for </span>(resource, names) <span class="kw">in </span>subscribed_resources.lock().<span class="kw">await</span>.iter() {
+                        <span class="self">Self</span>::send_without_cache(<span class="kw-2">&amp;</span>config, <span class="kw-2">&amp;mut </span>requests, <span class="kw-2">*</span>resource, names)<span class="question-mark">?</span>;
                     }
                 }
             }
-            .<span class="ident">instrument</span>(<span class="macro">tracing::trace_span!</span>(<span class="string">&quot;handle_discovery_response&quot;</span>))
+            .instrument(<span class="macro">tracing::trace_span!</span>(<span class="string">&quot;handle_discovery_response&quot;</span>))
         });
 
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
-            <span class="ident">config</span>,
-            <span class="ident">requests</span>,
-            <span class="ident">handle_discovery_response</span>,
-            <span class="ident">subscribed_resources</span>,
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
+            config,
+            requests,
+            handle_discovery_response,
+            subscribed_resources,
         })
     }
 
-    <span class="attribute">#[<span class="ident">tracing::instrument</span>(<span class="ident">skip</span>(<span class="self">self</span>))]</span>
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">send</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">resource_type</span>: <span class="ident">ResourceType</span>, <span class="ident">names</span>: <span class="kw-2">&amp;</span>[<span class="ident">String</span>]) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">subscribed_resources</span>
-            .<span class="ident">lock</span>()
-            .<span class="kw">await</span>
-            .<span class="ident">insert</span>((<span class="ident">resource_type</span>, <span class="ident">names</span>.<span class="ident">to_vec</span>()));
-        <span class="ident"><span class="self">Self</span>::send_without_cache</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">config</span>, <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">requests</span>, <span class="ident">resource_type</span>, <span class="ident">names</span>)
+    <span class="attribute">#[tracing::instrument(skip(<span class="self">self</span>))]
+    </span><span class="kw">pub async fn </span>send(<span class="kw-2">&amp;mut </span><span class="self">self</span>, resource_type: ResourceType, names: <span class="kw-2">&amp;</span>[String]) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+        <span class="self">self</span>.subscribed_resources
+            .lock()
+            .<span class="kw">await
+            </span>.insert((resource_type, names.to_vec()));
+        <span class="self">Self</span>::send_without_cache(<span class="kw-2">&amp;</span><span class="self">self</span>.config, <span class="kw-2">&amp;mut </span><span class="self">self</span>.requests, resource_type, names)
     }
 
-    <span class="kw">fn</span> <span class="ident">send_without_cache</span>(
-        <span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">Config</span>,
-        <span class="ident">requests</span>: <span class="kw-2">&amp;mut</span> <span class="ident">broadcast::Sender</span><span class="op">&lt;</span><span class="ident">DiscoveryRequest</span><span class="op">&gt;</span>,
-        <span class="ident">resource_type</span>: <span class="ident">ResourceType</span>,
-        <span class="ident">names</span>: <span class="kw-2">&amp;</span>[<span class="ident">String</span>],
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">DiscoveryRequest</span> {
-            <span class="ident">node</span>: <span class="prelude-val">Some</span>(<span class="ident">Node</span> {
-                <span class="ident">id</span>: (<span class="kw-2">*</span><span class="ident">config</span>.<span class="ident">id</span>.<span class="ident">load</span>()).<span class="ident">clone</span>(),
-                <span class="ident">user_agent_name</span>: <span class="string">&quot;quilkin&quot;</span>.<span class="ident">into</span>(),
-                ..<span class="ident">Node::default</span>()
+    <span class="kw">fn </span>send_without_cache(
+        config: <span class="kw-2">&amp;</span>Config,
+        requests: <span class="kw-2">&amp;mut </span>broadcast::Sender&lt;DiscoveryRequest&gt;,
+        resource_type: ResourceType,
+        names: <span class="kw-2">&amp;</span>[String],
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+        <span class="kw">let </span>request = DiscoveryRequest {
+            node: <span class="prelude-val">Some</span>(Node {
+                id: (<span class="kw-2">*</span>config.id.load()).clone(),
+                user_agent_name: <span class="string">&quot;quilkin&quot;</span>.into(),
+                ..Node::default()
             }),
-            <span class="ident">resource_names</span>: <span class="ident">names</span>.<span class="ident">to_vec</span>(),
-            <span class="ident">type_url</span>: <span class="ident">resource_type</span>.<span class="ident">type_url</span>().<span class="ident">into</span>(),
-            ..<span class="ident">DiscoveryRequest::default</span>()
+            resource_names: names.to_vec(),
+            type_url: resource_type.type_url().into(),
+            ..DiscoveryRequest::default()
         };
 
-        <span class="macro">tracing::trace!</span>(<span class="ident">r#type</span><span class="op">=</span><span class="op">%</span><span class="ident">resource_type</span>, <span class="question-mark">?</span><span class="ident">names</span>, <span class="string">&quot;sending discovery request&quot;</span>);
-        <span class="ident">requests</span>.<span class="ident">send</span>(<span class="ident">request</span>).<span class="ident">map_err</span>(<span class="ident">From::from</span>).<span class="ident">map</span>(<span class="ident">drop</span>)
+        <span class="macro">tracing::trace!</span>(r#type=%resource_type, <span class="question-mark">?</span>names, <span class="string">&quot;sending discovery request&quot;</span>);
+        requests.send(request).map_err(From::from).map(drop)
     }
 }
 
-<span class="kw">impl</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">Stream</span> {
-    <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) {
-        <span class="self">self</span>.<span class="ident">handle_discovery_response</span>.<span class="ident">abort</span>();
+<span class="kw">impl </span>Drop <span class="kw">for </span>Stream {
+    <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+        <span class="self">self</span>.handle_discovery_response.abort();
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">thiserror::Error</span>)]</span>
-<span class="kw">enum</span> <span class="ident">RpcSessionError</span> {
-    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Failed to establish initial connection.\n {0:?}&quot;</span>)]</span>
-    <span class="ident">InitialConnect</span>(<span class="ident">TonicError</span>),
+<span class="attribute">#[derive(Debug, thiserror::Error)]
+</span><span class="kw">enum </span>RpcSessionError {
+    <span class="attribute">#[error(<span class="string">&quot;Failed to establish initial connection.\n {0:?}&quot;</span>)]
+    </span>InitialConnect(TonicError),
 
-    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Error occured while receiving data. Status: {0}&quot;</span>)]</span>
-    <span class="ident">Receive</span>(<span class="ident">tonic::Status</span>),
+    <span class="attribute">#[error(<span class="string">&quot;Error occured while receiving data. Status: {0}&quot;</span>)]
+    </span>Receive(tonic::Status),
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
+    <span class="kw">use super</span>::<span class="kw-2">*</span>;
 
-    <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
-    <span class="doccomment">/// If we get an invalid URL, we should return immediately rather</span>
-    <span class="doccomment">/// than backoff or retry.</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">invalid_url</span>() {
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident"><span class="kw">crate</span>::Config::builder</span>()
-            .<span class="ident">management_servers</span>([<span class="string">&quot;localhost:18000&quot;</span>.<span class="ident">into</span>()])
-            .<span class="ident">build</span>()
-            .<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="ident">run</span> <span class="op">=</span> <span class="ident">Client::connect</span>(<span class="ident">Arc::new</span>(<span class="ident">config</span>));
+    <span class="attribute">#[tokio::test]
+    </span><span class="doccomment">/// If we get an invalid URL, we should return immediately rather
+    /// than backoff or retry.
+    </span><span class="kw">async fn </span>invalid_url() {
+        <span class="kw">let </span>config = <span class="kw">crate</span>::Config::builder()
+            .management_servers([<span class="string">&quot;localhost:18000&quot;</span>.into()])
+            .build()
+            .unwrap();
+        <span class="kw">let </span>run = Client::connect(Arc::new(config));
 
-        <span class="kw">let</span> <span class="ident">execution_result</span> <span class="op">=</span>
-            <span class="ident">tokio::time::timeout</span>(<span class="ident">std::time::Duration::from_millis</span>(<span class="number">10000</span>), <span class="ident">run</span>).<span class="kw">await</span>;
-        <span class="macro">assert!</span>(<span class="ident">execution_result</span>
-            .<span class="ident">expect</span>(<span class="string">&quot;client should bail out immediately&quot;</span>)
-            .<span class="ident">is_err</span>());
+        <span class="kw">let </span>execution_result =
+            tokio::time::timeout(std::time::Duration::from_millis(<span class="number">10000</span>), run).<span class="kw">await</span>;
+        <span class="macro">assert!</span>(execution_result
+            .expect(<span class="string">&quot;client should bail out immediately&quot;</span>)
+            .is_err());
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

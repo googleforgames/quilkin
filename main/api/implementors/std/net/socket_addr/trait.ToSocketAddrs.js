@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"quilkin":[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.65.0/std/net/socket_addr/trait.ToSocketAddrs.html\" title=\"trait std::net::socket_addr::ToSocketAddrs\">ToSocketAddrs</a> for <a class=\"struct\" href=\"quilkin/endpoint/struct.EndpointAddress.html\" title=\"struct quilkin::endpoint::EndpointAddress\">EndpointAddress</a>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

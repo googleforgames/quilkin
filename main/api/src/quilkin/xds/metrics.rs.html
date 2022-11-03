@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/xds/metrics.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>metrics.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../quilkin/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/xds/metrics.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>metrics.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../normalize.css"><link rel="stylesheet" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../ayu.css" disabled><link rel="stylesheet" href="../../../dark.css" disabled><link rel="stylesheet" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../quilkin/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -113,92 +113,92 @@
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- */</span>
+ */
 
-<span class="kw">use</span> <span class="ident">once_cell::sync::Lazy</span>;
-<span class="kw">use</span> <span class="ident">prometheus</span>::{<span class="ident">IntCounterVec</span>, <span class="ident">IntGaugeVec</span>};
+</span><span class="kw">use </span>once_cell::sync::Lazy;
+<span class="kw">use </span>prometheus::{IntCounterVec, IntGaugeVec};
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const</span> <span class="ident">CONTROL_PLANE_LABEL</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;control_plane&quot;</span>;
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const</span> <span class="ident">NODE_LABEL</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;node&quot;</span>;
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const</span> <span class="ident">TYPE_LABEL</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;type&quot;</span>;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>CONTROL_PLANE_LABEL: <span class="kw-2">&amp;</span>str = <span class="string">&quot;control_plane&quot;</span>;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>NODE_LABEL: <span class="kw-2">&amp;</span>str = <span class="string">&quot;node&quot;</span>;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>TYPE_LABEL: <span class="kw-2">&amp;</span>str = <span class="string">&quot;type&quot;</span>;
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">static</span> <span class="ident">ACTIVE_XDS_CLIENTS</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">IntGaugeVec</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy::new</span>(<span class="op">|</span><span class="op">|</span> {
-    <span class="macro">prometheus::register_int_gauge_vec_with_registry!</span> {
-        <span class="macro">prometheus::opts!</span> {
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">static </span>ACTIVE_XDS_CLIENTS: Lazy&lt;IntGaugeVec&gt; = Lazy::new(|| {
+    <span class="macro">prometheus::register_int_gauge_vec_with_registry! </span>{
+        <span class="macro">prometheus::opts! </span>{
             <span class="string">&quot;active_xds_clients&quot;</span>,
             <span class="string">&quot;Total number of active xDS clients&quot;</span>,
         },
-        <span class="kw-2">&amp;</span>[<span class="ident">NODE_LABEL</span>],
-        <span class="ident"><span class="kw">crate</span>::metrics::registry</span>(),
+        <span class="kw-2">&amp;</span>[NODE_LABEL],
+        <span class="kw">crate</span>::metrics::registry(),
     }
-    .<span class="ident">unwrap</span>()
+    .unwrap()
 });
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">static</span> <span class="ident">DISCOVERY_REQUESTS</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">IntCounterVec</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy::new</span>(<span class="op">|</span><span class="op">|</span> {
-    <span class="macro">prometheus::register_int_counter_vec_with_registry!</span> {
-        <span class="macro">prometheus::opts!</span> {
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">static </span>DISCOVERY_REQUESTS: Lazy&lt;IntCounterVec&gt; = Lazy::new(|| {
+    <span class="macro">prometheus::register_int_counter_vec_with_registry! </span>{
+        <span class="macro">prometheus::opts! </span>{
             <span class="string">&quot;discovery_requests&quot;</span>,
             <span class="string">&quot;Total number of xDS discovery requests&quot;</span>,
         },
-        <span class="kw-2">&amp;</span>[<span class="ident">NODE_LABEL</span>, <span class="ident">TYPE_LABEL</span>],
-        <span class="ident"><span class="kw">crate</span>::metrics::registry</span>(),
+        <span class="kw-2">&amp;</span>[NODE_LABEL, TYPE_LABEL],
+        <span class="kw">crate</span>::metrics::registry(),
     }
-    .<span class="ident">unwrap</span>()
+    .unwrap()
 });
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">static</span> <span class="ident">DISCOVERY_RESPONSES</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">IntCounterVec</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy::new</span>(<span class="op">|</span><span class="op">|</span> {
-    <span class="macro">prometheus::register_int_counter_vec_with_registry!</span> {
-        <span class="macro">prometheus::opts!</span> {
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">static </span>DISCOVERY_RESPONSES: Lazy&lt;IntCounterVec&gt; = Lazy::new(|| {
+    <span class="macro">prometheus::register_int_counter_vec_with_registry! </span>{
+        <span class="macro">prometheus::opts! </span>{
             <span class="string">&quot;discovery_responses&quot;</span>,
             <span class="string">&quot;Total number of xDS discovery responses&quot;</span>,
         },
-        <span class="kw-2">&amp;</span>[<span class="ident">CONTROL_PLANE_LABEL</span>, <span class="ident">TYPE_LABEL</span>],
-        <span class="ident"><span class="kw">crate</span>::metrics::registry</span>(),
+        <span class="kw-2">&amp;</span>[CONTROL_PLANE_LABEL, TYPE_LABEL],
+        <span class="kw">crate</span>::metrics::registry(),
     }
-    .<span class="ident">unwrap</span>()
+    .unwrap()
 });
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">static</span> <span class="ident">ACKS</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">IntCounterVec</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy::new</span>(<span class="op">|</span><span class="op">|</span> {
-    <span class="macro">prometheus::register_int_counter_vec_with_registry!</span> {
-        <span class="macro">prometheus::opts!</span> {
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">static </span>ACKS: Lazy&lt;IntCounterVec&gt; = Lazy::new(|| {
+    <span class="macro">prometheus::register_int_counter_vec_with_registry! </span>{
+        <span class="macro">prometheus::opts! </span>{
             <span class="string">&quot;xds_acks&quot;</span>,
             <span class="string">&quot;Total number of xDS ACKs&quot;</span>,
         },
-        <span class="kw-2">&amp;</span>[<span class="ident">NODE_LABEL</span>, <span class="ident">TYPE_LABEL</span>],
-        <span class="ident"><span class="kw">crate</span>::metrics::registry</span>(),
+        <span class="kw-2">&amp;</span>[NODE_LABEL, TYPE_LABEL],
+        <span class="kw">crate</span>::metrics::registry(),
     }
-    .<span class="ident">unwrap</span>()
+    .unwrap()
 });
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">static</span> <span class="ident">NACKS</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">IntCounterVec</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy::new</span>(<span class="op">|</span><span class="op">|</span> {
-    <span class="macro">prometheus::register_int_counter_vec_with_registry!</span> {
-        <span class="macro">prometheus::opts!</span> {
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">static </span>NACKS: Lazy&lt;IntCounterVec&gt; = Lazy::new(|| {
+    <span class="macro">prometheus::register_int_counter_vec_with_registry! </span>{
+        <span class="macro">prometheus::opts! </span>{
             <span class="string">&quot;xds_nacks&quot;</span>,
             <span class="string">&quot;Total number of xDS NACKs&quot;</span>,
         },
-        <span class="kw-2">&amp;</span>[<span class="ident">NODE_LABEL</span>, <span class="ident">TYPE_LABEL</span>],
-        <span class="ident"><span class="kw">crate</span>::metrics::registry</span>(),
+        <span class="kw-2">&amp;</span>[NODE_LABEL, TYPE_LABEL],
+        <span class="kw">crate</span>::metrics::registry(),
     }
-    .<span class="ident">unwrap</span>()
+    .unwrap()
 });
 
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">StreamConnectionMetrics</span> {
-    <span class="ident">node</span>: <span class="ident">String</span>,
+<span class="kw">pub struct </span>StreamConnectionMetrics {
+    node: String,
 }
 
-<span class="kw">impl</span> <span class="ident">StreamConnectionMetrics</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">node</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">node</span> <span class="op">=</span> <span class="ident">node</span>.<span class="ident">into</span>();
-        <span class="ident">ACTIVE_XDS_CLIENTS</span>.<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">node</span>]).<span class="ident">inc</span>();
+<span class="kw">impl </span>StreamConnectionMetrics {
+    <span class="kw">pub fn </span>new(node: <span class="kw">impl </span>Into&lt;String&gt;) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span>node = node.into();
+        ACTIVE_XDS_CLIENTS.with_label_values(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;*</span>node]).inc();
 
-        <span class="self">Self</span> { <span class="ident">node</span> }
+        <span class="self">Self </span>{ node }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">StreamConnectionMetrics</span> {
-    <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) {
-        <span class="ident">ACTIVE_XDS_CLIENTS</span>.<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="self">self</span>.<span class="ident">node</span>]).<span class="ident">dec</span>();
+<span class="kw">impl </span>Drop <span class="kw">for </span>StreamConnectionMetrics {
+    <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+        ACTIVE_XDS_CLIENTS.with_label_values(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;*</span><span class="self">self</span>.node]).dec();
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

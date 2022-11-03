@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/cli/generate_config_schema.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>generate_config_schema.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../quilkin/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/cli/generate_config_schema.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>generate_config_schema.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../normalize.css"><link rel="stylesheet" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../ayu.css" disabled><link rel="stylesheet" href="../../../dark.css" disabled><link rel="stylesheet" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../quilkin/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -77,56 +77,56 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */</span>
+ */
 
-<span class="doccomment">/// Generates JSON schema files for known filters.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">clap::Args</span>, <span class="ident">Clone</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GenerateConfigSchema</span> {
-    <span class="doccomment">/// The directory to write configuration files.</span>
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">short</span>, <span class="ident">long</span>, <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;.&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">output_directory</span>: <span class="ident">std::path::PathBuf</span>,
-    <span class="doccomment">/// A list of one or more filter IDs to generate or &#39;all&#39; to generate all</span>
-    <span class="doccomment">/// available filter schemas.</span>
-    <span class="attribute">#[<span class="ident">clap</span>(<span class="ident">num_args</span> <span class="op">=</span> <span class="number">1</span>.., <span class="ident">default_value</span> <span class="op">=</span> <span class="string">&quot;all&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">filter_ids</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+</span><span class="doccomment">/// Generates JSON schema files for known filters.
+</span><span class="attribute">#[derive(clap::Args, Clone)]
+</span><span class="kw">pub struct </span>GenerateConfigSchema {
+    <span class="doccomment">/// The directory to write configuration files.
+    </span><span class="attribute">#[clap(short, long, default_value = <span class="string">&quot;.&quot;</span>)]
+    </span><span class="kw">pub </span>output_directory: std::path::PathBuf,
+    <span class="doccomment">/// A list of one or more filter IDs to generate or &#39;all&#39; to generate all
+    /// available filter schemas.
+    </span><span class="attribute">#[clap(num_args = <span class="number">1</span>.., default_value = <span class="string">&quot;all&quot;</span>)]
+    </span><span class="kw">pub </span>filter_ids: Vec&lt;String&gt;,
 }
 
-<span class="kw">impl</span> <span class="ident">GenerateConfigSchema</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">generate_config_schema</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident"><span class="kw">crate</span>::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">set</span> <span class="op">=</span> <span class="ident"><span class="kw">crate</span>::filters::FilterSet::default</span>();
-        <span class="kw">type</span> <span class="ident">SchemaIterator</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span><span class="op">&gt;</span> <span class="op">=</span>
-            <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> (<span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>, <span class="ident">schemars::schema::RootSchema</span>)<span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;r</span><span class="op">&gt;</span>;
+<span class="kw">impl </span>GenerateConfigSchema {
+    <span class="kw">pub fn </span>generate_config_schema(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
+        <span class="kw">let </span>set = <span class="kw">crate</span>::filters::FilterSet::default();
+        <span class="kw">type </span>SchemaIterator&lt;<span class="lifetime">&#39;r</span>&gt; =
+            Box&lt;<span class="kw">dyn </span>Iterator&lt;Item = (<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, schemars::schema::RootSchema)&gt; + <span class="lifetime">&#39;r</span>&gt;;
 
-        <span class="kw">let</span> <span class="ident">schemas</span> <span class="op">=</span> (<span class="self">self</span>.<span class="ident">filter_ids</span>.<span class="ident">len</span>() <span class="op">==</span> <span class="number">1</span> <span class="op">&amp;&amp;</span> <span class="self">self</span>.<span class="ident">filter_ids</span>[<span class="number">0</span>].<span class="ident">to_lowercase</span>() <span class="op">==</span> <span class="string">&quot;all&quot;</span>)
-            .<span class="ident">then</span>(<span class="op">|</span><span class="op">|</span> {
-                <span class="ident">Box::new</span>(
-                    <span class="ident">set</span>.<span class="ident">iter</span>()
-                        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">factory</span><span class="op">|</span> (<span class="ident">factory</span>.<span class="ident">name</span>(), <span class="ident">factory</span>.<span class="ident">config_schema</span>())),
-                ) <span class="kw">as</span> <span class="ident">SchemaIterator</span>
+        <span class="kw">let </span>schemas = (<span class="self">self</span>.filter_ids.len() == <span class="number">1 </span>&amp;&amp; <span class="self">self</span>.filter_ids[<span class="number">0</span>].to_lowercase() == <span class="string">&quot;all&quot;</span>)
+            .then(|| {
+                Box::new(
+                    set.iter()
+                        .map(|factory| (factory.name(), factory.config_schema())),
+                ) <span class="kw">as </span>SchemaIterator
             })
-            .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> {
-                <span class="ident">Box::new</span>(<span class="self">self</span>.<span class="ident">filter_ids</span>.<span class="ident">iter</span>().<span class="ident">filter_map</span>(<span class="op">|</span><span class="ident">id</span><span class="op">|</span> {
-                    <span class="kw">let</span> <span class="ident">item</span> <span class="op">=</span> <span class="ident">set</span>.<span class="ident">get</span>(<span class="ident">id</span>);
+            .unwrap_or_else(|| {
+                Box::new(<span class="self">self</span>.filter_ids.iter().filter_map(|id| {
+                    <span class="kw">let </span>item = set.get(id);
 
-                    <span class="kw">if</span> <span class="ident">item</span>.<span class="ident">is_none</span>() {
+                    <span class="kw">if </span>item.is_none() {
                         <span class="macro">tracing::error!</span>(<span class="string">&quot;{id} not found in filter set.&quot;</span>);
                     }
 
-                    <span class="ident">item</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">item</span><span class="op">|</span> (<span class="ident">item</span>.<span class="ident">name</span>(), <span class="ident">item</span>.<span class="ident">config_schema</span>()))
-                })) <span class="kw">as</span> <span class="ident">SchemaIterator</span>
+                    item.map(|item| (item.name(), item.config_schema()))
+                })) <span class="kw">as </span>SchemaIterator
             });
 
-        <span class="kw">for</span> (<span class="ident">id</span>, <span class="ident">schema</span>) <span class="kw">in</span> <span class="ident">schemas</span> {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">path</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">output_directory</span>.<span class="ident">join</span>(<span class="ident">id</span>);
-            <span class="ident">path</span>.<span class="ident">set_extension</span>(<span class="string">&quot;yaml&quot;</span>);
+        <span class="kw">for </span>(id, schema) <span class="kw">in </span>schemas {
+            <span class="kw">let </span><span class="kw-2">mut </span>path = <span class="self">self</span>.output_directory.join(id);
+            path.set_extension(<span class="string">&quot;yaml&quot;</span>);
 
-            <span class="macro">tracing::info!</span>(<span class="string">&quot;Writing {id} schema to {}&quot;</span>, <span class="ident">path</span>.<span class="ident">display</span>());
+            <span class="macro">tracing::info!</span>(<span class="string">&quot;Writing {id} schema to {}&quot;</span>, path.display());
 
-            <span class="ident">std::fs::write</span>(<span class="ident">path</span>, <span class="ident">serde_yaml::to_string</span>(<span class="kw-2">&amp;</span><span class="ident">schema</span>)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
+            std::fs::write(path, serde_yaml::to_string(<span class="kw-2">&amp;</span>schema)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
         }
 
         <span class="prelude-val">Ok</span>(())
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

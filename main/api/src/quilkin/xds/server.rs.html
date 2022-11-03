@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/xds/server.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>server.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../quilkin/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/xds/server.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>server.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../normalize.css"><link rel="stylesheet" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../ayu.css" disabled><link rel="stylesheet" href="../../../dark.css" disabled><link rel="stylesheet" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../quilkin/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -404,383 +404,383 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */</span>
+ */
 
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">pin::Pin</span>, <span class="ident">sync::Arc</span>};
+</span><span class="kw">use </span>std::{pin::Pin, sync::Arc};
 
-<span class="kw">use</span> <span class="ident">cached::Cached</span>;
-<span class="kw">use</span> <span class="ident">futures::Stream</span>;
-<span class="kw">use</span> <span class="ident">tokio_stream::StreamExt</span>;
-<span class="kw">use</span> <span class="ident">tracing_futures::Instrument</span>;
+<span class="kw">use </span>cached::Cached;
+<span class="kw">use </span>futures::Stream;
+<span class="kw">use </span>tokio_stream::StreamExt;
+<span class="kw">use </span>tracing_futures::Instrument;
 
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">config::Config</span>,
-    <span class="ident">xds</span>::{
-        <span class="ident">metrics</span>,
-        <span class="ident">service::discovery::v3</span>::{
-            <span class="ident">aggregated_discovery_service_server</span>::{
-                <span class="ident">AggregatedDiscoveryService</span>, <span class="ident">AggregatedDiscoveryServiceServer</span>,
+<span class="kw">use crate</span>::{
+    config::Config,
+    xds::{
+        metrics,
+        service::discovery::v3::{
+            aggregated_discovery_service_server::{
+                AggregatedDiscoveryService, AggregatedDiscoveryServiceServer,
             },
-            <span class="ident">DeltaDiscoveryRequest</span>, <span class="ident">DeltaDiscoveryResponse</span>, <span class="ident">DiscoveryRequest</span>, <span class="ident">DiscoveryResponse</span>,
+            DeltaDiscoveryRequest, DeltaDiscoveryResponse, DiscoveryRequest, DiscoveryResponse,
         },
-        <span class="ident">ResourceType</span>,
+        ResourceType,
     },
 };
 
-<span class="attribute">#[<span class="ident">tracing::instrument</span>(<span class="ident">skip_all</span>)]</span>
-<span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">spawn</span>(<span class="ident">config</span>: <span class="ident">std::sync::Arc</span><span class="op">&lt;</span><span class="ident"><span class="kw">crate</span>::Config</span><span class="op">&gt;</span>) -&gt; <span class="ident"><span class="kw">crate</span>::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">port</span> <span class="op">=</span> <span class="kw-2">*</span><span class="ident">config</span>.<span class="ident">port</span>.<span class="ident">load</span>();
+<span class="attribute">#[tracing::instrument(skip_all)]
+</span><span class="kw">pub async fn </span>spawn(config: std::sync::Arc&lt;<span class="kw">crate</span>::Config&gt;) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
+    <span class="kw">let </span>port = <span class="kw-2">*</span>config.port.load();
 
-    <span class="kw">let</span> <span class="ident">server</span> <span class="op">=</span> <span class="ident">AggregatedDiscoveryServiceServer::new</span>(<span class="ident">ControlPlane::from_arc</span>(<span class="ident">config</span>));
-    <span class="kw">let</span> <span class="ident">server</span> <span class="op">=</span> <span class="ident">tonic::transport::Server::builder</span>().<span class="ident">add_service</span>(<span class="ident">server</span>);
-    <span class="macro">tracing::info!</span>(<span class="string">&quot;Serving management server at {}&quot;</span>, <span class="ident">port</span>);
-    <span class="prelude-val">Ok</span>(<span class="ident">server</span>
-        .<span class="ident">serve</span>((<span class="ident">std::net::Ipv4Addr::UNSPECIFIED</span>, <span class="ident">port</span>).<span class="ident">into</span>())
+    <span class="kw">let </span>server = AggregatedDiscoveryServiceServer::new(ControlPlane::from_arc(config));
+    <span class="kw">let </span>server = tonic::transport::Server::builder().add_service(server);
+    <span class="macro">tracing::info!</span>(<span class="string">&quot;Serving management server at {}&quot;</span>, port);
+    <span class="prelude-val">Ok</span>(server
+        .serve((std::net::Ipv4Addr::UNSPECIFIED, port).into())
         .<span class="kw">await</span><span class="question-mark">?</span>)
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ControlPlane</span> {
-    <span class="ident">config</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Config</span><span class="op">&gt;</span>,
-    <span class="ident">watchers</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident"><span class="kw">crate</span>::xds::resource::ResourceMap</span><span class="op">&lt;</span><span class="ident">Watchers</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+<span class="attribute">#[derive(Clone)]
+</span><span class="kw">pub struct </span>ControlPlane {
+    config: Arc&lt;Config&gt;,
+    watchers: Arc&lt;<span class="kw">crate</span>::xds::resource::ResourceMap&lt;Watchers&gt;&gt;,
 }
 
-<span class="kw">struct</span> <span class="ident">Watchers</span> {
-    <span class="ident">sender</span>: <span class="ident">tokio::sync::watch::Sender</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
-    <span class="ident">receiver</span>: <span class="ident">tokio::sync::watch::Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
-    <span class="ident">version</span>: <span class="ident">std::sync::atomic::AtomicU64</span>,
+<span class="kw">struct </span>Watchers {
+    sender: tokio::sync::watch::Sender&lt;()&gt;,
+    receiver: tokio::sync::watch::Receiver&lt;()&gt;,
+    version: std::sync::atomic::AtomicU64,
 }
 
-<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">Watchers</span> {
-    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
-        <span class="kw">let</span> (<span class="ident">sender</span>, <span class="ident">receiver</span>) <span class="op">=</span> <span class="ident">tokio::sync::watch::channel</span>(());
-        <span class="self">Self</span> {
-            <span class="ident">sender</span>,
-            <span class="ident">receiver</span>,
-            <span class="ident">version</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
+<span class="kw">impl </span>Default <span class="kw">for </span>Watchers {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span>(sender, receiver) = tokio::sync::watch::channel(());
+        <span class="self">Self </span>{
+            sender,
+            receiver,
+            version: &lt;<span class="kw">_</span>&gt;::default(),
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">ControlPlane</span> {
-    <span class="doccomment">/// Creates a new server for managing [`Config`].</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">config</span>: <span class="ident">Config</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident"><span class="self">Self</span>::from_arc</span>(<span class="ident">Arc::new</span>(<span class="ident">config</span>))
+<span class="kw">impl </span>ControlPlane {
+    <span class="doccomment">/// Creates a new server for managing [`Config`].
+    </span><span class="kw">pub fn </span>new(config: Config) -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::from_arc(Arc::new(config))
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_arc</span>(<span class="ident">config</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Config</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">this</span> <span class="op">=</span> <span class="self">Self</span> {
-            <span class="ident">config</span>,
-            <span class="ident">watchers</span>: <span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>(),
+    <span class="kw">pub fn </span>from_arc(config: Arc&lt;Config&gt;) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span>this = <span class="self">Self </span>{
+            config,
+            watchers: &lt;<span class="kw">_</span>&gt;::default(),
         };
 
-        <span class="ident">this</span>.<span class="ident">config</span>.<span class="ident">clusters</span>.<span class="ident">watch</span>({
-            <span class="kw">let</span> <span class="ident">this</span> <span class="op">=</span> <span class="ident">this</span>.<span class="ident">clone</span>();
-            <span class="kw">move</span> <span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
-                <span class="ident">this</span>.<span class="ident">push_update</span>(<span class="ident">ResourceType::Endpoint</span>);
-                <span class="ident">this</span>.<span class="ident">push_update</span>(<span class="ident">ResourceType::Cluster</span>);
+        this.config.clusters.watch({
+            <span class="kw">let </span>this = this.clone();
+            <span class="kw">move </span>|<span class="kw">_</span>| {
+                this.push_update(ResourceType::Endpoint);
+                this.push_update(ResourceType::Cluster);
             }
         });
 
-        <span class="ident">this</span>.<span class="ident">config</span>.<span class="ident">filters</span>.<span class="ident">watch</span>({
-            <span class="kw">let</span> <span class="ident">this</span> <span class="op">=</span> <span class="ident">this</span>.<span class="ident">clone</span>();
-            <span class="kw">move</span> <span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
-                <span class="ident">this</span>.<span class="ident">push_update</span>(<span class="ident">ResourceType::Listener</span>);
+        this.config.filters.watch({
+            <span class="kw">let </span>this = this.clone();
+            <span class="kw">move </span>|<span class="kw">_</span>| {
+                this.push_update(ResourceType::Listener);
             }
         });
 
-        <span class="ident">this</span>
+        this
     }
 
-    <span class="kw">fn</span> <span class="ident">push_update</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">resource_type</span>: <span class="ident">ResourceType</span>) {
-        <span class="kw">let</span> <span class="ident">watchers</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">watchers</span>[<span class="ident">resource_type</span>];
-        <span class="ident">watchers</span>
-            .<span class="ident">version</span>
-            .<span class="ident">fetch_add</span>(<span class="number">1</span>, <span class="ident">std::sync::atomic::Ordering::Relaxed</span>);
-        <span class="macro">tracing::trace!</span>(<span class="op">%</span><span class="ident">resource_type</span>, <span class="ident">watchers</span><span class="op">=</span><span class="ident">watchers</span>.<span class="ident">sender</span>.<span class="ident">receiver_count</span>(), <span class="string">&quot;pushing update&quot;</span>);
-        <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">watchers</span>.<span class="ident">sender</span>.<span class="ident">send</span>(());
+    <span class="kw">fn </span>push_update(<span class="kw-2">&amp;</span><span class="self">self</span>, resource_type: ResourceType) {
+        <span class="kw">let </span>watchers = <span class="kw-2">&amp;</span><span class="self">self</span>.watchers[resource_type];
+        watchers
+            .version
+            .fetch_add(<span class="number">1</span>, std::sync::atomic::Ordering::Relaxed);
+        <span class="macro">tracing::trace!</span>(%resource_type, watchers=watchers.sender.receiver_count(), <span class="string">&quot;pushing update&quot;</span>);
+        <span class="kw">let _ </span>= watchers.sender.send(());
     }
 
-    <span class="kw">fn</span> <span class="ident">discovery_response</span>(
+    <span class="kw">fn </span>discovery_response(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">id</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
-        <span class="ident">resource_type</span>: <span class="ident">ResourceType</span>,
-        <span class="ident">names</span>: <span class="kw-2">&amp;</span>[<span class="ident">String</span>],
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">DiscoveryResponse</span>, <span class="ident">tonic::Status</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">response</span> <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">config</span>
-            .<span class="ident">discovery_request</span>(<span class="ident">id</span>, <span class="ident">resource_type</span>, <span class="ident">names</span>)
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="ident">tonic::Status::internal</span>(<span class="ident">error</span>.<span class="ident">to_string</span>()))<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">watchers</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">watchers</span>[<span class="ident">resource_type</span>];
+        id: <span class="kw-2">&amp;</span>str,
+        resource_type: ResourceType,
+        names: <span class="kw-2">&amp;</span>[String],
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;DiscoveryResponse, tonic::Status&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>response = <span class="self">self
+            </span>.config
+            .discovery_request(id, resource_type, names)
+            .map_err(|error| tonic::Status::internal(error.to_string()))<span class="question-mark">?</span>;
+        <span class="kw">let </span>watchers = <span class="kw-2">&amp;</span><span class="self">self</span>.watchers[resource_type];
 
-        <span class="kw">let</span> <span class="ident">nonce</span> <span class="op">=</span> <span class="ident">uuid::Uuid::new_v4</span>();
-        <span class="ident">response</span>.<span class="ident">version_info</span> <span class="op">=</span> <span class="ident">watchers</span>
-            .<span class="ident">version</span>
-            .<span class="ident">load</span>(<span class="ident">std::sync::atomic::Ordering::Relaxed</span>)
-            .<span class="ident">to_string</span>();
-        <span class="ident">response</span>.<span class="ident">control_plane</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident"><span class="kw">crate</span>::xds::config::core::v3::ControlPlane</span> {
-            <span class="ident">identifier</span>: (<span class="kw-2">*</span><span class="self">self</span>.<span class="ident">config</span>.<span class="ident">id</span>.<span class="ident">load</span>()).<span class="ident">clone</span>(),
+        <span class="kw">let </span>nonce = uuid::Uuid::new_v4();
+        response.version_info = watchers
+            .version
+            .load(std::sync::atomic::Ordering::Relaxed)
+            .to_string();
+        response.control_plane = <span class="prelude-val">Some</span>(<span class="kw">crate</span>::xds::config::core::v3::ControlPlane {
+            identifier: (<span class="kw-2">*</span><span class="self">self</span>.config.id.load()).clone(),
         });
-        <span class="ident">response</span>.<span class="ident">nonce</span> <span class="op">=</span> <span class="ident">nonce</span>.<span class="ident">to_string</span>();
+        response.nonce = nonce.to_string();
 
         <span class="macro">tracing::trace!</span>(
-            <span class="ident">id</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">response</span>.<span class="ident">version_info</span>,
-            <span class="ident">r#type</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">response</span>.<span class="ident">type_url</span>,
-            <span class="ident">nonce</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">response</span>.<span class="ident">nonce</span>,
-            <span class="string">&quot;discovery response&quot;</span>
-        );
+            id = <span class="kw-2">&amp;*</span>response.version_info,
+            r#type = <span class="kw-2">&amp;*</span>response.type_url,
+            nonce = <span class="kw-2">&amp;*</span>response.nonce,
+            <span class="string">&quot;discovery response&quot;
+        </span>);
 
-        <span class="prelude-val">Ok</span>(<span class="ident">response</span>)
+        <span class="prelude-val">Ok</span>(response)
     }
 
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">stream_aggregated_resources</span>(
+    <span class="kw">pub async fn </span>stream_aggregated_resources(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="kw-2">mut</span> <span class="ident">streaming</span>: <span class="ident">Pin</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">DiscoveryRequest</span>, <span class="ident">tonic::Status</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>
-        <span class="ident">Pin</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">DiscoveryResponse</span>, <span class="ident">tonic::Status</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-        <span class="ident">tonic::Status</span>,
-    <span class="op">&gt;</span> {
+        <span class="kw-2">mut </span>streaming: Pin&lt;Box&lt;<span class="kw">dyn </span>Stream&lt;Item = <span class="prelude-ty">Result</span>&lt;DiscoveryRequest, tonic::Status&gt;&gt; + Send&gt;&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;
+        Pin&lt;Box&lt;<span class="kw">dyn </span>Stream&lt;Item = <span class="prelude-ty">Result</span>&lt;DiscoveryResponse, tonic::Status&gt;&gt; + Send&gt;&gt;,
+        tonic::Status,
+    &gt; {
         <span class="macro">tracing::trace!</span>(<span class="string">&quot;starting stream&quot;</span>);
-        <span class="kw">let</span> <span class="ident">message</span> <span class="op">=</span> <span class="ident">streaming</span>.<span class="ident">next</span>().<span class="kw">await</span>.<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
+        <span class="kw">let </span>message = streaming.next().<span class="kw">await</span>.ok_or_else(|| {
             <span class="macro">tracing::error!</span>(<span class="string">&quot;No message found&quot;</span>);
-            <span class="ident">tonic::Status::invalid_argument</span>(<span class="string">&quot;No message found&quot;</span>)
-        })<span class="question-mark">?</span><span class="question-mark">?</span>;
+            tonic::Status::invalid_argument(<span class="string">&quot;No message found&quot;</span>)
+        })<span class="question-mark">??</span>;
 
-        <span class="kw">if</span> <span class="ident">message</span>.<span class="ident">node</span>.<span class="ident">is_none</span>() {
+        <span class="kw">if </span>message.node.is_none() {
             <span class="macro">tracing::error!</span>(<span class="string">&quot;Node identifier was not found&quot;</span>);
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">tonic::Status::invalid_argument</span>(<span class="string">&quot;Node identifier required&quot;</span>));
+            <span class="kw">return </span><span class="prelude-val">Err</span>(tonic::Status::invalid_argument(<span class="string">&quot;Node identifier required&quot;</span>));
         }
 
-        <span class="kw">let</span> <span class="ident">node</span> <span class="op">=</span> <span class="ident">message</span>.<span class="ident">node</span>.<span class="ident">clone</span>().<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="ident">resource_type</span>: <span class="ident">ResourceType</span> <span class="op">=</span> <span class="ident">message</span>.<span class="ident">type_url</span>.<span class="ident">parse</span>()<span class="question-mark">?</span>;
-        <span class="macro">tracing::trace!</span>(<span class="ident">id</span> <span class="op">=</span> <span class="op">%</span><span class="ident">node</span>.<span class="ident">id</span>, <span class="op">%</span><span class="ident">resource_type</span>, <span class="string">&quot;initial request&quot;</span>);
-        <span class="ident">metrics::DISCOVERY_REQUESTS</span>
-            .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">node</span>.<span class="ident">id</span>, <span class="ident">resource_type</span>.<span class="ident">type_url</span>()])
-            .<span class="ident">inc</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rx</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">watchers</span>[<span class="ident">resource_type</span>].<span class="ident">receiver</span>.<span class="ident">clone</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pending_acks</span> <span class="op">=</span> <span class="ident">cached::TimedSizedCache::with_size_and_lifespan</span>(<span class="number">50</span>, <span class="number">1</span>);
-        <span class="kw">let</span> <span class="ident">this</span> <span class="op">=</span> <span class="ident"><span class="self">Self</span>::clone</span>(<span class="self">self</span>);
-        <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">this</span>.<span class="ident">discovery_response</span>(<span class="kw-2">&amp;</span><span class="ident">node</span>.<span class="ident">id</span>, <span class="ident">resource_type</span>, <span class="kw-2">&amp;</span><span class="ident">message</span>.<span class="ident">resource_names</span>)<span class="question-mark">?</span>;
-        <span class="ident">pending_acks</span>.<span class="ident">cache_set</span>(<span class="ident">response</span>.<span class="ident">nonce</span>.<span class="ident">clone</span>(), ());
+        <span class="kw">let </span>node = message.node.clone().unwrap();
+        <span class="kw">let </span>resource_type: ResourceType = message.type_url.parse()<span class="question-mark">?</span>;
+        <span class="macro">tracing::trace!</span>(id = %node.id, %resource_type, <span class="string">&quot;initial request&quot;</span>);
+        metrics::DISCOVERY_REQUESTS
+            .with_label_values(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;*</span>node.id, resource_type.type_url()])
+            .inc();
+        <span class="kw">let </span><span class="kw-2">mut </span>rx = <span class="self">self</span>.watchers[resource_type].receiver.clone();
+        <span class="kw">let </span><span class="kw-2">mut </span>pending_acks = cached::TimedSizedCache::with_size_and_lifespan(<span class="number">50</span>, <span class="number">1</span>);
+        <span class="kw">let </span>this = <span class="self">Self</span>::clone(<span class="self">self</span>);
+        <span class="kw">let </span>response = this.discovery_response(<span class="kw-2">&amp;</span>node.id, resource_type, <span class="kw-2">&amp;</span>message.resource_names)<span class="question-mark">?</span>;
+        pending_acks.cache_set(response.nonce.clone(), ());
 
-        <span class="kw">let</span> <span class="ident">id</span> <span class="op">=</span> <span class="ident">node</span>.<span class="ident">id</span>.<span class="ident">clone</span>();
-        <span class="prelude-val">Ok</span>(<span class="ident">Box::pin</span>(<span class="macro">async_stream::try_stream!</span> {
-            <span class="kw">yield</span> <span class="ident">response</span>;
+        <span class="kw">let </span>id = node.id.clone();
+        <span class="prelude-val">Ok</span>(Box::pin(<span class="macro">async_stream::try_stream! </span>{
+            <span class="kw">yield </span>response;
 
-            <span class="kw">loop</span> {
+            <span class="kw">loop </span>{
                 <span class="macro">tracing::trace!</span>(<span class="string">&quot;stream loop&quot;</span>);
-                <span class="macro">tokio::select!</span> {
-                    <span class="kw">_</span> <span class="op">=</span> <span class="ident">rx</span>.<span class="ident">changed</span>() =&gt; {
+                <span class="macro">tokio::select! </span>{
+                    <span class="kw">_ </span>= rx.changed() =&gt; {
                         <span class="macro">tracing::trace!</span>(<span class="string">&quot;sending new discovery response&quot;</span>);
-                        <span class="kw">yield</span> <span class="ident">this</span>.<span class="ident">discovery_response</span>(<span class="kw-2">&amp;</span><span class="ident">id</span>, <span class="ident">resource_type</span>, <span class="kw-2">&amp;</span><span class="ident">message</span>.<span class="ident">resource_names</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">response</span><span class="op">|</span> {
-                            <span class="ident">pending_acks</span>.<span class="ident">cache_set</span>(<span class="ident">response</span>.<span class="ident">nonce</span>.<span class="ident">clone</span>(), ());
-                            <span class="ident">response</span>
+                        <span class="kw">yield </span>this.discovery_response(<span class="kw-2">&amp;</span>id, resource_type, <span class="kw-2">&amp;</span>message.resource_names).map(|response| {
+                            pending_acks.cache_set(response.nonce.clone(), ());
+                            response
                         })<span class="question-mark">?</span>;
                     }
-                    <span class="ident">new_message</span> <span class="op">=</span> <span class="ident">streaming</span>.<span class="ident">next</span>() =&gt; {
-                        <span class="kw">let</span> <span class="ident">new_message</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">new_message</span>.<span class="ident">transpose</span>() {
-                            <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">value</span>)) =&gt; <span class="ident">value</span>,
+                    new_message = streaming.next() =&gt; {
+                        <span class="kw">let </span>new_message = <span class="kw">match </span>new_message.transpose() {
+                            <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(value)) =&gt; value,
                             <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) =&gt; <span class="kw">break</span>,
-                            <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; {
-                                <span class="macro">tracing::error!</span>(<span class="op">%</span><span class="ident">error</span>, <span class="string">&quot;unknown resource type&quot;</span>);
+                            <span class="prelude-val">Err</span>(error) =&gt; {
+                                <span class="macro">tracing::error!</span>(%error, <span class="string">&quot;unknown resource type&quot;</span>);
                                 <span class="kw">continue</span>;
                             }
                         };
 
-                        <span class="kw">let</span> <span class="ident">id</span> <span class="op">=</span> <span class="ident">new_message</span>.<span class="ident">node</span>.<span class="ident">as_ref</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">node</span><span class="op">|</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">node</span>.<span class="ident">id</span>).<span class="ident">unwrap_or</span>(<span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">id</span>);
-                        <span class="kw">let</span> <span class="ident">resource_type</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">new_message</span>.<span class="ident">type_url</span>.<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">ResourceType</span><span class="op">&gt;</span>() {
-                            <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>,
-                            <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; {
-                                <span class="macro">tracing::error!</span>(<span class="op">%</span><span class="ident">error</span>, <span class="string">&quot;unknown resource type&quot;</span>);
+                        <span class="kw">let </span>id = new_message.node.as_ref().map(|node| <span class="kw-2">&amp;*</span>node.id).unwrap_or(<span class="kw-2">&amp;*</span>id);
+                        <span class="kw">let </span>resource_type = <span class="kw">match </span>new_message.type_url.parse::&lt;ResourceType&gt;() {
+                            <span class="prelude-val">Ok</span>(value) =&gt; value,
+                            <span class="prelude-val">Err</span>(error) =&gt; {
+                                <span class="macro">tracing::error!</span>(%error, <span class="string">&quot;unknown resource type&quot;</span>);
                                 <span class="kw">continue</span>;
                             }
                         };
 
                         <span class="macro">tracing::trace!</span>(<span class="string">&quot;new request&quot;</span>);
-                        <span class="ident">metrics::DISCOVERY_REQUESTS</span>.<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident">id</span>, <span class="ident">resource_type</span>.<span class="ident">type_url</span>()]).<span class="ident">inc</span>();
+                        metrics::DISCOVERY_REQUESTS.with_label_values(<span class="kw-2">&amp;</span>[id, resource_type.type_url()]).inc();
 
-                        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">error</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">new_message</span>.<span class="ident">error_detail</span> {
-                            <span class="ident">metrics::NACKS</span>.<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident">id</span>, <span class="ident">resource_type</span>.<span class="ident">type_url</span>()]).<span class="ident">inc</span>();
-                            <span class="macro">tracing::error!</span>(<span class="ident">nonce</span> <span class="op">=</span> <span class="op">%</span><span class="ident">new_message</span>.<span class="ident">response_nonce</span>, <span class="question-mark">?</span><span class="ident">error</span>, <span class="string">&quot;NACK&quot;</span>);
-                            <span class="comment">// Currently just resend previous discovery response.</span>
-                        } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">uuid::Uuid::parse_str</span>(<span class="kw-2">&amp;</span><span class="ident">new_message</span>.<span class="ident">response_nonce</span>).<span class="ident">is_ok</span>() {
-                            <span class="kw">if</span> <span class="ident">pending_acks</span>.<span class="ident">cache_get</span>(<span class="kw-2">&amp;</span><span class="ident">new_message</span>.<span class="ident">response_nonce</span>).<span class="ident">is_some</span>() {
-                                <span class="macro">tracing::info!</span>(<span class="ident">nonce</span> <span class="op">=</span> <span class="op">%</span><span class="ident">new_message</span>.<span class="ident">response_nonce</span>, <span class="string">&quot;ACK&quot;</span>);
-                                <span class="kw">continue</span>
-                            } <span class="kw">else</span> {
-                                <span class="macro">tracing::trace!</span>(<span class="ident">nonce</span> <span class="op">=</span> <span class="op">%</span><span class="ident">new_message</span>.<span class="ident">response_nonce</span>, <span class="string">&quot;Unknown nonce: could not be found in cache&quot;</span>);
-                                <span class="kw">continue</span>
-                            }
+                        <span class="kw">if let </span><span class="prelude-val">Some</span>(error) = <span class="kw-2">&amp;</span>new_message.error_detail {
+                            metrics::NACKS.with_label_values(<span class="kw-2">&amp;</span>[id, resource_type.type_url()]).inc();
+                            <span class="macro">tracing::error!</span>(nonce = %new_message.response_nonce, <span class="question-mark">?</span>error, <span class="string">&quot;NACK&quot;</span>);
+                            <span class="comment">// Currently just resend previous discovery response.
+                        </span>} <span class="kw">else if </span>uuid::Uuid::parse_str(<span class="kw-2">&amp;</span>new_message.response_nonce).is_ok() {
+                            <span class="kw">if </span>pending_acks.cache_get(<span class="kw-2">&amp;</span>new_message.response_nonce).is_some() {
+                                <span class="macro">tracing::info!</span>(nonce = %new_message.response_nonce, <span class="string">&quot;ACK&quot;</span>);
+                                <span class="kw">continue
+                            </span>} <span class="kw">else </span>{
+                                <span class="macro">tracing::trace!</span>(nonce = %new_message.response_nonce, <span class="string">&quot;Unknown nonce: could not be found in cache&quot;</span>);
+                                <span class="kw">continue
+                            </span>}
                         }
 
-                        <span class="kw">yield</span> <span class="ident">this</span>.<span class="ident">discovery_response</span>(<span class="ident">id</span>, <span class="ident">resource_type</span>, <span class="kw-2">&amp;</span><span class="ident">message</span>.<span class="ident">resource_names</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">response</span><span class="op">|</span> {
-                            <span class="ident">pending_acks</span>.<span class="ident">cache_set</span>(<span class="ident">response</span>.<span class="ident">nonce</span>.<span class="ident">clone</span>(), ());
-                            <span class="ident">response</span>
-                        }).<span class="ident">unwrap</span>();
+                        <span class="kw">yield </span>this.discovery_response(id, resource_type, <span class="kw-2">&amp;</span>message.resource_names).map(|response| {
+                            pending_acks.cache_set(response.nonce.clone(), ());
+                            response
+                        }).unwrap();
                     }
                 }
             }
 
             <span class="macro">tracing::info!</span>(<span class="string">&quot;terminating stream&quot;</span>);
-        }.<span class="ident">instrument</span>(<span class="macro">tracing::info_span!</span>(<span class="string">&quot;xds_stream&quot;</span>, <span class="op">%</span><span class="ident">node</span>.<span class="ident">id</span>, <span class="op">%</span><span class="ident">resource_type</span>))))
+        }.instrument(<span class="macro">tracing::info_span!</span>(<span class="string">&quot;xds_stream&quot;</span>, %node.id, %resource_type))))
     }
 }
 
-<span class="attribute">#[<span class="ident">tonic::async_trait</span>]</span>
-<span class="kw">impl</span> <span class="ident">AggregatedDiscoveryService</span> <span class="kw">for</span> <span class="ident">ControlPlane</span> {
-    <span class="kw">type</span> <span class="ident">StreamAggregatedResourcesStream</span> <span class="op">=</span>
-        <span class="ident">std::pin::Pin</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">DiscoveryResponse</span>, <span class="ident">tonic::Status</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span><span class="op">&gt;</span><span class="op">&gt;</span>;
-    <span class="kw">type</span> <span class="ident">DeltaAggregatedResourcesStream</span> <span class="op">=</span>
-        <span class="ident">tokio_stream::wrappers::ReceiverStream</span><span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">DeltaDiscoveryResponse</span>, <span class="ident">tonic::Status</span><span class="op">&gt;</span><span class="op">&gt;</span>;
+<span class="attribute">#[tonic::async_trait]
+</span><span class="kw">impl </span>AggregatedDiscoveryService <span class="kw">for </span>ControlPlane {
+    <span class="kw">type </span>StreamAggregatedResourcesStream =
+        std::pin::Pin&lt;Box&lt;<span class="kw">dyn </span>Stream&lt;Item = <span class="prelude-ty">Result</span>&lt;DiscoveryResponse, tonic::Status&gt;&gt; + Send&gt;&gt;;
+    <span class="kw">type </span>DeltaAggregatedResourcesStream =
+        tokio_stream::wrappers::ReceiverStream&lt;<span class="prelude-ty">Result</span>&lt;DeltaDiscoveryResponse, tonic::Status&gt;&gt;;
 
-    <span class="attribute">#[<span class="ident">tracing::instrument</span>(<span class="ident">skip_all</span>)]</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">stream_aggregated_resources</span>(
+    <span class="attribute">#[tracing::instrument(skip_all)]
+    </span><span class="kw">async fn </span>stream_aggregated_resources(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">request</span>: <span class="ident">tonic::Request</span><span class="op">&lt;</span><span class="ident">tonic::Streaming</span><span class="op">&lt;</span><span class="ident">DiscoveryRequest</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">tonic::Response</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::StreamAggregatedResourcesStream</span><span class="op">&gt;</span>, <span class="ident">tonic::Status</span><span class="op">&gt;</span> {
-        <span class="prelude-val">Ok</span>(<span class="ident">tonic::Response::new</span>(
-            <span class="self">self</span>.<span class="ident">stream_aggregated_resources</span>(<span class="ident">Box::pin</span>(<span class="ident">request</span>.<span class="ident">into_inner</span>()))
-                .<span class="ident">in_current_span</span>()
+        request: tonic::Request&lt;tonic::Streaming&lt;DiscoveryRequest&gt;&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;tonic::Response&lt;<span class="self">Self</span>::StreamAggregatedResourcesStream&gt;, tonic::Status&gt; {
+        <span class="prelude-val">Ok</span>(tonic::Response::new(
+            <span class="self">self</span>.stream_aggregated_resources(Box::pin(request.into_inner()))
+                .in_current_span()
                 .<span class="kw">await</span><span class="question-mark">?</span>,
         ))
     }
 
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">delta_aggregated_resources</span>(
+    <span class="kw">async fn </span>delta_aggregated_resources(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">_request</span>: <span class="ident">tonic::Request</span><span class="op">&lt;</span><span class="ident">tonic::Streaming</span><span class="op">&lt;</span><span class="ident">DeltaDiscoveryRequest</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">tonic::Response</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::DeltaAggregatedResourcesStream</span><span class="op">&gt;</span>, <span class="ident">tonic::Status</span><span class="op">&gt;</span> {
-        <span class="prelude-val">Err</span>(<span class="ident">tonic::Status::unimplemented</span>(
+        _request: tonic::Request&lt;tonic::Streaming&lt;DeltaDiscoveryRequest&gt;&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;tonic::Response&lt;<span class="self">Self</span>::DeltaAggregatedResourcesStream&gt;, tonic::Status&gt; {
+        <span class="prelude-val">Err</span>(tonic::Status::unimplemented(
             <span class="string">&quot;Quilkin doesn&#39;t currently support Delta xDS&quot;</span>,
         ))
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="ident">pretty_assertions::assert_eq</span>;
-    <span class="kw">use</span> <span class="ident">tokio::time::timeout</span>;
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
+    <span class="kw">use </span>pretty_assertions::assert_eq;
+    <span class="kw">use </span>tokio::time::timeout;
 
-    <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::xds</span>::{
-        <span class="ident">config</span>::{
-            <span class="ident">core::v3::Node</span>,
-            <span class="ident">listener::v3</span>::{<span class="ident">FilterChain</span>, <span class="ident">Listener</span>},
+    <span class="kw">use super</span>::<span class="kw-2">*</span>;
+    <span class="kw">use </span><span class="kw">crate</span>::xds::{
+        config::{
+            core::v3::Node,
+            listener::v3::{FilterChain, Listener},
         },
-        <span class="ident">service::discovery::v3::DiscoveryResponse</span>,
-        <span class="ident">ResourceType</span>,
+        service::discovery::v3::DiscoveryResponse,
+        ResourceType,
     };
 
-    <span class="kw">const</span> <span class="ident">TIMEOUT_DURATION</span>: <span class="ident">std::time::Duration</span> <span class="op">=</span> <span class="ident">std::time::Duration::from_secs</span>(<span class="number">10</span>);
+    <span class="kw">const </span>TIMEOUT_DURATION: std::time::Duration = std::time::Duration::from_secs(<span class="number">10</span>);
 
-    <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">valid_response</span>() {
-        <span class="kw">const</span> <span class="ident">RESOURCE</span>: <span class="ident">ResourceType</span> <span class="op">=</span> <span class="ident">ResourceType::Endpoint</span>;
-        <span class="kw">const</span> <span class="ident">LISTENER_TYPE</span>: <span class="ident">ResourceType</span> <span class="op">=</span> <span class="ident">ResourceType::Listener</span>;
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>valid_response() {
+        <span class="kw">const </span>RESOURCE: ResourceType = ResourceType::Endpoint;
+        <span class="kw">const </span>LISTENER_TYPE: ResourceType = ResourceType::Listener;
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">DiscoveryResponse</span> {
-            <span class="ident">version_info</span>: <span class="ident">String::new</span>(),
-            <span class="ident">resources</span>: <span class="macro">vec!</span>[],
-            <span class="ident">type_url</span>: <span class="ident">RESOURCE</span>.<span class="ident">type_url</span>().<span class="ident">into</span>(),
-            ..<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>()
+        <span class="kw">let </span><span class="kw-2">mut </span>response = DiscoveryResponse {
+            version_info: String::new(),
+            resources: <span class="macro">vec!</span>[],
+            type_url: RESOURCE.type_url().into(),
+            ..&lt;<span class="kw">_</span>&gt;::default()
         };
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">listener_response</span> <span class="op">=</span> <span class="ident">DiscoveryResponse</span> {
-            <span class="ident">version_info</span>: <span class="ident">String::new</span>(),
-            <span class="ident">resources</span>: <span class="macro">vec!</span>[<span class="ident">prost_types::Any</span> {
-                <span class="ident">type_url</span>: <span class="ident">LISTENER_TYPE</span>.<span class="ident">type_url</span>().<span class="ident">into</span>(),
-                <span class="ident">value</span>: <span class="ident"><span class="kw">crate</span>::prost::encode</span>(<span class="kw-2">&amp;</span><span class="ident">Listener</span> {
-                    <span class="ident">filter_chains</span>: <span class="macro">vec!</span>[<span class="ident">FilterChain</span> {
-                        <span class="ident">filters</span>: <span class="macro">vec!</span>[],
-                        ..<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>()
+        <span class="kw">let </span><span class="kw-2">mut </span>listener_response = DiscoveryResponse {
+            version_info: String::new(),
+            resources: <span class="macro">vec!</span>[prost_types::Any {
+                type_url: LISTENER_TYPE.type_url().into(),
+                value: <span class="kw">crate</span>::prost::encode(<span class="kw-2">&amp;</span>Listener {
+                    filter_chains: <span class="macro">vec!</span>[FilterChain {
+                        filters: <span class="macro">vec!</span>[],
+                        ..&lt;<span class="kw">_</span>&gt;::default()
                     }],
-                    ..<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>()
+                    ..&lt;<span class="kw">_</span>&gt;::default()
                 })
-                .<span class="ident">unwrap</span>(),
+                .unwrap(),
             }],
-            <span class="ident">type_url</span>: <span class="ident">LISTENER_TYPE</span>.<span class="ident">type_url</span>().<span class="ident">into</span>(),
-            ..<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>()
+            type_url: LISTENER_TYPE.type_url().into(),
+            ..&lt;<span class="kw">_</span>&gt;::default()
         };
 
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">Config::default</span>());
-        <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">ControlPlane::from_arc</span>(<span class="ident">config</span>.<span class="ident">clone</span>());
-        <span class="kw">let</span> (<span class="ident">tx</span>, <span class="ident">rx</span>) <span class="op">=</span> <span class="ident">tokio::sync::mpsc::channel</span>(<span class="number">256</span>);
+        <span class="kw">let </span>config = Arc::new(Config::default());
+        <span class="kw">let </span>client = ControlPlane::from_arc(config.clone());
+        <span class="kw">let </span>(tx, rx) = tokio::sync::mpsc::channel(<span class="number">256</span>);
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">DiscoveryRequest</span> {
-            <span class="ident">node</span>: <span class="prelude-val">Some</span>(<span class="ident">Node</span> {
-                <span class="ident">id</span>: <span class="string">&quot;quilkin&quot;</span>.<span class="ident">into</span>(),
-                <span class="ident">user_agent_name</span>: <span class="string">&quot;quilkin&quot;</span>.<span class="ident">into</span>(),
-                ..<span class="ident">Node::default</span>()
+        <span class="kw">let </span><span class="kw-2">mut </span>request = DiscoveryRequest {
+            node: <span class="prelude-val">Some</span>(Node {
+                id: <span class="string">&quot;quilkin&quot;</span>.into(),
+                user_agent_name: <span class="string">&quot;quilkin&quot;</span>.into(),
+                ..Node::default()
             }),
-            <span class="ident">resource_names</span>: <span class="macro">vec!</span>[],
-            <span class="ident">type_url</span>: <span class="ident">RESOURCE</span>.<span class="ident">type_url</span>().<span class="ident">into</span>(),
-            ..<span class="ident">DiscoveryRequest::default</span>()
+            resource_names: <span class="macro">vec!</span>[],
+            type_url: RESOURCE.type_url().into(),
+            ..DiscoveryRequest::default()
         };
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">listener_request</span> <span class="op">=</span> <span class="ident">DiscoveryRequest</span> {
-            <span class="ident">node</span>: <span class="prelude-val">Some</span>(<span class="ident">Node</span> {
-                <span class="ident">id</span>: <span class="string">&quot;quilkin&quot;</span>.<span class="ident">into</span>(),
-                <span class="ident">user_agent_name</span>: <span class="string">&quot;quilkin&quot;</span>.<span class="ident">into</span>(),
-                ..<span class="ident">Node::default</span>()
+        <span class="kw">let </span><span class="kw-2">mut </span>listener_request = DiscoveryRequest {
+            node: <span class="prelude-val">Some</span>(Node {
+                id: <span class="string">&quot;quilkin&quot;</span>.into(),
+                user_agent_name: <span class="string">&quot;quilkin&quot;</span>.into(),
+                ..Node::default()
             }),
-            <span class="ident">resource_names</span>: <span class="macro">vec!</span>[],
-            <span class="ident">type_url</span>: <span class="ident">LISTENER_TYPE</span>.<span class="ident">type_url</span>().<span class="ident">into</span>(),
-            ..<span class="ident">DiscoveryRequest::default</span>()
+            resource_names: <span class="macro">vec!</span>[],
+            type_url: LISTENER_TYPE.type_url().into(),
+            ..DiscoveryRequest::default()
         };
 
-        <span class="ident">timeout</span>(<span class="ident">TIMEOUT_DURATION</span>, <span class="ident">tx</span>.<span class="ident">send</span>(<span class="prelude-val">Ok</span>(<span class="ident">request</span>.<span class="ident">clone</span>())))
-            .<span class="kw">await</span>
-            .<span class="ident">unwrap</span>()
-            .<span class="ident">unwrap</span>();
+        timeout(TIMEOUT_DURATION, tx.send(<span class="prelude-val">Ok</span>(request.clone())))
+            .<span class="kw">await
+            </span>.unwrap()
+            .unwrap();
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">stream</span> <span class="op">=</span> <span class="ident">timeout</span>(
-            <span class="ident">TIMEOUT_DURATION</span>,
-            <span class="ident">client</span>.<span class="ident">stream_aggregated_resources</span>(<span class="ident">Box::pin</span>(
-                <span class="ident">tokio_stream::wrappers::ReceiverStream::new</span>(<span class="ident">rx</span>),
+        <span class="kw">let </span><span class="kw-2">mut </span>stream = timeout(
+            TIMEOUT_DURATION,
+            client.stream_aggregated_resources(Box::pin(
+                tokio_stream::wrappers::ReceiverStream::new(rx),
             )),
         )
-        .<span class="kw">await</span>
-        .<span class="ident">unwrap</span>()
-        .<span class="ident">unwrap</span>();
+        .<span class="kw">await
+        </span>.unwrap()
+        .unwrap();
 
-        <span class="kw">let</span> <span class="ident">message</span> <span class="op">=</span> <span class="ident">timeout</span>(<span class="ident">TIMEOUT_DURATION</span>, <span class="ident">stream</span>.<span class="ident">next</span>())
-            .<span class="kw">await</span>
-            .<span class="ident">unwrap</span>()
-            .<span class="ident">unwrap</span>()
-            .<span class="ident">unwrap</span>();
-        <span class="ident">response</span>.<span class="ident">version_info</span> <span class="op">=</span> <span class="ident">message</span>.<span class="ident">version_info</span>.<span class="ident">clone</span>();
-        <span class="ident">response</span>.<span class="ident">nonce</span> <span class="op">=</span> <span class="ident">message</span>.<span class="ident">nonce</span>.<span class="ident">clone</span>();
-        <span class="ident">response</span>.<span class="ident">control_plane</span> <span class="op">=</span> <span class="ident">message</span>.<span class="ident">control_plane</span>.<span class="ident">clone</span>();
-        <span class="ident">request</span>.<span class="ident">response_nonce</span> <span class="op">=</span> <span class="ident">message</span>.<span class="ident">nonce</span>.<span class="ident">clone</span>();
+        <span class="kw">let </span>message = timeout(TIMEOUT_DURATION, stream.next())
+            .<span class="kw">await
+            </span>.unwrap()
+            .unwrap()
+            .unwrap();
+        response.version_info = message.version_info.clone();
+        response.nonce = message.nonce.clone();
+        response.control_plane = message.control_plane.clone();
+        request.response_nonce = message.nonce.clone();
 
-        <span class="macro">assert_eq!</span>(<span class="ident">response</span>, <span class="ident">message</span>);
+        <span class="macro">assert_eq!</span>(response, message);
 
-        <span class="ident">timeout</span>(<span class="ident">TIMEOUT_DURATION</span>, <span class="ident">tx</span>.<span class="ident">send</span>(<span class="prelude-val">Ok</span>(<span class="ident">request</span>.<span class="ident">clone</span>())))
-            .<span class="kw">await</span>
-            .<span class="ident">unwrap</span>()
-            .<span class="ident">unwrap</span>();
+        timeout(TIMEOUT_DURATION, tx.send(<span class="prelude-val">Ok</span>(request.clone())))
+            .<span class="kw">await
+            </span>.unwrap()
+            .unwrap();
 
-        <span class="ident">timeout</span>(<span class="ident">TIMEOUT_DURATION</span>, <span class="ident">tx</span>.<span class="ident">send</span>(<span class="prelude-val">Ok</span>(<span class="ident">listener_request</span>.<span class="ident">clone</span>())))
-            .<span class="kw">await</span>
-            .<span class="ident">unwrap</span>()
-            .<span class="ident">unwrap</span>();
+        timeout(TIMEOUT_DURATION, tx.send(<span class="prelude-val">Ok</span>(listener_request.clone())))
+            .<span class="kw">await
+            </span>.unwrap()
+            .unwrap();
 
-        <span class="kw">let</span> <span class="ident">message</span> <span class="op">=</span> <span class="ident">timeout</span>(<span class="ident">TIMEOUT_DURATION</span>, <span class="ident">stream</span>.<span class="ident">next</span>())
-            .<span class="kw">await</span>
-            .<span class="ident">unwrap</span>()
-            .<span class="ident">unwrap</span>()
-            .<span class="ident">unwrap</span>();
-        <span class="ident">listener_response</span>.<span class="ident">control_plane</span> <span class="op">=</span> <span class="ident">message</span>.<span class="ident">control_plane</span>.<span class="ident">clone</span>();
-        <span class="ident">listener_response</span>.<span class="ident">version_info</span> <span class="op">=</span> <span class="ident">message</span>.<span class="ident">version_info</span>.<span class="ident">clone</span>();
-        <span class="ident">listener_response</span>.<span class="ident">nonce</span> <span class="op">=</span> <span class="ident">message</span>.<span class="ident">nonce</span>.<span class="ident">clone</span>();
-        <span class="ident">listener_request</span>.<span class="ident">response_nonce</span> <span class="op">=</span> <span class="ident">message</span>.<span class="ident">nonce</span>.<span class="ident">clone</span>();
+        <span class="kw">let </span>message = timeout(TIMEOUT_DURATION, stream.next())
+            .<span class="kw">await
+            </span>.unwrap()
+            .unwrap()
+            .unwrap();
+        listener_response.control_plane = message.control_plane.clone();
+        listener_response.version_info = message.version_info.clone();
+        listener_response.nonce = message.nonce.clone();
+        listener_request.response_nonce = message.nonce.clone();
 
-        <span class="macro">assert_eq!</span>(<span class="ident">listener_response</span>, <span class="ident">message</span>);
+        <span class="macro">assert_eq!</span>(listener_response, message);
 
-        <span class="ident">timeout</span>(<span class="ident">TIMEOUT_DURATION</span>, <span class="ident">tx</span>.<span class="ident">send</span>(<span class="prelude-val">Ok</span>(<span class="ident">listener_request</span>.<span class="ident">clone</span>())))
-            .<span class="kw">await</span>
-            .<span class="ident">unwrap</span>()
-            .<span class="ident">unwrap</span>();
+        timeout(TIMEOUT_DURATION, tx.send(<span class="prelude-val">Ok</span>(listener_request.clone())))
+            .<span class="kw">await
+            </span>.unwrap()
+            .unwrap();
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/test_utils.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>test_utils.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../quilkin/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/test_utils.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>test_utils.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../quilkin/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -375,354 +375,354 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */</span>
+ */
 
-<span class="doccomment">/// Common utilities for testing</span>
-<span class="kw">use</span> <span class="ident">std</span>::{
-    <span class="ident">net</span>::{<span class="ident">Ipv4Addr</span>, <span class="ident">SocketAddr</span>, <span class="ident">SocketAddrV4</span>},
-    <span class="ident">str::from_utf8</span>,
-    <span class="ident">sync::Arc</span>,
+</span><span class="doccomment">/// Common utilities for testing
+</span><span class="kw">use </span>std::{
+    net::{Ipv4Addr, SocketAddr, SocketAddrV4},
+    str::from_utf8,
+    sync::Arc,
 };
 
-<span class="kw">use</span> <span class="ident">once_cell::sync::Lazy</span>;
-<span class="kw">use</span> <span class="ident">tokio</span>::{
-    <span class="ident">net::UdpSocket</span>,
-    <span class="ident">sync</span>::{<span class="ident">mpsc</span>, <span class="ident">oneshot</span>, <span class="ident">watch</span>},
+<span class="kw">use </span>once_cell::sync::Lazy;
+<span class="kw">use </span>tokio::{
+    net::UdpSocket,
+    sync::{mpsc, oneshot, watch},
 };
 
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">cluster::Cluster</span>,
-    <span class="ident">config</span>::{<span class="ident">Builder</span> <span class="kw">as</span> <span class="ident">ConfigBuilder</span>, <span class="ident">Config</span>},
-    <span class="ident">endpoint</span>::{<span class="ident">Endpoint</span>, <span class="ident">EndpointAddress</span>, <span class="ident">LocalityEndpoints</span>},
-    <span class="ident">filters</span>::{<span class="ident">prelude</span>::<span class="kw-2">*</span>, <span class="ident">FilterRegistry</span>},
-    <span class="ident">metadata::Value</span>,
+<span class="kw">use crate</span>::{
+    cluster::Cluster,
+    config::{Builder <span class="kw">as </span>ConfigBuilder, Config},
+    endpoint::{Endpoint, EndpointAddress, LocalityEndpoints},
+    filters::{prelude::<span class="kw-2">*</span>, FilterRegistry},
+    metadata::Value,
 };
 
-<span class="kw">static</span> <span class="ident">ENABLE_LOG</span>: <span class="ident">Lazy</span><span class="op">&lt;</span>()<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy::new</span>(<span class="op">|</span><span class="op">|</span> {
-    <span class="ident">tracing_subscriber::fmt</span>()
-        .<span class="ident">pretty</span>()
-        .<span class="ident">with_max_level</span>(<span class="ident">tracing::Level::TRACE</span>)
-        .<span class="ident">init</span>()
+<span class="kw">static </span>ENABLE_LOG: Lazy&lt;()&gt; = Lazy::new(|| {
+    tracing_subscriber::fmt()
+        .pretty()
+        .with_max_level(tracing::Level::TRACE)
+        .init()
 });
 
-<span class="doccomment">/// Call to safely enable `tracing` logging calls, at the TRACE level.</span>
-<span class="doccomment">/// This can be very useful when attempting to debug unit and integration tests.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">enable_tracing_log</span>() {
-    <span class="ident">Lazy::force</span>(<span class="kw-2">&amp;</span><span class="ident">ENABLE_LOG</span>);
+<span class="doccomment">/// Call to safely enable `tracing` logging calls, at the TRACE level.
+/// This can be very useful when attempting to debug unit and integration tests.
+</span><span class="kw">pub fn </span>enable_tracing_log() {
+    Lazy::force(<span class="kw-2">&amp;</span>ENABLE_LOG);
 }
 
-<span class="doccomment">/// Returns a local address on a port that is not assigned to another test.</span>
-<span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">available_addr</span>() -&gt; <span class="ident">SocketAddr</span> {
-    <span class="kw">let</span> <span class="ident">socket</span> <span class="op">=</span> <span class="ident">create_socket</span>().<span class="kw">await</span>;
-    <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span> <span class="ident">socket</span>.<span class="ident">local_addr</span>().<span class="ident">unwrap</span>();
-    <span class="macro">tracing::debug!</span>(<span class="ident">addr</span> <span class="op">=</span> <span class="question-mark">?</span><span class="ident">addr</span>, <span class="string">&quot;test_util::available_addr&quot;</span>);
-    <span class="ident">addr</span>
+<span class="doccomment">/// Returns a local address on a port that is not assigned to another test.
+</span><span class="kw">pub async fn </span>available_addr() -&gt; SocketAddr {
+    <span class="kw">let </span>socket = create_socket().<span class="kw">await</span>;
+    <span class="kw">let </span>addr = socket.local_addr().unwrap();
+    <span class="macro">tracing::debug!</span>(addr = <span class="question-mark">?</span>addr, <span class="string">&quot;test_util::available_addr&quot;</span>);
+    addr
 }
 
-<span class="comment">// TestFilter is useful for testing that commands are executing filters appropriately.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TestFilter</span>;
+<span class="comment">// TestFilter is useful for testing that commands are executing filters appropriately.
+</span><span class="kw">pub struct </span>TestFilter;
 
-<span class="kw">impl</span> <span class="ident">Filter</span> <span class="kw">for</span> <span class="ident">TestFilter</span> {
-    <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ReadContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="comment">// append values on each run</span>
-        <span class="ident">ctx</span>.<span class="ident">metadata</span>
-            .<span class="ident">entry</span>(<span class="string">&quot;downstream&quot;</span>.<span class="ident">into</span>())
-            .<span class="ident">and_modify</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">e</span>.<span class="ident">as_mut_string</span>().<span class="ident">unwrap</span>().<span class="ident">push_str</span>(<span class="string">&quot;:receive&quot;</span>))
-            .<span class="ident">or_insert_with</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Value::String</span>(<span class="string">&quot;receive&quot;</span>.<span class="ident">into</span>()));
+<span class="kw">impl </span>Filter <span class="kw">for </span>TestFilter {
+    <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt; {
+        <span class="comment">// append values on each run
+        </span>ctx.metadata
+            .entry(<span class="string">&quot;downstream&quot;</span>.into())
+            .and_modify(|e| e.as_mut_string().unwrap().push_str(<span class="string">&quot;:receive&quot;</span>))
+            .or_insert_with(|| Value::String(<span class="string">&quot;receive&quot;</span>.into()));
 
-        <span class="ident">ctx</span>.<span class="ident">contents</span>
-            .<span class="ident">append</span>(<span class="kw-2">&amp;mut</span> <span class="macro">format!</span>(<span class="string">&quot;:odr:{}&quot;</span>, <span class="ident">ctx</span>.<span class="ident">source</span>).<span class="ident">into_bytes</span>());
+        ctx.contents
+            .append(<span class="kw-2">&amp;mut </span><span class="macro">format!</span>(<span class="string">&quot;:odr:{}&quot;</span>, ctx.source).into_bytes());
         <span class="prelude-val">Some</span>(())
     }
 
-    <span class="kw">fn</span> <span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;mut</span> <span class="ident">WriteContext</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="comment">// append values on each run</span>
-        <span class="ident">ctx</span>.<span class="ident">metadata</span>
-            .<span class="ident">entry</span>(<span class="string">&quot;upstream&quot;</span>.<span class="ident">into</span>())
-            .<span class="ident">and_modify</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">e</span>.<span class="ident">as_mut_string</span>().<span class="ident">unwrap</span>().<span class="ident">push_str</span>(<span class="string">&quot;:receive&quot;</span>))
-            .<span class="ident">or_insert_with</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Value::String</span>(<span class="string">&quot;receive&quot;</span>.<span class="ident">to_string</span>()));
+    <span class="kw">fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt; {
+        <span class="comment">// append values on each run
+        </span>ctx.metadata
+            .entry(<span class="string">&quot;upstream&quot;</span>.into())
+            .and_modify(|e| e.as_mut_string().unwrap().push_str(<span class="string">&quot;:receive&quot;</span>))
+            .or_insert_with(|| Value::String(<span class="string">&quot;receive&quot;</span>.to_string()));
 
-        <span class="ident">ctx</span>.<span class="ident">contents</span>
-            .<span class="ident">append</span>(<span class="kw-2">&amp;mut</span> <span class="macro">format!</span>(<span class="string">&quot;:our:{}:{}&quot;</span>, <span class="ident">ctx</span>.<span class="ident">source</span>, <span class="ident">ctx</span>.<span class="ident">dest</span>).<span class="ident">into_bytes</span>());
+        ctx.contents
+            .append(<span class="kw-2">&amp;mut </span><span class="macro">format!</span>(<span class="string">&quot;:our:{}:{}&quot;</span>, ctx.source, ctx.dest).into_bytes());
         <span class="prelude-val">Some</span>(())
     }
 }
 
-<span class="kw">impl</span> <span class="ident">StaticFilter</span> <span class="kw">for</span> <span class="ident">TestFilter</span> {
-    <span class="kw">const</span> <span class="ident">NAME</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;TestFilter&quot;</span>;
-    <span class="kw">type</span> <span class="ident">Configuration</span> <span class="op">=</span> ();
-    <span class="kw">type</span> <span class="ident">BinaryConfiguration</span> <span class="op">=</span> ();
+<span class="kw">impl </span>StaticFilter <span class="kw">for </span>TestFilter {
+    <span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str = <span class="string">&quot;TestFilter&quot;</span>;
+    <span class="kw">type </span>Configuration = ();
+    <span class="kw">type </span>BinaryConfiguration = ();
 
-    <span class="kw">fn</span> <span class="ident">try_from_config</span>(<span class="kw">_</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Configuration</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+    <span class="kw">fn </span>try_from_config(<span class="kw">_</span>: <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Configuration&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
         <span class="prelude-val">Ok</span>(<span class="self">Self</span>)
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Default</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TestHelper</span> {
-    <span class="doccomment">/// Channel to subscribe to, and trigger the shutdown of created resources.</span>
-    <span class="ident">shutdown_ch</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span>(<span class="ident">watch::Sender</span><span class="op">&lt;</span>()<span class="op">&gt;</span>, <span class="ident">watch::Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>)<span class="op">&gt;</span>,
-    <span class="ident">server_shutdown_tx</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">watch::Sender</span><span class="op">&lt;</span>()<span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+<span class="attribute">#[derive(Default)]
+</span><span class="kw">pub struct </span>TestHelper {
+    <span class="doccomment">/// Channel to subscribe to, and trigger the shutdown of created resources.
+    </span>shutdown_ch: <span class="prelude-ty">Option</span>&lt;(watch::Sender&lt;()&gt;, watch::Receiver&lt;()&gt;)&gt;,
+    server_shutdown_tx: Vec&lt;<span class="prelude-ty">Option</span>&lt;watch::Sender&lt;()&gt;&gt;&gt;,
 }
 
-<span class="doccomment">/// Returned from [creating a socket](TestHelper::open_socket_and_recv_single_packet)</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">OpenSocketRecvPacket</span> {
-    <span class="doccomment">/// The opened socket</span>
-    <span class="kw">pub</span> <span class="ident">socket</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">UdpSocket</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// A channel on which the received packet will be forwarded.</span>
-    <span class="kw">pub</span> <span class="ident">packet_rx</span>: <span class="ident">oneshot::Receiver</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+<span class="doccomment">/// Returned from [creating a socket](TestHelper::open_socket_and_recv_single_packet)
+</span><span class="kw">pub struct </span>OpenSocketRecvPacket {
+    <span class="doccomment">/// The opened socket
+    </span><span class="kw">pub </span>socket: Arc&lt;UdpSocket&gt;,
+    <span class="doccomment">/// A channel on which the received packet will be forwarded.
+    </span><span class="kw">pub </span>packet_rx: oneshot::Receiver&lt;String&gt;,
 }
 
-<span class="kw">impl</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">TestHelper</span> {
-    <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) {
-        <span class="kw">for</span> <span class="ident">shutdown_tx</span> <span class="kw">in</span> <span class="self">self</span>.<span class="ident">server_shutdown_tx</span>.<span class="ident">iter_mut</span>().<span class="ident">flat_map</span>(<span class="op">|</span><span class="ident">tx</span><span class="op">|</span> <span class="ident">tx</span>.<span class="ident">take</span>()) {
-            <span class="ident">shutdown_tx</span>
-                .<span class="ident">send</span>(())
-                .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> {
+<span class="kw">impl </span>Drop <span class="kw">for </span>TestHelper {
+    <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+        <span class="kw">for </span>shutdown_tx <span class="kw">in </span><span class="self">self</span>.server_shutdown_tx.iter_mut().flat_map(|tx| tx.take()) {
+            shutdown_tx
+                .send(())
+                .map_err(|error| {
                     <span class="macro">tracing::warn!</span>(
-                        <span class="op">%</span><span class="ident">error</span>,
-                        <span class="string">&quot;Failed to send server shutdown over channel&quot;</span>
-                    )
+                        %error,
+                        <span class="string">&quot;Failed to send server shutdown over channel&quot;
+                    </span>)
                 })
-                .<span class="ident">ok</span>();
+                .ok();
         }
 
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>((<span class="ident">shutdown_tx</span>, <span class="kw">_</span>)) <span class="op">=</span> <span class="self">self</span>.<span class="ident">shutdown_ch</span>.<span class="ident">take</span>() {
-            <span class="ident">shutdown_tx</span>.<span class="ident">send</span>(()).<span class="ident">unwrap</span>();
+        <span class="kw">if let </span><span class="prelude-val">Some</span>((shutdown_tx, <span class="kw">_</span>)) = <span class="self">self</span>.shutdown_ch.take() {
+            shutdown_tx.send(()).unwrap();
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">TestHelper</span> {
-    <span class="doccomment">/// Opens a socket, listening for a packet. Once a packet is received, it</span>
-    <span class="doccomment">/// is forwarded over the returned channel.</span>
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">open_socket_and_recv_single_packet</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">OpenSocketRecvPacket</span> {
-        <span class="kw">let</span> <span class="ident">socket</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">create_socket</span>().<span class="kw">await</span>);
-        <span class="kw">let</span> (<span class="ident">packet_tx</span>, <span class="ident">packet_rx</span>) <span class="op">=</span> <span class="ident">oneshot::channel</span>::<span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>();
-        <span class="kw">let</span> <span class="ident">socket_recv</span> <span class="op">=</span> <span class="ident">socket</span>.<span class="ident">clone</span>();
-        <span class="ident">tokio::spawn</span>(<span class="kw">async</span> <span class="kw">move</span> {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buf</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="number">0</span>; <span class="number">1024</span>];
-            <span class="kw">let</span> <span class="ident">size</span> <span class="op">=</span> <span class="ident">socket_recv</span>.<span class="ident">recv</span>(<span class="kw-2">&amp;mut</span> <span class="ident">buf</span>).<span class="kw">await</span>.<span class="ident">unwrap</span>();
-            <span class="ident">packet_tx</span>
-                .<span class="ident">send</span>(<span class="ident">from_utf8</span>(<span class="kw-2">&amp;</span><span class="ident">buf</span>[..<span class="ident">size</span>]).<span class="ident">unwrap</span>().<span class="ident">to_string</span>())
-                .<span class="ident">unwrap</span>();
+<span class="kw">impl </span>TestHelper {
+    <span class="doccomment">/// Opens a socket, listening for a packet. Once a packet is received, it
+    /// is forwarded over the returned channel.
+    </span><span class="kw">pub async fn </span>open_socket_and_recv_single_packet(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; OpenSocketRecvPacket {
+        <span class="kw">let </span>socket = Arc::new(create_socket().<span class="kw">await</span>);
+        <span class="kw">let </span>(packet_tx, packet_rx) = oneshot::channel::&lt;String&gt;();
+        <span class="kw">let </span>socket_recv = socket.clone();
+        tokio::spawn(<span class="kw">async move </span>{
+            <span class="kw">let </span><span class="kw-2">mut </span>buf = <span class="macro">vec!</span>[<span class="number">0</span>; <span class="number">1024</span>];
+            <span class="kw">let </span>size = socket_recv.recv(<span class="kw-2">&amp;mut </span>buf).<span class="kw">await</span>.unwrap();
+            packet_tx
+                .send(from_utf8(<span class="kw-2">&amp;</span>buf[..size]).unwrap().to_string())
+                .unwrap();
         });
-        <span class="ident">OpenSocketRecvPacket</span> { <span class="ident">socket</span>, <span class="ident">packet_rx</span> }
+        OpenSocketRecvPacket { socket, packet_rx }
     }
 
-    <span class="doccomment">/// Opens a socket, listening for packets. Received packets are forwarded over the</span>
-    <span class="doccomment">/// returned channel.</span>
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">open_socket_and_recv_multiple_packets</span>(
-        <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
-    ) -&gt; (<span class="ident">mpsc::Receiver</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>, <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">UdpSocket</span><span class="op">&gt;</span>) {
-        <span class="kw">let</span> (<span class="ident">packet_tx</span>, <span class="ident">packet_rx</span>) <span class="op">=</span> <span class="ident">mpsc::channel</span>::<span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>(<span class="number">10</span>);
-        <span class="kw">let</span> <span class="ident">socket</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">create_socket</span>().<span class="kw">await</span>);
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">shutdown_rx</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_shutdown_subscriber</span>().<span class="kw">await</span>;
-        <span class="kw">let</span> <span class="ident">socket_recv</span> <span class="op">=</span> <span class="ident">socket</span>.<span class="ident">clone</span>();
-        <span class="ident">tokio::spawn</span>(<span class="kw">async</span> <span class="kw">move</span> {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buf</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="number">0</span>; <span class="number">1024</span>];
-            <span class="kw">loop</span> {
-                <span class="macro">tokio::select!</span> {
-                    <span class="ident">received</span> <span class="op">=</span> <span class="ident">socket_recv</span>.<span class="ident">recv_from</span>(<span class="kw-2">&amp;mut</span> <span class="ident">buf</span>) =&gt; {
-                        <span class="kw">let</span> (<span class="ident">size</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">received</span>.<span class="ident">unwrap</span>();
-                        <span class="kw">let</span> <span class="ident">str</span> <span class="op">=</span> <span class="ident">from_utf8</span>(<span class="kw-2">&amp;</span><span class="ident">buf</span>[..<span class="ident">size</span>]).<span class="ident">unwrap</span>().<span class="ident">to_string</span>();
-                        <span class="kw">match</span> <span class="ident">packet_tx</span>.<span class="ident">send</span>(<span class="ident">str</span>).<span class="kw">await</span> {
+    <span class="doccomment">/// Opens a socket, listening for packets. Received packets are forwarded over the
+    /// returned channel.
+    </span><span class="kw">pub async fn </span>open_socket_and_recv_multiple_packets(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+    ) -&gt; (mpsc::Receiver&lt;String&gt;, Arc&lt;UdpSocket&gt;) {
+        <span class="kw">let </span>(packet_tx, packet_rx) = mpsc::channel::&lt;String&gt;(<span class="number">10</span>);
+        <span class="kw">let </span>socket = Arc::new(create_socket().<span class="kw">await</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>shutdown_rx = <span class="self">self</span>.get_shutdown_subscriber().<span class="kw">await</span>;
+        <span class="kw">let </span>socket_recv = socket.clone();
+        tokio::spawn(<span class="kw">async move </span>{
+            <span class="kw">let </span><span class="kw-2">mut </span>buf = <span class="macro">vec!</span>[<span class="number">0</span>; <span class="number">1024</span>];
+            <span class="kw">loop </span>{
+                <span class="macro">tokio::select! </span>{
+                    received = socket_recv.recv_from(<span class="kw-2">&amp;mut </span>buf) =&gt; {
+                        <span class="kw">let </span>(size, <span class="kw">_</span>) = received.unwrap();
+                        <span class="kw">let </span>str = from_utf8(<span class="kw-2">&amp;</span>buf[..size]).unwrap().to_string();
+                        <span class="kw">match </span>packet_tx.send(str).<span class="kw">await </span>{
                             <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; {}
-                            <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; {
-                                <span class="macro">tracing::warn!</span>(<span class="ident">target</span>: <span class="string">&quot;recv_multiple_packets&quot;</span>, <span class="op">%</span><span class="ident">error</span>, <span class="string">&quot;recv_chan dropped&quot;</span>);
+                            <span class="prelude-val">Err</span>(error) =&gt; {
+                                <span class="macro">tracing::warn!</span>(target: <span class="string">&quot;recv_multiple_packets&quot;</span>, %error, <span class="string">&quot;recv_chan dropped&quot;</span>);
                                 <span class="kw">return</span>;
                             }
                         };
                     },
-                    <span class="kw">_</span> <span class="op">=</span> <span class="ident">shutdown_rx</span>.<span class="ident">changed</span>() =&gt; {
+                    <span class="kw">_ </span>= shutdown_rx.changed() =&gt; {
                         <span class="kw">return</span>;
                     }
                 }
             }
         });
-        (<span class="ident">packet_rx</span>, <span class="ident">socket</span>)
+        (packet_rx, socket)
     }
 
-    <span class="doccomment">/// Runs a simple UDP server that echos back payloads.</span>
-    <span class="doccomment">/// Returns the server&#39;s address.</span>
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">run_echo_server</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="ident">EndpointAddress</span> {
-        <span class="self">self</span>.<span class="ident">run_echo_server_with_tap</span>(<span class="op">|</span><span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span><span class="op">|</span> {}).<span class="kw">await</span>
-    }
+    <span class="doccomment">/// Runs a simple UDP server that echos back payloads.
+    /// Returns the server&#39;s address.
+    </span><span class="kw">pub async fn </span>run_echo_server(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; EndpointAddress {
+        <span class="self">self</span>.run_echo_server_with_tap(|<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>| {}).<span class="kw">await
+    </span>}
 
-    <span class="doccomment">/// Runs a simple UDP server that echos back payloads.</span>
-    <span class="doccomment">/// The provided function is invoked for each received payload.</span>
-    <span class="doccomment">/// Returns the server&#39;s address.</span>
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">run_echo_server_with_tap</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">tap</span>: <span class="ident">F</span>) -&gt; <span class="ident">EndpointAddress</span>
-    <span class="kw">where</span>
-        <span class="ident">F</span>: <span class="ident">Fn</span>(<span class="ident">SocketAddr</span>, <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">SocketAddr</span>) <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="lifetime">&#39;static</span>,
+    <span class="doccomment">/// Runs a simple UDP server that echos back payloads.
+    /// The provided function is invoked for each received payload.
+    /// Returns the server&#39;s address.
+    </span><span class="kw">pub async fn </span>run_echo_server_with_tap&lt;F&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, tap: F) -&gt; EndpointAddress
+    <span class="kw">where
+        </span>F: Fn(SocketAddr, <span class="kw-2">&amp;</span>[u8], SocketAddr) + Send + <span class="lifetime">&#39;static</span>,
     {
-        <span class="kw">let</span> <span class="ident">socket</span> <span class="op">=</span> <span class="ident">create_socket</span>().<span class="kw">await</span>;
-        <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span> <span class="ident">socket</span>.<span class="ident">local_addr</span>().<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">shutdown</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_shutdown_subscriber</span>().<span class="kw">await</span>;
-        <span class="kw">let</span> <span class="ident">local_addr</span> <span class="op">=</span> <span class="ident">addr</span>;
-        <span class="ident">tokio::spawn</span>(<span class="kw">async</span> <span class="kw">move</span> {
-            <span class="kw">loop</span> {
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buf</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="number">0</span>; <span class="number">1024</span>];
-                <span class="macro">tokio::select!</span> {
-                    <span class="ident">recvd</span> <span class="op">=</span> <span class="ident">socket</span>.<span class="ident">recv_from</span>(<span class="kw-2">&amp;mut</span> <span class="ident">buf</span>) =&gt; {
-                        <span class="kw">let</span> (<span class="ident">size</span>, <span class="ident">sender</span>) <span class="op">=</span> <span class="ident">recvd</span>.<span class="ident">unwrap</span>();
-                        <span class="kw">let</span> <span class="ident">packet</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">buf</span>[..<span class="ident">size</span>];
-                        <span class="ident">tap</span>(<span class="ident">sender</span>, <span class="ident">packet</span>, <span class="ident">local_addr</span>);
-                        <span class="ident">socket</span>.<span class="ident">send_to</span>(<span class="ident">packet</span>, <span class="ident">sender</span>).<span class="kw">await</span>.<span class="ident">unwrap</span>();
+        <span class="kw">let </span>socket = create_socket().<span class="kw">await</span>;
+        <span class="kw">let </span>addr = socket.local_addr().unwrap();
+        <span class="kw">let </span><span class="kw-2">mut </span>shutdown = <span class="self">self</span>.get_shutdown_subscriber().<span class="kw">await</span>;
+        <span class="kw">let </span>local_addr = addr;
+        tokio::spawn(<span class="kw">async move </span>{
+            <span class="kw">loop </span>{
+                <span class="kw">let </span><span class="kw-2">mut </span>buf = <span class="macro">vec!</span>[<span class="number">0</span>; <span class="number">1024</span>];
+                <span class="macro">tokio::select! </span>{
+                    recvd = socket.recv_from(<span class="kw-2">&amp;mut </span>buf) =&gt; {
+                        <span class="kw">let </span>(size, sender) = recvd.unwrap();
+                        <span class="kw">let </span>packet = <span class="kw-2">&amp;</span>buf[..size];
+                        tap(sender, packet, local_addr);
+                        socket.send_to(packet, sender).<span class="kw">await</span>.unwrap();
                     },
-                    <span class="kw">_</span> <span class="op">=</span> <span class="ident">shutdown</span>.<span class="ident">changed</span>() =&gt; {
+                    <span class="kw">_ </span>= shutdown.changed() =&gt; {
                         <span class="kw">return</span>;
                     }
                 }
             }
         });
-        <span class="ident">addr</span>.<span class="ident">into</span>()
+        addr.into()
     }
 
-    <span class="doccomment">/// Run a proxy server with a supplied config.</span>
-    <span class="doccomment">/// Admin is disabled for this method, as the majority of tests will not need it, and it makes it</span>
-    <span class="doccomment">/// easier to avoid issues with port collisions.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_server_with_config</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">config</span>: <span class="ident">Config</span>) {
-        <span class="ident">config</span>.<span class="ident">admin</span>.<span class="ident">remove</span>();
+    <span class="doccomment">/// Run a proxy server with a supplied config.
+    /// Admin is disabled for this method, as the majority of tests will not need it, and it makes it
+    /// easier to avoid issues with port collisions.
+    </span><span class="kw">pub fn </span>run_server_with_config(<span class="kw-2">&amp;mut </span><span class="self">self</span>, config: Config) {
+        config.admin.remove();
 
-        <span class="self">self</span>.<span class="ident">run_server</span>(<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::try_from</span>(<span class="ident">config</span>).<span class="ident">unwrap</span>());
+        <span class="self">self</span>.run_server(&lt;<span class="kw">_</span>&gt;::try_from(config).unwrap());
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run_server</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">server</span>: <span class="ident"><span class="kw">crate</span>::Proxy</span>) {
-        <span class="kw">let</span> (<span class="ident">shutdown_tx</span>, <span class="ident">shutdown_rx</span>) <span class="op">=</span> <span class="ident">watch::channel</span>::<span class="op">&lt;</span>()<span class="op">&gt;</span>(());
-        <span class="self">self</span>.<span class="ident">server_shutdown_tx</span>.<span class="ident">push</span>(<span class="prelude-val">Some</span>(<span class="ident">shutdown_tx</span>));
+    <span class="kw">pub fn </span>run_server(<span class="kw-2">&amp;mut </span><span class="self">self</span>, server: <span class="kw">crate</span>::Proxy) {
+        <span class="kw">let </span>(shutdown_tx, shutdown_rx) = watch::channel::&lt;()&gt;(());
+        <span class="self">self</span>.server_shutdown_tx.push(<span class="prelude-val">Some</span>(shutdown_tx));
 
-        <span class="kw">if</span> <span class="ident">server</span>.<span class="ident">config</span>.<span class="ident">admin</span>.<span class="ident">is_some</span>() {
-            <span class="ident">tokio::spawn</span>(<span class="ident"><span class="kw">crate</span>::admin::server</span>(
-                <span class="ident"><span class="kw">crate</span>::admin::Mode::Proxy</span>,
-                <span class="ident">server</span>.<span class="ident">config</span>.<span class="ident">clone</span>(),
+        <span class="kw">if </span>server.config.admin.is_some() {
+            tokio::spawn(<span class="kw">crate</span>::admin::server(
+                <span class="kw">crate</span>::admin::Mode::Proxy,
+                server.config.clone(),
             ));
         }
 
-        <span class="ident">tokio::spawn</span>(<span class="kw">async</span> <span class="kw">move</span> {
-            <span class="ident">server</span>.<span class="ident">run</span>(<span class="ident">shutdown_rx</span>).<span class="kw">await</span>.<span class="ident">unwrap</span>();
+        tokio::spawn(<span class="kw">async move </span>{
+            server.run(shutdown_rx).<span class="kw">await</span>.unwrap();
         });
     }
 
-    <span class="doccomment">/// Returns a receiver subscribed to the helper&#39;s shutdown event.</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">get_shutdown_subscriber</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="ident">watch::Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="comment">// If this is the first call, then we set up the channel first.</span>
-        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">shutdown_ch</span> {
-            <span class="prelude-val">Some</span>((<span class="kw">_</span>, <span class="kw-2">ref</span> <span class="ident">rx</span>)) =&gt; <span class="ident">rx</span>.<span class="ident">clone</span>(),
-            <span class="prelude-val">None</span> =&gt; {
-                <span class="kw">let</span> <span class="ident">ch</span> <span class="op">=</span> <span class="ident">watch::channel</span>(());
-                <span class="kw">let</span> <span class="ident">recv</span> <span class="op">=</span> <span class="ident">ch</span>.<span class="number">1</span>.<span class="ident">clone</span>();
-                <span class="self">self</span>.<span class="ident">shutdown_ch</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">ch</span>);
-                <span class="ident">recv</span>
+    <span class="doccomment">/// Returns a receiver subscribed to the helper&#39;s shutdown event.
+    </span><span class="kw">async fn </span>get_shutdown_subscriber(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; watch::Receiver&lt;()&gt; {
+        <span class="comment">// If this is the first call, then we set up the channel first.
+        </span><span class="kw">match </span><span class="self">self</span>.shutdown_ch {
+            <span class="prelude-val">Some</span>((<span class="kw">_</span>, <span class="kw-2">ref </span>rx)) =&gt; rx.clone(),
+            <span class="prelude-val">None </span>=&gt; {
+                <span class="kw">let </span>ch = watch::channel(());
+                <span class="kw">let </span>recv = ch.<span class="number">1</span>.clone();
+                <span class="self">self</span>.shutdown_ch = <span class="prelude-val">Some</span>(ch);
+                recv
             }
         }
     }
 }
 
-<span class="doccomment">/// assert that read makes no changes</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">assert_filter_read_no_change</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>(<span class="ident">filter</span>: <span class="kw-2">&amp;</span><span class="ident">F</span>)
-<span class="kw">where</span>
-    <span class="ident">F</span>: <span class="ident">Filter</span>,
+<span class="doccomment">/// assert that read makes no changes
+</span><span class="kw">pub fn </span>assert_filter_read_no_change&lt;F&gt;(filter: <span class="kw-2">&amp;</span>F)
+<span class="kw">where
+    </span>F: Filter,
 {
-    <span class="kw">let</span> <span class="ident">endpoints</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="string">&quot;127.0.0.1:80&quot;</span>.<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">Endpoint</span><span class="op">&gt;</span>().<span class="ident">unwrap</span>()];
-    <span class="kw">let</span> <span class="ident">source</span> <span class="op">=</span> <span class="string">&quot;127.0.0.1:90&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>();
-    <span class="kw">let</span> <span class="ident">contents</span> <span class="op">=</span> <span class="string">&quot;hello&quot;</span>.<span class="ident">to_string</span>().<span class="ident">into_bytes</span>();
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">context</span> <span class="op">=</span> <span class="ident">ReadContext::new</span>(<span class="ident">endpoints</span>.<span class="ident">clone</span>(), <span class="ident">source</span>, <span class="ident">contents</span>.<span class="ident">clone</span>());
+    <span class="kw">let </span>endpoints = <span class="macro">vec!</span>[<span class="string">&quot;127.0.0.1:80&quot;</span>.parse::&lt;Endpoint&gt;().unwrap()];
+    <span class="kw">let </span>source = <span class="string">&quot;127.0.0.1:90&quot;</span>.parse().unwrap();
+    <span class="kw">let </span>contents = <span class="string">&quot;hello&quot;</span>.to_string().into_bytes();
+    <span class="kw">let </span><span class="kw-2">mut </span>context = ReadContext::new(endpoints.clone(), source, contents.clone());
 
-    <span class="ident">filter</span>.<span class="ident">read</span>(<span class="kw-2">&amp;mut</span> <span class="ident">context</span>).<span class="ident">unwrap</span>();
-    <span class="macro">assert_eq!</span>(<span class="ident">endpoints</span>, <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">context</span>.<span class="ident">endpoints</span>);
-    <span class="macro">assert_eq!</span>(<span class="ident">contents</span>, <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">context</span>.<span class="ident">contents</span>);
+    filter.read(<span class="kw-2">&amp;mut </span>context).unwrap();
+    <span class="macro">assert_eq!</span>(endpoints, <span class="kw-2">&amp;*</span>context.endpoints);
+    <span class="macro">assert_eq!</span>(contents, <span class="kw-2">&amp;*</span>context.contents);
 }
 
-<span class="doccomment">/// assert that write makes no changes</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">assert_write_no_change</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>(<span class="ident">filter</span>: <span class="kw-2">&amp;</span><span class="ident">F</span>)
-<span class="kw">where</span>
-    <span class="ident">F</span>: <span class="ident">Filter</span>,
+<span class="doccomment">/// assert that write makes no changes
+</span><span class="kw">pub fn </span>assert_write_no_change&lt;F&gt;(filter: <span class="kw-2">&amp;</span>F)
+<span class="kw">where
+    </span>F: Filter,
 {
-    <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="string">&quot;127.0.0.1:90&quot;</span>.<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">Endpoint</span><span class="op">&gt;</span>().<span class="ident">unwrap</span>();
-    <span class="kw">let</span> <span class="ident">contents</span> <span class="op">=</span> <span class="string">&quot;hello&quot;</span>.<span class="ident">to_string</span>().<span class="ident">into_bytes</span>();
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">context</span> <span class="op">=</span> <span class="ident">WriteContext::new</span>(
-        <span class="ident">endpoint</span>.<span class="ident">clone</span>(),
-        <span class="ident">endpoint</span>.<span class="ident">address</span>,
-        <span class="string">&quot;127.0.0.1:70&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
-        <span class="ident">contents</span>.<span class="ident">clone</span>(),
+    <span class="kw">let </span>endpoint = <span class="string">&quot;127.0.0.1:90&quot;</span>.parse::&lt;Endpoint&gt;().unwrap();
+    <span class="kw">let </span>contents = <span class="string">&quot;hello&quot;</span>.to_string().into_bytes();
+    <span class="kw">let </span><span class="kw-2">mut </span>context = WriteContext::new(
+        endpoint.clone(),
+        endpoint.address,
+        <span class="string">&quot;127.0.0.1:70&quot;</span>.parse().unwrap(),
+        contents.clone(),
     );
 
-    <span class="ident">filter</span>.<span class="ident">write</span>(<span class="kw-2">&amp;mut</span> <span class="ident">context</span>).<span class="ident">unwrap</span>();
-    <span class="macro">assert_eq!</span>(<span class="ident">contents</span>, <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">context</span>.<span class="ident">contents</span>);
+    filter.write(<span class="kw-2">&amp;mut </span>context).unwrap();
+    <span class="macro">assert_eq!</span>(contents, <span class="kw-2">&amp;*</span>context.contents);
 }
 
-<span class="doccomment">/// Opens a new socket bound to an ephemeral port</span>
-<span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">create_socket</span>() -&gt; <span class="ident">UdpSocket</span> {
-    <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span> <span class="ident">SocketAddrV4::new</span>(<span class="ident">Ipv4Addr::UNSPECIFIED</span>, <span class="number">0</span>);
-    <span class="comment">// Use a standard socket in test utils as we only want to bind sockets to unused ports.</span>
-    <span class="ident">UdpSocket::bind</span>(<span class="ident">addr</span>).<span class="kw">await</span>.<span class="ident">unwrap</span>()
+<span class="doccomment">/// Opens a new socket bound to an ephemeral port
+</span><span class="kw">pub async fn </span>create_socket() -&gt; UdpSocket {
+    <span class="kw">let </span>addr = SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, <span class="number">0</span>);
+    <span class="comment">// Use a standard socket in test utils as we only want to bind sockets to unused ports.
+    </span>UdpSocket::bind(addr).<span class="kw">await</span>.unwrap()
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">config_with_dummy_endpoint</span>() -&gt; <span class="ident">ConfigBuilder</span> {
-    <span class="ident">ConfigBuilder::default</span>().<span class="ident">clusters</span>([<span class="ident">Cluster</span> {
-        <span class="ident">name</span>: <span class="string">&quot;default&quot;</span>.<span class="ident">into</span>(),
-        <span class="ident">localities</span>: <span class="macro">vec!</span>[<span class="ident">LocalityEndpoints</span> {
-            <span class="ident">locality</span>: <span class="prelude-val">None</span>,
-            <span class="ident">endpoints</span>: [<span class="ident">Endpoint</span> {
-                <span class="ident">address</span>: (<span class="ident">std::net::Ipv4Addr::LOCALHOST</span>, <span class="number">8080</span>).<span class="ident">into</span>(),
-                ..<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>()
+<span class="kw">pub fn </span>config_with_dummy_endpoint() -&gt; ConfigBuilder {
+    ConfigBuilder::default().clusters([Cluster {
+        name: <span class="string">&quot;default&quot;</span>.into(),
+        localities: <span class="macro">vec!</span>[LocalityEndpoints {
+            locality: <span class="prelude-val">None</span>,
+            endpoints: [Endpoint {
+                address: (std::net::Ipv4Addr::LOCALHOST, <span class="number">8080</span>).into(),
+                ..&lt;<span class="kw">_</span>&gt;::default()
             }]
-            .<span class="ident">into</span>(),
+            .into(),
         }]
-        .<span class="ident">into_iter</span>()
-        .<span class="ident">collect</span>(),
+        .into_iter()
+        .collect(),
     }])
 }
-<span class="doccomment">/// Creates a dummy endpoint with `id` as a suffix.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">ep</span>(<span class="ident">id</span>: <span class="ident">u8</span>) -&gt; <span class="ident">Endpoint</span> {
-    <span class="ident">Endpoint</span> {
-        <span class="ident">address</span>: ([<span class="number">127</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="ident">id</span>], <span class="number">8080</span>).<span class="ident">into</span>(),
-        ..<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="ident">::default</span>()
+<span class="doccomment">/// Creates a dummy endpoint with `id` as a suffix.
+</span><span class="kw">pub fn </span>ep(id: u8) -&gt; Endpoint {
+    Endpoint {
+        address: ([<span class="number">127</span>, <span class="number">0</span>, <span class="number">0</span>, id], <span class="number">8080</span>).into(),
+        ..&lt;<span class="kw">_</span>&gt;::default()
     }
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_test_config</span>() -&gt; <span class="ident"><span class="kw">crate</span>::Config</span> {
-    <span class="ident"><span class="kw">crate</span>::Config::builder</span>()
-        .<span class="ident">filters</span>(<span class="macro">vec!</span>[<span class="ident"><span class="kw">crate</span>::config::Filter</span> {
-            <span class="ident">name</span>: <span class="string">&quot;TestFilter&quot;</span>.<span class="ident">into</span>(),
-            <span class="ident">config</span>: <span class="prelude-val">None</span>,
+<span class="kw">pub fn </span>new_test_config() -&gt; <span class="kw">crate</span>::Config {
+    <span class="kw">crate</span>::Config::builder()
+        .filters(<span class="macro">vec!</span>[<span class="kw">crate</span>::config::Filter {
+            name: <span class="string">&quot;TestFilter&quot;</span>.into(),
+            config: <span class="prelude-val">None</span>,
         }])
-        .<span class="ident">build</span>()
-        .<span class="ident">unwrap</span>()
+        .build()
+        .unwrap()
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">load_test_filters</span>() {
-    <span class="ident">FilterRegistry::register</span>([<span class="ident">TestFilter::factory</span>()]);
+<span class="kw">pub fn </span>load_test_filters() {
+    FilterRegistry::register([TestFilter::factory()]);
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="ident">std::time::Duration</span>;
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
+    <span class="kw">use </span>std::time::Duration;
 
-    <span class="kw">use</span> <span class="ident">tokio::time::timeout</span>;
+    <span class="kw">use </span>tokio::time::timeout;
 
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::test_utils::TestHelper</span>;
+    <span class="kw">use </span><span class="kw">crate</span>::test_utils::TestHelper;
 
-    <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">test_echo_server</span>() {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">t</span> <span class="op">=</span> <span class="ident">TestHelper::default</span>();
-        <span class="kw">let</span> <span class="ident">echo_addr</span> <span class="op">=</span> <span class="ident">t</span>.<span class="ident">run_echo_server</span>().<span class="kw">await</span>;
-        <span class="kw">let</span> <span class="ident">endpoint</span> <span class="op">=</span> <span class="ident">t</span>.<span class="ident">open_socket_and_recv_single_packet</span>().<span class="kw">await</span>;
-        <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="string">&quot;hello&quot;</span>;
-        <span class="ident">endpoint</span>
-            .<span class="ident">socket</span>
-            .<span class="ident">send_to</span>(<span class="ident">msg</span>.<span class="ident">as_bytes</span>(), <span class="kw-2">&amp;</span><span class="ident">echo_addr</span>.<span class="ident">to_socket_addr</span>().<span class="ident">unwrap</span>())
-            .<span class="kw">await</span>
-            .<span class="ident">unwrap</span>();
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>test_echo_server() {
+        <span class="kw">let </span><span class="kw-2">mut </span>t = TestHelper::default();
+        <span class="kw">let </span>echo_addr = t.run_echo_server().<span class="kw">await</span>;
+        <span class="kw">let </span>endpoint = t.open_socket_and_recv_single_packet().<span class="kw">await</span>;
+        <span class="kw">let </span>msg = <span class="string">&quot;hello&quot;</span>;
+        endpoint
+            .socket
+            .send_to(msg.as_bytes(), <span class="kw-2">&amp;</span>echo_addr.to_socket_addr().unwrap())
+            .<span class="kw">await
+            </span>.unwrap();
         <span class="macro">assert_eq!</span>(
-            <span class="ident">msg</span>,
-            <span class="ident">timeout</span>(<span class="ident">Duration::from_secs</span>(<span class="number">5</span>), <span class="ident">endpoint</span>.<span class="ident">packet_rx</span>)
-                .<span class="kw">await</span>
-                .<span class="ident">expect</span>(<span class="string">&quot;should not timeout&quot;</span>)
-                .<span class="ident">unwrap</span>()
+            msg,
+            timeout(Duration::from_secs(<span class="number">5</span>), endpoint.packet_rx)
+                .<span class="kw">await
+                </span>.expect(<span class="string">&quot;should not timeout&quot;</span>)
+                .unwrap()
         );
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>
