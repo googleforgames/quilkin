@@ -46,7 +46,7 @@ pub(crate) fn total_sessions() -> &'static IntCounter {
         )
     });
 
-    &*TOTAL_SESSIONS
+    &TOTAL_SESSIONS
 }
 
 pub(crate) fn duration_secs() -> &'static Histogram {
@@ -64,5 +64,5 @@ pub(crate) fn duration_secs() -> &'static Histogram {
         )
     });
 
-    &*DURATION_SECS
+    &DURATION_SECS
 }
