@@ -333,7 +333,7 @@ edit either!</p>
 <p>For each <a href="https://github.com/googleforgames/quilkin/releases">release</a>, there is a container image built and
 hosted on Google Cloud <a href="https://cloud.google.com/artifact-registry">Artifact Registry</a>.</p>
 <p>The production release can be found under the tag: </p>
-<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.4.0-dev-1a6c8b6
+<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.4.0-dev-05ca07f
 </code></pre>
 <p>Which can be browsed as <a href="https://us-docker.pkg.dev/quilkin/release/quilkin">us-docker.pkg.dev/quilkin/release/quilkin</a>.</p>
 <p>The <a href="https://docs.docker.com/engine/reference/builder/#entrypoint">entrypoint</a> of the container is to run <code>/quilkin</code> 
@@ -905,7 +905,7 @@ definitions:
 </code></pre>
 <h3 id="metrics-2"><a class="header" href="#metrics-2">Metrics</a></h3>
 <ul>
-<li><code>quilkin_filter_Capture_packets_dropped</code>
+<li><code>quilkin_filter_Capture_packets_dropped_total</code>
 A counter of the total number of packets that have been dropped due to their length being less than the configured
 <code>size</code>.</li>
 </ul>
@@ -1385,7 +1385,7 @@ properties:
 </code></pre>
 <h3 id="metrics-9"><a class="header" href="#metrics-9">Metrics</a></h3>
 <ul>
-<li><code>quilkin_filter_LocalRateLimit_packets_dropped</code><br />
+<li><code>quilkin_filter_LocalRateLimit_packets_dropped_total</code><br />
 A counter over the total number of packets that have exceeded the configured maximum rate limit and have been dropped as a result.</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="match"><a class="header" href="#match">Match</a></h1>
@@ -1675,7 +1675,7 @@ definitions:
 </code></pre>
 <h3 id="metrics-13"><a class="header" href="#metrics-13">Metrics</a></h3>
 <ul>
-<li><code>quilkin_filter_TokenRouter_packets_dropped</code>
+<li><code>quilkin_filter_TokenRouter_packets_dropped_total</code>
 A counter of the total number of packets that have been dropped. This is also provided with a <code>Reason</code> label, as there
 are differing reasons for packets to be dropped:
 <ul>

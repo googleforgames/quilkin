@@ -74,9 +74,9 @@
 
 <span class="doccomment">/// Register and manage metrics for this filter
 </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>Metrics {
-    <span class="kw">pub</span>(<span class="kw">super</span>) packets_dropped_no_token_found: GenericCounter&lt;AtomicU64&gt;,
-    <span class="kw">pub</span>(<span class="kw">super</span>) packets_dropped_invalid_token: GenericCounter&lt;AtomicU64&gt;,
-    <span class="kw">pub</span>(<span class="kw">super</span>) packets_dropped_no_endpoint_match: GenericCounter&lt;AtomicU64&gt;,
+    <span class="kw">pub</span>(<span class="kw">super</span>) packets_dropped_total_no_token_found: GenericCounter&lt;AtomicU64&gt;,
+    <span class="kw">pub</span>(<span class="kw">super</span>) packets_dropped_total_invalid_token: GenericCounter&lt;AtomicU64&gt;,
+    <span class="kw">pub</span>(<span class="kw">super</span>) packets_dropped_total_no_endpoint_match: GenericCounter&lt;AtomicU64&gt;,
 }
 
 <span class="kw">impl </span>Metrics {
@@ -84,7 +84,7 @@
         <span class="kw">let </span>label_names = <span class="macro">vec!</span>[<span class="string">&quot;reason&quot;</span>];
         <span class="kw">let </span>metric = IntCounterVec::new(
             filter_opts(
-                <span class="string">&quot;packets_dropped&quot;</span>,
+                <span class="string">&quot;packets_dropped_total&quot;</span>,
                 <span class="string">&quot;TokenRouter&quot;</span>,
                 <span class="string">&quot;Total number of packets dropped. labels: reason.&quot;</span>,
             ),
@@ -93,11 +93,11 @@
         </span>.register_if_not_exists()<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(Metrics {
-            packets_dropped_no_token_found: metric
+            packets_dropped_total_no_token_found: metric
                 .get_metric_with_label_values(<span class="macro">vec!</span>[<span class="string">&quot;NoTokenFound&quot;</span>].as_slice())<span class="question-mark">?</span>,
-            packets_dropped_invalid_token: metric
+            packets_dropped_total_invalid_token: metric
                 .get_metric_with_label_values(<span class="macro">vec!</span>[<span class="string">&quot;InvalidToken&quot;</span>].as_slice())<span class="question-mark">?</span>,
-            packets_dropped_no_endpoint_match: metric
+            packets_dropped_total_no_endpoint_match: metric
                 .get_metric_with_label_values(<span class="macro">vec!</span>[<span class="string">&quot;NoEndpointMatch&quot;</span>].as_slice())<span class="question-mark">?</span>,
         })
     }

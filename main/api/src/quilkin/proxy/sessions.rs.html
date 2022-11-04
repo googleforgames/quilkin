@@ -523,6 +523,7 @@
 <span id="523">523</span>
 <span id="524">524</span>
 <span id="525">525</span>
+<span id="526">526</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -784,7 +785,7 @@
 
         <span class="kw">let </span>handle_error = |error: Error| {
             error.log();
-            <span class="kw">crate</span>::metrics::packets_dropped(
+            <span class="kw">crate</span>::metrics::packets_dropped_total(
                 <span class="kw">crate</span>::metrics::WRITE,
                 <span class="string">&quot;proxy::Session::process_recv_packet&quot;</span>,
             )
@@ -843,7 +844,8 @@
                 <span class="kw">crate</span>::metrics::bytes_total(<span class="kw">crate</span>::metrics::READ).inc_by(size <span class="kw">as </span>u64);
             }
             <span class="prelude-val">Err</span>(error) =&gt; {
-                <span class="kw">crate</span>::metrics::packets_dropped(<span class="kw">crate</span>::metrics::READ, <span class="string">&quot;proxy::Session::send&quot;</span>).inc();
+                <span class="kw">crate</span>::metrics::packets_dropped_total(<span class="kw">crate</span>::metrics::READ, <span class="string">&quot;proxy::Session::send&quot;</span>)
+                    .inc();
                 <span class="kw">crate</span>::metrics::errors_total(<span class="kw">crate</span>::metrics::READ).inc();
                 <span class="macro">tracing::error!</span>(kind=%error.kind(), <span class="string">&quot;{}&quot;</span>, error);
                 <span class="kw">return</span>;

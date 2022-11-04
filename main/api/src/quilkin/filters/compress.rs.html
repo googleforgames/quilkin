@@ -518,6 +518,12 @@
 <span id="518">518</span>
 <span id="519">519</span>
 <span id="520">520</span>
+<span id="521">521</span>
+<span id="522">522</span>
+<span id="523">523</span>
+<span id="524">524</span>
+<span id="525">525</span>
+<span id="526">526</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -571,21 +577,21 @@
 
     <span class="doccomment">/// Track a failed attempt at compression
     </span><span class="kw">fn </span>failed_compression&lt;T&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, err: <span class="kw-2">&amp;</span><span class="kw">dyn </span>std::error::Error) -&gt; <span class="prelude-ty">Option</span>&lt;T&gt; {
-        <span class="kw">if </span><span class="self">self</span>.metrics.packets_dropped_compress.get() % LOG_SAMPLING_RATE == <span class="number">0 </span>{
-            <span class="macro">warn!</span>(mode = <span class="question-mark">?</span><span class="self">self</span>.compression_mode, error = %err, count = <span class="self">self</span>.metrics.packets_dropped_compress.get(),
+        <span class="kw">if </span><span class="self">self</span>.metrics.packets_dropped_total_compress.get() % LOG_SAMPLING_RATE == <span class="number">0 </span>{
+            <span class="macro">warn!</span>(mode = <span class="question-mark">?</span><span class="self">self</span>.compression_mode, error = %err, count = <span class="self">self</span>.metrics.packets_dropped_total_compress.get(),
             <span class="string">&quot;Packets are being dropped as they could not be compressed&quot;</span>);
         }
-        <span class="self">self</span>.metrics.packets_dropped_compress.inc();
+        <span class="self">self</span>.metrics.packets_dropped_total_compress.inc();
         <span class="prelude-val">None
     </span>}
 
     <span class="doccomment">/// Track a failed attempt at decompression
     </span><span class="kw">fn </span>failed_decompression&lt;T&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, err: <span class="kw-2">&amp;</span><span class="kw">dyn </span>std::error::Error) -&gt; <span class="prelude-ty">Option</span>&lt;T&gt; {
-        <span class="kw">if </span><span class="self">self</span>.metrics.packets_dropped_decompress.get() % LOG_SAMPLING_RATE == <span class="number">0 </span>{
-            <span class="macro">warn!</span>(mode = <span class="question-mark">?</span><span class="self">self</span>.compression_mode, error = %err, count = <span class="question-mark">?</span><span class="self">self</span>.metrics.packets_dropped_decompress.get(),
+        <span class="kw">if </span><span class="self">self</span>.metrics.packets_dropped_total_decompress.get() % LOG_SAMPLING_RATE == <span class="number">0 </span>{
+            <span class="macro">warn!</span>(mode = <span class="question-mark">?</span><span class="self">self</span>.compression_mode, error = %err, count = <span class="question-mark">?</span><span class="self">self</span>.metrics.packets_dropped_total_decompress.get(),
             <span class="string">&quot;Packets are being dropped as they could not be decompressed&quot;</span>);
         }
-        <span class="self">self</span>.metrics.packets_dropped_decompress.inc();
+        <span class="self">self</span>.metrics.packets_dropped_total_decompress.inc();
         <span class="prelude-val">None
     </span>}
 }
@@ -838,8 +844,8 @@
 
         <span class="macro">assert_eq!</span>(expected, <span class="kw-2">&amp;*</span>write_context.contents);
 
-        <span class="macro">assert_eq!</span>(<span class="number">0</span>, compress.metrics.packets_dropped_decompress.get());
-        <span class="macro">assert_eq!</span>(<span class="number">0</span>, compress.metrics.packets_dropped_compress.get());
+        <span class="macro">assert_eq!</span>(<span class="number">0</span>, compress.metrics.packets_dropped_total_decompress.get());
+        <span class="macro">assert_eq!</span>(<span class="number">0</span>, compress.metrics.packets_dropped_total_compress.get());
         <span class="comment">// multiply by two, because data was sent both upstream and downstream
         </span><span class="macro">assert_eq!</span>(
             (read_context.contents.len() * <span class="number">2</span>) <span class="kw">as </span>u64,
@@ -874,8 +880,8 @@
             compress.metrics.decompressed_bytes_total.get()
         );
 
-        <span class="macro">assert_eq!</span>(<span class="number">0</span>, compress.metrics.packets_dropped_decompress.get());
-        <span class="macro">assert_eq!</span>(<span class="number">0</span>, compress.metrics.packets_dropped_compress.get());
+        <span class="macro">assert_eq!</span>(<span class="number">0</span>, compress.metrics.packets_dropped_total_decompress.get());
+        <span class="macro">assert_eq!</span>(<span class="number">0</span>, compress.metrics.packets_dropped_total_compress.get());
     }
 
     <span class="attribute">#[traced_test]
@@ -899,8 +905,11 @@
             ))
             .is_none());
 
-        <span class="macro">assert_eq!</span>(<span class="number">1</span>, compression.metrics.packets_dropped_decompress.get());
-        <span class="macro">assert_eq!</span>(<span class="number">0</span>, compression.metrics.packets_dropped_compress.get());
+        <span class="macro">assert_eq!</span>(
+            <span class="number">1</span>,
+            compression.metrics.packets_dropped_total_decompress.get()
+        );
+        <span class="macro">assert_eq!</span>(<span class="number">0</span>, compression.metrics.packets_dropped_total_compress.get());
 
         <span class="kw">let </span>compression = Compress::new(
             Config {
@@ -924,8 +933,11 @@
         </span>));
         <span class="macro">assert!</span>(logs_contain(<span class="string">&quot;quilkin::filters::compress&quot;</span>)); <span class="comment">// the given name to the the logger by tracing
 
-        </span><span class="macro">assert_eq!</span>(<span class="number">1</span>, compression.metrics.packets_dropped_decompress.get());
-        <span class="macro">assert_eq!</span>(<span class="number">0</span>, compression.metrics.packets_dropped_compress.get());
+        </span><span class="macro">assert_eq!</span>(
+            <span class="number">1</span>,
+            compression.metrics.packets_dropped_total_decompress.get()
+        );
+        <span class="macro">assert_eq!</span>(<span class="number">0</span>, compression.metrics.packets_dropped_total_compress.get());
         <span class="macro">assert_eq!</span>(<span class="number">0</span>, compression.metrics.compressed_bytes_total.get());
         <span class="macro">assert_eq!</span>(<span class="number">0</span>, compression.metrics.decompressed_bytes_total.get());
     }

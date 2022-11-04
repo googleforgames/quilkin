@@ -350,11 +350,11 @@
     PACKETS_TOTAL.with_label_values(<span class="kw-2">&amp;</span>[direction.label()])
 }
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>packets_dropped(direction: Direction, reason: <span class="kw-2">&amp;</span>str) -&gt; IntCounter {
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>packets_dropped_total(direction: Direction, reason: <span class="kw-2">&amp;</span>str) -&gt; IntCounter {
     <span class="kw">static </span>PACKETS_DROPPED: Lazy&lt;IntCounterVec&gt; = Lazy::new(|| {
         <span class="macro">prometheus::register_int_counter_vec_with_registry! </span>{
             <span class="macro">prometheus::opts! </span>{
-                <span class="string">&quot;packets_dropped&quot;</span>,
+                <span class="string">&quot;packets_dropped_total&quot;</span>,
                 <span class="string">&quot;Total number of dropped packets&quot;</span>,
             },
             <span class="kw-2">&amp;</span>[Direction::LABEL, <span class="string">&quot;reason&quot;</span>],

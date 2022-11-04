@@ -288,6 +288,9 @@
 <span id="288">288</span>
 <span id="289">289</span>
 <span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -355,7 +358,7 @@
                     metadata_key = %<span class="self">self</span>.config.metadata_key,
                     <span class="string">&quot;Dropping packet, no routing token was found&quot;
                 </span>);
-                <span class="self">self</span>.metrics.packets_dropped_no_token_found.inc();
+                <span class="self">self</span>.metrics.packets_dropped_total_no_token_found.inc();
                 <span class="prelude-val">None
             </span>}
             <span class="prelude-val">Some</span>(value) =&gt; <span class="kw">match </span>value {
@@ -374,7 +377,7 @@
                             token = <span class="kw-2">&amp;*</span>base64::encode(token),
                             <span class="string">&quot;No endpoint matched token&quot;
                         </span>);
-                        <span class="self">self</span>.metrics.packets_dropped_no_endpoint_match.inc();
+                        <span class="self">self</span>.metrics.packets_dropped_total_no_endpoint_match.inc();
                         <span class="prelude-val">None
                     </span>} <span class="kw">else </span>{
                         <span class="prelude-val">Some</span>(())
@@ -382,11 +385,11 @@
                 }
                 <span class="kw">_ </span>=&gt; {
                     <span class="macro">tracing::trace!</span>(
-                        count = <span class="question-mark">?</span><span class="self">self</span>.metrics.packets_dropped_invalid_token.get(),
+                        count = <span class="question-mark">?</span><span class="self">self</span>.metrics.packets_dropped_total_invalid_token.get(),
                         metadata_key = %<span class="self">self</span>.config.metadata_key,
                         <span class="string">&quot;Packets are being dropped as routing token has invalid type: expected Value::Bytes&quot;
                     </span>);
-                    <span class="self">self</span>.metrics.packets_dropped_invalid_token.inc();
+                    <span class="self">self</span>.metrics.packets_dropped_total_invalid_token.inc();
                     <span class="prelude-val">None
                 </span>}
             },
@@ -524,19 +527,22 @@
             .insert(CAPTURED_BYTES.into(), Value::Bytes(<span class="string">b&quot;567&quot;</span>.to_vec().into()));
 
         <span class="macro">assert!</span>(filter.read(<span class="kw-2">&amp;mut </span>ctx).is_none());
-        <span class="macro">assert_eq!</span>(<span class="number">1</span>, filter.metrics.packets_dropped_no_endpoint_match.get());
+        <span class="macro">assert_eq!</span>(
+            <span class="number">1</span>,
+            filter.metrics.packets_dropped_total_no_endpoint_match.get()
+        );
 
         <span class="comment">// no key
         </span><span class="kw">let </span><span class="kw-2">mut </span>ctx = new_ctx();
         <span class="macro">assert!</span>(filter.read(<span class="kw-2">&amp;mut </span>ctx).is_none());
-        <span class="macro">assert_eq!</span>(<span class="number">1</span>, filter.metrics.packets_dropped_no_token_found.get());
+        <span class="macro">assert_eq!</span>(<span class="number">1</span>, filter.metrics.packets_dropped_total_no_token_found.get());
 
         <span class="comment">// wrong type key
         </span><span class="kw">let </span><span class="kw-2">mut </span>ctx = new_ctx();
         ctx.metadata
             .insert(CAPTURED_BYTES.into(), Value::String(String::from(<span class="string">&quot;wrong&quot;</span>)));
         <span class="macro">assert!</span>(filter.read(<span class="kw-2">&amp;mut </span>ctx).is_none());
-        <span class="macro">assert_eq!</span>(<span class="number">1</span>, filter.metrics.packets_dropped_invalid_token.get());
+        <span class="macro">assert_eq!</span>(<span class="number">1</span>, filter.metrics.packets_dropped_total_invalid_token.get());
     }
 
     <span class="attribute">#[test]

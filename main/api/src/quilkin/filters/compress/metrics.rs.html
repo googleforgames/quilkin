@@ -89,8 +89,8 @@
 
 <span class="doccomment">/// Register and manage metrics for this filter
 </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>Metrics {
-    <span class="kw">pub</span>(<span class="kw">super</span>) packets_dropped_compress: GenericCounter&lt;AtomicU64&gt;,
-    <span class="kw">pub</span>(<span class="kw">super</span>) packets_dropped_decompress: GenericCounter&lt;AtomicU64&gt;,
+    <span class="kw">pub</span>(<span class="kw">super</span>) packets_dropped_total_compress: GenericCounter&lt;AtomicU64&gt;,
+    <span class="kw">pub</span>(<span class="kw">super</span>) packets_dropped_total_decompress: GenericCounter&lt;AtomicU64&gt;,
     <span class="kw">pub</span>(<span class="kw">super</span>) compressed_bytes_total: GenericCounter&lt;AtomicU64&gt;,
     <span class="kw">pub</span>(<span class="kw">super</span>) decompressed_bytes_total: GenericCounter&lt;AtomicU64&gt;,
 }
@@ -123,9 +123,9 @@
         </span>.register_if_not_exists()<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(Metrics {
-            packets_dropped_compress: dropped_metric
+            packets_dropped_total_compress: dropped_metric
                 .get_metric_with_label_values(<span class="macro">vec!</span>[<span class="string">&quot;Compress&quot;</span>].as_slice())<span class="question-mark">?</span>,
-            packets_dropped_decompress: dropped_metric
+            packets_dropped_total_decompress: dropped_metric
                 .get_metric_with_label_values(<span class="macro">vec!</span>[<span class="string">&quot;Decompress&quot;</span>].as_slice())<span class="question-mark">?</span>,
             compressed_bytes_total,
             decompressed_bytes_total,

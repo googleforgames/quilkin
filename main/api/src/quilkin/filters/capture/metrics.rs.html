@@ -64,7 +64,7 @@
     <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>new() -&gt; prometheus::Result&lt;<span class="self">Self</span>&gt; {
         <span class="prelude-val">Ok</span>(Metrics {
             packets_dropped_total: IntCounter::with_opts(filter_opts(
-                <span class="string">&quot;packets_dropped&quot;</span>,
+                <span class="string">&quot;packets_dropped_total&quot;</span>,
                 <span class="string">&quot;CaptureBytes&quot;</span>,
                 <span class="string">&quot;Total number of packets dropped due capture size being larger than the received packet&quot;</span>,
             ))<span class="question-mark">?

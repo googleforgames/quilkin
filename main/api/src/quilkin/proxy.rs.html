@@ -537,6 +537,7 @@
 <span id="537">537</span>
 <span id="538">538</span>
 <span id="539">539</span>
+<span id="540">540</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -773,7 +774,8 @@
         <span class="kw">let </span>endpoints: Vec&lt;<span class="kw">_</span>&gt; = clusters.endpoints().collect();
         <span class="kw">if </span>endpoints.is_empty() {
             <span class="macro">tracing::trace!</span>(<span class="string">&quot;dropping packet, no upstream endpoints available&quot;</span>);
-            <span class="kw">crate</span>::metrics::packets_dropped(<span class="kw">crate</span>::metrics::READ, <span class="string">&quot;NoEndpointsAvailable&quot;</span>).inc();
+            <span class="kw">crate</span>::metrics::packets_dropped_total(<span class="kw">crate</span>::metrics::READ, <span class="string">&quot;NoEndpointsAvailable&quot;</span>)
+                .inc();
             <span class="kw">return</span>;
         }
 

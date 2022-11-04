@@ -729,7 +729,7 @@
                     }
                     <span class="prelude-val">None </span>=&gt; {
                         <span class="macro">tracing::trace!</span>(%id, <span class="string">&quot;read dropping packet&quot;</span>);
-                        <span class="kw">crate</span>::metrics::packets_dropped(<span class="kw">crate</span>::metrics::READ, id).inc();
+                        <span class="kw">crate</span>::metrics::packets_dropped_total(<span class="kw">crate</span>::metrics::READ, id).inc();
                         <span class="kw">return </span><span class="prelude-val">None</span>;
                     }
                 }
@@ -752,7 +752,7 @@
                     }
                     <span class="prelude-val">None </span>=&gt; {
                         <span class="macro">tracing::trace!</span>(%id, <span class="string">&quot;write dropping packet&quot;</span>);
-                        <span class="kw">crate</span>::metrics::packets_dropped(<span class="kw">crate</span>::metrics::WRITE, id).inc();
+                        <span class="kw">crate</span>::metrics::packets_dropped_total(<span class="kw">crate</span>::metrics::WRITE, id).inc();
                         <span class="prelude-val">None
                     </span>}
                 }
