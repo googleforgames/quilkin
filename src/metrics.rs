@@ -44,7 +44,7 @@ pub fn registry() -> &'static Registry {
     static REGISTRY: Lazy<Registry> =
         Lazy::new(|| Registry::new_custom(Some("quilkin".into()), None).unwrap());
 
-    &*REGISTRY
+    &REGISTRY
 }
 
 /// Start the histogram bucket at a quarter of a millisecond, as number below a millisecond are

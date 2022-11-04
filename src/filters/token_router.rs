@@ -80,7 +80,6 @@ impl Filter for TokenRouter {
                     });
 
                     if ctx.endpoints.is_empty() {
-                        let token: &[u8] = &**token;
                         tracing::trace!(
                             token = &*base64::encode(token),
                             "No endpoint matched token"
