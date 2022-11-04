@@ -65,7 +65,7 @@ impl Filter for TokenRouter {
                     metadata_key = %self.config.metadata_key,
                     "Dropping packet, no routing token was found"
                 );
-                self.metrics.packets_dropped_no_token_found.inc();
+                self.metrics.packets_dropped_total_no_token_found.inc();
                 None
             }
             Some(value) => match value {
@@ -84,7 +84,7 @@ impl Filter for TokenRouter {
                             token = &*base64::encode(token),
                             "No endpoint matched token"
                         );
-                        self.metrics.packets_dropped_no_endpoint_match.inc();
+                        self.metrics.packets_dropped_total_no_endpoint_match.inc();
                         None
                     } else {
                         Some(())
@@ -92,11 +92,11 @@ impl Filter for TokenRouter {
                 }
                 _ => {
                     tracing::trace!(
-                        count = ?self.metrics.packets_dropped_invalid_token.get(),
+                        count = ?self.metrics.packets_dropped_total_invalid_token.get(),
                         metadata_key = %self.config.metadata_key,
                         "Packets are being dropped as routing token has invalid type: expected Value::Bytes"
                     );
-                    self.metrics.packets_dropped_invalid_token.inc();
+                    self.metrics.packets_dropped_total_invalid_token.inc();
                     None
                 }
             },
@@ -234,19 +234,22 @@ mod tests {
             .insert(CAPTURED_BYTES.into(), Value::Bytes(b"567".to_vec().into()));
 
         assert!(filter.read(&mut ctx).is_none());
-        assert_eq!(1, filter.metrics.packets_dropped_no_endpoint_match.get());
+        assert_eq!(
+            1,
+            filter.metrics.packets_dropped_total_no_endpoint_match.get()
+        );
 
         // no key
         let mut ctx = new_ctx();
         assert!(filter.read(&mut ctx).is_none());
-        assert_eq!(1, filter.metrics.packets_dropped_no_token_found.get());
+        assert_eq!(1, filter.metrics.packets_dropped_total_no_token_found.get());
 
         // wrong type key
         let mut ctx = new_ctx();
         ctx.metadata
             .insert(CAPTURED_BYTES.into(), Value::String(String::from("wrong")));
         assert!(filter.read(&mut ctx).is_none());
-        assert_eq!(1, filter.metrics.packets_dropped_invalid_token.get());
+        assert_eq!(1, filter.metrics.packets_dropped_total_invalid_token.get());
     }
 
     #[test]

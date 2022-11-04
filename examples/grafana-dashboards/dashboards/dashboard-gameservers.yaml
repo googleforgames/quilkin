@@ -457,7 +457,7 @@ data:
               },
               "editorMode": "code",
               "exemplar": true,
-              "expr": "sum(rate(quilkin_packets_dropped[$__rate_interval]))",
+              "expr": "sum(rate(quilkin_packets_dropped_total[$__rate_interval]))",
               "hide": false,
               "interval": "",
               "legendFormat": "dropped packet rate",

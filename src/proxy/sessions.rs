@@ -259,7 +259,7 @@ impl Session {
 
         let handle_error = |error: Error| {
             error.log();
-            crate::metrics::packets_dropped(
+            crate::metrics::packets_dropped_total(
                 crate::metrics::WRITE,
                 "proxy::Session::process_recv_packet",
             )
@@ -318,7 +318,8 @@ impl Session {
                 crate::metrics::bytes_total(crate::metrics::READ).inc_by(size as u64);
             }
             Err(error) => {
-                crate::metrics::packets_dropped(crate::metrics::READ, "proxy::Session::send").inc();
+                crate::metrics::packets_dropped_total(crate::metrics::READ, "proxy::Session::send")
+                    .inc();
                 crate::metrics::errors_total(crate::metrics::READ).inc();
                 tracing::error!(kind=%error.kind(), "{}", error);
                 return;

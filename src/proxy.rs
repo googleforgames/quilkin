@@ -234,7 +234,8 @@ impl Proxy {
         let endpoints: Vec<_> = clusters.endpoints().collect();
         if endpoints.is_empty() {
             tracing::trace!("dropping packet, no upstream endpoints available");
-            crate::metrics::packets_dropped(crate::metrics::READ, "NoEndpointsAvailable").inc();
+            crate::metrics::packets_dropped_total(crate::metrics::READ, "NoEndpointsAvailable")
+                .inc();
             return;
         }
 

@@ -50,5 +50,5 @@ To configure a rate limiter, we specify the maximum rate at which the proxy is a
 
 ### Metrics
 
-* `quilkin_filter_LocalRateLimit_packets_dropped`  
+* `quilkin_filter_LocalRateLimit_packets_dropped_total`  
   A counter over the total number of packets that have exceeded the configured maximum rate limit and have been dropped as a result.
