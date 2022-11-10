@@ -21,11 +21,11 @@ This routes all UDP packets that `ncat` receives to the local `cat` process, whi
 
 ## 2. Start Quilkin
 
-Next let's configure Quilkin to with a static configuration that points at the
+Next let's configure Quilkin in proxy mode, with a static configuration that points at the
 UDP echo service we just started.
 
 ```shell
-quilkin run --to localhost:8000
+quilkin run --to 127.0.0.1:8000
 ```
 
 This configuration will start Quilkin on the default port of 7000, and it will
@@ -63,6 +63,6 @@ Congratulations! You have successfully routed a UDP packet and back again with Q
 
 What's next?
 
-* Run through the [Quilkin with Agones quickstart](./quickstart-agones-xonotic.md).
+* Run through the [Quilkin with Agones quickstart](agones-xonotic.md).
 * Have a look at some of [the examples](https://github.com/googleforgames/quilkin/blob/{{GITHUB_REF_NAME}}/examples) we have.
-* Check out the [usage documentation](./using.md) for other configuration options.
+* Check out the [usage documentation](../using.md) for other configuration options.

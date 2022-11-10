@@ -35,6 +35,7 @@ Quilkin incorporates these abilities:
 * Composable tools for access control and security.
 * Able to be utilised as a standalone binary, with no client/server changes required or as a Rust library
   depending on how deep an integration you wish for your system.
+* Integration with Game Server hosting platforms such as [Agones](https://agones.dev).
 * Can be integrated with C/C++ code bases via FFI.
 
 ## What Next?

@@ -19,6 +19,7 @@
 #
 
 ---
+# ANCHOR: config-map
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -35,6 +36,8 @@ data:
             size: 3
             remove: true
       - name: quilkin.filters.token_router.v1alpha1.TokenRouter
+# ANCHOR_END: config-map
+
 ---
 
 # RBAC Setup for Agones xDS Control Plane

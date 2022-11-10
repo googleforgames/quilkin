@@ -23,6 +23,7 @@ IgnoreInternalURLs:
   - "book/print.html"
   - "print.html"
   - "../print.html"
+  - "../../print.html"
 IgnoreDirs:
   - "api"
 HTTPHeaders:

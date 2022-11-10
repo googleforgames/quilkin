@@ -2,12 +2,12 @@
 
 The `LoadBalancer` filter distributes packets received downstream among all upstream endpoints.
 
-#### Filter name
+## Filter name
 ```text
 quilkin.filters.load_balancer.v1alpha1.LoadBalancer
 ```
 
-### Configuration Examples
+## Configuration Examples
 ```rust
 # #[tokio::main]
 # async fn main() {
@@ -32,12 +32,12 @@ clusters:
 The load balancing policy (the strategy to use to select what endpoint to send traffic to) is configurable.
 In the example above, packets will be distributed by selecting endpoints in turn, in round robin fashion.
 
-### Configuration Options ([Rust Doc](../../api/quilkin/filters/load_balancer/struct.Config.html))
+## Configuration Options ([Rust Doc](../../../api/quilkin/filters/load_balancer/struct.Config.html))
 
 ```yaml
-{{#include ../../../target/quilkin.filters.load_balancer.v1alpha1.yaml}}
+{{#include ../../../../target/quilkin.filters.load_balancer.v1alpha1.yaml}}
 ```
 
-### Metrics
+## Metrics
 
 This filter currently does not expose any metrics.
