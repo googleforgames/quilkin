@@ -198,6 +198,22 @@ impl serde::Serialize for Reference {
     }
 }
 
+#[derive(Debug, thiserror::Error)]
+#[error("references are required to start with `{}`", super::VARIABLE_SIGIL)]
+pub struct InvalidReference;
+
+impl std::str::FromStr for Reference {
+    type Err = InvalidReference;
+
+    fn from_str(input: &str) -> Result<Self, Self::Err> {
+        if let Some(string) = input.strip_prefix(super::VARIABLE_SIGIL) {
+            Ok(Self::new(string))
+        } else {
+            Err(InvalidReference)
+        }
+    }
+}
+
 impl<'de> serde::Deserialize<'de> for Reference {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -205,12 +221,6 @@ impl<'de> serde::Deserialize<'de> for Reference {
     {
         let string = <std::borrow::Cow<'de, str>>::deserialize(deserializer)?;
 
-        if let Some(string) = string.strip_prefix('$') {
-            Ok(Self::new(string))
-        } else {
-            Err(<D::Error as serde::de::Error>::custom(
-                "references are required to start with `$`",
-            ))
-        }
+        string.parse().map_err(serde::de::Error::custom)
     }
 }

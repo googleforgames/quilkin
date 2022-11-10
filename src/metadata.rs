@@ -79,7 +79,7 @@ impl Metadata {
                     Some(path) => {
                         tracing::warn!("Unknown computed variable: {path}");
                         None
-                    },
+                    }
                     None => {
                         let value = self.map.get(&reference.key()).cloned();
 
@@ -88,7 +88,7 @@ impl Metadata {
                         }
 
                         value
-                    },
+                    }
                 }
             }
         }

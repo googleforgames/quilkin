@@ -127,11 +127,12 @@ impl TryFrom<proto::Concatenate> for Config {
             on_write,
             value: match p.value {
                 Some(proto::concatenate::Value::Literal(value)) => metadata::Value::try_from(value)
-                    .map_err(|error| ConvertProtoConfigError::new(error, Some("bytes".into())))?
+                    .map_err(|error| ConvertProtoConfigError::new(error, Some("value".into())))?
                     .into(),
-                Some(proto::concatenate::Value::Reference(key)) => {
-                    metadata::Reference::new(key).into()
-                }
+                Some(proto::concatenate::Value::Reference(key)) => key
+                    .parse::<metadata::Reference>()
+                    .map_err(|error| ConvertProtoConfigError::new(error, Some("value".into())))?
+                    .into(),
                 None => metadata::Value::from(bytes::Bytes::new()).into(),
             },
         })
