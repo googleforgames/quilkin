@@ -76,8 +76,19 @@ impl Metadata {
                     Some("/timestamp/now") => {
                         Some(Value::Number(chrono::Utc::now().timestamp_nanos() as u64))
                     }
-                    Some(_) => None,
-                    None => self.map.get(&reference.key()).cloned(),
+                    Some(path) => {
+                        tracing::warn!("Unknown computed variable: {path}");
+                        None
+                    },
+                    None => {
+                        let value = self.map.get(&reference.key()).cloned();
+
+                        if value.is_none() {
+                            tracing::warn!("No entry found matching {reference}");
+                        }
+
+                        value
+                    },
                 }
             }
         }
@@ -95,7 +106,14 @@ impl Metadata {
             Some(Value::Number(value)) => Some(Vec::from(value.to_be_bytes()).into()),
             Some(Value::Bytes(bytes)) => Some(bytes),
             Some(Value::String(string)) => Some(base64::decode(&string).ok()?.into()),
-            _ => None,
+            Some(value) => {
+                tracing::warn!("Couldn't convert {value} into bytes");
+                None
+            }
+            None => {
+                tracing::warn!("No value found matching {symbol}");
+                None
+            }
         }
     }
 }

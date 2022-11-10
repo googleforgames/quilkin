@@ -138,6 +138,15 @@ impl Symbol {
     }
 }
 
+impl std::fmt::Display for Symbol {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Literal(literal) => literal.fmt(f),
+            Self::Reference(key) => key.fmt(f),
+        }
+    }
+}
+
 impl From<Value> for Symbol {
     fn from(value: Value) -> Self {
         Self::Literal(value)
