@@ -5,31 +5,31 @@ The `CaptureBytes` filter's job is to find a series of bytes within a packet, an
 down the chain.
 
 This is often used as a way of retrieving authentication tokens from a packet, and used in combination with
-[ConcatenateBytes](./concatenate_bytes.md) and
+[ConcatenateBytes](concatenate_bytes.md) and
 [TokenRouter](token_router.md) filter to provide common packet routing utilities.
 
-### Capture strategies
+## Capture strategies
 
 There are multiple strategies for capturing bytes from the packet.
 
-#### Suffix
+### Suffix
 Captures bytes from the end of the packet.
 
-#### Prefix
+### Prefix
 Captures bytes from the start of the packet.
 
-#### Regex
+### Regex
 Captures bytes using a regular expression. Unlike other capture strategies,
 the regular expression can return one or many values if there are
 multiple matches.
 
 
-#### Filter name
+## Filter name
 ```text
 quilkin.filters.capture.v1alpha1.Capture
 ```
 
-### Configuration Examples
+## Configuration Examples
 ```rust
 # let yaml = "
 version: v1alpha1
@@ -51,16 +51,16 @@ clusters:
 # quilkin::Proxy::try_from(config).unwrap();
 ```
 
-### Configuration Options ([Rust Doc](../../api/quilkin/filters/capture/struct.Config.html))
+## Configuration Options ([Rust Doc](../../../api/quilkin/filters/capture/struct.Config.html))
 
 ```yaml
-{{#include ../../../target/quilkin.filters.capture.v1alpha1.yaml}}
+{{#include ../../../../target/quilkin.filters.capture.v1alpha1.yaml}}
 ```
 
-### Metrics
+## Metrics
 
 * `quilkin_filter_Capture_packets_dropped_total`
   A counter of the total number of packets that have been dropped due to their length being less than the configured
   `size`.
 
-[filter-dynamic-metadata]: ../filters.md#filter-dynamic-metadata
+[filter-dynamic-metadata]: ../../filters.md#filter-dynamic-metadata

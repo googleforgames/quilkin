@@ -4,12 +4,12 @@ The `Timestamp` filter accepts a UNIX timestamp from metadata and observes the
 duration between that timestamp and now. Mostly useful in combination with other
 filters such as `Capture` to pull timestamp data from packets.
 
-#### Filter name
+## Filter name
 ```text
 quilkin.filters.timestamp.v1alpha1.Timestamp
 ```
 
-### Configuration Examples
+## Configuration Examples
 ```rust
 # let yaml = "
 version: v1alpha1
@@ -33,13 +33,13 @@ clusters:
 # quilkin::Proxy::try_from(config).unwrap();
 ```
 
-### Configuration Options ([Rust Doc](../../api/quilkin/filters/timestamp/struct.Config.html))
+## Configuration Options ([Rust Doc](../../../api/quilkin/filters/timestamp/struct.Config.html))
 
 ```yaml
-{{#include ../../../target/quilkin.filters.timestamp.v1alpha1.yaml}}
+{{#include ../../../../target/quilkin.filters.timestamp.v1alpha1.yaml}}
 ```
 
-### Metrics
+## Metrics
 
 * `quilkin_filter_timestamp_seconds{metadata_key, direction}`
   A histogram of durations from `metadata_key` to now in the packet `direction`.

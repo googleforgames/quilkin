@@ -15,7 +15,7 @@ The release binary can be downloaded from the
 For each [release](https://github.com/googleforgames/quilkin/releases), there is a container image built and
 hosted on Google Cloud [Artifact Registry](https://cloud.google.com/artifact-registry).
 
-The production release can be found under the tag: 
+The latest production release can be found under the tag: 
 
 ```
 us-docker.pkg.dev/quilkin/release/quilkin:{{QUILKIN_VERSION}}
@@ -32,8 +32,14 @@ for all command line options.
 Quilkin provides a variety of different commands depending on your use-case.
 The primary entrypoint of the process is `run`, which runs Quilkin as a reverse
 UDP proxy.  To see a basic usage of the command-line interface run through the
-[netcat with Quilkin quickstart](./quickstart-netcat.md). For more advanced
-usage, checkout the [`quilkin::Cli`] documentation.
+[netcat with Quilkin quickstart](./quickstarts/netcat.md). 
+
+For more advanced usage, checkout the [`quilkin::Cli`] documentation or run:
+
+```shell
+$ quilkin --help
+{{#include ../../target/quilkin.commands}}
+```
 
 ## File Based Configuration
 
@@ -50,6 +56,9 @@ See the [File Configuration](./file-configuration.md) documentation for details.
 By default Quilkin will log `INFO` level events, you can change this by setting
 the `RUST_LOG` environment variable. See [`log` documentation][log-docs] for
 more advanced usage.
+
+> If you are debugging Quilkin set the `RUST_LOG` environemnt variable to `quilkin=trace`, to filter trace level 
+> logging to only Quilkin components. 
 
 [log-docs]: https://docs.rs/env_logger/0.9.0/env_logger/#enabling-logging
 [`quilkin::Cli`]: ../api/quilkin/struct.Cli.html

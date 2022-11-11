@@ -1,4 +1,4 @@
-# Quickstart: Quilkin with Agones and Xonotic
+# Quickstart: Quilkin with Agones and Xonotic (Sidecar)
 
 ## Requirements
 
@@ -12,8 +12,8 @@
 ## 1. Agones Fleet with Quilkin
 
 In this step, we're going to set up a Xonotic dedicated game server, with Quilkin running as a 
-[sidecar](integrations.md#server-proxy-as-a-sidecar), which will give us access to all the
-[metrics](./proxy.md#metrics) that Quilkin provides.
+[sidecar](../integrations.md#server-proxy-as-a-sidecar), which will give us access to all the
+[metrics](../proxy/metrics.md) that Quilkin provides.
 
 ```shell
 kubectl apply -f https://raw.githubusercontent.com/googleforgames/quilkin/{{GITHUB_REF_NAME}}/examples/agones-xonotic-sidecar/sidecar.yaml
@@ -51,7 +51,7 @@ You should now be playing a game of Xonotic against 4 bots!
 Let's take a look at some metrics that Quilkin outputs.
 
 Grab the name of the GameServer you connected to before, and replace the `${gameserver}` value below, and run the 
-command. This will forward the [admin](./admin.md) interface to localhost.
+command. This will forward the [admin](../admin.md) interface to localhost.
 
 ```shell
 kubectl port-forward ${gameserver} 9091
@@ -82,7 +82,7 @@ Run the following:
 kubectl apply -f https://raw.githubusercontent.com/googleforgames/quilkin/{{GITHUB_REF_NAME}}/examples/agones-xonotic-sidecar/sidecar-compress.yaml
 ```
 
-This will implement the [Compress](./filters/compress.md) filter in our Quilkin sidecar proxy in our new 
+This will implement the [Compress](../proxy/filters/compress.md) filter in our Quilkin sidecar proxy in our new 
 Fleet.
 
 Now you can run `kubectl get gameservers` until all your Agones `GameServers` are marked as `Ready` like so:
@@ -103,7 +103,7 @@ First, grab a copy of the Quilkin configuration
 <a data-proofer-ignore href="https://github.com/googleforgames/quilkin/blob/{{GITHUB_REF_NAME}}/examples/agones-xonotic-sidecar/sidecar-compress.yaml">client-compress.yaml</a>
 locally. This has the Compress filter already configured, but we need to fill in the address to connect to.
 
-> Rather than editing a file, this could also be sent through the [xDS API](./xds.md), but it is easier to 
+> Rather than editing a file, this could also be sent through the [xDS API](../xds.md), but it is easier to 
 > demonstrate this functionality through a static configuration.
 
 Instead of connecting Xonotic directly, take the IP and port from one of the Agones hosted `GameServer` records, and 
@@ -112,7 +112,7 @@ replace the `${GAMESERVER_IP}` and `${GAMESERVER_PORT}` values in your copy of `
 Run this configuration locally as:
 
 ```shell
-quilkin -c ./client-compress.yaml run`
+quilkin -c ./client-compress.yaml run
 ```
 
 Now we can connect to the local client proxy on "127.0.0.1:7000" via the "Multiplayer > Address" field in the
@@ -133,4 +133,4 @@ kubectl delete -f https://raw.githubusercontent.com/googleforgames/quilkin/{{GIT
 ## What's Next?
 
 * Have a look at the [examples](https://github.com/googleforgames/quilkin/blob/{{GITHUB_REF_NAME}}/examples) folder for configuration and usage examples.
-* Explore the [usage documentation](./using.md) for other configuration options. 
+* Explore the [usage documentation](../using.md) for other configuration options. 

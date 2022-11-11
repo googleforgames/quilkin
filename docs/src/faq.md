@@ -37,7 +37,7 @@ separate binary is not an option.
 This is an ongoing discussion, and since console development is protected by non-disclosure agreements, we can't 
 comment on this directly.
 
-That being said, we are having discussions on how we can release lean versions of certain filters that would work 
+That being said, we have started implementing lean [Client SDK](./sdks.md) versions of certain filters that work 
 with known supported game engines and languages for circumstances where compiling Rust or providing a separate 
 Quilkin binary as an executable is not an option.
 

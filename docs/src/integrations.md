@@ -9,28 +9,28 @@ on how you can use Quilkin in your multiplayer game networking architecture.
 ## Server Proxy as a Sidecar
 
 ```text
-                  +
+                  |
                   |
                Internet
                   |
                   |
                   |
-+---------+       |          +----------------+ +----------------+
-|  Game   |       |          | Quilkin        | | Dedicated      |
-|  Client <------------------> (Server Proxy) | | Game Server    |
-+---------+       |          |                <->                |
-                  |          +----------------+ +----------------+
+┌─────────┐       |          ┌────────────────┐ ┌────────────────┐
+│  Game   │       |          │ Quilkin        │ │ Dedicated      │
+│  Client ◄──────────────────► (Server Proxy) │ │ Game Server    │
+└─────────┘       |          │                ◄─►                │
+                  |          └────────────────┘ └────────────────┘
                   |
                   |
-                  |          +----------------+ +----------------+
-                  |          | Quilkin        | | Dedicated      |
-                  |          | (Server Proxy) | | Game Server    |
-                  |          |                <->                |
-                  |          +----------------+ +----------------+
+                  |          ┌────────────────┐ ┌────────────────┐
+                  |          │ Quilkin        │ │ Dedicated      │
+                  |          │ (Server Proxy) │ │ Game Server    │
+                  |          │                ◄─►                │
+                  |          └────────────────┘ └────────────────┘
                   |
                   |
                   |
-                  +
+                  |
 ```
 This is the simplest integration and configuration option with Quilkin, but does provide the smallest number
 of possible feature implementations and ability to provide redundancy.
@@ -44,70 +44,77 @@ and metric information that comes with Quilkin.
   separate port for each Game Client connection.
 * Clients connect to the Server Proxy's public port/IP combination, and the Server Proxy routes all traffic directly
   to the dedicated game server.
-* The Server Proxy can still use filters such as rate limiting, compression (forthcoming) or encryption (forthcoming),
+* The Server Proxy can still use filters such as rate limiting, compression, firewall rules, etc
   as long as the Game Client conforms to the standard protocols utilised by those filters as appropriate.
 
 ## Client Proxy to Sidecar Server Proxy
 
 ```text
-                                    +
+                                    |
                                     |
                                  Internet
                                     |
                                     |
                                     |
-+---------+    +----------------+   |        +----------------+ +----------------+
-|  Game   |    | Quilkin        |   |        | Quilkin        | | Dedicated      |
-|  Client <----> (Client Proxy) <------------> (Server Proxy) | | Game Server    |
-+---------+    +----------------+   |        |                <->                |
-                                    |        +----------------+ +----------------+
+┌─────────┐    ┌────────────────┐   |        ┌────────────────┐ ┌────────────────┐
+│  Game   │    │ Quilkin        │   |        │ Quilkin        │ │ Dedicated      │
+│  Client ◄────► (Client Proxy) ◄────────────► (Server Proxy) │ │ Game Server    │
+└─────────┘    └────────────────┘   |        │                ◄─►                │
+                                    |        └────────────────┘ └────────────────┘
                                     |
                                     |
-                                    |        +----------------+ +----------------+
-                                    |        | Quilkin        | | Dedicated      |
-                                    |        | (Server Proxy) | | Game Server    |
-                                    |        |                <->                |
-                                    |        +----------------+ +----------------+
+                                    |        ┌────────────────┐ ┌────────────────┐
+                                    |        │ Quilkin        │ │ Dedicated      │
+                                    |        │ (Server Proxy) │ │ Game Server    │
+                                    |        │                ◄─►                │
+                                    |        └────────────────┘ └────────────────┘
                                     |
                                     |
                                     |
-                                    +
+                                    |
 ```
 This example is the same as the above, but puts a Client Proxy between the Game Client, and the Server Proxy to take
 advantage of Client Proxy functionality.
 
-* The Client Proxy may be integrated as a standalone binary, or directly into the client, with communication
-  occurring over a localhost port.
-* The Client Proxy can now utilise filters, such as, compression (forthcoming) and encryption (forthcoming), without
-  having to change the Game Client.
+* The Client Proxy may be integrated as a standalone binary, directly into the client with communication
+  occurring over a localhost port or it may be possible utlise one of our [client SDKs].
+* The Client Proxy can now utilise filters, such as compression, without having to change the Game Client.
 * The Game Client will need to communicate to the Client Proxy what IP it should connect to when the Client is 
   match-made with a Game Server.
 
 ## Client Proxy to Separate Server Proxies Pools
 
 ```text
-                                       +                          +
-                                       |                          |
-                                    Internet                   Private
-                                       |                       Network
-                                       |     +----------------+   |          +----------------+
-                                       |     | Quilkin        |   |          | Dedicated      |
-                                       |  +--> (Server Proxy) <-------+------> Game Server    |
-+---------+      +----------------+    |  |  |                |   |   |      |                |
-|  Game   |      | Quilkin        <-------+  +----------------+   |   |      +----------------+
-|  Client <------> (Client Proxy) |    |  |                       |   |
-+---------+      +----------------+    |  |  +----------------+   |   |      +----------------+
-                                       |  |  | Quilkin        |   |   |      | Dedicated      |
-                                       |  +--> (Server Proxy) <-------+      | Game Server    |
-                                       |     |                |   |          |                |
-                                       |     +----------------+   |          +----------------+
-                                       |                          |
-                                       |     +----------------+   |          +----------------+
-                                       |     | Quilkin        |   |          | Dedicated      |
-                                       |     | (Server Proxy) |   |          | Game Server    |
-                                       |     |                |   |          |                |
-                                       |     +----------------+   |          +----------------+
-                                       +                          +
+                                       |                             |
+                                       |                             |
+                                    Internet                      Private
+                                       |                          Network
+                                       |     ┌────────────────┐      |       ┌────────────────┐
+                                       |     │ Quilkin        │      |       │ Dedicated      │
+                                       |  ┌──► (Server Proxy) ◄──────────┬───► Game Server    │
+┌─────────┐      ┌────────────────┐    |  │  │                │      |   │   │                │
+│  Game   │      │ Quilkin        ◄───────┤  └────────────────┘      |   │   └────────────────┘
+│  Client ◄──────► (Client Proxy) │    |  │                          |   │
+└─────────┘      └────────────────┘    |  │  ┌────────────────┐      |   │   ┌────────────────┐
+                                       |  │  │ Quilkin        │      |   │   │ Dedicated      │
+                                       |  └──► (Server Proxy) ◄──────────┘   │ Game Server    │
+                                       |     │                │      |       │                │
+                                       |     └────────────────┘      |       └────────────────┘
+                                       |                             |
+                                       |     ┌────────────────┐      |       ┌────────────────┐
+                                       |     │ Quilkin        │      |       │ Dedicated      │
+                                       |     │ (Server Proxy) │      |       │ Game Server    │
+                                       |     │                │      |       │                │
+                                       |     └────────────────┘      |       └────────────────┘
+                                       |                 ▲           |              ▲
+                                                         │                          │
+                                                         │              ┌───────────┴────┐
+                                                         │              │ xDS            │
+                                                         └──────────────┤ Control Plane  │
+                                                                        └────────────────┘
+
+
+
 
 ```
 
@@ -115,18 +122,19 @@ This is the most complex configuration, but enables the most reuse of Quilkin's 
 while also providing the most redundancy and security for your dedicated game servers.
 
 * The Game client sends and receives packets from the Quilkin client proxy.
-* The Client Proxy may be integrated as a standalone binary, or directly into the client, with communication
-  occurring over a localhost port.
-* The Client Proxy can utilise the full set of filters, such as routing, compression (forthcoming) and
-    encryption (forthcoming), without having to change the Game Client.
-* There are a hosted set of Quilkin Server proxies that have public IP addresses, and are connected
-  to a [control plane](https://github.com/googleforgames/quilkin/issues/131) to coordinate routing and access control
-  to the dedicated game servers, which are on private IP addresses.
+* The Client Proxy may be integrated as a standalone binary, with communication occurring over a localhost port, or 
+  it could be integrated directly with the game client as a library, or the client could utilise one of our 
+  [client SDKs] if Rust integration is not possible.
+* The Client Proxy can utilise the full set of filters, such as concatenation (for routing), compression or load 
+  balancing, without having to change the Game Client.
+* A hosted set of Quilkin Server proxies that have public IP addresses, are connected to an 
+  [xDS Control Plane](./xds.md) to coordinate routing and access control to the dedicated game servers, which are 
+  on private IP addresses.
 * The Client Proxy is made aware of one or more Server proxies to connect to, possibly via their Game Client matchmaker
   or another service, with an authentication token to pass to the Server proxies, such that the UDP packets can be
   routed correctly to the dedicated game server they should connect to.
 * Dedicated game servers receive traffic as per normal from the Server Proxies, and send data back to the proxies
-  directly.     
+  directly.
 * If the dedicated game server always expects traffic from only a single ip/port combination for client connection, 
   then traffic will always need to be sent through a single Server Proxy. Otherwise, UDP packets can be load
   balanced via the Client Proxy to multiple Server Proxies for even greater redundancy.
@@ -134,9 +142,12 @@ while also providing the most redundancy and security for your dedicated game se
 
 ## What Next?
 
-* Have a look at the [example configurations](https://github.com/googleforgames/quilkin/blob/{{GITHUB_REF_NAME}}/examples) for basic configuration examples.
+* Have a look at the [example configurations](./examples.md) for configuration and usage examples.
 * Review the [set of filters](./filters.md) that are available.
 
 ---
 
-Diagrams powered by http://asciiflow.com/
+Diagrams powered by <a href="http://asciiflow.com/" target="_blank">asciiflow.com</a>
+
+
+[client SDKs]: ./sdks.md

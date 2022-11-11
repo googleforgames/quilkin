@@ -3,12 +3,12 @@
 The `ConcatenateBytes` filter's job is to add a byte packet to either the beginning or end of each UDP packet that passes
 through. This is commonly used to provide an auth token to each packet, so they can be routed appropriately.  
 
-#### Filter name
+## Filter name
 ```text
 quilkin.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
 ```
 
-### Configuration Examples
+## Configuration Examples
 ```rust
 # let yaml = "
 version: v1alpha1
@@ -29,12 +29,12 @@ clusters:
 # quilkin::Proxy::try_from(config).unwrap();
 ```
 
-### Configuration Options ([Rust Doc](../../api/quilkin/filters/concatenate_bytes/struct.Config.html))
+## Configuration Options ([Rust Doc](../../../api/quilkin/filters/concatenate_bytes/struct.Config.html))
 
 ```yaml
-{{#include ../../../target/quilkin.filters.concatenate_bytes.v1alpha1.yaml}}
+{{#include ../../../../target/quilkin.filters.concatenate_bytes.v1alpha1.yaml}}
 ```
 
-### Metrics
+## Metrics
 
 This filter currently exports no metrics.
