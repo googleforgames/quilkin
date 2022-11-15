@@ -100,7 +100,7 @@ What we will do in this step, is run Quilkin locally as a client-side proxy to c
 sent up to our Xonotic servers that are expecting compressed data.
 
 First, grab a copy of the Quilkin configuration 
-<a data-proofer-ignore href="https://github.com/googleforgames/quilkin/blob/{{GITHUB_REF_NAME}}/examples/agones-xonotic-sidecar/sidecar-compress.yaml">client-compress.yaml</a>
+<a href="https://github.com/googleforgames/quilkin/blob/{{GITHUB_REF_NAME}}/examples/agones-xonotic-sidecar/sidecar-compress.yaml">client-compress.yaml</a>
 locally. This has the Compress filter already configured, but we need to fill in the address to connect to.
 
 > Rather than editing a file, this could also be sent through the [xDS API](../xds.md), but it is easier to 
