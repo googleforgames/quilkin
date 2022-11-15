@@ -298,7 +298,7 @@ xonotic-sidecar-compress-htc2x-sdp4k   Ready   34.94.107.201   7592   gke-agones
 <p>What we will do in this step, is run Quilkin locally as a client-side proxy to compress the UDP data before it is 
 sent up to our Xonotic servers that are expecting compressed data.</p>
 <p>First, grab a copy of the Quilkin configuration 
-<a data-proofer-ignore href="https://github.com/googleforgames/quilkin/blob/main/examples/agones-xonotic-sidecar/sidecar-compress.yaml">client-compress.yaml</a>
+<a href="https://github.com/googleforgames/quilkin/blob/main/examples/agones-xonotic-sidecar/sidecar-compress.yaml">client-compress.yaml</a>
 locally. This has the Compress filter already configured, but we need to fill in the address to connect to.</p>
 <blockquote>
 <p>Rather than editing a file, this could also be sent through the <a href="quickstarts/../xds.html">xDS API</a>, but it is easier to 
@@ -336,7 +336,7 @@ edit either!</p>
 <p>For each <a href="https://github.com/googleforgames/quilkin/releases">release</a>, there is a container image built and
 hosted on Google Cloud <a href="https://cloud.google.com/artifact-registry">Artifact Registry</a>.</p>
 <p>The latest production release can be found under the tag: </p>
-<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.4.0-dev-452bdf2
+<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.4.0-1d414cb
 </code></pre>
 <p>Which can be browsed as <a href="https://us-docker.pkg.dev/quilkin/release/quilkin">us-docker.pkg.dev/quilkin/release/quilkin</a>.</p>
 <p>The <a href="https://docs.docker.com/engine/reference/builder/#entrypoint">entrypoint</a> of the container is to run <code>/quilkin</code> 
