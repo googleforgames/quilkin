@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-use std::convert::TryFrom;
-
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -23,7 +21,6 @@ use super::endpoint_chooser::{
     EndpointChooser, HashEndpointChooser, RandomEndpointChooser, RoundRobinEndpointChooser,
 };
 use super::proto;
-use crate::{filters::ConvertProtoConfigError, map_proto_enum};
 
 /// The configuration for [`load_balancer`][super].
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq, JsonSchema)]
@@ -41,24 +38,15 @@ impl From<Config> for super::proto::LoadBalancer {
     }
 }
 
-impl TryFrom<proto::LoadBalancer> for Config {
-    type Error = ConvertProtoConfigError;
-
-    fn try_from(p: proto::LoadBalancer) -> Result<Self, Self::Error> {
-        let policy = p
-            .policy
-            .map(|policy| {
-                map_proto_enum!(
-                    value = policy.value,
-                    field = "policy",
-                    proto_enum_type = proto::load_balancer::Policy,
-                    target_enum_type = Policy,
-                    variants = [RoundRobin, Random, Hash]
-                )
-            })
-            .transpose()?
-            .unwrap_or_default();
-        Ok(Self { policy })
+impl From<proto::LoadBalancer> for Config {
+    fn from(p: proto::LoadBalancer) -> Self {
+        Self {
+            policy: p
+                .policy
+                .map(|p| p.value())
+                .map(Policy::from)
+                .unwrap_or_default(),
+        }
     }
 }
 
@@ -103,82 +91,20 @@ impl From<Policy> for proto::load_balancer::Policy {
     }
 }
 
-impl From<Policy> for proto::load_balancer::PolicyValue {
-    fn from(policy: Policy) -> Self {
-        Self {
-            value: proto::load_balancer::Policy::from(policy) as i32,
+impl From<proto::load_balancer::Policy> for Policy {
+    fn from(policy: proto::load_balancer::Policy) -> Self {
+        match policy {
+            proto::load_balancer::Policy::RoundRobin => Self::RoundRobin,
+            proto::load_balancer::Policy::Random => Self::Random,
+            proto::load_balancer::Policy::Hash => Self::Hash,
         }
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use std::convert::TryFrom;
-
-    use super::*;
-
-    #[test]
-    fn convert_proto_config() {
-        let test_cases = vec![
-            (
-                "RandomPolicy",
-                proto::LoadBalancer {
-                    policy: Some(proto::load_balancer::PolicyValue {
-                        value: proto::load_balancer::Policy::Random as i32,
-                    }),
-                },
-                Some(Config {
-                    policy: Policy::Random,
-                }),
-            ),
-            (
-                "RoundRobinPolicy",
-                proto::LoadBalancer {
-                    policy: Some(proto::load_balancer::PolicyValue {
-                        value: proto::load_balancer::Policy::RoundRobin as i32,
-                    }),
-                },
-                Some(Config {
-                    policy: Policy::RoundRobin,
-                }),
-            ),
-            (
-                "HashPolicy",
-                proto::LoadBalancer {
-                    policy: Some(proto::load_balancer::PolicyValue {
-                        value: proto::load_balancer::Policy::Hash as i32,
-                    }),
-                },
-                Some(Config {
-                    policy: Policy::Hash,
-                }),
-            ),
-            (
-                "should fail when invalid policy is provided",
-                proto::LoadBalancer {
-                    policy: Some(proto::load_balancer::PolicyValue { value: 42 }),
-                },
-                None,
-            ),
-            (
-                "should use correct default values",
-                proto::LoadBalancer { policy: None },
-                Some(Config {
-                    policy: Policy::default(),
-                }),
-            ),
-        ];
-        for (name, proto_config, expected) in test_cases {
-            let result = Config::try_from(proto_config);
-            assert_eq!(
-                result.is_err(),
-                expected.is_none(),
-                "{}: error expectation does not match",
-                name
-            );
-            if let Some(expected) = expected {
-                assert_eq!(expected, result.unwrap(), "{}", name);
-            }
+impl From<Policy> for proto::load_balancer::PolicyValue {
+    fn from(policy: Policy) -> Self {
+        Self {
+            value: proto::load_balancer::Policy::from(policy) as i32,
         }
     }
 }

@@ -21,7 +21,7 @@ use schemars::JsonSchema;
 use serde::de::{self, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use crate::{filters::ConvertProtoConfigError, map_proto_enum};
+use crate::filters::ConvertProtoConfigError;
 
 use super::proto;
 
@@ -50,6 +50,15 @@ impl From<Action> for proto::firewall::Action {
         match action {
             Action::Allow => Self::Allow,
             Action::Deny => Self::Deny,
+        }
+    }
+}
+
+impl From<proto::firewall::Action> for Action {
+    fn from(action: proto::firewall::Action) -> Self {
+        match action {
+            proto::firewall::Action::Allow => Self::Allow,
+            proto::firewall::Action::Deny => Self::Deny,
         }
     }
 }
@@ -238,14 +247,7 @@ impl TryFrom<proto::Firewall> for Config {
         }
 
         fn convert_rule(rule: &proto::firewall::Rule) -> Result<Rule, ConvertProtoConfigError> {
-            let action = map_proto_enum!(
-                value = rule.action,
-                field = "policy",
-                proto_enum_type = proto::firewall::Action,
-                target_enum_type = Action,
-                variants = [Allow, Deny]
-            )?;
-
+            let action = Action::from(rule.action());
             let source = IpNetwork::try_from(rule.source.as_str()).map_err(|err| {
                 ConvertProtoConfigError::new(
                     format!("invalid source: {err:?}"),

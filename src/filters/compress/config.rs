@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-use std::convert::TryFrom;
-
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -24,7 +22,6 @@ use super::quilkin::filters::compress::v1alpha1::{
     compress::{Action as ProtoAction, ActionValue, Mode as ProtoMode, ModeValue},
     Compress as ProtoConfig,
 };
-use crate::{filters::ConvertProtoConfigError, map_proto_enum};
 
 /// The library to use when compressing.
 #[derive(Clone, Copy, Deserialize, Debug, Eq, PartialEq, Serialize, JsonSchema)]
@@ -54,6 +51,14 @@ impl From<Mode> for ProtoMode {
     fn from(mode: Mode) -> Self {
         match mode {
             Mode::Snappy => Self::Snappy,
+        }
+    }
+}
+
+impl From<ProtoMode> for Mode {
+    fn from(mode: ProtoMode) -> Self {
+        match mode {
+            ProtoMode::Snappy => Self::Snappy,
         }
     }
 }
@@ -93,6 +98,16 @@ impl From<Action> for ProtoAction {
     }
 }
 
+impl From<ProtoAction> for Action {
+    fn from(action: ProtoAction) -> Self {
+        match action {
+            ProtoAction::DoNothing => Self::DoNothing,
+            ProtoAction::Compress => Self::Compress,
+            ProtoAction::Decompress => Self::Decompress,
+        }
+    }
+}
+
 impl From<Action> for ActionValue {
     fn from(action: Action) -> Self {
         Self {
@@ -120,56 +135,30 @@ impl From<Config> for ProtoConfig {
     }
 }
 
-impl TryFrom<ProtoConfig> for Config {
-    type Error = ConvertProtoConfigError;
-
-    fn try_from(p: ProtoConfig) -> std::result::Result<Self, Self::Error> {
+impl From<ProtoConfig> for Config {
+    fn from(p: ProtoConfig) -> Self {
         let mode = p
             .mode
-            .map(|mode| {
-                map_proto_enum!(
-                    value = mode.value,
-                    field = "mode",
-                    proto_enum_type = ProtoMode,
-                    target_enum_type = Mode,
-                    variants = [Snappy]
-                )
-            })
-            .transpose()?
+            .map(|p| p.value())
+            .map(Mode::from)
             .unwrap_or_default();
 
         let on_read = p
             .on_read
-            .map(|on_read| {
-                map_proto_enum!(
-                    value = on_read.value,
-                    field = "on_read",
-                    proto_enum_type = ProtoAction,
-                    target_enum_type = Action,
-                    variants = [DoNothing, Compress, Decompress]
-                )
-            })
-            .transpose()?
+            .map(|p| p.value())
+            .map(Action::from)
             .unwrap_or_default();
 
         let on_write = p
             .on_write
-            .map(|on_write| {
-                map_proto_enum!(
-                    value = on_write.value,
-                    field = "on_write",
-                    proto_enum_type = ProtoAction,
-                    target_enum_type = Action,
-                    variants = [DoNothing, Compress, Decompress]
-                )
-            })
-            .transpose()?
+            .map(|p| p.value())
+            .map(Action::from)
             .unwrap_or_default();
 
-        Ok(Self {
+        Self {
             mode,
             on_read,
             on_write,
-        })
+        }
     }
 }
