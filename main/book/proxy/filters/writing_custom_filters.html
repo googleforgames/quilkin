@@ -342,6 +342,9 @@ prost-build = &quot;0.7&quot;
 </code></pre>
 <pre><code class="language-rust no_run noplayground ignore">// src/build.rs
 fn main() {
+    // Remove if you already have `protoc` installed in your system.
+    std::env::set_var(&quot;PROTOC&quot;, protobuf_src::protoc());
+
     prost_build::compile_protos(&amp;[&quot;src/greet.proto&quot;], &amp;[&quot;src/&quot;]).unwrap();
 }</code></pre>
 <p>To include the generated code, we'll use [<code>tonic::include_proto</code>], then we just
