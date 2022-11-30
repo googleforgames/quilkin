@@ -17,7 +17,9 @@
 // This build script is used to generate the rust source files that
 // we need for XDS GRPC communication.
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    #[cfg(feature = "vendor-protoc")]
     std::env::set_var("PROTOC", protobuf_src::protoc());
+
     let proto_files = vec![
         "proto/data-plane-api/envoy/config/common/matcher/v3/matcher.proto",
         "proto/data-plane-api/envoy/config/accesslog/v3/accesslog.proto",
