@@ -151,8 +151,9 @@ else
 		-v $(CARGO_HOME)/registry:/root/.cargo/registry \
 		-e "CARGO_TARGET_DIR=$(CARGO_TARGET_DIR)" \
 		-e "CC=o64-clang" -e "CXX=o64-clang++" \
+		-e "PROTOC=/opt/protoc/bin/protoc" \
 		us-docker.pkg.dev/quilkin/ci/rust-linux-darwin-builder:$(rust_toolchain) \
-			sh -c "rustup target add x86_64-apple-darwin && cargo $(cargo_build_x86_64_apple)"
+			sh -c "/workspace/build/darwin-builder/setup.sh && cargo $(cargo_build_x86_64_apple) --no-default-features"
 endif
 
 # Build container image.

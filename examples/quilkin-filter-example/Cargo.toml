@@ -27,14 +27,15 @@ edition = "2021"
 # If lifting this example, you will want to be explicit about the Quilkin version, e.g.
 # quilkin = "0.2.0"
 quilkin = { path = "../../" }
-tokio = { version = "1.13.1", features = ["full"] }
-tonic = "0.6.1"
-prost = "0.9.0"
-prost-types = "0.9.0"
-serde = "1.0"
-serde_yaml = "0.8"
-bytes = "1.1.0"
-schemars = "0.8.8"
+tokio = { version = "1.21.2", features = ["full"] }
+tonic = "0.8.2"
+prost = "0.11.2"
+prost-types = "0.11.2"
+serde = "1.0.147"
+serde_yaml = "0.9.14"
+bytes = "1.2.1"
+schemars = "0.8.11"
 
 [build-dependencies]
-prost-build = "0.9.0"
+prost-build = "0.11.2"
+protobuf-src = "1.1.0"
