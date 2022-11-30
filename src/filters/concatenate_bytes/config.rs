@@ -14,13 +14,9 @@
  * limitations under the License.
  */
 
-use std::convert::TryFrom;
-
 use base64_serde::base64_serde_type;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-
-use crate::{filters::prelude::*, map_proto_enum};
 
 use super::proto;
 
@@ -48,6 +44,16 @@ impl From<Strategy> for proto::concatenate_bytes::Strategy {
             Strategy::Append => Self::Append,
             Strategy::Prepend => Self::Prepend,
             Strategy::DoNothing => Self::DoNothing,
+        }
+    }
+}
+
+impl From<proto::concatenate_bytes::Strategy> for Strategy {
+    fn from(strategy: proto::concatenate_bytes::Strategy) -> Self {
+        match strategy {
+            proto::concatenate_bytes::Strategy::Append => Self::Append,
+            proto::concatenate_bytes::Strategy::Prepend => Self::Prepend,
+            proto::concatenate_bytes::Strategy::DoNothing => Self::DoNothing,
         }
     }
 }
@@ -88,42 +94,24 @@ impl From<Config> for proto::ConcatenateBytes {
     }
 }
 
-impl TryFrom<proto::ConcatenateBytes> for Config {
-    type Error = ConvertProtoConfigError;
-
-    fn try_from(p: proto::ConcatenateBytes) -> Result<Self, Self::Error> {
+impl From<proto::ConcatenateBytes> for Config {
+    fn from(p: proto::ConcatenateBytes) -> Self {
         let on_read = p
             .on_read
-            .map(|strategy| {
-                map_proto_enum!(
-                    value = strategy.value,
-                    field = "on_read",
-                    proto_enum_type = proto::concatenate_bytes::Strategy,
-                    target_enum_type = Strategy,
-                    variants = [DoNothing, Append, Prepend]
-                )
-            })
-            .transpose()?
+            .map(|p| p.value())
+            .map(Strategy::from)
             .unwrap_or_default();
 
         let on_write = p
             .on_write
-            .map(|strategy| {
-                map_proto_enum!(
-                    value = strategy.value,
-                    field = "on_write",
-                    proto_enum_type = proto::concatenate_bytes::Strategy,
-                    target_enum_type = Strategy,
-                    variants = [DoNothing, Append, Prepend]
-                )
-            })
-            .transpose()?
+            .map(|p| p.value())
+            .map(Strategy::from)
             .unwrap_or_default();
 
-        Ok(Self {
+        Self {
             on_read,
             on_write,
             bytes: p.bytes,
-        })
+        }
     }
 }
