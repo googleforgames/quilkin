@@ -115,18 +115,6 @@
 <span id="115">115</span>
 <span id="116">116</span>
 <span id="117">117</span>
-<span id="118">118</span>
-<span id="119">119</span>
-<span id="120">120</span>
-<span id="121">121</span>
-<span id="122">122</span>
-<span id="123">123</span>
-<span id="124">124</span>
-<span id="125">125</span>
-<span id="126">126</span>
-<span id="127">127</span>
-<span id="128">128</span>
-<span id="129">129</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -143,13 +131,9 @@
  * limitations under the License.
  */
 
-</span><span class="kw">use </span>std::convert::TryFrom;
-
-<span class="kw">use </span>base64_serde::base64_serde_type;
+</span><span class="kw">use </span>base64_serde::base64_serde_type;
 <span class="kw">use </span>schemars::JsonSchema;
 <span class="kw">use </span>serde::{Deserialize, Serialize};
-
-<span class="kw">use crate</span>::{filters::prelude::<span class="kw-2">*</span>, map_proto_enum};
 
 <span class="kw">use </span><span class="kw">super</span>::proto;
 
@@ -177,6 +161,16 @@
             Strategy::Append =&gt; <span class="self">Self</span>::Append,
             Strategy::Prepend =&gt; <span class="self">Self</span>::Prepend,
             Strategy::DoNothing =&gt; <span class="self">Self</span>::DoNothing,
+        }
+    }
+}
+
+<span class="kw">impl </span>From&lt;proto::concatenate_bytes::Strategy&gt; <span class="kw">for </span>Strategy {
+    <span class="kw">fn </span>from(strategy: proto::concatenate_bytes::Strategy) -&gt; <span class="self">Self </span>{
+        <span class="kw">match </span>strategy {
+            proto::concatenate_bytes::Strategy::Append =&gt; <span class="self">Self</span>::Append,
+            proto::concatenate_bytes::Strategy::Prepend =&gt; <span class="self">Self</span>::Prepend,
+            proto::concatenate_bytes::Strategy::DoNothing =&gt; <span class="self">Self</span>::DoNothing,
         }
     }
 }
@@ -217,43 +211,25 @@
     }
 }
 
-<span class="kw">impl </span>TryFrom&lt;proto::ConcatenateBytes&gt; <span class="kw">for </span>Config {
-    <span class="kw">type </span>Error = ConvertProtoConfigError;
-
-    <span class="kw">fn </span>try_from(p: proto::ConcatenateBytes) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
+<span class="kw">impl </span>From&lt;proto::ConcatenateBytes&gt; <span class="kw">for </span>Config {
+    <span class="kw">fn </span>from(p: proto::ConcatenateBytes) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>on_read = p
             .on_read
-            .map(|strategy| {
-                <span class="macro">map_proto_enum!</span>(
-                    value = strategy.value,
-                    field = <span class="string">&quot;on_read&quot;</span>,
-                    proto_enum_type = proto::concatenate_bytes::Strategy,
-                    target_enum_type = Strategy,
-                    variants = [DoNothing, Append, Prepend]
-                )
-            })
-            .transpose()<span class="question-mark">?
-            </span>.unwrap_or_default();
+            .map(|p| p.value())
+            .map(Strategy::from)
+            .unwrap_or_default();
 
         <span class="kw">let </span>on_write = p
             .on_write
-            .map(|strategy| {
-                <span class="macro">map_proto_enum!</span>(
-                    value = strategy.value,
-                    field = <span class="string">&quot;on_write&quot;</span>,
-                    proto_enum_type = proto::concatenate_bytes::Strategy,
-                    target_enum_type = Strategy,
-                    variants = [DoNothing, Append, Prepend]
-                )
-            })
-            .transpose()<span class="question-mark">?
-            </span>.unwrap_or_default();
+            .map(|p| p.value())
+            .map(Strategy::from)
+            .unwrap_or_default();
 
-        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
+        <span class="self">Self </span>{
             on_read,
             on_write,
             bytes: p.bytes,
-        })
+        }
     }
 }
 </code></pre></div>

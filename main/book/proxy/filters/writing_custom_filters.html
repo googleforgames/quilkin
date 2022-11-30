@@ -8,7 +8,6 @@
 
         <!-- Custom HTML head -->
         
-        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff" />
@@ -34,13 +33,13 @@
     </head>
     <body>
         <!-- Provide site root to javascript -->
-        <script type="text/javascript">
+        <script>
             var path_to_root = "../../";
             var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
         </script>
 
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
-        <script type="text/javascript">
+        <script>
             try {
                 var theme = localStorage.getItem('mdbook-theme');
                 var sidebar = localStorage.getItem('mdbook-sidebar');
@@ -56,7 +55,7 @@
         </script>
 
         <!-- Set the theme before any content is loaded, prevents flash -->
-        <script type="text/javascript">
+        <script>
             var theme;
             try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
             if (theme === null || theme === undefined) { theme = default_theme; }
@@ -68,7 +67,7 @@
         </script>
 
         <!-- Hide / unhide sidebar before it is displayed -->
-        <script type="text/javascript">
+        <script>
             var html = document.querySelector('html');
             var sidebar = 'hidden';
             if (document.body.clientWidth >= 1080) {
@@ -99,7 +98,7 @@
                             <i class="fa fa-paint-brush"></i>
                         </button>
                         <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
-                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
@@ -132,7 +131,7 @@
                 </div>
 
                 <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
-                <script type="text/javascript">
+                <script>
                     document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
                     document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
                     Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
@@ -154,8 +153,7 @@ we need to create a type and implement two traits for it.</p>
 <p>It's not terribly important what the filter in this example does so let's write
 a <code>Greet</code> filter that appends <code>Hello</code> to every packet in one direction and
 <code>Goodbye</code> to packets in the opposite direction.</p>
-<pre><code class="language-rust no_run noplayground">struct Greet;
-</code></pre>
+<pre><code class="language-rust no_run noplayground">struct Greet;</code></pre>
 <blockquote>
 <p>As a convention within Quilkin: Filter names are singular, they also tend to
 be a verb, rather than an adjective.</p>
@@ -186,8 +184,7 @@ impl Filter for Greet {
         ctx.contents.extend(b&quot;Goodbye&quot;);
         Some(())
     }
-}
-</code></pre>
+}</code></pre>
 <h2 id="staticfilter"><a class="header" href="#staticfilter"><code>StaticFilter</code></a></h2>
 <p>Represents metadata needed for your [<code>Filter</code>], most of it has to with defining
 configuration, for now we can use <code>()</code> as we have no configuration currently.</p>
@@ -202,8 +199,7 @@ configuration, for now we can use <code>()</code> as we have no configuration cu
     fn try_from_config(config: Option&lt;Self::Configuration&gt;) -&gt; Result&lt;Self, Error&gt; {
         Ok(Self)
     }
-}
-</code></pre>
+}</code></pre>
 <h2 id="running"><a class="header" href="#running">Running</a></h2>
 <p>We can run the proxy using [<code>Proxy::TryFrom</code>][Proxy::TryFrom] function. Let's
 add a main function that does that. Quilkin relies on the <a href="https://docs.rs/tokio">Tokio</a> async
@@ -234,8 +230,7 @@ async fn main() -&gt; quilkin::Result&lt;()&gt; {
         .try_into()?;
 
     server.run(shutdown_rx).await
-}
-</code></pre>
+}</code></pre>
 <p>Now, let's try out the proxy. The following configuration starts our extended
 version of the proxy at port 7001 and forwards all packets to an upstream server
 at port 4321.</p>
@@ -285,8 +280,7 @@ serde_yaml = &quot;0.8&quot;
 #[derive(Serialize, Deserialize, Debug, schemars::JsonSchema)]
 struct Config {
     greeting: String,
-}
-</code></pre>
+}</code></pre>
 <ol start="3">
 <li>Update the <code>Greet</code> Filter to take in <code>greeting</code> as a parameter:</li>
 </ol>
@@ -306,8 +300,7 @@ impl Filter for Greet {
             .splice(0..0, format!(&quot;{} &quot;, self.config.greeting).into_bytes());
         Some(())
     }
-}
-</code></pre>
+}</code></pre>
 <h3 id="protobuf-configuration"><a class="header" href="#protobuf-configuration">Protobuf Configuration</a></h3>
 <p>Quilkin comes with out-of-the-box support for xDS management, and as such needs
 to communicate filter configuration over <a href="https://developers.google.com/protocol-buffers">Protobuf</a> with management servers and
@@ -350,8 +343,7 @@ prost-build = &quot;0.7&quot;
 <pre><code class="language-rust no_run noplayground ignore">// src/build.rs
 fn main() {
     prost_build::compile_protos(&amp;[&quot;src/greet.proto&quot;], &amp;[&quot;src/&quot;]).unwrap();
-}
-</code></pre>
+}</code></pre>
 <p>To include the generated code, we'll use [<code>tonic::include_proto</code>], then we just
 need to implement <a href="https://doc.rust-lang.org/std/convert/trait.TryFrom.html">std::convert::TryFrom</a> for converting the protobuf message to
 equivalvent configuration.</p>
@@ -376,8 +368,7 @@ impl From&lt;Config&gt; for proto::Greet {
             greeting: config.greeting,
         }
     }
-}
-</code></pre>
+}</code></pre>
 <p>Now, let's update <code>Greet</code>'s <code>StaticFilter</code> implementation to use the two
 configurations.</p>
 <pre><code class="language-rust no_run noplayground ignore">// src/main.rs
@@ -395,8 +386,7 @@ impl StaticFilter for Greet {
             config: Self::ensure_config_exists(config)?,
         })
     }
-}
-</code></pre>
+}</code></pre>
 <p>That's it! With these changes we have wired up static configuration for our
 filter. Try it out with the following configuration:</p>
 <pre><code class="language-yaml"># quilkin.yaml
@@ -442,18 +432,18 @@ endpoints:
 
 
 
-        <script type="text/javascript">
+        <script>
             window.playground_copyable = true;
         </script>
 
 
-        <script src="../../elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="../../mark.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="../../searcher.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../../elasticlunr.min.js"></script>
+        <script src="../../mark.min.js"></script>
+        <script src="../../searcher.js"></script>
 
-        <script src="../../clipboard.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="../../highlight.js" type="text/javascript" charset="utf-8"></script>
-        <script src="../../book.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../../clipboard.min.js"></script>
+        <script src="../../highlight.js"></script>
+        <script src="../../book.js"></script>
 
         <!-- Custom JS scripts -->
 

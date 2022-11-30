@@ -162,17 +162,6 @@
 <span id="162">162</span>
 <span id="163">163</span>
 <span id="164">164</span>
-<span id="165">165</span>
-<span id="166">166</span>
-<span id="167">167</span>
-<span id="168">168</span>
-<span id="169">169</span>
-<span id="170">170</span>
-<span id="171">171</span>
-<span id="172">172</span>
-<span id="173">173</span>
-<span id="174">174</span>
-<span id="175">175</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -189,9 +178,7 @@
  * limitations under the License.
  */
 
-</span><span class="kw">use </span>std::convert::TryFrom;
-
-<span class="kw">use </span>schemars::JsonSchema;
+</span><span class="kw">use </span>schemars::JsonSchema;
 <span class="kw">use </span>serde::{Deserialize, Serialize};
 
 <span class="kw">use </span><span class="kw">super</span>::compressor::{Compressor, Snappy};
@@ -199,7 +186,6 @@
     compress::{Action <span class="kw">as </span>ProtoAction, ActionValue, Mode <span class="kw">as </span>ProtoMode, ModeValue},
     Compress <span class="kw">as </span>ProtoConfig,
 };
-<span class="kw">use crate</span>::{filters::ConvertProtoConfigError, map_proto_enum};
 
 <span class="doccomment">/// The library to use when compressing.
 </span><span class="attribute">#[derive(Clone, Copy, Deserialize, Debug, Eq, PartialEq, Serialize, JsonSchema)]
@@ -229,6 +215,14 @@
     <span class="kw">fn </span>from(mode: Mode) -&gt; <span class="self">Self </span>{
         <span class="kw">match </span>mode {
             Mode::Snappy =&gt; <span class="self">Self</span>::Snappy,
+        }
+    }
+}
+
+<span class="kw">impl </span>From&lt;ProtoMode&gt; <span class="kw">for </span>Mode {
+    <span class="kw">fn </span>from(mode: ProtoMode) -&gt; <span class="self">Self </span>{
+        <span class="kw">match </span>mode {
+            ProtoMode::Snappy =&gt; <span class="self">Self</span>::Snappy,
         }
     }
 }
@@ -268,6 +262,16 @@
     }
 }
 
+<span class="kw">impl </span>From&lt;ProtoAction&gt; <span class="kw">for </span>Action {
+    <span class="kw">fn </span>from(action: ProtoAction) -&gt; <span class="self">Self </span>{
+        <span class="kw">match </span>action {
+            ProtoAction::DoNothing =&gt; <span class="self">Self</span>::DoNothing,
+            ProtoAction::Compress =&gt; <span class="self">Self</span>::Compress,
+            ProtoAction::Decompress =&gt; <span class="self">Self</span>::Decompress,
+        }
+    }
+}
+
 <span class="kw">impl </span>From&lt;Action&gt; <span class="kw">for </span>ActionValue {
     <span class="kw">fn </span>from(action: Action) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
@@ -295,57 +299,31 @@
     }
 }
 
-<span class="kw">impl </span>TryFrom&lt;ProtoConfig&gt; <span class="kw">for </span>Config {
-    <span class="kw">type </span>Error = ConvertProtoConfigError;
-
-    <span class="kw">fn </span>try_from(p: ProtoConfig) -&gt; std::result::Result&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
+<span class="kw">impl </span>From&lt;ProtoConfig&gt; <span class="kw">for </span>Config {
+    <span class="kw">fn </span>from(p: ProtoConfig) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>mode = p
             .mode
-            .map(|mode| {
-                <span class="macro">map_proto_enum!</span>(
-                    value = mode.value,
-                    field = <span class="string">&quot;mode&quot;</span>,
-                    proto_enum_type = ProtoMode,
-                    target_enum_type = Mode,
-                    variants = [Snappy]
-                )
-            })
-            .transpose()<span class="question-mark">?
-            </span>.unwrap_or_default();
+            .map(|p| p.value())
+            .map(Mode::from)
+            .unwrap_or_default();
 
         <span class="kw">let </span>on_read = p
             .on_read
-            .map(|on_read| {
-                <span class="macro">map_proto_enum!</span>(
-                    value = on_read.value,
-                    field = <span class="string">&quot;on_read&quot;</span>,
-                    proto_enum_type = ProtoAction,
-                    target_enum_type = Action,
-                    variants = [DoNothing, Compress, Decompress]
-                )
-            })
-            .transpose()<span class="question-mark">?
-            </span>.unwrap_or_default();
+            .map(|p| p.value())
+            .map(Action::from)
+            .unwrap_or_default();
 
         <span class="kw">let </span>on_write = p
             .on_write
-            .map(|on_write| {
-                <span class="macro">map_proto_enum!</span>(
-                    value = on_write.value,
-                    field = <span class="string">&quot;on_write&quot;</span>,
-                    proto_enum_type = ProtoAction,
-                    target_enum_type = Action,
-                    variants = [DoNothing, Compress, Decompress]
-                )
-            })
-            .transpose()<span class="question-mark">?
-            </span>.unwrap_or_default();
+            .map(|p| p.value())
+            .map(Action::from)
+            .unwrap_or_default();
 
-        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
+        <span class="self">Self </span>{
             mode,
             on_read,
             on_write,
-        })
+        }
     }
 }
 </code></pre></div>

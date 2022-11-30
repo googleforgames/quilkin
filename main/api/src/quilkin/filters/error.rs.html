@@ -113,59 +113,6 @@
 <span id="113">113</span>
 <span id="114">114</span>
 <span id="115">115</span>
-<span id="116">116</span>
-<span id="117">117</span>
-<span id="118">118</span>
-<span id="119">119</span>
-<span id="120">120</span>
-<span id="121">121</span>
-<span id="122">122</span>
-<span id="123">123</span>
-<span id="124">124</span>
-<span id="125">125</span>
-<span id="126">126</span>
-<span id="127">127</span>
-<span id="128">128</span>
-<span id="129">129</span>
-<span id="130">130</span>
-<span id="131">131</span>
-<span id="132">132</span>
-<span id="133">133</span>
-<span id="134">134</span>
-<span id="135">135</span>
-<span id="136">136</span>
-<span id="137">137</span>
-<span id="138">138</span>
-<span id="139">139</span>
-<span id="140">140</span>
-<span id="141">141</span>
-<span id="142">142</span>
-<span id="143">143</span>
-<span id="144">144</span>
-<span id="145">145</span>
-<span id="146">146</span>
-<span id="147">147</span>
-<span id="148">148</span>
-<span id="149">149</span>
-<span id="150">150</span>
-<span id="151">151</span>
-<span id="152">152</span>
-<span id="153">153</span>
-<span id="154">154</span>
-<span id="155">155</span>
-<span id="156">156</span>
-<span id="157">157</span>
-<span id="158">158</span>
-<span id="159">159</span>
-<span id="160">160</span>
-<span id="161">161</span>
-<span id="162">162</span>
-<span id="163">163</span>
-<span id="164">164</span>
-<span id="165">165</span>
-<span id="166">166</span>
-<span id="167">167</span>
-<span id="168">168</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -278,59 +225,6 @@
         <span class="self">Self </span>{
             reason: <span class="macro">format!</span>(<span class="string">&quot;`{field}` is required but not found&quot;</span>),
             field: <span class="prelude-val">Some</span>(field.into()),
-        }
-    }
-}
-
-<span class="doccomment">/// Returns a [`ConvertProtoConfigError`] with an error message when
-/// an invalid proto enum value was provided in a filter&#39;s proto config.
-</span><span class="attribute">#[macro_export]
-</span><span class="macro">macro_rules! </span>enum_no_match_error {
-    (
-        field = <span class="macro-nonterminal">$field</span>:literal,
-        invalid_value = <span class="macro-nonterminal">$invalid_value</span>:ident,
-        enum_type = <span class="macro-nonterminal">$enum_type</span>:ty,
-        allowed_values = [ $( <span class="macro-nonterminal">$allowed_value</span>:tt ),+ ]
-    ) =&gt; {
-        <span class="prelude-val">Err</span>(<span class="macro-nonterminal">$crate::filters::error::ConvertProtoConfigError::new</span>(
-            <span class="macro">format!</span>(
-              <span class="string">&quot;invalid value `{}` provided: allowed values are {}&quot;</span>,
-              <span class="macro-nonterminal">$invalid_value</span>,
-              <span class="macro">vec!</span>[
-                $( (<span class="macro">stringify!</span>(<span class="macro-nonterminal">$allowed_value</span>), &lt;<span class="macro-nonterminal">$enum_type</span>&gt;::<span class="macro-nonterminal">$allowed_value </span><span class="kw">as </span>i32) ),+
-              ]
-              .into_iter()
-              .map(|(a, b)| <span class="macro">format!</span>(<span class="string">&quot;{a} =&gt; {}&quot;</span>, b <span class="kw">as </span>i32))
-              .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
-              .join(<span class="string">&quot;, &quot;</span>)
-            ),
-            <span class="prelude-val">Some</span>(<span class="macro-nonterminal">$field</span>.into()),
-        ))
-    };
-}
-
-<span class="doccomment">/// Maps an integer from a protobuf enum value to a target enum variant.
-/// Both protobuf and target enum must have similar variants.
-/// The protobuf enum variant should be cast-able to an i32
-/// Returns an `OK` Result with the target enum variant otherwise [`ConvertProtoConfigError`]
-/// if the provided value does not map to any enum variant.
-</span><span class="attribute">#[macro_export]
-</span><span class="macro">macro_rules! </span>map_proto_enum {
-    (
-        value = <span class="macro-nonterminal">$value</span>:expr,
-        field = <span class="macro-nonterminal">$field</span>:literal,
-        proto_enum_type = <span class="macro-nonterminal">$proto_enum_type</span>:ty,
-        target_enum_type = <span class="macro-nonterminal">$target_enum_type</span>:ty,
-        variants = [ $( <span class="macro-nonterminal">$variant</span>:tt ),+ ]
-    ) =&gt; {
-        <span class="kw">match </span><span class="macro-nonterminal">$value </span>{
-            $( v <span class="kw">if </span>v == &lt;<span class="macro-nonterminal">$proto_enum_type</span>&gt;::<span class="macro-nonterminal">$variant </span><span class="kw">as </span>i32 =&gt; <span class="prelude-val">Ok</span>(&lt;<span class="macro-nonterminal">$target_enum_type</span>&gt;::<span class="macro-nonterminal">$variant</span>) ),+,
-            invalid =&gt; <span class="macro-nonterminal">$</span><span class="macro">crate::enum_no_match_error!</span>(
-                <span class="macro-nonterminal">field </span>= <span class="macro-nonterminal">$field</span>,
-                invalid_value = invalid,
-                enum_type = <span class="macro-nonterminal">$proto_enum_type</span>,
-                allowed_values = [ $( <span class="macro-nonterminal">$variant </span>),+ ]
-            )
         }
     }
 }
