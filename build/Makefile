@@ -23,7 +23,7 @@ mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
 build_path := $(dir $(mkfile_path))
 project_path := $(realpath $(build_path)/..)
 
-CARGO_HOME ?= ~/.cargo
+CARGO_HOME ?= $(build_path)/.cargo
 BUILD_IMAGE_TAG ?= quilkin-build
 rust_toolchain := $(shell grep channel $(project_path)/rust-toolchain.toml | awk '{ print $$3 }')
 
