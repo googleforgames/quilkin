@@ -63,6 +63,6 @@ Congratulations! You have successfully routed a UDP packet and back again with Q
 
 What's next?
 
-* Run through the [Quilkin with Agones quickstart](agones-xonotic.md).
+* Run through the [Quilkin with Agones quickstart](agones-xonotic-sidecar.md).
 * Have a look at some of [the examples](https://github.com/googleforgames/quilkin/blob/{{GITHUB_REF_NAME}}/examples) we have.
 * Check out the [usage documentation](../using.md) for other configuration options.
