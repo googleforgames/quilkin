@@ -259,7 +259,7 @@ impl Proxy {
     }
 
     /// Send a packet received from `recv_addr` to an endpoint.
-    #[tracing::instrument(skip_all, fields(source = %recv_addr, dest = %endpoint.address))]
+    #[tracing::instrument(level="trace", skip_all, fields(source = %recv_addr, dest = %endpoint.address))]
     async fn session_send_packet(
         packet: &[u8],
         recv_addr: EndpointAddress,
