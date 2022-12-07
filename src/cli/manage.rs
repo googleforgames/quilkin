@@ -52,18 +52,32 @@ impl Manage {
             config.port.store(port.into());
         }
 
-        let provider_task = match &self.provider {
-            Providers::Agones {
-                gameservers_namespace,
-                config_namespace,
-            } => tokio::spawn(crate::config::watch::agones(
-                gameservers_namespace.clone(),
-                config_namespace.clone(),
-                config.clone(),
-            )),
-            Providers::File { path } => {
-                tokio::spawn(crate::config::watch::fs(config.clone(), path.clone()))
-            }
+        let provider_task = {
+            const PROVIDER_RETRIES: u32 = 25;
+            const PROVIDER_BACKOFF: std::time::Duration = std::time::Duration::from_millis(250);
+            let config = config.clone();
+
+            tryhard::retry_fn(move || match &self.provider {
+                Providers::Agones {
+                    gameservers_namespace,
+                    config_namespace,
+                } => tokio::spawn(crate::config::watch::agones(
+                    gameservers_namespace.clone(),
+                    config_namespace.clone(),
+                    config.clone(),
+                )),
+                Providers::File { path } => {
+                    tokio::spawn(crate::config::watch::fs(config.clone(), path.clone()))
+                }
+            })
+            .retries(PROVIDER_RETRIES)
+            .exponential_backoff(PROVIDER_BACKOFF)
+            .on_retry(|_, _, error| {
+                let error = error.to_string();
+                async move {
+                    tracing::warn!(%error, "provider task error, retrying");
+                }
+            })
         };
 
         tokio::select! {
