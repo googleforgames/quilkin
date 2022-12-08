@@ -100,7 +100,7 @@ clusters:
         let mount_name = "config".to_string();
         template.containers.push(quilkin_container(
             &client,
-            Some(vec!["run".into()]),
+            Some(vec!["proxy".into()]),
             Some(mount_name.clone()),
         ));
 

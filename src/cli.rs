@@ -16,7 +16,7 @@
 
 mod generate_config_schema;
 mod manage;
-mod run;
+mod proxy;
 
 use std::{
     path::{Path, PathBuf},
@@ -30,7 +30,7 @@ use crate::{admin::Mode, Config};
 pub use self::{
     generate_config_schema::GenerateConfigSchema,
     manage::{Manage, Providers},
-    run::Run,
+    proxy::Proxy,
 };
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -59,7 +59,7 @@ pub struct Cli {
 /// The various Quilkin commands.
 #[derive(Clone, clap::Subcommand)]
 pub enum Commands {
-    Run(Run),
+    Proxy(Proxy),
     GenerateConfigSchema(GenerateConfigSchema),
     Manage(Manage),
 }
@@ -67,7 +67,7 @@ pub enum Commands {
 impl Commands {
     pub fn admin_mode(&self) -> Option<Mode> {
         match self {
-            Self::Run(_) => Some(Mode::Proxy),
+            Self::Proxy(_) => Some(Mode::Proxy),
             Self::Manage(_) => Some(Mode::Xds),
             Self::GenerateConfigSchema(_) => None,
         }
@@ -140,7 +140,7 @@ impl Cli {
         let fut = tryhard::retry_fn({
             let shutdown_rx = shutdown_rx.clone();
             move || match self.command.clone() {
-                Commands::Run(runner) => {
+                Commands::Proxy(runner) => {
                     let config = config.clone();
                     let shutdown_rx = shutdown_rx.clone();
                     tokio::spawn(

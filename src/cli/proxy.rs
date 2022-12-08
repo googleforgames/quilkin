@@ -22,7 +22,7 @@ use crate::filters::FilterFactory;
 /// Run Quilkin as a UDP reverse proxy.
 #[derive(clap::Args, Clone)]
 #[non_exhaustive]
-pub struct Run {
+pub struct Proxy {
     /// One or more `quilkin manage` endpoints to listen to for config changes
     #[clap(short, long, env = "QUILKIN_MANAGEMENT_SERVER", conflicts_with("to"))]
     pub management_server: Vec<String>,
@@ -37,7 +37,7 @@ pub struct Run {
     pub to: Vec<SocketAddr>,
 }
 
-impl Run {
+impl Proxy {
     /// Start and run a proxy.
     pub async fn run(
         &self,
@@ -83,7 +83,7 @@ impl Run {
             && config.management_servers.load().is_empty()
         {
             return Err(eyre::eyre!(
-                "`quilkin run` requires at least one `to` address or `management_server` endpoint."
+                "`quilkin proxy` requires at least one `to` address or `management_server` endpoint."
             ));
         }
 

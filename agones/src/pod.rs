@@ -31,7 +31,7 @@ mod tests {
         let client = Client::new().await;
 
         let pods: Api<Pod> = client.namespaced_api();
-        let cmds = ["run", "--to", "127.0.0.1:0"].map(String::from).to_vec();
+        let cmds = ["proxy", "--to", "127.0.0.1:0"].map(String::from).to_vec();
         let pod = Pod {
             metadata: ObjectMeta {
                 generate_name: Some("quilkin-".into()),

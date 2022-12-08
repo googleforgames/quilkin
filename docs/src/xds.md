@@ -32,7 +32,7 @@ Since the range of resources configurable by the xDS API extends that of Quilkin
 ## Connecting to an xDS management server
 
 Connecting a Quilkin proxy to an xDS management server can be implemented via providing one or more URLs to
-the `management_servers` [command line](../api/quilkin/cli/struct.Run.html#structfield.management_server) or 
+the `management_servers` [command line](../api/quilkin/cli/struct.Proxy.html#structfield.management_server) or 
 [file configuration](./file-configuration.md#dynamic-configuration).
 
 
