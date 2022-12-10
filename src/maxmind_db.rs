@@ -23,6 +23,8 @@ static HTTP: Lazy<
 });
 pub static CLIENT: Lazy<arc_swap::ArcSwapOption<MaxmindDb>> = Lazy::new(<_>::default);
 
+/// The source of a Maxmind database, available either locally at a specified
+/// path or remotely from a publicly available URL.
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize, schemars::JsonSchema)]
 #[serde(tag = "kind")]
 pub enum Source {

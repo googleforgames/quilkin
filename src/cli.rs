@@ -13,6 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+//! Quilkin's command line interface.
+
+pub mod generate_config_schema;
+pub mod manage;
+mod providers;
+pub mod proxy;
 
 use std::{
     path::{Path, PathBuf},
@@ -24,15 +30,13 @@ use tokio::{signal, sync::watch};
 
 use crate::{admin::Mode, Config};
 
+#[doc(inline)]
 pub use self::{
     generate_config_schema::GenerateConfigSchema,
-    manage::{Manage, Providers},
+    manage::{Manage, Providers as ManageProviders},
+    providers::Kubernetes,
     proxy::Proxy,
 };
-
-pub mod generate_config_schema;
-pub mod manage;
-pub mod proxy;
 
 const ETC_CONFIG_PATH: &str = "/etc/quilkin/quilkin.yaml";
 const PORT_ENV_VAR: &str = "QUILKIN_PORT";

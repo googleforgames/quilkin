@@ -345,9 +345,14 @@ filters:
         let mut container = quilkin_container(
             client,
             Some(vec![
-                "proxy".into(),
-                "--management-server=http://quilkin-manage-agones:7800".into(),
-            ]),
+                            "proxy".into(),
+            <<<<<<< HEAD
+                            "--management-server=http://quilkin-manage-agones:7800".into(),
+            =======
+                            "xds".into(),
+                            "http://quilkin-manage-agones:80".into(),
+            >>>>>>> 76dd00a3 (Move xDS task out of Proxy, add Agones as another discovery task)
+                        ]),
             None,
         );
 

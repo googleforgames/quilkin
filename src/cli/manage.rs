@@ -43,17 +43,7 @@ pub struct Manage {
 /// The available xDS source providers.
 #[derive(Clone, clap::Subcommand)]
 pub enum Providers {
-    /// Watches Agones' game server CRDs for `Allocated` game server endpoints,
-    /// and for a `ConfigMap` that specifies the filter configuration.
-    Agones {
-        /// The namespace under which the configmap is stored.
-        #[clap(short, long, default_value = "default")]
-        config_namespace: String,
-        /// The namespace under which the game servers run.
-        #[clap(short, long, default_value = "default")]
-        gameservers_namespace: String,
-    },
-
+    Agones(crate::cli::Kubernetes),
     /// Watches for changes to the file located at `path`.
     File {
         /// The path to the source config.
@@ -77,17 +67,11 @@ impl Manage {
         }
 
         let provider_task = {
-            const PROVIDER_RETRIES: u32 = 25;
-            const PROVIDER_BACKOFF: std::time::Duration = std::time::Duration::from_millis(250);
             let config = config.clone();
-
-            tryhard::retry_fn(move || match &self.provider {
-                Providers::Agones {
-                    gameservers_namespace,
-                    config_namespace,
-                } => tokio::spawn(crate::config::watch::agones(
-                    gameservers_namespace.clone(),
-                    config_namespace.clone(),
+            crate::task::provider(move || match &self.provider {
+                Providers::Agones(args) => tokio::spawn(crate::config::watch::agones(
+                    args.gameservers_namespace.clone(),
+                    args.config_namespace.clone(),
                     locality.clone(),
                     config.clone(),
                 )),
@@ -96,14 +80,6 @@ impl Manage {
                     path.clone(),
                     locality.clone(),
                 )),
-            })
-            .retries(PROVIDER_RETRIES)
-            .exponential_backoff(PROVIDER_BACKOFF)
-            .on_retry(|_, _, error| {
-                let error = error.to_string();
-                async move {
-                    tracing::warn!(%error, "provider task error, retrying");
-                }
             })
         };
 

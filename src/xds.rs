@@ -169,7 +169,7 @@ mod tests {
         .unwrap();
 
         let client_addr = crate::test_utils::available_addr().await;
-        let client_config = serde_json::from_value(serde_json::json!({
+        let client_config: Arc<Config> = serde_json::from_value(serde_json::json!({
             "version": "v1alpha1",
             "id": "test-proxy",
         }))
@@ -184,7 +184,9 @@ mod tests {
         tokio::spawn(server::spawn(xds_port, xds_config.clone()));
         let client_proxy = crate::cli::Proxy {
             port: client_addr.port(),
-            management_server: vec![format!("http://0.0.0.0:{}", xds_port).parse().unwrap()],
+            provider: Some(crate::cli::proxy::Providers::Xds {
+                management_server: vec![format!("http://0.0.0.0:{}", xds_port).parse().unwrap()],
+            }),
             ..<_>::default()
         };
 

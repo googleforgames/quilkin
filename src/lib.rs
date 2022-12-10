@@ -19,9 +19,11 @@
 mod admin;
 mod cluster;
 mod maxmind_db;
+mod proxy;
+mod task;
+
 pub(crate) mod metrics;
 pub(crate) mod prost;
-mod proxy;
 pub(crate) mod ttl_map;
 pub(crate) mod utils;
 
