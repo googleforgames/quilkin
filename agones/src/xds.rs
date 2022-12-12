@@ -359,7 +359,7 @@ management_servers:
             .unwrap();
         let mount_name = "config";
         let mut container =
-            quilkin_container(client, Some(vec!["run".into()]), Some(mount_name.into()));
+            quilkin_container(client, Some(vec!["proxy".into()]), Some(mount_name.into()));
 
         // we'll use a host port, since spinning up a load balancer takes a long time.
         // we know that port 7000 is open because this is an Agones cluster and it has associated

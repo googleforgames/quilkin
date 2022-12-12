@@ -91,7 +91,7 @@ with it in `client-token.yaml`.
 Run this configuration locally as:
 
 ```shell
-$ quilkin -c ./client-token.yaml run
+$ quilkin -c ./client-token.yaml proxy
 {"timestamp":"2022-10-07T22:10:47.257635Z","level":"INFO","fields":{"message":"Starting Quilkin","version":"0.4.0-dev","commit":"c77260a2526542c564829a2c66935c60f00adcd2"},"target":"quilkin::cli"}
 {"timestamp":"2022-10-07T22:10:47.258273Z","level":"INFO","fields":{"message":"Starting","port":7000,"proxy_id":"markmandel45"},"target":"quilkin::proxy"}
 {"timestamp":"2022-10-07T22:10:47.258321Z","level":"INFO","fields":{"message":"Starting admin endpoint","address":"[::]:9092"},"target":"quilkin::admin"}

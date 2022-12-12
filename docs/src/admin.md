@@ -28,7 +28,7 @@ Will return an HTTP status of 200 when all health checks pass.
 This provides a readiness probe endpoint, most commonly used in 
 [Kubernetes based systems](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes).
 
-Depending on whether Quilkin is run in Proxy mode i.e. `quilkin run`, vs an xDS provider mode, such as `quilkin 
+Depending on whether Quilkin is run in Proxy mode i.e. `quilkin proxy`, vs an xDS provider mode, such as `quilkin 
 manage agones`, will dictate how readiness is calculated: 
 
 #### Proxy Mode

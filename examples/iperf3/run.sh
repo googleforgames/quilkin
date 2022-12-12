@@ -39,7 +39,7 @@ echo "Starting iperf3 server..."
 iperf3 --server --interval 10 --port 8001 > /quilkin/server.log &
 
 echo "Starting quilkin server..."
-quilkin run > /quilkin/quilkin.log &
+quilkin proxy > /quilkin/quilkin.log &
 
 echo "Waiting for startup..."
 # Wait for both processes to start up.

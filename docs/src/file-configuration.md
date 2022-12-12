@@ -11,7 +11,7 @@ environment variable.
 
 ## Static Configuration
 
-Example of a full configuration for `quilkin run` that utlisies a static Endpoint configuration:
+Example of a full configuration for `quilkin proxy` that utlisies a static Endpoint configuration:
 
 ```yaml
 {{#include ../../examples/proxy.yaml:17:100}}
@@ -19,7 +19,7 @@ Example of a full configuration for `quilkin run` that utlisies a static Endpoin
 
 ## Dynamic Configuration
 
-Example of a full configuration for `quilkin run` that utlisies a dynamic Endpoint configuration through an 
+Example of a full configuration for `quilkin proxy` that utlisies a dynamic Endpoint configuration through an 
 [xDS management endpoint](./xds.md):
 
 ```yaml

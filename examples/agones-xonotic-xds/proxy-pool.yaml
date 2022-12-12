@@ -42,8 +42,8 @@ spec:
     spec:
       containers:
         - name: quilkin
-          image: us-docker.pkg.dev/quilkin/release/quilkin:0.4.0
-          args: ["run", "--management-server", "http://quilkin-manage-agones:80"]
+          image: us-docker.pkg.dev/quilkin/release/quilkin:0.5.0
+          args: ["proxy", "--management-server", "http://quilkin-manage-agones:80"]
           env:
             - name: RUST_LOG
               value: info #,quilkin=trace

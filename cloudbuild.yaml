@@ -57,7 +57,7 @@ steps:
     entrypoint: bash
     args:
       - '-c'
-      - 'timeout --signal=INT --preserve-status 5s docker run --rm -v "/workspace/examples/proxy.yaml:/etc/quilkin/quilkin.yaml" ${_REPOSITORY}quilkin:$(make version) run'
+      - 'timeout --signal=INT --preserve-status 5s docker run --rm -v "/workspace/examples/proxy.yaml:/etc/quilkin/quilkin.yaml" ${_REPOSITORY}quilkin:$(make version) proxy'
     id: test-quilkin-image-default-config-file
     waitFor:
       - build
@@ -68,7 +68,7 @@ steps:
     entrypoint: bash
     args:
       - '-c'
-      - 'timeout --signal=INT --preserve-status 5s docker run -v /tmp:/etc/quilkin/ --rm ${_REPOSITORY}quilkin:$(make version) run --to="127.0.0.1:0"'
+      - 'timeout --signal=INT --preserve-status 5s docker run -v /tmp:/etc/quilkin/ --rm ${_REPOSITORY}quilkin:$(make version) proxy --to="127.0.0.1:0"'
     id: test-quilkin-image-command-line
     waitFor:
       - build

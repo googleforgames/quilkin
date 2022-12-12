@@ -3,7 +3,7 @@
 If Quilkin is provided a
 remote URL or local file path to a
 Maxmind IP Geolocation database through the `mmdb` [file](../file-configuration.md) or
-[command line](../../api/quilkin/cli/struct.Run.html#structfield.mmdb)
+[command line](../../api/quilkin/cli/struct.Proxy.html#structfield.mmdb)
 configuration, Quilkin will log the following information in the `maxmind information` log.
 
 | Field           | Description                                   |
