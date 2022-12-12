@@ -239,7 +239,7 @@ clusters:
         <span class="kw">let </span>mount_name = <span class="string">&quot;config&quot;</span>.to_string();
         template.containers.push(quilkin_container(
             <span class="kw-2">&amp;</span>client,
-            <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="string">&quot;run&quot;</span>.into()]),
+            <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="string">&quot;proxy&quot;</span>.into()]),
             <span class="prelude-val">Some</span>(mount_name.clone()),
         ));
 

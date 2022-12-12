@@ -150,7 +150,7 @@ its current running directory first, then if not present, in
 <code>-c/--config</code> command-line argument, or the <code>QUILKIN_FILENAME</code>
 environment variable.</p>
 <h2 id="static-configuration"><a class="header" href="#static-configuration">Static Configuration</a></h2>
-<p>Example of a full configuration for <code>quilkin run</code> that utlisies a static Endpoint configuration:</p>
+<p>Example of a full configuration for <code>quilkin proxy</code> that utlisies a static Endpoint configuration:</p>
 <pre><code class="language-yaml">#
 # Example configuration for a Quilkin Proxy with static Endpoints
 #
@@ -178,7 +178,7 @@ clusters: # grouping of clusters
                   - bmt1eTcweA== # (string value: nkuy70x)
 </code></pre>
 <h2 id="dynamic-configuration"><a class="header" href="#dynamic-configuration">Dynamic Configuration</a></h2>
-<p>Example of a full configuration for <code>quilkin run</code> that utlisies a dynamic Endpoint configuration through an 
+<p>Example of a full configuration for <code>quilkin proxy</code> that utlisies a dynamic Endpoint configuration through an 
 <a href="./xds.html">xDS management endpoint</a>:</p>
 <pre><code class="language-yaml">#
 # Example configuration for a Quilkin Proxy that is configured via an xDS control plane.

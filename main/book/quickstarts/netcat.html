@@ -158,7 +158,7 @@
 <h2 id="2-start-quilkin"><a class="header" href="#2-start-quilkin">2. Start Quilkin</a></h2>
 <p>Next let's configure Quilkin in proxy mode, with a static configuration that points at the
 UDP echo service we just started.</p>
-<pre><code class="language-shell">quilkin run --to 127.0.0.1:8000
+<pre><code class="language-shell">quilkin proxy --to 127.0.0.1:8000
 </code></pre>
 <p>This configuration will start Quilkin on the default port of 7000, and it will
 redirect all incoming UDP traffic to a single endpoint of 127.0.0.1, port 8000.</p>

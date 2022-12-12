@@ -144,24 +144,14 @@
                         <h1 id="proxy-mode"><a class="header" href="#proxy-mode">Proxy Mode</a></h1>
 <p>The &quot;proxy mode&quot; is the primary mode of operation for Quilkin, wherein it acts as a non-transparent UDP proxy.</p>
 <p>This is driven by Quilkin being <a href="./using.html#command-line-interface">executed</a> via the 
-<a href="../api/quilkin/cli/struct.Run.html"><code>run</code> subcommand</a>.</p>
-<p>To view all the options for the <code>run</code> subcommand, run: </p>
-<pre><code class="language-shell">$ quilkin run --help
-Run Quilkin as a UDP reverse proxy
+<a href="../api/quilkin/cli/struct.Proxy.html"><code>proxy</code> subcommand</a>.</p>
+<p>To view all the options for the <code>proxy</code> subcommand, run: </p>
+<pre><code class="language-shell">$ quilkin proxy --help
+error: The subcommand 'run' wasn't recognized
 
-Usage: quilkin run [OPTIONS]
+Usage: quilkin [OPTIONS] &lt;COMMAND&gt;
 
-Options:
-  -m, --management-server &lt;MANAGEMENT_SERVER&gt;
-          One or more `quilkin manage` endpoints to listen to for config changes [env: QUILKIN_MANAGEMENT_SERVER=]
-      --mmdb &lt;MMDB&gt;
-          The remote URL or local file path to retrieve the Maxmind database [env: MMDB=]
-  -p, --port &lt;PORT&gt;
-          The port to listen on [env: QUILKIN_PORT=]
-  -t, --to &lt;TO&gt;
-          One or more socket addresses to forward packets to [env: QUILKIN_DEST=]
-  -h, --help
-          Print help information
+For more information try '--help'
 </code></pre>
 
                     </main>

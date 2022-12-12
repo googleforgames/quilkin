@@ -199,7 +199,7 @@ depending on how deep an integration you wish for your system.</li>
 <h2 id="2-start-quilkin"><a class="header" href="#2-start-quilkin">2. Start Quilkin</a></h2>
 <p>Next let's configure Quilkin in proxy mode, with a static configuration that points at the
 UDP echo service we just started.</p>
-<pre><code class="language-shell">quilkin run --to 127.0.0.1:8000
+<pre><code class="language-shell">quilkin proxy --to 127.0.0.1:8000
 </code></pre>
 <p>This configuration will start Quilkin on the default port of 7000, and it will
 redirect all incoming UDP traffic to a single endpoint of 127.0.0.1, port 8000.</p>
@@ -335,7 +335,7 @@ edit either!</p>
 <p>For each <a href="https://github.com/googleforgames/quilkin/releases">release</a>, there is a container image built and
 hosted on Google Cloud <a href="https://cloud.google.com/artifact-registry">Artifact Registry</a>.</p>
 <p>The latest production release can be found under the tag: </p>
-<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.5.0-dev-29620d0
+<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.5.0-dev-51b9971
 </code></pre>
 <p>Which can be browsed as <a href="https://us-docker.pkg.dev/quilkin/release/quilkin">us-docker.pkg.dev/quilkin/release/quilkin</a>.</p>
 <p>The <a href="https://docs.docker.com/engine/reference/builder/#entrypoint">entrypoint</a> of the container is to run <code>/quilkin</code> 
@@ -353,7 +353,7 @@ The Command-Line Interface for Quilkin
 Usage: quilkin [OPTIONS] &lt;COMMAND&gt;
 
 Commands:
-  run                     Run Quilkin as a UDP reverse proxy
+  proxy                   Run Quilkin as a UDP reverse proxy
   generate-config-schema  Generates JSON schema files for known filters
   manage                  Runs Quilkin as a xDS management server, using `provider` as a configuration source
   help                    Print this message or the help of the given subcommand(s)
@@ -391,7 +391,7 @@ its current running directory first, then if not present, in
 <code>-c/--config</code> command-line argument, or the <code>QUILKIN_FILENAME</code>
 environment variable.</p>
 <h2 id="static-configuration"><a class="header" href="#static-configuration">Static Configuration</a></h2>
-<p>Example of a full configuration for <code>quilkin run</code> that utlisies a static Endpoint configuration:</p>
+<p>Example of a full configuration for <code>quilkin proxy</code> that utlisies a static Endpoint configuration:</p>
 <pre><code class="language-yaml">#
 # Example configuration for a Quilkin Proxy with static Endpoints
 #
@@ -419,7 +419,7 @@ clusters: # grouping of clusters
                   - bmt1eTcweA== # (string value: nkuy70x)
 </code></pre>
 <h2 id="dynamic-configuration"><a class="header" href="#dynamic-configuration">Dynamic Configuration</a></h2>
-<p>Example of a full configuration for <code>quilkin run</code> that utlisies a dynamic Endpoint configuration through an 
+<p>Example of a full configuration for <code>quilkin proxy</code> that utlisies a dynamic Endpoint configuration through an 
 <a href="./xds.html">xDS management endpoint</a>:</p>
 <pre><code class="language-yaml">#
 # Example configuration for a Quilkin Proxy that is configured via an xDS control plane.
@@ -672,24 +672,14 @@ balanced via the Client Proxy to multiple Server Proxies for even greater redund
 <div style="break-before: page; page-break-before: always;"></div><h1 id="proxy-mode"><a class="header" href="#proxy-mode">Proxy Mode</a></h1>
 <p>The &quot;proxy mode&quot; is the primary mode of operation for Quilkin, wherein it acts as a non-transparent UDP proxy.</p>
 <p>This is driven by Quilkin being <a href="./using.html#command-line-interface">executed</a> via the 
-<a href="../api/quilkin/cli/struct.Run.html"><code>run</code> subcommand</a>.</p>
-<p>To view all the options for the <code>run</code> subcommand, run: </p>
-<pre><code class="language-shell">$ quilkin run --help
-Run Quilkin as a UDP reverse proxy
+<a href="../api/quilkin/cli/struct.Proxy.html"><code>proxy</code> subcommand</a>.</p>
+<p>To view all the options for the <code>proxy</code> subcommand, run: </p>
+<pre><code class="language-shell">$ quilkin proxy --help
+error: The subcommand 'run' wasn't recognized
 
-Usage: quilkin run [OPTIONS]
+Usage: quilkin [OPTIONS] &lt;COMMAND&gt;
 
-Options:
-  -m, --management-server &lt;MANAGEMENT_SERVER&gt;
-          One or more `quilkin manage` endpoints to listen to for config changes [env: QUILKIN_MANAGEMENT_SERVER=]
-      --mmdb &lt;MMDB&gt;
-          The remote URL or local file path to retrieve the Maxmind database [env: MMDB=]
-  -p, --port &lt;PORT&gt;
-          The port to listen on [env: QUILKIN_PORT=]
-  -t, --to &lt;TO&gt;
-          One or more socket addresses to forward packets to [env: QUILKIN_DEST=]
-  -h, --help
-          Print help information
+For more information try '--help'
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="proxy-concepts"><a class="header" href="#proxy-concepts">Proxy Concepts</a></h1>
 <p>The Concepts section helps you learn about the parts of Quilkin when running as proxy and how they work toghether.</p>
@@ -2161,7 +2151,7 @@ client.</li>
 <p>If Quilkin is provided a
 remote URL or local file path to a
 Maxmind IP Geolocation database through the <code>mmdb</code> <a href="proxy/../file-configuration.html">file</a> or
-<a href="proxy/../../api/quilkin/cli/struct.Run.html#structfield.mmdb">command line</a>
+<a href="proxy/../../api/quilkin/cli/struct.Proxy.html#structfield.mmdb">command line</a>
 configuration, Quilkin will log the following information in the <code>maxmind information</code> log.</p>
 <div class="table-wrapper"><table><thead><tr><th>Field</th><th>Description</th></tr></thead><tbody>
 <tr><td><code>number</code></td><td>ASN Number</td></tr>
@@ -2214,7 +2204,7 @@ Quilkin implements the <strong>Aggregated Discovery Service (ADS)</strong> <em>S
 </ul>
 <h2 id="connecting-to-an-xds-management-server"><a class="header" href="#connecting-to-an-xds-management-server">Connecting to an xDS management server</a></h2>
 <p>Connecting a Quilkin proxy to an xDS management server can be implemented via providing one or more URLs to
-the <code>management_servers</code> <a href="../api/quilkin/cli/struct.Run.html#structfield.management_server">command line</a> or 
+the <code>management_servers</code> <a href="../api/quilkin/cli/struct.Proxy.html#structfield.management_server">command line</a> or 
 <a href="./file-configuration.html#dynamic-configuration">file configuration</a>.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="quilkin-built-in-xds-providers"><a class="header" href="#quilkin-built-in-xds-providers">Quilkin Built-in xDS Providers</a></h1>
 <p>To make xDS integration easier, Quilkin can be run in &quot;xDS Provider Mode&quot;.</p>
@@ -2428,7 +2418,7 @@ from the cache.</p>
 <h3 id="ready"><a class="header" href="#ready">/ready</a></h3>
 <p>This provides a readiness probe endpoint, most commonly used in 
 <a href="https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes">Kubernetes based systems</a>.</p>
-<p>Depending on whether Quilkin is run in Proxy mode i.e. <code>quilkin run</code>, vs an xDS provider mode, such as <code>quilkin  manage agones</code>, will dictate how readiness is calculated: </p>
+<p>Depending on whether Quilkin is run in Proxy mode i.e. <code>quilkin proxy</code>, vs an xDS provider mode, such as <code>quilkin  manage agones</code>, will dictate how readiness is calculated: </p>
 <h4 id="proxy-mode-2"><a class="header" href="#proxy-mode-2">Proxy Mode</a></h4>
 <p>Will return an HTTP status of 200 when there is at least one endpoint to send data to. This is primarily to ensure 
 that new proxies that have yet to get configuration information from an <a href="./xds.html">xDS server</a> aren't send data 

@@ -154,7 +154,7 @@
 <p>For each <a href="https://github.com/googleforgames/quilkin/releases">release</a>, there is a container image built and
 hosted on Google Cloud <a href="https://cloud.google.com/artifact-registry">Artifact Registry</a>.</p>
 <p>The latest production release can be found under the tag: </p>
-<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.5.0-dev-29620d0
+<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.5.0-dev-51b9971
 </code></pre>
 <p>Which can be browsed as <a href="https://us-docker.pkg.dev/quilkin/release/quilkin">us-docker.pkg.dev/quilkin/release/quilkin</a>.</p>
 <p>The <a href="https://docs.docker.com/engine/reference/builder/#entrypoint">entrypoint</a> of the container is to run <code>/quilkin</code> 
@@ -172,7 +172,7 @@ The Command-Line Interface for Quilkin
 Usage: quilkin [OPTIONS] &lt;COMMAND&gt;
 
 Commands:
-  run                     Run Quilkin as a UDP reverse proxy
+  proxy                   Run Quilkin as a UDP reverse proxy
   generate-config-schema  Generates JSON schema files for known filters
   manage                  Runs Quilkin as a xDS management server, using `provider` as a configuration source
   help                    Print this message or the help of the given subcommand(s)

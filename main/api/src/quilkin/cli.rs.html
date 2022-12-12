@@ -211,7 +211,7 @@
 
 </span><span class="kw">mod </span>generate_config_schema;
 <span class="kw">mod </span>manage;
-<span class="kw">mod </span>run;
+<span class="kw">mod </span>proxy;
 
 <span class="kw">use </span>std::{
     path::{Path, PathBuf},
@@ -225,7 +225,7 @@
 <span class="kw">pub use </span><span class="self">self</span>::{
     generate_config_schema::GenerateConfigSchema,
     manage::{Manage, Providers},
-    run::Run,
+    proxy::Proxy,
 };
 
 <span class="kw">const </span>VERSION: <span class="kw-2">&amp;</span>str = <span class="macro">env!</span>(<span class="string">&quot;CARGO_PKG_VERSION&quot;</span>);
@@ -254,7 +254,7 @@
 <span class="doccomment">/// The various Quilkin commands.
 </span><span class="attribute">#[derive(Clone, clap::Subcommand)]
 </span><span class="kw">pub enum </span>Commands {
-    Run(Run),
+    Proxy(Proxy),
     GenerateConfigSchema(GenerateConfigSchema),
     Manage(Manage),
 }
@@ -262,7 +262,7 @@
 <span class="kw">impl </span>Commands {
     <span class="kw">pub fn </span>admin_mode(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Mode&gt; {
         <span class="kw">match </span><span class="self">self </span>{
-            <span class="self">Self</span>::Run(<span class="kw">_</span>) =&gt; <span class="prelude-val">Some</span>(Mode::Proxy),
+            <span class="self">Self</span>::Proxy(<span class="kw">_</span>) =&gt; <span class="prelude-val">Some</span>(Mode::Proxy),
             <span class="self">Self</span>::Manage(<span class="kw">_</span>) =&gt; <span class="prelude-val">Some</span>(Mode::Xds),
             <span class="self">Self</span>::GenerateConfigSchema(<span class="kw">_</span>) =&gt; <span class="prelude-val">None</span>,
         }
@@ -335,7 +335,7 @@
         <span class="kw">let </span>fut = tryhard::retry_fn({
             <span class="kw">let </span>shutdown_rx = shutdown_rx.clone();
             <span class="kw">move </span>|| <span class="kw">match </span><span class="self">self</span>.command.clone() {
-                Commands::Run(runner) =&gt; {
+                Commands::Proxy(runner) =&gt; {
                     <span class="kw">let </span>config = config.clone();
                     <span class="kw">let </span>shutdown_rx = shutdown_rx.clone();
                     tokio::spawn(
