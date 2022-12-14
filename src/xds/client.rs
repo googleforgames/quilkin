@@ -19,7 +19,7 @@ use std::{collections::HashSet, sync::Arc, time::Duration};
 use futures::StreamExt;
 use rand::Rng;
 use tokio::sync::{broadcast, Mutex};
-use tonic::transport::{channel::Channel as TonicChannel, Error as TonicError};
+use tonic::transport::{channel::Channel as TonicChannel, Endpoint, Error as TonicError};
 use tracing::Instrument;
 use tryhard::{
     backoff_strategies::{BackoffStrategy, ExponentialBackoff},
@@ -58,7 +58,7 @@ impl Client {
     async fn new_ads_client(config: &Config) -> Result<AdsClient> {
         use crate::config::{
             BACKOFF_INITIAL_DELAY_MILLISECONDS, BACKOFF_MAX_DELAY_SECONDS,
-            BACKOFF_MAX_JITTER_MILLISECONDS,
+            BACKOFF_MAX_JITTER_MILLISECONDS, CONNECTION_TIMEOUT,
         };
 
         let mut backoff =
@@ -116,12 +116,18 @@ impl Client {
                     None => Err(RpcSessionError::Receive(tonic::Status::internal(
                         "Failed initial connection",
                     ))),
-                    Some(endpoint) => AggregatedDiscoveryServiceClient::connect(endpoint)
-                        .instrument(tracing::debug_span!(
-                            "AggregatedDiscoveryServiceClient::connect"
-                        ))
-                        .await
-                        .map_err(RpcSessionError::InitialConnect),
+                    Some(endpoint) => {
+                        let endpoint = Endpoint::from_shared(endpoint)
+                            .map_err(RpcSessionError::InitialConnect)?
+                            .connect_timeout(Duration::from_secs(CONNECTION_TIMEOUT));
+
+                        AggregatedDiscoveryServiceClient::connect(endpoint)
+                            .instrument(tracing::debug_span!(
+                                "AggregatedDiscoveryServiceClient::connect"
+                            ))
+                            .await
+                            .map_err(RpcSessionError::InitialConnect)
+                    }
                 }
             }
         })
