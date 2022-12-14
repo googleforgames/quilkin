@@ -52,6 +52,7 @@ pub(crate) const LOG_SAMPLING_RATE: u64 = 1000;
 pub(crate) const BACKOFF_INITIAL_DELAY_MILLISECONDS: u64 = 500;
 pub(crate) const BACKOFF_MAX_DELAY_SECONDS: u64 = 30;
 pub(crate) const BACKOFF_MAX_JITTER_MILLISECONDS: u64 = 2000;
+pub(crate) const CONNECTION_TIMEOUT: u64 = 5;
 
 /// Config is the configuration of a proxy
 #[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
