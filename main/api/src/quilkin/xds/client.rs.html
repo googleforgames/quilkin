@@ -318,6 +318,12 @@
 <span id="318">318</span>
 <span id="319">319</span>
 <span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -339,7 +345,7 @@
 <span class="kw">use </span>futures::StreamExt;
 <span class="kw">use </span>rand::Rng;
 <span class="kw">use </span>tokio::sync::{broadcast, Mutex};
-<span class="kw">use </span>tonic::transport::{channel::Channel <span class="kw">as </span>TonicChannel, Error <span class="kw">as </span>TonicError};
+<span class="kw">use </span>tonic::transport::{channel::Channel <span class="kw">as </span>TonicChannel, Endpoint, Error <span class="kw">as </span>TonicError};
 <span class="kw">use </span>tracing::Instrument;
 <span class="kw">use </span>tryhard::{
     backoff_strategies::{BackoffStrategy, ExponentialBackoff},
@@ -378,7 +384,7 @@
     <span class="kw">async fn </span>new_ads_client(config: <span class="kw-2">&amp;</span>Config) -&gt; <span class="prelude-ty">Result</span>&lt;AdsClient&gt; {
         <span class="kw">use </span><span class="kw">crate</span>::config::{
             BACKOFF_INITIAL_DELAY_MILLISECONDS, BACKOFF_MAX_DELAY_SECONDS,
-            BACKOFF_MAX_JITTER_MILLISECONDS,
+            BACKOFF_MAX_JITTER_MILLISECONDS, CONNECTION_TIMEOUT,
         };
 
         <span class="kw">let </span><span class="kw-2">mut </span>backoff =
@@ -436,12 +442,18 @@
                     <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(RpcSessionError::Receive(tonic::Status::internal(
                         <span class="string">&quot;Failed initial connection&quot;</span>,
                     ))),
-                    <span class="prelude-val">Some</span>(endpoint) =&gt; AggregatedDiscoveryServiceClient::connect(endpoint)
-                        .instrument(<span class="macro">tracing::debug_span!</span>(
-                            <span class="string">&quot;AggregatedDiscoveryServiceClient::connect&quot;
-                        </span>))
-                        .<span class="kw">await
-                        </span>.map_err(RpcSessionError::InitialConnect),
+                    <span class="prelude-val">Some</span>(endpoint) =&gt; {
+                        <span class="kw">let </span>endpoint = Endpoint::from_shared(endpoint)
+                            .map_err(RpcSessionError::InitialConnect)<span class="question-mark">?
+                            </span>.connect_timeout(Duration::from_secs(CONNECTION_TIMEOUT));
+
+                        AggregatedDiscoveryServiceClient::connect(endpoint)
+                            .instrument(<span class="macro">tracing::debug_span!</span>(
+                                <span class="string">&quot;AggregatedDiscoveryServiceClient::connect&quot;
+                            </span>))
+                            .<span class="kw">await
+                            </span>.map_err(RpcSessionError::InitialConnect)
+                    }
                 }
             }
         })

@@ -588,6 +588,7 @@
 <span id="588">588</span>
 <span id="589">589</span>
 <span id="590">590</span>
+<span id="591">591</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -642,6 +643,7 @@
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>BACKOFF_INITIAL_DELAY_MILLISECONDS: u64 = <span class="number">500</span>;
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>BACKOFF_MAX_DELAY_SECONDS: u64 = <span class="number">30</span>;
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>BACKOFF_MAX_JITTER_MILLISECONDS: u64 = <span class="number">2000</span>;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>CONNECTION_TIMEOUT: u64 = <span class="number">5</span>;
 
 <span class="doccomment">/// Config is the configuration of a proxy
 </span><span class="attribute">#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
