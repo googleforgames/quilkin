@@ -25,7 +25,7 @@ import (
 
 	"github.com/GoogleCloudPlatform/cloud-build-notifiers/lib/notifiers"
 	log "github.com/golang/glog"
-	"github.com/google/go-github/v35/github"
+	"github.com/google/go-github/v48/github"
 	"golang.org/x/oauth2"
 	"google.golang.org/genproto/googleapis/devtools/cloudbuild/v1"
 )
@@ -123,13 +123,16 @@ func (g *githubNotifier) SendNotification(ctx context.Context, build *cloudbuild
 		}
 	}
 
-	g.clearBotComments(ctx, pr)
+	if err := g.clearBotComments(ctx, pr); err != nil {
+		log.Warningf("Error clearing bot comments: %v for PR: %d", err, pr)
+	}
 
 	commentBody := body.String()
 	comment := &github.IssueComment{
 		Body: &commentBody,
 	}
 	if _, _, err := g.client.Issues.CreateComment(ctx, owner, repo, pr, comment); err != nil {
+		log.Errorf("Error creating a comment: %v on PR %d", err, pr)
 		return err
 	}
 
@@ -145,7 +148,9 @@ func (g *githubNotifier) clearBotComments(ctx context.Context, pr int) error {
 
 	for _, comment := range comments {
 		if *comment.User.ID == quilkinBotId {
-			g.client.Issues.DeleteComment(ctx, owner, repo, *comment.ID)
+			if _, err := g.client.Issues.DeleteComment(ctx, owner, repo, *comment.ID); err != nil {
+				log.Errorf("Error deleting comment: %v on PR with id %d", err, *comment.ID)
+			}
 		}
 	}
 
