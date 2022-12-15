@@ -84,19 +84,15 @@ impl Client {
             );
 
             match error {
+                RpcSessionError::InvalidEndpoint(ref error) => {
+                    tracing::error!(?error, "Error creating endpoint");
+                    // Do not retry if this is an invalid URL error that we cannot recover from.
+                    RetryPolicy::Break
+                }
                 RpcSessionError::InitialConnect(ref error) => {
                     tracing::warn!(?error, "Unable to connect to the XDS server");
-
-                    // Do not retry if this is an invalid URL error that we cannot recover from.
-                    // Need to use {:?} as the Display output only returns 'transport error'
-                    let err_description = format!("{error:?}");
-                    if err_description.to_lowercase().contains("invalid url") {
-                        RetryPolicy::Break
-                    } else {
-                        RetryPolicy::Delay(delay)
-                    }
+                    RetryPolicy::Delay(delay)
                 }
-
                 RpcSessionError::Receive(ref status) => {
                     tracing::warn!(status = ?status, "Failed to receive response from XDS server");
                     RetryPolicy::Delay(delay)
@@ -118,8 +114,19 @@ impl Client {
                     ))),
                     Some(endpoint) => {
                         let endpoint = Endpoint::from_shared(endpoint)
-                            .map_err(RpcSessionError::InitialConnect)?
+                            .map_err(|err| RpcSessionError::InvalidEndpoint(err.to_string()))?
                             .connect_timeout(Duration::from_secs(CONNECTION_TIMEOUT));
+
+                        // make sure that we have everything we will need in our URI
+                        if endpoint.uri().scheme().is_none() {
+                            return Err(RpcSessionError::InvalidEndpoint(
+                                "No scheme provided".into(),
+                            ));
+                        } else if endpoint.uri().host().is_none() {
+                            return Err(RpcSessionError::InvalidEndpoint(
+                                "No host provided".into(),
+                            ));
+                        }
 
                         AggregatedDiscoveryServiceClient::connect(endpoint)
                             .instrument(tracing::debug_span!(
@@ -296,10 +303,13 @@ impl Drop for Stream {
 
 #[derive(Debug, thiserror::Error)]
 enum RpcSessionError {
+    #[error("Invalid endpoint. \n {0}")]
+    InvalidEndpoint(String),
+
     #[error("Failed to establish initial connection.\n {0:?}")]
     InitialConnect(TonicError),
 
-    #[error("Error occured while receiving data. Status: {0}")]
+    #[error("Error occurred while receiving data. Status: {0}")]
     Receive(tonic::Status),
 }
 
@@ -311,16 +321,22 @@ mod tests {
     /// If we get an invalid URL, we should return immediately rather
     /// than backoff or retry.
     async fn invalid_url() {
-        let config = crate::Config::builder()
-            .management_servers(["localhost:18000".into()])
-            .build()
-            .unwrap();
-        let run = Client::connect(Arc::new(config));
+        async fn test(url: String) {
+            println!("Testing for {url}");
+            let config = crate::Config::builder()
+                .management_servers([url.clone()])
+                .build()
+                .unwrap();
+            let run = Client::connect(Arc::new(config));
 
-        let execution_result =
-            tokio::time::timeout(std::time::Duration::from_millis(10000), run).await;
-        assert!(execution_result
-            .expect("client should bail out immediately")
-            .is_err());
+            let execution_result =
+                tokio::time::timeout(std::time::Duration::from_millis(10000), run).await;
+            assert!(execution_result
+                .unwrap_or_else(|_| panic!("client should bail out immediately: {url}"))
+                .is_err());
+        }
+        test("localhost/18000".into()).await;
+        test("localhost:18000".into()).await;
+        test("http://".into()).await;
     }
 }
