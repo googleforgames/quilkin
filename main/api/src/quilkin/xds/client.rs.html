@@ -324,6 +324,22 @@
 <span id="324">324</span>
 <span id="325">325</span>
 <span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -410,19 +426,15 @@
             );
 
             <span class="kw">match </span>error {
+                RpcSessionError::InvalidEndpoint(<span class="kw-2">ref </span>error) =&gt; {
+                    <span class="macro">tracing::error!</span>(<span class="question-mark">?</span>error, <span class="string">&quot;Error creating endpoint&quot;</span>);
+                    <span class="comment">// Do not retry if this is an invalid URL error that we cannot recover from.
+                    </span>RetryPolicy::Break
+                }
                 RpcSessionError::InitialConnect(<span class="kw-2">ref </span>error) =&gt; {
                     <span class="macro">tracing::warn!</span>(<span class="question-mark">?</span>error, <span class="string">&quot;Unable to connect to the XDS server&quot;</span>);
-
-                    <span class="comment">// Do not retry if this is an invalid URL error that we cannot recover from.
-                    // Need to use {:?} as the Display output only returns &#39;transport error&#39;
-                    </span><span class="kw">let </span>err_description = <span class="macro">format!</span>(<span class="string">&quot;{error:?}&quot;</span>);
-                    <span class="kw">if </span>err_description.to_lowercase().contains(<span class="string">&quot;invalid url&quot;</span>) {
-                        RetryPolicy::Break
-                    } <span class="kw">else </span>{
-                        RetryPolicy::Delay(delay)
-                    }
+                    RetryPolicy::Delay(delay)
                 }
-
                 RpcSessionError::Receive(<span class="kw-2">ref </span>status) =&gt; {
                     <span class="macro">tracing::warn!</span>(status = <span class="question-mark">?</span>status, <span class="string">&quot;Failed to receive response from XDS server&quot;</span>);
                     RetryPolicy::Delay(delay)
@@ -444,8 +456,19 @@
                     ))),
                     <span class="prelude-val">Some</span>(endpoint) =&gt; {
                         <span class="kw">let </span>endpoint = Endpoint::from_shared(endpoint)
-                            .map_err(RpcSessionError::InitialConnect)<span class="question-mark">?
+                            .map_err(|err| RpcSessionError::InvalidEndpoint(err.to_string()))<span class="question-mark">?
                             </span>.connect_timeout(Duration::from_secs(CONNECTION_TIMEOUT));
+
+                        <span class="comment">// make sure that we have everything we will need in our URI
+                        </span><span class="kw">if </span>endpoint.uri().scheme().is_none() {
+                            <span class="kw">return </span><span class="prelude-val">Err</span>(RpcSessionError::InvalidEndpoint(
+                                <span class="string">&quot;No scheme provided&quot;</span>.into(),
+                            ));
+                        } <span class="kw">else if </span>endpoint.uri().host().is_none() {
+                            <span class="kw">return </span><span class="prelude-val">Err</span>(RpcSessionError::InvalidEndpoint(
+                                <span class="string">&quot;No host provided&quot;</span>.into(),
+                            ));
+                        }
 
                         AggregatedDiscoveryServiceClient::connect(endpoint)
                             .instrument(<span class="macro">tracing::debug_span!</span>(
@@ -622,10 +645,13 @@
 
 <span class="attribute">#[derive(Debug, thiserror::Error)]
 </span><span class="kw">enum </span>RpcSessionError {
+    <span class="attribute">#[error(<span class="string">&quot;Invalid endpoint. \n {0}&quot;</span>)]
+    </span>InvalidEndpoint(String),
+
     <span class="attribute">#[error(<span class="string">&quot;Failed to establish initial connection.\n {0:?}&quot;</span>)]
     </span>InitialConnect(TonicError),
 
-    <span class="attribute">#[error(<span class="string">&quot;Error occured while receiving data. Status: {0}&quot;</span>)]
+    <span class="attribute">#[error(<span class="string">&quot;Error occurred while receiving data. Status: {0}&quot;</span>)]
     </span>Receive(tonic::Status),
 }
 
@@ -637,17 +663,23 @@
     </span><span class="doccomment">/// If we get an invalid URL, we should return immediately rather
     /// than backoff or retry.
     </span><span class="kw">async fn </span>invalid_url() {
-        <span class="kw">let </span>config = <span class="kw">crate</span>::Config::builder()
-            .management_servers([<span class="string">&quot;localhost:18000&quot;</span>.into()])
-            .build()
-            .unwrap();
-        <span class="kw">let </span>run = Client::connect(Arc::new(config));
+        <span class="kw">async fn </span>test(url: String) {
+            <span class="macro">println!</span>(<span class="string">&quot;Testing for {url}&quot;</span>);
+            <span class="kw">let </span>config = <span class="kw">crate</span>::Config::builder()
+                .management_servers([url.clone()])
+                .build()
+                .unwrap();
+            <span class="kw">let </span>run = Client::connect(Arc::new(config));
 
-        <span class="kw">let </span>execution_result =
-            tokio::time::timeout(std::time::Duration::from_millis(<span class="number">10000</span>), run).<span class="kw">await</span>;
-        <span class="macro">assert!</span>(execution_result
-            .expect(<span class="string">&quot;client should bail out immediately&quot;</span>)
-            .is_err());
+            <span class="kw">let </span>execution_result =
+                tokio::time::timeout(std::time::Duration::from_millis(<span class="number">10000</span>), run).<span class="kw">await</span>;
+            <span class="macro">assert!</span>(execution_result
+                .unwrap_or_else(|<span class="kw">_</span>| <span class="macro">panic!</span>(<span class="string">&quot;client should bail out immediately: {url}&quot;</span>))
+                .is_err());
+        }
+        test(<span class="string">&quot;localhost/18000&quot;</span>.into()).<span class="kw">await</span>;
+        test(<span class="string">&quot;localhost:18000&quot;</span>.into()).<span class="kw">await</span>;
+        test(<span class="string">&quot;http://&quot;</span>.into()).<span class="kw">await</span>;
     }
 }
 </code></pre></div>
