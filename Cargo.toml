@@ -48,7 +48,7 @@ base64-serde = "0.6.1"
 bytes = { version = "1.2.1", features = ["serde"] }
 cached = "0.40.0"
 chrono = "0.4.23"
-clap = { version = "4.0.26", features = ["cargo", "derive", "env"] }
+clap = { version = "4.0.29", features = ["cargo", "derive", "env"] }
 dashmap = "5.4.0"
 dirs2 = "3.0.1"
 either = "1.8.0"
