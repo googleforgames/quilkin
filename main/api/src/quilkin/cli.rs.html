@@ -188,11 +188,6 @@
 <span id="188">188</span>
 <span id="189">189</span>
 <span id="190">190</span>
-<span id="191">191</span>
-<span id="192">192</span>
-<span id="193">193</span>
-<span id="194">194</span>
-<span id="195">195</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -209,15 +204,12 @@
  * limitations under the License.
  */
 
-</span><span class="kw">mod </span>generate_config_schema;
-<span class="kw">mod </span>manage;
-<span class="kw">mod </span>proxy;
-
-<span class="kw">use </span>std::{
+</span><span class="kw">use </span>std::{
     path::{Path, PathBuf},
     sync::Arc,
 };
 
+<span class="kw">use </span>clap::crate_version;
 <span class="kw">use </span>tokio::{signal, sync::watch};
 
 <span class="kw">use crate</span>::{admin::Mode, Config};
@@ -228,11 +220,15 @@
     proxy::Proxy,
 };
 
-<span class="kw">const </span>VERSION: <span class="kw-2">&amp;</span>str = <span class="macro">env!</span>(<span class="string">&quot;CARGO_PKG_VERSION&quot;</span>);
+<span class="kw">mod </span>generate_config_schema;
+<span class="kw">mod </span>manage;
+<span class="kw">mod </span>proxy;
+
 <span class="kw">const </span>ETC_CONFIG_PATH: <span class="kw-2">&amp;</span>str = <span class="string">&quot;/etc/quilkin/quilkin.yaml&quot;</span>;
 
 <span class="doccomment">/// The Command-Line Interface for Quilkin.
 </span><span class="attribute">#[derive(clap::Parser)]
+#[command(version)]
 #[non_exhaustive]
 </span><span class="kw">pub struct </span>Cli {
     <span class="doccomment">/// Whether to spawn the admin server or not.
@@ -274,12 +270,6 @@
     /// arguments.
     </span><span class="attribute">#[tracing::instrument(skip_all)]
     </span><span class="kw">pub async fn </span>drive(<span class="self">self</span>) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
-        <span class="kw">let </span>version: std::borrow::Cow&lt;<span class="lifetime">&#39;static</span>, str&gt; = <span class="kw">if </span><span class="macro">cfg!</span>(debug_assertions) {
-            <span class="macro">format!</span>(<span class="string">&quot;{VERSION}+debug&quot;</span>).into()
-        } <span class="kw">else </span>{
-            VERSION.into()
-        };
-
         <span class="kw">if </span>!<span class="self">self</span>.quiet {
             <span class="kw">let </span>env_filter = tracing_subscriber::EnvFilter::builder()
                 .with_default_directive(tracing_subscriber::filter::LevelFilter::INFO.into())
@@ -292,7 +282,7 @@
         }
 
         <span class="macro">tracing::info!</span>(
-            version = <span class="kw-2">&amp;*</span>version,
+            version = <span class="macro">crate_version!</span>(),
             commit = <span class="kw">crate</span>::metadata::build::GIT_COMMIT_HASH,
             <span class="string">&quot;Starting Quilkin&quot;
         </span>);

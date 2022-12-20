@@ -154,7 +154,7 @@
 <p>For each <a href="https://github.com/googleforgames/quilkin/releases">release</a>, there is a container image built and
 hosted on Google Cloud <a href="https://cloud.google.com/artifact-registry">Artifact Registry</a>.</p>
 <p>The latest production release can be found under the tag: </p>
-<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.5.0-dev-39ec6da
+<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.5.0-dev-a314877
 </code></pre>
 <p>Which can be browsed as <a href="https://us-docker.pkg.dev/quilkin/release/quilkin">us-docker.pkg.dev/quilkin/release/quilkin</a>.</p>
 <p>The <a href="https://docs.docker.com/engine/reference/builder/#entrypoint">entrypoint</a> of the container is to run <code>/quilkin</code> 
@@ -183,6 +183,7 @@ Options:
       --admin-address &lt;ADMIN_ADDRESS&gt;  The port to bind for the admin server [env: QUILKIN_ADMIN_ADDRESS=]
   -q, --quiet                          Whether Quilkin will report any results to stdout/stderr [env: QUIET=]
   -h, --help                           Print help information
+  -V, --version                        Print version information
 </code></pre>
 <h2 id="file-based-configuration"><a class="header" href="#file-based-configuration">File Based Configuration</a></h2>
 <p>For use cases that utilise functionality such as:</p>
