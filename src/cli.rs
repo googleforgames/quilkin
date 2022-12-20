@@ -14,15 +14,12 @@
  * limitations under the License.
  */
 
-mod generate_config_schema;
-mod manage;
-mod proxy;
-
 use std::{
     path::{Path, PathBuf},
     sync::Arc,
 };
 
+use clap::crate_version;
 use tokio::{signal, sync::watch};
 
 use crate::{admin::Mode, Config};
@@ -33,11 +30,15 @@ pub use self::{
     proxy::Proxy,
 };
 
-const VERSION: &str = env!("CARGO_PKG_VERSION");
+mod generate_config_schema;
+mod manage;
+mod proxy;
+
 const ETC_CONFIG_PATH: &str = "/etc/quilkin/quilkin.yaml";
 
 /// The Command-Line Interface for Quilkin.
 #[derive(clap::Parser)]
+#[command(version)]
 #[non_exhaustive]
 pub struct Cli {
     /// Whether to spawn the admin server or not.
@@ -79,12 +80,6 @@ impl Cli {
     /// arguments.
     #[tracing::instrument(skip_all)]
     pub async fn drive(self) -> crate::Result<()> {
-        let version: std::borrow::Cow<'static, str> = if cfg!(debug_assertions) {
-            format!("{VERSION}+debug").into()
-        } else {
-            VERSION.into()
-        };
-
         if !self.quiet {
             let env_filter = tracing_subscriber::EnvFilter::builder()
                 .with_default_directive(tracing_subscriber::filter::LevelFilter::INFO.into())
@@ -97,7 +92,7 @@ impl Cli {
         }
 
         tracing::info!(
-            version = &*version,
+            version = crate_version!(),
             commit = crate::metadata::build::GIT_COMMIT_HASH,
             "Starting Quilkin"
         );
