@@ -18,8 +18,8 @@ releases, both from an optimisation and observability perspective as well.
 
 ## Can I integrate Quilkin with C++ code?
 
-Quilkin is also released as a [library](https://crates.io/crates/quilkin), so it can be integrated with an external 
-codebase as necessary.
+Quilkin is also released as a <a href="https://crates.io/crates/quilkin" data-proofer-ignore>library</a> so it can be
+integrated with an external codebase as necessary.
 
 Using Rust code inside a C or C++ project mostly consists of two parts.
 
