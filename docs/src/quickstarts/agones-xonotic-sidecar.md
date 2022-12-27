@@ -1,13 +1,6 @@
 # Quickstart: Quilkin with Agones and Xonotic (Sidecar)
 
-## Requirements
-
-* A terminal with `kubectl` installed
-* A local copy of the [Xonotic](https://xonotic.org/) client
-* A running [Agones](https://agones.dev/) Kubernetes cluster
-  * [Installation instructions](https://agones.dev/site/docs/installation/)
-  * If you aren't familiar with Agones, we recommend working through their 
-    [Getting Started](https://agones.dev/site/docs/getting-started/) guides.
+{{#include _agones.md}}
 
 ## 1. Agones Fleet with Quilkin
 
@@ -43,6 +36,8 @@ Usually with Agones you would
 
 Choose one of the listed `GameServer`s from the previous step, and connect to the IP and port of the Xonotic 
 server via the "Multiplayer > Address" field in the Xonotic client in the format of {IP}:{PORT}.
+
+![xonotic-address.png](xonotic-address.png)
 
 You should now be playing a game of Xonotic against 4 bots!
 
