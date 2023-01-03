@@ -25,13 +25,13 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::oneshot::{channel, Receiver, Sender};
 
+pub use dashmap::try_result::TryResult;
+
 // Clippy isn't recognizing that these imports are used conditionally.
 #[allow(unused_imports)]
 use std::time::{SystemTime, UNIX_EPOCH};
 #[allow(unused_imports)]
 use tokio::time::Instant;
-
-use crate::endpoint::EndpointAddress;
 
 /// A wrapper around the value of an entry in the map.
 /// It contains the value's ttl.
@@ -73,15 +73,23 @@ impl<V> Value<V> {
     }
 }
 
+impl<V> std::ops::Deref for Value<V> {
+    type Target = V;
+
+    fn deref(&self) -> &Self::Target {
+        &self.value
+    }
+}
+
 /// Map contains the hash map implementation.
-struct Map<V> {
-    inner: DashMap<EndpointAddress, Value<V>>,
+struct Map<K, V> {
+    inner: DashMap<K, Value<V>>,
     ttl: Duration,
     clock: Clock,
     shutdown_tx: Option<Sender<()>>,
 }
 
-impl<V> Drop for Map<V> {
+impl<K, V> Drop for Map<K, V> {
     fn drop(&mut self) {
         if let Some(shutdown_tx) = self.shutdown_tx.take() {
             shutdown_tx.send(()).ok();
@@ -95,11 +103,11 @@ impl<V> Drop for Map<V> {
 /// [`TtlMap::get_mut`] functions, or via the [`TtlMap::entry`] interface.
 /// During tests, the internal clock implementation is driven by [`tokio::time`] so
 /// functions like [`tokio::time::pause`] and [`tokio::time::advance`] can be used.
-#[derive(Clone)]
-pub(crate) struct TtlMap<V>(Arc<Map<V>>);
+pub(crate) struct TtlMap<K, V>(Arc<Map<K, V>>);
 
-impl<V> TtlMap<V>
+impl<K, V> TtlMap<K, V>
 where
+    K: Hash + Eq + Send + Sync + 'static,
     V: Send + Sync + 'static,
 {
     pub fn new(ttl: Duration, poll_interval: Duration) -> Self {
@@ -111,11 +119,7 @@ where
         Self::initialize(DashMap::with_capacity(capacity), ttl, poll_interval)
     }
 
-    fn initialize(
-        inner: DashMap<EndpointAddress, Value<V>>,
-        ttl: Duration,
-        poll_interval: Duration,
-    ) -> Self {
+    fn initialize(inner: DashMap<K, Value<V>>, ttl: Duration, poll_interval: Duration) -> Self {
         let (shutdown_tx, shutdown_rx) = channel();
         let map = TtlMap(Arc::new(Map {
             inner,
@@ -140,13 +144,14 @@ where
     }
 }
 
-impl<V> TtlMap<V>
+#[allow(dead_code)]
+impl<K, V> TtlMap<K, V>
 where
+    K: Hash + Eq + Send + Sync + 'static,
     V: Send + Sync,
 {
-    #[allow(dead_code)]
     /// Returns a reference to value corresponding to key.
-    pub fn get(&self, key: &EndpointAddress) -> Option<Ref<EndpointAddress, Value<V>>> {
+    pub fn get(&self, key: &K) -> Option<Ref<K, Value<V>>> {
         let value = self.0.inner.get(key);
         if let Some(ref value) = value {
             value.update_expiration(self.0.ttl)
@@ -155,10 +160,19 @@ where
         value
     }
 
-    #[allow(dead_code)]
+    /// Returns a reference to value corresponding to key.
+    pub fn try_get(&self, key: &K) -> TryResult<Ref<K, Value<V>>> {
+        let value = self.0.inner.try_get(key);
+        if let TryResult::Present(ref value) = value {
+            value.update_expiration(self.0.ttl)
+        }
+
+        value
+    }
+
     /// Returns a mutable reference to value corresponding to key.
     /// The value will be reset to expire at the configured TTL after the time of retrieval.
-    pub fn get_mut(&self, key: &EndpointAddress) -> Option<RefMut<EndpointAddress, Value<V>>> {
+    pub fn get_mut(&self, key: &K) -> Option<RefMut<K, Value<V>>> {
         let value = self.0.inner.get_mut(key);
         if let Some(ref value) = value {
             value.update_expiration(self.0.ttl);
@@ -167,34 +181,31 @@ where
         value
     }
 
-    #[allow(dead_code)]
     /// Returns the number of entries in the map.
     /// The value will be reset to expire at the configured TTL after the time of retrieval.
     pub fn len(&self) -> usize {
         self.0.inner.len()
     }
 
-    #[allow(dead_code)]
     /// Returns true if the map contains a value for the specified key.
-    pub fn contains_key(&self, key: &EndpointAddress) -> bool {
+    pub fn contains_key(&self, key: &K) -> bool {
         self.0.inner.contains_key(key)
     }
 
-    #[allow(dead_code)]
     /// Inserts a key-value pair into the map.
     /// The value will be set to expire at the configured TTL after the time of insertion.
     /// If a previous value existed for this key, that value is returned.
-    pub fn insert(&self, key: EndpointAddress, value: V) -> Option<V> {
+    pub fn insert(&self, key: K, value: V) -> Option<V> {
         self.0
             .inner
             .insert(key, Value::new(value, self.0.ttl, self.0.clock.clone()))
             .map(|value| value.value)
     }
 
-    /// Returns an API for in-place updates of the specified key-value pair.
+    /// Returns an entry for in-place updates of the specified key-value pair.
     /// Note: This acquires a write lock on the map's shard that corresponds
     /// to the entry.
-    pub fn entry(&self, key: EndpointAddress) -> Entry<EndpointAddress, Value<V>> {
+    pub fn entry(&self, key: K) -> Entry<K, Value<V>> {
         let ttl = self.0.ttl;
         match self.0.inner.entry(key) {
             inner @ DashMapEntry::Occupied(_) => Entry::Occupied(OccupiedEntry {
@@ -208,6 +219,24 @@ where
                 clock: self.0.clock.clone(),
             }),
         }
+    }
+}
+
+impl<K, V> Clone for TtlMap<K, V> {
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
+    }
+}
+
+impl<K, V> Default for TtlMap<K, V>
+where
+    K: Hash + Eq + Send + Sync + 'static,
+    V: Send + Sync + 'static,
+{
+    fn default() -> Self {
+        const DEFAULT_TIMEOUT_SECONDS: Duration = Duration::from_secs(60);
+        const DEFAULT_EXPIRY_POLL_INTERVAL: Duration = Duration::from_secs(60);
+        Self::new(DEFAULT_TIMEOUT_SECONDS, DEFAULT_EXPIRY_POLL_INTERVAL)
     }
 }
 
@@ -292,12 +321,13 @@ where
     }
 }
 
-fn spawn_cleanup_task<V>(
-    map: Arc<Map<V>>,
+fn spawn_cleanup_task<K, V>(
+    map: Arc<Map<K, V>>,
     poll_interval: Duration,
     clock: Clock,
     mut shutdown_rx: Receiver<()>,
 ) where
+    K: Send + Sync + Hash + Eq + 'static,
     V: Send + Sync + 'static,
 {
     let mut interval = tokio::time::interval(poll_interval);
@@ -316,8 +346,9 @@ fn spawn_cleanup_task<V>(
     });
 }
 
-async fn prune_entries<V>(map: &Arc<Map<V>>, clock: &Clock)
+async fn prune_entries<K, V>(map: &Arc<Map<K, V>>, clock: &Clock)
 where
+    K: Hash + Eq + Send + Sync + 'static,
     V: Send + Sync + 'static,
 {
     let now_secs = if let Ok(now_secs) = clock.now_relative_secs() {
@@ -398,6 +429,7 @@ impl Clock {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::endpoint::EndpointAddress;
     use std::net::Ipv4Addr;
 
     use tokio::time;
@@ -413,7 +445,10 @@ mod tests {
     async fn len() {
         let (one, two) = address_pair();
 
-        let map = TtlMap::<usize>::new(Duration::from_secs(10), Duration::from_millis(10));
+        let map = TtlMap::<EndpointAddress, usize>::new(
+            Duration::from_secs(10),
+            Duration::from_millis(10),
+        );
         map.insert(one, 1);
         assert_eq!(map.len(), 1);
         map.insert(two, 2);
@@ -424,7 +459,10 @@ mod tests {
     async fn insert_and_get() {
         let (one, two) = address_pair();
 
-        let map = TtlMap::<usize>::new(Duration::from_secs(10), Duration::from_millis(10));
+        let map = TtlMap::<EndpointAddress, usize>::new(
+            Duration::from_secs(10),
+            Duration::from_millis(10),
+        );
         map.insert(one.clone(), 1);
         map.insert(two.clone(), 2);
 
@@ -439,7 +477,10 @@ mod tests {
 
         let (one, _) = address_pair();
 
-        let map = TtlMap::<usize>::new(Duration::from_secs(10), Duration::from_millis(10));
+        let map = TtlMap::<EndpointAddress, usize>::new(
+            Duration::from_secs(10),
+            Duration::from_millis(10),
+        );
         map.insert(one.clone(), 1);
 
         let exp1 = map.get(&one).unwrap().expiration_secs();
@@ -461,7 +502,10 @@ mod tests {
         let (one, two) = address_pair();
         let three = ([127, 0, 0, 3], 8080).into();
 
-        let map = TtlMap::<usize>::new(Duration::from_secs(10), Duration::from_millis(10));
+        let map = TtlMap::<EndpointAddress, usize>::new(
+            Duration::from_secs(10),
+            Duration::from_millis(10),
+        );
         map.insert(one.clone(), 1);
         map.insert(two.clone(), 2);
 
@@ -474,7 +518,10 @@ mod tests {
     async fn entry_occupied_insert_and_get() {
         let (one, _) = address_pair();
 
-        let map = TtlMap::<usize>::new(Duration::from_secs(10), Duration::from_millis(10));
+        let map = TtlMap::<EndpointAddress, usize>::new(
+            Duration::from_secs(10),
+            Duration::from_millis(10),
+        );
         map.insert(one.clone(), 1);
 
         match map.entry(one.clone()) {
@@ -492,7 +539,10 @@ mod tests {
     async fn entry_occupied_get_mut() {
         let (one, _) = address_pair();
 
-        let map = TtlMap::<usize>::new(Duration::from_secs(10), Duration::from_millis(10));
+        let map = TtlMap::<EndpointAddress, usize>::new(
+            Duration::from_secs(10),
+            Duration::from_millis(10),
+        );
         map.insert(one.clone(), 1);
 
         match map.entry(one.clone()) {
@@ -509,7 +559,10 @@ mod tests {
     async fn entry_vacant_insert() {
         let (one, _) = address_pair();
 
-        let map = TtlMap::<usize>::new(Duration::from_secs(10), Duration::from_millis(10));
+        let map = TtlMap::<EndpointAddress, usize>::new(
+            Duration::from_secs(10),
+            Duration::from_millis(10),
+        );
 
         match map.entry(one.clone()) {
             Entry::Vacant(entry) => {
@@ -530,7 +583,10 @@ mod tests {
 
         let (one, _) = address_pair();
 
-        let map = TtlMap::<usize>::new(Duration::from_secs(10), Duration::from_millis(10));
+        let map = TtlMap::<EndpointAddress, usize>::new(
+            Duration::from_secs(10),
+            Duration::from_millis(10),
+        );
         map.insert(one.clone(), 1);
 
         let exp1 = map.get(&one).unwrap().expiration_secs();
@@ -553,7 +609,10 @@ mod tests {
 
         let (one, _) = address_pair();
 
-        let map = TtlMap::<usize>::new(Duration::from_secs(10), Duration::from_millis(10));
+        let map = TtlMap::<EndpointAddress, usize>::new(
+            Duration::from_secs(10),
+            Duration::from_millis(10),
+        );
         map.insert(one.clone(), 1);
 
         let exp1 = map.get(&one).unwrap().expiration_secs();
@@ -576,7 +635,10 @@ mod tests {
 
         let (one, _) = address_pair();
 
-        let map = TtlMap::<usize>::new(Duration::from_secs(10), Duration::from_millis(10));
+        let map = TtlMap::<EndpointAddress, usize>::new(
+            Duration::from_secs(10),
+            Duration::from_millis(10),
+        );
         map.insert(one.clone(), 1);
 
         let exp1 = map.get(&one).unwrap().expiration_secs();
@@ -602,7 +664,10 @@ mod tests {
 
         let (one, _) = address_pair();
 
-        let map = TtlMap::<usize>::new(Duration::from_secs(10), Duration::from_millis(10));
+        let map = TtlMap::<EndpointAddress, usize>::new(
+            Duration::from_secs(10),
+            Duration::from_millis(10),
+        );
 
         let exp1 = match map.entry(one.clone()) {
             Entry::Vacant(entry) => entry.insert(9).expiration_secs(),
@@ -628,7 +693,7 @@ mod tests {
         let (one, _) = address_pair();
 
         let ttl = Duration::from_secs(12);
-        let map = TtlMap::<usize>::new(ttl, Duration::from_millis(10));
+        let map = TtlMap::<EndpointAddress, usize>::new(ttl, Duration::from_millis(10));
 
         let exp = match map.entry(one) {
             Entry::Vacant(entry) => entry.insert(9).expiration_secs(),
@@ -646,7 +711,8 @@ mod tests {
 
         let (one, two) = address_pair();
 
-        let map = TtlMap::<usize>::new(Duration::from_secs(5), Duration::from_secs(1));
+        let map =
+            TtlMap::<EndpointAddress, usize>::new(Duration::from_secs(5), Duration::from_secs(1));
         map.insert(one.clone(), 1);
         map.insert(two.clone(), 2);
 
