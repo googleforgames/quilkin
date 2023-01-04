@@ -471,7 +471,7 @@
 /// flow through the filter untouched.
 </span><span class="kw">pub struct </span>LocalRateLimit {
     <span class="doccomment">/// Tracks rate limiting state per source address.
-    </span>state: TtlMap&lt;Bucket&gt;,
+    </span>state: TtlMap&lt;EndpointAddress, Bucket&gt;,
     <span class="doccomment">/// Filter configuration.
     </span>config: Config,
     <span class="doccomment">/// metrics reporter for this filter.

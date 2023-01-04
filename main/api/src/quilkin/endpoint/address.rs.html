@@ -319,9 +319,6 @@
 <span id="319">319</span>
 <span id="320">320</span>
 <span id="321">321</span>
-<span id="322">322</span>
-<span id="323">323</span>
-<span id="324">324</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -382,7 +379,7 @@
 
     <span class="doccomment">/// Returns the socket address for the endpoint, resolving any DNS entries
     /// if present.
-    </span><span class="kw">pub fn </span>to_socket_addr(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;SocketAddr, ToSocketAddrError&gt; {
+    </span><span class="kw">pub fn </span>to_socket_addr(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; std::io::Result&lt;SocketAddr&gt; {
         <span class="comment">// These unwraps after `to_socket_addr` are guarenteed not to panic as
         // all the types we use provide either one address or error.
         </span><span class="prelude-val">Ok</span>(<span class="kw">if let </span><span class="prelude-val">Some</span>(port) = <span class="self">self</span>.port {
@@ -392,19 +389,16 @@
             }
         } <span class="kw">else </span>{
             <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.host {
-                AddressKind::Ip(<span class="kw">_</span>) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(ToSocketAddrError::NoPort),
+                AddressKind::Ip(<span class="kw">_</span>) =&gt; {
+                    <span class="kw">return </span><span class="prelude-val">Err</span>(std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        <span class="string">&quot;no port provided for IP address&quot;</span>,
+                    ))
+                }
                 AddressKind::Name(name) =&gt; name.to_socket_addrs()<span class="question-mark">?</span>.next().unwrap(),
             }
         })
     }
-}
-
-<span class="attribute">#[derive(Debug, thiserror::Error)]
-</span><span class="kw">pub enum </span>ToSocketAddrError {
-    <span class="attribute">#[error(<span class="string">&quot;no port provided for address&quot;</span>)]
-    </span>NoPort,
-    <span class="attribute">#[error(<span class="string">&quot;not valid address: {0}&quot;</span>)]
-    </span>NotValidAddress(<span class="attribute">#[from] </span>std::io::Error),
 }
 
 <span class="doccomment">/// Forwards the deserialisation to use [`std::net::ToSocketAddrs`] instead of

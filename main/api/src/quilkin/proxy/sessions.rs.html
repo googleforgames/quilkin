@@ -384,146 +384,6 @@
 <span id="384">384</span>
 <span id="385">385</span>
 <span id="386">386</span>
-<span id="387">387</span>
-<span id="388">388</span>
-<span id="389">389</span>
-<span id="390">390</span>
-<span id="391">391</span>
-<span id="392">392</span>
-<span id="393">393</span>
-<span id="394">394</span>
-<span id="395">395</span>
-<span id="396">396</span>
-<span id="397">397</span>
-<span id="398">398</span>
-<span id="399">399</span>
-<span id="400">400</span>
-<span id="401">401</span>
-<span id="402">402</span>
-<span id="403">403</span>
-<span id="404">404</span>
-<span id="405">405</span>
-<span id="406">406</span>
-<span id="407">407</span>
-<span id="408">408</span>
-<span id="409">409</span>
-<span id="410">410</span>
-<span id="411">411</span>
-<span id="412">412</span>
-<span id="413">413</span>
-<span id="414">414</span>
-<span id="415">415</span>
-<span id="416">416</span>
-<span id="417">417</span>
-<span id="418">418</span>
-<span id="419">419</span>
-<span id="420">420</span>
-<span id="421">421</span>
-<span id="422">422</span>
-<span id="423">423</span>
-<span id="424">424</span>
-<span id="425">425</span>
-<span id="426">426</span>
-<span id="427">427</span>
-<span id="428">428</span>
-<span id="429">429</span>
-<span id="430">430</span>
-<span id="431">431</span>
-<span id="432">432</span>
-<span id="433">433</span>
-<span id="434">434</span>
-<span id="435">435</span>
-<span id="436">436</span>
-<span id="437">437</span>
-<span id="438">438</span>
-<span id="439">439</span>
-<span id="440">440</span>
-<span id="441">441</span>
-<span id="442">442</span>
-<span id="443">443</span>
-<span id="444">444</span>
-<span id="445">445</span>
-<span id="446">446</span>
-<span id="447">447</span>
-<span id="448">448</span>
-<span id="449">449</span>
-<span id="450">450</span>
-<span id="451">451</span>
-<span id="452">452</span>
-<span id="453">453</span>
-<span id="454">454</span>
-<span id="455">455</span>
-<span id="456">456</span>
-<span id="457">457</span>
-<span id="458">458</span>
-<span id="459">459</span>
-<span id="460">460</span>
-<span id="461">461</span>
-<span id="462">462</span>
-<span id="463">463</span>
-<span id="464">464</span>
-<span id="465">465</span>
-<span id="466">466</span>
-<span id="467">467</span>
-<span id="468">468</span>
-<span id="469">469</span>
-<span id="470">470</span>
-<span id="471">471</span>
-<span id="472">472</span>
-<span id="473">473</span>
-<span id="474">474</span>
-<span id="475">475</span>
-<span id="476">476</span>
-<span id="477">477</span>
-<span id="478">478</span>
-<span id="479">479</span>
-<span id="480">480</span>
-<span id="481">481</span>
-<span id="482">482</span>
-<span id="483">483</span>
-<span id="484">484</span>
-<span id="485">485</span>
-<span id="486">486</span>
-<span id="487">487</span>
-<span id="488">488</span>
-<span id="489">489</span>
-<span id="490">490</span>
-<span id="491">491</span>
-<span id="492">492</span>
-<span id="493">493</span>
-<span id="494">494</span>
-<span id="495">495</span>
-<span id="496">496</span>
-<span id="497">497</span>
-<span id="498">498</span>
-<span id="499">499</span>
-<span id="500">500</span>
-<span id="501">501</span>
-<span id="502">502</span>
-<span id="503">503</span>
-<span id="504">504</span>
-<span id="505">505</span>
-<span id="506">506</span>
-<span id="507">507</span>
-<span id="508">508</span>
-<span id="509">509</span>
-<span id="510">510</span>
-<span id="511">511</span>
-<span id="512">512</span>
-<span id="513">513</span>
-<span id="514">514</span>
-<span id="515">515</span>
-<span id="516">516</span>
-<span id="517">517</span>
-<span id="518">518</span>
-<span id="519">519</span>
-<span id="520">520</span>
-<span id="521">521</span>
-<span id="522">522</span>
-<span id="523">523</span>
-<span id="524">524</span>
-<span id="525">525</span>
-<span id="526">526</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -540,26 +400,12 @@
  * limitations under the License.
  */
 
-</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>manager;
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>metrics;
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>metrics;
 
-<span class="kw">pub use </span>manager::SESSION_TIMEOUT_SECONDS;
-
-<span class="kw">use </span>std::{
-    sync::{
-        atomic::{AtomicU64, Ordering},
-        Arc,
-    },
-    time::{SystemTime, UNIX_EPOCH},
-};
+<span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use </span>prometheus::HistogramTimer;
-<span class="kw">use </span>tokio::{
-    net::UdpSocket,
-    select,
-    sync::watch,
-    time::{Duration, Instant},
-};
+<span class="kw">use </span>tokio::{net::UdpSocket, select, sync::watch, time::Instant};
 
 <span class="kw">use crate</span>::{
     endpoint::{Endpoint, EndpointAddress},
@@ -567,7 +413,7 @@
     utils::{debug, Loggable},
 };
 
-<span class="kw">type </span><span class="prelude-ty">Result</span>&lt;T&gt; = std::result::Result&lt;T, Error&gt;;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">type </span>SessionMap = <span class="kw">crate</span>::ttl_map::TtlMap&lt;SessionKey, Session&gt;;
 
 <span class="doccomment">/// Session encapsulates a UDP stream session
 </span><span class="kw">pub struct </span>Session {
@@ -580,8 +426,6 @@
     </span>dest: Endpoint,
     <span class="doccomment">/// address of original sender
     </span>source: EndpointAddress,
-    <span class="doccomment">/// The time at which the session is considered expired and can be removed.
-    </span>expiration: Arc&lt;AtomicU64&gt;,
     <span class="doccomment">/// a channel to broadcast on if we are shutting down this Session
     </span>shutdown_tx: watch::Sender&lt;()&gt;,
     <span class="doccomment">/// The ASN information.
@@ -616,13 +460,12 @@
     <span class="kw">pub </span>source: EndpointAddress,
     <span class="kw">pub </span>downstream_socket: Arc&lt;UdpSocket&gt;,
     <span class="kw">pub </span>dest: Endpoint,
-    <span class="kw">pub </span>ttl: Duration,
 }
 
 <span class="kw">impl </span>SessionArgs {
     <span class="doccomment">/// Creates a new Session, and starts the process of receiving udp sockets
     /// from its ephemeral port from endpoint(s)
-    </span><span class="kw">pub async fn </span>into_session(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Session&gt; {
+    </span><span class="kw">pub async fn </span>into_session(<span class="self">self</span>) -&gt; std::io::Result&lt;Session&gt; {
         Session::new(<span class="self">self</span>).<span class="kw">await
     </span>}
 }
@@ -630,22 +473,13 @@
 <span class="kw">impl </span>Session {
     <span class="doccomment">/// internal constructor for a Session from SessionArgs
     </span><span class="attribute">#[tracing::instrument(skip_all)]
-    </span><span class="kw">async fn </span>new(args: SessionArgs) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+    </span><span class="kw">async fn </span>new(args: SessionArgs) -&gt; std::io::Result&lt;<span class="self">Self</span>&gt; {
         <span class="kw">let </span>addr = (std::net::Ipv4Addr::UNSPECIFIED, <span class="number">0</span>);
-        <span class="kw">let </span>upstream_socket = Arc::new(UdpSocket::bind(addr).<span class="kw">await</span>.map_err(Error::BindUdpSocket)<span class="question-mark">?</span>);
+        <span class="kw">let </span>upstream_socket = Arc::new(UdpSocket::bind(addr).<span class="kw">await</span><span class="question-mark">?</span>);
         upstream_socket
-            .connect(
-                args.dest
-                    .address
-                    .to_socket_addr()
-                    .map_err(Error::ToSocketAddr)<span class="question-mark">?</span>,
-            )
-            .<span class="kw">await
-            </span>.map_err(Error::BindUdpSocket)<span class="question-mark">?</span>;
+            .connect(args.dest.address.to_socket_addr()<span class="question-mark">?</span>)
+            .<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="kw">let </span>(shutdown_tx, shutdown_rx) = watch::channel::&lt;()&gt;(());
-
-        <span class="kw">let </span>expiration = Arc::new(AtomicU64::new(<span class="number">0</span>));
-        <span class="self">Self</span>::do_update_expiration(<span class="kw-2">&amp;</span>expiration, args.ttl)<span class="question-mark">?</span>;
 
         <span class="kw">let </span>ip = args.source.to_socket_addr().unwrap().ip();
         <span class="kw">let </span>asn_info = <span class="kw">crate</span>::MaxmindDb::lookup(ip);
@@ -655,7 +489,6 @@
             source: args.source.clone(),
             dest: args.dest,
             created_at: Instant::now(),
-            expiration,
             shutdown_tx,
             asn_info,
         };
@@ -664,20 +497,14 @@
 
         <span class="self">self</span>::metrics::total_sessions().inc();
         s.active_session_metric().inc();
-        s.run(args.ttl, args.downstream_socket, shutdown_rx);
+        s.run(args.downstream_socket, shutdown_rx);
         <span class="prelude-val">Ok</span>(s)
     }
 
     <span class="doccomment">/// run starts processing receiving upstream udp packets
     /// and sending them back downstream
-    </span><span class="kw">fn </span>run(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        ttl: Duration,
-        downstream_socket: Arc&lt;UdpSocket&gt;,
-        <span class="kw-2">mut </span>shutdown_rx: watch::Receiver&lt;()&gt;,
-    ) {
+    </span><span class="kw">fn </span>run(<span class="kw-2">&amp;</span><span class="self">self</span>, downstream_socket: Arc&lt;UdpSocket&gt;, <span class="kw-2">mut </span>shutdown_rx: watch::Receiver&lt;()&gt;) {
         <span class="kw">let </span>source = <span class="self">self</span>.source.clone();
-        <span class="kw">let </span>expiration = <span class="self">self</span>.expiration.clone();
         <span class="kw">let </span>config = <span class="self">self</span>.config.clone();
         <span class="kw">let </span>endpoint = <span class="self">self</span>.dest.clone();
         <span class="kw">let </span>upstream_socket = <span class="self">self</span>.upstream_socket.clone();
@@ -699,8 +526,6 @@
                                 <span class="kw">crate</span>::metrics::packets_total(<span class="kw">crate</span>::metrics::WRITE).inc();
                                 Session::process_recv_packet(
                                     <span class="kw-2">&amp;</span>downstream_socket,
-                                    <span class="kw-2">&amp;</span>expiration,
-                                    ttl,
                                     ReceivedPacketContext {
                                         config: config.clone(),
                                         packet: <span class="kw-2">&amp;</span>buf[..size],
@@ -721,19 +546,6 @@
         });
     }
 
-    <span class="doccomment">/// expiration returns the current expiration Instant value
-    </span><span class="kw">pub fn </span>expiration(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
-        <span class="self">self</span>.expiration.load(Ordering::Relaxed)
-    }
-
-    <span class="doccomment">/// key returns the key to be used for this session in a SessionMap
-    </span><span class="kw">pub fn </span>key(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SessionKey {
-        SessionKey {
-            source: <span class="self">self</span>.source.clone(),
-            dest: <span class="self">self</span>.dest.address.clone(),
-        }
-    }
-
     <span class="kw">fn </span>active_session_metric(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; prometheus::IntGauge {
         <span class="kw">let </span>(asn_number, ip_prefix) = <span class="self">self
             </span>.asn_info
@@ -747,8 +559,6 @@
     <span class="doccomment">/// process_recv_packet processes a packet that is received by this session.
     </span><span class="kw">async fn </span>process_recv_packet(
         downstream_socket: <span class="kw-2">&amp;</span>Arc&lt;UdpSocket&gt;,
-        expiration: <span class="kw-2">&amp;</span>Arc&lt;AtomicU64&gt;,
-        ttl: Duration,
         packet_ctx: ReceivedPacketContext&lt;<span class="lifetime">&#39;_</span>&gt;,
     ) {
         <span class="kw">let </span>ReceivedPacketContext {
@@ -762,21 +572,19 @@
 
         <span class="macro">tracing::trace!</span>(%from, dest = %endpoint.address, contents = %debug::bytes_to_string(packet), <span class="string">&quot;received packet from upstream&quot;</span>);
 
-        <span class="kw">let </span>result = Session::do_update_expiration(expiration, ttl)
-            .and_then(|<span class="kw">_</span>| {
-                <span class="kw">let </span><span class="kw-2">mut </span>context = WriteContext::new(
-                    endpoint.clone(),
-                    from.clone(),
-                    dest.clone(),
-                    packet.to_vec(),
-                );
-                config
-                    .filters
-                    .load()
-                    .write(<span class="kw-2">&amp;mut </span>context)
-                    .ok_or(Error::FilterDroppedPacket)
-                    .map(|<span class="kw">_</span>| context)
-            })
+        <span class="kw">let </span><span class="kw-2">mut </span>context = WriteContext::new(
+            endpoint.clone(),
+            from.clone(),
+            dest.clone(),
+            packet.to_vec(),
+        );
+
+        <span class="kw">let </span>result = config
+            .filters
+            .load()
+            .write(<span class="kw-2">&amp;mut </span>context)
+            .ok_or(Error::FilterDroppedPacket)
+            .map(|<span class="kw">_</span>| context)
             .and_then(|context| {
                 dest.to_socket_addr()
                     .map(|addr| (addr, context))
@@ -809,59 +617,19 @@
         timer.stop_and_record();
     }
 
-    <span class="doccomment">/// update_expiration set the increments the expiration value by the session timeout
-    </span><span class="kw">pub fn </span>update_expiration(<span class="kw-2">&amp;</span><span class="self">self</span>, ttl: Duration) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-        <span class="self">Self</span>::do_update_expiration(<span class="kw-2">&amp;</span><span class="self">self</span>.expiration, ttl)
-    }
-
-    <span class="doccomment">/// do_update_expiration increments the expiration value by the session timeout (internal)
-    </span><span class="kw">fn </span>do_update_expiration(expiration: <span class="kw-2">&amp;</span>Arc&lt;AtomicU64&gt;, ttl: Duration) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-        <span class="kw">let </span>now = SystemTime::now();
-        <span class="kw">let </span>new_expiration_time = now
-            .checked_add(ttl)
-            .ok_or(Error::UpdateSessionExpiration { now, ttl })<span class="question-mark">?
-            </span>.duration_since(UNIX_EPOCH)
-            <span class="comment">// This is safe because it&#39;s impossible for `UNIX_EPOCH` to be
-            // ahead of any clock time, or the system we&#39;re on is so severely
-            // broken that the expiration code isn&#39;t going to work anyway.
-            </span>.unwrap();
-
-        expiration.store(new_expiration_time.as_secs(), Ordering::Relaxed);
-
-        <span class="prelude-val">Ok</span>(())
-    }
-
     <span class="doccomment">/// Sends a packet to the Session&#39;s dest.
-    </span><span class="kw">pub async fn </span>send(<span class="kw-2">&amp;</span><span class="self">self</span>, buf: <span class="kw-2">&amp;</span>[u8], ttl: Duration) {
+    </span><span class="kw">pub fn </span>send&lt;<span class="lifetime">&#39;buf</span>&gt;(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        buf: <span class="kw-2">&amp;</span><span class="lifetime">&#39;buf </span>[u8],
+    ) -&gt; <span class="kw">impl </span>std::future::Future&lt;Output = std::io::Result&lt;usize&gt;&gt; + <span class="lifetime">&#39;buf </span>{
         <span class="macro">tracing::trace!</span>(
         dest_address = %<span class="self">self</span>.dest.address,
         contents = %debug::bytes_to_string(buf),
         <span class="string">&quot;sending packet upstream&quot;</span>);
 
-        <span class="kw">match </span><span class="self">self</span>.do_send(buf).<span class="kw">await </span>{
-            <span class="prelude-val">Ok</span>(size) =&gt; {
-                <span class="kw">crate</span>::metrics::packets_total(<span class="kw">crate</span>::metrics::READ).inc();
-                <span class="kw">crate</span>::metrics::bytes_total(<span class="kw">crate</span>::metrics::READ).inc_by(size <span class="kw">as </span>u64);
-            }
-            <span class="prelude-val">Err</span>(error) =&gt; {
-                <span class="kw">crate</span>::metrics::packets_dropped_total(<span class="kw">crate</span>::metrics::READ, <span class="string">&quot;proxy::Session::send&quot;</span>)
-                    .inc();
-                <span class="kw">crate</span>::metrics::errors_total(<span class="kw">crate</span>::metrics::READ).inc();
-                <span class="macro">tracing::error!</span>(kind=%error.kind(), <span class="string">&quot;{}&quot;</span>, error);
-                <span class="kw">return</span>;
-            }
-        }
-
-        <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = <span class="self">self</span>.update_expiration(ttl) {
-            <span class="macro">tracing::warn!</span>(%error, <span class="string">&quot;Error updating session expiration&quot;</span>)
-        }
+        <span class="kw">let </span>socket = <span class="self">self</span>.upstream_socket.clone();
+        <span class="kw">async move </span>{ socket.send(buf).<span class="kw">await </span>}
     }
-
-    <span class="doccomment">/// Sends `buf` to the session&#39;s destination address. On success, returns
-    /// the number of bytes written.
-    </span><span class="kw">pub async fn </span>do_send(<span class="kw-2">&amp;</span><span class="self">self</span>, buf: <span class="kw-2">&amp;</span>[u8]) -&gt; std::io::Result&lt;usize&gt; {
-        <span class="self">self</span>.upstream_socket.send(buf).<span class="kw">await
-    </span>}
 }
 
 <span class="kw">impl </span>Drop <span class="kw">for </span>Session {
@@ -879,15 +647,8 @@
 
 <span class="attribute">#[derive(Debug, thiserror::Error)]
 </span><span class="kw">pub enum </span>Error {
-    <span class="attribute">#[error(<span class="string">&quot;failed to bind socket: {0}&quot;</span>)]
-    </span>BindUdpSocket(std::io::Error),
-    <span class="attribute">#[error(<span class="string">&quot;{} + {}s would have caused overflow&quot;</span>, chrono::DateTime::&lt;chrono::Utc&gt;::from(<span class="kw-2">*</span>.now).to_rfc2822(), .ttl.as_secs())]
-    </span>UpdateSessionExpiration {
-        now: std::time::SystemTime,
-        ttl: std::time::Duration,
-    },
     <span class="attribute">#[error(<span class="string">&quot;failed to convert endpoint to socket address: {0}&quot;</span>)]
-    </span>ToSocketAddr(<span class="kw">crate</span>::endpoint::ToSocketAddrError),
+    </span>ToSocketAddr(std::io::Error),
     <span class="attribute">#[error(<span class="string">&quot;failed to send packet downstream: {0}&quot;</span>)]
     </span>SendTo(std::io::Error),
     <span class="attribute">#[error(<span class="string">&quot;filter dropped packet from upstream&quot;</span>)]
@@ -897,11 +658,8 @@
 <span class="kw">impl </span>Loggable <span class="kw">for </span>Error {
     <span class="kw">fn </span>log(<span class="kw-2">&amp;</span><span class="self">self</span>) {
         <span class="kw">match </span><span class="self">self </span>{
-            <span class="self">Self</span>::BindUdpSocket(error) | <span class="self">Self</span>::SendTo(error) =&gt; {
+            <span class="self">Self</span>::ToSocketAddr(error) | <span class="self">Self</span>::SendTo(error) =&gt; {
                 <span class="macro">tracing::error!</span>(kind=%error.kind(), <span class="string">&quot;{}&quot;</span>, <span class="self">self</span>)
-            }
-            <span class="self">Self</span>::UpdateSessionExpiration { .. } | <span class="self">Self</span>::ToSocketAddr(<span class="kw">_</span>) =&gt; {
-                <span class="macro">tracing::error!</span>(<span class="string">&quot;{}&quot;</span>, <span class="self">self</span>)
             }
             <span class="self">Self</span>::FilterDroppedPacket =&gt; {
                 <span class="macro">tracing::trace!</span>(<span class="string">&quot;{}&quot;</span>, <span class="self">self</span>)
@@ -912,14 +670,7 @@
 
 <span class="attribute">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
-    <span class="kw">use </span>std::{
-        str::from_utf8,
-        sync::{
-            atomic::{AtomicU64, Ordering},
-            Arc,
-        },
-        time::{Duration, SystemTime, UNIX_EPOCH},
-    };
+    <span class="kw">use </span>std::{str::from_utf8, sync::Arc, time::Duration};
 
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
 
@@ -939,27 +690,17 @@
         <span class="kw">let </span>endpoint = Endpoint::new(addr.clone());
         <span class="kw">let </span>socket = Arc::new(create_socket().<span class="kw">await</span>);
         <span class="kw">let </span>msg = <span class="string">&quot;hello&quot;</span>;
-        <span class="kw">let </span>ttl = Duration::from_secs(<span class="number">20</span>);
 
         <span class="kw">let </span>sess = Session::new(SessionArgs {
             config: &lt;<span class="kw">_</span>&gt;::default(),
             source: addr.clone(),
             downstream_socket: socket.clone(),
             dest: endpoint,
-            ttl,
         })
         .<span class="kw">await
         </span>.unwrap();
 
-        <span class="kw">let </span>initial_expiration_secs = sess.expiration.load(Ordering::Relaxed);
-        <span class="kw">let </span>now_secs = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
-        <span class="kw">let </span>diff = initial_expiration_secs - now_secs;
-        <span class="macro">assert!</span>((<span class="number">15</span>..<span class="number">21</span>).contains(<span class="kw-2">&amp;</span>diff));
-
-        sess.send(msg.as_bytes(), ttl).<span class="kw">await</span>;
+        sess.send(msg.as_bytes()).<span class="kw">await</span>.unwrap();
 
         <span class="kw">let </span><span class="kw-2">mut </span>buf = <span class="macro">vec!</span>[<span class="number">0</span>; <span class="number">1024</span>];
         <span class="kw">let </span>(size, recv_addr) = timeout(Duration::from_secs(<span class="number">5</span>), socket.recv_from(<span class="kw-2">&amp;mut </span>buf))
@@ -979,20 +720,11 @@
         <span class="kw">let </span>socket = Arc::new(create_socket().<span class="kw">await</span>);
         <span class="kw">let </span>endpoint = Endpoint::new(<span class="string">&quot;127.0.1.1:80&quot;</span>.parse().unwrap());
         <span class="kw">let </span>dest: EndpointAddress = socket.local_addr().unwrap().into();
-        <span class="kw">let </span>expiration = Arc::new(AtomicU64::new(
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_secs(),
-        ));
-        <span class="kw">let </span>initial_expiration = expiration.load(Ordering::Relaxed);
 
         <span class="comment">// first test with no filtering
         </span><span class="kw">let </span>msg = <span class="string">&quot;hello&quot;</span>;
         Session::process_recv_packet(
             <span class="kw-2">&amp;</span>socket,
-            <span class="kw-2">&amp;</span>expiration,
-            Duration::from_secs(<span class="number">10</span>),
             ReceivedPacketContext {
                 config: &lt;<span class="kw">_</span>&gt;::default(),
                 packet: msg.as_bytes(),
@@ -1004,8 +736,6 @@
         )
         .<span class="kw">await</span>;
 
-        <span class="macro">assert!</span>(initial_expiration &lt; expiration.load(Ordering::Relaxed));
-
         <span class="kw">let </span><span class="kw-2">mut </span>buf = <span class="macro">vec!</span>[<span class="number">0</span>; <span class="number">1024</span>];
         <span class="kw">let </span>(size, recv_addr) = timeout(Duration::from_secs(<span class="number">5</span>), socket.recv_from(<span class="kw-2">&amp;mut </span>buf))
             .<span class="kw">await
@@ -1014,19 +744,10 @@
         <span class="macro">assert_eq!</span>(msg, from_utf8(<span class="kw-2">&amp;</span>buf[..size]).unwrap());
         <span class="macro">assert_eq!</span>(dest.port(), recv_addr.port());
 
-        <span class="kw">let </span>expiration = Arc::new(AtomicU64::new(
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_secs(),
-        ));
-        <span class="kw">let </span>initial_expiration = expiration.load(Ordering::Relaxed);
         <span class="comment">// add filter
         </span><span class="kw">let </span>config = Arc::new(new_test_config());
         Session::process_recv_packet(
             <span class="kw-2">&amp;</span>socket,
-            <span class="kw-2">&amp;</span>expiration,
-            Duration::from_secs(<span class="number">10</span>),
             ReceivedPacketContext {
                 config,
                 packet: msg.as_bytes(),
@@ -1038,7 +759,6 @@
         )
         .<span class="kw">await</span>;
 
-        <span class="macro">assert!</span>(initial_expiration &lt; expiration.load(Ordering::Relaxed));
         <span class="kw">let </span>(size, recv_addr) = timeout(Duration::from_secs(<span class="number">5</span>), socket.recv_from(<span class="kw-2">&amp;mut </span>buf))
             .<span class="kw">await
             </span>.expect(<span class="string">&quot;Should receive a packet&quot;</span>)
