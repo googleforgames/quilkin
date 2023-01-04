@@ -16,7 +16,7 @@
 
 mod sessions;
 
-pub use sessions::SessionKey;
+pub use sessions::{Session, SessionArgs, SessionKey};
 
 use std::{
     net::{Ipv4Addr, SocketAddrV4},
@@ -29,7 +29,8 @@ use tokio::{net::UdpSocket, sync::watch, time::Duration};
 use crate::{
     endpoint::{Endpoint, EndpointAddress},
     filters::{Filter, ReadContext},
-    proxy::sessions::{manager::SessionManager, SessionArgs, SESSION_TIMEOUT_SECONDS},
+    proxy::sessions::SessionMap,
+    ttl_map::TryResult,
     utils::{debug, net},
     xds::ResourceType,
     Config, Result,
@@ -58,8 +59,7 @@ impl TryFrom<Arc<Config>> for Proxy {
 
 /// Represents arguments to the `Proxy::run_recv_from` method.
 struct RunRecvFromArgs {
-    session_manager: SessionManager,
-    session_ttl: Duration,
+    sessions: SessionMap,
     shutdown_rx: watch::Receiver<()>,
 }
 
@@ -78,19 +78,179 @@ struct DownstreamReceiveWorkerConfig {
     worker_id: usize,
     /// Socket with reused port from which the worker receives packets.
     socket: Arc<UdpSocket>,
-    /// Configuration required to process a received downstream packet.
-    receive_config: ProcessDownstreamReceiveConfig,
+    config: Arc<Config>,
+    sessions: SessionMap,
     /// The worker task exits when a value is received from this shutdown channel.
     shutdown_rx: watch::Receiver<()>,
 }
 
-/// Contains arguments to process a received downstream packet, through the
-/// filter chain and session pipeline.
-struct ProcessDownstreamReceiveConfig {
-    config: Arc<Config>,
-    session_manager: SessionManager,
-    session_ttl: Duration,
-    socket: Arc<UdpSocket>,
+impl DownstreamReceiveWorkerConfig {
+    fn spawn(self) {
+        let Self {
+            worker_id,
+            socket,
+            config,
+            sessions,
+            mut shutdown_rx,
+        } = self;
+
+        tokio::spawn(async move {
+            // Initialize a buffer for the UDP packet. We use the maximum size of a UDP
+            // packet, which is the maximum value of 16 a bit integer.
+            let mut buf = vec![0; 1 << 16];
+            loop {
+                tracing::debug!(
+                    id = worker_id,
+                    addr = ?socket.local_addr(),
+                    "Awaiting packet"
+                );
+                tokio::select! {
+                    result = socket.recv_from(&mut buf) => {
+                        match result {
+                            Ok((size, source)) => Self::spawn_process_task(&buf, size, source, worker_id, &socket, &config, &sessions),
+                            Err(error) => {
+                                tracing::error!(%error, "error receiving packet");
+                                return;
+                            }
+                        }
+                    }
+                    _ = shutdown_rx.changed() => {
+                        tracing::debug!(id = worker_id, "Received shutdown signal");
+                        return;
+                    }
+                }
+            }
+        });
+    }
+
+    #[inline]
+    fn spawn_process_task(
+        buf: &[u8],
+        size: usize,
+        source: std::net::SocketAddr,
+        worker_id: usize,
+        socket: &Arc<UdpSocket>,
+        config: &Arc<Config>,
+        sessions: &SessionMap,
+    ) {
+        let timer = crate::metrics::processing_time(crate::metrics::READ).start_timer();
+        let contents = buf[..size].to_vec();
+
+        tracing::trace!(
+            id = worker_id,
+            size = size,
+            source = %source,
+            contents=&*debug::bytes_to_string(&contents),
+            "received packet from downstream"
+        );
+
+        let packet = DownstreamPacket {
+            source: source.into(),
+            contents,
+            timer,
+        };
+        let config = config.clone();
+        let sessions = sessions.clone();
+        let socket = socket.clone();
+
+        tokio::spawn(async move {
+            match Self::process_downstream_received_packet(packet, config, socket, sessions).await {
+                Ok(size) => {
+                    crate::metrics::packets_total(crate::metrics::READ).inc();
+                    crate::metrics::bytes_total(crate::metrics::READ).inc_by(size as u64);
+                }
+                Err(error) => {
+                    crate::metrics::packets_dropped_total(
+                        crate::metrics::READ,
+                        "proxy::Session::send",
+                    )
+                    .inc();
+                    crate::metrics::errors_total(crate::metrics::READ).inc();
+                    tracing::error!(kind=%error.kind(), "{}", error);
+                }
+            }
+        });
+    }
+
+    /// Processes a packet by running it through the filter chain.
+    async fn process_downstream_received_packet(
+        packet: DownstreamPacket,
+        config: Arc<Config>,
+        downstream_socket: Arc<UdpSocket>,
+        sessions: SessionMap,
+    ) -> std::io::Result<usize> {
+        let clusters = config.clusters.load();
+        let endpoints: Vec<_> = clusters.endpoints().collect();
+        if endpoints.is_empty() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "dropping packet, no upstream endpoints available",
+            ));
+        }
+
+        let filters = config.filters.load();
+        let mut context = ReadContext::new(endpoints, packet.source, packet.contents);
+        let result = filters.read(&mut context);
+
+        let mut bytes_written = 0;
+        if let Some(()) = result {
+            for endpoint in context.endpoints.iter() {
+                bytes_written += Self::session_send_packet(
+                    &context.contents,
+                    &context.source,
+                    endpoint,
+                    &downstream_socket,
+                    &config,
+                    &sessions,
+                )
+                .await?;
+            }
+        }
+
+        packet.timer.stop_and_record();
+        Ok(bytes_written)
+    }
+
+    /// Send a packet received from `recv_addr` to an endpoint.
+    #[tracing::instrument(level="trace", skip_all, fields(source = %recv_addr, dest = %endpoint.address))]
+    async fn session_send_packet(
+        packet: &[u8],
+        recv_addr: &EndpointAddress,
+        endpoint: &Endpoint,
+        downstream_socket: &Arc<UdpSocket>,
+        config: &Arc<Config>,
+        sessions: &SessionMap,
+    ) -> std::io::Result<usize> {
+        let session_key = SessionKey {
+            source: recv_addr.clone(),
+            dest: endpoint.address.clone(),
+        };
+
+        let send_future = match sessions.try_get(&session_key) {
+            TryResult::Present(entry) => entry.send(packet),
+            TryResult::Absent => {
+                let session_args = SessionArgs {
+                    config: config.clone(),
+                    source: session_key.source.clone(),
+                    downstream_socket: downstream_socket.clone(),
+                    dest: endpoint.clone(),
+                };
+
+                let session = session_args.into_session().await?;
+                let future = session.send(packet);
+                sessions.insert(session_key, session);
+                future
+            }
+            TryResult::Locked => {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    eyre::eyre!("dropping packet as the session shard is currently locked"),
+                ));
+            }
+        };
+
+        send_future.await
+    }
 }
 
 impl Proxy {
@@ -102,14 +262,15 @@ impl Proxy {
     /// start the async processing of incoming UDP packets. Will block until an
     /// event is sent through the stop Receiver.
     pub async fn run(self, mut shutdown_rx: watch::Receiver<()>) -> Result<()> {
+        const SESSION_TIMEOUT_SECONDS: Duration = Duration::from_secs(60);
+        const SESSION_EXPIRY_POLL_INTERVAL: Duration = Duration::from_secs(60);
         tracing::info!(
             port = *self.config.port.load(),
             proxy_id = &*self.config.id.load(),
             "Starting"
         );
 
-        let session_manager = SessionManager::new(shutdown_rx.clone());
-        let session_ttl = Duration::from_secs(SESSION_TIMEOUT_SECONDS);
+        let sessions = SessionMap::new(SESSION_TIMEOUT_SECONDS, SESSION_EXPIRY_POLL_INTERVAL);
 
         let management_servers = self.config.management_servers.load();
         let _xds_stream = if !management_servers.is_empty() {
@@ -126,8 +287,7 @@ impl Proxy {
         };
 
         self.run_recv_from(RunRecvFromArgs {
-            session_manager,
-            session_ttl,
+            sessions,
             shutdown_rx: shutdown_rx.clone(),
         })
         .await?;
@@ -144,194 +304,37 @@ impl Proxy {
     /// This function also spawns the set of worker tasks responsible for consuming packets
     /// off the aforementioned queue and processing them through the filter chain and session
     /// pipeline.
-    async fn run_recv_from(&self, args: RunRecvFromArgs) -> Result<()> {
-        let session_manager = args.session_manager;
-
+    async fn run_recv_from(
+        &self,
+        RunRecvFromArgs {
+            sessions,
+            shutdown_rx,
+        }: RunRecvFromArgs,
+    ) -> Result<()> {
         // The number of worker tasks to spawn. Each task gets a dedicated queue to
         // consume packets off.
         let num_workers = num_cpus::get();
 
         // Contains config for each worker task.
-        let mut worker_configs = vec![];
+        let mut workers = Vec::with_capacity(num_workers);
         for worker_id in 0..num_workers {
             let socket = Arc::new(self.bind(*self.config.port.load())?);
-            worker_configs.push(DownstreamReceiveWorkerConfig {
+            workers.push(DownstreamReceiveWorkerConfig {
                 worker_id,
                 socket: socket.clone(),
-                shutdown_rx: args.shutdown_rx.clone(),
-                receive_config: ProcessDownstreamReceiveConfig {
-                    config: self.config.clone(),
-                    session_manager: session_manager.clone(),
-                    session_ttl: args.session_ttl,
-                    socket,
-                },
+                shutdown_rx: shutdown_rx.clone(),
+                config: self.config.clone(),
+                sessions: sessions.clone(),
             })
         }
 
         // Start the worker tasks that pick up received packets from their queue
         // and processes them.
-        Self::spawn_downstream_receive_workers(worker_configs);
+        for worker in workers {
+            worker.spawn();
+        }
+
         Ok(())
-    }
-
-    /// For each worker config provided, spawn a background task that sits in a
-    /// loop, receiving packets from a socket and processing them through
-    /// the filter chain.
-    fn spawn_downstream_receive_workers(worker_configs: Vec<DownstreamReceiveWorkerConfig>) {
-        for DownstreamReceiveWorkerConfig {
-            worker_id,
-            socket,
-            mut shutdown_rx,
-            receive_config,
-        } in worker_configs
-        {
-            tokio::spawn(async move {
-                // Initialize a buffer for the UDP packet. We use the maximum size of a UDP
-                // packet, which is the maximum value of 16 a bit integer.
-                let mut buf = vec![0; 1 << 16];
-                loop {
-                    tracing::debug!(
-                        id = worker_id,
-                        addr = ?socket.local_addr(),
-                        "Awaiting packet"
-                    );
-                    tokio::select! {
-                        recv = socket.recv_from(&mut buf) => {
-                            let timer = crate::metrics::processing_time(crate::metrics::READ).start_timer();
-                            match recv {
-                                Ok((size, source)) => {
-                                    let contents = buf[..size].to_vec();
-                                    tracing::trace!(id = worker_id, size = size, source = %source, contents=&*debug::bytes_to_string(&contents), "received packet from downstream");
-                                    let packet = DownstreamPacket {
-                                        source: source.into(),
-                                        contents,
-                                        timer,
-                                    };
-                                    Self::process_downstream_received_packet(packet, &receive_config).await
-                                },
-                                Err(error) => {
-                                    tracing::error!(%error);
-                                    return;
-                                }
-                            }
-                        }
-                        _ = shutdown_rx.changed() => {
-                            tracing::debug!(id = worker_id, "Received shutdown signal");
-                            return;
-                        }
-                    }
-                }
-            });
-        }
-    }
-
-    /// Processes a packet by running it through the filter chain.
-    async fn process_downstream_received_packet(
-        packet: DownstreamPacket,
-        args: &ProcessDownstreamReceiveConfig,
-    ) {
-        let clusters = args.config.clusters.load();
-        let endpoints: Vec<_> = clusters.endpoints().collect();
-        if endpoints.is_empty() {
-            tracing::trace!("dropping packet, no upstream endpoints available");
-            crate::metrics::packets_dropped_total(crate::metrics::READ, "NoEndpointsAvailable")
-                .inc();
-            return;
-        }
-
-        let filters = args.config.filters.load();
-        let mut context = ReadContext::new(endpoints, packet.source, packet.contents);
-        let result = filters.read(&mut context);
-
-        if let Some(()) = result {
-            for endpoint in context.endpoints.iter() {
-                Self::session_send_packet(
-                    &context.contents,
-                    context.source.clone(),
-                    endpoint,
-                    args,
-                )
-                .await;
-            }
-        }
-
-        packet.timer.stop_and_record();
-    }
-
-    /// Send a packet received from `recv_addr` to an endpoint.
-    #[tracing::instrument(level="trace", skip_all, fields(source = %recv_addr, dest = %endpoint.address))]
-    async fn session_send_packet(
-        packet: &[u8],
-        recv_addr: EndpointAddress,
-        endpoint: &Endpoint,
-        args: &ProcessDownstreamReceiveConfig,
-    ) {
-        let session_key = SessionKey {
-            source: recv_addr,
-            dest: endpoint.address.clone(),
-        };
-
-        // Grab a read lock and find the session.
-        let guard = args.session_manager.get_sessions().await;
-        if let Some(session) = guard.get(&session_key) {
-            // If it exists then send the packet, we're done.
-            session.send(packet, args.session_ttl).await
-        } else {
-            // If it does not exist, grab a write lock so that we can create it.
-            //
-            // NOTE: We must drop the lock guard to release the lock before
-            // trying to acquire a write lock since these lock aren't reentrant,
-            // otherwise we will deadlock with our self.
-            drop(guard);
-
-            // Grab a write lock.
-            let mut guard = args.session_manager.get_sessions_mut().await;
-
-            // Although we have the write lock now, check whether some other thread
-            // managed to create the session in-between our dropping the read
-            // lock and grabbing the write lock.
-            if let Some(session) = guard.get(&session_key) {
-                tracing::trace!("Reusing previous session");
-                // If the session now exists then we have less work to do,
-                // simply send the packet.
-                session.send(packet, args.session_ttl).await;
-            } else {
-                tracing::trace!("Creating new session");
-                // Otherwise, create the session and insert into the map.
-                let session_args = SessionArgs {
-                    config: args.config.clone(),
-                    source: session_key.source.clone(),
-                    downstream_socket: args.socket.clone(),
-                    dest: endpoint.clone(),
-                    ttl: args.session_ttl,
-                };
-                match session_args.into_session().await {
-                    Ok(session) => {
-                        // Insert the session into the map and release the write lock
-                        // immediately since we don't want to block other threads while we send
-                        // the packet. Instead, re-acquire a read lock and send the packet.
-                        guard.insert(session.key(), session);
-
-                        // Release the write lock.
-                        drop(guard);
-
-                        // Grab a read lock to send the packet.
-                        let guard = args.session_manager.get_sessions().await;
-                        if let Some(session) = guard.get(&session_key) {
-                            session.send(packet, args.session_ttl).await;
-                        } else {
-                            tracing::warn!(
-                                key = %format!("({}:{})", session_key.source, session_key.dest),
-                                "Could not find session"
-                            )
-                        }
-                    }
-                    Err(error) => {
-                        tracing::error!(%error, "Failed to ensure session exists");
-                    }
-                }
-            }
-        }
     }
 
     /// binds the local configured port with port and address reuse applied.
@@ -471,24 +474,19 @@ mod tests {
         let msg = "hello";
 
         // we'll test a single DownstreamReceiveWorkerConfig
-        let config = DownstreamReceiveWorkerConfig {
+        DownstreamReceiveWorkerConfig {
             worker_id: 1,
             socket: socket.clone(),
-            receive_config: ProcessDownstreamReceiveConfig {
-                config: Arc::new(
-                    Config::builder()
-                        .endpoints(&[endpoint.socket.local_addr().unwrap().into()][..])
-                        .build()
-                        .unwrap(),
-                ),
-                session_manager: SessionManager::new(shutdown_rx.clone()),
-                session_ttl: Duration::from_secs(10),
-                socket,
-            },
+            config: Arc::new(
+                Config::builder()
+                    .endpoints(&[endpoint.socket.local_addr().unwrap().into()][..])
+                    .build()
+                    .unwrap(),
+            ),
+            sessions: <_>::default(),
             shutdown_rx,
-        };
-
-        Proxy::spawn_downstream_receive_workers(vec![config]);
+        }
+        .spawn();
 
         let socket = create_socket().await;
         socket.send_to(msg.as_bytes(), &addr).await.unwrap();
@@ -509,7 +507,6 @@ mod tests {
 
         let msg = "hello";
         let endpoint = t.open_socket_and_recv_single_packet().await;
-        let session_manager = SessionManager::new(shutdown_rx.clone());
         let local_addr = available_addr().await;
         let config = Config::builder()
             .port(local_addr.port())
@@ -520,8 +517,7 @@ mod tests {
 
         server
             .run_recv_from(RunRecvFromArgs {
-                session_manager: session_manager.clone(),
-                session_ttl: Duration::from_secs(10),
+                sessions: <_>::default(),
                 shutdown_rx,
             })
             .await

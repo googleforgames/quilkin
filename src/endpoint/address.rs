@@ -58,7 +58,7 @@ impl EndpointAddress {
 
     /// Returns the socket address for the endpoint, resolving any DNS entries
     /// if present.
-    pub fn to_socket_addr(&self) -> Result<SocketAddr, ToSocketAddrError> {
+    pub fn to_socket_addr(&self) -> std::io::Result<SocketAddr> {
         // These unwraps after `to_socket_addr` are guarenteed not to panic as
         // all the types we use provide either one address or error.
         Ok(if let Some(port) = self.port {
@@ -68,19 +68,16 @@ impl EndpointAddress {
             }
         } else {
             match &self.host {
-                AddressKind::Ip(_) => return Err(ToSocketAddrError::NoPort),
+                AddressKind::Ip(_) => {
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        "no port provided for IP address",
+                    ))
+                }
                 AddressKind::Name(name) => name.to_socket_addrs()?.next().unwrap(),
             }
         })
     }
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum ToSocketAddrError {
-    #[error("no port provided for address")]
-    NoPort,
-    #[error("not valid address: {0}")]
-    NotValidAddress(#[from] std::io::Error),
 }
 
 /// Forwards the deserialisation to use [`std::net::ToSocketAddrs`] instead of

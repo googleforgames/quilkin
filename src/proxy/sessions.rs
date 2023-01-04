@@ -14,26 +14,12 @@
  * limitations under the License.
  */
 
-pub(crate) mod manager;
 pub(crate) mod metrics;
 
-pub use manager::SESSION_TIMEOUT_SECONDS;
-
-use std::{
-    sync::{
-        atomic::{AtomicU64, Ordering},
-        Arc,
-    },
-    time::{SystemTime, UNIX_EPOCH},
-};
+use std::sync::Arc;
 
 use prometheus::HistogramTimer;
-use tokio::{
-    net::UdpSocket,
-    select,
-    sync::watch,
-    time::{Duration, Instant},
-};
+use tokio::{net::UdpSocket, select, sync::watch, time::Instant};
 
 use crate::{
     endpoint::{Endpoint, EndpointAddress},
@@ -41,7 +27,7 @@ use crate::{
     utils::{debug, Loggable},
 };
 
-type Result<T> = std::result::Result<T, Error>;
+pub(crate) type SessionMap = crate::ttl_map::TtlMap<SessionKey, Session>;
 
 /// Session encapsulates a UDP stream session
 pub struct Session {
@@ -54,8 +40,6 @@ pub struct Session {
     dest: Endpoint,
     /// address of original sender
     source: EndpointAddress,
-    /// The time at which the session is considered expired and can be removed.
-    expiration: Arc<AtomicU64>,
     /// a channel to broadcast on if we are shutting down this Session
     shutdown_tx: watch::Sender<()>,
     /// The ASN information.
@@ -90,13 +74,12 @@ pub struct SessionArgs {
     pub source: EndpointAddress,
     pub downstream_socket: Arc<UdpSocket>,
     pub dest: Endpoint,
-    pub ttl: Duration,
 }
 
 impl SessionArgs {
     /// Creates a new Session, and starts the process of receiving udp sockets
     /// from its ephemeral port from endpoint(s)
-    pub async fn into_session(self) -> Result<Session> {
+    pub async fn into_session(self) -> std::io::Result<Session> {
         Session::new(self).await
     }
 }
@@ -104,22 +87,13 @@ impl SessionArgs {
 impl Session {
     /// internal constructor for a Session from SessionArgs
     #[tracing::instrument(skip_all)]
-    async fn new(args: SessionArgs) -> Result<Self> {
+    async fn new(args: SessionArgs) -> std::io::Result<Self> {
         let addr = (std::net::Ipv4Addr::UNSPECIFIED, 0);
-        let upstream_socket = Arc::new(UdpSocket::bind(addr).await.map_err(Error::BindUdpSocket)?);
+        let upstream_socket = Arc::new(UdpSocket::bind(addr).await?);
         upstream_socket
-            .connect(
-                args.dest
-                    .address
-                    .to_socket_addr()
-                    .map_err(Error::ToSocketAddr)?,
-            )
-            .await
-            .map_err(Error::BindUdpSocket)?;
+            .connect(args.dest.address.to_socket_addr()?)
+            .await?;
         let (shutdown_tx, shutdown_rx) = watch::channel::<()>(());
-
-        let expiration = Arc::new(AtomicU64::new(0));
-        Self::do_update_expiration(&expiration, args.ttl)?;
 
         let ip = args.source.to_socket_addr().unwrap().ip();
         let asn_info = crate::MaxmindDb::lookup(ip);
@@ -129,7 +103,6 @@ impl Session {
             source: args.source.clone(),
             dest: args.dest,
             created_at: Instant::now(),
-            expiration,
             shutdown_tx,
             asn_info,
         };
@@ -138,20 +111,14 @@ impl Session {
 
         self::metrics::total_sessions().inc();
         s.active_session_metric().inc();
-        s.run(args.ttl, args.downstream_socket, shutdown_rx);
+        s.run(args.downstream_socket, shutdown_rx);
         Ok(s)
     }
 
     /// run starts processing receiving upstream udp packets
     /// and sending them back downstream
-    fn run(
-        &self,
-        ttl: Duration,
-        downstream_socket: Arc<UdpSocket>,
-        mut shutdown_rx: watch::Receiver<()>,
-    ) {
+    fn run(&self, downstream_socket: Arc<UdpSocket>, mut shutdown_rx: watch::Receiver<()>) {
         let source = self.source.clone();
-        let expiration = self.expiration.clone();
         let config = self.config.clone();
         let endpoint = self.dest.clone();
         let upstream_socket = self.upstream_socket.clone();
@@ -173,8 +140,6 @@ impl Session {
                                 crate::metrics::packets_total(crate::metrics::WRITE).inc();
                                 Session::process_recv_packet(
                                     &downstream_socket,
-                                    &expiration,
-                                    ttl,
                                     ReceivedPacketContext {
                                         config: config.clone(),
                                         packet: &buf[..size],
@@ -195,19 +160,6 @@ impl Session {
         });
     }
 
-    /// expiration returns the current expiration Instant value
-    pub fn expiration(&self) -> u64 {
-        self.expiration.load(Ordering::Relaxed)
-    }
-
-    /// key returns the key to be used for this session in a SessionMap
-    pub fn key(&self) -> SessionKey {
-        SessionKey {
-            source: self.source.clone(),
-            dest: self.dest.address.clone(),
-        }
-    }
-
     fn active_session_metric(&self) -> prometheus::IntGauge {
         let (asn_number, ip_prefix) = self
             .asn_info
@@ -221,8 +173,6 @@ impl Session {
     /// process_recv_packet processes a packet that is received by this session.
     async fn process_recv_packet(
         downstream_socket: &Arc<UdpSocket>,
-        expiration: &Arc<AtomicU64>,
-        ttl: Duration,
         packet_ctx: ReceivedPacketContext<'_>,
     ) {
         let ReceivedPacketContext {
@@ -236,21 +186,19 @@ impl Session {
 
         tracing::trace!(%from, dest = %endpoint.address, contents = %debug::bytes_to_string(packet), "received packet from upstream");
 
-        let result = Session::do_update_expiration(expiration, ttl)
-            .and_then(|_| {
-                let mut context = WriteContext::new(
-                    endpoint.clone(),
-                    from.clone(),
-                    dest.clone(),
-                    packet.to_vec(),
-                );
-                config
-                    .filters
-                    .load()
-                    .write(&mut context)
-                    .ok_or(Error::FilterDroppedPacket)
-                    .map(|_| context)
-            })
+        let mut context = WriteContext::new(
+            endpoint.clone(),
+            from.clone(),
+            dest.clone(),
+            packet.to_vec(),
+        );
+
+        let result = config
+            .filters
+            .load()
+            .write(&mut context)
+            .ok_or(Error::FilterDroppedPacket)
+            .map(|_| context)
             .and_then(|context| {
                 dest.to_socket_addr()
                     .map(|addr| (addr, context))
@@ -283,58 +231,18 @@ impl Session {
         timer.stop_and_record();
     }
 
-    /// update_expiration set the increments the expiration value by the session timeout
-    pub fn update_expiration(&self, ttl: Duration) -> Result<()> {
-        Self::do_update_expiration(&self.expiration, ttl)
-    }
-
-    /// do_update_expiration increments the expiration value by the session timeout (internal)
-    fn do_update_expiration(expiration: &Arc<AtomicU64>, ttl: Duration) -> Result<()> {
-        let now = SystemTime::now();
-        let new_expiration_time = now
-            .checked_add(ttl)
-            .ok_or(Error::UpdateSessionExpiration { now, ttl })?
-            .duration_since(UNIX_EPOCH)
-            // This is safe because it's impossible for `UNIX_EPOCH` to be
-            // ahead of any clock time, or the system we're on is so severely
-            // broken that the expiration code isn't going to work anyway.
-            .unwrap();
-
-        expiration.store(new_expiration_time.as_secs(), Ordering::Relaxed);
-
-        Ok(())
-    }
-
     /// Sends a packet to the Session's dest.
-    pub async fn send(&self, buf: &[u8], ttl: Duration) {
+    pub fn send<'buf>(
+        &self,
+        buf: &'buf [u8],
+    ) -> impl std::future::Future<Output = std::io::Result<usize>> + 'buf {
         tracing::trace!(
         dest_address = %self.dest.address,
         contents = %debug::bytes_to_string(buf),
         "sending packet upstream");
 
-        match self.do_send(buf).await {
-            Ok(size) => {
-                crate::metrics::packets_total(crate::metrics::READ).inc();
-                crate::metrics::bytes_total(crate::metrics::READ).inc_by(size as u64);
-            }
-            Err(error) => {
-                crate::metrics::packets_dropped_total(crate::metrics::READ, "proxy::Session::send")
-                    .inc();
-                crate::metrics::errors_total(crate::metrics::READ).inc();
-                tracing::error!(kind=%error.kind(), "{}", error);
-                return;
-            }
-        }
-
-        if let Err(error) = self.update_expiration(ttl) {
-            tracing::warn!(%error, "Error updating session expiration")
-        }
-    }
-
-    /// Sends `buf` to the session's destination address. On success, returns
-    /// the number of bytes written.
-    pub async fn do_send(&self, buf: &[u8]) -> std::io::Result<usize> {
-        self.upstream_socket.send(buf).await
+        let socket = self.upstream_socket.clone();
+        async move { socket.send(buf).await }
     }
 }
 
@@ -353,15 +261,8 @@ impl Drop for Session {
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("failed to bind socket: {0}")]
-    BindUdpSocket(std::io::Error),
-    #[error("{} + {}s would have caused overflow", chrono::DateTime::<chrono::Utc>::from(*.now).to_rfc2822(), .ttl.as_secs())]
-    UpdateSessionExpiration {
-        now: std::time::SystemTime,
-        ttl: std::time::Duration,
-    },
     #[error("failed to convert endpoint to socket address: {0}")]
-    ToSocketAddr(crate::endpoint::ToSocketAddrError),
+    ToSocketAddr(std::io::Error),
     #[error("failed to send packet downstream: {0}")]
     SendTo(std::io::Error),
     #[error("filter dropped packet from upstream")]
@@ -371,11 +272,8 @@ pub enum Error {
 impl Loggable for Error {
     fn log(&self) {
         match self {
-            Self::BindUdpSocket(error) | Self::SendTo(error) => {
+            Self::ToSocketAddr(error) | Self::SendTo(error) => {
                 tracing::error!(kind=%error.kind(), "{}", self)
-            }
-            Self::UpdateSessionExpiration { .. } | Self::ToSocketAddr(_) => {
-                tracing::error!("{}", self)
             }
             Self::FilterDroppedPacket => {
                 tracing::trace!("{}", self)
@@ -386,14 +284,7 @@ impl Loggable for Error {
 
 #[cfg(test)]
 mod tests {
-    use std::{
-        str::from_utf8,
-        sync::{
-            atomic::{AtomicU64, Ordering},
-            Arc,
-        },
-        time::{Duration, SystemTime, UNIX_EPOCH},
-    };
+    use std::{str::from_utf8, sync::Arc, time::Duration};
 
     use super::*;
 
@@ -413,27 +304,17 @@ mod tests {
         let endpoint = Endpoint::new(addr.clone());
         let socket = Arc::new(create_socket().await);
         let msg = "hello";
-        let ttl = Duration::from_secs(20);
 
         let sess = Session::new(SessionArgs {
             config: <_>::default(),
             source: addr.clone(),
             downstream_socket: socket.clone(),
             dest: endpoint,
-            ttl,
         })
         .await
         .unwrap();
 
-        let initial_expiration_secs = sess.expiration.load(Ordering::Relaxed);
-        let now_secs = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
-        let diff = initial_expiration_secs - now_secs;
-        assert!((15..21).contains(&diff));
-
-        sess.send(msg.as_bytes(), ttl).await;
+        sess.send(msg.as_bytes()).await.unwrap();
 
         let mut buf = vec![0; 1024];
         let (size, recv_addr) = timeout(Duration::from_secs(5), socket.recv_from(&mut buf))
@@ -453,20 +334,11 @@ mod tests {
         let socket = Arc::new(create_socket().await);
         let endpoint = Endpoint::new("127.0.1.1:80".parse().unwrap());
         let dest: EndpointAddress = socket.local_addr().unwrap().into();
-        let expiration = Arc::new(AtomicU64::new(
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_secs(),
-        ));
-        let initial_expiration = expiration.load(Ordering::Relaxed);
 
         // first test with no filtering
         let msg = "hello";
         Session::process_recv_packet(
             &socket,
-            &expiration,
-            Duration::from_secs(10),
             ReceivedPacketContext {
                 config: <_>::default(),
                 packet: msg.as_bytes(),
@@ -478,8 +350,6 @@ mod tests {
         )
         .await;
 
-        assert!(initial_expiration < expiration.load(Ordering::Relaxed));
-
         let mut buf = vec![0; 1024];
         let (size, recv_addr) = timeout(Duration::from_secs(5), socket.recv_from(&mut buf))
             .await
@@ -488,19 +358,10 @@ mod tests {
         assert_eq!(msg, from_utf8(&buf[..size]).unwrap());
         assert_eq!(dest.port(), recv_addr.port());
 
-        let expiration = Arc::new(AtomicU64::new(
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_secs(),
-        ));
-        let initial_expiration = expiration.load(Ordering::Relaxed);
         // add filter
         let config = Arc::new(new_test_config());
         Session::process_recv_packet(
             &socket,
-            &expiration,
-            Duration::from_secs(10),
             ReceivedPacketContext {
                 config,
                 packet: msg.as_bytes(),
@@ -512,7 +373,6 @@ mod tests {
         )
         .await;
 
-        assert!(initial_expiration < expiration.load(Ordering::Relaxed));
         let (size, recv_addr) = timeout(Duration::from_secs(5), socket.recv_from(&mut buf))
             .await
             .expect("Should receive a packet")
