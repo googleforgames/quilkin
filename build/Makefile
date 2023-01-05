@@ -27,12 +27,11 @@ CARGO_HOME ?= $(build_path)/.cargo
 BUILD_IMAGE_TAG ?= quilkin-build
 rust_toolchain := $(shell grep channel $(project_path)/rust-toolchain.toml | awk '{ print $$3 }')
 
-# if this is a release, don't put the sha, otherwise, leave it off.
-ifdef QUILKIN_RELEASE
-	package_version := $(shell cargo tree --depth 0 | awk '{print $$2}')
-else
+# if this is a release, don't put the sha, otherwise, add it.
+package_version := $(shell cd $(project_path) && cargo tree --depth 0 | awk '{print $$2}' | sed 's/v//')
+ifndef QUILKIN_RELEASE
 	git_sha := $(shell git rev-parse --short=7 HEAD)
-	package_version := $(shell cargo tree --depth 0 | awk '{print $$2}')-${git_sha}
+	package_version := ${package_version}-${git_sha}
 endif
 
 # Set this value if you want to use an external registry
