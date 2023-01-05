@@ -66,7 +66,7 @@ struct Bucket {
 /// flow through the filter untouched.
 pub struct LocalRateLimit {
     /// Tracks rate limiting state per source address.
-    state: TtlMap<Bucket>,
+    state: TtlMap<EndpointAddress, Bucket>,
     /// Filter configuration.
     config: Config,
     /// metrics reporter for this filter.
