@@ -512,7 +512,7 @@ proxies will route to the Allocated GameServer, and you can play a gamee!</p>
 <p>For each <a href="https://github.com/googleforgames/quilkin/releases">release</a>, there is a container image built and
 hosted on Google Cloud <a href="https://cloud.google.com/artifact-registry">Artifact Registry</a>.</p>
 <p>The latest production release can be found under the tag: </p>
-<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.5.0-dev-51b25a2
+<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.5.0-dev-0b173aa
 </code></pre>
 <p>Which can be browsed as <a href="https://us-docker.pkg.dev/quilkin/release/quilkin">us-docker.pkg.dev/quilkin/release/quilkin</a>.</p>
 <p>The <a href="https://docs.docker.com/engine/reference/builder/#entrypoint">entrypoint</a> of the container is to run <code>/quilkin</code> 
@@ -853,11 +853,21 @@ balanced via the Client Proxy to multiple Server Proxies for even greater redund
 <a href="../api/quilkin/cli/struct.Proxy.html"><code>proxy</code> subcommand</a>.</p>
 <p>To view all the options for the <code>proxy</code> subcommand, run: </p>
 <pre><code class="language-shell">$ quilkin proxy --help
-error: The subcommand 'run' wasn't recognized
+Run Quilkin as a UDP reverse proxy
 
-Usage: quilkin [OPTIONS] &lt;COMMAND&gt;
+Usage: quilkin proxy [OPTIONS]
 
-For more information try '--help'
+Options:
+  -m, --management-server &lt;MANAGEMENT_SERVER&gt;
+          One or more `quilkin manage` endpoints to listen to for config changes [env: QUILKIN_MANAGEMENT_SERVER=]
+      --mmdb &lt;MMDB&gt;
+          The remote URL or local file path to retrieve the Maxmind database [env: MMDB=]
+  -p, --port &lt;PORT&gt;
+          The port to listen on [env: QUILKIN_PORT=]
+  -t, --to &lt;TO&gt;
+          One or more socket addresses to forward packets to [env: QUILKIN_DEST=]
+  -h, --help
+          Print help information
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="proxy-concepts"><a class="header" href="#proxy-concepts">Proxy Concepts</a></h1>
 <p>The Concepts section helps you learn about the parts of Quilkin when running as proxy and how they work toghether.</p>
