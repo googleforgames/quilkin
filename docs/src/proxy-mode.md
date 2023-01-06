@@ -9,5 +9,5 @@ To view all the options for the `proxy` subcommand, run:
 
 ```shell
 $ quilkin proxy --help
-{{#include ../../target/quilkin.run.commands}}
+{{#include ../../target/quilkin.proxy.commands}}
 ```
