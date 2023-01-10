@@ -635,7 +635,7 @@
 
 <span class="kw">pub use </span><span class="self">self</span>::{builder::Builder, config_type::ConfigType, error::ValidationError, slot::Slot};
 
-<span class="macro">base64_serde_type!</span>(Base64Standard, base64::STANDARD);
+<span class="macro">base64_serde_type!</span>(<span class="kw">pub </span>Base64Standard, base64::STANDARD);
 
 <span class="comment">// For some log messages on the hot path (potentially per-packet), we log 1 out
 // of every `LOG_SAMPLING_RATE` occurrences to avoid spamming the logs.

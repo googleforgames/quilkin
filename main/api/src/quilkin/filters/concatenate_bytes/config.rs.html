@@ -113,8 +113,6 @@
 <span id="113">113</span>
 <span id="114">114</span>
 <span id="115">115</span>
-<span id="116">116</span>
-<span id="117">117</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -131,13 +129,11 @@
  * limitations under the License.
  */
 
-</span><span class="kw">use </span>base64_serde::base64_serde_type;
-<span class="kw">use </span>schemars::JsonSchema;
+</span><span class="kw">use </span>schemars::JsonSchema;
 <span class="kw">use </span>serde::{Deserialize, Serialize};
 
 <span class="kw">use </span><span class="kw">super</span>::proto;
-
-<span class="macro">base64_serde_type!</span>(Base64Standard, base64::STANDARD);
+<span class="kw">use </span><span class="kw">crate</span>::config::Base64Standard;
 
 <span class="attribute">#[derive(Serialize, Deserialize, Debug, Eq, PartialEq, JsonSchema)]
 </span><span class="kw">pub enum </span>Strategy {
