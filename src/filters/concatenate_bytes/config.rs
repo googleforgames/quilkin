@@ -14,13 +14,11 @@
  * limitations under the License.
  */
 
-use base64_serde::base64_serde_type;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use super::proto;
-
-base64_serde_type!(Base64Standard, base64::STANDARD);
+use crate::config::Base64Standard;
 
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq, JsonSchema)]
 pub enum Strategy {

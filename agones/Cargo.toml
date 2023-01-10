@@ -24,8 +24,8 @@ description = "End to end integration tests to be run against a Kubernetes clust
 readme = "README.md"
 
 [dependencies]
-base64 = "0.13.0"
-k8s-openapi = { version = "0.16.0", features = ["v1_22"] }
-kube = { version = "0.76.0", features = ["runtime", "derive"] }
+base64.workspace = true
+k8s-openapi.workspace = true
+kube = { workspace = true, features = ["openssl-tls", "client", "derive", "runtime"] }
 quilkin = { path = "../" }
-tokio = { version = "1.21.2", features = ["sync", "parking_lot"] }
+tokio.workspace = true

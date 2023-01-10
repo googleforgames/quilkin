@@ -44,7 +44,7 @@ use metrics::Metrics;
 
 pub use self::{builder::Builder, config_type::ConfigType, error::ValidationError, slot::Slot};
 
-base64_serde_type!(Base64Standard, base64::STANDARD);
+base64_serde_type!(pub Base64Standard, base64::STANDARD);
 
 // For some log messages on the hot path (potentially per-packet), we log 1 out
 // of every `LOG_SAMPLING_RATE` occurrences to avoid spamming the logs.
