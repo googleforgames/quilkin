@@ -26,6 +26,6 @@ readme = "README.md"
 [dependencies]
 base64.workspace = true
 k8s-openapi.workspace = true
-kube = { workspace = true, features = ["runtime", "derive"] }
+kube = { workspace = true, features = ["openssl-tls", "client", "derive", "runtime"] }
 quilkin = { path = "../" }
 tokio.workspace = true
