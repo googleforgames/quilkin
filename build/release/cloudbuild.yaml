@@ -41,7 +41,7 @@ steps:
       - 'make version > ../version'
     id: output-version
     waitFor: ['-']
-  - name: githubchangeloggenerator/github-changelog-generator:latest # have to use latest, there is no 1.16.4 tag
+  - name: ferrarimarco/github-changelog-generator:1.15.2
     id: changelog
     entrypoint: sh
     args:
