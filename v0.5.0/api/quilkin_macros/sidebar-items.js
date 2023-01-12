@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"macro":[["include_proto","Includes generated Protobuf definitions from `tonic`."]]};

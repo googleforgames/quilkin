@@ -1,0 +1,174 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/prost.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>prost.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../quilkin/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../quilkin/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<span id="2">2</span>
+<span id="3">3</span>
+<span id="4">4</span>
+<span id="5">5</span>
+<span id="6">6</span>
+<span id="7">7</span>
+<span id="8">8</span>
+<span id="9">9</span>
+<span id="10">10</span>
+<span id="11">11</span>
+<span id="12">12</span>
+<span id="13">13</span>
+<span id="14">14</span>
+<span id="15">15</span>
+<span id="16">16</span>
+<span id="17">17</span>
+<span id="18">18</span>
+<span id="19">19</span>
+<span id="20">20</span>
+<span id="21">21</span>
+<span id="22">22</span>
+<span id="23">23</span>
+<span id="24">24</span>
+<span id="25">25</span>
+<span id="26">26</span>
+<span id="27">27</span>
+<span id="28">28</span>
+<span id="29">29</span>
+<span id="30">30</span>
+<span id="31">31</span>
+<span id="32">32</span>
+<span id="33">33</span>
+<span id="34">34</span>
+<span id="35">35</span>
+<span id="36">36</span>
+<span id="37">37</span>
+<span id="38">38</span>
+<span id="39">39</span>
+<span id="40">40</span>
+<span id="41">41</span>
+<span id="42">42</span>
+<span id="43">43</span>
+<span id="44">44</span>
+<span id="45">45</span>
+<span id="46">46</span>
+<span id="47">47</span>
+<span id="48">48</span>
+<span id="49">49</span>
+<span id="50">50</span>
+<span id="51">51</span>
+<span id="52">52</span>
+<span id="53">53</span>
+<span id="54">54</span>
+<span id="55">55</span>
+<span id="56">56</span>
+<span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
+<span id="60">60</span>
+<span id="61">61</span>
+<span id="62">62</span>
+<span id="63">63</span>
+<span id="64">64</span>
+<span id="65">65</span>
+<span id="66">66</span>
+<span id="67">67</span>
+<span id="68">68</span>
+<span id="69">69</span>
+<span id="70">70</span>
+<span id="71">71</span>
+<span id="72">72</span>
+<span id="73">73</span>
+<span id="74">74</span>
+<span id="75">75</span>
+<span id="76">76</span>
+<span id="77">77</span>
+<span id="78">78</span>
+<span id="79">79</span>
+<span id="80">80</span>
+<span id="81">81</span>
+<span id="82">82</span>
+<span id="83">83</span>
+<span id="84">84</span>
+<span id="85">85</span>
+<span id="86">86</span>
+</pre><pre class="rust"><code><span class="comment">/*
+ * Copyright 2021 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+</span><span class="doccomment">//! Extensions to `prost` and related crates.
+
+</span><span class="kw">use </span>prost_types::value::Kind;
+<span class="kw">use </span>serde_json::Value;
+
+<span class="kw">pub fn </span>encode&lt;M: prost::Message&gt;(message: <span class="kw-2">&amp;</span>M) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, prost::EncodeError&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>buf = Vec::new();
+    buf.reserve(message.encoded_len());
+    message.encode(<span class="kw-2">&amp;mut </span>buf)<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>(buf)
+}
+
+<span class="kw">pub fn </span>mapping_from_kind(kind: Kind) -&gt; <span class="prelude-ty">Option</span>&lt;serde_json::Map&lt;String, serde_json::Value&gt;&gt; {
+    <span class="kw">match </span>value_from_kind(kind) {
+        Value::Object(mapping) =&gt; <span class="prelude-val">Some</span>(mapping),
+        <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+    }
+}
+
+<span class="kw">pub fn </span>value_from_kind(kind: Kind) -&gt; Value {
+    <span class="kw">match </span>kind {
+        Kind::NullValue(<span class="kw">_</span>) =&gt; Value::Null,
+        Kind::BoolValue(v) =&gt; Value::Bool(v),
+        Kind::NumberValue(v) =&gt; Value::Number(serde_json::Number::from(v <span class="kw">as </span>i64)), <span class="comment">// TODO: Call out in documentation or find solution
+        </span>Kind::StringValue(v) =&gt; Value::String(v),
+        Kind::ListValue(v) =&gt; Value::Array(
+            v.values
+                .into_iter()
+                .filter_map(|v| v.kind)
+                .map(value_from_kind)
+                .collect(),
+        ),
+        Kind::StructValue(v) =&gt; Value::Object(
+            v.fields
+                .into_iter()
+                .filter_map(|(k, v)| v.kind.map(value_from_kind).map(|v| (k, v)))
+                .collect(),
+        ),
+    }
+}
+
+<span class="kw">pub fn </span>struct_from_json(value: Value) -&gt; <span class="prelude-ty">Option</span>&lt;prost_types::Struct&gt; {
+    <span class="kw">match </span>from_json(value) {
+        prost_types::Value {
+            kind: <span class="prelude-val">Some</span>(Kind::StructValue(r#struct)),
+        } =&gt; <span class="prelude-val">Some</span>(r#struct),
+        <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+    }
+}
+
+<span class="kw">pub fn </span>from_json(value: Value) -&gt; prost_types::Value {
+    prost_types::Value {
+        kind: <span class="prelude-val">Some</span>(<span class="kw">match </span>value {
+            Value::Null =&gt; Kind::NullValue(&lt;<span class="kw">_</span>&gt;::default()),
+            Value::Bool(v) =&gt; Kind::BoolValue(v),
+            <span class="comment">// as_f64 never returns None, so unwrap is safe here.
+            </span>Value::Number(v) =&gt; Kind::NumberValue(v.as_f64().unwrap()),
+            Value::String(v) =&gt; Kind::StringValue(v),
+            Value::Array(v) =&gt; Kind::ListValue(prost_types::ListValue {
+                values: v.into_iter().map(from_json).collect(),
+            }),
+            Value::Object(v) =&gt; Kind::StructValue(prost_types::Struct {
+                fields: v
+                    .into_iter()
+                    .map(|(key, value)| (key, from_json(value)))
+                    .collect(),
+            }),
+        }),
+    }
+}
+</code></pre></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="quilkin" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

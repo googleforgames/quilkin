@@ -1,0 +1,280 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `agones/src/sidecar.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>sidecar.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../agones/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../agones/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../agones/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<span id="2">2</span>
+<span id="3">3</span>
+<span id="4">4</span>
+<span id="5">5</span>
+<span id="6">6</span>
+<span id="7">7</span>
+<span id="8">8</span>
+<span id="9">9</span>
+<span id="10">10</span>
+<span id="11">11</span>
+<span id="12">12</span>
+<span id="13">13</span>
+<span id="14">14</span>
+<span id="15">15</span>
+<span id="16">16</span>
+<span id="17">17</span>
+<span id="18">18</span>
+<span id="19">19</span>
+<span id="20">20</span>
+<span id="21">21</span>
+<span id="22">22</span>
+<span id="23">23</span>
+<span id="24">24</span>
+<span id="25">25</span>
+<span id="26">26</span>
+<span id="27">27</span>
+<span id="28">28</span>
+<span id="29">29</span>
+<span id="30">30</span>
+<span id="31">31</span>
+<span id="32">32</span>
+<span id="33">33</span>
+<span id="34">34</span>
+<span id="35">35</span>
+<span id="36">36</span>
+<span id="37">37</span>
+<span id="38">38</span>
+<span id="39">39</span>
+<span id="40">40</span>
+<span id="41">41</span>
+<span id="42">42</span>
+<span id="43">43</span>
+<span id="44">44</span>
+<span id="45">45</span>
+<span id="46">46</span>
+<span id="47">47</span>
+<span id="48">48</span>
+<span id="49">49</span>
+<span id="50">50</span>
+<span id="51">51</span>
+<span id="52">52</span>
+<span id="53">53</span>
+<span id="54">54</span>
+<span id="55">55</span>
+<span id="56">56</span>
+<span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
+<span id="60">60</span>
+<span id="61">61</span>
+<span id="62">62</span>
+<span id="63">63</span>
+<span id="64">64</span>
+<span id="65">65</span>
+<span id="66">66</span>
+<span id="67">67</span>
+<span id="68">68</span>
+<span id="69">69</span>
+<span id="70">70</span>
+<span id="71">71</span>
+<span id="72">72</span>
+<span id="73">73</span>
+<span id="74">74</span>
+<span id="75">75</span>
+<span id="76">76</span>
+<span id="77">77</span>
+<span id="78">78</span>
+<span id="79">79</span>
+<span id="80">80</span>
+<span id="81">81</span>
+<span id="82">82</span>
+<span id="83">83</span>
+<span id="84">84</span>
+<span id="85">85</span>
+<span id="86">86</span>
+<span id="87">87</span>
+<span id="88">88</span>
+<span id="89">89</span>
+<span id="90">90</span>
+<span id="91">91</span>
+<span id="92">92</span>
+<span id="93">93</span>
+<span id="94">94</span>
+<span id="95">95</span>
+<span id="96">96</span>
+<span id="97">97</span>
+<span id="98">98</span>
+<span id="99">99</span>
+<span id="100">100</span>
+<span id="101">101</span>
+<span id="102">102</span>
+<span id="103">103</span>
+<span id="104">104</span>
+<span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
+<span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
+<span id="123">123</span>
+<span id="124">124</span>
+<span id="125">125</span>
+<span id="126">126</span>
+<span id="127">127</span>
+<span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
+<span id="131">131</span>
+<span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+</pre><pre class="rust"><code><span class="comment">/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+</span><span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
+    <span class="kw">use crate</span>::{game_server, is_gameserver_ready, quilkin_config_map, quilkin_container, Client};
+    <span class="kw">use </span>k8s_openapi::api::core::v1::{ConfigMap, ConfigMapVolumeSource, Volume};
+    <span class="kw">use </span>kube::{api::PostParams, runtime::wait::await_condition, Api, ResourceExt};
+    <span class="kw">use </span>quilkin::{config::watch::agones::crd::GameServer, test_utils::TestHelper};
+    <span class="kw">use </span>std::time::Duration;
+    <span class="kw">use </span>tokio::time::timeout;
+
+    <span class="attribute">#[tokio::test]
+    </span><span class="doccomment">/// This test exists to test that we can connect to an Agones GameServer directly.
+    /// Useful in case one is not sure if an issue is Quilkin or general connectivity issues, such
+    /// as a firewall settings, or an issue with Agones itself.
+    </span><span class="kw">async fn </span>gameserver_no_sidecar() {
+        <span class="kw">let </span>client = Client::new().<span class="kw">await</span>;
+        <span class="kw">let </span>gameservers: Api&lt;GameServer&gt; = client.namespaced_api();
+
+        <span class="kw">let </span>gs = game_server();
+
+        <span class="kw">let </span>pp = PostParams::default();
+        <span class="kw">let </span>gs = gameservers.create(<span class="kw-2">&amp;</span>pp, <span class="kw-2">&amp;</span>gs).<span class="kw">await</span>.unwrap();
+
+        <span class="kw">let </span>name = gs.name_unchecked();
+        <span class="kw">let </span>ready = await_condition(gameservers.clone(), name.as_str(), is_gameserver_ready());
+        timeout(Duration::from_secs(<span class="number">30</span>), ready)
+            .<span class="kw">await
+            </span>.expect(<span class="string">&quot;GameServer should be ready&quot;</span>)
+            .unwrap();
+        <span class="kw">let </span>gs = gameservers.get(name.as_str()).<span class="kw">await</span>.unwrap();
+
+        <span class="kw">let </span>t = TestHelper::default();
+        <span class="kw">let </span>recv = t.open_socket_and_recv_single_packet().<span class="kw">await</span>;
+        <span class="kw">let </span>address = <span class="kw">crate</span>::gameserver_address(<span class="kw-2">&amp;</span>gs);
+        recv.socket
+            .send_to(<span class="string">&quot;hello&quot;</span>.as_bytes(), address)
+            .<span class="kw">await
+            </span>.unwrap();
+
+        <span class="kw">let </span>response = timeout(Duration::from_secs(<span class="number">30</span>), recv.packet_rx)
+            .<span class="kw">await
+            </span>.expect(<span class="string">&quot;should receive packet&quot;</span>)
+            .unwrap();
+        <span class="macro">assert_eq!</span>(<span class="string">&quot;ACK: hello\n&quot;</span>, response);
+    }
+
+    <span class="attribute">#[tokio::test]
+    </span><span class="doccomment">/// Testing Quilkin running as a sidecar next to a GameServer
+    </span><span class="kw">async fn </span>gameserver_sidecar() {
+        <span class="kw">let </span>client = Client::new().<span class="kw">await</span>;
+        <span class="kw">let </span>config_maps: Api&lt;ConfigMap&gt; = client.namespaced_api();
+        <span class="kw">let </span>gameservers: Api&lt;GameServer&gt; = client.namespaced_api();
+        <span class="kw">let </span>pp = PostParams::default();
+
+        <span class="comment">// We&#39;ll append &quot;sidecar&quot;, to prove the packet goes through the sidecar.
+        </span><span class="kw">let </span>config = <span class="string">r#&quot;
+version: v1alpha1
+filters:
+  - name: quilkin.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
+    config:
+        on_read: APPEND
+        on_write: DO_NOTHING
+        bytes: c2lkZWNhcg== # sidecar
+clusters:
+  default:
+    localities:
+      - endpoints:
+          - address: 127.0.0.1:7654
+&quot;#</span>;
+
+        <span class="kw">let </span>config_map = config_maps
+            .create(<span class="kw-2">&amp;</span>pp, <span class="kw-2">&amp;</span>quilkin_config_map(config))
+            .<span class="kw">await
+            </span>.unwrap();
+        <span class="kw">let </span><span class="kw-2">mut </span>gs = game_server();
+
+        <span class="comment">// reset ports to point at the Quilkin sidecar
+        </span>gs.spec.ports[<span class="number">0</span>].container_port = <span class="number">7000</span>;
+        gs.spec.ports[<span class="number">0</span>].container = <span class="prelude-val">Some</span>(<span class="string">&quot;quilkin&quot;</span>.into());
+
+        <span class="comment">// set the gameserver container to the simple-game-server container.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>template = gs.spec.template.spec.as_mut().unwrap();
+        gs.spec.container = <span class="prelude-val">Some</span>(template.containers[<span class="number">0</span>].name.clone());
+
+        <span class="kw">let </span>mount_name = <span class="string">&quot;config&quot;</span>.to_string();
+        template.containers.push(quilkin_container(
+            <span class="kw-2">&amp;</span>client,
+            <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="string">&quot;proxy&quot;</span>.into()]),
+            <span class="prelude-val">Some</span>(mount_name.clone()),
+        ));
+
+        template.volumes = <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[Volume {
+            name: mount_name,
+            config_map: <span class="prelude-val">Some</span>(ConfigMapVolumeSource {
+                name: <span class="prelude-val">Some</span>(config_map.name_unchecked()),
+                ..Default::default()
+            }),
+            ..Default::default()
+        }]);
+
+        <span class="kw">let </span>gs = gameservers.create(<span class="kw-2">&amp;</span>pp, <span class="kw-2">&amp;</span>gs).<span class="kw">await</span>.unwrap();
+        <span class="kw">let </span>name = gs.name_unchecked();
+        <span class="kw">let </span>ready = await_condition(gameservers.clone(), name.as_str(), is_gameserver_ready());
+        timeout(Duration::from_secs(<span class="number">30</span>), ready)
+            .<span class="kw">await
+            </span>.expect(<span class="string">&quot;GameServer should be ready&quot;</span>)
+            .unwrap();
+        <span class="kw">let </span>gs = gameservers.get(name.as_str()).<span class="kw">await</span>.unwrap();
+
+        <span class="kw">let </span>t = TestHelper::default();
+        <span class="kw">let </span>recv = t.open_socket_and_recv_single_packet().<span class="kw">await</span>;
+        <span class="kw">let </span>address = <span class="kw">crate</span>::gameserver_address(<span class="kw-2">&amp;</span>gs);
+        recv.socket
+            .send_to(<span class="string">&quot;hello&quot;</span>.as_bytes(), address)
+            .<span class="kw">await
+            </span>.unwrap();
+
+        <span class="kw">let </span>response = timeout(Duration::from_secs(<span class="number">30</span>), recv.packet_rx)
+            .<span class="kw">await
+            </span>.expect(<span class="string">&quot;should receive packet&quot;</span>)
+            .unwrap();
+        <span class="macro">assert_eq!</span>(<span class="string">&quot;ACK: hellosidecar\n&quot;</span>, response);
+    }
+}
+</code></pre></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="agones" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

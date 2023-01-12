@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":[["RandomValueSpecifier",""]],"mod":[["cluster_weight","Nested message and enum types in `ClusterWeight`."]],"struct":[["ClusterWeight",""]]};
