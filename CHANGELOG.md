@@ -1,6 +1,45 @@
 # Changelog
 
-## [v0.4.0](https://github.com/googleforgames/quilkin/tree/v0.4.0) (2022-11-11)
+## [v0.5.0](https://github.com/googleforgames/quilkin/tree/v0.5.0) (2023-01-11)
+
+[Full Changelog](https://github.com/googleforgames/quilkin/compare/v0.4.0...v0.5.0)
+
+**Breaking changes:**
+
+- Rename run command to proxy [\#661](https://github.com/googleforgames/quilkin/pull/661) ([XAMPPRocky](https://github.com/XAMPPRocky))
+
+**Implemented enhancements:**
+
+- \[Docs\] Agones xDS Provider Quickstart [\#644](https://github.com/googleforgames/quilkin/issues/644)
+- --version flag for binary [\#668](https://github.com/googleforgames/quilkin/pull/668) ([markmandel](https://github.com/markmandel))
+- Agones xDS Provider Quickstart [\#667](https://github.com/googleforgames/quilkin/pull/667) ([markmandel](https://github.com/markmandel))
+
+**Fixed bugs:**
+
+- xDS dynamic routing stops working after 4-5 days [\#660](https://github.com/googleforgames/quilkin/issues/660)
+- Docs: `quilkin run` vs `proxy` bug in preprocessor [\#678](https://github.com/googleforgames/quilkin/pull/678) ([markmandel](https://github.com/markmandel))
+- Timeout for xDS gRPPC Client connection [\#664](https://github.com/googleforgames/quilkin/pull/664) ([markmandel](https://github.com/markmandel))
+- Add retry for provider task [\#659](https://github.com/googleforgames/quilkin/pull/659) ([XAMPPRocky](https://github.com/XAMPPRocky))
+- docs/src/proxy/filters/writing\_custom\_filters: fix port typo [\#652](https://github.com/googleforgames/quilkin/pull/652) ([markus-wa](https://github.com/markus-wa))
+
+**Closed issues:**
+
+- Release 0.4.0 [\#647](https://github.com/googleforgames/quilkin/issues/647)
+
+**Merged pull requests:**
+
+- Make: package\_version less brittle [\#675](https://github.com/googleforgames/quilkin/pull/675) ([markmandel](https://github.com/markmandel))
+- Replace SessionManager with TtlMap, refactor downstream packet processing to track more errors in metrics [\#674](https://github.com/googleforgames/quilkin/pull/674) ([XAMPPRocky](https://github.com/XAMPPRocky))
+- Update dependencies [\#670](https://github.com/googleforgames/quilkin/pull/670) ([XAMPPRocky](https://github.com/XAMPPRocky))
+- Error for invalid endpoint [\#665](https://github.com/googleforgames/quilkin/pull/665) ([markmandel](https://github.com/markmandel))
+- Notification bot: Update dependencies [\#663](https://github.com/googleforgames/quilkin/pull/663) ([markmandel](https://github.com/markmandel))
+- Move instrument level to trace [\#658](https://github.com/googleforgames/quilkin/pull/658) ([XAMPPRocky](https://github.com/XAMPPRocky))
+- Make: Move cargo registry to /target/build-image/ [\#654](https://github.com/googleforgames/quilkin/pull/654) ([markmandel](https://github.com/markmandel))
+- Update dependencies [\#651](https://github.com/googleforgames/quilkin/pull/651) ([XAMPPRocky](https://github.com/XAMPPRocky))
+- Remove map\_proto\_enum and simplify proto enum conversions [\#650](https://github.com/googleforgames/quilkin/pull/650) ([XAMPPRocky](https://github.com/XAMPPRocky))
+- Bump version to 0.5.0-dev [\#649](https://github.com/googleforgames/quilkin/pull/649) ([markmandel](https://github.com/markmandel))
+
+## [v0.4.0](https://github.com/googleforgames/quilkin/tree/v0.4.0) (2022-11-15)
 
 [Full Changelog](https://github.com/googleforgames/quilkin/compare/v0.3.0...v0.4.0)
 
@@ -22,11 +61,11 @@
 - Make `config::Config` compatible with xDS manager [\#520](https://github.com/googleforgames/quilkin/issues/520)
 - Add admin server for xDS management server [\#519](https://github.com/googleforgames/quilkin/issues/519)
 - e2e tests for Agones integration [\#510](https://github.com/googleforgames/quilkin/issues/510)
-- Switch to using `serde_json::Value` internally over `serde_yaml::Value` [\#507](https://github.com/googleforgames/quilkin/issues/507)
+- Switch to using `serde\_json::Value` internally over `serde\_yaml::Value` [\#507](https://github.com/googleforgames/quilkin/issues/507)
 - impl `prost::Message` for filter configuration directly. [\#505](https://github.com/googleforgames/quilkin/issues/505)
 - xDS: Support any filter [\#486](https://github.com/googleforgames/quilkin/issues/486)
 - More in-depth network metrics about clients \(IPv4 and IPv6\) [\#450](https://github.com/googleforgames/quilkin/issues/450)
-- Replace listen distributor task with multithreaded `SO_REUSEPORT` task. [\#410](https://github.com/googleforgames/quilkin/issues/410)
+- Replace listen distributor task with multithreaded `SO\_REUSEPORT` task. [\#410](https://github.com/googleforgames/quilkin/issues/410)
 - xDS Example [\#233](https://github.com/googleforgames/quilkin/issues/233)
 - Total review of guide [\#645](https://github.com/googleforgames/quilkin/pull/645) ([markmandel](https://github.com/markmandel))
 - Build macos binaries on ARM [\#636](https://github.com/googleforgames/quilkin/pull/636) ([markmandel](https://github.com/markmandel))
@@ -61,7 +100,7 @@
 
 - Fatal error from too old resource version [\#626](https://github.com/googleforgames/quilkin/issues/626)
 - Get build tooling working on ARM/M1 Mac [\#608](https://github.com/googleforgames/quilkin/issues/608)
-- `quilkin_session_rx_bytes_total` metric seems to not be working [\#605](https://github.com/googleforgames/quilkin/issues/605)
+- `quilkin\_session\_rx\_bytes\_total` metric seems to not be working [\#605](https://github.com/googleforgames/quilkin/issues/605)
 - \[Agones test\] create\_quilkin\_pod should test for more than running [\#597](https://github.com/googleforgames/quilkin/issues/597)
 - \[Agones\] Removing/updating token annotation on a GameServer deoesn't update the Endpoint [\#589](https://github.com/googleforgames/quilkin/issues/589)
 - Metrics having no data after refactors. [\#588](https://github.com/googleforgames/quilkin/issues/588)
@@ -107,6 +146,7 @@
 
 **Merged pull requests:**
 
+- Release 0.4.0 [\#648](https://github.com/googleforgames/quilkin/pull/648) ([markmandel](https://github.com/markmandel))
 - Update release instructions to remove `-debug` [\#646](https://github.com/googleforgames/quilkin/pull/646) ([markmandel](https://github.com/markmandel))
 - Consistency of "packets\_dropped\_total" metric [\#641](https://github.com/googleforgames/quilkin/pull/641) ([markmandel](https://github.com/markmandel))
 - Update to Rust 1.65.0 [\#640](https://github.com/googleforgames/quilkin/pull/640) ([XAMPPRocky](https://github.com/XAMPPRocky))
@@ -139,7 +179,7 @@
 - Delete Go based xDS [\#548](https://github.com/googleforgames/quilkin/pull/548) ([markmandel](https://github.com/markmandel))
 - build/Makefile - convert spaces to tabs [\#547](https://github.com/googleforgames/quilkin/pull/547) ([markmandel](https://github.com/markmandel))
 - General testing cleanup [\#539](https://github.com/googleforgames/quilkin/pull/539) ([markmandel](https://github.com/markmandel))
-- `connect()` Sessions socket to Endpoint address [\#538](https://github.com/googleforgames/quilkin/pull/538) ([markmandel](https://github.com/markmandel))
+- `connect\(\)` Sessions socket to Endpoint address [\#538](https://github.com/googleforgames/quilkin/pull/538) ([markmandel](https://github.com/markmandel))
 - Upgrade Tokio to 1.19.2 [\#536](https://github.com/googleforgames/quilkin/pull/536) ([markmandel](https://github.com/markmandel))
 - Update to Rust 1.61.0 [\#535](https://github.com/googleforgames/quilkin/pull/535) ([XAMPPRocky](https://github.com/XAMPPRocky))
 - Update link to DiscoveryRequest [\#533](https://github.com/googleforgames/quilkin/pull/533) ([XAMPPRocky](https://github.com/XAMPPRocky))
@@ -149,11 +189,10 @@
 - Add conversion to protobuf for most core types [\#514](https://github.com/googleforgames/quilkin/pull/514) ([XAMPPRocky](https://github.com/XAMPPRocky))
 - Update xDS APIs [\#502](https://github.com/googleforgames/quilkin/pull/502) ([XAMPPRocky](https://github.com/XAMPPRocky))
 - Preparation for 0.4.0 [\#501](https://github.com/googleforgames/quilkin/pull/501) ([markmandel](https://github.com/markmandel))
-- Refactor ClusterManager into SharedCluster [\#493](https://github.com/googleforgames/quilkin/pull/493) ([XAMPPRocky](https://github.com/XAMPPRocky))
 - Refactor FilterManager into SharedFilterChain [\#491](https://github.com/googleforgames/quilkin/pull/491) ([XAMPPRocky](https://github.com/XAMPPRocky))
 - Refactor Metrics Registry into public static [\#490](https://github.com/googleforgames/quilkin/pull/490) ([XAMPPRocky](https://github.com/XAMPPRocky))
 - Refactor FilterRegistry into private static [\#489](https://github.com/googleforgames/quilkin/pull/489) ([XAMPPRocky](https://github.com/XAMPPRocky))
-- Add `Debug` for `FilterChain` and `FilterManager::with_dynamic` [\#487](https://github.com/googleforgames/quilkin/pull/487) ([XAMPPRocky](https://github.com/XAMPPRocky))
+- Add `Debug` for `FilterChain` and `FilterManager::with\_dynamic` [\#487](https://github.com/googleforgames/quilkin/pull/487) ([XAMPPRocky](https://github.com/XAMPPRocky))
 
 ## [v0.3.0](https://github.com/googleforgames/quilkin/tree/v0.3.0) (2022-03-02)
 
@@ -195,7 +234,7 @@
 - Add "Rust Doc" link to each Filter [\#434](https://github.com/googleforgames/quilkin/pull/434) ([markmandel](https://github.com/markmandel))
 - Documentation for Firewall filter [\#432](https://github.com/googleforgames/quilkin/pull/432) ([markmandel](https://github.com/markmandel))
 - Code: Firewall filter [\#416](https://github.com/googleforgames/quilkin/pull/416) ([markmandel](https://github.com/markmandel))
-- Support clear bot history on new build [\#390](https://github.com/googleforgames/quilkin/pull/390) ([devharis](https://github.com/devharis))
+- Support clear bot history on new build [\#390](https://github.com/googleforgames/quilkin/pull/390) ([fredagsfys](https://github.com/fredagsfys))
 - replace slog with tracing in Filter [\#385](https://github.com/googleforgames/quilkin/pull/385) ([rezvaneh](https://github.com/rezvaneh))
 - XDS Management Server [\#360](https://github.com/googleforgames/quilkin/pull/360) ([iffyio](https://github.com/iffyio))
 
@@ -233,6 +272,7 @@
 - Update dependencies [\#497](https://github.com/googleforgames/quilkin/pull/497) ([XAMPPRocky](https://github.com/XAMPPRocky))
 - Update to Rust 1.59 [\#496](https://github.com/googleforgames/quilkin/pull/496) ([XAMPPRocky](https://github.com/XAMPPRocky))
 - Update xds.md [\#495](https://github.com/googleforgames/quilkin/pull/495) ([XAMPPRocky](https://github.com/XAMPPRocky))
+- Refactor ClusterManager into SharedCluster [\#493](https://github.com/googleforgames/quilkin/pull/493) ([XAMPPRocky](https://github.com/XAMPPRocky))
 - Increase Cloud Build timeout to 2h [\#492](https://github.com/googleforgames/quilkin/pull/492) ([markmandel](https://github.com/markmandel))
 - Update clap to 3.1 [\#488](https://github.com/googleforgames/quilkin/pull/488) ([XAMPPRocky](https://github.com/XAMPPRocky))
 - Update CODEOWNERS [\#477](https://github.com/googleforgames/quilkin/pull/477) ([iffyio](https://github.com/iffyio))
@@ -509,7 +549,7 @@
 - Update release checklist to include quilkin-macros [\#294](https://github.com/googleforgames/quilkin/pull/294) ([markmandel](https://github.com/markmandel))
 - Output the rust version for each build. [\#288](https://github.com/googleforgames/quilkin/pull/288) ([markmandel](https://github.com/markmandel))
 - Refactor and break out top-level filter module. [\#286](https://github.com/googleforgames/quilkin/pull/286) ([XAMPPRocky](https://github.com/XAMPPRocky))
-- Use `include_str!` instead of `doc(include)` [\#284](https://github.com/googleforgames/quilkin/pull/284) ([XAMPPRocky](https://github.com/XAMPPRocky))
+- Use `include\_str!` instead of `doc\(include\)` [\#284](https://github.com/googleforgames/quilkin/pull/284) ([XAMPPRocky](https://github.com/XAMPPRocky))
 - Use channel size of 1 to send xds updates [\#283](https://github.com/googleforgames/quilkin/pull/283) ([iffyio](https://github.com/iffyio))
 - Fixes from clippy [\#282](https://github.com/googleforgames/quilkin/pull/282) ([XAMPPRocky](https://github.com/XAMPPRocky))
 - Add default configuration file conventions. [\#279](https://github.com/googleforgames/quilkin/pull/279) ([XAMPPRocky](https://github.com/XAMPPRocky))
@@ -531,7 +571,7 @@
 - Update Rust version to 1.51 [\#247](https://github.com/googleforgames/quilkin/pull/247) ([XAMPPRocky](https://github.com/XAMPPRocky))
 - Clippy fixes  [\#246](https://github.com/googleforgames/quilkin/pull/246) ([XAMPPRocky](https://github.com/XAMPPRocky))
 - Refactor UpstreamEndpoints::retain [\#245](https://github.com/googleforgames/quilkin/pull/245) ([XAMPPRocky](https://github.com/XAMPPRocky))
-- Close Session on drop, refactor `SessionManager::prune_sessions` [\#244](https://github.com/googleforgames/quilkin/pull/244) ([XAMPPRocky](https://github.com/XAMPPRocky))
+- Close Session on drop, refactor `SessionManager::prune\_sessions` [\#244](https://github.com/googleforgames/quilkin/pull/244) ([XAMPPRocky](https://github.com/XAMPPRocky))
 - Add documentation for writing filters [\#243](https://github.com/googleforgames/quilkin/pull/243) ([iffyio](https://github.com/iffyio))
 - Add missing licences. [\#242](https://github.com/googleforgames/quilkin/pull/242) ([markmandel](https://github.com/markmandel))
 - Point COC contact to a Google Group. [\#240](https://github.com/googleforgames/quilkin/pull/240) ([markmandel](https://github.com/markmandel))
