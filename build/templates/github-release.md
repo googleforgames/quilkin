@@ -16,4 +16,3 @@ See [CHANGELOG](https://github.com/googleforgames/quilkin/blob/release-{version}
 Images available with this release:
 
 - [us-docker.pkg.dev/quilkin/release/quilkin:{version}](https://us-docker.pkg.dev/quilkin/release/quilkin:{version})
-- [us-docker.pkg.dev/quilkin/release/quilkin:{version}-debug](https://us-docker.pkg.dev/quilkin/release/quilkin:{version}-debug)
