@@ -175,8 +175,8 @@ impl ControlPlane {
         Ok(Box::pin(async_stream::try_stream! {
             yield response;
 
+            let _span = tracing::trace_span!("stream loop");
             loop {
-                tracing::trace!("stream loop");
                 tokio::select! {
                     _ = rx.changed() => {
                         tracing::trace!("sending new discovery response");

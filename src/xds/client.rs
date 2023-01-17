@@ -164,7 +164,7 @@ pub struct Stream {
 }
 
 impl Stream {
-    #[tracing::instrument(skip_all)]
+    #[tracing::instrument(level = "trace", skip_all)]
     async fn connect(xds: Client) -> Result<Self> {
         let (requests, mut rx) = broadcast::channel(12);
         let Client { mut client, config } = xds;
@@ -188,58 +188,69 @@ impl Stream {
                         .await?
                         .into_inner();
 
-                    while let Some(response) = responses
-                        .message()
-                        .await
-                        .map_err(|error| tracing::warn!(%error, "Error from xDS server"))
-                        .ok()
-                        .flatten()
-                    {
-                        let identifier = response
-                            .control_plane
-                            .as_ref()
-                            .map(|cp| cp.identifier.clone())
-                            .unwrap_or_default();
-                        let _stream_metrics =
-                            super::metrics::StreamConnectionMetrics::new(&identifier);
-                        tracing::info!(
-                            id = &*response.version_info,
-                            r#type = &*response.type_url,
-                            nonce = &*response.nonce,
-                            control_plane = &*identifier,
-                            "Received response"
-                        );
+                    loop {
+                        let timeout = tokio::time::sleep(std::time::Duration::from_millis(500));
+                        let new_message = responses.message();
 
-                        let result = response
-                            .resources
-                            .iter()
-                            .cloned()
-                            .map(Resource::try_from)
-                            .try_for_each(|resource| {
-                                let resource = resource?;
-                                metrics::DISCOVERY_RESPONSES
-                                    .with_label_values(&[&*identifier, resource.type_url()])
-                                    .inc();
-                                config.apply(&resource)
-                            });
+                        tokio::select! {
+                            _ = timeout => {
+                                Self::refresh_resources(&config, &subscribed_resources, &mut requests).await?;
+                            }
+                            response = new_message => {
+                                let Some(response) = response.map_err(|error| tracing::warn!(%error, "Error from xDS server")).ok().flatten() else {
+                                    break;
+                                };
 
-                        let mut request = DiscoveryRequest::try_from(response)?;
-                        if let Err(error) = result {
-                            metrics::NACKS
-                                .with_label_values(&[&*identifier, &*request.type_url])
-                                .inc();
-                            request.error_detail = Some(crate::xds::google::rpc::Status {
-                                code: 3,
-                                message: error.to_string(),
-                                ..<_>::default()
-                            });
-                        } else {
-                            metrics::ACKS
-                                .with_label_values(&[&*identifier, &*request.type_url])
-                                .inc();
+                                let identifier = response
+                                    .control_plane
+                                    .as_ref()
+                                    .map(|cp| cp.identifier.clone())
+                                    .unwrap_or_default();
+                                let _stream_metrics =
+                                    super::metrics::StreamConnectionMetrics::new(&identifier);
+                                tracing::info!(
+                                    id = &*response.version_info,
+                                    r#type = &*response.type_url,
+                                    nonce = &*response.nonce,
+                                    control_plane = &*identifier,
+                                    "Received response"
+                                );
+
+                                let result = response
+                                    .resources
+                                    .iter()
+                                    .cloned()
+                                    .map(Resource::try_from)
+                                    .try_for_each(|resource| {
+                                        let resource = resource?;
+                                        metrics::DISCOVERY_RESPONSES
+                                            .with_label_values(&[&*identifier, resource.type_url()])
+                                            .inc();
+                                        config.apply(&resource)
+                                    });
+
+                                let mut request = DiscoveryRequest::try_from(response)?;
+                                if let Err(error) = result {
+                                    metrics::NACKS
+                                        .with_label_values(&[&*identifier, &*request.type_url])
+                                        .inc();
+                                    request.error_detail = Some(crate::xds::google::rpc::Status {
+                                        code: 3,
+                                        message: error.to_string(),
+                                        ..<_>::default()
+                                    });
+                                } else {
+                                    metrics::ACKS
+                                        .with_label_values(&[&*identifier, &*request.type_url])
+                                        .inc();
+                                }
+
+                                requests.send(request)?;
+                            }
+                            else => {
+                                break;
+                            }
                         }
-
-                        requests.send(request)?;
                     }
 
                     tracing::info!("Lost connection to xDS, retrying");
@@ -247,10 +258,7 @@ impl Stream {
                     // connection, so we just create a new client and restart.
                     client = Client::new_ads_client(&config).await?;
                     rx = requests.subscribe();
-
-                    for (resource, names) in subscribed_resources.lock().await.iter() {
-                        Self::send_without_cache(&config, &mut requests, *resource, names)?;
-                    }
+                    Self::refresh_resources(&config, &subscribed_resources, &mut requests).await?;
                 }
             }
             .instrument(tracing::trace_span!("handle_discovery_response"))
@@ -264,13 +272,25 @@ impl Stream {
         })
     }
 
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument(level = "trace", skip(self))]
     pub async fn send(&mut self, resource_type: ResourceType, names: &[String]) -> Result<()> {
         self.subscribed_resources
             .lock()
             .await
             .insert((resource_type, names.to_vec()));
         Self::send_without_cache(&self.config, &mut self.requests, resource_type, names)
+    }
+
+    async fn refresh_resources(
+        config: &Config,
+        subscribed_resources: &SubscribedResources,
+        requests: &mut broadcast::Sender<DiscoveryRequest>,
+    ) -> Result<()> {
+        for (resource, names) in subscribed_resources.lock().await.iter() {
+            Self::send_without_cache(config, requests, *resource, names)?;
+        }
+
+        Ok(())
     }
 
     fn send_without_cache(
