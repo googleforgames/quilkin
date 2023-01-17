@@ -340,6 +340,26 @@
 <span id="340">340</span>
 <span id="341">341</span>
 <span id="342">342</span>
+<span id="343">343</span>
+<span id="344">344</span>
+<span id="345">345</span>
+<span id="346">346</span>
+<span id="347">347</span>
+<span id="348">348</span>
+<span id="349">349</span>
+<span id="350">350</span>
+<span id="351">351</span>
+<span id="352">352</span>
+<span id="353">353</span>
+<span id="354">354</span>
+<span id="355">355</span>
+<span id="356">356</span>
+<span id="357">357</span>
+<span id="358">358</span>
+<span id="359">359</span>
+<span id="360">360</span>
+<span id="361">361</span>
+<span id="362">362</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -506,7 +526,7 @@
 }
 
 <span class="kw">impl </span>Stream {
-    <span class="attribute">#[tracing::instrument(skip_all)]
+    <span class="attribute">#[tracing::instrument(level = <span class="string">&quot;trace&quot;</span>, skip_all)]
     </span><span class="kw">async fn </span>connect(xds: Client) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
         <span class="kw">let </span>(requests, <span class="kw-2">mut </span>rx) = broadcast::channel(<span class="number">12</span>);
         <span class="kw">let </span>Client { <span class="kw-2">mut </span>client, config } = xds;
@@ -530,58 +550,69 @@
                         .<span class="kw">await</span><span class="question-mark">?
                         </span>.into_inner();
 
-                    <span class="kw">while let </span><span class="prelude-val">Some</span>(response) = responses
-                        .message()
-                        .<span class="kw">await
-                        </span>.map_err(|error| <span class="macro">tracing::warn!</span>(%error, <span class="string">&quot;Error from xDS server&quot;</span>))
-                        .ok()
-                        .flatten()
-                    {
-                        <span class="kw">let </span>identifier = response
-                            .control_plane
-                            .as_ref()
-                            .map(|cp| cp.identifier.clone())
-                            .unwrap_or_default();
-                        <span class="kw">let </span>_stream_metrics =
-                            <span class="kw">super</span>::metrics::StreamConnectionMetrics::new(<span class="kw-2">&amp;</span>identifier);
-                        <span class="macro">tracing::info!</span>(
-                            id = <span class="kw-2">&amp;*</span>response.version_info,
-                            r#type = <span class="kw-2">&amp;*</span>response.type_url,
-                            nonce = <span class="kw-2">&amp;*</span>response.nonce,
-                            control_plane = <span class="kw-2">&amp;*</span>identifier,
-                            <span class="string">&quot;Received response&quot;
-                        </span>);
+                    <span class="kw">loop </span>{
+                        <span class="kw">let </span>timeout = tokio::time::sleep(std::time::Duration::from_millis(<span class="number">500</span>));
+                        <span class="kw">let </span>new_message = responses.message();
 
-                        <span class="kw">let </span>result = response
-                            .resources
-                            .iter()
-                            .cloned()
-                            .map(Resource::try_from)
-                            .try_for_each(|resource| {
-                                <span class="kw">let </span>resource = resource<span class="question-mark">?</span>;
-                                metrics::DISCOVERY_RESPONSES
-                                    .with_label_values(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;*</span>identifier, resource.type_url()])
-                                    .inc();
-                                config.apply(<span class="kw-2">&amp;</span>resource)
-                            });
+                        <span class="macro">tokio::select! </span>{
+                            <span class="kw">_ </span>= timeout =&gt; {
+                                <span class="self">Self</span>::refresh_resources(<span class="kw-2">&amp;</span>config, <span class="kw-2">&amp;</span>subscribed_resources, <span class="kw-2">&amp;mut </span>requests).<span class="kw">await</span><span class="question-mark">?</span>;
+                            }
+                            response = new_message =&gt; {
+                                <span class="kw">let </span><span class="prelude-val">Some</span>(response) = response.map_err(|error| <span class="macro">tracing::warn!</span>(%error, <span class="string">&quot;Error from xDS server&quot;</span>)).ok().flatten() <span class="kw">else </span>{
+                                    <span class="kw">break</span>;
+                                };
 
-                        <span class="kw">let </span><span class="kw-2">mut </span>request = DiscoveryRequest::try_from(response)<span class="question-mark">?</span>;
-                        <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = result {
-                            metrics::NACKS
-                                .with_label_values(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;*</span>identifier, <span class="kw-2">&amp;*</span>request.type_url])
-                                .inc();
-                            request.error_detail = <span class="prelude-val">Some</span>(<span class="kw">crate</span>::xds::google::rpc::Status {
-                                code: <span class="number">3</span>,
-                                message: error.to_string(),
-                                ..&lt;<span class="kw">_</span>&gt;::default()
-                            });
-                        } <span class="kw">else </span>{
-                            metrics::ACKS
-                                .with_label_values(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;*</span>identifier, <span class="kw-2">&amp;*</span>request.type_url])
-                                .inc();
+                                <span class="kw">let </span>identifier = response
+                                    .control_plane
+                                    .as_ref()
+                                    .map(|cp| cp.identifier.clone())
+                                    .unwrap_or_default();
+                                <span class="kw">let </span>_stream_metrics =
+                                    <span class="kw">super</span>::metrics::StreamConnectionMetrics::new(<span class="kw-2">&amp;</span>identifier);
+                                <span class="macro">tracing::info!</span>(
+                                    id = <span class="kw-2">&amp;*</span>response.version_info,
+                                    r#type = <span class="kw-2">&amp;*</span>response.type_url,
+                                    nonce = <span class="kw-2">&amp;*</span>response.nonce,
+                                    control_plane = <span class="kw-2">&amp;*</span>identifier,
+                                    <span class="string">&quot;Received response&quot;
+                                </span>);
+
+                                <span class="kw">let </span>result = response
+                                    .resources
+                                    .iter()
+                                    .cloned()
+                                    .map(Resource::try_from)
+                                    .try_for_each(|resource| {
+                                        <span class="kw">let </span>resource = resource<span class="question-mark">?</span>;
+                                        metrics::DISCOVERY_RESPONSES
+                                            .with_label_values(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;*</span>identifier, resource.type_url()])
+                                            .inc();
+                                        config.apply(<span class="kw-2">&amp;</span>resource)
+                                    });
+
+                                <span class="kw">let </span><span class="kw-2">mut </span>request = DiscoveryRequest::try_from(response)<span class="question-mark">?</span>;
+                                <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = result {
+                                    metrics::NACKS
+                                        .with_label_values(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;*</span>identifier, <span class="kw-2">&amp;*</span>request.type_url])
+                                        .inc();
+                                    request.error_detail = <span class="prelude-val">Some</span>(<span class="kw">crate</span>::xds::google::rpc::Status {
+                                        code: <span class="number">3</span>,
+                                        message: error.to_string(),
+                                        ..&lt;<span class="kw">_</span>&gt;::default()
+                                    });
+                                } <span class="kw">else </span>{
+                                    metrics::ACKS
+                                        .with_label_values(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;*</span>identifier, <span class="kw-2">&amp;*</span>request.type_url])
+                                        .inc();
+                                }
+
+                                requests.send(request)<span class="question-mark">?</span>;
+                            }
+                            <span class="kw">else </span>=&gt; {
+                                <span class="kw">break</span>;
+                            }
                         }
-
-                        requests.send(request)<span class="question-mark">?</span>;
                     }
 
                     <span class="macro">tracing::info!</span>(<span class="string">&quot;Lost connection to xDS, retrying&quot;</span>);
@@ -589,10 +620,7 @@
                     // connection, so we just create a new client and restart.
                     </span>client = Client::new_ads_client(<span class="kw-2">&amp;</span>config).<span class="kw">await</span><span class="question-mark">?</span>;
                     rx = requests.subscribe();
-
-                    <span class="kw">for </span>(resource, names) <span class="kw">in </span>subscribed_resources.lock().<span class="kw">await</span>.iter() {
-                        <span class="self">Self</span>::send_without_cache(<span class="kw-2">&amp;</span>config, <span class="kw-2">&amp;mut </span>requests, <span class="kw-2">*</span>resource, names)<span class="question-mark">?</span>;
-                    }
+                    <span class="self">Self</span>::refresh_resources(<span class="kw-2">&amp;</span>config, <span class="kw-2">&amp;</span>subscribed_resources, <span class="kw-2">&amp;mut </span>requests).<span class="kw">await</span><span class="question-mark">?</span>;
                 }
             }
             .instrument(<span class="macro">tracing::trace_span!</span>(<span class="string">&quot;handle_discovery_response&quot;</span>))
@@ -606,13 +634,25 @@
         })
     }
 
-    <span class="attribute">#[tracing::instrument(skip(<span class="self">self</span>))]
+    <span class="attribute">#[tracing::instrument(level = <span class="string">&quot;trace&quot;</span>, skip(<span class="self">self</span>))]
     </span><span class="kw">pub async fn </span>send(<span class="kw-2">&amp;mut </span><span class="self">self</span>, resource_type: ResourceType, names: <span class="kw-2">&amp;</span>[String]) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
         <span class="self">self</span>.subscribed_resources
             .lock()
             .<span class="kw">await
             </span>.insert((resource_type, names.to_vec()));
         <span class="self">Self</span>::send_without_cache(<span class="kw-2">&amp;</span><span class="self">self</span>.config, <span class="kw-2">&amp;mut </span><span class="self">self</span>.requests, resource_type, names)
+    }
+
+    <span class="kw">async fn </span>refresh_resources(
+        config: <span class="kw-2">&amp;</span>Config,
+        subscribed_resources: <span class="kw-2">&amp;</span>SubscribedResources,
+        requests: <span class="kw-2">&amp;mut </span>broadcast::Sender&lt;DiscoveryRequest&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+        <span class="kw">for </span>(resource, names) <span class="kw">in </span>subscribed_resources.lock().<span class="kw">await</span>.iter() {
+            <span class="self">Self</span>::send_without_cache(config, requests, <span class="kw-2">*</span>resource, names)<span class="question-mark">?</span>;
+        }
+
+        <span class="prelude-val">Ok</span>(())
     }
 
     <span class="kw">fn </span>send_without_cache(

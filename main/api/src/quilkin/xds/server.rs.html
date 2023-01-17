@@ -571,8 +571,8 @@
         <span class="prelude-val">Ok</span>(Box::pin(<span class="macro">async_stream::try_stream! </span>{
             <span class="kw">yield </span>response;
 
+            <span class="kw">let </span>_span = <span class="macro">tracing::trace_span!</span>(<span class="string">&quot;stream loop&quot;</span>);
             <span class="kw">loop </span>{
-                <span class="macro">tracing::trace!</span>(<span class="string">&quot;stream loop&quot;</span>);
                 <span class="macro">tokio::select! </span>{
                     <span class="kw">_ </span>= rx.changed() =&gt; {
                         <span class="macro">tracing::trace!</span>(<span class="string">&quot;sending new discovery response&quot;</span>);
