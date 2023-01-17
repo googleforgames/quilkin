@@ -390,6 +390,8 @@
 <span id="390">390</span>
 <span id="391">391</span>
 <span id="392">392</span>
+<span id="393">393</span>
+<span id="394">394</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -498,7 +500,9 @@
             .version
             .fetch_add(<span class="number">1</span>, std::sync::atomic::Ordering::Relaxed);
         <span class="macro">tracing::trace!</span>(%resource_type, watchers=watchers.sender.receiver_count(), <span class="string">&quot;pushing update&quot;</span>);
-        <span class="kw">let _ </span>= watchers.sender.send(());
+        <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = watchers.sender.send(()) {
+            <span class="macro">tracing::warn!</span>(%error, <span class="string">&quot;pushing update failed&quot;</span>);
+        }
     }
 
     <span class="kw">fn </span>discovery_response(
