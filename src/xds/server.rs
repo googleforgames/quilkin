@@ -106,7 +106,9 @@ impl ControlPlane {
             .version
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         tracing::trace!(%resource_type, watchers=watchers.sender.receiver_count(), "pushing update");
-        let _ = watchers.sender.send(());
+        if let Err(error) = watchers.sender.send(()) {
+            tracing::warn!(%error, "pushing update failed");
+        }
     }
 
     fn discovery_response(
