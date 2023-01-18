@@ -70,7 +70,7 @@ pub struct Config {
     #[serde(default)]
     #[schemars(with = "Vec::<ManagementServer>")]
     pub management_servers: Slot<Vec<ManagementServer>>,
-    #[serde(default = "default_proxy_port")]
+    #[serde(default = "Slot::<u16>::empty")]
     pub port: Slot<u16>,
     #[schemars(with = "Option<Version>")]
     pub version: Slot<Version>,
@@ -221,7 +221,7 @@ impl Default for Config {
             management_servers: <_>::default(),
             maxmind_db: Slot::empty(),
             metrics: <_>::default(),
-            port: default_proxy_port(),
+            port: Slot::empty(),
             version: <_>::default(),
         }
     }
@@ -260,10 +260,6 @@ fn default_proxy_id() -> Slot<String> {
     Slot::from(sys_info::hostname().unwrap_or_else(|_| Uuid::new_v4().as_hyphenated().to_string()))
 }
 
-fn default_proxy_port() -> Slot<u16> {
-    Slot::from(7000)
-}
-
 #[derive(Clone, Debug, Deserialize, Eq, Serialize, JsonSchema, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct Admin {
@@ -273,7 +269,7 @@ pub struct Admin {
 impl Default for Admin {
     fn default() -> Self {
         Admin {
-            address: (std::net::Ipv4Addr::UNSPECIFIED, 9091).into(),
+            address: (std::net::Ipv4Addr::UNSPECIFIED, 8000).into(),
         }
     }
 }
@@ -398,7 +394,6 @@ mod tests {
         }))
         .unwrap();
 
-        assert_eq!(*config.port.load(), 7000);
         assert!(config.id.load().len() > 1);
     }
 

@@ -14,12 +14,14 @@
  * limitations under the License.
  */
 
+pub const PORT: u16 = 7800;
+
 /// Runs Quilkin as a xDS management server, using `provider` as
 /// a configuration source.
 #[derive(clap::Args, Clone)]
 pub struct Manage {
-    #[clap(short, long, env = "QUILKIN_PORT")]
-    port: Option<u16>,
+    #[clap(short, long, env = super::PORT_ENV_VAR, default_value_t = PORT)]
+    port: u16,
     /// The configuration source for a management server.
     #[clap(subcommand)]
     pub provider: Providers,
@@ -48,9 +50,7 @@ pub enum Providers {
 
 impl Manage {
     pub async fn manage(&self, config: std::sync::Arc<crate::Config>) -> crate::Result<()> {
-        if let Some(port) = self.port {
-            config.port.store(port.into());
-        }
+        config.port.store_if_unset(self.port.into());
 
         let provider_task = {
             const PROVIDER_RETRIES: u32 = 25;
