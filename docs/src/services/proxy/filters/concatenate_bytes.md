@@ -29,10 +29,10 @@ clusters:
 # quilkin::Proxy::try_from(config).unwrap();
 ```
 
-## Configuration Options ([Rust Doc](../../../api/quilkin/filters/concatenate_bytes/struct.Config.html))
+## Configuration Options ([Rust Doc](../../../../api/quilkin/filters/concatenate_bytes/struct.Config.html))
 
 ```yaml
-{{#include ../../../../target/quilkin.filters.concatenate_bytes.v1alpha1.yaml}}
+{{#include ../../../../../target/quilkin.filters.concatenate_bytes.v1alpha1.yaml}}
 ```
 
 ## Metrics

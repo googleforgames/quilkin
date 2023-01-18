@@ -3,7 +3,7 @@
 ## Proxy Mode
 
 Quilkin exposes the following metrics around the management servers and its resources when running as a
-[UDP Proxy](../proxy-mode.md):
+[UDP Proxy](../proxy.md):
 
 - `quilkin_xds_connected_state` (Gauge)
 
@@ -28,7 +28,7 @@ Quilkin exposes the following metrics around the management servers and its reso
 
 ## xDS Provider Mode
 
-The following metrics are exposed when Quilkin is running as an [xDS provider](builtin.md).
+The following metrics are exposed when Quilkin is running as an [xDS provider](../xds.md).
 
 - `quilkin_management_server_connected_proxies` (Gauge)
 

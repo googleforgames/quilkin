@@ -28,10 +28,10 @@ clusters:
 # quilkin::Proxy::try_from(config).unwrap();
 ```
 
-## Configuration Options ([Rust Doc](../../../api/quilkin/filters/debug/struct.Config.html))
+## Configuration Options ([Rust Doc](../../../../api/quilkin/filters/debug/struct.Config.html))
 
 ```yaml
-{{#include ../../../../target/quilkin.filters.debug.v1alpha1.yaml}}
+{{#include ../../../../../target/quilkin.filters.debug.v1alpha1.yaml}}
 ```
 
 

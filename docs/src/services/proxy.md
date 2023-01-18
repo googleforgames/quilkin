@@ -1,23 +1,32 @@
-# Proxy Concepts
+# Proxy
 
-The Concepts section helps you learn about the parts of Quilkin when running as proxy and how they work toghether.
+| services | ports | Protocol |
+|----------|-------|-----------|
+| proxy | 7777 | UDP (IPv4) |
 
-## Local Port
+"Proxy" is the primary Quilkin service, which acts as a non-transparent UDP
+proxy.
 
-This is the `port` configuration, in which initial connections to Quilkin are made. Defaults to `7000`.
+To view all the options for the `proxy` subcommand, run: 
+
+```shell
+$ quilkin proxy --help
+{{#include ../../../target/quilkin.proxy.commands}}
+```
 
 ## Endpoints
 
 An Endpoint represents an address that Quilkin forwards packets to that it has recieved from the 
-[Local Port](#local-port), and recieves data from as well.
+source port.
 
 It is represented by an IP address and port. An Endpoint can optionally be associated with an arbitrary set of 
 [metadata](#endpoint-metadata) as well.
 
 ## Proxy Filters
 
-Filters are the way for a Quilkin proxy to intercept UDP traffic travelling between a [Local Port] and 
-[Endpoints][Endpoint] in either direction, and be able to inpsect, manipulate, and route the packets as desired. 
+Filters are the way for a Quilkin proxy to intercept UDP packet traffic from the
+source and [Endpoints][Endpoint] in either direction, and be able to inpsect,
+manipulate, and route the packets as desired. 
 
 See [Filters][filters-doc]  for a deeper dive into Filters, as well as the list of build in Filters that come with 
 Quilkin.
@@ -77,11 +86,8 @@ Sessions are established *after* the filter chain completes. The destination End
 the [filter chain][filter-doc], so a Session can only be created after filter chain completion. For example, if the 
 filter chain drops all packets, then no session will ever be created.
 
-[Local Port]: #local-port
-[sessions-doc]: ./session.md
-[filters-doc]: ../filters.md
 [Endpoint]: #endpoints
-[file-configuration]: ../file-configuration.md
+[file-configuration]: ../deployment/configuration.md
 [xds-endpoint-metadata]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint_components.proto#envoy-v3-api-field-config-endpoint-v3-lbendpoint-metadata
-[dynamic-configuration-doc]: ../xds.md
-[TokenRouter]: filters/token_router.md
+[dynamic-configuration-doc]: ./xds.md
+[TokenRouter]: ./proxy/filters/token_router.md

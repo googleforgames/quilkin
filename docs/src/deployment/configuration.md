@@ -1,4 +1,4 @@
-# File Configuration
+# Configuration
 
 The following is the schema and reference for a Quilkin configuration
 file. See the [examples] folder for example configuration files.
@@ -11,19 +11,20 @@ environment variable.
 
 ## Static Configuration
 
-Example of a full configuration for `quilkin proxy` that utlisies a static Endpoint configuration:
+Example of a full configuration for `quilkin proxy` that utlisies a static
+endpoint configuration:
 
 ```yaml
-{{#include ../../examples/proxy.yaml:17:100}}
+{{#include ../../../examples/proxy.yaml:17:100}}
 ```
 
 ## Dynamic Configuration
 
-Example of a full configuration for `quilkin proxy` that utlisies a dynamic Endpoint configuration through an 
-[xDS management endpoint](./xds.md):
+Example of a full configuration for `quilkin proxy` that utlisies a dynamic
+Endpoint configuration through an [xDS management endpoint](../services/xds.md):
 
 ```yaml
-{{#include ../../examples/control-plane.yaml:17:100}}
+{{#include ../../../examples/control-plane.yaml:17:100}}
 ```
 
 ## Json Schema

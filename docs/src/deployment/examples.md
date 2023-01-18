@@ -77,7 +77,7 @@ This example is the same as the above, but puts a Client Proxy between the Game 
 advantage of Client Proxy functionality.
 
 * The Client Proxy may be integrated as a standalone binary, directly into the client with communication
-  occurring over a localhost port or it may be possible utlise one of our [client SDKs].
+  occurring over a localhost port or it may be possible utlise one of our client SDKs such as [Unreal Engine][ue].
 * The Client Proxy can now utilise filters, such as compression, without having to change the Game Client.
 * The Game Client will need to communicate to the Client Proxy what IP it should connect to when the Client is 
   match-made with a Game Server.
@@ -128,7 +128,7 @@ while also providing the most redundancy and security for your dedicated game se
 * The Client Proxy can utilise the full set of filters, such as concatenation (for routing), compression or load 
   balancing, without having to change the Game Client.
 * A hosted set of Quilkin Server proxies that have public IP addresses, are connected to an 
-  [xDS Control Plane](./xds.md) to coordinate routing and access control to the dedicated game servers, which are 
+  [xDS Control Plane](../services/xds.md) to coordinate routing and access control to the dedicated game servers, which are 
   on private IP addresses.
 * The Client Proxy is made aware of one or more Server proxies to connect to, possibly via their Game Client matchmaker
   or another service, with an authentication token to pass to the Server proxies, such that the UDP packets can be
@@ -143,11 +143,11 @@ while also providing the most redundancy and security for your dedicated game se
 ## What Next?
 
 * Have a look at the [example configurations](./examples.md) for configuration and usage examples.
-* Review the [set of filters](./filters.md) that are available.
+* Review the [set of filters](../services/proxy/filters.md) that are available.
 
 ---
 
 Diagrams powered by <a href="http://asciiflow.com/" target="_blank">asciiflow.com</a>
 
 
-[client SDKs]: ./sdks.md
+[ue]: ../sdks/unreal-engine.md
