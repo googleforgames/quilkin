@@ -19,7 +19,7 @@ mod sessions;
 pub use sessions::{Session, SessionArgs, SessionKey};
 
 use std::{
-    net::{Ipv4Addr, SocketAddrV4},
+    net::{Ipv6Addr, SocketAddrV6},
     sync::Arc,
 };
 
@@ -339,7 +339,7 @@ impl Proxy {
 
     /// binds the local configured port with port and address reuse applied.
     fn bind(&self, port: u16) -> Result<UdpSocket> {
-        let addr = SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, port);
+        let addr = SocketAddrV6::new(Ipv6Addr::UNSPECIFIED, port, 0, 0);
         net::socket_with_reuse(addr.into())
     }
 }

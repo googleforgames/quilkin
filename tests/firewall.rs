@@ -34,7 +34,7 @@ async fn firewall_allow() {
     let yaml = "
 on_read:
   - action: ALLOW
-    source: 127.0.0.1/32
+    source: ::/32
     ports:
        - %1
 on_write:
