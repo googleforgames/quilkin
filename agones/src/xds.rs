@@ -275,7 +275,7 @@ filters:
         .to_vec();
         let mut container = quilkin_container(client, Some(args), None);
         container.ports = Some(vec![ContainerPort {
-            container_port: 7000,
+            container_port: 7777,
             ..Default::default()
         }]);
         let labels = BTreeMap::from([("role".to_string(), "xds".to_string())]);
@@ -319,7 +319,7 @@ filters:
                 ports: Some(vec![ServicePort {
                     protocol: Some("TCP".into()),
                     port: 80,
-                    target_port: Some(IntOrString::Int(7000)),
+                    target_port: Some(IntOrString::Int(7777)),
                     ..Default::default()
                 }]),
                 ..Default::default()
@@ -362,12 +362,12 @@ management_servers:
             quilkin_container(client, Some(vec!["proxy".into()]), Some(mount_name.into()));
 
         // we'll use a host port, since spinning up a load balancer takes a long time.
-        // we know that port 7000 is open because this is an Agones cluster and it has associated
+        // we know that port 7777 is open because this is an Agones cluster and it has associated
         // firewall rules , and even if we conflict with a GameServer
         // the k8s scheduler will move us to another node.
         let host_port: u16 = 7005;
         container.ports = Some(vec![ContainerPort {
-            container_port: 7000,
+            container_port: 7777,
             host_port: Some(host_port as i32),
             protocol: Some("UDP".into()),
             ..Default::default()
