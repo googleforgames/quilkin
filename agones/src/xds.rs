@@ -318,8 +318,8 @@ filters:
                 selector: Some(labels),
                 ports: Some(vec![ServicePort {
                     protocol: Some("TCP".into()),
-                    port: 80,
-                    target_port: Some(IntOrString::Int(7777)),
+                    port: 7800,
+                    target_port: Some(IntOrString::Int(7800)),
                     ..Default::default()
                 }]),
                 ..Default::default()
@@ -350,7 +350,7 @@ filters:
         let config = r#"
 version: v1alpha1
 management_servers:
-  - address: http://quilkin-manage-agones:80
+  - address: http://quilkin-manage-agones:7800
 "#;
 
         let config_map = config_maps
