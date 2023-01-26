@@ -106,7 +106,9 @@ impl ControlPlane {
             .version
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         tracing::trace!(%resource_type, watchers=watchers.sender.receiver_count(), "pushing update");
-        let _ = watchers.sender.send(());
+        if let Err(error) = watchers.sender.send(()) {
+            tracing::warn!(%error, "pushing update failed");
+        }
     }
 
     fn discovery_response(
@@ -175,8 +177,8 @@ impl ControlPlane {
         Ok(Box::pin(async_stream::try_stream! {
             yield response;
 
+            let _span = tracing::trace_span!("stream loop");
             loop {
-                tracing::trace!("stream loop");
                 tokio::select! {
                     _ = rx.changed() => {
                         tracing::trace!("sending new discovery response");
