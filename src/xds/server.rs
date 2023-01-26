@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-use std::{pin::Pin, sync::Arc};
+use std::sync::Arc;
 
 use cached::Cached;
 use futures::Stream;
@@ -146,10 +146,7 @@ impl ControlPlane {
     pub async fn stream_aggregated_resources<S>(
         &self,
         mut streaming: S,
-    ) -> Result<
-        Pin<Box<dyn Stream<Item = Result<DiscoveryResponse, tonic::Status>> + Send>>,
-        tonic::Status,
-    >
+    ) -> Result<impl Stream<Item = Result<DiscoveryResponse, tonic::Status>> + Send, tonic::Status>
     where
         S: Stream<Item = Result<DiscoveryRequest, tonic::Status>>
             + Send
@@ -254,11 +251,11 @@ impl AggregatedDiscoveryService for ControlPlane {
         &self,
         request: tonic::Request<tonic::Streaming<DiscoveryRequest>>,
     ) -> Result<tonic::Response<Self::StreamAggregatedResourcesStream>, tonic::Status> {
-        Ok(tonic::Response::new(
+        Ok(tonic::Response::new(Box::pin(
             self.stream_aggregated_resources(request.into_inner())
                 .in_current_span()
                 .await?,
-        ))
+        )))
     }
 
     async fn delta_aggregated_resources(
