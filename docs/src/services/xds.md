@@ -1,4 +1,23 @@
-# Dynamic Configuration using xDS Management Servers
+# xDS Control Plane
+
+| services | ports | Protocol |
+|----------|-------|-----------|
+| xDS | 7800 | gRPC(IPv4) |
+
+For multi-cluster integration, Quilkin provides a `manage` service, that can be
+used with a number of configuration discovery providers to provide cluster
+configuration multiple [`proxy`s](./proxy.md). With each provider automationing the
+complexity of a full xDS management control plane via integrations with popular
+projects and common architecture patterns.
+
+To view all the providers and options for the `manage` subcommand, run:
+
+```shell
+$ quilkin manage --help
+{{#include ../../../target/quilkin.manage.commands}}
+```
+
+## Overview
 
 In addition to static configuration provided upon startup, a Quiklin proxy's configuration can also be updated at runtime. The proxy can be configured on startup to talk to a set of management servers which provide it with updates throughout its lifecycle.
 
@@ -32,8 +51,8 @@ Since the range of resources configurable by the xDS API extends that of Quilkin
 ## Connecting to an xDS management server
 
 Connecting a Quilkin proxy to an xDS management server can be implemented via providing one or more URLs to
-the `management_servers` [command line](../api/quilkin/cli/struct.Proxy.html#structfield.management_server) or 
-[file configuration](./file-configuration.md#dynamic-configuration).
+the `management_servers` [command line](../../api/quilkin/cli/struct.Proxy.html#structfield.management_server) or
+[file configuration](../deployment/configuration.md#dynamic-configuration).
 
 
 [xDS]: https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol#xds-rest-and-grpc-protocol
@@ -48,15 +67,14 @@ the `management_servers` [command line](../api/quilkin/cli/struct.Proxy.html#str
 [clapolicy]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint.proto#config-endpoint-v3-clusterloadassignment-policy
 [locality]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/base.proto#config-core-v3-locality
 [socket addresses]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#config-core-v3-address
-[filters-doc]: ./filters.md
+[filters-doc]: ./proxy/filters.md
 [listener-resource]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto#config-listener-v3-listener
 [xds-filters]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener_components.proto#envoy-v3-api-msg-config-listener-v3-filter
 [xds-filter-chain]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener_components.proto#config-listener-v3-filterchain
 [xds-variants]: https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol#variants-of-the-xds-transport-protocol
 [filter-protos]: https://github.com/googleforgames/quilkin/tree/{{GITHUB_REF_NAME}}/proto/quilkin/filters
-[filters-doc]: ./filters.md
 [xds-endpoint-metadata]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/base.proto#envoy-v3-api-msg-config-core-v3-metadata
-[endpoint-metadata]: proxy/concepts.md#endpoint-metadata
+[endpoint-metadata]: proxy.md#endpoint-metadata
 [control-plane]: https://github.com/googleforgames/quilkin/tree/{{GITHUB_REF_NAME}}/xds
 [Kubernetes]: https://kubernetes.io/
 

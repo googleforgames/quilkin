@@ -40,6 +40,22 @@ Quilkin incorporates these abilities:
 
 ## What Next?
 
-* Read the [usage guide](./using.md)
-* Have a look at the [example configurations](https://github.com/googleforgames/quilkin/blob/{{GITHUB_REF_NAME}}/examples) for basic configuration examples.
-* Check out the [example integration patterns](./integrations.md).
+Quilkin provides a variety of different services depending on your use-case.
+The primary service is [`proxy`](./services/proxy.md), which runs a reverse UDP
+proxy. To see a basic usage of the command-line interface run through the
+[netcat with Quilkin quickstart](./deployment/quickstarts/netcat.md). 
+
+For more advanced usage, you might also be interested in:
+
+* Checking out the [installation guide](./installation.md)
+* Having a look at the [example projects](https://github.com/googleforgames/quilkin/blob/{{GITHUB_REF_NAME}}/examples) for basic configuration examples.
+* Checking out the [example deployment architecture](./deployment/examples.md)
+  for deploying quilkin for your game network.
+
+
+```shell
+$ quilkin --help
+{{#include ../../target/quilkin.commands}}
+```
+
+[log-docs]: https://docs.rs/env_logger/0.9.0/env_logger/#enabling-logging

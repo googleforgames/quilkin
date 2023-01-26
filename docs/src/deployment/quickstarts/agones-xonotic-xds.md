@@ -9,8 +9,8 @@ In this quickstart, we'll be setting up an example [Xonotic](https://xonotic.org
 Fleet, that will only be accessible through Quilkin, via utilising the [TokenRouter]
 Filter to provide routing and access control to the Allocated `GameServer` instances.   
 
-To do this, we'll take advantage of the Quilkin [Agones xDS Provider](../xds/providers/agones.md) to provide 
-an out-of-the-box control plane for integration between Agones and [Quilkin's xDS configuration API](../xds.md) with 
+To do this, we'll take advantage of the Quilkin [Agones xDS Provider](../../services/xds/providers/agones.md) to provide 
+an out-of-the-box control plane for integration between Agones and [Quilkin's xDS configuration API](../../services/xds.md) with 
 minimal effort.
 
 ## 2. Install Quilkin Agones xDS Provider
@@ -79,22 +79,22 @@ quilkin-proxies-78965c446d-m4rr7        1/1     Running   0          6s
 Let's take this one step further, and check the configuration of the proxies that should have come from the `quilkin 
 manage agones` instance.
 
-In another terminal, run:  `kubectl port-forward deployments/quilkin-proxies 9091`, to port forward the
+In another terminal, run:  `kubectl port-forward deployments/quilkin-proxies 8000`, to port forward the
 [admin endpoint](../admin.md) locally, which we can then query.
 
-Go back to your original terminal and run `curl -s http://localhost:9091/config` 
+Go back to your original terminal and run `curl -s http://localhost:8000/config` 
 
-> If you have [jq](https://stedolan.github.io/jq/) installed, run `curl -s http://localhost:9091/config | jq` for a
+> If you have [jq](https://stedolan.github.io/jq/) installed, run `curl -s http://localhost:8000/config | jq` for a
 > nicely formatted JSON output.
 
 ```shell
-$ curl -s http://localhost:9091/config
-{"admin":{"address":"0.0.0.0:9091"},"clusters":{},"filters":[{"name":"quilkin.filters.capture.v1alpha1.Capture","config":{"metadataKey":"quilkin.dev/capture","suffix":{"size":3,"remove":true}}},{"name":"quilkin.filters.token_router.v1alpha1.TokenRouter","config":null}],"id":"quilkin-proxies-78965c446d-dqvjg","management_servers":[{"address":"http://quilkin-manage-agones:80"}],"port":7000,"version":"v1alpha1","maxmind_db":null}%       
+$ curl -s http://localhost:8000/config
+{"admin":{"address":"0.0.0.0:8000"},"clusters":{},"filters":[{"name":"quilkin.filters.capture.v1alpha1.Capture","config":{"metadataKey":"quilkin.dev/capture","suffix":{"size":3,"remove":true}}},{"name":"quilkin.filters.token_router.v1alpha1.TokenRouter","config":null}],"id":"quilkin-proxies-78965c446d-dqvjg","management_servers":[{"address":"http://quilkin-manage-agones:80"}],"port":7000,"version":"v1alpha1","maxmind_db":null}%       
 ```
 
 This shows us the current configuration of the proxies coming from the xDS server created via `quilkin manage 
 agones`. The most interesting part that we see here, is that we have a matching set of 
-[Filters](../proxy/concepts.md#proxy-filters) that are found in the `ConfigMap` in the 
+[Filters](../../services/proxy/filters.md) that are found in the `ConfigMap` in the 
 [xds-control-plane.yaml](https://github.com/googleforgames/quilkin/blob/{{GITHUB_REF_NAME}}/examples/agones-xonotic-xds/xds-control-plane.yaml)
 we installed earlier.
 
@@ -169,11 +169,11 @@ our authentication and routing token ("NDU2").
 
 > You should use something more cryptographically random than `456` in your application.
 
-Let's run `curl -s http://localhost:9091/config` again, so we can see what has changed!
+Let's run `curl -s http://localhost:8000/config` again, so we can see what has changed!
 
 ```shell
-$ curl -s http://localhost:9091/config
-{"admin":{"address":"0.0.0.0:9091"},"clusters":{"default":{"localities":[{"locality":null,"endpoints":[{"address":"34.168.170.51:7226","metadata":{"quilkin.dev":{"tokens":["NDU2"]}}}]}]}},"filters":[{"name":"quilkin.filters.capture.v1alpha1.Capture","config":{"metadataKey":"quilkin.dev/capture","suffix":{"size":3,"remove":true}}},{"name":"quilkin.filters.token_router.v1alpha1.TokenRouter","config":null}],"id":"quilkin-proxies-78965c446d-tfgsj","management_servers":[{"address":"http://quilkin-manage-agones:80"}],"port":7000,"version":"v1alpha1","maxmind_db":null}%
+$ curl -s http://localhost:8000/config
+{"admin":{"address":"0.0.0.0:8000"},"clusters":{"default":{"localities":[{"locality":null,"endpoints":[{"address":"34.168.170.51:7226","metadata":{"quilkin.dev":{"tokens":["NDU2"]}}}]}]}},"filters":[{"name":"quilkin.filters.capture.v1alpha1.Capture","config":{"metadataKey":"quilkin.dev/capture","suffix":{"size":3,"remove":true}}},{"name":"quilkin.filters.token_router.v1alpha1.TokenRouter","config":null}],"id":"quilkin-proxies-78965c446d-tfgsj","management_servers":[{"address":"http://quilkin-manage-agones:80"}],"port":7000,"version":"v1alpha1","maxmind_db":null}%
 ```
 
 Looking under `clusters` > `localities` > `endpoints` we can see an address and token that matches up with the 
@@ -199,7 +199,7 @@ quilkin-proxies   LoadBalancer   10.109.0.12   35.246.94.14    7000:30174/UDP   
 We have a [Quilkin config yaml](https://github.com/googleforgames/quilkin/blob/{{GITHUB_REF_NAME}}/examples/agones-xonotic-xds/client-token.yaml)
 file all ready for you, that is configured to append the routing token `456` to each 
 packet that passes through it, via the power of a 
-[ConcatenateBytes](../proxy/filters/concatenate_bytes.md) Filter.
+[ConcatenateBytes](../../services/proxy/filters/concatenate_bytes.md) Filter.
 
 Download `client-token.yaml` locally, so you can edit it:
 
@@ -230,9 +230,9 @@ proxies will route to the Allocated GameServer, and you can play a gamee!
 
 ## What's Next?
 
-* Check out the variety of [Filters](../filters.md) that are possible with Quilkin.
-* Read into the [xDS Managment API](../xds.md).
+* Check out the variety of [Filters](../../services/proxy/filters.md) that are possible with Quilkin.
+* Read into the [xDS Managment API](../../services/xds.md).
 
 [ConfigMap]: https://kubernetes.io/docs/concepts/configuration/configmap/
-[Capture]: ../proxy/filters/capture.md
-[TokenRouter]: ../proxy/filters/token_router.md
+[Capture]: ../../services/proxy/filters/capture.md
+[TokenRouter]: ../../services/proxy/filters/token_router.md

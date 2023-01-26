@@ -18,7 +18,7 @@ filters:
         on_read: COMPRESS
         on_write: DECOMPRESS
         mode: SNAPPY
-clusters: 
+clusters:
   default:
     localities:
       - endpoints:
@@ -34,13 +34,13 @@ sent to the local listening port and then compressed when heading up to a dedica
 decompressed when traffic is returned from the dedicated game server before being handed back to game client.
 
 > It is worth noting that since the Compress filter modifies the *entire packet*, it is worth paying special
-  attention to the order it is placed in your [Filter configuration](../../filters.md). Most of the time it will likely be
+  attention to the order it is placed in your [Filter configuration](../filters.md). Most of the time it will likely be
   the first or last Filter configured to ensure it is compressing the entire set of data being sent.
 
-## Configuration Options ([Rust Doc](../../../api/quilkin/filters/compress/struct.Config.html))
+## Configuration Options ([Rust Doc](../../../../api/quilkin/filters/compress/struct.Config.html))
 
 ```yaml
-{{#include ../../../../target/quilkin.filters.compress.v1alpha1.yaml}}
+{{#include ../../../../../target/quilkin.filters.compress.v1alpha1.yaml}}
 ```
 
 ## Compression Modes

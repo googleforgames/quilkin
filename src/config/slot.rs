@@ -90,6 +90,13 @@ impl<T: Default> Slot<T> {
     pub fn remove(&self) {
         self.store_opt(None);
     }
+
+    /// Replaces the data if the slot is empty.
+    pub fn store_if_unset(&self, value: Arc<T>) {
+        if self.inner.load().is_none() {
+            self.store(value);
+        }
+    }
 }
 
 impl<T: Default + PartialEq> Slot<T> {

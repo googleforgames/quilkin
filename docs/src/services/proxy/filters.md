@@ -1,4 +1,4 @@
-# Proxy Filters
+# Packet Filters
 
 In most cases, we would like Quilkin to do some preprocessing of received packets before sending them off to their destination. Because this stage is entirely specific to the use case at hand and differs between Quilkin deployments, we must have a say over what tweaks to perform - this is where filters come in.
 
@@ -14,7 +14,7 @@ As an example, say we would like to perform the following steps in our processin
 * Do not forward (drop) the packet if its compressed length is over 512 bytes.
 
 We would create a filter corresponding to each step either by leveraging any [existing filters](#built-in-filters)
-that do what we want or [writing one ourselves](proxy/filters/writing_custom_filters.md) and connect them to form the
+that do what we want or [writing one ourselves](./filters/writing_custom_filters.md) and connect them to form the
 following filter chain:
 
 ```bash
@@ -49,7 +49,7 @@ filters:
     config:
       max_packets: 10
       period: 1
-clusters: 
+clusters:
   default:
     localities:
       - endpoints:
@@ -94,16 +94,16 @@ Quilkin includes several filters out of the box.
 | Filter                                             | Description                                                                                                 |
 |----------------------------------------------------|-------------------------------------------------------------------------------------------------------------|
 | [Capture]                                          | Capture specific bytes from a packet and store them in [filter dynamic metadata](#filter-dynamic-metadata). |
-| [Compress](proxy/filters/compress.md)                  | Compress and decompress packets data.                                                                       |
-| [ConcatenateBytes](proxy/filters/concatenate_bytes.md) | Add authentication tokens to packets.                                                                       |
-| [Debug]                                            | Logs every packet.                                                                                          |
-| [Drop](proxy/filters/drop.md)                          | Drop all packets                                                                                            |
-| [Firewall](proxy/filters/firewall.md)                  | Allowing/blocking traffic by IP and port.                                                                   |
-| [LoadBalancer](proxy/filters/load_balancer.md)         | Distributes downstream packets among upstream endpoints.                                                    |
+| [Compress](./filters/compress.md)                  | Compress and decompress packets data.                                                                       |
+| [ConcatenateBytes](./filters/concatenate_bytes.md) | Add authentication tokens to packets.                                                                       |
+| [Debug](./filters/concatenate_bytes.md)            | Logs every packet.                                                                                          |
+| [Drop](./filters/drop.md)                          | Drop all packets                                                                                            |
+| [Firewall](./filters/firewall.md)                  | Allowing/blocking traffic by IP and port.                                                                   |
+| [LoadBalancer](./filters/load_balancer.md)         | Distributes downstream packets among upstream endpoints.                                                    |
 | [LocalRateLimit]                                   | Limit the frequency of packets.                                                                             |
-| [Match](proxy/filters/match.md)                        | Change Filter behaviour based on dynamic metadata                                                           |
-| [Pass](proxy/filters/pass.md)                          | Allow all packets through                                                                                   |
-| [Timestamp](proxy/filters/timestamp.md)                | Accepts a UNIX timestamp from metadata and observes the duration between that timestamp and now.            |
+| [Match](./filters/match.md)                        | Change Filter behaviour based on dynamic metadata                                                           |
+| [Pass](./filters/pass.md)                          | Allow all packets through                                                                                   |
+| [Timestamp](./filters/timestamp.md)                | Accepts a UNIX timestamp from metadata and observes the duration between that timestamp and now.            |
 | [TokenRouter]                                      | Send packets to endpoints based on metadata.                                                                |
 
 ## FilterConfig <a name="filter-config"></a>
@@ -127,8 +127,8 @@ properties:
 required: [ 'name' ]
 ```
 
-[Capture]: proxy/filters/capture.md
-[TokenRouter]: proxy/filters/token_router.md
-[Debug]: proxy/filters/debug.md
-[LocalRateLimit]: proxy/filters/local_rate_limit.md
-[`quilkin::metadata::Value`]: ../api/quilkin/metadata/enum.Value.html
+[Capture]: ./filters/capture.md
+[TokenRouter]: ./filters/token_router.md
+[Debug]: ./filters/debug.md
+[LocalRateLimit]: ./filters/local_rate_limit.md
+[`quilkin::metadata::Value`]: ../../../api/quilkin/metadata/enum.Value.html

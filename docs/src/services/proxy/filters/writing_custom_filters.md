@@ -91,7 +91,7 @@ Add a main function that starts the proxy.
 
 ```rust,no_run,noplayground,ignore
 // src/main.rs
-{{#include ../../../../examples/quilkin-filter-example/src/main.rs:run}}
+{{#include ../../../../../examples/quilkin-filter-example/src/main.rs:run}}
 ```
 
 Now, let's try out the proxy. The following configuration starts our extended
@@ -153,14 +153,14 @@ serde_yaml = "0.8"
 
 ```rust,no_run,noplayground,ignore
 // src/main.rs
-{{#include ../../../../examples/quilkin-filter-example/src/main.rs:serde_config}}
+{{#include ../../../../../examples/quilkin-filter-example/src/main.rs:serde_config}}
 ```
 
 3. Update the `Greet` Filter to take in `greeting` as a parameter:
 
 ```rust,no_run,noplayground,ignore
 // src/main.rs
-{{#include ../../../../examples/quilkin-filter-example/src/main.rs:filter}}
+{{#include ../../../../../examples/quilkin-filter-example/src/main.rs:filter}}
 ```
 
 ### Protobuf Configuration
@@ -184,7 +184,7 @@ prost-types = "0.7"
 
 ```plaintext,no_run,noplayground,ignore
 // src/greet.proto
-{{#include ../../../../examples/quilkin-filter-example/src/greet.proto:proto}}
+{{#include ../../../../../examples/quilkin-filter-example/src/greet.proto:proto}}
 ```
 
 3. Generate Rust code from the proto file:
@@ -205,7 +205,7 @@ prost-build = "0.7"
 
 ```rust,no_run,noplayground,ignore
 // src/build.rs
-{{#include ../../../../examples/quilkin-filter-example/build.rs:build}}
+{{#include ../../../../../examples/quilkin-filter-example/build.rs:build}}
 ```
 
 To include the generated code, we'll use [`tonic::include_proto`], then we just
@@ -215,9 +215,9 @@ equivalvent configuration.
 
 ```rust,no_run,noplayground,ignore
 // src/main.rs
-{{#include ../../../../examples/quilkin-filter-example/src/main.rs:include_proto}}
+{{#include ../../../../../examples/quilkin-filter-example/src/main.rs:include_proto}}
 
-{{#include ../../../../examples/quilkin-filter-example/src/main.rs:TryFrom}}
+{{#include ../../../../../examples/quilkin-filter-example/src/main.rs:TryFrom}}
 ```
 
 Now, let's update `Greet`'s `StaticFilter` implementation to use the two
@@ -225,7 +225,7 @@ configurations.
 
 ```rust,no_run,noplayground,ignore
 // src/main.rs
-{{#include ../../../../examples/quilkin-filter-example/src/main.rs:factory}}
+{{#include ../../../../../examples/quilkin-filter-example/src/main.rs:factory}}
 ```
 
 That's it! With these changes we have wired up static configuration for our
@@ -233,27 +233,27 @@ filter. Try it out with the following configuration:
 
 ```yaml
 # quilkin.yaml
-{{#include ../../../../examples/quilkin-filter-example/config.yaml:yaml}}
+{{#include ../../../../../examples/quilkin-filter-example/config.yaml:yaml}}
 ```
 
-[FilterInstance]: ../../../api/quilkin/filters/prelude/struct.FilterInstance.html
-[Filter]: ../../../api/quilkin/filters/trait.Filter.html
-[FilterFactory]: ../../../api/quilkin/filters/trait.FilterFactory.html
-[filter-factory-name]: ../../../api/quilkin/filters/trait.FilterFactory.html#tymethod.name
-[FilterRegistry]: ../../../api/quilkin/filters/struct.FilterRegistry.html
-[FilterRegistry::register]: ../../../api/quilkin/filters/struct.FilterRegistry.html#method.register
+[FilterInstance]: ../../../../api/quilkin/filters/prelude/struct.FilterInstance.html
+[Filter]: ../../../../api/quilkin/filters/trait.Filter.html
+[FilterFactory]: ../../../../api/quilkin/filters/trait.FilterFactory.html
+[filter-factory-name]: ../../../../api/quilkin/filters/trait.FilterFactory.html#tymethod.name
+[FilterRegistry]: ../../../../api/quilkin/filters/struct.FilterRegistry.html
+[FilterRegistry::register]: ../../../../api/quilkin/filters/struct.FilterRegistry.html#method.register
 [Proxy::try_from]: ../../../api/struct.Proxy.html#impl-TryFrom%3CConfig%3E
 [CreateFilterArgs::config]: ../../../api/quilkin/filters/prelude/struct.CreateFilterArgs.html#structfield.config
-[ConfigType::dynamic]: ../../../api/quilkin/config/enum.ConfigType.html#variant.Dynamic
-[ConfigType::static]: ../../../api/quilkin/config/enum.ConfigType.html#variant.Static
-[ConfigType::deserialize]: ../../../api/quilkin/config/enum.ConfigType.html#method.deserialize
+[ConfigType::dynamic]: ../../../../api/quilkin/config/enum.ConfigType.html#variant.Dynamic
+[ConfigType::static]: ../../../../api/quilkin/config/enum.ConfigType.html#variant.Static
+[ConfigType::deserialize]: ../../../../api/quilkin/config/enum.ConfigType.html#method.deserialize
 [std::convert::TryFrom]: https://doc.rust-lang.org/std/convert/trait.TryFrom.html
 
-[Filters]: ../../filters.md
-[filter chain]: ../../filters.md#filters-and-filter-chain
-[built-in-filters]: ../../filters.md#built-in-filters
-[filter configuration]: ../../filters.md#filter-config
-[proxy-config]: ../../file-configuration.md
+[Filters]: ../filters.md
+[filter chain]: ../filters.md#filters-and-filter-chain
+[built-in-filters]: ../filters.md#built-in-filters
+[filter configuration]: ../filters.md#filter-config
+[proxy-config]: ../../deployment/configuration.md
 [management server]: ../../xds.md
 [tokio]: https://docs.rs/tokio
 [tonic]: https://docs.rs/tonic

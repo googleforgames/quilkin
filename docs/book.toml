@@ -29,4 +29,7 @@ use_env = true
 
 [preprocessor.variables.variables]
 
+[build]
+create-missing = false
+
 [output.html]
