@@ -392,6 +392,9 @@
 <span id="392">392</span>
 <span id="393">393</span>
 <span id="394">394</span>
+<span id="395">395</span>
+<span id="396">396</span>
+<span id="397">397</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -408,7 +411,7 @@
  * limitations under the License.
  */
 
-</span><span class="kw">use </span>std::{pin::Pin, sync::Arc};
+</span><span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use </span>cached::Cached;
 <span class="kw">use </span>futures::Stream;
@@ -537,13 +540,16 @@
         <span class="prelude-val">Ok</span>(response)
     }
 
-    <span class="kw">pub async fn </span>stream_aggregated_resources(
+    <span class="kw">pub async fn </span>stream_aggregated_resources&lt;S&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="kw-2">mut </span>streaming: Pin&lt;Box&lt;<span class="kw">dyn </span>Stream&lt;Item = <span class="prelude-ty">Result</span>&lt;DiscoveryRequest, tonic::Status&gt;&gt; + Send&gt;&gt;,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;
-        Pin&lt;Box&lt;<span class="kw">dyn </span>Stream&lt;Item = <span class="prelude-ty">Result</span>&lt;DiscoveryResponse, tonic::Status&gt;&gt; + Send&gt;&gt;,
-        tonic::Status,
-    &gt; {
+        <span class="kw-2">mut </span>streaming: S,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw">impl </span>Stream&lt;Item = <span class="prelude-ty">Result</span>&lt;DiscoveryResponse, tonic::Status&gt;&gt; + Send, tonic::Status&gt;
+    <span class="kw">where
+        </span>S: Stream&lt;Item = <span class="prelude-ty">Result</span>&lt;DiscoveryRequest, tonic::Status&gt;&gt;
+            + Send
+            + std::marker::Unpin
+            + <span class="lifetime">&#39;static</span>,
+    {
         <span class="macro">tracing::trace!</span>(<span class="string">&quot;starting stream&quot;</span>);
         <span class="kw">let </span>message = streaming.next().<span class="kw">await</span>.ok_or_else(|| {
             <span class="macro">tracing::error!</span>(<span class="string">&quot;No message found&quot;</span>);
@@ -642,11 +648,11 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         request: tonic::Request&lt;tonic::Streaming&lt;DiscoveryRequest&gt;&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;tonic::Response&lt;<span class="self">Self</span>::StreamAggregatedResourcesStream&gt;, tonic::Status&gt; {
-        <span class="prelude-val">Ok</span>(tonic::Response::new(
-            <span class="self">self</span>.stream_aggregated_resources(Box::pin(request.into_inner()))
+        <span class="prelude-val">Ok</span>(tonic::Response::new(Box::pin(
+            <span class="self">self</span>.stream_aggregated_resources(request.into_inner())
                 .in_current_span()
                 .<span class="kw">await</span><span class="question-mark">?</span>,
-        ))
+        )))
     }
 
     <span class="kw">async fn </span>delta_aggregated_resources(
