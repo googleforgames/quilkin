@@ -584,11 +584,6 @@
 <span id="584">584</span>
 <span id="585">585</span>
 <span id="586">586</span>
-<span id="587">587</span>
-<span id="588">588</span>
-<span id="589">589</span>
-<span id="590">590</span>
-<span id="591">591</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -661,7 +656,7 @@
     <span class="attribute">#[serde(default)]
     #[schemars(with = <span class="string">&quot;Vec::&lt;ManagementServer&gt;&quot;</span>)]
     </span><span class="kw">pub </span>management_servers: Slot&lt;Vec&lt;ManagementServer&gt;&gt;,
-    <span class="attribute">#[serde(default = <span class="string">&quot;default_proxy_port&quot;</span>)]
+    <span class="attribute">#[serde(default = <span class="string">&quot;Slot::&lt;u16&gt;::empty&quot;</span>)]
     </span><span class="kw">pub </span>port: Slot&lt;u16&gt;,
     <span class="attribute">#[schemars(with = <span class="string">&quot;Option&lt;Version&gt;&quot;</span>)]
     </span><span class="kw">pub </span>version: Slot&lt;Version&gt;,
@@ -812,7 +807,7 @@
             management_servers: &lt;<span class="kw">_</span>&gt;::default(),
             maxmind_db: Slot::empty(),
             metrics: &lt;<span class="kw">_</span>&gt;::default(),
-            port: default_proxy_port(),
+            port: Slot::empty(),
             version: &lt;<span class="kw">_</span>&gt;::default(),
         }
     }
@@ -851,10 +846,6 @@
     Slot::from(sys_info::hostname().unwrap_or_else(|<span class="kw">_</span>| Uuid::new_v4().as_hyphenated().to_string()))
 }
 
-<span class="kw">fn </span>default_proxy_port() -&gt; Slot&lt;u16&gt; {
-    Slot::from(<span class="number">7000</span>)
-}
-
 <span class="attribute">#[derive(Clone, Debug, Deserialize, Eq, Serialize, JsonSchema, PartialEq)]
 #[serde(deny_unknown_fields)]
 </span><span class="kw">pub struct </span>Admin {
@@ -864,7 +855,7 @@
 <span class="kw">impl </span>Default <span class="kw">for </span>Admin {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
         Admin {
-            address: (std::net::Ipv4Addr::UNSPECIFIED, <span class="number">9091</span>).into(),
+            address: (std::net::Ipv4Addr::UNSPECIFIED, <span class="number">8000</span>).into(),
         }
     }
 }
@@ -989,7 +980,6 @@
         }))
         .unwrap();
 
-        <span class="macro">assert_eq!</span>(<span class="kw-2">*</span>config.port.load(), <span class="number">7000</span>);
         <span class="macro">assert!</span>(config.id.load().len() &gt; <span class="number">1</span>);
     }
 

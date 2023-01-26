@@ -217,6 +217,13 @@
 <span id="217">217</span>
 <span id="218">218</span>
 <span id="219">219</span>
+<span id="220">220</span>
+<span id="221">221</span>
+<span id="222">222</span>
+<span id="223">223</span>
+<span id="224">224</span>
+<span id="225">225</span>
+<span id="226">226</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -308,6 +315,13 @@
     <span class="doccomment">/// Removes any data from the slot.
     </span><span class="kw">pub fn </span>remove(<span class="kw-2">&amp;</span><span class="self">self</span>) {
         <span class="self">self</span>.store_opt(<span class="prelude-val">None</span>);
+    }
+
+    <span class="doccomment">/// Replaces the data if the slot is empty.
+    </span><span class="kw">pub fn </span>store_if_unset(<span class="kw-2">&amp;</span><span class="self">self</span>, value: Arc&lt;T&gt;) {
+        <span class="kw">if </span><span class="self">self</span>.inner.load().is_none() {
+            <span class="self">self</span>.store(value);
+        }
     }
 }
 

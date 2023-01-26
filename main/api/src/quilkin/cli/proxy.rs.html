@@ -111,6 +111,8 @@
 <span class="attribute">#[cfg(doc)]
 </span><span class="kw">use </span><span class="kw">crate</span>::filters::FilterFactory;
 
+<span class="kw">pub const </span>PORT: u16 = <span class="number">7777</span>;
+
 <span class="doccomment">/// Run Quilkin as a UDP reverse proxy.
 </span><span class="attribute">#[derive(clap::Args, Clone)]
 #[non_exhaustive]
@@ -122,8 +124,8 @@
     </span><span class="attribute">#[clap(long, env)]
     </span><span class="kw">pub </span>mmdb: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::maxmind_db::Source&gt;,
     <span class="doccomment">/// The port to listen on.
-    </span><span class="attribute">#[clap(short, long, env = <span class="string">&quot;QUILKIN_PORT&quot;</span>)]
-    </span><span class="kw">pub </span>port: <span class="prelude-ty">Option</span>&lt;u16&gt;,
+    </span><span class="attribute">#[clap(short, long, env = <span class="kw">super</span>::PORT_ENV_VAR, default_value_t = PORT)]
+    </span><span class="kw">pub </span>port: u16,
     <span class="doccomment">/// One or more socket addresses to forward packets to.
     </span><span class="attribute">#[clap(short, long, env = <span class="string">&quot;QUILKIN_DEST&quot;</span>)]
     </span><span class="kw">pub </span>to: Vec&lt;SocketAddr&gt;,
@@ -136,9 +138,7 @@
         config: std::sync::Arc&lt;<span class="kw">crate</span>::Config&gt;,
         shutdown_rx: tokio::sync::watch::Receiver&lt;()&gt;,
     ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(port) = <span class="self">self</span>.port {
-            config.port.store(port.into());
-        }
+        config.port.store_if_unset(<span class="self">self</span>.port.into());
 
         <span class="kw">let </span>_mmdb_task = <span class="self">self</span>.mmdb.clone().map(|source| {
             tokio::spawn(<span class="kw">async move </span>{

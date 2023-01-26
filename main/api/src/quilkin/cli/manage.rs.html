@@ -102,12 +102,14 @@
  * limitations under the License.
  */
 
-</span><span class="doccomment">/// Runs Quilkin as a xDS management server, using `provider` as
+</span><span class="kw">pub const </span>PORT: u16 = <span class="number">7800</span>;
+
+<span class="doccomment">/// Runs Quilkin as a xDS management server, using `provider` as
 /// a configuration source.
 </span><span class="attribute">#[derive(clap::Args, Clone)]
 </span><span class="kw">pub struct </span>Manage {
-    <span class="attribute">#[clap(short, long, env = <span class="string">&quot;QUILKIN_PORT&quot;</span>)]
-    </span>port: <span class="prelude-ty">Option</span>&lt;u16&gt;,
+    <span class="attribute">#[clap(short, long, env = <span class="kw">super</span>::PORT_ENV_VAR, default_value_t = PORT)]
+    </span>port: u16,
     <span class="doccomment">/// The configuration source for a management server.
     </span><span class="attribute">#[clap(subcommand)]
     </span><span class="kw">pub </span>provider: Providers,
@@ -136,9 +138,7 @@
 
 <span class="kw">impl </span>Manage {
     <span class="kw">pub async fn </span>manage(<span class="kw-2">&amp;</span><span class="self">self</span>, config: std::sync::Arc&lt;<span class="kw">crate</span>::Config&gt;) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(port) = <span class="self">self</span>.port {
-            config.port.store(port.into());
-        }
+        config.port.store_if_unset(<span class="self">self</span>.port.into());
 
         <span class="kw">let </span>provider_task = {
             <span class="kw">const </span>PROVIDER_RETRIES: u32 = <span class="number">25</span>;

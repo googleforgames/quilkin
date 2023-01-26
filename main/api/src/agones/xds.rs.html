@@ -730,7 +730,7 @@ filters:
         .to_vec();
         <span class="kw">let </span><span class="kw-2">mut </span>container = quilkin_container(client, <span class="prelude-val">Some</span>(args), <span class="prelude-val">None</span>);
         container.ports = <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[ContainerPort {
-            container_port: <span class="number">7000</span>,
+            container_port: <span class="number">7777</span>,
             ..Default::default()
         }]);
         <span class="kw">let </span>labels = BTreeMap::from([(<span class="string">&quot;role&quot;</span>.to_string(), <span class="string">&quot;xds&quot;</span>.to_string())]);
@@ -773,8 +773,8 @@ filters:
                 selector: <span class="prelude-val">Some</span>(labels),
                 ports: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[ServicePort {
                     protocol: <span class="prelude-val">Some</span>(<span class="string">&quot;TCP&quot;</span>.into()),
-                    port: <span class="number">80</span>,
-                    target_port: <span class="prelude-val">Some</span>(IntOrString::Int(<span class="number">7000</span>)),
+                    port: <span class="number">7800</span>,
+                    target_port: <span class="prelude-val">Some</span>(IntOrString::Int(<span class="number">7800</span>)),
                     ..Default::default()
                 }]),
                 ..Default::default()
@@ -805,7 +805,7 @@ filters:
         <span class="kw">let </span>config = <span class="string">r#&quot;
 version: v1alpha1
 management_servers:
-  - address: http://quilkin-manage-agones:80
+  - address: http://quilkin-manage-agones:7800
 &quot;#</span>;
 
         <span class="kw">let </span>config_map = config_maps
@@ -817,12 +817,12 @@ management_servers:
             quilkin_container(client, <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="string">&quot;proxy&quot;</span>.into()]), <span class="prelude-val">Some</span>(mount_name.into()));
 
         <span class="comment">// we&#39;ll use a host port, since spinning up a load balancer takes a long time.
-        // we know that port 7000 is open because this is an Agones cluster and it has associated
+        // we know that port 7777 is open because this is an Agones cluster and it has associated
         // firewall rules , and even if we conflict with a GameServer
         // the k8s scheduler will move us to another node.
         </span><span class="kw">let </span>host_port: u16 = <span class="number">7005</span>;
         container.ports = <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[ContainerPort {
-            container_port: <span class="number">7000</span>,
+            container_port: <span class="number">7777</span>,
             host_port: <span class="prelude-val">Some</span>(host_port <span class="kw">as </span>i32),
             protocol: <span class="prelude-val">Some</span>(<span class="string">&quot;UDP&quot;</span>.into()),
             ..Default::default()

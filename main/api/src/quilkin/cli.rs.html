@@ -188,6 +188,7 @@
 <span id="188">188</span>
 <span id="189">189</span>
 <span id="190">190</span>
+<span id="191">191</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -225,6 +226,7 @@
 <span class="kw">mod </span>proxy;
 
 <span class="kw">const </span>ETC_CONFIG_PATH: <span class="kw-2">&amp;</span>str = <span class="string">&quot;/etc/quilkin/quilkin.yaml&quot;</span>;
+<span class="kw">const </span>PORT_ENV_VAR: <span class="kw-2">&amp;</span>str = <span class="string">&quot;QUILKIN_PORT&quot;</span>;
 
 <span class="doccomment">/// The Command-Line Interface for Quilkin.
 </span><span class="attribute">#[derive(clap::Parser)]

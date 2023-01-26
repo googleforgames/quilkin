@@ -767,7 +767,7 @@
         liveness_probe: <span class="prelude-val">Some</span>(Probe {
             http_get: <span class="prelude-val">Some</span>(HTTPGetAction {
                 path: <span class="prelude-val">Some</span>(<span class="string">&quot;/live&quot;</span>.into()),
-                port: IntOrString::Int(<span class="number">9091</span>),
+                port: IntOrString::Int(<span class="number">8000</span>),
                 ..Default::default()
             }),
             initial_delay_seconds: <span class="prelude-val">Some</span>(<span class="number">3</span>),
@@ -777,7 +777,7 @@
         readiness_probe: <span class="prelude-val">Some</span>(Probe {
             http_get: <span class="prelude-val">Some</span>(HTTPGetAction {
                 path: <span class="prelude-val">Some</span>(<span class="string">&quot;/ready&quot;</span>.into()),
-                port: IntOrString::Int(<span class="number">9091</span>),
+                port: IntOrString::Int(<span class="number">8000</span>),
                 ..Default::default()
             }),
             initial_delay_seconds: <span class="prelude-val">Some</span>(<span class="number">3</span>),
