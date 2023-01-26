@@ -6,7 +6,10 @@ each providing different capabilities and complexity tradeoffs.
 Below captures several of the most useful and prevalent architectural patterns to give you inspiration
 on how you can use Quilkin in your multiplayer game networking architecture.
 
-## Server Proxy as a Sidecar
+These [examples](https://github.com/googleforgames/quilkin/tree/{{GITHUB_REF_NAME}}/examples)
+as well many others are available on Github repository.
+
+## [Server Proxy as a Sidecar](https://github.com/googleforgames/quilkin/tree/{{GITHUB_REF_NAME}}/examples/agones-xonotic-sidecar)
 
 ```text
                   |
@@ -79,10 +82,10 @@ advantage of Client Proxy functionality.
 * The Client Proxy may be integrated as a standalone binary, directly into the client with communication
   occurring over a localhost port or it may be possible utlise one of our client SDKs such as [Unreal Engine][ue].
 * The Client Proxy can now utilise filters, such as compression, without having to change the Game Client.
-* The Game Client will need to communicate to the Client Proxy what IP it should connect to when the Client is 
+* The Game Client will need to communicate to the Client Proxy what IP it should connect to when the Client is
   match-made with a Game Server.
 
-## Client Proxy to Separate Server Proxies Pools
+## [Client Proxy to Separate Server Proxies Pools](https://github.com/googleforgames/quilkin/tree/{{GITHUB_REF_NAME}}/examples/agones-xonotic-xds)
 
 ```text
                                        |                             |
@@ -122,27 +125,27 @@ This is the most complex configuration, but enables the most reuse of Quilkin's 
 while also providing the most redundancy and security for your dedicated game servers.
 
 * The Game client sends and receives packets from the Quilkin client proxy.
-* The Client Proxy may be integrated as a standalone binary, with communication occurring over a localhost port, or 
-  it could be integrated directly with the game client as a library, or the client could utilise one of our 
+* The Client Proxy may be integrated as a standalone binary, with communication occurring over a localhost port, or
+  it could be integrated directly with the game client as a library, or the client could utilise one of our
   [client SDKs] if Rust integration is not possible.
-* The Client Proxy can utilise the full set of filters, such as concatenation (for routing), compression or load 
+* The Client Proxy can utilise the full set of filters, such as concatenation (for routing), compression or load
   balancing, without having to change the Game Client.
-* A hosted set of Quilkin Server proxies that have public IP addresses, are connected to an 
-  [xDS Control Plane](../services/xds.md) to coordinate routing and access control to the dedicated game servers, which are 
+* A hosted set of Quilkin Server proxies that have public IP addresses, are connected to an
+  [xDS Control Plane](../services/xds.md) to coordinate routing and access control to the dedicated game servers, which are
   on private IP addresses.
 * The Client Proxy is made aware of one or more Server proxies to connect to, possibly via their Game Client matchmaker
   or another service, with an authentication token to pass to the Server proxies, such that the UDP packets can be
   routed correctly to the dedicated game server they should connect to.
 * Dedicated game servers receive traffic as per normal from the Server Proxies, and send data back to the proxies
   directly.
-* If the dedicated game server always expects traffic from only a single ip/port combination for client connection, 
+* If the dedicated game server always expects traffic from only a single ip/port combination for client connection,
   then traffic will always need to be sent through a single Server Proxy. Otherwise, UDP packets can be load
   balanced via the Client Proxy to multiple Server Proxies for even greater redundancy.
 
 
 ## What Next?
 
-* Have a look at the [example configurations](./examples.md) for configuration and usage examples.
+* Have a look at the [Administration API](./admin.md).
 * Review the [set of filters](../services/proxy/filters.md) that are available.
 
 ---

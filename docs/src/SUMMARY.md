@@ -2,6 +2,11 @@
 [Installation](./installation.md)
 [FAQ](./faq.md)
 
+# Quickstart Guides
+- [Netcat](./deployment/quickstarts/netcat.md)
+- [Agones + Xonotic (Sidecar)](./deployment/quickstarts/agones-xonotic-sidecar.md)
+- [Agones + Xonotic (xDS)](./deployment/quickstarts/agones-xonotic-xds.md)
+
 # Services
 - [Proxy](./services/proxy.md)
     - [Filters](./services/proxy/filters.md)
@@ -35,8 +40,3 @@
 - [Administration](./deployment/admin.md)
 - [Architecture Examples](./deployment/examples.md)
 - [Configuration](./deployment/configuration.md)
-
-# Quickstart Guides
-- [Netcat](./deployment/quickstarts/netcat.md)
-- [Agones + Xonotic (Sidecar)](./deployment/quickstarts/agones-xonotic-sidecar.md)
-- [Agones + Xonotic (xDS)](./deployment/quickstarts/agones-xonotic-xds.md)
