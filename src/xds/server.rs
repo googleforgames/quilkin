@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-use std::{pin::Pin, sync::Arc};
+use std::sync::Arc;
 
 use cached::Cached;
 use futures::Stream;
@@ -143,13 +143,16 @@ impl ControlPlane {
         Ok(response)
     }
 
-    pub async fn stream_aggregated_resources(
+    pub async fn stream_aggregated_resources<S>(
         &self,
-        mut streaming: Pin<Box<dyn Stream<Item = Result<DiscoveryRequest, tonic::Status>> + Send>>,
-    ) -> Result<
-        Pin<Box<dyn Stream<Item = Result<DiscoveryResponse, tonic::Status>> + Send>>,
-        tonic::Status,
-    > {
+        mut streaming: S,
+    ) -> Result<impl Stream<Item = Result<DiscoveryResponse, tonic::Status>> + Send, tonic::Status>
+    where
+        S: Stream<Item = Result<DiscoveryRequest, tonic::Status>>
+            + Send
+            + std::marker::Unpin
+            + 'static,
+    {
         tracing::trace!("starting stream");
         let message = streaming.next().await.ok_or_else(|| {
             tracing::error!("No message found");
@@ -248,11 +251,11 @@ impl AggregatedDiscoveryService for ControlPlane {
         &self,
         request: tonic::Request<tonic::Streaming<DiscoveryRequest>>,
     ) -> Result<tonic::Response<Self::StreamAggregatedResourcesStream>, tonic::Status> {
-        Ok(tonic::Response::new(
-            self.stream_aggregated_resources(Box::pin(request.into_inner()))
+        Ok(tonic::Response::new(Box::pin(
+            self.stream_aggregated_resources(request.into_inner())
                 .in_current_span()
                 .await?,
-        ))
+        )))
     }
 
     async fn delta_aggregated_resources(
