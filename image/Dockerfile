@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM gcr.io/distroless/cc:nonroot as base
+FROM gcr.io/distroless/cc-debian11:nonroot as base
 WORKDIR /
 COPY ./license.html .
 COPY ./dependencies-src.zip .
