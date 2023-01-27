@@ -2,6 +2,24 @@
 
 The following are metrics that Quilkin provides while in Proxy Mode.
 
+# ASN Maxmind Information
+
+If Quilkin is provided a a MaxmindDB GeoIP database, Quilkin will log the
+following information in the `maxmind information` log, as well provide metrics
+that use the following fields as labels.
+
+| Field           | Description                                   |
+|-----------------|-----------------------------------------------|
+| `number`        | ASN Number                                    |
+| `organization`  | The organisation responsible for the ASN      |
+| `country_code`  | The corresponding country code                |
+| `prefix`        | The IP prefix CIDR address                    |
+| `prefix_entity` | The name of the entity for the prefix address |
+| `prefix_name`   | The name of the prefix address                |
+
+> Maxmind databases often require a licence and/or fee, so they aren't included
+> by default with Quilkin.
+
 ## General Metrics
 
 The proxy exposes the following general metrics:
@@ -26,7 +44,7 @@ The proxy exposes the following general metrics:
 
 * `quilkin_cluster_active_endpoints`
 
-  The number of currently active upstream endpoints. Note that this tracks the number of endpoints that the proxy 
+  The number of currently active upstream endpoints. Note that this tracks the number of endpoints that the proxy
   knows of rather than those that it is connected to (see [Session Metrics][session-metrics] instead for those)
 
 * `quilkin_bytes_total{event}`
@@ -53,9 +71,9 @@ The proxy exposes the following metrics around sessions:
 
 * `quilkin_session_active{asn}{ip_prefix}`
 
-  The number of currently active sessions. If a [maxmind](maxmind.md) database has been provided, the labels are 
-  populated:
-  * The `asn` label is the [ASN](https://en.wikipedia.org/wiki/Autonomous_system_(Internet)) number of the connecting 
+  The number of currently active sessions. If a maxmind database has been
+  provided, the labels are populated:
+  * The `asn` label is the [ASN](https://en.wikipedia.org/wiki/Autonomous_system_(Internet)) number of the connecting
     client.
   * The `ip_prefix`label is the IP prefix of the connecting client.
 
@@ -69,7 +87,7 @@ The proxy exposes the following metrics around sessions:
 
 ## Filter Metrics
 
-* `quilkin_filter_read_duration_seconds{filter}` 
+* `quilkin_filter_read_duration_seconds{filter}`
 
   The duration it took for a `filter`'s `read` implementation to execute.
   * The`filter` label is the name of the filter being executed.
@@ -79,7 +97,7 @@ The proxy exposes the following metrics around sessions:
   The duration it took for a `filter`'s `write` implementation to execute.
   * The `filter` label is the name of the filter being executed.
 
-Each individual Filter can also expose it's own metrics. See the 
-[list of build in Filters](../filters.md#built-in-filters) for more details.
+Each individual Filter can also expose it's own metrics. See the
+[list of build in Filters](./filters.md#built-in-filters) for more details.
 
 [session-metrics]: #session-metrics

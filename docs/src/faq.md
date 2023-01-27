@@ -37,14 +37,14 @@ separate binary is not an option.
 This is an ongoing discussion, and since console development is protected by non-disclosure agreements, we can't 
 comment on this directly.
 
-That being said, we have started implementing lean [Client SDK](./sdks.md) versions of certain filters that work 
-with known supported game engines and languages for circumstances where compiling Rust or providing a separate 
-Quilkin binary as an executable is not an option.
+That being said, we have an [Unreal Engine](./sdks/unreal-engine.md) for games
+in circumstances where compiling Rust or providing a separate Quilkin binary as
+an executable is not an option.
 
 ## Any reason you didn't contribute this into/extend Envoy?
 
 This is an excellent question! [Envoy](https://www.envoyproxy.io/) is an amazing project, and has set many of the 
-standards for how [proxies are written and orchestrated](./xds.md), and was an inspiration for many of 
+standards for how [proxies are written and orchestrated](./services/xds.md), and was an inspiration for many of 
 the decisions made on Quilkin.
 
 However, we decided to build this project separately:

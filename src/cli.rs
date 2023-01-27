@@ -35,6 +35,7 @@ mod manage;
 mod proxy;
 
 const ETC_CONFIG_PATH: &str = "/etc/quilkin/quilkin.yaml";
+const PORT_ENV_VAR: &str = "QUILKIN_PORT";
 
 /// The Command-Line Interface for Quilkin.
 #[derive(clap::Parser)]

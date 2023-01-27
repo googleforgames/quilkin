@@ -108,6 +108,7 @@ test-docs:
 			cargo doc --workspace --no-deps && cd docs && mdbook build --dest-dir /tmp/docs/book && \
 			cp -r "$(CARGO_TARGET_DIR)/doc" /tmp/docs/api && \
 			rm /tmp/docs/book/print.html && \
+			echo "<!doctype html>" > /tmp/docs/book/print.html && \
 			htmltest -c /workspace/docs/htmltest.yaml /tmp/docs'
 
 # Build all binaries, images and related artifacts

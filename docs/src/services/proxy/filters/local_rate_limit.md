@@ -1,6 +1,6 @@
 # LocalRateLimit
 
-The LocalRateLimit filter controls the frequency at which packets received downstream are forwarded upstream by the proxy.  
+The LocalRateLimit filter controls the frequency at which packets received downstream are forwarded upstream by the proxy.
 Rate limiting is done independently per source (IP, Port) combination.
 
 ## Filter name
@@ -21,7 +21,7 @@ filters:
     config:
       max_packets: 1000
       period: 1
-clusters: 
+clusters:
   default:
     localities:
       - endpoints:
@@ -41,14 +41,14 @@ To configure a rate limiter, we specify the maximum rate at which the proxy is a
 
 > Packets that that exceeds the maximum configured rate are dropped.
 
-## Configuration Options ([Rust Doc](../../../api/quilkin/filters/local_rate_limit/struct.Config.html))
+## Configuration Options ([Rust Doc](../../../../api/quilkin/filters/local_rate_limit/struct.Config.html))
 
 ```yaml
-{{#include ../../../../target/quilkin.filters.local_rate_limit.v1alpha1.yaml}}
+{{#include ../../../../../target/quilkin.filters.local_rate_limit.v1alpha1.yaml}}
 ```
 
 
 ## Metrics
 
-* `quilkin_filter_LocalRateLimit_packets_dropped_total`  
+* `quilkin_filter_LocalRateLimit_packets_dropped_total`
   A counter over the total number of packets that have exceeded the configured maximum rate limit and have been dropped as a result.

@@ -19,6 +19,8 @@ use std::net::SocketAddr;
 #[cfg(doc)]
 use crate::filters::FilterFactory;
 
+pub const PORT: u16 = 7777;
+
 /// Run Quilkin as a UDP reverse proxy.
 #[derive(clap::Args, Clone)]
 #[non_exhaustive]
@@ -30,8 +32,8 @@ pub struct Proxy {
     #[clap(long, env)]
     pub mmdb: Option<crate::maxmind_db::Source>,
     /// The port to listen on.
-    #[clap(short, long, env = "QUILKIN_PORT")]
-    pub port: Option<u16>,
+    #[clap(short, long, env = super::PORT_ENV_VAR, default_value_t = PORT)]
+    pub port: u16,
     /// One or more socket addresses to forward packets to.
     #[clap(short, long, env = "QUILKIN_DEST")]
     pub to: Vec<SocketAddr>,
@@ -44,9 +46,7 @@ impl Proxy {
         config: std::sync::Arc<crate::Config>,
         shutdown_rx: tokio::sync::watch::Receiver<()>,
     ) -> crate::Result<()> {
-        if let Some(port) = self.port {
-            config.port.store(port.into());
-        }
+        config.port.store_if_unset(self.port.into());
 
         let _mmdb_task = self.mmdb.clone().map(|source| {
             tokio::spawn(async move {

@@ -42,10 +42,10 @@ clusters:
 
 View the [CaptureBytes](capture.md) filter documentation for more details.
 
-## Configuration Options ([Rust Doc](../../../api/quilkin/filters/token_router/struct.Config.html))
+## Configuration Options ([Rust Doc](../../../../api/quilkin/filters/token_router/struct.Config.html))
 
 ```yaml
-{{#include ../../../../target/quilkin.filters.token_router.v1alpha1.yaml}}
+{{#include ../../../../../target/quilkin.filters.token_router.v1alpha1.yaml}}
 ```
 
 ## Metrics
@@ -108,5 +108,5 @@ clusters:
 On the game client side the [ConcatenateBytes](concatenate_bytes.md) filter could also be used to add authentication
 tokens to outgoing packets.
 
-[filter-dynamic-metadata]: ../../filters.md#filter-dynamic-metadata
-[endpoint-tokens]: ../concepts.md#endpoints
+[filter-dynamic-metadata]: ../filters.md#filter-dynamic-metadata
+[endpoint-tokens]: ../../proxy.md#endpoints

@@ -1,6 +1,6 @@
-# CaptureBytes
+# Capture
 
-The `CaptureBytes` filter's job is to find a series of bytes within a packet, and capture it into
+The `Capture` filter's job is to find a series of bytes within a packet, and capture it into
 [Filter Dynamic Metadata][filter-dynamic-metadata], so that it can be utilised by filters further
 down the chain.
 
@@ -51,10 +51,10 @@ clusters:
 # quilkin::Proxy::try_from(config).unwrap();
 ```
 
-## Configuration Options ([Rust Doc](../../../api/quilkin/filters/capture/struct.Config.html))
+## Configuration Options ([Rust Doc](../../../../api/quilkin/filters/capture/struct.Config.html))
 
 ```yaml
-{{#include ../../../../target/quilkin.filters.capture.v1alpha1.yaml}}
+{{#include ../../../../../target/quilkin.filters.capture.v1alpha1.yaml}}
 ```
 
 ## Metrics
@@ -63,4 +63,4 @@ clusters:
   A counter of the total number of packets that have been dropped due to their length being less than the configured
   `size`.
 
-[filter-dynamic-metadata]: ../../filters.md#filter-dynamic-metadata
+[filter-dynamic-metadata]: ../filters.md#filter-dynamic-metadata
