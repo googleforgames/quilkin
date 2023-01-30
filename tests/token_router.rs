@@ -43,10 +43,22 @@ quilkin.dev:
     tokens:
         - YWJj # abc
         ";
+
     let server_port = 12348;
-    let server_config = quilkin::Config::builder()
-        .port(server_port)
-        .filters(vec![
+    let server_proxy = quilkin::cli::Proxy {
+        port: server_port,
+        ..<_>::default()
+    };
+    let server_config = std::sync::Arc::new(quilkin::Config::default());
+    server_config.clusters.modify(|clusters| {
+        clusters.insert_default(vec![Endpoint::with_metadata(
+            echo.clone(),
+            serde_yaml::from_str::<MetadataView<_>>(endpoint_metadata).unwrap(),
+        )])
+    });
+
+    server_config.filters.store(
+        quilkin::filters::FilterChain::try_from(vec![
             Filter {
                 name: Capture::factory().name().into(),
                 config: serde_yaml::from_str(capture_yaml).unwrap(),
@@ -56,13 +68,11 @@ quilkin.dev:
                 config: None,
             },
         ])
-        .endpoints(vec![Endpoint::with_metadata(
-            echo,
-            serde_yaml::from_str::<MetadataView<_>>(endpoint_metadata).unwrap(),
-        )])
-        .build()
-        .unwrap();
-    t.run_server_with_config(server_config);
+        .map(std::sync::Arc::new)
+        .unwrap(),
+    );
+
+    t.run_server(server_config, server_proxy, None);
 
     // valid packet
     let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;

@@ -50,8 +50,6 @@ pub enum Providers {
 
 impl Manage {
     pub async fn manage(&self, config: std::sync::Arc<crate::Config>) -> crate::Result<()> {
-        config.port.store_if_unset(self.port.into());
-
         let provider_task = {
             const PROVIDER_RETRIES: u32 = 25;
             const PROVIDER_BACKOFF: std::time::Duration = std::time::Duration::from_millis(250);
@@ -81,7 +79,7 @@ impl Manage {
         };
 
         tokio::select! {
-            result = crate::xds::server::spawn(config) => result,
+            result = crate::xds::server::spawn(self.port, config) => result,
             result = provider_task => result.map_err(From::from).and_then(|result| result),
         }
     }

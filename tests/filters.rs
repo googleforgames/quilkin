@@ -37,35 +37,49 @@ async fn test_filter() {
 
     // create server configuration
     let server_port = 12346;
-    let server_config = quilkin::Config::builder()
-        .port(server_port)
-        .filters(vec![Filter {
+    let server_proxy = quilkin::cli::Proxy {
+        port: server_port,
+        ..<_>::default()
+    };
+    let server_config = std::sync::Arc::new(quilkin::Config::default());
+    server_config.filters.store(
+        quilkin::filters::FilterChain::try_from(vec![Filter {
             name: "TestFilter".to_string(),
             config: None,
         }])
-        .endpoints(vec![Endpoint::new(echo)])
-        .build()
-        .unwrap();
+        .map(std::sync::Arc::new)
+        .unwrap(),
+    );
 
-    // Run server proxy.
-    t.run_server_with_config(server_config);
+    server_config
+        .clusters
+        .modify(|clusters| clusters.insert_default(vec![Endpoint::new(echo.clone())]));
+
+    t.run_server(server_config, server_proxy, None);
 
     // create a local client
     let client_port = 12347;
-    let client_config = quilkin::Config::builder()
-        .port(client_port)
-        .filters(vec![Filter {
+    let client_proxy = quilkin::cli::Proxy {
+        port: client_port,
+        ..<_>::default()
+    };
+    let client_config = std::sync::Arc::new(quilkin::Config::default());
+    client_config.clusters.modify(|clusters| {
+        clusters.insert_default(vec![Endpoint::new(
+            SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port).into(),
+        )])
+    });
+    client_config.filters.store(
+        quilkin::filters::FilterChain::try_from(vec![Filter {
             name: "TestFilter".to_string(),
             config: None,
         }])
-        .endpoints(vec![Endpoint::new(
-            SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port).into(),
-        )])
-        .build()
-        .unwrap();
+        .map(std::sync::Arc::new)
+        .unwrap(),
+    );
 
     // Run client proxy.
-    t.run_server_with_config(client_config);
+    t.run_server(client_config, client_proxy, None);
 
     // let's send the packet
     let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
@@ -106,41 +120,48 @@ async fn debug_filter() {
     // create an echo server as an endpoint.
     let echo = t.run_echo_server().await;
 
-    // filter config
-    let config = serde_json::json!({
-    "id":  "server",
-    });
     // create server configuration
     let server_port = 12247;
-    let server_config = quilkin::Config::builder()
-        .port(server_port)
-        .filters(vec![Filter {
+    let server_config = std::sync::Arc::new(quilkin::Config::default());
+    let server_proxy = quilkin::cli::Proxy {
+        port: server_port,
+        ..<_>::default()
+    };
+    server_config
+        .clusters
+        .modify(|clusters| clusters.insert_default(vec![Endpoint::new(echo.clone())]));
+    server_config.filters.store(
+        quilkin::filters::FilterChain::try_from(vec![quilkin::config::Filter {
             name: factory.name().into(),
-            config: Some(config),
+            config: Some(serde_json::json!({ "id":  "server", })),
         }])
-        .endpoints(vec![Endpoint::new(echo)])
-        .build()
-        .unwrap();
-    t.run_server_with_config(server_config);
+        .map(std::sync::Arc::new)
+        .unwrap(),
+    );
 
-    let config = serde_json::json!({
-    "id":  "client",
-    });
+    t.run_server(server_config, server_proxy, None);
 
     // create a local client
     let client_port = 12248;
-    let client_config = quilkin::Config::builder()
-        .port(client_port)
-        .filters(vec![Filter {
-            name: factory.name().into(),
-            config: Some(config),
-        }])
-        .endpoints(vec![Endpoint::new(
+    let client_proxy = quilkin::cli::Proxy {
+        port: client_port,
+        ..<_>::default()
+    };
+    let client_config = std::sync::Arc::new(quilkin::Config::default());
+    client_config.clusters.modify(|clusters| {
+        clusters.insert_default(vec![Endpoint::new(
             SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port).into(),
         )])
-        .build()
-        .unwrap();
-    t.run_server_with_config(client_config);
+    });
+    client_config.filters.store(
+        quilkin::filters::FilterChain::try_from(vec![Filter {
+            name: factory.name().into(),
+            config: Some(serde_json::json!({ "id":  "client" })),
+        }])
+        .map(std::sync::Arc::new)
+        .unwrap(),
+    );
+    t.run_server(client_config, client_proxy, None);
 
     // let's send the packet
     let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
@@ -151,7 +172,7 @@ async fn debug_filter() {
     socket.send_to(b"hello", &local_addr).await.unwrap();
 
     // since the debug filter doesn't change the data, it should be exactly the same
-    let value = timeout(Duration::from_secs(5), recv_chan.recv())
+    let value = timeout(Duration::from_millis(500), recv_chan.recv())
         .await
         .unwrap()
         .unwrap();

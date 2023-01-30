@@ -30,9 +30,9 @@ pub use self::{
     proxy::Proxy,
 };
 
-mod generate_config_schema;
-mod manage;
-mod proxy;
+pub mod generate_config_schema;
+pub mod manage;
+pub mod proxy;
 
 const ETC_CONFIG_PATH: &str = "/etc/quilkin/quilkin.yaml";
 const PORT_ENV_VAR: &str = "QUILKIN_PORT";
@@ -99,17 +99,17 @@ impl Cli {
         );
 
         let config = Arc::new(Self::read_config(self.config)?);
-        let _admin_task = if let Some(mode) = self.command.admin_mode().filter(|_| !self.no_admin) {
-            if let Some(address) = self.admin_address {
-                config
-                    .admin
-                    .store(Arc::new(crate::config::Admin { address }));
-            }
-            Some(tokio::spawn(crate::admin::server(mode, config.clone())))
-        } else {
-            config.admin.remove();
-            None
-        };
+        let _admin_task = self
+            .command
+            .admin_mode()
+            .filter(|_| !self.no_admin)
+            .map(|mode| {
+                tokio::spawn(crate::admin::server(
+                    mode,
+                    config.clone(),
+                    self.admin_address,
+                ))
+            });
 
         let (shutdown_tx, mut shutdown_rx) = watch::channel::<()>(());
 

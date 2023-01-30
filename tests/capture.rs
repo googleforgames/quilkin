@@ -33,9 +33,14 @@ async fn token_router() {
     let mut t = TestHelper::default();
     let echo = t.run_echo_server().await;
     let server_port = 12348;
-    let server_config = quilkin::Config::builder()
-        .port(server_port)
-        .filters(vec![
+    let server_proxy = quilkin::cli::Proxy {
+        port: server_port,
+        ..<_>::default()
+    };
+
+    let server_config = std::sync::Arc::new(quilkin::Config::default());
+    server_config.filters.store(
+        quilkin::filters::FilterChain::try_from(vec![
             Filter {
                 name: Capture::factory().name().into(),
                 config: serde_json::from_value(serde_json::json!({
@@ -50,8 +55,13 @@ async fn token_router() {
                 config: None,
             },
         ])
-        .endpoints(vec![Endpoint::with_metadata(
-            echo,
+        .map(std::sync::Arc::new)
+        .unwrap(),
+    );
+
+    server_config.clusters.modify(|clusters| {
+        clusters.insert_default(vec![Endpoint::with_metadata(
+            echo.clone(),
             serde_json::from_value::<MetadataView<_>>(serde_json::json!({
                 "quilkin.dev": {
                     "tokens": ["YWJj"]
@@ -59,9 +69,9 @@ async fn token_router() {
             }))
             .unwrap(),
         )])
-        .build()
-        .unwrap();
-    t.run_server_with_config(server_config);
+    });
+
+    t.run_server(server_config, server_proxy, None);
 
     // valid packet
     let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;

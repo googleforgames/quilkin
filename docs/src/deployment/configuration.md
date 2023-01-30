@@ -54,16 +54,6 @@ properties:
     type: string
     description: |
       The remote URL or local file path to retrieve the Maxmind database (requires licence).
-  admin:
-    type: object
-    description: |
-      Configuration of proxy admin HTTP interface.
-    properties:
-      address:
-        type: string
-        description: |
-          Socket Address and port to bind the administration interface to.
-        default: "[::]:9091"
   filters:
     type: array
     description: |

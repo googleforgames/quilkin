@@ -30,7 +30,6 @@ clusters:
         - address: 127.0.0.1:26000
 # ";
 # let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-# quilkin::Proxy::try_from(config).unwrap();
 ```
 
 ## Configuration Options ([Rust Doc](../../../../api/quilkin/filters/timestamp/struct.Config.html))

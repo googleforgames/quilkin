@@ -17,7 +17,7 @@ use std::panic;
 
 use hyper::{Client, Uri};
 
-use quilkin::{config::Admin, endpoint::Endpoint, test_utils::TestHelper};
+use quilkin::{endpoint::Endpoint, test_utils::TestHelper};
 
 const LIVE_ADDRESS: &str = "http://localhost:9093/live";
 
@@ -27,15 +27,19 @@ async fn health_server() {
 
     // create server configuration
     let server_port = 12349;
-    let server_config = quilkin::Config::builder()
-        .port(server_port)
-        .endpoints(vec!["127.0.0.1:0".parse::<Endpoint>().unwrap()])
-        .admin(Admin {
-            address: "[::]:9093".parse().unwrap(),
-        })
-        .build()
-        .unwrap();
-    t.run_server(<_>::try_from(server_config).unwrap());
+    let server_proxy = quilkin::cli::Proxy {
+        port: server_port,
+        ..<_>::default()
+    };
+    let server_config = std::sync::Arc::new(quilkin::Config::default());
+    server_config.clusters.modify(|clusters| {
+        clusters.insert_default(vec!["127.0.0.1:0".parse::<Endpoint>().unwrap()])
+    });
+    t.run_server(
+        server_config,
+        server_proxy,
+        Some(Some((std::net::Ipv6Addr::UNSPECIFIED, 9093).into())),
+    );
 
     let client = Client::new();
     let resp = client

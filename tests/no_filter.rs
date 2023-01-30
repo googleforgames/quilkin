@@ -30,13 +30,19 @@ async fn echo() {
 
     // create server configuration
     let local_addr = available_addr().await;
-    let server_config = quilkin::Config::builder()
-        .port(local_addr.port())
-        .endpoints(vec![Endpoint::new(server1), Endpoint::new(server2)])
-        .build()
-        .unwrap();
+    let server_proxy = quilkin::cli::Proxy {
+        port: local_addr.port(),
+        ..<_>::default()
+    };
+    let server_config = std::sync::Arc::new(quilkin::Config::default());
+    server_config.clusters.modify(|clusters| {
+        clusters.insert_default(vec![
+            Endpoint::new(server1.clone()),
+            Endpoint::new(server2.clone()),
+        ])
+    });
 
-    t.run_server_with_config(server_config);
+    t.run_server(server_config, server_proxy, None);
 
     // let's send the packet
     let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;

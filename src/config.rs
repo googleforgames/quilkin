@@ -16,17 +16,15 @@
 
 //! Quilkin configuration.
 
-use std::{net::SocketAddr, sync::Arc};
+use std::sync::Arc;
 
 use base64_serde::base64_serde_type;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-mod builder;
 mod config_type;
 mod error;
-mod metrics;
 mod slot;
 pub mod watch;
 
@@ -40,9 +38,7 @@ use crate::{
     },
 };
 
-use metrics::Metrics;
-
-pub use self::{builder::Builder, config_type::ConfigType, error::ValidationError, slot::Slot};
+pub use self::{config_type::ConfigType, error::ValidationError, slot::Slot};
 
 base64_serde_type!(pub Base64Standard, base64::STANDARD);
 
@@ -59,8 +55,6 @@ pub(crate) const CONNECTION_TIMEOUT: u64 = 5;
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct Config {
-    #[serde(default = "Slot::<Admin>::with_default")]
-    pub admin: Slot<Admin>,
     #[serde(default)]
     pub clusters: Slot<ClusterMap>,
     #[serde(default)]
@@ -68,25 +62,10 @@ pub struct Config {
     #[serde(default = "default_proxy_id")]
     pub id: Slot<String>,
     #[serde(default)]
-    #[schemars(with = "Vec::<ManagementServer>")]
-    pub management_servers: Slot<Vec<ManagementServer>>,
-    #[serde(default = "Slot::<u16>::empty")]
-    pub port: Slot<u16>,
-    #[schemars(with = "Option<Version>")]
     pub version: Slot<Version>,
-    #[serde(default = "Slot::<crate::maxmind_db::Source>::empty")]
-    #[schemars(with = "Option<crate::maxmind_db::Source>")]
-    pub maxmind_db: Slot<crate::maxmind_db::Source>,
-    #[serde(default, skip)]
-    metrics: Metrics,
 }
 
 impl Config {
-    /// Returns a new empty [`Builder`] for [`Config`].
-    pub fn builder() -> Builder {
-        Builder::default()
-    }
-
     /// Attempts to deserialize `input` as a YAML object representing `Self`.
     pub fn from_reader<R: std::io::Read>(input: R) -> Result<Self, serde_yaml::Error> {
         serde_yaml::from_reader(input)
@@ -106,15 +85,7 @@ impl Config {
             }
         }
 
-        replace_if_present!(
-            admin,
-            clusters,
-            filters,
-            management_servers,
-            port,
-            id,
-            version
-        );
+        replace_if_present!(clusters, filters, id);
         self.apply_metrics();
 
         Ok(())
@@ -204,36 +175,29 @@ impl Config {
     }
 
     pub fn apply_metrics(&self) {
-        let endpoints = self.clusters.load().endpoints().count();
+        let clusters = self.clusters.load();
 
-        self.metrics.active_clusters.set((endpoints == 0) as i64);
-        self.metrics.active_endpoints.set(endpoints as i64);
+        crate::cluster::active_clusters().set(clusters.len() as i64);
+        crate::cluster::active_endpoints().set(clusters.endpoints().count() as i64);
     }
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
-            admin: Slot::with_default(),
             clusters: <_>::default(),
             filters: <_>::default(),
             id: default_proxy_id(),
-            management_servers: <_>::default(),
-            maxmind_db: Slot::empty(),
-            metrics: <_>::default(),
-            port: Slot::empty(),
-            version: <_>::default(),
+            version: Slot::with_default(),
         }
     }
 }
 
 impl PartialEq for Config {
     fn eq(&self, rhs: &Self) -> bool {
-        self.admin == rhs.admin
-            && self.id == rhs.id
-            && self.port == rhs.port
+        self.id == rhs.id
+            && self.clusters == rhs.clusters
             && self.filters == rhs.filters
-            && self.management_servers == rhs.management_servers
             && self.version == rhs.version
     }
 }
@@ -258,26 +222,6 @@ fn default_proxy_id() -> Slot<String> {
 #[cfg(target_os = "linux")]
 fn default_proxy_id() -> Slot<String> {
     Slot::from(sys_info::hostname().unwrap_or_else(|_| Uuid::new_v4().as_hyphenated().to_string()))
-}
-
-#[derive(Clone, Debug, Deserialize, Eq, Serialize, JsonSchema, PartialEq)]
-#[serde(deny_unknown_fields)]
-pub struct Admin {
-    pub address: SocketAddr,
-}
-
-impl Default for Admin {
-    fn default() -> Self {
-        Admin {
-            address: (std::net::Ipv4Addr::UNSPECIFIED, 8000).into(),
-        }
-    }
-}
-
-#[derive(Clone, Debug, Deserialize, Eq, Serialize, PartialEq, JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct ManagementServer {
-    pub address: String,
 }
 
 /// Filter is the configuration for a single filter
@@ -365,24 +309,24 @@ mod tests {
 
     #[test]
     fn deserialise_client() {
-        let config = Builder::default()
-            .port(7000)
-            .endpoints(vec![Endpoint::new("127.0.0.1:25999".parse().unwrap())])
-            .build()
-            .unwrap();
+        let config = Config::default();
+        config.clusters.modify(|clusters| {
+            clusters.insert_default(vec![Endpoint::new("127.0.0.1:25999".parse().unwrap())])
+        });
+
         let _ = serde_yaml::to_string(&config).unwrap();
     }
 
     #[test]
     fn deserialise_server() {
-        let config = Builder::default()
-            .port(7000)
-            .endpoints(vec![
+        let config = Config::default();
+        config.clusters.modify(|clusters| {
+            clusters.insert_default(vec![
                 Endpoint::new("127.0.0.1:26000".parse().unwrap()),
                 Endpoint::new("127.0.0.1:26001".parse().unwrap()),
             ])
-            .build()
-            .unwrap();
+        });
+
         let _ = serde_yaml::to_string(&config).unwrap();
     }
 
@@ -402,12 +346,11 @@ mod tests {
         let yaml = "
 version: v1alpha1
 id: server-proxy
-port: 7000
   ";
         let config = parse_config(yaml);
 
-        assert_eq!(*config.port.load(), 7000);
         assert_eq!(config.id.load().as_str(), "server-proxy");
+        assert_eq!(*config.version.load(), Version::V1Alpha1);
     }
 
     #[test]
@@ -488,30 +431,6 @@ port: 7000
     }
 
     #[test]
-    fn parse_management_servers() {
-        let config: Config = serde_json::from_value(json!({
-            "version": "v1alpha1",
-            "management_servers": [
-                { "address": "127.0.0.1:25999" },
-                { "address": "127.0.0.1:30000" },
-            ],
-        }))
-        .unwrap();
-
-        assert_eq!(
-            **config.management_servers.load(),
-            vec![
-                ManagementServer {
-                    address: "127.0.0.1:25999".into(),
-                },
-                ManagementServer {
-                    address: "127.0.0.1:30000".into(),
-                },
-            ],
-        );
-    }
-
-    #[test]
     fn deny_unused_fields() {
         let configs = vec![
             "
@@ -576,11 +495,5 @@ dynamic:
             println!("here: {}", error);
             assert!(format!("{error:?}").contains("unknown field"));
         }
-    }
-
-    #[test]
-    fn config_default() {
-        let config = Config::default();
-        assert!(config.admin.is_some());
     }
 }

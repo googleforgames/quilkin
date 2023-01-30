@@ -26,7 +26,6 @@ clusters:
 # ";
 # let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 # assert_eq!(config.filters.load().len(), 1);
-# quilkin::Proxy::try_from(config).unwrap();
 ```
 
 The above example shows a proxy that could be used with a typical game client, where the original client data is

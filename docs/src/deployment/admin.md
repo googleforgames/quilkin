@@ -18,14 +18,9 @@ Quilkin exposes an HTTP interface to query different aspects of the server.
 
 > It is assumed that the administration interface will only ever be able to be accessible on `localhost`.
 
-By default, the administration interface is bound to `[::]:8000`, but it can be configured by the command line flag
-`--admin-address` or through the [configuration file](./configuration.md), like so:
-
-```yaml
-admin:
-  address: [::]:9095
-```
-
+By default, the administration interface is bound to `[::]:8000`, but it can be
+configured with the `--admin-address` CLI flag or the `QUILKIN_ADMIN_ADDRESS`
+environment.
 
 ## Endpoints
 

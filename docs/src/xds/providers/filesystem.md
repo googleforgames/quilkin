@@ -36,7 +36,6 @@ clusters:
 # ";
 # let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 # assert_eq!(config.filters.load().len(), 1);
-# quilkin::Proxy::try_from(config).unwrap();
 ```
 
 [file-configuration]: ../../file-configuration.md

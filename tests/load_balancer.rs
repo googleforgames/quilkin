@@ -47,22 +47,30 @@ policy: ROUND_ROBIN
     }
 
     let server_port = 12346;
-    let server_config = quilkin::Config::builder()
-        .port(server_port)
-        .filters(vec![Filter {
-            name: LoadBalancer::factory().name().into(),
-            config: serde_yaml::from_str(yaml).unwrap(),
-        }])
-        .endpoints(
+    let server_config = std::sync::Arc::new(quilkin::Config::default());
+    server_config.clusters.modify(|clusters| {
+        clusters.insert_default(
             echo_addresses
                 .iter()
                 .cloned()
                 .map(Endpoint::new)
                 .collect::<Vec<_>>(),
         )
-        .build()
-        .unwrap();
-    t.run_server_with_config(server_config);
+    });
+    server_config.filters.store(
+        quilkin::filters::FilterChain::try_from(vec![Filter {
+            name: LoadBalancer::factory().name().into(),
+            config: serde_yaml::from_str(yaml).unwrap(),
+        }])
+        .map(std::sync::Arc::new)
+        .unwrap(),
+    );
+
+    let server_proxy = quilkin::cli::Proxy {
+        port: server_port,
+        ..<_>::default()
+    };
+    t.run_server(server_config, server_proxy, None);
     let server_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port);
 
     let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
