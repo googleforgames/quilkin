@@ -15,8 +15,6 @@
 #
 
 version: v1alpha1
-admin:
-  address: "[::]:9092"
 filters:
   - name: quilkin.filters.concatenate_bytes.v1alpha1.ConcatenateBytes
     config:

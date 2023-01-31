@@ -27,7 +27,6 @@ use tryhard::{
 };
 
 use crate::{
-    config::Config,
     xds::{
         config::core::v3::Node,
         metrics,
@@ -44,18 +43,23 @@ type AdsClient = AggregatedDiscoveryServiceClient<TonicChannel>;
 /// Client that can talk to an XDS server using the aDS protocol.
 #[derive(Clone)]
 pub struct Client {
+    identifier: String,
+    management_servers: Vec<Endpoint>,
     client: AdsClient,
-    config: Arc<Config>,
 }
 
 impl Client {
-    #[tracing::instrument(skip_all, fields(servers = ?config.management_servers.load().iter().map(|server| &server.address).collect::<Vec<_>>()))]
-    pub async fn connect(config: Arc<Config>) -> Result<Self> {
-        let client = Self::new_ads_client(&config).await?;
-        Ok(Self { client, config })
+    #[tracing::instrument(skip_all, level = "trace", fields(servers = ?management_servers))]
+    pub async fn connect(identifier: String, management_servers: Vec<Endpoint>) -> Result<Self> {
+        let client = Self::new_ads_client(&management_servers).await?;
+        Ok(Self {
+            client,
+            identifier,
+            management_servers,
+        })
     }
 
-    async fn new_ads_client(config: &Config) -> Result<AdsClient> {
+    async fn new_ads_client(management_servers: &[Endpoint]) -> Result<AdsClient> {
         use crate::config::{
             BACKOFF_INITIAL_DELAY_MILLISECONDS, BACKOFF_MAX_DELAY_SECONDS,
             BACKOFF_MAX_JITTER_MILLISECONDS, CONNECTION_TIMEOUT,
@@ -100,21 +104,17 @@ impl Client {
             }
         });
 
-        let management_servers = config.management_servers.load();
-        let mut addresses = management_servers
-            .iter()
-            .cycle()
-            .map(|server| server.address.clone());
+        let mut addresses = management_servers.iter().cycle();
         let connect_to_server = tryhard::retry_fn(|| {
             let address = addresses.next();
-            async {
+            async move {
                 match address {
                     None => Err(RpcSessionError::Receive(tonic::Status::internal(
                         "Failed initial connection",
                     ))),
                     Some(endpoint) => {
-                        let endpoint = Endpoint::from_shared(endpoint)
-                            .map_err(|err| RpcSessionError::InvalidEndpoint(err.to_string()))?
+                        let endpoint = endpoint
+                            .clone()
                             .connect_timeout(Duration::from_secs(CONNECTION_TIMEOUT));
 
                         // make sure that we have everything we will need in our URI
@@ -148,8 +148,11 @@ impl Client {
     }
 
     /// Starts a new stream to the xDS management server.
-    pub async fn stream(&self) -> Result<Stream> {
-        Stream::connect(self.clone()).await
+    pub async fn stream(
+        &self,
+        on_new_resource: impl Fn(&Resource) -> crate::Result<()> + Send + Sync + 'static,
+    ) -> Result<Stream> {
+        Stream::connect(self, on_new_resource).await
     }
 }
 
@@ -157,7 +160,7 @@ type SubscribedResources = Arc<Mutex<HashSet<(ResourceType, Vec<String>)>>>;
 
 /// An active xDS gRPC management stream.
 pub struct Stream {
-    config: Arc<Config>,
+    identifier: Arc<str>,
     requests: broadcast::Sender<DiscoveryRequest>,
     handle_discovery_response: tokio::task::JoinHandle<Result<()>>,
     subscribed_resources: SubscribedResources,
@@ -165,14 +168,23 @@ pub struct Stream {
 
 impl Stream {
     #[tracing::instrument(level = "trace", skip_all)]
-    async fn connect(xds: Client) -> Result<Self> {
+    async fn connect(
+        Client {
+            client,
+            identifier,
+            management_servers,
+        }: &Client,
+        on_new_resource: impl Fn(&Resource) -> crate::Result<()> + Send + Sync + 'static,
+    ) -> Result<Self> {
         let (requests, mut rx) = broadcast::channel(12);
-        let Client { mut client, config } = xds;
         let subscribed_resources: SubscribedResources = <_>::default();
+        let identifier: Arc<str> = Arc::from(&**identifier);
 
         let handle_discovery_response = tokio::spawn({
-            let config = config.clone();
+            let mut client = client.clone();
+            let identifier = identifier.clone();
             let mut requests = requests.clone();
+            let management_servers = management_servers.clone();
             let subscribed_resources = subscribed_resources.clone();
             async move {
                 loop {
@@ -194,7 +206,7 @@ impl Stream {
 
                         tokio::select! {
                             _ = timeout => {
-                                Self::refresh_resources(&config, &subscribed_resources, &mut requests).await?;
+                                Self::refresh_resources(&identifier, &subscribed_resources, &mut requests).await?;
                             }
                             response = new_message => {
                                 let Some(response) = response.map_err(|error| tracing::warn!(%error, "Error from xDS server")).ok().flatten() else {
@@ -226,7 +238,7 @@ impl Stream {
                                         metrics::DISCOVERY_RESPONSES
                                             .with_label_values(&[&*identifier, resource.type_url()])
                                             .inc();
-                                        config.apply(&resource)
+                                        (on_new_resource)(&resource)
                                     });
 
                                 let mut request = DiscoveryRequest::try_from(response)?;
@@ -256,16 +268,16 @@ impl Stream {
                     tracing::info!("Lost connection to xDS, retrying");
                     // If we've reached here, something has gone wrong with the
                     // connection, so we just create a new client and restart.
-                    client = Client::new_ads_client(&config).await?;
+                    client = Client::new_ads_client(&management_servers).await?;
                     rx = requests.subscribe();
-                    Self::refresh_resources(&config, &subscribed_resources, &mut requests).await?;
+                    Self::refresh_resources(&identifier, &subscribed_resources, &mut requests).await?;
                 }
             }
             .instrument(tracing::trace_span!("handle_discovery_response"))
         });
 
         Ok(Self {
-            config,
+            identifier,
             requests,
             handle_discovery_response,
             subscribed_resources,
@@ -278,30 +290,30 @@ impl Stream {
             .lock()
             .await
             .insert((resource_type, names.to_vec()));
-        Self::send_without_cache(&self.config, &mut self.requests, resource_type, names)
+        Self::send_without_cache(&self.identifier, &mut self.requests, resource_type, names)
     }
 
     async fn refresh_resources(
-        config: &Config,
+        identifier: &str,
         subscribed_resources: &SubscribedResources,
         requests: &mut broadcast::Sender<DiscoveryRequest>,
     ) -> Result<()> {
         for (resource, names) in subscribed_resources.lock().await.iter() {
-            Self::send_without_cache(config, requests, *resource, names)?;
+            Self::send_without_cache(identifier, requests, *resource, names)?;
         }
 
         Ok(())
     }
 
     fn send_without_cache(
-        config: &Config,
+        identifier: &str,
         requests: &mut broadcast::Sender<DiscoveryRequest>,
         resource_type: ResourceType,
         names: &[String],
     ) -> Result<()> {
         let request = DiscoveryRequest {
             node: Some(Node {
-                id: (*config.id.load()).clone(),
+                id: identifier.into(),
                 user_agent_name: "quilkin".into(),
                 ..Node::default()
             }),
@@ -331,32 +343,4 @@ enum RpcSessionError {
 
     #[error("Error occurred while receiving data. Status: {0}")]
     Receive(tonic::Status),
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    /// If we get an invalid URL, we should return immediately rather
-    /// than backoff or retry.
-    async fn invalid_url() {
-        async fn test(url: String) {
-            println!("Testing for {url}");
-            let config = crate::Config::builder()
-                .management_servers([url.clone()])
-                .build()
-                .unwrap();
-            let run = Client::connect(Arc::new(config));
-
-            let execution_result =
-                tokio::time::timeout(std::time::Duration::from_millis(10000), run).await;
-            assert!(execution_result
-                .unwrap_or_else(|_| panic!("client should bail out immediately: {url}"))
-                .is_err());
-        }
-        test("localhost/18000".into()).await;
-        test("localhost:18000".into()).await;
-        test("http://".into()).await;
-    }
 }

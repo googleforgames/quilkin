@@ -70,7 +70,7 @@ pub use self::{
     write::WriteContext,
 };
 
-pub(crate) use self::chain::FilterChain;
+pub use self::chain::FilterChain;
 
 /// Statically safe version of [`Filter`], if you're writing a Rust filter, you
 /// should implement [`StaticFilter`] in addition to [`Filter`], as

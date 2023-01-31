@@ -27,7 +27,7 @@ use crate::{
     utils::{debug, Loggable},
 };
 
-pub(crate) type SessionMap = crate::ttl_map::TtlMap<SessionKey, Session>;
+pub type SessionMap = crate::ttl_map::TtlMap<SessionKey, Session>;
 
 /// Session encapsulates a UDP stream session
 pub struct Session {

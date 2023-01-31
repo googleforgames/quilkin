@@ -37,7 +37,6 @@ clusters:
 # ";
 # let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 # assert_eq!(config.filters.load().len(), 1);
-# quilkin::Proxy::try_from(config).unwrap();
 ```
 
 View the [CaptureBytes](capture.md) filter documentation for more details.
@@ -102,7 +101,6 @@ clusters:
 # ";
 # let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 # assert_eq!(config.filters.load().len(), 2);
-# quilkin::Proxy::try_from(config).unwrap();
 ```
 
 On the game client side the [ConcatenateBytes](concatenate_bytes.md) filter could also be used to add authentication

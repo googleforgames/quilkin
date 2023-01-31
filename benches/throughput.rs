@@ -6,8 +6,6 @@ use std::time;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use once_cell::sync::Lazy;
 
-use quilkin::config::Admin;
-
 const MESSAGE_SIZE: usize = 0xffff;
 const DEFAULT_MESSAGE: [u8; 0xffff] = [0xff; 0xffff];
 const BENCH_LOOP_ADDR: &str = "127.0.0.1:8002";
@@ -29,19 +27,19 @@ const PACKETS: &[&[u8]] = &[
 fn run_quilkin(port: u16, endpoint: SocketAddr) {
     std::thread::spawn(move || {
         let runtime = tokio::runtime::Runtime::new().unwrap();
-        let config = quilkin::Config::builder()
-            .port(port)
-            .admin(Admin {
-                address: "[::]:0".parse().unwrap(),
-            })
-            .endpoints(vec![quilkin::endpoint::Endpoint::new(endpoint.into())])
-            .build()
-            .unwrap();
+        let config = Arc::new(quilkin::Config::default());
+        config.clusters.modify(|clusters| {
+            clusters.insert_default(vec![quilkin::endpoint::Endpoint::new(endpoint.into())])
+        });
 
-        let server = quilkin::Proxy::try_from(config).unwrap();
+        let proxy = quilkin::cli::Proxy {
+            port,
+            ..<_>::default()
+        };
+
         runtime.block_on(async move {
             let (_shutdown_tx, shutdown_rx) = tokio::sync::watch::channel::<()>(());
-            server.run(shutdown_rx).await.unwrap();
+            proxy.run(config, shutdown_rx).await.unwrap();
         });
     });
 }

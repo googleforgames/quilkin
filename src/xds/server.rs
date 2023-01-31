@@ -36,9 +36,7 @@ use crate::{
 };
 
 #[tracing::instrument(skip_all)]
-pub async fn spawn(config: std::sync::Arc<crate::Config>) -> crate::Result<()> {
-    let port = *config.port.load();
-
+pub async fn spawn(port: u16, config: std::sync::Arc<crate::Config>) -> crate::Result<()> {
     let server = AggregatedDiscoveryServiceServer::new(ControlPlane::from_arc(config));
     let server = tonic::transport::Server::builder().add_service(server);
     tracing::info!("Serving management server at {}", port);

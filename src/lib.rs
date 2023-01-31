@@ -38,7 +38,10 @@ pub mod test_utils;
 pub type Result<T, E = eyre::Error> = std::result::Result<T, E>;
 
 #[doc(inline)]
-pub use self::{cli::Cli, config::Config, proxy::Proxy};
+pub use self::{
+    cli::{Cli, Proxy},
+    config::Config,
+};
 
 pub use quilkin_macros::include_proto;
 

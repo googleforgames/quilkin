@@ -106,16 +106,25 @@ async fn test(t: &mut TestHelper, server_port: u16, yaml: &str) -> oneshot::Rece
         .replace("%2", echo.port().to_string().as_str());
     tracing::info!(config = yaml.as_str(), "Config");
 
-    let server_config = quilkin::Config::builder()
-        .port(server_port)
-        .filters(vec![Filter {
+    let server_proxy = quilkin::cli::Proxy {
+        port: server_port,
+        ..<_>::default()
+    };
+    let server_config = std::sync::Arc::new(quilkin::Config::default());
+    server_config.filters.store(
+        quilkin::filters::FilterChain::try_from(vec![Filter {
             name: Firewall::factory().name().into(),
             config: serde_yaml::from_str(yaml.as_str()).unwrap(),
         }])
-        .endpoints(vec![Endpoint::new(echo)])
-        .build()
-        .unwrap();
-    t.run_server_with_config(server_config);
+        .map(std::sync::Arc::new)
+        .unwrap(),
+    );
+
+    server_config
+        .clusters
+        .modify(|clusters| clusters.insert_default(vec![Endpoint::new(echo.clone())]));
+
+    t.run_server(server_config, server_proxy, None);
 
     let local_addr: SocketAddr = (std::net::Ipv4Addr::LOCALHOST, server_port).into();
     tracing::info!(source = %client_addr, address = %local_addr, "Sending hello");

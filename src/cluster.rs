@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+use once_cell::sync::Lazy;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -21,6 +22,37 @@ use std::collections::HashMap;
 use crate::endpoint::{Endpoint, EndpointAddress, Locality, LocalityEndpoints};
 
 const DEFAULT_CLUSTER_NAME: &str = "default";
+const SUBSYSTEM: &str = "cluster";
+
+pub(crate) fn active_clusters() -> &'static prometheus::IntGauge {
+    static ACTIVE_CLUSTERS: Lazy<prometheus::IntGauge> = Lazy::new(|| {
+        crate::metrics::register(
+            prometheus::IntGauge::with_opts(crate::metrics::opts(
+                "active",
+                SUBSYSTEM,
+                "Number of currently active clusters.",
+            ))
+            .unwrap(),
+        )
+    });
+
+    &ACTIVE_CLUSTERS
+}
+
+pub(crate) fn active_endpoints() -> &'static prometheus::IntGauge {
+    static ACTIVE_ENDPOINTS: Lazy<prometheus::IntGauge> = Lazy::new(|| {
+        crate::metrics::register(
+            prometheus::IntGauge::with_opts(crate::metrics::opts(
+                "active_endpoints",
+                SUBSYSTEM,
+                "Number of currently active endpoints.",
+            ))
+            .unwrap(),
+        )
+    });
+
+    &ACTIVE_ENDPOINTS
+}
 
 #[derive(Clone, Default, Debug, Eq, PartialEq, Deserialize, Serialize, JsonSchema)]
 pub struct Cluster {

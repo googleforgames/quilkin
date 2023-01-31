@@ -19,11 +19,7 @@
 #
 
 version: v1alpha1
-admin: # configuration options for administration
-  address: "[::]:9091" # the address and port to bind the admin API to.
-maxmind_db: null # Remote URL or local file path to retrieve a Maxmind database (requires licence).
 id: my-proxy # An identifier for the proxy instance.
-port: 7001 # the port to receive traffic to locally
 clusters: # grouping of clusters
   default:
     localities: # grouping of endpoints within a cluster

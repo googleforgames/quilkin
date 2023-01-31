@@ -101,6 +101,10 @@ impl FilterChain {
         self.filters.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     pub fn iter(&self) -> impl Iterator<Item = crate::config::Filter> + '_ {
         self.filters
             .iter()

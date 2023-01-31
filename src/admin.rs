@@ -25,6 +25,8 @@ use hyper::{Body, Method, Request, Response, Server as HyperServer, StatusCode};
 use self::health::Health;
 use crate::config::Config;
 
+pub const PORT: u16 = 8000;
+
 /// Define which mode Quilkin is in.
 #[derive(Copy, Clone, Debug)]
 pub enum Mode {
@@ -35,8 +37,9 @@ pub enum Mode {
 pub fn server(
     mode: Mode,
     config: Arc<Config>,
+    address: Option<std::net::SocketAddr>,
 ) -> tokio::task::JoinHandle<Result<(), hyper::Error>> {
-    let address = config.admin.load().address;
+    let address = address.unwrap_or_else(|| (std::net::Ipv6Addr::UNSPECIFIED, PORT).into());
     let health = Health::new();
     tracing::info!(address = %address, "Starting admin endpoint");
 

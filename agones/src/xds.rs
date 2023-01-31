@@ -23,8 +23,8 @@ mod tests {
         api::{
             apps::v1::{Deployment, DeploymentSpec},
             core::v1::{
-                ConfigMap, ConfigMapVolumeSource, ContainerPort, Node, Pod, PodSpec,
-                PodTemplateSpec, Service, ServiceAccount, ServicePort, ServiceSpec, Volume,
+                ConfigMap, ContainerPort, Node, Pod, PodSpec, PodTemplateSpec, Service,
+                ServiceAccount, ServicePort, ServiceSpec,
             },
             rbac::v1::{ClusterRole, PolicyRule, RoleBinding, RoleRef, Subject},
         },
@@ -85,8 +85,7 @@ filters:
         config_maps.create(&pp, &config_map).await.unwrap();
 
         agones_control_plane(&client, deployments.clone()).await;
-        let proxy_address =
-            quilkin_proxy_deployment(&client, config_maps, deployments.clone()).await;
+        let proxy_address = quilkin_proxy_deployment(&client, deployments.clone()).await;
 
         // create a fleet so we can ensure that a packet is going to the GameServer we expect, and not
         // any other.
@@ -341,25 +340,16 @@ filters:
 
     /// create a Deployment with a singular Quilkin proxy, that is configured
     /// to be attached to the Quilkin Agones xDS server in `agones_control_plane()`.
-    async fn quilkin_proxy_deployment(
-        client: &Client,
-        config_maps: Api<ConfigMap>,
-        deployments: Api<Deployment>,
-    ) -> SocketAddr {
+    async fn quilkin_proxy_deployment(client: &Client, deployments: Api<Deployment>) -> SocketAddr {
         let pp = PostParams::default();
-        let config = r#"
-version: v1alpha1
-management_servers:
-  - address: http://quilkin-manage-agones:7800
-"#;
-
-        let config_map = config_maps
-            .create(&pp, &quilkin_config_map(config))
-            .await
-            .unwrap();
-        let mount_name = "config";
-        let mut container =
-            quilkin_container(client, Some(vec!["proxy".into()]), Some(mount_name.into()));
+        let mut container = quilkin_container(
+            client,
+            Some(vec![
+                "proxy".into(),
+                "--management-server=http://quilkin-manage-agones:7800".into(),
+            ]),
+            None,
+        );
 
         // we'll use a host port, since spinning up a load balancer takes a long time.
         // we know that port 7777 is open because this is an Agones cluster and it has associated
@@ -393,14 +383,6 @@ management_servers:
                     }),
                     spec: Some(PodSpec {
                         containers: vec![container],
-                        volumes: Some(vec![Volume {
-                            name: mount_name.into(),
-                            config_map: Some(ConfigMapVolumeSource {
-                                name: Some(config_map.name_unchecked()),
-                                ..Default::default()
-                            }),
-                            ..Default::default()
-                        }]),
                         ..Default::default()
                     }),
                 },

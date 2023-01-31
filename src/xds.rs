@@ -157,10 +157,8 @@ mod tests {
 
         let xds_port = crate::test_utils::available_addr().await.port();
         let xds_config: Arc<Config> = serde_json::from_value(serde_json::json!({
-            "admin": null,
             "version": "v1alpha1",
             "id": "test-proxy",
-            "port": xds_port,
             "clusters": {
                 "default": {
                     "localities": [localities]
@@ -171,34 +169,32 @@ mod tests {
         .unwrap();
 
         let client_addr = crate::test_utils::available_addr().await;
-        let client_config: Config = serde_json::from_value(serde_json::json!({
+        let client_config = serde_json::from_value(serde_json::json!({
             "version": "v1alpha1",
-            "admin": null,
             "id": "test-proxy",
-            "port": client_addr.port(),
-            "management_servers": [{
-                "address": format!("http://0.0.0.0:{}", xds_port),
-            }]
         }))
+        .map(Arc::new)
         .unwrap();
 
         // Test that the client can handle the manager dropping out.
-        let handle = tokio::spawn(server::spawn(xds_config.clone()));
+        let handle = tokio::spawn(server::spawn(xds_port, xds_config.clone()));
 
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         let (_shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(());
-        tokio::spawn(server::spawn(xds_config.clone()));
-        tokio::spawn(
-            crate::Proxy::try_from(client_config)
-                .unwrap()
-                .run(shutdown_rx),
-        );
+        tokio::spawn(server::spawn(xds_port, xds_config.clone()));
+        let client_proxy = crate::cli::Proxy {
+            port: client_addr.port(),
+            management_server: vec![format!("http://0.0.0.0:{}", xds_port).parse().unwrap()],
+            ..<_>::default()
+        };
+
+        tokio::spawn(async move { client_proxy.run(client_config, shutdown_rx).await });
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         handle.abort();
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-        tokio::spawn(server::spawn(xds_config.clone()));
+        tokio::spawn(server::spawn(xds_port, xds_config.clone()));
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
         const VERSION_KEY: &str = "quilkin.dev/load_balancer/version";
@@ -287,19 +283,25 @@ mod tests {
     async fn basic() {
         let config: Arc<Config> = serde_json::from_value(serde_json::json!({
             "version": "v1alpha1",
-            "admin": null,
             "id": "test-proxy",
-            "port": 23456u16,
-            "management_servers": [{
-                "address": "http://127.0.0.1:23456",
-            }]
         }))
         .map(Arc::new)
         .unwrap();
 
-        tokio::spawn(server::spawn(config.clone()));
-        let client = Client::connect(config.clone()).await.unwrap();
-        let mut stream = client.stream().await.unwrap();
+        tokio::spawn(server::spawn(23456, config.clone()));
+        let client = Client::connect(
+            "test-client".into(),
+            vec!["http://127.0.0.1:23456".try_into().unwrap()],
+        )
+        .await
+        .unwrap();
+        let mut stream = client
+            .stream({
+                let config = config.clone();
+                move |resource| config.apply(resource)
+            })
+            .await
+            .unwrap();
 
         // Each time, we create a new upstream endpoint and send a cluster update for it.
         let concat_bytes = vec![("b", "c,"), ("d", "e")];

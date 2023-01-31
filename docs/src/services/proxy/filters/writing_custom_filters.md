@@ -73,7 +73,7 @@ impl StaticFilter for Greet {
 
 ## Running
 
-We can run the proxy using [`Proxy::TryFrom`][Proxy::TryFrom] function. Let's
+We can run the proxy using `Proxy::run` function. Let's
 add a main function that does that. Quilkin relies on the [Tokio] async
 runtime, so we need to import that crate and wrap our main function with it.
 
@@ -95,13 +95,12 @@ Add a main function that starts the proxy.
 ```
 
 Now, let's try out the proxy. The following configuration starts our extended
-version of the proxy at port 7001 and forwards all packets to an upstream server
+version of the proxy at port 7777 and forwards all packets to an upstream server
 at port 4321.
 
 ```yaml
 # quilkin.yaml
 version: v1alpha1
-port: 7001
 filters:
   - name: greet.v1
 clusters:
@@ -121,7 +120,7 @@ cargo run -- &
 # Start a UDP listening server on the configured port
 nc -lu 127.0.0.1 4321 &
 # Start an interactive UDP client that sends packet to the proxy
-nc -u 127.0.0.1 7001
+nc -u 127.0.0.1 7777
 ```
 
 Whatever we pass to the client should now show up with our modification on the
@@ -242,7 +241,6 @@ filter. Try it out with the following configuration:
 [filter-factory-name]: ../../../../api/quilkin/filters/trait.FilterFactory.html#tymethod.name
 [FilterRegistry]: ../../../../api/quilkin/filters/struct.FilterRegistry.html
 [FilterRegistry::register]: ../../../../api/quilkin/filters/struct.FilterRegistry.html#method.register
-[Proxy::try_from]: ../../../api/struct.Proxy.html#impl-TryFrom%3CConfig%3E
 [CreateFilterArgs::config]: ../../../api/quilkin/filters/prelude/struct.CreateFilterArgs.html#structfield.config
 [ConfigType::dynamic]: ../../../../api/quilkin/config/enum.ConfigType.html#variant.Dynamic
 [ConfigType::static]: ../../../../api/quilkin/config/enum.ConfigType.html#variant.Static

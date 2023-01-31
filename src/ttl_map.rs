@@ -35,7 +35,7 @@ use tokio::time::Instant;
 
 /// A wrapper around the value of an entry in the map.
 /// It contains the value's ttl.
-pub(crate) struct Value<V> {
+pub struct Value<V> {
     pub value: V,
     expires_at: Arc<AtomicU64>,
     clock: Clock,
@@ -103,7 +103,7 @@ impl<K, V> Drop for Map<K, V> {
 /// [`TtlMap::get_mut`] functions, or via the [`TtlMap::entry`] interface.
 /// During tests, the internal clock implementation is driven by [`tokio::time`] so
 /// functions like [`tokio::time::pause`] and [`tokio::time::advance`] can be used.
-pub(crate) struct TtlMap<K, V>(Arc<Map<K, V>>);
+pub struct TtlMap<K, V>(Arc<Map<K, V>>);
 
 impl<K, V> TtlMap<K, V>
 where
@@ -241,14 +241,14 @@ where
 }
 
 /// A view into an occupied entry in the map.
-pub(crate) struct OccupiedEntry<'a, K, V> {
+pub struct OccupiedEntry<'a, K, V> {
     inner: DashMapEntry<'a, K, V>,
     ttl: Duration,
     clock: Clock,
 }
 
 /// A view into a vacant entry in the map.
-pub(crate) struct VacantEntry<'a, K, V> {
+pub struct VacantEntry<'a, K, V> {
     inner: DashMapEntry<'a, K, V>,
     ttl: Duration,
     clock: Clock,
@@ -256,7 +256,7 @@ pub(crate) struct VacantEntry<'a, K, V> {
 
 /// A view into an entry in the map.
 /// It may either be [`VacantEntry`] or [`OccupiedEntry`]
-pub(crate) enum Entry<'a, K, V> {
+pub enum Entry<'a, K, V> {
     Occupied(OccupiedEntry<'a, K, V>),
     Vacant(VacantEntry<'a, K, V>),
 }

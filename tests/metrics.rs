@@ -16,7 +16,7 @@
 
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
-use quilkin::{config::Admin, endpoint::Endpoint, test_utils::TestHelper};
+use quilkin::{endpoint::Endpoint, test_utils::TestHelper};
 
 #[tokio::test]
 async fn metrics_server() {
@@ -26,27 +26,32 @@ async fn metrics_server() {
     let echo = t.run_echo_server().await;
 
     // create server configuration
-    let server_port = 12346;
-    let server_config = quilkin::Config::builder()
-        .port(server_port)
-        .endpoints(vec![Endpoint::new(echo)])
-        .admin(Admin {
-            address: "[::]:9092".parse().unwrap(),
-        })
-        .build()
-        .unwrap();
-    t.run_server(quilkin::Proxy::try_from(server_config).unwrap());
+    let server_addr = quilkin::test_utils::available_addr().await;
+    let server_proxy = quilkin::cli::Proxy {
+        port: server_addr.port(),
+        ..<_>::default()
+    };
+    let server_config = std::sync::Arc::new(quilkin::Config::default());
+    server_config
+        .clusters
+        .modify(|clusters| clusters.insert_default(vec![Endpoint::new(echo.clone())]));
+    t.run_server(
+        server_config,
+        server_proxy,
+        Some(Some("[::]:9092".parse().unwrap())),
+    );
 
     // create a local client
     let client_port = 12347;
-    let client_config = quilkin::Config::builder()
-        .port(client_port)
-        .endpoints(vec![Endpoint::new(
-            (IpAddr::V4(Ipv4Addr::LOCALHOST), server_port).into(),
-        )])
-        .build()
-        .unwrap();
-    t.run_server_with_config(client_config);
+    let client_proxy = quilkin::cli::Proxy {
+        port: client_port,
+        ..<_>::default()
+    };
+    let client_config = std::sync::Arc::new(quilkin::Config::default());
+    client_config
+        .clusters
+        .modify(|clusters| clusters.insert_default(vec![Endpoint::new(server_addr.into())]));
+    t.run_server(client_config, client_proxy, None);
 
     // let's send the packet
     let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;

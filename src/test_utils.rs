@@ -29,7 +29,7 @@ use tokio::{
 
 use crate::{
     cluster::Cluster,
-    config::{Builder as ConfigBuilder, Config},
+    config::Config,
     endpoint::{Endpoint, EndpointAddress, LocalityEndpoints},
     filters::{prelude::*, FilterRegistry},
     metadata::Value,
@@ -216,28 +216,29 @@ impl TestHelper {
         addr.into()
     }
 
-    /// Run a proxy server with a supplied config.
-    /// Admin is disabled for this method, as the majority of tests will not need it, and it makes it
-    /// easier to avoid issues with port collisions.
-    pub fn run_server_with_config(&mut self, config: Config) {
-        config.admin.remove();
-
-        self.run_server(<_>::try_from(config).unwrap());
+    pub fn run_server_with_config(&mut self, config: Arc<Config>) {
+        self.run_server(config, crate::cli::Proxy::default(), None)
     }
 
-    pub fn run_server(&mut self, server: crate::Proxy) {
+    pub fn run_server(
+        &mut self,
+        config: Arc<Config>,
+        server: crate::cli::Proxy,
+        with_admin: Option<Option<SocketAddr>>,
+    ) {
         let (shutdown_tx, shutdown_rx) = watch::channel::<()>(());
         self.server_shutdown_tx.push(Some(shutdown_tx));
 
-        if server.config.admin.is_some() {
+        if let Some(address) = with_admin {
             tokio::spawn(crate::admin::server(
                 crate::admin::Mode::Proxy,
-                server.config.clone(),
+                config.clone(),
+                address,
             ));
         }
 
         tokio::spawn(async move {
-            server.run(shutdown_rx).await.unwrap();
+            server.run(config, shutdown_rx).await.unwrap();
         });
     }
 
@@ -296,20 +297,26 @@ pub async fn create_socket() -> UdpSocket {
     UdpSocket::bind(addr).await.unwrap()
 }
 
-pub fn config_with_dummy_endpoint() -> ConfigBuilder {
-    ConfigBuilder::default().clusters([Cluster {
-        name: "default".into(),
-        localities: vec![LocalityEndpoints {
-            locality: None,
-            endpoints: [Endpoint {
-                address: (std::net::Ipv4Addr::LOCALHOST, 8080).into(),
-                ..<_>::default()
+pub fn config_with_dummy_endpoint() -> Config {
+    let config = Config::default();
+
+    config.clusters.modify(|map| {
+        let _ = map.get_default_mut().insert(&mut Cluster {
+            name: "default".into(),
+            localities: vec![LocalityEndpoints {
+                locality: None,
+                endpoints: [Endpoint {
+                    address: (std::net::Ipv4Addr::LOCALHOST, 8080).into(),
+                    ..<_>::default()
+                }]
+                .into(),
             }]
-            .into(),
-        }]
-        .into_iter()
-        .collect(),
-    }])
+            .into_iter()
+            .collect(),
+        });
+    });
+
+    config
 }
 /// Creates a dummy endpoint with `id` as a suffix.
 pub fn ep(id: u8) -> Endpoint {
@@ -320,13 +327,16 @@ pub fn ep(id: u8) -> Endpoint {
 }
 
 pub fn new_test_config() -> crate::Config {
-    crate::Config::builder()
-        .filters(vec![crate::config::Filter {
-            name: "TestFilter".into(),
-            config: None,
-        }])
-        .build()
-        .unwrap()
+    crate::Config {
+        filters: crate::config::Slot::new(
+            crate::filters::FilterChain::try_from(vec![crate::config::Filter {
+                name: "TestFilter".into(),
+                config: None,
+            }])
+            .unwrap(),
+        ),
+        ..<_>::default()
+    }
 }
 
 pub fn load_test_filters() {

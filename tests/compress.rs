@@ -35,17 +35,24 @@ async fn client_and_server() {
 on_read: DECOMPRESS
 on_write: COMPRESS
 ";
-    let server_config = quilkin::Config::builder()
-        .port(server_addr.port())
-        .filters(vec![Filter {
+    let server_config = std::sync::Arc::new(quilkin::Config::default());
+    server_config
+        .clusters
+        .modify(|clusters| clusters.insert_default(vec![Endpoint::new(echo.clone())]));
+    server_config.filters.store(
+        quilkin::filters::FilterChain::try_from(vec![Filter {
             name: Compress::factory().name().into(),
             config: serde_yaml::from_str(yaml).unwrap(),
         }])
-        .endpoints(vec![Endpoint::new(echo)])
-        .build()
-        .unwrap();
+        .map(std::sync::Arc::new)
+        .unwrap(),
+    );
+    let server_proxy = quilkin::cli::Proxy {
+        port: server_addr.port(),
+        ..<_>::default()
+    };
     // Run server proxy.
-    t.run_server_with_config(server_config);
+    t.run_server(server_config, server_proxy, None);
 
     // create a local client
     let client_addr = available_addr().await;
@@ -53,17 +60,24 @@ on_write: COMPRESS
 on_read: COMPRESS
 on_write: DECOMPRESS
 ";
-    let client_config = quilkin::Config::builder()
-        .port(client_addr.port())
-        .filters(vec![Filter {
+    let client_config = std::sync::Arc::new(quilkin::Config::default());
+    client_config
+        .clusters
+        .modify(|clusters| clusters.insert_default(vec![Endpoint::new(server_addr.into())]));
+    client_config.filters.store(
+        quilkin::filters::FilterChain::try_from(vec![Filter {
             name: Compress::factory().name().into(),
             config: serde_yaml::from_str(yaml).unwrap(),
         }])
-        .endpoints(vec![Endpoint::new(server_addr.into())])
-        .build()
-        .unwrap();
+        .map(std::sync::Arc::new)
+        .unwrap(),
+    );
+    let client_proxy = quilkin::cli::Proxy {
+        port: client_addr.port(),
+        ..<_>::default()
+    };
     // Run client proxy.
-    t.run_server_with_config(client_config);
+    t.run_server(client_config, client_proxy, None);
 
     // let's send the packet
     let (mut rx, tx) = t.open_socket_and_recv_multiple_packets().await;
