@@ -361,6 +361,16 @@
 <span id="361">361</span>
 <span id="362">362</span>
 <span id="363">363</span>
+<span id="364">364</span>
+<span id="365">365</span>
+<span id="366">366</span>
+<span id="367">367</span>
+<span id="368">368</span>
+<span id="369">369</span>
+<span id="370">370</span>
+<span id="371">371</span>
+<span id="372">372</span>
+<span id="373">373</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -392,7 +402,7 @@
 
 <span class="kw">use crate</span>::{
     cluster::Cluster,
-    config::{Builder <span class="kw">as </span>ConfigBuilder, Config},
+    config::Config,
     endpoint::{Endpoint, EndpointAddress, LocalityEndpoints},
     filters::{prelude::<span class="kw-2">*</span>, FilterRegistry},
     metadata::Value,
@@ -579,28 +589,29 @@
         addr.into()
     }
 
-    <span class="doccomment">/// Run a proxy server with a supplied config.
-    /// Admin is disabled for this method, as the majority of tests will not need it, and it makes it
-    /// easier to avoid issues with port collisions.
-    </span><span class="kw">pub fn </span>run_server_with_config(<span class="kw-2">&amp;mut </span><span class="self">self</span>, config: Config) {
-        config.admin.remove();
-
-        <span class="self">self</span>.run_server(&lt;<span class="kw">_</span>&gt;::try_from(config).unwrap());
+    <span class="kw">pub fn </span>run_server_with_config(<span class="kw-2">&amp;mut </span><span class="self">self</span>, config: Arc&lt;Config&gt;) {
+        <span class="self">self</span>.run_server(config, <span class="kw">crate</span>::cli::Proxy::default(), <span class="prelude-val">None</span>)
     }
 
-    <span class="kw">pub fn </span>run_server(<span class="kw-2">&amp;mut </span><span class="self">self</span>, server: <span class="kw">crate</span>::Proxy) {
+    <span class="kw">pub fn </span>run_server(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        config: Arc&lt;Config&gt;,
+        server: <span class="kw">crate</span>::cli::Proxy,
+        with_admin: <span class="prelude-ty">Option</span>&lt;<span class="prelude-ty">Option</span>&lt;SocketAddr&gt;&gt;,
+    ) {
         <span class="kw">let </span>(shutdown_tx, shutdown_rx) = watch::channel::&lt;()&gt;(());
         <span class="self">self</span>.server_shutdown_tx.push(<span class="prelude-val">Some</span>(shutdown_tx));
 
-        <span class="kw">if </span>server.config.admin.is_some() {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(address) = with_admin {
             tokio::spawn(<span class="kw">crate</span>::admin::server(
                 <span class="kw">crate</span>::admin::Mode::Proxy,
-                server.config.clone(),
+                config.clone(),
+                address,
             ));
         }
 
         tokio::spawn(<span class="kw">async move </span>{
-            server.run(shutdown_rx).<span class="kw">await</span>.unwrap();
+            server.run(config, shutdown_rx).<span class="kw">await</span>.unwrap();
         });
     }
 
@@ -659,20 +670,26 @@
     </span>UdpSocket::bind(addr).<span class="kw">await</span>.unwrap()
 }
 
-<span class="kw">pub fn </span>config_with_dummy_endpoint() -&gt; ConfigBuilder {
-    ConfigBuilder::default().clusters([Cluster {
-        name: <span class="string">&quot;default&quot;</span>.into(),
-        localities: <span class="macro">vec!</span>[LocalityEndpoints {
-            locality: <span class="prelude-val">None</span>,
-            endpoints: [Endpoint {
-                address: (std::net::Ipv4Addr::LOCALHOST, <span class="number">8080</span>).into(),
-                ..&lt;<span class="kw">_</span>&gt;::default()
+<span class="kw">pub fn </span>config_with_dummy_endpoint() -&gt; Config {
+    <span class="kw">let </span>config = Config::default();
+
+    config.clusters.modify(|map| {
+        <span class="kw">let _ </span>= map.get_default_mut().insert(<span class="kw-2">&amp;mut </span>Cluster {
+            name: <span class="string">&quot;default&quot;</span>.into(),
+            localities: <span class="macro">vec!</span>[LocalityEndpoints {
+                locality: <span class="prelude-val">None</span>,
+                endpoints: [Endpoint {
+                    address: (std::net::Ipv4Addr::LOCALHOST, <span class="number">8080</span>).into(),
+                    ..&lt;<span class="kw">_</span>&gt;::default()
+                }]
+                .into(),
             }]
-            .into(),
-        }]
-        .into_iter()
-        .collect(),
-    }])
+            .into_iter()
+            .collect(),
+        });
+    });
+
+    config
 }
 <span class="doccomment">/// Creates a dummy endpoint with `id` as a suffix.
 </span><span class="kw">pub fn </span>ep(id: u8) -&gt; Endpoint {
@@ -683,13 +700,16 @@
 }
 
 <span class="kw">pub fn </span>new_test_config() -&gt; <span class="kw">crate</span>::Config {
-    <span class="kw">crate</span>::Config::builder()
-        .filters(<span class="macro">vec!</span>[<span class="kw">crate</span>::config::Filter {
-            name: <span class="string">&quot;TestFilter&quot;</span>.into(),
-            config: <span class="prelude-val">None</span>,
-        }])
-        .build()
-        .unwrap()
+    <span class="kw">crate</span>::Config {
+        filters: <span class="kw">crate</span>::config::Slot::new(
+            <span class="kw">crate</span>::filters::FilterChain::try_from(<span class="macro">vec!</span>[<span class="kw">crate</span>::config::Filter {
+                name: <span class="string">&quot;TestFilter&quot;</span>.into(),
+                config: <span class="prelude-val">None</span>,
+            }])
+            .unwrap(),
+        ),
+        ..&lt;<span class="kw">_</span>&gt;::default()
+    }
 }
 
 <span class="kw">pub fn </span>load_test_filters() {

@@ -159,11 +159,9 @@ logging to only Quilkin components.</p>
 <blockquote>
 <p>It is assumed that the administration interface will only ever be able to be accessible on <code>localhost</code>.</p>
 </blockquote>
-<p>By default, the administration interface is bound to <code>[::]:8000</code>, but it can be configured by the command line flag
-<code>--admin-address</code> or through the <a href="./configuration.html">configuration file</a>, like so:</p>
-<pre><code class="language-yaml">admin:
-  address: [::]:9095
-</code></pre>
+<p>By default, the administration interface is bound to <code>[::]:8000</code>, but it can be
+configured with the <code>--admin-address</code> CLI flag or the <code>QUILKIN_ADMIN_ADDRESS</code>
+environment.</p>
 <h2 id="endpoints"><a class="header" href="#endpoints">Endpoints</a></h2>
 <p>The admin interface provides the following endpoints:</p>
 <h3 id="live"><a class="header" href="#live">/live</a></h3>

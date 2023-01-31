@@ -157,11 +157,7 @@ endpoint configuration:</p>
 #
 
 version: v1alpha1
-admin: # configuration options for administration
-  address: &quot;[::]:9091&quot; # the address and port to bind the admin API to.
-maxmind_db: null # Remote URL or local file path to retrieve a Maxmind database (requires licence).
 id: my-proxy # An identifier for the proxy instance.
-port: 7001 # the port to receive traffic to locally
 clusters: # grouping of clusters
   default:
     localities: # grouping of endpoints within a cluster
@@ -181,19 +177,7 @@ clusters: # grouping of clusters
 <h2 id="dynamic-configuration"><a class="header" href="#dynamic-configuration">Dynamic Configuration</a></h2>
 <p>Example of a full configuration for <code>quilkin proxy</code> that utlisies a dynamic
 Endpoint configuration through an <a href="../services/xds.html">xDS management endpoint</a>:</p>
-<pre><code class="language-yaml">#
-# Example configuration for a Quilkin Proxy that is configured via an xDS control plane.
-#
-
-version: v1alpha1
-admin: # configuration options for administration
-  address: &quot;[::]:9091&quot; # the address and port to bind the admin API to.
-maxmind_db: null # Remote URL or local file path to retrieve a Maxmind database (requires licence).
-id: my-proxy # An identifier for the proxy instance.
-port: 7001 # the port to receive traffic to locally
-management_servers: # array of management servers to configure the proxy with.
-                    # Multiple servers can be provided for redundancy.
-  - address: http://127.0.0.1:26000
+<pre><code class="language-yaml">{{#include ../../../examples/control-plane.yaml:17:100}}
 </code></pre>
 <h2 id="json-schema"><a class="header" href="#json-schema">Json Schema</a></h2>
 <p>The full <a href="https://json-schema.org/">JSON Schema</a> for the YAML configuration file.</p>
@@ -219,16 +203,6 @@ properties:
     type: string
     description: |
       The remote URL or local file path to retrieve the Maxmind database (requires licence).
-  admin:
-    type: object
-    description: |
-      Configuration of proxy admin HTTP interface.
-    properties:
-      address:
-        type: string
-        description: |
-          Socket Address and port to bind the administration interface to.
-        default: &quot;[::]:9091&quot;
   filters:
     type: array
     description: |

@@ -435,24 +435,6 @@
 <span id="435">435</span>
 <span id="436">436</span>
 <span id="437">437</span>
-<span id="438">438</span>
-<span id="439">439</span>
-<span id="440">440</span>
-<span id="441">441</span>
-<span id="442">442</span>
-<span id="443">443</span>
-<span id="444">444</span>
-<span id="445">445</span>
-<span id="446">446</span>
-<span id="447">447</span>
-<span id="448">448</span>
-<span id="449">449</span>
-<span id="450">450</span>
-<span id="451">451</span>
-<span id="452">452</span>
-<span id="453">453</span>
-<span id="454">454</span>
-<span id="455">455</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -478,8 +460,8 @@
         api::{
             apps::v1::{Deployment, DeploymentSpec},
             core::v1::{
-                ConfigMap, ConfigMapVolumeSource, ContainerPort, Node, Pod, PodSpec,
-                PodTemplateSpec, Service, ServiceAccount, ServicePort, ServiceSpec, Volume,
+                ConfigMap, ContainerPort, Node, Pod, PodSpec, PodTemplateSpec, Service,
+                ServiceAccount, ServicePort, ServiceSpec,
             },
             rbac::v1::{ClusterRole, PolicyRule, RoleBinding, RoleRef, Subject},
         },
@@ -540,8 +522,7 @@ filters:
         config_maps.create(<span class="kw-2">&amp;</span>pp, <span class="kw-2">&amp;</span>config_map).<span class="kw">await</span>.unwrap();
 
         agones_control_plane(<span class="kw-2">&amp;</span>client, deployments.clone()).<span class="kw">await</span>;
-        <span class="kw">let </span>proxy_address =
-            quilkin_proxy_deployment(<span class="kw-2">&amp;</span>client, config_maps, deployments.clone()).<span class="kw">await</span>;
+        <span class="kw">let </span>proxy_address = quilkin_proxy_deployment(<span class="kw-2">&amp;</span>client, deployments.clone()).<span class="kw">await</span>;
 
         <span class="comment">// create a fleet so we can ensure that a packet is going to the GameServer we expect, and not
         // any other.
@@ -796,25 +777,16 @@ filters:
 
     <span class="doccomment">/// create a Deployment with a singular Quilkin proxy, that is configured
     /// to be attached to the Quilkin Agones xDS server in `agones_control_plane()`.
-    </span><span class="kw">async fn </span>quilkin_proxy_deployment(
-        client: <span class="kw-2">&amp;</span>Client,
-        config_maps: Api&lt;ConfigMap&gt;,
-        deployments: Api&lt;Deployment&gt;,
-    ) -&gt; SocketAddr {
+    </span><span class="kw">async fn </span>quilkin_proxy_deployment(client: <span class="kw-2">&amp;</span>Client, deployments: Api&lt;Deployment&gt;) -&gt; SocketAddr {
         <span class="kw">let </span>pp = PostParams::default();
-        <span class="kw">let </span>config = <span class="string">r#&quot;
-version: v1alpha1
-management_servers:
-  - address: http://quilkin-manage-agones:7800
-&quot;#</span>;
-
-        <span class="kw">let </span>config_map = config_maps
-            .create(<span class="kw-2">&amp;</span>pp, <span class="kw-2">&amp;</span>quilkin_config_map(config))
-            .<span class="kw">await
-            </span>.unwrap();
-        <span class="kw">let </span>mount_name = <span class="string">&quot;config&quot;</span>;
-        <span class="kw">let </span><span class="kw-2">mut </span>container =
-            quilkin_container(client, <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="string">&quot;proxy&quot;</span>.into()]), <span class="prelude-val">Some</span>(mount_name.into()));
+        <span class="kw">let </span><span class="kw-2">mut </span>container = quilkin_container(
+            client,
+            <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[
+                <span class="string">&quot;proxy&quot;</span>.into(),
+                <span class="string">&quot;--management-server=http://quilkin-manage-agones:7800&quot;</span>.into(),
+            ]),
+            <span class="prelude-val">None</span>,
+        );
 
         <span class="comment">// we&#39;ll use a host port, since spinning up a load balancer takes a long time.
         // we know that port 7777 is open because this is an Agones cluster and it has associated
@@ -848,14 +820,6 @@ management_servers:
                     }),
                     spec: <span class="prelude-val">Some</span>(PodSpec {
                         containers: <span class="macro">vec!</span>[container],
-                        volumes: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[Volume {
-                            name: mount_name.into(),
-                            config_map: <span class="prelude-val">Some</span>(ConfigMapVolumeSource {
-                                name: <span class="prelude-val">Some</span>(config_map.name_unchecked()),
-                                ..Default::default()
-                            }),
-                            ..Default::default()
-                        }]),
                         ..Default::default()
                     }),
                 },

@@ -215,7 +215,7 @@ your local machine through <a href="installation.html#cargo">Cargo</a>.</p>
 <dl>
   <dt><strong>Source / Method</strong></dt>
   <dd>
-<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.6.0-dev-2d30566
+<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.6.0-dev-f9125c5
 </code></pre>
 </dd>
   <dt><strong>Notes</strong></dt>
@@ -729,7 +729,6 @@ clusters:
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 2);
-</span><span class="boring">quilkin::Proxy::try_from(config).unwrap();
 </span><span class="boring">}</span></code></pre></pre>
 <p>We specify our filter chain in the <code>.filters</code> section of the proxy's configuration which has takes a sequence of <a href="services/proxy/filters.html#filter-config">FilterConfig</a> objects. Each object describes all information necessary to create a single filter.</p>
 <p>The above example creates a filter chain comprising a <a href="services/proxy/./filters/debug.html">Debug</a> filter followed by a <a href="services/proxy/./filters/local_rate_limit.html">LocalRateLimit</a> filter - the effect is that every packet will be logged and the proxy will not forward more than 10 packets per second.</p>
@@ -826,7 +825,6 @@ clusters:
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 1);
-</span><span class="boring">quilkin::Proxy::try_from(config).unwrap();
 </span><span class="boring">}</span></code></pre></pre>
 <h2 id="configuration-options-rust-doc"><a class="header" href="#configuration-options-rust-doc">Configuration Options (<a href="services/proxy/filters/../../../../api/quilkin/filters/capture/struct.Config.html">Rust Doc</a>)</a></h2>
 <pre><code class="language-yaml">$schema: http://json-schema.org/draft-07/schema#
@@ -934,7 +932,6 @@ clusters:
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 1);
-</span><span class="boring">quilkin::Proxy::try_from(config).unwrap();
 </span><span class="boring">}</span></code></pre></pre>
 <p>The above example shows a proxy that could be used with a typical game client, where the original client data is
 sent to the local listening port and then compressed when heading up to a dedicated game server, and then
@@ -1030,7 +1027,6 @@ clusters:
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 1);
-</span><span class="boring">quilkin::Proxy::try_from(config).unwrap();
 </span><span class="boring">}</span></code></pre></pre>
 <h2 id="configuration-options-rust-doc-2"><a class="header" href="#configuration-options-rust-doc-2">Configuration Options (<a href="services/proxy/filters/../../../../api/quilkin/filters/concatenate_bytes/struct.Config.html">Rust Doc</a>)</a></h2>
 <pre><code class="language-yaml">$schema: http://json-schema.org/draft-07/schema#
@@ -1089,7 +1085,6 @@ clusters:
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 1);
-</span><span class="boring">quilkin::Proxy::try_from(config).unwrap();
 </span><span class="boring">}</span></code></pre></pre>
 <h2 id="configuration-options-rust-doc-3"><a class="header" href="#configuration-options-rust-doc-3">Configuration Options (<a href="services/proxy/filters/../../../../api/quilkin/filters/debug/struct.Config.html">Rust Doc</a>)</a></h2>
 <pre><code class="language-yaml">$schema: http://json-schema.org/draft-07/schema#
@@ -1141,7 +1136,6 @@ filters:
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 2);
-</span><span class="boring">quilkin::Proxy::try_from(config).unwrap();
 </span><span class="boring">}</span></code></pre></pre>
 <h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
 <p>No defined configuration options.</p>
@@ -1180,7 +1174,6 @@ clusters:
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 1);
-</span><span class="boring">quilkin::Proxy::try_from(config).unwrap();
 </span><span class="boring">}</span></code></pre></pre>
 <h2 id="configuration-options-rust-doc-4"><a class="header" href="#configuration-options-rust-doc-4">Configuration Options (<a href="services/proxy/filters/../../../../api/quilkin/filters/firewall/struct.Config.html">Rust Doc</a>)</a></h2>
 <pre><code class="language-yaml">$schema: http://json-schema.org/draft-07/schema#
@@ -1285,7 +1278,6 @@ clusters:
 <span class="boring">&quot;;
 </span><span class="boring">  let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 1);
-</span><span class="boring">quilkin::Proxy::try_from(config).unwrap();
 </span><span class="boring">}</span></code></pre></pre>
 <p>The load balancing policy (the strategy to use to select what endpoint to send traffic to) is configurable.
 In the example above, packets will be distributed by selecting endpoints in turn, in round robin fashion.</p>
@@ -1344,7 +1336,6 @@ clusters:
 <span class="boring">&quot;;
 </span><span class="boring">  let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 1);
-</span><span class="boring">quilkin::Proxy::try_from(config).unwrap();
 </span><span class="boring">}</span></code></pre></pre>
 <p>To configure a rate limiter, we specify the maximum rate at which the proxy is allowed to forward packets. In the example above, we configured the proxy to forward a maximum of 1000 packets per second).</p>
 <blockquote>
@@ -1419,7 +1410,6 @@ filters:
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 2);
-</span><span class="boring">quilkin::Proxy::try_from(config).unwrap();
 </span><span class="boring">}</span></code></pre></pre>
 <!--  ANCHOR_END: example -->
 <h2 id="configuration-options-rust-doc-7"><a class="header" href="#configuration-options-rust-doc-7">Configuration Options (<a href="services/proxy/filters/../../../../api/quilkin/filters/match/struct.Config.html">Rust Doc</a>)</a></h2>
@@ -1550,7 +1540,6 @@ filters:
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 2);
-</span><span class="boring">quilkin::Proxy::try_from(config).unwrap();
 </span><span class="boring">}</span></code></pre></pre>
 <h2 id="configuration-1"><a class="header" href="#configuration-1">Configuration</a></h2>
 <p>No defined configuration options.</p>
@@ -1585,7 +1574,6 @@ clusters:
         - address: 127.0.0.1:26000
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-</span><span class="boring">quilkin::Proxy::try_from(config).unwrap();
 </span><span class="boring">}</span></code></pre></pre>
 <h2 id="configuration-options-rust-doc-8"><a class="header" href="#configuration-options-rust-doc-8">Configuration Options (<a href="services/proxy/filters/../../../../api/quilkin/filters/timestamp/struct.Config.html">Rust Doc</a>)</a></h2>
 <pre><code class="language-yaml">$schema: http://json-schema.org/draft-07/schema#
@@ -1644,7 +1632,6 @@ clusters:
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 1);
-</span><span class="boring">quilkin::Proxy::try_from(config).unwrap();
 </span><span class="boring">}</span></code></pre></pre>
 <p>View the <a href="services/proxy/filters/capture.html">CaptureBytes</a> filter documentation for more details.</p>
 <h2 id="configuration-options-rust-doc-9"><a class="header" href="#configuration-options-rust-doc-9">Configuration Options (<a href="services/proxy/filters/../../../../api/quilkin/filters/token_router/struct.Config.html">Rust Doc</a>)</a></h2>
@@ -1714,7 +1701,6 @@ clusters:
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 2);
-</span><span class="boring">quilkin::Proxy::try_from(config).unwrap();
 </span><span class="boring">}</span></code></pre></pre>
 <p>On the game client side the <a href="services/proxy/filters/concatenate_bytes.html">ConcatenateBytes</a> filter could also be used to add authentication
 tokens to outgoing packets.</p>
@@ -1778,7 +1764,7 @@ configuration, for now we can use <code>()</code> as we have no configuration cu
     }
 }</code></pre>
 <h2 id="running"><a class="header" href="#running">Running</a></h2>
-<p>We can run the proxy using [<code>Proxy::TryFrom</code>][Proxy::TryFrom] function. Let's
+<p>We can run the proxy using <code>Proxy::run</code> function. Let's
 add a main function that does that. Quilkin relies on the <a href="https://docs.rs/tokio">Tokio</a> async
 runtime, so we need to import that crate and wrap our main function with it.</p>
 <p>We can also register custom filters in quilkin using <a href="services/proxy/filters/../../../../api/quilkin/filters/struct.FilterRegistry.html#method.register"><code>FilterRegistry::register</code></a></p>
@@ -1794,26 +1780,28 @@ async fn main() -&gt; quilkin::Result&lt;()&gt; {
     quilkin::filters::FilterRegistry::register(vec![Greet::factory()].into_iter());
 
     let (_shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(());
-    let server: quilkin::Proxy = quilkin::Config::builder()
-        .port(7001)
-        .filters(vec![quilkin::config::Filter {
+    let proxy = quilkin::Proxy::default();
+    let config = quilkin::Config::default();
+    config.filters.store(std::sync::Arc::new(
+        vec![quilkin::config::Filter {
             name: Greet::NAME.into(),
             config: None,
-        }])
-        .endpoints(vec![quilkin::endpoint::Endpoint::new(
+        }]
+        .try_into()?,
+    ));
+    config.clusters.modify(|map| {
+        map.insert_default(vec![quilkin::endpoint::Endpoint::new(
             (std::net::Ipv4Addr::LOCALHOST, 4321).into(),
         )])
-        .build()?
-        .try_into()?;
+    });
 
-    server.run(shutdown_rx).await
+    proxy.run(config.into(), shutdown_rx).await
 }</code></pre>
 <p>Now, let's try out the proxy. The following configuration starts our extended
-version of the proxy at port 7001 and forwards all packets to an upstream server
+version of the proxy at port 7777 and forwards all packets to an upstream server
 at port 4321.</p>
 <pre><code class="language-yaml"># quilkin.yaml
 version: v1alpha1
-port: 7001
 filters:
   - name: greet.v1
 clusters:
@@ -1830,7 +1818,7 @@ cargo run -- &amp;
 # Start a UDP listening server on the configured port
 nc -lu 127.0.0.1 4321 &amp;
 # Start an interactive UDP client that sends packet to the proxy
-nc -u 127.0.0.1 7001
+nc -u 127.0.0.1 7777
 </code></pre>
 <p>Whatever we pass to the client should now show up with our modification on the
 listening server's standard output.  For example typing <code>Quilkin</code> in the client
@@ -2167,7 +2155,7 @@ Quilkin implements the <strong>Aggregated Discovery Service (ADS)</strong> <em>S
 </ul>
 <h2 id="connecting-to-an-xds-management-server"><a class="header" href="#connecting-to-an-xds-management-server">Connecting to an xDS management server</a></h2>
 <p>Connecting a Quilkin proxy to an xDS management server can be implemented via providing one or more URLs to
-the <code>management_servers</code> <a href="services/../../api/quilkin/cli/struct.Proxy.html#structfield.management_server">command line</a> or
+the <code>management_servers</code> <a href="services/../../api/quilkin/struct.Proxy.html#structfield.management_server">command line</a> or
 <a href="services/../deployment/configuration.html#dynamic-configuration">file configuration</a>.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="xds-metrics"><a class="header" href="#xds-metrics">xDS Metrics</a></h1>
 <h2 id="proxy-mode"><a class="header" href="#proxy-mode">Proxy Mode</a></h2>
@@ -2336,7 +2324,6 @@ clusters:
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 1);
-</span><span class="boring">quilkin::Proxy::try_from(config).unwrap();
 </span><span class="boring">}</span></code></pre></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="quilkin-unreal-engine-plugin"><a class="header" href="#quilkin-unreal-engine-plugin">Quilkin Unreal Engine Plugin</a></h1>
 <p>This is an alpha version of the Unreal Engine plugin for Quilkin. Currently it only supports adding a routing token in the following format.</p>
@@ -2363,11 +2350,9 @@ logging to only Quilkin components.</p>
 <blockquote>
 <p>It is assumed that the administration interface will only ever be able to be accessible on <code>localhost</code>.</p>
 </blockquote>
-<p>By default, the administration interface is bound to <code>[::]:8000</code>, but it can be configured by the command line flag
-<code>--admin-address</code> or through the <a href="deployment/./configuration.html">configuration file</a>, like so:</p>
-<pre><code class="language-yaml">admin:
-  address: [::]:9095
-</code></pre>
+<p>By default, the administration interface is bound to <code>[::]:8000</code>, but it can be
+configured with the <code>--admin-address</code> CLI flag or the <code>QUILKIN_ADMIN_ADDRESS</code>
+environment.</p>
 <h2 id="endpoints-1"><a class="header" href="#endpoints-1">Endpoints</a></h2>
 <p>The admin interface provides the following endpoints:</p>
 <h3 id="live"><a class="header" href="#live">/live</a></h3>
@@ -2549,11 +2534,7 @@ endpoint configuration:</p>
 #
 
 version: v1alpha1
-admin: # configuration options for administration
-  address: &quot;[::]:9091&quot; # the address and port to bind the admin API to.
-maxmind_db: null # Remote URL or local file path to retrieve a Maxmind database (requires licence).
 id: my-proxy # An identifier for the proxy instance.
-port: 7001 # the port to receive traffic to locally
 clusters: # grouping of clusters
   default:
     localities: # grouping of endpoints within a cluster
@@ -2573,19 +2554,7 @@ clusters: # grouping of clusters
 <h2 id="dynamic-configuration"><a class="header" href="#dynamic-configuration">Dynamic Configuration</a></h2>
 <p>Example of a full configuration for <code>quilkin proxy</code> that utlisies a dynamic
 Endpoint configuration through an <a href="deployment/../services/xds.html">xDS management endpoint</a>:</p>
-<pre><code class="language-yaml">#
-# Example configuration for a Quilkin Proxy that is configured via an xDS control plane.
-#
-
-version: v1alpha1
-admin: # configuration options for administration
-  address: &quot;[::]:9091&quot; # the address and port to bind the admin API to.
-maxmind_db: null # Remote URL or local file path to retrieve a Maxmind database (requires licence).
-id: my-proxy # An identifier for the proxy instance.
-port: 7001 # the port to receive traffic to locally
-management_servers: # array of management servers to configure the proxy with.
-                    # Multiple servers can be provided for redundancy.
-  - address: http://127.0.0.1:26000
+<pre><code class="language-yaml">{{#include ../../../examples/control-plane.yaml:17:100}}
 </code></pre>
 <h2 id="json-schema"><a class="header" href="#json-schema">Json Schema</a></h2>
 <p>The full <a href="https://json-schema.org/">JSON Schema</a> for the YAML configuration file.</p>
@@ -2611,16 +2580,6 @@ properties:
     type: string
     description: |
       The remote URL or local file path to retrieve the Maxmind database (requires licence).
-  admin:
-    type: object
-    description: |
-      Configuration of proxy admin HTTP interface.
-    properties:
-      address:
-        type: string
-        description: |
-          Socket Address and port to bind the administration interface to.
-        default: &quot;[::]:9091&quot;
   filters:
     type: array
     description: |

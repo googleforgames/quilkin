@@ -221,9 +221,9 @@
     proxy::Proxy,
 };
 
-<span class="kw">mod </span>generate_config_schema;
-<span class="kw">mod </span>manage;
-<span class="kw">mod </span>proxy;
+<span class="kw">pub mod </span>generate_config_schema;
+<span class="kw">pub mod </span>manage;
+<span class="kw">pub mod </span>proxy;
 
 <span class="kw">const </span>ETC_CONFIG_PATH: <span class="kw-2">&amp;</span>str = <span class="string">&quot;/etc/quilkin/quilkin.yaml&quot;</span>;
 <span class="kw">const </span>PORT_ENV_VAR: <span class="kw-2">&amp;</span>str = <span class="string">&quot;QUILKIN_PORT&quot;</span>;
@@ -290,17 +290,17 @@
         </span>);
 
         <span class="kw">let </span>config = Arc::new(<span class="self">Self</span>::read_config(<span class="self">self</span>.config)<span class="question-mark">?</span>);
-        <span class="kw">let </span>_admin_task = <span class="kw">if let </span><span class="prelude-val">Some</span>(mode) = <span class="self">self</span>.command.admin_mode().filter(|<span class="kw">_</span>| !<span class="self">self</span>.no_admin) {
-            <span class="kw">if let </span><span class="prelude-val">Some</span>(address) = <span class="self">self</span>.admin_address {
-                config
-                    .admin
-                    .store(Arc::new(<span class="kw">crate</span>::config::Admin { address }));
-            }
-            <span class="prelude-val">Some</span>(tokio::spawn(<span class="kw">crate</span>::admin::server(mode, config.clone())))
-        } <span class="kw">else </span>{
-            config.admin.remove();
-            <span class="prelude-val">None
-        </span>};
+        <span class="kw">let </span>_admin_task = <span class="self">self
+            </span>.command
+            .admin_mode()
+            .filter(|<span class="kw">_</span>| !<span class="self">self</span>.no_admin)
+            .map(|mode| {
+                tokio::spawn(<span class="kw">crate</span>::admin::server(
+                    mode,
+                    config.clone(),
+                    <span class="self">self</span>.admin_address,
+                ))
+            });
 
         <span class="kw">let </span>(shutdown_tx, <span class="kw-2">mut </span>shutdown_rx) = watch::channel::&lt;()&gt;(());
 

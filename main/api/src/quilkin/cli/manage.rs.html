@@ -84,8 +84,6 @@
 <span id="84">84</span>
 <span id="85">85</span>
 <span id="86">86</span>
-<span id="87">87</span>
-<span id="88">88</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -138,8 +136,6 @@
 
 <span class="kw">impl </span>Manage {
     <span class="kw">pub async fn </span>manage(<span class="kw-2">&amp;</span><span class="self">self</span>, config: std::sync::Arc&lt;<span class="kw">crate</span>::Config&gt;) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
-        config.port.store_if_unset(<span class="self">self</span>.port.into());
-
         <span class="kw">let </span>provider_task = {
             <span class="kw">const </span>PROVIDER_RETRIES: u32 = <span class="number">25</span>;
             <span class="kw">const </span>PROVIDER_BACKOFF: std::time::Duration = std::time::Duration::from_millis(<span class="number">250</span>);
@@ -169,7 +165,7 @@
         };
 
         <span class="macro">tokio::select! </span>{
-            result = <span class="kw">crate</span>::xds::server::spawn(config) =&gt; result,
+            result = <span class="kw">crate</span>::xds::server::spawn(<span class="self">self</span>.port, config) =&gt; result,
             result = provider_task =&gt; result.map_err(From::from).and_then(|result| result),
         }
     }

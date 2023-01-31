@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":[["PORT",""]],"enum":[["Providers","The available xDS source providers."]],"struct":[["Manage","Runs Quilkin as a xDS management server, using `provider` as a configuration source."]]};

@@ -176,7 +176,6 @@ clusters:
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 1);
-</span><span class="boring">quilkin::Proxy::try_from(config).unwrap();
 </span><span class="boring">}</span></code></pre></pre>
 <p>View the <a href="capture.html">CaptureBytes</a> filter documentation for more details.</p>
 <h2 id="configuration-options-rust-doc"><a class="header" href="#configuration-options-rust-doc">Configuration Options (<a href="../../../../api/quilkin/filters/token_router/struct.Config.html">Rust Doc</a>)</a></h2>
@@ -246,7 +245,6 @@ clusters:
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 2);
-</span><span class="boring">quilkin::Proxy::try_from(config).unwrap();
 </span><span class="boring">}</span></code></pre></pre>
 <p>On the game client side the <a href="concatenate_bytes.html">ConcatenateBytes</a> filter could also be used to add authentication
 tokens to outgoing packets.</p>

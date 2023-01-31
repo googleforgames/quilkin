@@ -774,7 +774,7 @@
 
 <span class="doccomment">/// A wrapper around the value of an entry in the map.
 /// It contains the value&#39;s ttl.
-</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>Value&lt;V&gt; {
+</span><span class="kw">pub struct </span>Value&lt;V&gt; {
     <span class="kw">pub </span>value: V,
     expires_at: Arc&lt;AtomicU64&gt;,
     clock: Clock,
@@ -842,7 +842,7 @@
 /// [`TtlMap::get_mut`] functions, or via the [`TtlMap::entry`] interface.
 /// During tests, the internal clock implementation is driven by [`tokio::time`] so
 /// functions like [`tokio::time::pause`] and [`tokio::time::advance`] can be used.
-</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>TtlMap&lt;K, V&gt;(Arc&lt;Map&lt;K, V&gt;&gt;);
+</span><span class="kw">pub struct </span>TtlMap&lt;K, V&gt;(Arc&lt;Map&lt;K, V&gt;&gt;);
 
 <span class="kw">impl</span>&lt;K, V&gt; TtlMap&lt;K, V&gt;
 <span class="kw">where
@@ -980,14 +980,14 @@
 }
 
 <span class="doccomment">/// A view into an occupied entry in the map.
-</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>OccupiedEntry&lt;<span class="lifetime">&#39;a</span>, K, V&gt; {
+</span><span class="kw">pub struct </span>OccupiedEntry&lt;<span class="lifetime">&#39;a</span>, K, V&gt; {
     inner: DashMapEntry&lt;<span class="lifetime">&#39;a</span>, K, V&gt;,
     ttl: Duration,
     clock: Clock,
 }
 
 <span class="doccomment">/// A view into a vacant entry in the map.
-</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>VacantEntry&lt;<span class="lifetime">&#39;a</span>, K, V&gt; {
+</span><span class="kw">pub struct </span>VacantEntry&lt;<span class="lifetime">&#39;a</span>, K, V&gt; {
     inner: DashMapEntry&lt;<span class="lifetime">&#39;a</span>, K, V&gt;,
     ttl: Duration,
     clock: Clock,
@@ -995,7 +995,7 @@
 
 <span class="doccomment">/// A view into an entry in the map.
 /// It may either be [`VacantEntry`] or [`OccupiedEntry`]
-</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">enum </span>Entry&lt;<span class="lifetime">&#39;a</span>, K, V&gt; {
+</span><span class="kw">pub enum </span>Entry&lt;<span class="lifetime">&#39;a</span>, K, V&gt; {
     Occupied(OccupiedEntry&lt;<span class="lifetime">&#39;a</span>, K, V&gt;),
     Vacant(VacantEntry&lt;<span class="lifetime">&#39;a</span>, K, V&gt;),
 }

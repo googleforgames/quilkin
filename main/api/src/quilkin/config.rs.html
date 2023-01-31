@@ -497,93 +497,6 @@
 <span id="497">497</span>
 <span id="498">498</span>
 <span id="499">499</span>
-<span id="500">500</span>
-<span id="501">501</span>
-<span id="502">502</span>
-<span id="503">503</span>
-<span id="504">504</span>
-<span id="505">505</span>
-<span id="506">506</span>
-<span id="507">507</span>
-<span id="508">508</span>
-<span id="509">509</span>
-<span id="510">510</span>
-<span id="511">511</span>
-<span id="512">512</span>
-<span id="513">513</span>
-<span id="514">514</span>
-<span id="515">515</span>
-<span id="516">516</span>
-<span id="517">517</span>
-<span id="518">518</span>
-<span id="519">519</span>
-<span id="520">520</span>
-<span id="521">521</span>
-<span id="522">522</span>
-<span id="523">523</span>
-<span id="524">524</span>
-<span id="525">525</span>
-<span id="526">526</span>
-<span id="527">527</span>
-<span id="528">528</span>
-<span id="529">529</span>
-<span id="530">530</span>
-<span id="531">531</span>
-<span id="532">532</span>
-<span id="533">533</span>
-<span id="534">534</span>
-<span id="535">535</span>
-<span id="536">536</span>
-<span id="537">537</span>
-<span id="538">538</span>
-<span id="539">539</span>
-<span id="540">540</span>
-<span id="541">541</span>
-<span id="542">542</span>
-<span id="543">543</span>
-<span id="544">544</span>
-<span id="545">545</span>
-<span id="546">546</span>
-<span id="547">547</span>
-<span id="548">548</span>
-<span id="549">549</span>
-<span id="550">550</span>
-<span id="551">551</span>
-<span id="552">552</span>
-<span id="553">553</span>
-<span id="554">554</span>
-<span id="555">555</span>
-<span id="556">556</span>
-<span id="557">557</span>
-<span id="558">558</span>
-<span id="559">559</span>
-<span id="560">560</span>
-<span id="561">561</span>
-<span id="562">562</span>
-<span id="563">563</span>
-<span id="564">564</span>
-<span id="565">565</span>
-<span id="566">566</span>
-<span id="567">567</span>
-<span id="568">568</span>
-<span id="569">569</span>
-<span id="570">570</span>
-<span id="571">571</span>
-<span id="572">572</span>
-<span id="573">573</span>
-<span id="574">574</span>
-<span id="575">575</span>
-<span id="576">576</span>
-<span id="577">577</span>
-<span id="578">578</span>
-<span id="579">579</span>
-<span id="580">580</span>
-<span id="581">581</span>
-<span id="582">582</span>
-<span id="583">583</span>
-<span id="584">584</span>
-<span id="585">585</span>
-<span id="586">586</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -602,17 +515,15 @@
 
 </span><span class="doccomment">//! Quilkin configuration.
 
-</span><span class="kw">use </span>std::{net::SocketAddr, sync::Arc};
+</span><span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use </span>base64_serde::base64_serde_type;
 <span class="kw">use </span>schemars::JsonSchema;
 <span class="kw">use </span>serde::{Deserialize, Serialize};
 <span class="kw">use </span>uuid::Uuid;
 
-<span class="kw">mod </span>builder;
 <span class="kw">mod </span>config_type;
 <span class="kw">mod </span>error;
-<span class="kw">mod </span>metrics;
 <span class="kw">mod </span>slot;
 <span class="kw">pub mod </span>watch;
 
@@ -626,9 +537,7 @@
     },
 };
 
-<span class="kw">use </span>metrics::Metrics;
-
-<span class="kw">pub use </span><span class="self">self</span>::{builder::Builder, config_type::ConfigType, error::ValidationError, slot::Slot};
+<span class="kw">pub use </span><span class="self">self</span>::{config_type::ConfigType, error::ValidationError, slot::Slot};
 
 <span class="macro">base64_serde_type!</span>(<span class="kw">pub </span>Base64Standard, base64::STANDARD);
 
@@ -645,8 +554,6 @@
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 </span><span class="kw">pub struct </span>Config {
-    <span class="attribute">#[serde(default = <span class="string">&quot;Slot::&lt;Admin&gt;::with_default&quot;</span>)]
-    </span><span class="kw">pub </span>admin: Slot&lt;Admin&gt;,
     <span class="attribute">#[serde(default)]
     </span><span class="kw">pub </span>clusters: Slot&lt;ClusterMap&gt;,
     <span class="attribute">#[serde(default)]
@@ -654,25 +561,10 @@
     <span class="attribute">#[serde(default = <span class="string">&quot;default_proxy_id&quot;</span>)]
     </span><span class="kw">pub </span>id: Slot&lt;String&gt;,
     <span class="attribute">#[serde(default)]
-    #[schemars(with = <span class="string">&quot;Vec::&lt;ManagementServer&gt;&quot;</span>)]
-    </span><span class="kw">pub </span>management_servers: Slot&lt;Vec&lt;ManagementServer&gt;&gt;,
-    <span class="attribute">#[serde(default = <span class="string">&quot;Slot::&lt;u16&gt;::empty&quot;</span>)]
-    </span><span class="kw">pub </span>port: Slot&lt;u16&gt;,
-    <span class="attribute">#[schemars(with = <span class="string">&quot;Option&lt;Version&gt;&quot;</span>)]
     </span><span class="kw">pub </span>version: Slot&lt;Version&gt;,
-    <span class="attribute">#[serde(default = <span class="string">&quot;Slot::&lt;crate::maxmind_db::Source&gt;::empty&quot;</span>)]
-    #[schemars(with = <span class="string">&quot;Option&lt;crate::maxmind_db::Source&gt;&quot;</span>)]
-    </span><span class="kw">pub </span>maxmind_db: Slot&lt;<span class="kw">crate</span>::maxmind_db::Source&gt;,
-    <span class="attribute">#[serde(default, skip)]
-    </span>metrics: Metrics,
 }
 
 <span class="kw">impl </span>Config {
-    <span class="doccomment">/// Returns a new empty [`Builder`] for [`Config`].
-    </span><span class="kw">pub fn </span>builder() -&gt; Builder {
-        Builder::default()
-    }
-
     <span class="doccomment">/// Attempts to deserialize `input` as a YAML object representing `Self`.
     </span><span class="kw">pub fn </span>from_reader&lt;R: std::io::Read&gt;(input: R) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, serde_yaml::Error&gt; {
         serde_yaml::from_reader(input)
@@ -692,15 +584,7 @@
             }
         }
 
-        <span class="macro">replace_if_present!</span>(
-            admin,
-            clusters,
-            filters,
-            management_servers,
-            port,
-            id,
-            version
-        );
+        <span class="macro">replace_if_present!</span>(clusters, filters, id);
         <span class="self">self</span>.apply_metrics();
 
         <span class="prelude-val">Ok</span>(())
@@ -790,36 +674,29 @@
     }
 
     <span class="kw">pub fn </span>apply_metrics(<span class="kw-2">&amp;</span><span class="self">self</span>) {
-        <span class="kw">let </span>endpoints = <span class="self">self</span>.clusters.load().endpoints().count();
+        <span class="kw">let </span>clusters = <span class="self">self</span>.clusters.load();
 
-        <span class="self">self</span>.metrics.active_clusters.set((endpoints == <span class="number">0</span>) <span class="kw">as </span>i64);
-        <span class="self">self</span>.metrics.active_endpoints.set(endpoints <span class="kw">as </span>i64);
+        <span class="kw">crate</span>::cluster::active_clusters().set(clusters.len() <span class="kw">as </span>i64);
+        <span class="kw">crate</span>::cluster::active_endpoints().set(clusters.endpoints().count() <span class="kw">as </span>i64);
     }
 }
 
 <span class="kw">impl </span>Default <span class="kw">for </span>Config {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
-            admin: Slot::with_default(),
             clusters: &lt;<span class="kw">_</span>&gt;::default(),
             filters: &lt;<span class="kw">_</span>&gt;::default(),
             id: default_proxy_id(),
-            management_servers: &lt;<span class="kw">_</span>&gt;::default(),
-            maxmind_db: Slot::empty(),
-            metrics: &lt;<span class="kw">_</span>&gt;::default(),
-            port: Slot::empty(),
-            version: &lt;<span class="kw">_</span>&gt;::default(),
+            version: Slot::with_default(),
         }
     }
 }
 
 <span class="kw">impl </span>PartialEq <span class="kw">for </span>Config {
     <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, rhs: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; bool {
-        <span class="self">self</span>.admin == rhs.admin
-            &amp;&amp; <span class="self">self</span>.id == rhs.id
-            &amp;&amp; <span class="self">self</span>.port == rhs.port
+        <span class="self">self</span>.id == rhs.id
+            &amp;&amp; <span class="self">self</span>.clusters == rhs.clusters
             &amp;&amp; <span class="self">self</span>.filters == rhs.filters
-            &amp;&amp; <span class="self">self</span>.management_servers == rhs.management_servers
             &amp;&amp; <span class="self">self</span>.version == rhs.version
     }
 }
@@ -844,26 +721,6 @@
 <span class="attribute">#[cfg(target_os = <span class="string">&quot;linux&quot;</span>)]
 </span><span class="kw">fn </span>default_proxy_id() -&gt; Slot&lt;String&gt; {
     Slot::from(sys_info::hostname().unwrap_or_else(|<span class="kw">_</span>| Uuid::new_v4().as_hyphenated().to_string()))
-}
-
-<span class="attribute">#[derive(Clone, Debug, Deserialize, Eq, Serialize, JsonSchema, PartialEq)]
-#[serde(deny_unknown_fields)]
-</span><span class="kw">pub struct </span>Admin {
-    <span class="kw">pub </span>address: SocketAddr,
-}
-
-<span class="kw">impl </span>Default <span class="kw">for </span>Admin {
-    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
-        Admin {
-            address: (std::net::Ipv4Addr::UNSPECIFIED, <span class="number">8000</span>).into(),
-        }
-    }
-}
-
-<span class="attribute">#[derive(Clone, Debug, Deserialize, Eq, Serialize, PartialEq, JsonSchema)]
-#[serde(deny_unknown_fields)]
-</span><span class="kw">pub struct </span>ManagementServer {
-    <span class="kw">pub </span>address: String,
 }
 
 <span class="doccomment">/// Filter is the configuration for a single filter
@@ -951,24 +808,24 @@
 
     <span class="attribute">#[test]
     </span><span class="kw">fn </span>deserialise_client() {
-        <span class="kw">let </span>config = Builder::default()
-            .port(<span class="number">7000</span>)
-            .endpoints(<span class="macro">vec!</span>[Endpoint::new(<span class="string">&quot;127.0.0.1:25999&quot;</span>.parse().unwrap())])
-            .build()
-            .unwrap();
+        <span class="kw">let </span>config = Config::default();
+        config.clusters.modify(|clusters| {
+            clusters.insert_default(<span class="macro">vec!</span>[Endpoint::new(<span class="string">&quot;127.0.0.1:25999&quot;</span>.parse().unwrap())])
+        });
+
         <span class="kw">let _ </span>= serde_yaml::to_string(<span class="kw-2">&amp;</span>config).unwrap();
     }
 
     <span class="attribute">#[test]
     </span><span class="kw">fn </span>deserialise_server() {
-        <span class="kw">let </span>config = Builder::default()
-            .port(<span class="number">7000</span>)
-            .endpoints(<span class="macro">vec!</span>[
+        <span class="kw">let </span>config = Config::default();
+        config.clusters.modify(|clusters| {
+            clusters.insert_default(<span class="macro">vec!</span>[
                 Endpoint::new(<span class="string">&quot;127.0.0.1:26000&quot;</span>.parse().unwrap()),
                 Endpoint::new(<span class="string">&quot;127.0.0.1:26001&quot;</span>.parse().unwrap()),
             ])
-            .build()
-            .unwrap();
+        });
+
         <span class="kw">let _ </span>= serde_yaml::to_string(<span class="kw-2">&amp;</span>config).unwrap();
     }
 
@@ -988,12 +845,11 @@
         <span class="kw">let </span>yaml = <span class="string">&quot;
 version: v1alpha1
 id: server-proxy
-port: 7000
   &quot;</span>;
         <span class="kw">let </span>config = parse_config(yaml);
 
-        <span class="macro">assert_eq!</span>(<span class="kw-2">*</span>config.port.load(), <span class="number">7000</span>);
         <span class="macro">assert_eq!</span>(config.id.load().as_str(), <span class="string">&quot;server-proxy&quot;</span>);
+        <span class="macro">assert_eq!</span>(<span class="kw-2">*</span>config.version.load(), Version::V1Alpha1);
     }
 
     <span class="attribute">#[test]
@@ -1074,30 +930,6 @@ port: 7000
     }
 
     <span class="attribute">#[test]
-    </span><span class="kw">fn </span>parse_management_servers() {
-        <span class="kw">let </span>config: Config = serde_json::from_value(<span class="macro">json!</span>({
-            <span class="string">&quot;version&quot;</span>: <span class="string">&quot;v1alpha1&quot;</span>,
-            <span class="string">&quot;management_servers&quot;</span>: [
-                { <span class="string">&quot;address&quot;</span>: <span class="string">&quot;127.0.0.1:25999&quot; </span>},
-                { <span class="string">&quot;address&quot;</span>: <span class="string">&quot;127.0.0.1:30000&quot; </span>},
-            ],
-        }))
-        .unwrap();
-
-        <span class="macro">assert_eq!</span>(
-            <span class="kw-2">**</span>config.management_servers.load(),
-            <span class="macro">vec!</span>[
-                ManagementServer {
-                    address: <span class="string">&quot;127.0.0.1:25999&quot;</span>.into(),
-                },
-                ManagementServer {
-                    address: <span class="string">&quot;127.0.0.1:30000&quot;</span>.into(),
-                },
-            ],
-        );
-    }
-
-    <span class="attribute">#[test]
     </span><span class="kw">fn </span>deny_unused_fields() {
         <span class="kw">let </span>configs = <span class="macro">vec!</span>[
             <span class="string">&quot;
@@ -1162,12 +994,6 @@ dynamic:
             <span class="macro">println!</span>(<span class="string">&quot;here: {}&quot;</span>, error);
             <span class="macro">assert!</span>(<span class="macro">format!</span>(<span class="string">&quot;{error:?}&quot;</span>).contains(<span class="string">&quot;unknown field&quot;</span>));
         }
-    }
-
-    <span class="attribute">#[test]
-    </span><span class="kw">fn </span>config_default() {
-        <span class="kw">let </span>config = Config::default();
-        <span class="macro">assert!</span>(config.admin.is_some());
     }
 }
 </code></pre></div>

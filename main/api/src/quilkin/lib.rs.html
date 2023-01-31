@@ -60,6 +60,9 @@
 <span id="60">60</span>
 <span id="61">61</span>
 <span id="62">62</span>
+<span id="63">63</span>
+<span id="64">64</span>
+<span id="65">65</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -100,7 +103,10 @@
 <span class="kw">pub type </span><span class="prelude-ty">Result</span>&lt;T, E = eyre::Error&gt; = std::result::Result&lt;T, E&gt;;
 
 <span class="attribute">#[doc(inline)]
-</span><span class="kw">pub use </span><span class="self">self</span>::{cli::Cli, config::Config, proxy::Proxy};
+</span><span class="kw">pub use </span><span class="self">self</span>::{
+    cli::{Cli, Proxy},
+    config::Config,
+};
 
 <span class="kw">pub use </span>quilkin_macros::include_proto;
 

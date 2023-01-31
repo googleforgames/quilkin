@@ -194,7 +194,6 @@ clusters:
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 2);
-</span><span class="boring">quilkin::Proxy::try_from(config).unwrap();
 </span><span class="boring">}</span></code></pre></pre>
 <p>We specify our filter chain in the <code>.filters</code> section of the proxy's configuration which has takes a sequence of <a href="#filter-config">FilterConfig</a> objects. Each object describes all information necessary to create a single filter.</p>
 <p>The above example creates a filter chain comprising a <a href="./filters/debug.html">Debug</a> filter followed by a <a href="./filters/local_rate_limit.html">LocalRateLimit</a> filter - the effect is that every packet will be logged and the proxy will not forward more than 10 packets per second.</p>

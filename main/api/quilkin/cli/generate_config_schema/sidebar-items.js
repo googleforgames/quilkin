@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["GenerateConfigSchema","Generates JSON schema files for known filters."]]};

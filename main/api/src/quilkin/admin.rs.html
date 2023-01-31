@@ -156,6 +156,9 @@
 <span id="156">156</span>
 <span id="157">157</span>
 <span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -183,6 +186,8 @@
 <span class="kw">use </span><span class="self">self</span>::health::Health;
 <span class="kw">use </span><span class="kw">crate</span>::config::Config;
 
+<span class="kw">pub const </span>PORT: u16 = <span class="number">8000</span>;
+
 <span class="doccomment">/// Define which mode Quilkin is in.
 </span><span class="attribute">#[derive(Copy, Clone, Debug)]
 </span><span class="kw">pub enum </span>Mode {
@@ -193,8 +198,9 @@
 <span class="kw">pub fn </span>server(
     mode: Mode,
     config: Arc&lt;Config&gt;,
+    address: <span class="prelude-ty">Option</span>&lt;std::net::SocketAddr&gt;,
 ) -&gt; tokio::task::JoinHandle&lt;<span class="prelude-ty">Result</span>&lt;(), hyper::Error&gt;&gt; {
-    <span class="kw">let </span>address = config.admin.load().address;
+    <span class="kw">let </span>address = address.unwrap_or_else(|| (std::net::Ipv6Addr::UNSPECIFIED, PORT).into());
     <span class="kw">let </span>health = Health::new();
     <span class="macro">tracing::info!</span>(address = %address, <span class="string">&quot;Starting admin endpoint&quot;</span>);
 

@@ -393,8 +393,6 @@
 <span id="393">393</span>
 <span id="394">394</span>
 <span id="395">395</span>
-<span id="396">396</span>
-<span id="397">397</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -433,9 +431,7 @@
 };
 
 <span class="attribute">#[tracing::instrument(skip_all)]
-</span><span class="kw">pub async fn </span>spawn(config: std::sync::Arc&lt;<span class="kw">crate</span>::Config&gt;) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
-    <span class="kw">let </span>port = <span class="kw-2">*</span>config.port.load();
-
+</span><span class="kw">pub async fn </span>spawn(port: u16, config: std::sync::Arc&lt;<span class="kw">crate</span>::Config&gt;) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
     <span class="kw">let </span>server = AggregatedDiscoveryServiceServer::new(ControlPlane::from_arc(config));
     <span class="kw">let </span>server = tonic::transport::Server::builder().add_service(server);
     <span class="macro">tracing::info!</span>(<span class="string">&quot;Serving management server at {}&quot;</span>, port);
