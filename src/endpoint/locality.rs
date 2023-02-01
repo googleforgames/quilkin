@@ -153,6 +153,24 @@ impl TryFrom<LocalityLbEndpoints> for LocalityEndpoints {
     }
 }
 
+impl From<(Vec<Endpoint>, Option<Locality>)> for LocalityEndpoints {
+    fn from((endpoints, locality): (Vec<Endpoint>, Option<Locality>)) -> Self {
+        Self::from(endpoints).with_locality(locality)
+    }
+}
+
+impl From<(Endpoint, Locality)> for LocalityEndpoints {
+    fn from((endpoint, locality): (Endpoint, Locality)) -> Self {
+        Self::from(endpoint).with_locality(locality)
+    }
+}
+
+impl From<(Endpoint, Option<Locality>)> for LocalityEndpoints {
+    fn from((endpoint, locality): (Endpoint, Option<Locality>)) -> Self {
+        Self::from(endpoint).with_locality(locality)
+    }
+}
+
 impl From<LocalityEndpoints> for LocalityLbEndpoints {
     fn from(value: LocalityEndpoints) -> Self {
         Self {
@@ -160,5 +178,107 @@ impl From<LocalityEndpoints> for LocalityLbEndpoints {
             locality: value.locality.map(From::from),
             ..Self::default()
         }
+    }
+}
+
+/// Set around [`LocalityEndpoints`] to ensure that all unique localities are
+/// different entries. Any duplicate localities provided are merged.
+#[derive(Clone, Default, Debug, Eq, PartialEq)]
+pub struct LocalitySet(std::collections::HashMap<Option<Locality>, LocalityEndpoints>);
+
+impl LocalitySet {
+    /// Creates a new set from the provided localities.
+    pub fn new(set: Vec<LocalityEndpoints>) -> Self {
+        Self::from_iter(set)
+    }
+
+    /// Inserts a new locality of endpoints.
+    pub fn insert(&mut self, mut locality: LocalityEndpoints) {
+        let mut entry = self.0.entry(locality.locality.clone()).or_default();
+        entry.locality = locality.locality;
+        entry.endpoints.append(&mut locality.endpoints);
+    }
+
+    /// Removes the specified locality or all endpoints with no locality.
+    pub fn remove(&mut self, key: &Option<Locality>) -> Option<LocalityEndpoints> {
+        self.0.remove(key)
+    }
+
+    /// Removes all localities.
+    pub fn clear(&mut self) {
+        self.0.clear();
+    }
+
+    /// Returns an iterator over the set of localities.
+    pub fn iter(&self) -> impl Iterator<Item = &LocalityEndpoints> + '_ {
+        self.0.values()
+    }
+
+    /// Returns a mutable iterator over the set of localities.
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut LocalityEndpoints> + '_ {
+        self.0.values_mut()
+    }
+}
+
+impl Serialize for LocalitySet {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.0.values().collect::<Vec<_>>().serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for LocalitySet {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        <Vec<LocalityEndpoints>>::deserialize(deserializer).map(Self::new)
+    }
+}
+
+impl schemars::JsonSchema for LocalitySet {
+    fn schema_name() -> String {
+        <Vec<LocalityEndpoints>>::schema_name()
+    }
+    fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+        <Vec<LocalityEndpoints>>::json_schema(gen)
+    }
+
+    fn is_referenceable() -> bool {
+        <Vec<LocalityEndpoints>>::is_referenceable()
+    }
+}
+
+impl<T> From<T> for LocalitySet
+where
+    T: Into<Vec<LocalityEndpoints>>,
+{
+    fn from(value: T) -> Self {
+        Self::new(value.into())
+    }
+}
+
+impl FromIterator<LocalityEndpoints> for LocalitySet {
+    fn from_iter<I: IntoIterator<Item = LocalityEndpoints>>(iter: I) -> Self {
+        let mut map = Self(<_>::default());
+
+        for locality in iter {
+            map.insert(locality);
+        }
+
+        map
+    }
+}
+
+impl IntoIterator for LocalitySet {
+    type Item = LocalityEndpoints;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        // Have to convert to vec to avoid `Values`'s lifetime parameter.
+        // Remove once GAT's are stable.
+        self.0.into_values().collect::<Vec<_>>().into_iter()
     }
 }

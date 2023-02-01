@@ -74,6 +74,5 @@ async fn metrics_server() {
         .unwrap();
 
     let response = String::from_utf8(resp.to_vec()).unwrap();
-    dbg!(&response);
     assert!(response.contains(r#"quilkin_packets_total{event="read"} 2"#));
 }

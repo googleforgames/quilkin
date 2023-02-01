@@ -71,9 +71,10 @@ impl Config {
         serde_yaml::from_reader(input)
     }
 
-    pub fn update_from_json(
+    fn update_from_json(
         &self,
         map: serde_json::Map<String, serde_json::Value>,
+        locality: Option<crate::endpoint::Locality>,
     ) -> Result<(), eyre::Error> {
         macro_rules! replace_if_present {
             ($($field:ident),+) => {
@@ -86,6 +87,12 @@ impl Config {
         }
 
         replace_if_present!(clusters, filters, id);
+
+        if let Some(locality) = locality {
+            self.clusters
+                .modify(|map| map.update_unlocated_endpoints(&locality));
+        }
+
         self.apply_metrics();
 
         Ok(())

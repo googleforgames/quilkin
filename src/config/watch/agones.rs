@@ -23,7 +23,7 @@ use std::sync::Arc;
 
 use crate::{
     cluster::ClusterMap,
-    endpoint::{Endpoint, LocalityEndpoints},
+    endpoint::{Endpoint, Locality, LocalityEndpoints},
     Config,
 };
 use crd::GameServer;
@@ -31,6 +31,7 @@ use crd::GameServer;
 pub async fn watch(
     gameservers_namespace: impl AsRef<str>,
     config_namespace: impl AsRef<str>,
+    locality: Option<Locality>,
     config: Arc<Config>,
 ) -> crate::Result<()> {
     let client = tokio::time::timeout(
@@ -69,7 +70,7 @@ pub async fn watch(
                 this.handle_configmap_event(configmap).await?;
             }
             Some(either::Right(gameserver)) => {
-                this.handle_gameserver_event(gameserver).await?;
+                this.handle_gameserver_event(gameserver, &locality).await?;
             }
             None => break Err(eyre::eyre!("Kubernetes stream unexpectedly ended")),
         }
@@ -124,7 +125,11 @@ impl Watcher {
         Ok(())
     }
 
-    async fn handle_gameserver_event(&self, event: Event<GameServer>) -> Result<(), tonic::Status> {
+    async fn handle_gameserver_event(
+        &self,
+        event: Event<GameServer>,
+        locality: &Option<Locality>,
+    ) -> Result<(), tonic::Status> {
         match event {
             Event::Applied(server) => {
                 if !server.is_allocated() {
@@ -133,8 +138,11 @@ impl Watcher {
 
                 let endpoint = Endpoint::try_from(server)?;
                 tracing::trace!(endpoint=%serde_json::to_value(&endpoint).unwrap(), "Adding endpoint");
-                self.config.clusters.modify(|clusters| {
-                    clusters.default_cluster_mut().insert(endpoint.clone());
+                self.config.clusters.modify(|clusters| match locality {
+                    Some(locality) => clusters
+                        .default_cluster_mut()
+                        .insert((endpoint.clone(), locality.clone())),
+                    None => clusters.default_cluster_mut().insert(endpoint.clone()),
                 });
                 tracing::trace!(clusters=%serde_json::to_value(&self.config.clusters.load()).unwrap(), "current clusters");
             }
@@ -143,8 +151,9 @@ impl Watcher {
                 let servers: Vec<_> = servers
                     .into_iter()
                     .filter(GameServer::is_allocated)
-                    .collect();
-                let endpoints = LocalityEndpoints::try_from(servers)?;
+                    .map(Endpoint::try_from)
+                    .collect::<Result<_, _>>()?;
+                let endpoints = LocalityEndpoints::from((servers, locality.clone()));
                 tracing::trace!(?endpoints, "Restarting with endpoints");
                 self.config
                     .clusters
