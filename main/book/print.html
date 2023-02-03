@@ -215,7 +215,7 @@ your local machine through <a href="installation.html#cargo">Cargo</a>.</p>
 <dl>
   <dt><strong>Source / Method</strong></dt>
   <dd>
-<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.6.0-dev-f9125c5
+<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.6.0-dev-f253dcc
 </code></pre>
 </dd>
   <dt><strong>Notes</strong></dt>
@@ -2114,8 +2114,11 @@ Commands:
   help    Print this message or the help of the given subcommand(s)
 
 Options:
-  -p, --port &lt;PORT&gt;  [env: QUILKIN_PORT=] [default: 7800]
-  -h, --help         Print help
+  -p, --port &lt;PORT&gt;          The TCP port to listen to, to serve discovery responses [env: QUILKIN_PORT=] [default: 7800]
+      --region &lt;REGION&gt;      The `region` to set in the cluster map for any provider endpoints discovered [env: QUILKIN_REGION=]
+      --zone &lt;ZONE&gt;          The `zone` in the `region` to set in the cluster map for any provider endpoints discovered [env: QUILKIN_ZONE=]
+      --sub-zone &lt;SUB_ZONE&gt;  The `sub_zone` in the `zone` in the `region` to set in the cluster map for any provider endpoints discovered [env: QUILKIN_SUB_ZONE=]
+  -h, --help                 Print help
 </code></pre>
 <h2 id="overview-1"><a class="header" href="#overview-1">Overview</a></h2>
 <p>In addition to static configuration provided upon startup, a Quiklin proxy's configuration can also be updated at runtime. The proxy can be configured on startup to talk to a set of management servers which provide it with updates throughout its lifecycle.</p>

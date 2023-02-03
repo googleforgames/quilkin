@@ -497,6 +497,13 @@
 <span id="497">497</span>
 <span id="498">498</span>
 <span id="499">499</span>
+<span id="500">500</span>
+<span id="501">501</span>
+<span id="502">502</span>
+<span id="503">503</span>
+<span id="504">504</span>
+<span id="505">505</span>
+<span id="506">506</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -570,9 +577,10 @@
         serde_yaml::from_reader(input)
     }
 
-    <span class="kw">pub fn </span>update_from_json(
+    <span class="kw">fn </span>update_from_json(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         map: serde_json::Map&lt;String, serde_json::Value&gt;,
+        locality: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::endpoint::Locality&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), eyre::Error&gt; {
         <span class="macro">macro_rules! </span>replace_if_present {
             ($(<span class="macro-nonterminal">$field</span>:ident),+) =&gt; {
@@ -585,6 +593,12 @@
         }
 
         <span class="macro">replace_if_present!</span>(clusters, filters, id);
+
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(locality) = locality {
+            <span class="self">self</span>.clusters
+                .modify(|map| map.update_unlocated_endpoints(<span class="kw-2">&amp;</span>locality));
+        }
+
         <span class="self">self</span>.apply_metrics();
 
         <span class="prelude-val">Ok</span>(())

@@ -95,6 +95,10 @@
 <span id="95">95</span>
 <span id="96">96</span>
 <span id="97">97</span>
+<span id="98">98</span>
+<span id="99">99</span>
+<span id="100">100</span>
+<span id="101">101</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -117,7 +121,11 @@
 
 <span class="kw">use </span><span class="kw">crate</span>::Config;
 
-<span class="kw">pub async fn </span>watch(config: Arc&lt;Config&gt;, path: <span class="kw">impl </span>Into&lt;std::path::PathBuf&gt;) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
+<span class="kw">pub async fn </span>watch(
+    config: Arc&lt;Config&gt;,
+    path: <span class="kw">impl </span>Into&lt;std::path::PathBuf&gt;,
+    locality: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::endpoint::Locality&gt;,
+) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
     <span class="kw">let </span>path = path.into();
     <span class="kw">let </span>(tx, <span class="kw-2">mut </span>rx) = tokio::sync::mpsc::unbounded_channel();
     <span class="kw">let </span><span class="kw-2">mut </span>watcher = notify::RecommendedWatcher::new(
@@ -148,7 +156,7 @@
             </span>tokio::time::sleep(std::time::Duration::from_millis(<span class="number">50</span>)).<span class="kw">await</span>;
             <span class="macro">tracing::info!</span>(path = %path.display(), <span class="string">&quot;file changed, updating config&quot;</span>);
             <span class="kw">let </span>buf = tokio::fs::read(path).<span class="kw">await</span><span class="question-mark">?</span>;
-            config.update_from_json(serde_yaml::from_slice(<span class="kw-2">&amp;</span>buf)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
+            config.update_from_json(serde_yaml::from_slice(<span class="kw-2">&amp;</span>buf)<span class="question-mark">?</span>, locality.clone())<span class="question-mark">?</span>;
         }
     }
 
@@ -169,7 +177,7 @@
         tokio::fs::write(<span class="kw-2">&amp;</span>file_path, serde_yaml::to_string(<span class="kw-2">&amp;</span>source).unwrap())
             .<span class="kw">await
             </span>.unwrap();
-        <span class="kw">let </span>_handle = tokio::spawn(watch(dest.clone(), file_path.clone()));
+        <span class="kw">let </span>_handle = tokio::spawn(watch(dest.clone(), file_path.clone(), <span class="prelude-val">None</span>));
         tokio::time::sleep(std::time::Duration::from_millis(<span class="number">100</span>)).<span class="kw">await</span>;
 
         source.clusters.modify(|clusters| {

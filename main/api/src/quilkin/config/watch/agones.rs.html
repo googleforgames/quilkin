@@ -166,6 +166,15 @@
 <span id="166">166</span>
 <span id="167">167</span>
 <span id="168">168</span>
+<span id="169">169</span>
+<span id="170">170</span>
+<span id="171">171</span>
+<span id="172">172</span>
+<span id="173">173</span>
+<span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
+<span id="177">177</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -191,7 +200,7 @@
 
 <span class="kw">use crate</span>::{
     cluster::ClusterMap,
-    endpoint::{Endpoint, LocalityEndpoints},
+    endpoint::{Endpoint, Locality, LocalityEndpoints},
     Config,
 };
 <span class="kw">use </span>crd::GameServer;
@@ -199,6 +208,7 @@
 <span class="kw">pub async fn </span>watch(
     gameservers_namespace: <span class="kw">impl </span>AsRef&lt;str&gt;,
     config_namespace: <span class="kw">impl </span>AsRef&lt;str&gt;,
+    locality: <span class="prelude-ty">Option</span>&lt;Locality&gt;,
     config: Arc&lt;Config&gt;,
 ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
     <span class="kw">let </span>client = tokio::time::timeout(
@@ -237,7 +247,7 @@
                 this.handle_configmap_event(configmap).<span class="kw">await</span><span class="question-mark">?</span>;
             }
             <span class="prelude-val">Some</span>(either::Right(gameserver)) =&gt; {
-                this.handle_gameserver_event(gameserver).<span class="kw">await</span><span class="question-mark">?</span>;
+                this.handle_gameserver_event(gameserver, <span class="kw-2">&amp;</span>locality).<span class="kw">await</span><span class="question-mark">?</span>;
             }
             <span class="prelude-val">None </span>=&gt; <span class="kw">break </span><span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">&quot;Kubernetes stream unexpectedly ended&quot;</span>)),
         }
@@ -292,7 +302,11 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">async fn </span>handle_gameserver_event(<span class="kw-2">&amp;</span><span class="self">self</span>, event: Event&lt;GameServer&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), tonic::Status&gt; {
+    <span class="kw">async fn </span>handle_gameserver_event(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        event: Event&lt;GameServer&gt;,
+        locality: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;Locality&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), tonic::Status&gt; {
         <span class="kw">match </span>event {
             Event::Applied(server) =&gt; {
                 <span class="kw">if </span>!server.is_allocated() {
@@ -301,8 +315,11 @@
 
                 <span class="kw">let </span>endpoint = Endpoint::try_from(server)<span class="question-mark">?</span>;
                 <span class="macro">tracing::trace!</span>(endpoint=%serde_json::to_value(<span class="kw-2">&amp;</span>endpoint).unwrap(), <span class="string">&quot;Adding endpoint&quot;</span>);
-                <span class="self">self</span>.config.clusters.modify(|clusters| {
-                    clusters.default_cluster_mut().insert(endpoint.clone());
+                <span class="self">self</span>.config.clusters.modify(|clusters| <span class="kw">match </span>locality {
+                    <span class="prelude-val">Some</span>(locality) =&gt; clusters
+                        .default_cluster_mut()
+                        .insert((endpoint.clone(), locality.clone())),
+                    <span class="prelude-val">None </span>=&gt; clusters.default_cluster_mut().insert(endpoint.clone()),
                 });
                 <span class="macro">tracing::trace!</span>(clusters=%serde_json::to_value(<span class="kw-2">&amp;</span><span class="self">self</span>.config.clusters.load()).unwrap(), <span class="string">&quot;current clusters&quot;</span>);
             }
@@ -311,8 +328,9 @@
                 <span class="kw">let </span>servers: Vec&lt;<span class="kw">_</span>&gt; = servers
                     .into_iter()
                     .filter(GameServer::is_allocated)
-                    .collect();
-                <span class="kw">let </span>endpoints = LocalityEndpoints::try_from(servers)<span class="question-mark">?</span>;
+                    .map(Endpoint::try_from)
+                    .collect::&lt;<span class="prelude-ty">Result</span>&lt;<span class="kw">_</span>, <span class="kw">_</span>&gt;&gt;()<span class="question-mark">?</span>;
+                <span class="kw">let </span>endpoints = LocalityEndpoints::from((servers, locality.clone()));
                 <span class="macro">tracing::trace!</span>(<span class="question-mark">?</span>endpoints, <span class="string">&quot;Restarting with endpoints&quot;</span>);
                 <span class="self">self</span>.config
                     .clusters
