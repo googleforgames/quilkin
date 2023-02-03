@@ -25,7 +25,7 @@ use crate::xds::config::endpoint::v3::{lb_endpoint::HostIdentifier, Endpoint as 
 
 pub use self::{
     address::EndpointAddress,
-    locality::{Locality, LocalityEndpoints},
+    locality::{Locality, LocalityEndpoints, LocalitySet},
 };
 
 type EndpointMetadata = crate::metadata::MetadataView<Metadata>;

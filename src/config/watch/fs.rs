@@ -20,7 +20,11 @@ use notify::Watcher;
 
 use crate::Config;
 
-pub async fn watch(config: Arc<Config>, path: impl Into<std::path::PathBuf>) -> crate::Result<()> {
+pub async fn watch(
+    config: Arc<Config>,
+    path: impl Into<std::path::PathBuf>,
+    locality: Option<crate::endpoint::Locality>,
+) -> crate::Result<()> {
     let path = path.into();
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
     let mut watcher = notify::RecommendedWatcher::new(
@@ -51,7 +55,7 @@ pub async fn watch(config: Arc<Config>, path: impl Into<std::path::PathBuf>) -> 
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
             tracing::info!(path = %path.display(), "file changed, updating config");
             let buf = tokio::fs::read(path).await?;
-            config.update_from_json(serde_yaml::from_slice(&buf)?)?;
+            config.update_from_json(serde_yaml::from_slice(&buf)?, locality.clone())?;
         }
     }
 
@@ -72,7 +76,7 @@ mod tests {
         tokio::fs::write(&file_path, serde_yaml::to_string(&source).unwrap())
             .await
             .unwrap();
-        let _handle = tokio::spawn(watch(dest.clone(), file_path.clone()));
+        let _handle = tokio::spawn(watch(dest.clone(), file_path.clone(), None));
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
         source.clusters.modify(|clusters| {
