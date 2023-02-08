@@ -27,39 +27,99 @@ use tryhard::{
 };
 
 use crate::{
+    config::Config,
     xds::{
         config::core::v3::Node,
-        metrics,
+        relay::aggregated_control_plane_discovery_service_client::AggregatedControlPlaneDiscoveryServiceClient,
         service::discovery::v3::{
-            aggregated_discovery_service_client::AggregatedDiscoveryServiceClient, DiscoveryRequest,
+            aggregated_discovery_service_client::AggregatedDiscoveryServiceClient,
+            DiscoveryRequest, DiscoveryResponse,
         },
         Resource, ResourceType,
     },
     Result,
 };
 
-type AdsClient = AggregatedDiscoveryServiceClient<TonicChannel>;
+type AdsGrpcClient = AggregatedDiscoveryServiceClient<TonicChannel>;
+type MdsGrpcClient = AggregatedControlPlaneDiscoveryServiceClient<TonicChannel>;
+type SubscribedResources = Arc<Mutex<HashSet<(ResourceType, Vec<String>)>>>;
+
+pub type AdsClient = Client<AdsGrpcClient>;
+pub type AdsStream = BidirectionalStream<AdsGrpcClient>;
+pub type MdsClient = Client<MdsGrpcClient>;
+pub type MdsStream = BidirectionalStream<MdsGrpcClient>;
+
+#[tonic::async_trait]
+pub trait ServiceClient: Clone + Sized + Send + 'static {
+    type Request: Clone + Send + Sync + Sized + 'static + std::fmt::Debug;
+    type Response: Clone + Send + Sync + Sized + 'static + std::fmt::Debug;
+
+    async fn connect(endpoint: tonic::transport::Endpoint)
+        -> Result<Self, tonic::transport::Error>;
+    async fn stream_requests<S: tonic::IntoStreamingRequest<Message = Self::Request> + Send>(
+        &mut self,
+        stream: S,
+    ) -> tonic::Result<tonic::Response<tonic::Streaming<Self::Response>>>;
+}
+
+#[tonic::async_trait]
+impl ServiceClient for AdsGrpcClient {
+    type Request = DiscoveryRequest;
+    type Response = DiscoveryResponse;
+
+    async fn connect(
+        endpoint: tonic::transport::Endpoint,
+    ) -> Result<Self, tonic::transport::Error> {
+        AdsGrpcClient::connect(endpoint).await
+    }
+
+    async fn stream_requests<S: tonic::IntoStreamingRequest<Message = Self::Request> + Send>(
+        &mut self,
+        stream: S,
+    ) -> tonic::Result<tonic::Response<tonic::Streaming<Self::Response>>> {
+        self.stream_aggregated_resources(stream).await
+    }
+}
+
+#[tonic::async_trait]
+impl ServiceClient for MdsGrpcClient {
+    type Request = DiscoveryResponse;
+    type Response = DiscoveryRequest;
+
+    async fn connect(
+        endpoint: tonic::transport::Endpoint,
+    ) -> Result<Self, tonic::transport::Error> {
+        MdsGrpcClient::connect(endpoint).await
+    }
+
+    async fn stream_requests<S: tonic::IntoStreamingRequest<Message = Self::Request> + Send>(
+        &mut self,
+        stream: S,
+    ) -> tonic::Result<tonic::Response<tonic::Streaming<Self::Response>>> {
+        self.stream_aggregated_resources(stream).await
+    }
+}
 
 /// Client that can talk to an XDS server using the aDS protocol.
 #[derive(Clone)]
-pub struct Client {
-    identifier: String,
+pub struct Client<C: ServiceClient> {
+    client: C,
+    identifier: Arc<str>,
     management_servers: Vec<Endpoint>,
-    client: AdsClient,
 }
 
-impl Client {
+impl<C: ServiceClient> Client<C> {
     #[tracing::instrument(skip_all, level = "trace", fields(servers = ?management_servers))]
     pub async fn connect(identifier: String, management_servers: Vec<Endpoint>) -> Result<Self> {
-        let client = Self::new_ads_client(&management_servers).await?;
+        let client = Self::connect_with_backoff(&management_servers).await?;
         Ok(Self {
             client,
-            identifier,
+            identifier: Arc::from(identifier),
             management_servers,
         })
     }
 
-    async fn new_ads_client(management_servers: &[Endpoint]) -> Result<AdsClient> {
+    async fn connect_with_backoff(management_servers: &[Endpoint]) -> Result<C> {
         use crate::config::{
             BACKOFF_INITIAL_DELAY_MILLISECONDS, BACKOFF_MAX_DELAY_SECONDS,
             BACKOFF_MAX_JITTER_MILLISECONDS, CONNECTION_TIMEOUT,
@@ -113,6 +173,7 @@ impl Client {
                         "Failed initial connection",
                     ))),
                     Some(endpoint) => {
+                        tracing::info!("attempting to connect to `{}`", endpoint.uri());
                         let endpoint = endpoint
                             .clone()
                             .connect_timeout(Duration::from_secs(CONNECTION_TIMEOUT));
@@ -128,7 +189,7 @@ impl Client {
                             ));
                         }
 
-                        AggregatedDiscoveryServiceClient::connect(endpoint)
+                        C::connect(endpoint)
                             .instrument(tracing::debug_span!(
                                 "AggregatedDiscoveryServiceClient::connect"
                             ))
@@ -141,156 +202,217 @@ impl Client {
         .with_config(retry_config);
 
         let client = connect_to_server
-            .instrument(tracing::trace_span!("xds_client_connect"))
+            .instrument(tracing::trace_span!("mds_client_connect"))
             .await?;
-        tracing::info!("Connected to xDS server");
+        tracing::info!("Connected to relay server");
         Ok(client)
-    }
-
-    /// Starts a new stream to the xDS management server.
-    pub async fn stream(
-        &self,
-        on_new_resource: impl Fn(&Resource) -> crate::Result<()> + Send + Sync + 'static,
-    ) -> Result<Stream> {
-        Stream::connect(self, on_new_resource).await
     }
 }
 
-type SubscribedResources = Arc<Mutex<HashSet<(ResourceType, Vec<String>)>>>;
+impl MdsClient {
+    pub fn mds_client_stream(&self, config: Arc<Config>) -> MdsStream {
+        MdsStream::mds_client_stream(self, config)
+    }
+}
+
+impl AdsClient {
+    /// Starts a new stream to the xDS management server.
+    pub fn xds_client_stream(&self, config: Arc<Config>) -> AdsStream {
+        AdsStream::xds_client_stream(self, config)
+    }
+}
 
 /// An active xDS gRPC management stream.
-pub struct Stream {
+pub struct BidirectionalStream<C: ServiceClient> {
     identifier: Arc<str>,
-    requests: broadcast::Sender<DiscoveryRequest>,
+    requests: broadcast::Sender<C::Request>,
     handle_discovery_response: tokio::task::JoinHandle<Result<()>>,
     subscribed_resources: SubscribedResources,
 }
 
-impl Stream {
-    #[tracing::instrument(level = "trace", skip_all)]
-    async fn connect(
+impl AdsStream {
+    pub fn xds_client_stream(
         Client {
             client,
             identifier,
             management_servers,
-        }: &Client,
-        on_new_resource: impl Fn(&Resource) -> crate::Result<()> + Send + Sync + 'static,
-    ) -> Result<Self> {
-        let (requests, mut rx) = broadcast::channel(12);
-        let subscribed_resources: SubscribedResources = <_>::default();
-        let identifier: Arc<str> = Arc::from(&**identifier);
-
-        let handle_discovery_response = tokio::spawn({
-            let mut client = client.clone();
-            let identifier = identifier.clone();
-            let mut requests = requests.clone();
-            let management_servers = management_servers.clone();
-            let subscribed_resources = subscribed_resources.clone();
-            async move {
+        }: &AdsClient,
+        config: Arc<Config>,
+    ) -> Self {
+        let mut client = client.clone();
+        let identifier = identifier.clone();
+        let management_servers = management_servers.clone();
+        Self::connect(
+            identifier.clone(),
+            move |(mut requests, mut rx), subscribed_resources| async move {
+                tracing::trace!("starting xDS client stream task");
                 loop {
-                    let mut responses = client
-                        .stream_aggregated_resources(
+                    let config = config.clone();
+                    tracing::trace!("connecting to grpc stream");
+                    let stream = client
+                        .stream_requests(
+                            // Errors only happen if the stream is behind, which
+                            // we don't care about, we only want the latest
+                            // state of the world.
                             tokio_stream::wrappers::BroadcastStream::from(rx)
-                                // Errors only happen if the stream is behind, which
-                                // we don't care about, we only want the latest
-                                // state of the world.
                                 .filter_map(|result| futures::future::ready(result.ok())),
                         )
                         .in_current_span()
                         .await?
                         .into_inner();
 
+                    tracing::trace!("creating discovery response handler");
+                    let mut stream = handle_discovery_responses(
+                        (&*identifier).into(),
+                        stream,
+                        move |resource| config.apply(resource),
+                    );
+
                     loop {
                         let timeout = tokio::time::sleep(std::time::Duration::from_millis(500));
-                        let new_message = responses.message();
 
-                        tokio::select! {
+                        let select = tokio::select! {
+                            Some(value) = stream.next() => {
+                                value
+                            }
                             _ = timeout => {
                                 Self::refresh_resources(&identifier, &subscribed_resources, &mut requests).await?;
+                                continue;
                             }
-                            response = new_message => {
-                                let Some(response) = response.map_err(|error| tracing::warn!(%error, "Error from xDS server")).ok().flatten() else {
-                                    break;
-                                };
+                        };
+                        tracing::trace!("received ack");
 
-                                let identifier = response
-                                    .control_plane
-                                    .as_ref()
-                                    .map(|cp| cp.identifier.clone())
-                                    .unwrap_or_default();
-                                let _stream_metrics =
-                                    super::metrics::StreamConnectionMetrics::new(&identifier);
-                                tracing::info!(
-                                    id = &*response.version_info,
-                                    r#type = &*response.type_url,
-                                    nonce = &*response.nonce,
-                                    control_plane = &*identifier,
-                                    "Received response"
-                                );
-
-                                let result = response
-                                    .resources
-                                    .iter()
-                                    .cloned()
-                                    .map(Resource::try_from)
-                                    .try_for_each(|resource| {
-                                        let resource = resource?;
-                                        metrics::DISCOVERY_RESPONSES
-                                            .with_label_values(&[&*identifier, resource.type_url()])
-                                            .inc();
-                                        (on_new_resource)(&resource)
-                                    });
-
-                                let mut request = DiscoveryRequest::try_from(response)?;
-                                if let Err(error) = result {
-                                    metrics::NACKS
-                                        .with_label_values(&[&*identifier, &*request.type_url])
-                                        .inc();
-                                    request.error_detail = Some(crate::xds::google::rpc::Status {
-                                        code: 3,
-                                        message: error.to_string(),
-                                        ..<_>::default()
-                                    });
-                                } else {
-                                    metrics::ACKS
-                                        .with_label_values(&[&*identifier, &*request.type_url])
-                                        .inc();
-                                }
-
-                                requests.send(request)?;
+                        match select {
+                            Ok(ack) => {
+                                requests.send(ack)?;
+                                continue;
                             }
-                            else => {
+                            Err(error) => {
+                                tracing::warn!(%error, "xds stream error");
                                 break;
                             }
                         }
                     }
 
                     tracing::info!("Lost connection to xDS, retrying");
-                    // If we've reached here, something has gone wrong with the
-                    // connection, so we just create a new client and restart.
-                    client = Client::new_ads_client(&management_servers).await?;
+                    client = AdsClient::connect_with_backoff(&management_servers).await?;
                     rx = requests.subscribe();
-                    Self::refresh_resources(&identifier, &subscribed_resources, &mut requests).await?;
+                    Self::refresh_resources(&identifier, &subscribed_resources, &mut requests)
+                        .await?;
                 }
-            }
-            .instrument(tracing::trace_span!("handle_discovery_response"))
-        });
-
-        Ok(Self {
-            identifier,
-            requests,
-            handle_discovery_response,
-            subscribed_resources,
-        })
+            },
+        )
     }
 
     #[tracing::instrument(level = "trace", skip(self))]
-    pub async fn send(&mut self, resource_type: ResourceType, names: &[String]) -> Result<()> {
+    pub async fn discovery_request(
+        &mut self,
+        resource_type: ResourceType,
+        names: &[String],
+    ) -> Result<()> {
         self.subscribed_resources
             .lock()
             .await
             .insert((resource_type, names.to_vec()));
-        Self::send_without_cache(&self.identifier, &mut self.requests, resource_type, names)
+        Self::discovery_request_without_cache(
+            &self.identifier,
+            &mut self.requests,
+            resource_type,
+            names,
+        )
+    }
+}
+
+impl MdsStream {
+    pub fn mds_client_stream(
+        Client {
+            client,
+            identifier,
+            management_servers,
+        }: &MdsClient,
+        config: Arc<Config>,
+    ) -> Self {
+        let mut client = client.clone();
+        let identifier = identifier.clone();
+        let management_servers = management_servers.clone();
+        Self::connect(
+            identifier.clone(),
+            move |(requests, mut rx), _| async move {
+                tracing::trace!("starting relay client stream task");
+                loop {
+                    let initial_response = DiscoveryResponse {
+                        control_plane: Some(crate::xds::config::core::v3::ControlPlane {
+                            identifier: (&*identifier).into(),
+                        }),
+                        ..<_>::default()
+                    };
+                    let _ = requests.send(initial_response);
+                    let stream = client
+                        .stream_requests(
+                            // Errors only happen if the stream is behind, which
+                            // we don't care about, we only want the latest
+                            // state of the world.
+                            tokio_stream::wrappers::BroadcastStream::from(rx)
+                                .filter_map(|result| futures::future::ready(result.ok())),
+                        )
+                        .in_current_span()
+                        .await?
+                        .into_inner();
+
+                    let control_plane = super::server::ControlPlane::from_arc(config.clone());
+                    let mut stream = control_plane.stream_aggregated_resources(stream).await?;
+                    while let Some(result) = stream.next().await {
+                        let response = result?;
+                        tracing::info!(config=%serde_json::to_value(&config).unwrap(), "received discovery response");
+                        requests.send(response)?;
+                    }
+
+                    tracing::warn!("lost connection to relay server, retrying");
+                    client = MdsClient::connect_with_backoff(&management_servers)
+                        .await
+                        .unwrap();
+                    rx = requests.subscribe();
+                }
+            },
+        )
+    }
+}
+
+impl<C: ServiceClient> BidirectionalStream<C> {
+    pub fn connect<F>(
+        identifier: Arc<str>,
+        response_task: impl FnOnce(
+            (
+                broadcast::Sender<C::Request>,
+                broadcast::Receiver<C::Request>,
+            ),
+            SubscribedResources,
+        ) -> F,
+    ) -> Self
+    where
+        F: std::future::Future<Output = crate::Result<()>> + Send + 'static,
+    {
+        let (requests, rx) = broadcast::channel::<C::Request>(12);
+        let subscribed_resources: SubscribedResources = <_>::default();
+
+        tracing::trace!("spawning stream background task");
+        let handle_discovery_response = tokio::spawn({
+            let requests = requests.clone();
+            let subscribed_resources = subscribed_resources.clone();
+            (response_task)((requests, rx), subscribed_resources)
+                .instrument(tracing::trace_span!("handle_discovery_response"))
+        });
+
+        Self {
+            identifier,
+            requests,
+            handle_discovery_response,
+            subscribed_resources,
+        }
+    }
+
+    pub(crate) fn requests(&self) -> broadcast::Sender<C::Request> {
+        self.requests.clone()
     }
 
     async fn refresh_resources(
@@ -299,13 +421,13 @@ impl Stream {
         requests: &mut broadcast::Sender<DiscoveryRequest>,
     ) -> Result<()> {
         for (resource, names) in subscribed_resources.lock().await.iter() {
-            Self::send_without_cache(identifier, requests, *resource, names)?;
+            Self::discovery_request_without_cache(identifier, requests, *resource, names)?;
         }
 
         Ok(())
     }
 
-    fn send_without_cache(
+    pub(crate) fn discovery_request_without_cache(
         identifier: &str,
         requests: &mut broadcast::Sender<DiscoveryRequest>,
         resource_type: ResourceType,
@@ -327,7 +449,7 @@ impl Stream {
     }
 }
 
-impl Drop for Stream {
+impl<C: ServiceClient> Drop for BidirectionalStream<C> {
     fn drop(&mut self) {
         self.handle_discovery_response.abort();
     }
@@ -343,4 +465,60 @@ enum RpcSessionError {
 
     #[error("Error occurred while receiving data. Status: {0}")]
     Receive(tonic::Status),
+}
+
+pub fn handle_discovery_responses(
+    identifier: String,
+    stream: impl futures::Stream<Item = tonic::Result<DiscoveryResponse>> + 'static + Send,
+    on_new_resource: impl Fn(&Resource) -> crate::Result<()> + Send + Sync + 'static,
+) -> std::pin::Pin<Box<dyn futures::Stream<Item = Result<DiscoveryRequest>> + Send>> {
+    Box::pin(async_stream::try_stream! {
+        let _stream_metrics = super::metrics::StreamConnectionMetrics::new(identifier.clone());
+        tracing::info!("awaiting response");
+        for await response in stream
+        {
+            let response = match response {
+                Ok(response) => response,
+                Err(error) => {
+                    tracing::warn!(%error, "Error from xDS server");
+                    break;
+                }
+            };
+
+            let control_plane_identifier = response.control_plane.as_ref().map(|cp| cp.identifier.clone()).unwrap_or_default();
+
+            super::metrics::discovery_responses(&control_plane_identifier, &response.type_url).inc();
+            tracing::info!(
+                version = &*response.version_info,
+                r#type = &*response.type_url,
+                nonce = &*response.nonce,
+                "received response"
+            );
+
+            let result = response
+                .resources
+                .iter()
+                .cloned()
+                .map(Resource::try_from)
+                .try_for_each(|resource| {
+                    let resource = resource?;
+                    tracing::info!("applying resource");
+                    (on_new_resource)(&resource)
+                });
+
+            let mut request = DiscoveryRequest::try_from(response)?;
+            if let Err(error) = result {
+                super::metrics::nacks(&control_plane_identifier, &request.type_url).inc();
+                request.error_detail = Some(crate::xds::google::rpc::Status {
+                    code: 3,
+                    message: error.to_string(),
+                    ..<_>::default()
+                });
+            } else {
+                super::metrics::acks(&control_plane_identifier, &request.type_url).inc();
+            }
+
+            yield request;
+        }
+    })
 }

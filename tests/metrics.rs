@@ -24,6 +24,7 @@ async fn metrics_server() {
 
     // create an echo server as an endpoint.
     let echo = t.run_echo_server().await;
+    let metrics_port = quilkin::test_utils::available_addr().await.port();
 
     // create server configuration
     let server_addr = quilkin::test_utils::available_addr().await;
@@ -38,7 +39,7 @@ async fn metrics_server() {
     t.run_server(
         server_config,
         server_proxy,
-        Some(Some("[::]:9092".parse().unwrap())),
+        Some(Some((std::net::Ipv6Addr::UNSPECIFIED, metrics_port).into())),
     );
 
     // create a local client
@@ -65,7 +66,11 @@ async fn metrics_server() {
     let client = hyper::Client::new();
 
     let resp = client
-        .get(hyper::Uri::from_static("http://localhost:9092/metrics"))
+        .get(
+            format!("http://localhost:{metrics_port}/metrics")
+                .parse()
+                .unwrap(),
+        )
         .await
         .map(|resp| resp.into_body())
         .map(hyper::body::to_bytes)

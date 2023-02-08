@@ -125,16 +125,23 @@ mod google {
     }
 }
 
+crate::include_proto!("quilkin.relay.v1alpha1");
+
 pub(crate) mod client;
 mod metrics;
 mod resource;
 pub(crate) mod server;
 
-pub use client::Client;
-pub use resource::{Resource, ResourceType};
-pub use server::ControlPlane;
-pub use service::discovery::v3::aggregated_discovery_service_client::AggregatedDiscoveryServiceClient;
-pub use xds::*;
+pub(crate) use self::quilkin::relay::v1alpha1 as relay;
+use self::xds as envoy;
+
+pub use self::{
+    client::{AdsClient, Client},
+    resource::{Resource, ResourceType},
+    server::ControlPlane,
+    service::discovery::v3::aggregated_discovery_service_client::AggregatedDiscoveryServiceClient,
+    xds::*,
+};
 
 #[cfg(test)]
 mod tests {
@@ -295,13 +302,8 @@ mod tests {
         )
         .await
         .unwrap();
-        let mut stream = client
-            .stream({
-                let config = config.clone();
-                move |resource| config.apply(resource)
-            })
-            .await
-            .unwrap();
+        let mut stream = client.xds_client_stream(config.clone());
+        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 
         // Each time, we create a new upstream endpoint and send a cluster update for it.
         let concat_bytes = vec![("b", "c,"), ("d", "e")];
@@ -312,8 +314,9 @@ mod tests {
             config.clusters.modify(|clusters| {
                 let cluster = clusters.default_cluster_mut();
                 cluster.localities.clear();
-                cluster.insert(Endpoint::new(local_addr.clone()))
+                cluster.insert(Endpoint::new(local_addr.clone()));
             });
+            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 
             let filters = crate::filters::FilterChain::try_from(vec![
                 ConcatenateBytes::as_filter_config(concatenate_bytes::Config {
@@ -333,8 +336,11 @@ mod tests {
 
             config.filters.modify(|chain| *chain = filters.clone());
 
-            stream.send(ResourceType::Cluster, &[]).await.unwrap();
-            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            stream
+                .discovery_request(ResourceType::Cluster, &[])
+                .await
+                .unwrap();
+            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
             assert_eq!(
                 local_addr,
                 config
@@ -348,7 +354,10 @@ mod tests {
                     .address
             );
 
-            stream.send(ResourceType::Listener, &[]).await.unwrap();
+            stream
+                .discovery_request(ResourceType::Listener, &[])
+                .await
+                .unwrap();
             tokio::time::sleep(std::time::Duration::from_millis(100)).await;
             let changed_filters = config.filters.load();
 

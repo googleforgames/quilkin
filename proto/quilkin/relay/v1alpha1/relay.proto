@@ -1,0 +1,40 @@
+/*
+ * Copyright 2023 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+syntax = "proto3";
+
+package quilkin.relay.v1alpha1;
+
+import "envoy/service/discovery/v3/discovery.proto";
+
+// The Manager Discovery Service provides an RPC for a management
+// service to upstream its configuration to a relay service.
+// This RPC works essentially the same as xDS, except instead of the
+// client connecting to the server to receive configuration, the
+// client is connecting to the server send its configuration.
+//
+// This service enables the relay to merge the configuration of all
+// currently live management servers as a single aggregated
+// xDS server without the relay needing to maintain a list
+// of xDS servers to connect to in the relay itself.
+service AggregatedControlPlaneDiscoveryService {
+  // The RPC protocol begins with a single empty DiscoveryResponse
+  // initiated by the management server, after that this behaves
+  // the same as the management server xDS protocol, except with
+  // DiscoveryRequests initiated by the server rather than the client.
+  rpc StreamAggregatedResources(stream envoy.service.discovery.v3.DiscoveryResponse)
+      returns (stream envoy.service.discovery.v3.DiscoveryRequest) {
+  }
+}

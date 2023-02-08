@@ -121,7 +121,13 @@ impl Config {
             }
             ResourceType::Cluster => {
                 let clusters = self.clusters.load();
-                for cluster in names.iter().filter_map(|name| clusters.get(name)) {
+                let clusters: Vec<_> = if names.is_empty() {
+                    clusters.values().collect()
+                } else {
+                    names.iter().filter_map(|name| clusters.get(name)).collect()
+                };
+
+                for cluster in clusters {
                     resources.push(resource_type.encode_to_any(
                         &crate::xds::config::cluster::v3::Cluster::try_from(cluster)?,
                     )?);
