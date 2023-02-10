@@ -25,7 +25,7 @@ ENV RUSTUP_HOME=/usr/local/rustup \
 # Install packages
 RUN set -eux && \
     apt-get update && \
-    apt-get install -y lsb-release jq curl wget zip build-essential software-properties-common \ 
+    apt-get install -y lsb-release jq curl wget zip build-essential software-properties-common \
         libssl-dev pkg-config python3-pip bash-completion g++-x86-64-linux-gnu g++-mingw-w64-x86-64 && \
     pip3 install live-server && \
     echo "source /etc/bash_completion" >> /root/.bashrc
@@ -68,7 +68,8 @@ RUN set -eux; \
     chmod -R a+w $RUSTUP_HOME $CARGO_HOME && \
     rustup component add rustfmt clippy && \
     rustup target add x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu x86_64-pc-windows-gnu && \
-    cargo install cargo-watch mdbook mdbook-variables && \
+    cargo install cargo-watch mdbook && \
+    cargo install --git https://gitlab.com/hydai/mdbook-variables.git --branch bump_toml && \
     cargo install cargo-about && \
     cargo install --locked cargo-deny && \
     rustup --version && \
