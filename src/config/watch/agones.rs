@@ -22,7 +22,6 @@ use kube::runtime::watcher::Event;
 use std::sync::Arc;
 
 use crate::{
-    cluster::ClusterMap,
     endpoint::{Endpoint, Locality, LocalityEndpoints},
     Config,
 };
@@ -138,13 +137,21 @@ impl Watcher {
 
                 let endpoint = Endpoint::try_from(server)?;
                 tracing::trace!(endpoint=%serde_json::to_value(&endpoint).unwrap(), "Adding endpoint");
-                self.config.clusters.modify(|clusters| match locality {
-                    Some(locality) => clusters
+                match locality {
+                    Some(locality) => self
+                        .config
+                        .clusters
+                        .value()
                         .default_cluster_mut()
-                        .insert((endpoint.clone(), locality.clone())),
-                    None => clusters.default_cluster_mut().insert(endpoint.clone()),
-                });
-                tracing::trace!(clusters=%serde_json::to_value(&self.config.clusters.load()).unwrap(), "current clusters");
+                        .insert((endpoint, locality.clone())),
+                    None => self
+                        .config
+                        .clusters
+                        .value()
+                        .default_cluster_mut()
+                        .insert(endpoint),
+                };
+                tracing::trace!(clusters=%serde_json::to_value(&self.config.clusters).unwrap(), "current clusters");
             }
 
             Event::Restarted(servers) => {
@@ -155,9 +162,7 @@ impl Watcher {
                     .collect::<Result<_, _>>()?;
                 let endpoints = LocalityEndpoints::from((servers, locality.clone()));
                 tracing::trace!(?endpoints, "Restarting with endpoints");
-                self.config
-                    .clusters
-                    .store(Arc::new(ClusterMap::new_with_default_cluster(endpoints)));
+                self.config.clusters.value().insert_default(endpoints);
             }
 
             Event::Deleted(server) => {

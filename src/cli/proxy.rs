@@ -81,12 +81,11 @@ impl Proxy {
         });
 
         if !self.to.is_empty() {
-            config.clusters.modify(|clusters| {
-                clusters.default_cluster_mut().localities = vec![self.to.clone().into()].into();
-            });
+            config.clusters.value().default_cluster_mut().localities =
+                vec![self.to.clone().into()].into();
         }
 
-        if config.clusters.load().endpoints().count() == 0 && self.management_server.is_empty() {
+        if config.clusters.value().endpoints().count() == 0 && self.management_server.is_empty() {
             return Err(eyre::eyre!(
                 "`quilkin proxy` requires at least one `to` address or `management_server` endpoint."
             ));

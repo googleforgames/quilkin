@@ -38,7 +38,7 @@ use crate::{
     },
 };
 
-pub use self::{config_type::ConfigType, error::ValidationError, slot::Slot};
+pub use self::{config_type::ConfigType, error::ValidationError, slot::Slot, watch::Watch};
 
 base64_serde_type!(pub Base64Standard, base64::STANDARD);
 
@@ -51,12 +51,12 @@ pub(crate) const BACKOFF_MAX_JITTER_MILLISECONDS: u64 = 2000;
 pub(crate) const CONNECTION_TIMEOUT: u64 = 5;
 
 /// Config is the configuration of a proxy
-#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
+#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema, PartialEq)]
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct Config {
     #[serde(default)]
-    pub clusters: Slot<ClusterMap>,
+    pub clusters: Watch<ClusterMap>,
     #[serde(default)]
     pub filters: Slot<crate::filters::FilterChain>,
     #[serde(default = "default_proxy_id")]
@@ -86,11 +86,18 @@ impl Config {
             }
         }
 
-        replace_if_present!(clusters, filters, id);
+        replace_if_present!(filters, id);
 
-        if let Some(locality) = locality {
-            self.clusters
-                .modify(|map| map.update_unlocated_endpoints(&locality));
+        {
+            let clusters = self.clusters.value();
+
+            if let Some(value) = map.get("clusters") {
+                clusters.merge(serde_json::from_value(value.clone())?);
+            }
+
+            if let Some(locality) = locality {
+                clusters.update_unlocated_endpoints(&locality);
+            }
         }
 
         self.apply_metrics();
@@ -107,9 +114,10 @@ impl Config {
         let mut resources = Vec::new();
         match resource_type {
             ResourceType::Endpoint => {
-                for value in self.clusters.load().values() {
+                for entry in self.clusters.value().iter() {
                     resources.push(
-                        resource_type.encode_to_any(&ClusterLoadAssignment::try_from(value)?)?,
+                        resource_type
+                            .encode_to_any(&ClusterLoadAssignment::try_from(entry.value())?)?,
                     );
                 }
             }
@@ -120,16 +128,27 @@ impl Config {
                 })?);
             }
             ResourceType::Cluster => {
-                let clusters = self.clusters.load();
                 let clusters: Vec<_> = if names.is_empty() {
-                    clusters.values().collect()
+                    self.clusters
+                        .value()
+                        .iter()
+                        .map(|entry| entry.value().clone())
+                        .collect()
                 } else {
-                    names.iter().filter_map(|name| clusters.get(name)).collect()
+                    names
+                        .iter()
+                        .filter_map(|name| {
+                            self.clusters
+                                .value()
+                                .get(name)
+                                .map(|entry| entry.value().clone())
+                        })
+                        .collect()
                 };
 
                 for cluster in clusters {
                     resources.push(resource_type.encode_to_any(
-                        &crate::xds::config::cluster::v3::Cluster::try_from(cluster)?,
+                        &crate::xds::config::cluster::v3::Cluster::try_from(&cluster)?,
                     )?);
                 }
             }
@@ -146,14 +165,12 @@ impl Config {
     #[tracing::instrument(skip_all, fields(response = response.type_url()))]
     pub fn apply(&self, response: &Resource) -> crate::Result<()> {
         let apply_cluster = |cluster: Cluster| {
-            if cluster.endpoints().count() == 0 {
-                return;
-            }
-
             tracing::trace!(endpoints = %serde_json::to_value(&cluster).unwrap(), "applying new endpoints");
-            self.clusters.modify(|clusters| {
-                clusters.insert(cluster.clone());
-            });
+            self.clusters
+                .value()
+                .default_entry(cluster.name)
+                .localities
+                .merge(&cluster.localities);
         };
 
         match response {
@@ -188,9 +205,8 @@ impl Config {
     }
 
     pub fn apply_metrics(&self) {
-        let clusters = self.clusters.load();
-
-        crate::cluster::active_clusters().set(clusters.len() as i64);
+        let clusters = self.clusters.value();
+        crate::cluster::active_clusters().set(clusters.localities().count() as i64);
         crate::cluster::active_endpoints().set(clusters.endpoints().count() as i64);
     }
 }
@@ -203,15 +219,6 @@ impl Default for Config {
             id: default_proxy_id(),
             version: Slot::with_default(),
         }
-    }
-}
-
-impl PartialEq for Config {
-    fn eq(&self, rhs: &Self) -> bool {
-        self.id == rhs.id
-            && self.clusters == rhs.clusters
-            && self.filters == rhs.filters
-            && self.version == rhs.version
     }
 }
 
@@ -382,9 +389,10 @@ id: server-proxy
         }))
         .unwrap();
 
+        let value = config.clusters.value();
         assert_eq!(
-            *config.clusters.load(),
-            ClusterMap::new_with_default_cluster(vec![Endpoint::new(
+            &*value,
+            &ClusterMap::new_with_default_cluster(vec![Endpoint::new(
                 (std::net::Ipv4Addr::LOCALHOST, 25999).into(),
             )])
         )
@@ -421,9 +429,10 @@ id: server-proxy
         }))
         .unwrap_or_default();
 
+        let value = config.clusters.value();
         assert_eq!(
-            *config.clusters.load(),
-            ClusterMap::new_with_default_cluster(vec![
+            &*value,
+            &ClusterMap::new_with_default_cluster(vec![
                 Endpoint::with_metadata(
                     "127.0.0.1:26000".parse().unwrap(),
                     Metadata {

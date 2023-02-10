@@ -96,7 +96,7 @@ fn handle_request(
 }
 
 fn check_proxy_readiness(config: &Config) -> Response<Body> {
-    if config.clusters.load().endpoints().count() > 0 {
+    if config.clusters.value().endpoints().count() > 0 {
         return Response::new("ok".into());
     }
 
@@ -133,7 +133,6 @@ fn collect_metrics() -> Response<Body> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cluster::ClusterMap;
     use crate::endpoint::Endpoint;
 
     #[tokio::test]
@@ -145,15 +144,17 @@ mod tests {
     #[test]
     fn check_proxy_readiness() {
         let config = Config::default();
-        assert_eq!(config.clusters.load().endpoints().count(), 0);
+        assert_eq!(config.clusters.value().endpoints().count(), 0);
 
         let response = super::check_proxy_readiness(&config);
         assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
 
-        let cluster = ClusterMap::new_with_default_cluster(vec![Endpoint::new(
+        let cluster = crate::cluster::Cluster::new_default(vec![vec![Endpoint::new(
             (std::net::Ipv4Addr::LOCALHOST, 25999).into(),
-        )]);
-        config.clusters.store(Arc::new(cluster));
+        )]
+        .into()]);
+
+        config.clusters.value().insert(cluster);
 
         let response = super::check_proxy_readiness(&config);
         assert_eq!(response.status(), StatusCode::OK);

@@ -14,10 +14,12 @@
  * limitations under the License.
  */
 
+use std::{collections::HashMap, sync::Arc};
+
+use dashmap::DashMap;
 use once_cell::sync::Lazy;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 use crate::endpoint::{Endpoint, EndpointAddress, Locality, LocalityEndpoints, LocalitySet};
 
@@ -54,7 +56,7 @@ pub(crate) fn active_endpoints() -> &'static prometheus::IntGauge {
     &ACTIVE_ENDPOINTS
 }
 
-#[derive(Clone, Default, Debug, Eq, PartialEq, Deserialize, Serialize, JsonSchema)]
+#[derive(Clone, Default, Debug, Deserialize, Eq, JsonSchema, PartialEq, Serialize)]
 pub struct Cluster {
     #[serde(skip, default = "default_cluster_name")]
     pub name: String,
@@ -93,6 +95,10 @@ impl Cluster {
             .iter()
             .flat_map(|locality| locality.endpoints.iter())
     }
+
+    pub fn merge(&mut self, cluster: &Self) {
+        self.localities.merge(&cluster.localities);
+    }
 }
 
 fn default_cluster_name() -> String {
@@ -100,8 +106,11 @@ fn default_cluster_name() -> String {
 }
 
 /// Represents a full snapshot of all clusters.
-#[derive(Clone, Default, Debug, Serialize, PartialEq, Eq, JsonSchema)]
-pub struct ClusterMap(HashMap<String, Cluster>);
+#[derive(Clone, Default, Debug, Serialize)]
+pub struct ClusterMap(Arc<DashMap<String, Cluster>>);
+
+type DashMapRef<'inner> = dashmap::mapref::one::Ref<'inner, String, Cluster>;
+type DashMapRefMut<'inner> = dashmap::mapref::one::RefMut<'inner, String, Cluster>;
 
 impl ClusterMap {
     /// Creates a new `Cluster` called `name` containing `endpoints`.
@@ -109,59 +118,74 @@ impl ClusterMap {
         Self::from_iter([Cluster::new_default(vec![localities.into()])])
     }
 
-    pub fn insert(&mut self, cluster: Cluster) -> Option<Cluster> {
+    pub fn insert(&self, cluster: Cluster) -> Option<Cluster> {
         self.0.insert(cluster.name.clone(), cluster)
     }
 
-    pub fn get(&self, key: &str) -> Option<&Cluster> {
+    pub fn get(&self, key: &str) -> Option<DashMapRef> {
         self.0.get(key)
     }
 
-    pub fn get_mut(&mut self, key: &str) -> Option<&mut Cluster> {
+    pub fn get_mut(&self, key: &str) -> Option<DashMapRefMut> {
         self.0.get_mut(key)
     }
 
-    pub fn get_default(&self) -> Option<&Cluster> {
+    pub fn get_default(&self) -> Option<DashMapRef> {
         self.get(DEFAULT_CLUSTER_NAME)
     }
 
-    pub fn get_default_mut(&mut self) -> Option<&mut Cluster> {
+    pub fn get_default_mut(&self) -> Option<DashMapRefMut> {
         self.get_mut(DEFAULT_CLUSTER_NAME)
     }
 
-    pub fn insert_default(&mut self, cluster: impl Into<LocalityEndpoints>) {
+    pub fn insert_default(&self, cluster: impl Into<LocalityEndpoints>) {
         self.0.insert(
             DEFAULT_CLUSTER_NAME.into(),
             Cluster::new_default(vec![cluster.into()]),
         );
     }
 
-    pub fn default_cluster_mut(&mut self) -> &mut Cluster {
-        let entry = self.0.entry(DEFAULT_CLUSTER_NAME.into()).or_default();
+    pub fn iter(&self) -> dashmap::iter::Iter<String, Cluster> {
+        self.0.iter()
+    }
+
+    pub fn entry(&self, key: String) -> dashmap::mapref::entry::Entry<String, Cluster> {
+        self.0.entry(key)
+    }
+
+    pub fn default_entry(&self, key: String) -> DashMapRefMut {
+        let mut entry = self.entry(key.clone()).or_default();
+        entry.name.is_empty().then(|| entry.name = key);
         entry
-            .name
-            .is_empty()
-            .then(|| entry.name = DEFAULT_CLUSTER_NAME.into());
-        entry
+    }
+
+    pub fn default_cluster_mut(&self) -> DashMapRefMut {
+        self.default_entry(DEFAULT_CLUSTER_NAME.into())
     }
 
     /// Updates the locality of any endpoints which have no locality in any
     /// clusters to `locality`.
-    pub fn update_unlocated_endpoints(&mut self, locality: &Locality) {
-        for cluster in self.values_mut() {
-            cluster.update_locality(locality);
+    pub fn update_unlocated_endpoints(&self, locality: &Locality) {
+        for mut entry in self.0.iter_mut() {
+            entry.update_locality(locality);
         }
     }
 
-    pub fn localities(&self) -> impl Iterator<Item = &LocalityEndpoints> + '_ {
+    pub fn localities(&self) -> impl Iterator<Item = LocalityEndpoints> + '_ {
         self.0
-            .values()
-            .flat_map(|cluster| cluster.localities.iter())
+            .iter()
+            .flat_map(|entry| entry.value().localities.clone().into_iter())
     }
 
     pub fn endpoints(&self) -> impl Iterator<Item = Endpoint> + '_ {
-        self.localities()
-            .flat_map(|locality| locality.endpoints.clone())
+        self.localities().flat_map(|locality| locality.endpoints)
+    }
+
+    pub fn merge(&self, map: Self) {
+        for cluster in map.iter() {
+            let cluster = cluster.value();
+            self.default_entry(cluster.name.clone()).merge(cluster);
+        }
     }
 
     pub fn contains_only_unique_endpoints(&self) -> bool {
@@ -172,24 +196,50 @@ impl ClusterMap {
     }
 }
 
+impl PartialEq for ClusterMap {
+    fn eq(&self, rhs: &Self) -> bool {
+        for a in self.iter() {
+            match rhs.get(a.key()).filter(|b| *a.value() == **b) {
+                Some(_) => {}
+                None => return false,
+            }
+        }
+
+        true
+    }
+}
+
+impl schemars::JsonSchema for ClusterMap {
+    fn schema_name() -> String {
+        <HashMap<String, Cluster>>::schema_name()
+    }
+    fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+        <HashMap<String, Cluster>>::json_schema(gen)
+    }
+
+    fn is_referenceable() -> bool {
+        <HashMap<String, Cluster>>::is_referenceable()
+    }
+}
+
 impl<'de> Deserialize<'de> for ClusterMap {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
-        let mut map = HashMap::<String, Cluster>::deserialize(deserializer)?;
+        let map = DashMap::<String, Cluster>::deserialize(deserializer)?;
 
-        for (key, value) in map.iter_mut() {
-            value.name = key.clone();
+        for mut entry in map.iter_mut() {
+            entry.name = entry.key().clone();
         }
 
-        Ok(Self(map))
+        Ok(Self(Arc::new(map)))
     }
 }
 
-impl From<HashMap<String, Cluster>> for ClusterMap {
-    fn from(value: HashMap<String, Cluster>) -> Self {
-        Self(value)
+impl From<DashMap<String, Cluster>> for ClusterMap {
+    fn from(value: DashMap<String, Cluster>) -> Self {
+        Self(Arc::new(value))
     }
 }
 
@@ -210,31 +260,17 @@ impl FromIterator<Cluster> for ClusterMap {
     where
         T: IntoIterator<Item = Cluster>,
     {
-        Self(
+        Self(Arc::new(
             iter.into_iter()
                 .map(|cluster| (cluster.name.clone(), cluster))
                 .collect(),
-        )
-    }
-}
-
-impl std::ops::Deref for ClusterMap {
-    type Target = HashMap<String, Cluster>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl std::ops::DerefMut for ClusterMap {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+        ))
     }
 }
 
 impl<const N: usize> From<[(String, Cluster); N]> for ClusterMap {
     fn from(value: [(String, Cluster); N]) -> Self {
-        Self(value.into())
+        Self::from_iter(value)
     }
 }
 
@@ -243,7 +279,7 @@ impl FromIterator<(String, Cluster)> for ClusterMap {
     where
         T: IntoIterator<Item = (String, Cluster)>,
     {
-        Self(iter.into_iter().collect())
+        Self(Arc::new(iter.into_iter().collect()))
     }
 }
 

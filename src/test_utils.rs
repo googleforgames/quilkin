@@ -294,20 +294,18 @@ pub async fn create_socket() -> UdpSocket {
 pub fn config_with_dummy_endpoint() -> Config {
     let config = Config::default();
 
-    config.clusters.modify(|map| {
-        let _ = map.get_default_mut().insert(&mut Cluster {
-            name: "default".into(),
-            localities: vec![LocalityEndpoints {
-                locality: None,
-                endpoints: [Endpoint {
-                    address: (std::net::Ipv4Addr::LOCALHOST, 8080).into(),
-                    ..<_>::default()
-                }]
-                .into(),
+    config.clusters.value().insert(Cluster {
+        name: "default".into(),
+        localities: vec![LocalityEndpoints {
+            locality: None,
+            endpoints: [Endpoint {
+                address: (std::net::Ipv4Addr::LOCALHOST, 8080).into(),
+                ..<_>::default()
             }]
-            .into_iter()
-            .collect(),
-        });
+            .into(),
+        }]
+        .into_iter()
+        .collect(),
     });
 
     config

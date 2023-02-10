@@ -98,11 +98,17 @@ impl ControlPlane {
             watchers: <_>::default(),
         };
 
-        this.config.clusters.watch({
+        tokio::spawn({
             let this = this.clone();
-            move |_| {
-                this.push_update(ResourceType::Endpoint);
-                this.push_update(ResourceType::Cluster);
+            async move {
+                loop {
+                    tokio::select! {
+                        _ = this.config.clusters.has_changed() => {
+                            this.push_update(ResourceType::Endpoint);
+                            this.push_update(ResourceType::Cluster);
+                        }
+                    }
+                }
             }
         });
 

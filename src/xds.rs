@@ -312,7 +312,7 @@ mod tests {
             let local_addr: crate::endpoint::EndpointAddress = socket.local_addr().unwrap().into();
 
             config.clusters.modify(|clusters| {
-                let cluster = clusters.default_cluster_mut();
+                let mut cluster = clusters.default_cluster_mut();
                 cluster.localities.clear();
                 cluster.insert(Endpoint::new(local_addr.clone()));
             });
@@ -345,7 +345,7 @@ mod tests {
                 local_addr,
                 config
                     .clusters
-                    .load()
+                    .value()
                     .get_default()
                     .unwrap()
                     .endpoints()
