@@ -22,7 +22,7 @@ define_port!(7800);
 pub struct Manage {
     /// One or more `quilkin relay` endpoints to push configuration changes to.
     #[clap(short, long, env = "QUILKIN_MANAGEMENT_SERVER")]
-    pub relay_server: Vec<tonic::transport::Endpoint>,
+    pub relay: Vec<tonic::transport::Endpoint>,
     /// The TCP port to listen to, to serve discovery responses.
     #[clap(short, long, env = super::PORT_ENV_VAR, default_value_t = PORT)]
     port: u16,
@@ -110,11 +110,11 @@ impl Manage {
             })
         };
 
-        let _relay_stream = if !self.relay_server.is_empty() {
+        let _relay_stream = if !self.relay.is_empty() {
             tracing::info!("connecting to relay server");
             let client = crate::xds::client::MdsClient::connect(
                 String::clone(&config.id.load()),
-                self.relay_server.clone(),
+                self.relay.clone(),
             )
             .await?;
             Some(client.mds_client_stream(config.clone()))
