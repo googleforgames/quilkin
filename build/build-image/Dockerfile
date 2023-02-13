@@ -68,8 +68,7 @@ RUN set -eux; \
     chmod -R a+w $RUSTUP_HOME $CARGO_HOME && \
     rustup component add rustfmt clippy && \
     rustup target add x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu x86_64-pc-windows-gnu && \
-    cargo install cargo-watch mdbook && \
-    cargo install --git https://gitlab.com/hydai/mdbook-variables.git --branch bump_toml && \
+     cargo install cargo-watch mdbook mdbook-variables && \
     cargo install cargo-about && \
     cargo install --locked cargo-deny && \
     rustup --version && \
