@@ -41,7 +41,7 @@ mod tests {
     use tokio::time::timeout;
 
     use quilkin::{
-        config::watch::agones::crd::{Fleet, GameServer},
+        config::providers::k8s::agones::{Fleet, GameServer},
         test_utils::TestHelper,
     };
 

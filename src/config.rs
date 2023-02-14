@@ -25,7 +25,7 @@ use uuid::Uuid;
 
 mod config_type;
 mod error;
-pub mod provider;
+pub mod providers;
 mod slot;
 pub mod watch;
 
@@ -40,7 +40,7 @@ use crate::{
 };
 
 pub use self::{
-    config_type::ConfigType, error::ValidationError, provider::Providers, slot::Slot, watch::Watch,
+    config_type::ConfigType, error::ValidationError, providers::Providers, slot::Slot, watch::Watch,
 };
 
 base64_serde_type!(pub Base64Standard, base64::STANDARD);

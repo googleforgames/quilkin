@@ -1,3 +1,5 @@
+pub mod k8s;
+
 const RETRIES: u32 = 25;
 const BACKOFF_STEP: std::time::Duration = std::time::Duration::from_millis(250);
 
@@ -53,7 +55,7 @@ impl Providers {
     }
 
     #[tracing::instrument(level = "trace", skip_all)]
-    async fn task<F>(task: impl FnMut() -> F) -> crate::Result<()>
+    pub async fn task<F>(task: impl FnMut() -> F) -> crate::Result<()>
     where
         F: std::future::Future<Output = crate::Result<()>>,
     {
