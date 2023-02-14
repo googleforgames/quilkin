@@ -17,85 +17,104 @@
 use once_cell::sync::Lazy;
 use prometheus::{IntCounterVec, IntGaugeVec};
 
-pub(crate) const CONTROL_PLANE_LABEL: &str = "control_plane";
 pub(crate) const NODE_LABEL: &str = "node";
+pub(crate) const CONTROL_PLANE_LABEL: &str = "control_plane";
 pub(crate) const TYPE_LABEL: &str = "type";
 
-pub(crate) static ACTIVE_XDS_CLIENTS: Lazy<IntGaugeVec> = Lazy::new(|| {
-    prometheus::register_int_gauge_vec_with_registry! {
-        prometheus::opts! {
-            "active_xds_clients",
-            "Total number of active xDS clients",
-        },
-        &[NODE_LABEL],
-        crate::metrics::registry(),
-    }
-    .unwrap()
-});
+pub(crate) fn active_control_planes(control_plane: &str) -> prometheus::IntGauge {
+    static ACTIVE_CONTROL_PLANES: Lazy<IntGaugeVec> = Lazy::new(|| {
+        prometheus::register_int_gauge_vec_with_registry! {
+            prometheus::opts! {
+                "active_control_planes",
+                "Total number of active control plane connections",
+            },
+            &[CONTROL_PLANE_LABEL],
+            crate::metrics::registry(),
+        }
+        .unwrap()
+    });
 
-pub(crate) static DISCOVERY_REQUESTS: Lazy<IntCounterVec> = Lazy::new(|| {
-    prometheus::register_int_counter_vec_with_registry! {
-        prometheus::opts! {
-            "discovery_requests",
-            "Total number of xDS discovery requests",
-        },
-        &[NODE_LABEL, TYPE_LABEL],
-        crate::metrics::registry(),
-    }
-    .unwrap()
-});
+    ACTIVE_CONTROL_PLANES.with_label_values(&[control_plane])
+}
 
-pub(crate) static DISCOVERY_RESPONSES: Lazy<IntCounterVec> = Lazy::new(|| {
-    prometheus::register_int_counter_vec_with_registry! {
-        prometheus::opts! {
-            "discovery_responses",
-            "Total number of xDS discovery responses",
-        },
-        &[CONTROL_PLANE_LABEL, TYPE_LABEL],
-        crate::metrics::registry(),
-    }
-    .unwrap()
-});
+pub(crate) fn discovery_requests(node: &str, type_url: &str) -> prometheus::IntCounter {
+    static DISCOVERY_REQUESTS: Lazy<IntCounterVec> = Lazy::new(|| {
+        prometheus::register_int_counter_vec_with_registry! {
+            prometheus::opts! {
+                "discovery_requests",
+                "Total number of xDS discovery requests",
+            },
+            &[NODE_LABEL, TYPE_LABEL],
+            crate::metrics::registry(),
+        }
+        .unwrap()
+    });
 
-pub(crate) static ACKS: Lazy<IntCounterVec> = Lazy::new(|| {
-    prometheus::register_int_counter_vec_with_registry! {
-        prometheus::opts! {
-            "xds_acks",
-            "Total number of xDS ACKs",
-        },
-        &[NODE_LABEL, TYPE_LABEL],
-        crate::metrics::registry(),
-    }
-    .unwrap()
-});
+    DISCOVERY_REQUESTS.with_label_values(&[node, type_url])
+}
 
-pub(crate) static NACKS: Lazy<IntCounterVec> = Lazy::new(|| {
-    prometheus::register_int_counter_vec_with_registry! {
-        prometheus::opts! {
-            "xds_nacks",
-            "Total number of xDS NACKs",
-        },
-        &[NODE_LABEL, TYPE_LABEL],
-        crate::metrics::registry(),
-    }
-    .unwrap()
-});
+pub(crate) fn discovery_responses(control_plane: &str, type_url: &str) -> prometheus::IntCounter {
+    pub(crate) static DISCOVERY_RESPONSES: Lazy<IntCounterVec> = Lazy::new(|| {
+        prometheus::register_int_counter_vec_with_registry! {
+            prometheus::opts! {
+                "discovery_responses",
+                "Total number of xDS discovery responses",
+            },
+            &[CONTROL_PLANE_LABEL, TYPE_LABEL],
+            crate::metrics::registry(),
+        }
+        .unwrap()
+    });
+
+    DISCOVERY_RESPONSES.with_label_values(&[control_plane, type_url])
+}
+
+pub(crate) fn acks(control_plane: &str, type_url: &str) -> prometheus::IntCounter {
+    static ACKS: Lazy<IntCounterVec> = Lazy::new(|| {
+        prometheus::register_int_counter_vec_with_registry! {
+            prometheus::opts! {
+                "xds_acks",
+                "Total number of xDS ACKs",
+            },
+            &[CONTROL_PLANE_LABEL, TYPE_LABEL],
+            crate::metrics::registry(),
+        }
+        .unwrap()
+    });
+
+    ACKS.with_label_values(&[control_plane, type_url])
+}
+
+pub(crate) fn nacks(control_plane: &str, type_url: &str) -> prometheus::IntCounter {
+    static NACKS: Lazy<IntCounterVec> = Lazy::new(|| {
+        prometheus::register_int_counter_vec_with_registry! {
+            prometheus::opts! {
+                "xds_nacks",
+                "Total number of xDS NACKs",
+            },
+            &[CONTROL_PLANE_LABEL, TYPE_LABEL],
+            crate::metrics::registry(),
+        }
+        .unwrap()
+    });
+
+    NACKS.with_label_values(&[control_plane, type_url])
+}
 
 pub struct StreamConnectionMetrics {
-    node: String,
+    control_plane: String,
 }
 
 impl StreamConnectionMetrics {
-    pub fn new(node: impl Into<String>) -> Self {
-        let node = node.into();
-        ACTIVE_XDS_CLIENTS.with_label_values(&[&*node]).inc();
+    pub fn new(control_plane: String) -> Self {
+        self::active_control_planes(&control_plane).inc();
 
-        Self { node }
+        Self { control_plane }
     }
 }
 
 impl Drop for StreamConnectionMetrics {
     fn drop(&mut self) {
-        ACTIVE_XDS_CLIENTS.with_label_values(&[&*self.node]).dec();
+        self::active_control_planes(&self.control_plane).dec();
     }
 }

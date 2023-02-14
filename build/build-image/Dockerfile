@@ -25,7 +25,7 @@ ENV RUSTUP_HOME=/usr/local/rustup \
 # Install packages
 RUN set -eux && \
     apt-get update && \
-    apt-get install -y lsb-release jq curl wget zip build-essential software-properties-common \ 
+    apt-get install -y lsb-release jq curl wget zip build-essential software-properties-common \
         libssl-dev pkg-config python3-pip bash-completion g++-x86-64-linux-gnu g++-mingw-w64-x86-64 && \
     pip3 install live-server && \
     echo "source /etc/bash_completion" >> /root/.bashrc

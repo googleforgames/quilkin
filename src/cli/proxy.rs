@@ -14,12 +14,9 @@
  * limitations under the License.
  */
 
-use std::{
-    net::{Ipv4Addr, SocketAddr, SocketAddrV4},
-    sync::Arc,
-};
+use std::{net::SocketAddr, sync::Arc};
 
-use tokio::{net::UdpSocket, sync::watch, time::Duration};
+use tokio::{sync::watch, time::Duration};
 use tonic::transport::Endpoint;
 
 use crate::{proxy::SessionMap, utils::net, xds::ResourceType, Config, Result};
@@ -27,7 +24,7 @@ use crate::{proxy::SessionMap, utils::net, xds::ResourceType, Config, Result};
 #[cfg(doc)]
 use crate::filters::FilterFactory;
 
-pub const PORT: u16 = 7777;
+define_port!(7777);
 
 /// Run Quilkin as a UDP reverse proxy.
 #[derive(clap::Args, Clone)]
@@ -84,12 +81,11 @@ impl Proxy {
         });
 
         if !self.to.is_empty() {
-            config.clusters.modify(|clusters| {
-                clusters.default_cluster_mut().localities = vec![self.to.clone().into()].into();
-            });
+            config.clusters.value().default_cluster_mut().localities =
+                vec![self.to.clone().into()].into();
         }
 
-        if config.clusters.load().endpoints().count() == 0 && self.management_server.is_empty() {
+        if config.clusters.value().endpoints().count() == 0 && self.management_server.is_empty() {
             return Err(eyre::eyre!(
                 "`quilkin proxy` requires at least one `to` address or `management_server` endpoint."
             ));
@@ -102,19 +98,18 @@ impl Proxy {
 
         let _xds_stream = if !self.management_server.is_empty() {
             let client =
-                crate::xds::Client::connect(String::clone(&id), self.management_server.clone())
+                crate::xds::AdsClient::connect(String::clone(&id), self.management_server.clone())
                     .await?;
-            let mut stream = client
-                .stream({
-                    let config = config.clone();
-                    move |resource| config.apply(resource)
-                })
-                .await?;
+            let mut stream = client.xds_client_stream(config.clone());
 
             tokio::time::sleep(std::time::Duration::from_nanos(1)).await;
-            stream.send(ResourceType::Endpoint, &[]).await?;
+            stream
+                .discovery_request(ResourceType::Endpoint, &[])
+                .await?;
             tokio::time::sleep(std::time::Duration::from_nanos(1)).await;
-            stream.send(ResourceType::Listener, &[]).await?;
+            stream
+                .discovery_request(ResourceType::Listener, &[])
+                .await?;
             Some(stream)
         } else {
             None
@@ -147,7 +142,7 @@ impl Proxy {
         // Contains config for each worker task.
         let mut workers = Vec::with_capacity(num_workers);
         for worker_id in 0..num_workers {
-            let socket = Arc::new(self.bind(self.port)?);
+            let socket = Arc::new(net::socket_with_reuse(self.port)?);
             workers.push(crate::proxy::DownstreamReceiveWorkerConfig {
                 worker_id,
                 socket: socket.clone(),
@@ -164,12 +159,6 @@ impl Proxy {
         }
 
         Ok(())
-    }
-
-    /// binds the local configured port with port and address reuse applied.
-    fn bind(&self, port: u16) -> Result<UdpSocket> {
-        let addr = SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, port);
-        net::socket_with_reuse(addr.into())
     }
 }
 

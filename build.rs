@@ -21,9 +21,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     std::env::set_var("PROTOC", protobuf_src::protoc());
 
     let proto_files = vec![
-        "proto/data-plane-api/envoy/config/common/matcher/v3/matcher.proto",
         "proto/data-plane-api/envoy/config/accesslog/v3/accesslog.proto",
         "proto/data-plane-api/envoy/config/cluster/v3/cluster.proto",
+        "proto/data-plane-api/envoy/config/common/matcher/v3/matcher.proto",
         "proto/data-plane-api/envoy/config/listener/v3/listener.proto",
         "proto/data-plane-api/envoy/config/listener/v3/listener_components.proto",
         "proto/data-plane-api/envoy/config/route/v3/route.proto",
@@ -32,6 +32,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "proto/data-plane-api/envoy/service/discovery/v3/discovery.proto",
         "proto/data-plane-api/envoy/type/metadata/v3/metadata.proto",
         "proto/data-plane-api/envoy/type/tracing/v3/custom_tag.proto",
+        "proto/quilkin/relay/v1alpha1/relay.proto",
         "proto/quilkin/filters/capture/v1alpha1/capture.proto",
         "proto/quilkin/filters/compress/v1alpha1/compress.proto",
         "proto/quilkin/filters/concatenate_bytes/v1alpha1/concatenate_bytes.proto",

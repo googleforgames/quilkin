@@ -218,6 +218,13 @@ impl LocalitySet {
     pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut LocalityEndpoints> + '_ {
         self.0.values_mut()
     }
+
+    pub fn merge(&mut self, cluster: &Self) {
+        for (key, value) in &cluster.0 {
+            let entry = self.0.entry(key.clone()).or_default();
+            *entry = value.clone();
+        }
+    }
 }
 
 impl Serialize for LocalitySet {

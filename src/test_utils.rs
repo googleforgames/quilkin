@@ -15,11 +15,7 @@
  */
 
 /// Common utilities for testing
-use std::{
-    net::{Ipv4Addr, SocketAddr, SocketAddrV4},
-    str::from_utf8,
-    sync::Arc,
-};
+use std::{net::SocketAddr, str::from_utf8, sync::Arc};
 
 use once_cell::sync::Lazy;
 use tokio::{
@@ -292,28 +288,24 @@ where
 
 /// Opens a new socket bound to an ephemeral port
 pub async fn create_socket() -> UdpSocket {
-    let addr = SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, 0);
-    // Use a standard socket in test utils as we only want to bind sockets to unused ports.
-    UdpSocket::bind(addr).await.unwrap()
+    crate::utils::net::socket_with_reuse(0).unwrap()
 }
 
 pub fn config_with_dummy_endpoint() -> Config {
     let config = Config::default();
 
-    config.clusters.modify(|map| {
-        let _ = map.get_default_mut().insert(&mut Cluster {
-            name: "default".into(),
-            localities: vec![LocalityEndpoints {
-                locality: None,
-                endpoints: [Endpoint {
-                    address: (std::net::Ipv4Addr::LOCALHOST, 8080).into(),
-                    ..<_>::default()
-                }]
-                .into(),
+    config.clusters.value().insert(Cluster {
+        name: "default".into(),
+        localities: vec![LocalityEndpoints {
+            locality: None,
+            endpoints: [Endpoint {
+                address: (std::net::Ipv4Addr::LOCALHOST, 8080).into(),
+                ..<_>::default()
             }]
-            .into_iter()
-            .collect(),
-        });
+            .into(),
+        }]
+        .into_iter()
+        .collect(),
     });
 
     config

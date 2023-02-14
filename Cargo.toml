@@ -55,7 +55,7 @@ bytes = { version = "1.3.0", features = ["serde"] }
 cached = "0.41.0"
 chrono = "0.4.23"
 clap = { version = "4.0.32", features = ["cargo", "derive", "env"] }
-dashmap = "5.4.0"
+dashmap = {version = "5.4.0", features = ["serde"] }
 dirs2 = "3.0.1"
 either = "1.8.0"
 enum-map = "2.4.2"

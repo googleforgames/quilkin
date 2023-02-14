@@ -28,11 +28,23 @@ pub use self::{
     generate_config_schema::GenerateConfigSchema,
     manage::{Manage, Providers},
     proxy::Proxy,
+    relay::Relay,
 };
+
+macro_rules! define_port {
+    ($port:expr) => {
+        pub const PORT: u16 = $port;
+
+        pub fn default_port() -> u16 {
+            PORT
+        }
+    };
+}
 
 pub mod generate_config_schema;
 pub mod manage;
 pub mod proxy;
+pub mod relay;
 
 const ETC_CONFIG_PATH: &str = "/etc/quilkin/quilkin.yaml";
 const PORT_ENV_VAR: &str = "QUILKIN_PORT";
@@ -64,13 +76,14 @@ pub enum Commands {
     Proxy(Proxy),
     GenerateConfigSchema(GenerateConfigSchema),
     Manage(Manage),
+    Relay(Relay),
 }
 
 impl Commands {
     pub fn admin_mode(&self) -> Option<Mode> {
         match self {
             Self::Proxy(_) => Some(Mode::Proxy),
-            Self::Manage(_) => Some(Mode::Xds),
+            Self::Relay(_) | Self::Manage(_) => Some(Mode::Xds),
             Self::GenerateConfigSchema(_) => None,
         }
     }
@@ -149,6 +162,10 @@ impl Cli {
                 }
                 Commands::GenerateConfigSchema(generator) => {
                     tokio::spawn(std::future::ready(generator.generate_config_schema()))
+                }
+                Commands::Relay(relay) => {
+                    let config = config.clone();
+                    tokio::spawn(async move { relay.relay(config).await })
                 }
             }
         })

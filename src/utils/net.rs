@@ -20,19 +20,11 @@ use std::{io, net::SocketAddr};
 use tokio::net::UdpSocket;
 
 /// returns a UdpSocket with address and port reuse.
-pub fn socket_with_reuse(addr: SocketAddr) -> Result<UdpSocket> {
-    let sock = Socket::new(
-        match addr {
-            SocketAddr::V4(_) => socket2::Domain::IPV4,
-            SocketAddr::V6(_) => socket2::Domain::IPV6,
-        },
-        Type::DGRAM,
-        Some(Protocol::UDP),
-    )?;
+pub fn socket_with_reuse(port: u16) -> Result<UdpSocket> {
+    let sock = Socket::new(socket2::Domain::IPV4, Type::DGRAM, Some(Protocol::UDP))?;
     enable_reuse(&sock)?;
     sock.set_nonblocking(true)?;
-    sock.bind(&addr.into())?;
-
+    sock.bind(&SocketAddr::from((std::net::Ipv4Addr::UNSPECIFIED, port)).into())?;
     UdpSocket::from_std(sock.into()).map_err(|error| eyre::eyre!(error))
 }
 
@@ -55,13 +47,13 @@ mod tests {
     #[tokio::test]
     async fn socket_with_reuse() {
         let expected = available_addr().await;
-        let socket = super::socket_with_reuse(expected).unwrap();
+        let socket = super::socket_with_reuse(expected.port()).unwrap();
         let addr = socket.local_addr().unwrap();
 
         assert_eq!(expected, socket.local_addr().unwrap());
 
         // should be able to do it a second time, since we are reusing the address.
-        let socket = super::socket_with_reuse(expected).unwrap();
+        let socket = super::socket_with_reuse(expected.port()).unwrap();
         let addr2 = socket.local_addr().unwrap();
         assert_eq!(addr, addr2);
     }

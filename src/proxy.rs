@@ -147,8 +147,7 @@ impl DownstreamReceiveWorkerConfig {
         downstream_socket: Arc<UdpSocket>,
         sessions: SessionMap,
     ) -> std::io::Result<usize> {
-        let clusters = config.clusters.load();
-        let endpoints: Vec<_> = clusters.endpoints().collect();
+        let endpoints: Vec<_> = config.clusters.value().endpoints().collect();
         if endpoints.is_empty() {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::Other,
