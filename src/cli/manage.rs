@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+use futures::TryFutureExt;
+
 define_port!(7800);
 
 /// Runs Quilkin as a xDS management server, using `provider` as
@@ -40,28 +42,7 @@ pub struct Manage {
     sub_zone: Option<String>,
     /// The configuration source for a management server.
     #[clap(subcommand)]
-    pub provider: Providers,
-}
-
-/// The available xDS source providers.
-#[derive(Clone, clap::Subcommand)]
-pub enum Providers {
-    /// Watches Agones' game server CRDs for `Allocated` game server endpoints,
-    /// and for a `ConfigMap` that specifies the filter configuration.
-    Agones {
-        /// The namespace under which the configmap is stored.
-        #[clap(short, long, default_value = "default")]
-        config_namespace: String,
-        /// The namespace under which the game servers run.
-        #[clap(short, long, default_value = "default")]
-        gameservers_namespace: String,
-    },
-
-    /// Watches for changes to the file located at `path`.
-    File {
-        /// The path to the source config.
-        path: std::path::PathBuf,
-    },
+    pub provider: crate::config::Providers,
 }
 
 impl Manage {
@@ -79,36 +60,7 @@ impl Manage {
                 .modify(|map| map.update_unlocated_endpoints(locality));
         }
 
-        let provider_task = {
-            const PROVIDER_RETRIES: u32 = 25;
-            const PROVIDER_BACKOFF: std::time::Duration = std::time::Duration::from_millis(250);
-            let config = config.clone();
-
-            tryhard::retry_fn(move || match &self.provider {
-                Providers::Agones {
-                    gameservers_namespace,
-                    config_namespace,
-                } => tokio::spawn(crate::config::watch::agones(
-                    gameservers_namespace.clone(),
-                    config_namespace.clone(),
-                    locality.clone(),
-                    config.clone(),
-                )),
-                Providers::File { path } => tokio::spawn(crate::config::watch::fs(
-                    config.clone(),
-                    path.clone(),
-                    locality.clone(),
-                )),
-            })
-            .retries(PROVIDER_RETRIES)
-            .exponential_backoff(PROVIDER_BACKOFF)
-            .on_retry(|_, _, error| {
-                let error = error.to_string();
-                async move {
-                    tracing::warn!(%error, "provider task error, retrying");
-                }
-            })
-        };
+        let provider_task = self.provider.spawn(config.clone(), locality.clone());
 
         let _relay_stream = if !self.relay.is_empty() {
             tracing::info!("connecting to relay server");
@@ -122,9 +74,13 @@ impl Manage {
             None
         };
 
+        let server_task = tokio::spawn(crate::xds::server::spawn(self.port, config))
+            .map_err(From::from)
+            .and_then(std::future::ready);
+
         tokio::select! {
-            result = crate::xds::server::spawn(self.port, config) => result,
-            result = provider_task => result.map_err(From::from).and_then(|result| result),
+            result = server_task => result,
+            result = provider_task => result?,
         }
     }
 }

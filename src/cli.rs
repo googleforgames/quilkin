@@ -25,10 +25,7 @@ use tokio::{signal, sync::watch};
 use crate::{admin::Mode, Config};
 
 pub use self::{
-    generate_config_schema::GenerateConfigSchema,
-    manage::{Manage, Providers},
-    proxy::Proxy,
-    relay::Relay,
+    generate_config_schema::GenerateConfigSchema, manage::Manage, proxy::Proxy, relay::Relay,
 };
 
 macro_rules! define_port {
