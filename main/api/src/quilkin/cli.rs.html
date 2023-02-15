@@ -189,6 +189,20 @@
 <span id="189">189</span>
 <span id="190">190</span>
 <span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -216,14 +230,23 @@
 <span class="kw">use crate</span>::{admin::Mode, Config};
 
 <span class="kw">pub use </span><span class="self">self</span>::{
-    generate_config_schema::GenerateConfigSchema,
-    manage::{Manage, Providers},
-    proxy::Proxy,
+    generate_config_schema::GenerateConfigSchema, manage::Manage, proxy::Proxy, relay::Relay,
 };
+
+<span class="macro">macro_rules! </span>define_port {
+    (<span class="macro-nonterminal">$port</span>:expr) =&gt; {
+        <span class="kw">pub const </span>PORT: u16 = <span class="macro-nonterminal">$port</span>;
+
+        <span class="kw">pub fn </span>default_port() -&gt; u16 {
+            PORT
+        }
+    };
+}
 
 <span class="kw">pub mod </span>generate_config_schema;
 <span class="kw">pub mod </span>manage;
 <span class="kw">pub mod </span>proxy;
+<span class="kw">pub mod </span>relay;
 
 <span class="kw">const </span>ETC_CONFIG_PATH: <span class="kw-2">&amp;</span>str = <span class="string">&quot;/etc/quilkin/quilkin.yaml&quot;</span>;
 <span class="kw">const </span>PORT_ENV_VAR: <span class="kw-2">&amp;</span>str = <span class="string">&quot;QUILKIN_PORT&quot;</span>;
@@ -255,13 +278,14 @@
     Proxy(Proxy),
     GenerateConfigSchema(GenerateConfigSchema),
     Manage(Manage),
+    Relay(Relay),
 }
 
 <span class="kw">impl </span>Commands {
     <span class="kw">pub fn </span>admin_mode(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Mode&gt; {
         <span class="kw">match </span><span class="self">self </span>{
             <span class="self">Self</span>::Proxy(<span class="kw">_</span>) =&gt; <span class="prelude-val">Some</span>(Mode::Proxy),
-            <span class="self">Self</span>::Manage(<span class="kw">_</span>) =&gt; <span class="prelude-val">Some</span>(Mode::Xds),
+            <span class="self">Self</span>::Relay(<span class="kw">_</span>) | <span class="self">Self</span>::Manage(<span class="kw">_</span>) =&gt; <span class="prelude-val">Some</span>(Mode::Xds),
             <span class="self">Self</span>::GenerateConfigSchema(<span class="kw">_</span>) =&gt; <span class="prelude-val">None</span>,
         }
     }
@@ -340,6 +364,10 @@
                 }
                 Commands::GenerateConfigSchema(generator) =&gt; {
                     tokio::spawn(std::future::ready(generator.generate_config_schema()))
+                }
+                Commands::Relay(relay) =&gt; {
+                    <span class="kw">let </span>config = config.clone();
+                    tokio::spawn(<span class="kw">async move </span>{ relay.relay(config).<span class="kw">await </span>})
                 }
             }
         })

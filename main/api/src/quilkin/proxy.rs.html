@@ -219,7 +219,6 @@
 <span id="219">219</span>
 <span id="220">220</span>
 <span id="221">221</span>
-<span id="222">222</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -369,8 +368,7 @@
         downstream_socket: Arc&lt;UdpSocket&gt;,
         sessions: SessionMap,
     ) -&gt; std::io::Result&lt;usize&gt; {
-        <span class="kw">let </span>clusters = config.clusters.load();
-        <span class="kw">let </span>endpoints: Vec&lt;<span class="kw">_</span>&gt; = clusters.endpoints().collect();
+        <span class="kw">let </span>endpoints: Vec&lt;<span class="kw">_</span>&gt; = config.clusters.value().endpoints().collect();
         <span class="kw">if </span>endpoints.is_empty() {
             <span class="kw">return </span><span class="prelude-val">Err</span>(std::io::Error::new(
                 std::io::ErrorKind::Other,

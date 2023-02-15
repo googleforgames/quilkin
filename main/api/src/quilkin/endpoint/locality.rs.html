@@ -282,6 +282,13 @@
 <span id="282">282</span>
 <span id="283">283</span>
 <span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -501,6 +508,13 @@
     <span class="doccomment">/// Returns a mutable iterator over the set of localities.
     </span><span class="kw">pub fn </span>iter_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw">impl </span>Iterator&lt;Item = <span class="kw-2">&amp;mut </span>LocalityEndpoints&gt; + <span class="lifetime">&#39;_ </span>{
         <span class="self">self</span>.<span class="number">0</span>.values_mut()
+    }
+
+    <span class="kw">pub fn </span>merge(<span class="kw-2">&amp;mut </span><span class="self">self</span>, cluster: <span class="kw-2">&amp;</span><span class="self">Self</span>) {
+        <span class="kw">for </span>(key, value) <span class="kw">in </span><span class="kw-2">&amp;</span>cluster.<span class="number">0 </span>{
+            <span class="kw">let </span>entry = <span class="self">self</span>.<span class="number">0</span>.entry(key.clone()).or_default();
+            <span class="kw-2">*</span>entry = value.clone();
+        }
     }
 }
 

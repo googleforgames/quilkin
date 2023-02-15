@@ -504,6 +504,24 @@
 <span id="504">504</span>
 <span id="505">505</span>
 <span id="506">506</span>
+<span id="507">507</span>
+<span id="508">508</span>
+<span id="509">509</span>
+<span id="510">510</span>
+<span id="511">511</span>
+<span id="512">512</span>
+<span id="513">513</span>
+<span id="514">514</span>
+<span id="515">515</span>
+<span id="516">516</span>
+<span id="517">517</span>
+<span id="518">518</span>
+<span id="519">519</span>
+<span id="520">520</span>
+<span id="521">521</span>
+<span id="522">522</span>
+<span id="523">523</span>
+<span id="524">524</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -531,6 +549,7 @@
 
 <span class="kw">mod </span>config_type;
 <span class="kw">mod </span>error;
+<span class="kw">pub mod </span>provider;
 <span class="kw">mod </span>slot;
 <span class="kw">pub mod </span>watch;
 
@@ -544,7 +563,9 @@
     },
 };
 
-<span class="kw">pub use </span><span class="self">self</span>::{config_type::ConfigType, error::ValidationError, slot::Slot};
+<span class="kw">pub use </span><span class="self">self</span>::{
+    config_type::ConfigType, error::ValidationError, provider::Providers, slot::Slot, watch::Watch,
+};
 
 <span class="macro">base64_serde_type!</span>(<span class="kw">pub </span>Base64Standard, base64::STANDARD);
 
@@ -557,12 +578,12 @@
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>CONNECTION_TIMEOUT: u64 = <span class="number">5</span>;
 
 <span class="doccomment">/// Config is the configuration of a proxy
-</span><span class="attribute">#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
+</span><span class="attribute">#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema, PartialEq)]
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 </span><span class="kw">pub struct </span>Config {
     <span class="attribute">#[serde(default)]
-    </span><span class="kw">pub </span>clusters: Slot&lt;ClusterMap&gt;,
+    </span><span class="kw">pub </span>clusters: Watch&lt;ClusterMap&gt;,
     <span class="attribute">#[serde(default)]
     </span><span class="kw">pub </span>filters: Slot&lt;<span class="kw">crate</span>::filters::FilterChain&gt;,
     <span class="attribute">#[serde(default = <span class="string">&quot;default_proxy_id&quot;</span>)]
@@ -592,11 +613,18 @@
             }
         }
 
-        <span class="macro">replace_if_present!</span>(clusters, filters, id);
+        <span class="macro">replace_if_present!</span>(filters, id);
 
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(locality) = locality {
-            <span class="self">self</span>.clusters
-                .modify(|map| map.update_unlocated_endpoints(<span class="kw-2">&amp;</span>locality));
+        {
+            <span class="kw">let </span>clusters = <span class="self">self</span>.clusters.value();
+
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(value) = map.get(<span class="string">&quot;clusters&quot;</span>) {
+                clusters.merge(serde_json::from_value(value.clone())<span class="question-mark">?</span>);
+            }
+
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(locality) = locality {
+                clusters.update_unlocated_endpoints(<span class="kw-2">&amp;</span>locality);
+            }
         }
 
         <span class="self">self</span>.apply_metrics();
@@ -613,9 +641,10 @@
         <span class="kw">let </span><span class="kw-2">mut </span>resources = Vec::new();
         <span class="kw">match </span>resource_type {
             ResourceType::Endpoint =&gt; {
-                <span class="kw">for </span>value <span class="kw">in </span><span class="self">self</span>.clusters.load().values() {
+                <span class="kw">for </span>entry <span class="kw">in </span><span class="self">self</span>.clusters.value().iter() {
                     resources.push(
-                        resource_type.encode_to_any(<span class="kw-2">&amp;</span>ClusterLoadAssignment::try_from(value)<span class="question-mark">?</span>)<span class="question-mark">?</span>,
+                        resource_type
+                            .encode_to_any(<span class="kw-2">&amp;</span>ClusterLoadAssignment::try_from(entry.value())<span class="question-mark">?</span>)<span class="question-mark">?</span>,
                     );
                 }
             }
@@ -626,10 +655,27 @@
                 })<span class="question-mark">?</span>);
             }
             ResourceType::Cluster =&gt; {
-                <span class="kw">let </span>clusters = <span class="self">self</span>.clusters.load();
-                <span class="kw">for </span>cluster <span class="kw">in </span>names.iter().filter_map(|name| clusters.get(name)) {
+                <span class="kw">let </span>clusters: Vec&lt;<span class="kw">_</span>&gt; = <span class="kw">if </span>names.is_empty() {
+                    <span class="self">self</span>.clusters
+                        .value()
+                        .iter()
+                        .map(|entry| entry.value().clone())
+                        .collect()
+                } <span class="kw">else </span>{
+                    names
+                        .iter()
+                        .filter_map(|name| {
+                            <span class="self">self</span>.clusters
+                                .value()
+                                .get(name)
+                                .map(|entry| entry.value().clone())
+                        })
+                        .collect()
+                };
+
+                <span class="kw">for </span>cluster <span class="kw">in </span>clusters {
                     resources.push(resource_type.encode_to_any(
-                        <span class="kw-2">&amp;</span><span class="kw">crate</span>::xds::config::cluster::v3::Cluster::try_from(cluster)<span class="question-mark">?</span>,
+                        <span class="kw-2">&amp;</span><span class="kw">crate</span>::xds::config::cluster::v3::Cluster::try_from(<span class="kw-2">&amp;</span>cluster)<span class="question-mark">?</span>,
                     )<span class="question-mark">?</span>);
                 }
             }
@@ -646,14 +692,12 @@
     <span class="attribute">#[tracing::instrument(skip_all, fields(response = response.type_url()))]
     </span><span class="kw">pub fn </span>apply(<span class="kw-2">&amp;</span><span class="self">self</span>, response: <span class="kw-2">&amp;</span>Resource) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
         <span class="kw">let </span>apply_cluster = |cluster: Cluster| {
-            <span class="kw">if </span>cluster.endpoints().count() == <span class="number">0 </span>{
-                <span class="kw">return</span>;
-            }
-
             <span class="macro">tracing::trace!</span>(endpoints = %serde_json::to_value(<span class="kw-2">&amp;</span>cluster).unwrap(), <span class="string">&quot;applying new endpoints&quot;</span>);
-            <span class="self">self</span>.clusters.modify(|clusters| {
-                clusters.insert(cluster.clone());
-            });
+            <span class="self">self</span>.clusters
+                .value()
+                .default_entry(cluster.name)
+                .localities
+                .merge(<span class="kw-2">&amp;</span>cluster.localities);
         };
 
         <span class="kw">match </span>response {
@@ -688,9 +732,8 @@
     }
 
     <span class="kw">pub fn </span>apply_metrics(<span class="kw-2">&amp;</span><span class="self">self</span>) {
-        <span class="kw">let </span>clusters = <span class="self">self</span>.clusters.load();
-
-        <span class="kw">crate</span>::cluster::active_clusters().set(clusters.len() <span class="kw">as </span>i64);
+        <span class="kw">let </span>clusters = <span class="self">self</span>.clusters.value();
+        <span class="kw">crate</span>::cluster::active_clusters().set(clusters.localities().count() <span class="kw">as </span>i64);
         <span class="kw">crate</span>::cluster::active_endpoints().set(clusters.endpoints().count() <span class="kw">as </span>i64);
     }
 }
@@ -703,15 +746,6 @@
             id: default_proxy_id(),
             version: Slot::with_default(),
         }
-    }
-}
-
-<span class="kw">impl </span>PartialEq <span class="kw">for </span>Config {
-    <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, rhs: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; bool {
-        <span class="self">self</span>.id == rhs.id
-            &amp;&amp; <span class="self">self</span>.clusters == rhs.clusters
-            &amp;&amp; <span class="self">self</span>.filters == rhs.filters
-            &amp;&amp; <span class="self">self</span>.version == rhs.version
     }
 }
 
@@ -882,9 +916,10 @@ id: server-proxy
         }))
         .unwrap();
 
+        <span class="kw">let </span>value = config.clusters.value();
         <span class="macro">assert_eq!</span>(
-            <span class="kw-2">*</span>config.clusters.load(),
-            ClusterMap::new_with_default_cluster(<span class="macro">vec!</span>[Endpoint::new(
+            <span class="kw-2">&amp;*</span>value,
+            <span class="kw-2">&amp;</span>ClusterMap::new_with_default_cluster(<span class="macro">vec!</span>[Endpoint::new(
                 (std::net::Ipv4Addr::LOCALHOST, <span class="number">25999</span>).into(),
             )])
         )
@@ -921,9 +956,10 @@ id: server-proxy
         }))
         .unwrap_or_default();
 
+        <span class="kw">let </span>value = config.clusters.value();
         <span class="macro">assert_eq!</span>(
-            <span class="kw-2">*</span>config.clusters.load(),
-            ClusterMap::new_with_default_cluster(<span class="macro">vec!</span>[
+            <span class="kw-2">&amp;*</span>value,
+            <span class="kw-2">&amp;</span>ClusterMap::new_with_default_cluster(<span class="macro">vec!</span>[
                 Endpoint::with_metadata(
                     <span class="string">&quot;127.0.0.1:26000&quot;</span>.parse().unwrap(),
                     Metadata {

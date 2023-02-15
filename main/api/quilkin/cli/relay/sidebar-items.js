@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":[["PORT",""]],"struct":[["Relay","Runs Quilkin as a relay service that runs a Manager Discovery Service (mDS) for accepting cluster and configuration information from xDS management services, and exposing it as a single merged xDS service for proxy services."]]};

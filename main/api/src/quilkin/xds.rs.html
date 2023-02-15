@@ -360,6 +360,15 @@
 <span id="360">360</span>
 <span id="361">361</span>
 <span id="362">362</span>
+<span id="363">363</span>
+<span id="364">364</span>
+<span id="365">365</span>
+<span id="366">366</span>
+<span id="367">367</span>
+<span id="368">368</span>
+<span id="369">369</span>
+<span id="370">370</span>
+<span id="371">371</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -487,16 +496,23 @@
     }
 }
 
+<span class="macro">crate::include_proto!</span>(<span class="string">&quot;quilkin.relay.v1alpha1&quot;</span>);
+
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>client;
 <span class="kw">mod </span>metrics;
 <span class="kw">mod </span>resource;
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>server;
 
-<span class="kw">pub use </span>client::Client;
-<span class="kw">pub use </span>resource::{Resource, ResourceType};
-<span class="kw">pub use </span>server::ControlPlane;
-<span class="kw">pub use </span>service::discovery::v3::aggregated_discovery_service_client::AggregatedDiscoveryServiceClient;
-<span class="kw">pub use </span>xds::<span class="kw-2">*</span>;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">use </span><span class="self">self</span>::quilkin::relay::v1alpha1 <span class="kw">as </span>relay;
+<span class="kw">use </span><span class="self">self</span>::xds <span class="kw">as </span>envoy;
+
+<span class="kw">pub use </span><span class="self">self</span>::{
+    client::{AdsClient, Client},
+    resource::{Resource, ResourceType},
+    server::ControlPlane,
+    service::discovery::v3::aggregated_discovery_service_client::AggregatedDiscoveryServiceClient,
+    xds::<span class="kw-2">*</span>,
+};
 
 <span class="attribute">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
@@ -657,13 +673,8 @@
         )
         .<span class="kw">await
         </span>.unwrap();
-        <span class="kw">let </span><span class="kw-2">mut </span>stream = client
-            .stream({
-                <span class="kw">let </span>config = config.clone();
-                <span class="kw">move </span>|resource| config.apply(resource)
-            })
-            .<span class="kw">await
-            </span>.unwrap();
+        <span class="kw">let </span><span class="kw-2">mut </span>stream = client.xds_client_stream(config.clone());
+        tokio::time::sleep(std::time::Duration::from_millis(<span class="number">500</span>)).<span class="kw">await</span>;
 
         <span class="comment">// Each time, we create a new upstream endpoint and send a cluster update for it.
         </span><span class="kw">let </span>concat_bytes = <span class="macro">vec!</span>[(<span class="string">&quot;b&quot;</span>, <span class="string">&quot;c,&quot;</span>), (<span class="string">&quot;d&quot;</span>, <span class="string">&quot;e&quot;</span>)];
@@ -672,10 +683,11 @@
             <span class="kw">let </span>local_addr: <span class="kw">crate</span>::endpoint::EndpointAddress = socket.local_addr().unwrap().into();
 
             config.clusters.modify(|clusters| {
-                <span class="kw">let </span>cluster = clusters.default_cluster_mut();
+                <span class="kw">let </span><span class="kw-2">mut </span>cluster = clusters.default_cluster_mut();
                 cluster.localities.clear();
-                cluster.insert(Endpoint::new(local_addr.clone()))
+                cluster.insert(Endpoint::new(local_addr.clone()));
             });
+            tokio::time::sleep(std::time::Duration::from_millis(<span class="number">500</span>)).<span class="kw">await</span>;
 
             <span class="kw">let </span>filters = <span class="kw">crate</span>::filters::FilterChain::try_from(<span class="macro">vec!</span>[
                 ConcatenateBytes::as_filter_config(concatenate_bytes::Config {
@@ -695,13 +707,16 @@
 
             config.filters.modify(|chain| <span class="kw-2">*</span>chain = filters.clone());
 
-            stream.send(ResourceType::Cluster, <span class="kw-2">&amp;</span>[]).<span class="kw">await</span>.unwrap();
-            tokio::time::sleep(std::time::Duration::from_millis(<span class="number">100</span>)).<span class="kw">await</span>;
+            stream
+                .discovery_request(ResourceType::Cluster, <span class="kw-2">&amp;</span>[])
+                .<span class="kw">await
+                </span>.unwrap();
+            tokio::time::sleep(std::time::Duration::from_millis(<span class="number">500</span>)).<span class="kw">await</span>;
             <span class="macro">assert_eq!</span>(
                 local_addr,
                 config
                     .clusters
-                    .load()
+                    .value()
                     .get_default()
                     .unwrap()
                     .endpoints()
@@ -710,7 +725,10 @@
                     .address
             );
 
-            stream.send(ResourceType::Listener, <span class="kw-2">&amp;</span>[]).<span class="kw">await</span>.unwrap();
+            stream
+                .discovery_request(ResourceType::Listener, <span class="kw-2">&amp;</span>[])
+                .<span class="kw">await
+                </span>.unwrap();
             tokio::time::sleep(std::time::Duration::from_millis(<span class="number">100</span>)).<span class="kw">await</span>;
             <span class="kw">let </span>changed_filters = config.filters.load();
 

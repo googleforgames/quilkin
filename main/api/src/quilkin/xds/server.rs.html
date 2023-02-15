@@ -393,6 +393,91 @@
 <span id="393">393</span>
 <span id="394">394</span>
 <span id="395">395</span>
+<span id="396">396</span>
+<span id="397">397</span>
+<span id="398">398</span>
+<span id="399">399</span>
+<span id="400">400</span>
+<span id="401">401</span>
+<span id="402">402</span>
+<span id="403">403</span>
+<span id="404">404</span>
+<span id="405">405</span>
+<span id="406">406</span>
+<span id="407">407</span>
+<span id="408">408</span>
+<span id="409">409</span>
+<span id="410">410</span>
+<span id="411">411</span>
+<span id="412">412</span>
+<span id="413">413</span>
+<span id="414">414</span>
+<span id="415">415</span>
+<span id="416">416</span>
+<span id="417">417</span>
+<span id="418">418</span>
+<span id="419">419</span>
+<span id="420">420</span>
+<span id="421">421</span>
+<span id="422">422</span>
+<span id="423">423</span>
+<span id="424">424</span>
+<span id="425">425</span>
+<span id="426">426</span>
+<span id="427">427</span>
+<span id="428">428</span>
+<span id="429">429</span>
+<span id="430">430</span>
+<span id="431">431</span>
+<span id="432">432</span>
+<span id="433">433</span>
+<span id="434">434</span>
+<span id="435">435</span>
+<span id="436">436</span>
+<span id="437">437</span>
+<span id="438">438</span>
+<span id="439">439</span>
+<span id="440">440</span>
+<span id="441">441</span>
+<span id="442">442</span>
+<span id="443">443</span>
+<span id="444">444</span>
+<span id="445">445</span>
+<span id="446">446</span>
+<span id="447">447</span>
+<span id="448">448</span>
+<span id="449">449</span>
+<span id="450">450</span>
+<span id="451">451</span>
+<span id="452">452</span>
+<span id="453">453</span>
+<span id="454">454</span>
+<span id="455">455</span>
+<span id="456">456</span>
+<span id="457">457</span>
+<span id="458">458</span>
+<span id="459">459</span>
+<span id="460">460</span>
+<span id="461">461</span>
+<span id="462">462</span>
+<span id="463">463</span>
+<span id="464">464</span>
+<span id="465">465</span>
+<span id="466">466</span>
+<span id="467">467</span>
+<span id="468">468</span>
+<span id="469">469</span>
+<span id="470">470</span>
+<span id="471">471</span>
+<span id="472">472</span>
+<span id="473">473</span>
+<span id="474">474</span>
+<span id="475">475</span>
+<span id="476">476</span>
+<span id="477">477</span>
+<span id="478">478</span>
+<span id="479">479</span>
+<span id="480">480</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -412,7 +497,7 @@
 </span><span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use </span>cached::Cached;
-<span class="kw">use </span>futures::Stream;
+<span class="kw">use </span>futures::{Stream, TryFutureExt, TryStreamExt};
 <span class="kw">use </span>tokio_stream::StreamExt;
 <span class="kw">use </span>tracing_futures::Instrument;
 
@@ -420,6 +505,9 @@
     config::Config,
     xds::{
         metrics,
+        relay::aggregated_control_plane_discovery_service_server::{
+            AggregatedControlPlaneDiscoveryService, AggregatedControlPlaneDiscoveryServiceServer,
+        },
         service::discovery::v3::{
             aggregated_discovery_service_server::{
                 AggregatedDiscoveryService, AggregatedDiscoveryServiceServer,
@@ -431,13 +519,28 @@
 };
 
 <span class="attribute">#[tracing::instrument(skip_all)]
-</span><span class="kw">pub async fn </span>spawn(port: u16, config: std::sync::Arc&lt;<span class="kw">crate</span>::Config&gt;) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
+</span><span class="kw">pub fn </span>spawn(
+    port: u16,
+    config: std::sync::Arc&lt;<span class="kw">crate</span>::Config&gt;,
+) -&gt; <span class="kw">impl </span>std::future::Future&lt;Output = <span class="kw">crate</span>::Result&lt;()&gt;&gt; {
     <span class="kw">let </span>server = AggregatedDiscoveryServiceServer::new(ControlPlane::from_arc(config));
     <span class="kw">let </span>server = tonic::transport::Server::builder().add_service(server);
-    <span class="macro">tracing::info!</span>(<span class="string">&quot;Serving management server at {}&quot;</span>, port);
-    <span class="prelude-val">Ok</span>(server
-        .serve((std::net::Ipv4Addr::UNSPECIFIED, port).into())
-        .<span class="kw">await</span><span class="question-mark">?</span>)
+    <span class="macro">tracing::info!</span>(<span class="string">&quot;serving management server on port `{port}`&quot;</span>);
+    server
+        .serve((std::net::Ipv6Addr::UNSPECIFIED, port).into())
+        .map_err(From::from)
+}
+
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>control_plane_discovery_server(
+    port: u16,
+    config: Arc&lt;Config&gt;,
+) -&gt; <span class="kw">impl </span>std::future::Future&lt;Output = <span class="kw">crate</span>::Result&lt;()&gt;&gt; {
+    <span class="kw">let </span>server = AggregatedControlPlaneDiscoveryServiceServer::new(ControlPlane::from_arc(config));
+    <span class="kw">let </span>server = tonic::transport::Server::builder().add_service(server);
+    <span class="macro">tracing::info!</span>(<span class="string">&quot;serving relay server on port `{port}`&quot;</span>);
+    server
+        .serve((std::net::Ipv6Addr::UNSPECIFIED, port).into())
+        .map_err(From::from)
 }
 
 <span class="attribute">#[derive(Clone)]
@@ -475,11 +578,17 @@
             watchers: &lt;<span class="kw">_</span>&gt;::default(),
         };
 
-        this.config.clusters.watch({
+        tokio::spawn({
             <span class="kw">let </span>this = this.clone();
-            <span class="kw">move </span>|<span class="kw">_</span>| {
-                this.push_update(ResourceType::Endpoint);
-                this.push_update(ResourceType::Cluster);
+            <span class="kw">async move </span>{
+                <span class="kw">loop </span>{
+                    <span class="macro">tokio::select! </span>{
+                        <span class="kw">_ </span>= this.config.clusters.has_changed() =&gt; {
+                            this.push_update(ResourceType::Endpoint);
+                            this.push_update(ResourceType::Cluster);
+                        }
+                    }
+                }
             }
         });
 
@@ -504,7 +613,7 @@
         }
     }
 
-    <span class="kw">fn </span>discovery_response(
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>discovery_response(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         id: <span class="kw-2">&amp;</span>str,
         resource_type: ResourceType,
@@ -559,21 +668,19 @@
 
         <span class="kw">let </span>node = message.node.clone().unwrap();
         <span class="kw">let </span>resource_type: ResourceType = message.type_url.parse()<span class="question-mark">?</span>;
-        <span class="macro">tracing::trace!</span>(id = %node.id, %resource_type, <span class="string">&quot;initial request&quot;</span>);
-        metrics::DISCOVERY_REQUESTS
-            .with_label_values(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;*</span>node.id, resource_type.type_url()])
-            .inc();
         <span class="kw">let </span><span class="kw-2">mut </span>rx = <span class="self">self</span>.watchers[resource_type].receiver.clone();
         <span class="kw">let </span><span class="kw-2">mut </span>pending_acks = cached::TimedSizedCache::with_size_and_lifespan(<span class="number">50</span>, <span class="number">1</span>);
         <span class="kw">let </span>this = <span class="self">Self</span>::clone(<span class="self">self</span>);
-        <span class="kw">let </span>response = this.discovery_response(<span class="kw-2">&amp;</span>node.id, resource_type, <span class="kw-2">&amp;</span>message.resource_names)<span class="question-mark">?</span>;
+        <span class="kw">let </span>id = node.id.clone();
+
+        <span class="macro">tracing::trace!</span>(id = %node.id, %resource_type, <span class="string">&quot;initial request&quot;</span>);
+        metrics::discovery_requests(<span class="kw-2">&amp;</span>id, resource_type.type_url()).inc();
+        <span class="kw">let </span>response = this.discovery_response(<span class="kw-2">&amp;</span>id, resource_type, <span class="kw-2">&amp;</span>message.resource_names)<span class="question-mark">?</span>;
         pending_acks.cache_set(response.nonce.clone(), ());
 
-        <span class="kw">let </span>id = node.id.clone();
         <span class="prelude-val">Ok</span>(Box::pin(<span class="macro">async_stream::try_stream! </span>{
             <span class="kw">yield </span>response;
 
-            <span class="kw">let </span>_span = <span class="macro">tracing::trace_span!</span>(<span class="string">&quot;stream loop&quot;</span>);
             <span class="kw">loop </span>{
                 <span class="macro">tokio::select! </span>{
                     <span class="kw">_ </span>= rx.changed() =&gt; {
@@ -588,25 +695,25 @@
                             <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(value)) =&gt; value,
                             <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) =&gt; <span class="kw">break</span>,
                             <span class="prelude-val">Err</span>(error) =&gt; {
-                                <span class="macro">tracing::error!</span>(%error, <span class="string">&quot;unknown resource type&quot;</span>);
+                                <span class="macro">tracing::error!</span>(%error, <span class="string">&quot;error receiving message&quot;</span>);
                                 <span class="kw">continue</span>;
                             }
                         };
 
+                        <span class="macro">tracing::trace!</span>(<span class="string">&quot;new message&quot;</span>);
                         <span class="kw">let </span>id = new_message.node.as_ref().map(|node| <span class="kw-2">&amp;*</span>node.id).unwrap_or(<span class="kw-2">&amp;*</span>id);
                         <span class="kw">let </span>resource_type = <span class="kw">match </span>new_message.type_url.parse::&lt;ResourceType&gt;() {
                             <span class="prelude-val">Ok</span>(value) =&gt; value,
                             <span class="prelude-val">Err</span>(error) =&gt; {
-                                <span class="macro">tracing::error!</span>(%error, <span class="string">&quot;unknown resource type&quot;</span>);
+                                <span class="macro">tracing::error!</span>(%error, url=%new_message.type_url, <span class="string">&quot;unknown resource type&quot;</span>);
                                 <span class="kw">continue</span>;
                             }
                         };
 
-                        <span class="macro">tracing::trace!</span>(<span class="string">&quot;new request&quot;</span>);
-                        metrics::DISCOVERY_REQUESTS.with_label_values(<span class="kw-2">&amp;</span>[id, resource_type.type_url()]).inc();
+                        metrics::discovery_requests(id, resource_type.type_url()).inc();
 
                         <span class="kw">if let </span><span class="prelude-val">Some</span>(error) = <span class="kw-2">&amp;</span>new_message.error_detail {
-                            metrics::NACKS.with_label_values(<span class="kw-2">&amp;</span>[id, resource_type.type_url()]).inc();
+                            metrics::nacks(id, resource_type.type_url()).inc();
                             <span class="macro">tracing::error!</span>(nonce = %new_message.response_nonce, <span class="question-mark">?</span>error, <span class="string">&quot;NACK&quot;</span>);
                             <span class="comment">// Currently just resend previous discovery response.
                         </span>} <span class="kw">else if </span>uuid::Uuid::parse_str(<span class="kw-2">&amp;</span>new_message.response_nonce).is_ok() {
@@ -658,6 +765,69 @@
         <span class="prelude-val">Err</span>(tonic::Status::unimplemented(
             <span class="string">&quot;Quilkin doesn&#39;t currently support Delta xDS&quot;</span>,
         ))
+    }
+}
+
+<span class="attribute">#[tonic::async_trait]
+</span><span class="kw">impl </span>AggregatedControlPlaneDiscoveryService <span class="kw">for </span>ControlPlane {
+    <span class="kw">type </span>StreamAggregatedResourcesStream =
+        std::pin::Pin&lt;Box&lt;<span class="kw">dyn </span>Stream&lt;Item = <span class="prelude-ty">Result</span>&lt;DiscoveryRequest, tonic::Status&gt;&gt; + Send&gt;&gt;;
+
+    <span class="attribute">#[tracing::instrument(skip_all)]
+    </span><span class="kw">async fn </span>stream_aggregated_resources(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        responses: tonic::Request&lt;tonic::Streaming&lt;DiscoveryResponse&gt;&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;tonic::Response&lt;<span class="self">Self</span>::StreamAggregatedResourcesStream&gt;, tonic::Status&gt; {
+        <span class="macro">tracing::info!</span>(<span class="string">&quot;control plane discovery stream attempt&quot;</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>responses = responses.into_inner();
+        <span class="kw">let </span><span class="prelude-val">Some</span>(identifier) = responses.next().<span class="kw">await</span>.ok_or_else(|| tonic::Status::cancelled(<span class="string">&quot;received empty first response&quot;</span>))<span class="question-mark">??</span>.control_plane.map(|cp| cp.identifier) <span class="kw">else </span>{
+            <span class="kw">return </span><span class="prelude-val">Err</span>(tonic::Status::invalid_argument(<span class="string">&quot;DiscoveryResponse.control_plane.identifier is required in the first message&quot;</span>))
+        };
+
+        <span class="macro">tracing::info!</span>(%identifier, <span class="string">&quot;new control plane discovery stream&quot;</span>);
+        <span class="kw">let </span>config = <span class="self">self</span>.config.clone();
+        <span class="kw">let </span>stream = <span class="kw">super</span>::client::AdsStream::connect(
+            Arc::from(<span class="kw-2">&amp;*</span>identifier),
+            <span class="kw">move </span>|(<span class="kw-2">mut </span>requests, _rx), _subscribed_resources| <span class="kw">async move </span>{
+                <span class="macro">tracing::info!</span>(%identifier, <span class="string">&quot;sending initial discovery request&quot;</span>);
+                <span class="kw">crate</span>::xds::client::MdsStream::discovery_request_without_cache(
+                    <span class="kw-2">&amp;</span>identifier,
+                    <span class="kw-2">&amp;mut </span>requests,
+                    <span class="kw">crate</span>::xds::ResourceType::Cluster,
+                    <span class="kw-2">&amp;</span>[],
+                )
+                .map_err(|error| tonic::Status::internal(error.to_string()))<span class="question-mark">?</span>;
+
+                <span class="kw">let </span><span class="kw-2">mut </span>response_handler = <span class="kw">super</span>::client::handle_discovery_responses(
+                    identifier.clone(),
+                    responses,
+                    <span class="kw">move </span>|resource| config.apply(resource),
+                );
+
+                <span class="kw">loop </span>{
+                    <span class="kw">let </span>timeout = tokio::time::sleep(std::time::Duration::from_secs(<span class="number">1</span>));
+                    <span class="macro">tokio::select! </span>{
+                        <span class="kw">_ </span>= timeout =&gt; {
+                            <span class="macro">tracing::info!</span>(<span class="string">&quot;sending discovery request&quot;</span>);
+                            <span class="kw">crate</span>::xds::client::MdsStream::discovery_request_without_cache(<span class="kw-2">&amp;</span>identifier, <span class="kw-2">&amp;mut </span>requests, <span class="kw">crate</span>::xds::ResourceType::Cluster, <span class="kw-2">&amp;</span>[])
+                                .map_err(|error| tonic::Status::internal(error.to_string()))<span class="question-mark">?</span>;
+                        }
+                        <span class="prelude-val">Some</span>(ack) = response_handler.next() =&gt; {
+                            <span class="macro">tracing::info!</span>(<span class="string">&quot;sending ack request&quot;</span>);
+                            requests.send(ack<span class="question-mark">?</span>)<span class="question-mark">?</span>;
+                        }
+                    }
+                }
+            },
+        );
+
+        <span class="prelude-val">Ok</span>(tonic::Response::new(Box::pin(<span class="macro">async_stream::stream! </span>{
+            <span class="kw">for await </span>request <span class="kw">in </span>tokio_stream::wrappers::BroadcastStream::new(stream.requests().subscribe())
+                .map_err(|error| tonic::Status::internal(error.to_string()))
+            {
+                <span class="kw">yield </span>request;
+            }
+        })))
     }
 }
 

@@ -175,6 +175,11 @@
 <span id="175">175</span>
 <span id="176">176</span>
 <span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -199,7 +204,6 @@
 <span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use crate</span>::{
-    cluster::ClusterMap,
     endpoint::{Endpoint, Locality, LocalityEndpoints},
     Config,
 };
@@ -315,13 +319,21 @@
 
                 <span class="kw">let </span>endpoint = Endpoint::try_from(server)<span class="question-mark">?</span>;
                 <span class="macro">tracing::trace!</span>(endpoint=%serde_json::to_value(<span class="kw-2">&amp;</span>endpoint).unwrap(), <span class="string">&quot;Adding endpoint&quot;</span>);
-                <span class="self">self</span>.config.clusters.modify(|clusters| <span class="kw">match </span>locality {
-                    <span class="prelude-val">Some</span>(locality) =&gt; clusters
+                <span class="kw">match </span>locality {
+                    <span class="prelude-val">Some</span>(locality) =&gt; <span class="self">self
+                        </span>.config
+                        .clusters
+                        .value()
                         .default_cluster_mut()
-                        .insert((endpoint.clone(), locality.clone())),
-                    <span class="prelude-val">None </span>=&gt; clusters.default_cluster_mut().insert(endpoint.clone()),
-                });
-                <span class="macro">tracing::trace!</span>(clusters=%serde_json::to_value(<span class="kw-2">&amp;</span><span class="self">self</span>.config.clusters.load()).unwrap(), <span class="string">&quot;current clusters&quot;</span>);
+                        .insert((endpoint, locality.clone())),
+                    <span class="prelude-val">None </span>=&gt; <span class="self">self
+                        </span>.config
+                        .clusters
+                        .value()
+                        .default_cluster_mut()
+                        .insert(endpoint),
+                };
+                <span class="macro">tracing::trace!</span>(clusters=%serde_json::to_value(<span class="kw-2">&amp;</span><span class="self">self</span>.config.clusters).unwrap(), <span class="string">&quot;current clusters&quot;</span>);
             }
 
             Event::Restarted(servers) =&gt; {
@@ -332,9 +344,7 @@
                     .collect::&lt;<span class="prelude-ty">Result</span>&lt;<span class="kw">_</span>, <span class="kw">_</span>&gt;&gt;()<span class="question-mark">?</span>;
                 <span class="kw">let </span>endpoints = LocalityEndpoints::from((servers, locality.clone()));
                 <span class="macro">tracing::trace!</span>(<span class="question-mark">?</span>endpoints, <span class="string">&quot;Restarting with endpoints&quot;</span>);
-                <span class="self">self</span>.config
-                    .clusters
-                    .store(Arc::new(ClusterMap::new_with_default_cluster(endpoints)));
+                <span class="self">self</span>.config.clusters.value().insert_default(endpoints);
             }
 
             Event::Deleted(server) =&gt; {

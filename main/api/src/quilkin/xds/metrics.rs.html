@@ -99,6 +99,25 @@
 <span id="99">99</span>
 <span id="100">100</span>
 <span id="101">101</span>
+<span id="102">102</span>
+<span id="103">103</span>
+<span id="104">104</span>
+<span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
+<span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -118,86 +137,105 @@
 </span><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>prometheus::{IntCounterVec, IntGaugeVec};
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>CONTROL_PLANE_LABEL: <span class="kw-2">&amp;</span>str = <span class="string">&quot;control_plane&quot;</span>;
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>NODE_LABEL: <span class="kw-2">&amp;</span>str = <span class="string">&quot;node&quot;</span>;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>CONTROL_PLANE_LABEL: <span class="kw-2">&amp;</span>str = <span class="string">&quot;control_plane&quot;</span>;
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>TYPE_LABEL: <span class="kw-2">&amp;</span>str = <span class="string">&quot;type&quot;</span>;
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">static </span>ACTIVE_XDS_CLIENTS: Lazy&lt;IntGaugeVec&gt; = Lazy::new(|| {
-    <span class="macro">prometheus::register_int_gauge_vec_with_registry! </span>{
-        <span class="macro">prometheus::opts! </span>{
-            <span class="string">&quot;active_xds_clients&quot;</span>,
-            <span class="string">&quot;Total number of active xDS clients&quot;</span>,
-        },
-        <span class="kw-2">&amp;</span>[NODE_LABEL],
-        <span class="kw">crate</span>::metrics::registry(),
-    }
-    .unwrap()
-});
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>active_control_planes(control_plane: <span class="kw-2">&amp;</span>str) -&gt; prometheus::IntGauge {
+    <span class="kw">static </span>ACTIVE_CONTROL_PLANES: Lazy&lt;IntGaugeVec&gt; = Lazy::new(|| {
+        <span class="macro">prometheus::register_int_gauge_vec_with_registry! </span>{
+            <span class="macro">prometheus::opts! </span>{
+                <span class="string">&quot;active_control_planes&quot;</span>,
+                <span class="string">&quot;Total number of active control plane connections&quot;</span>,
+            },
+            <span class="kw-2">&amp;</span>[CONTROL_PLANE_LABEL],
+            <span class="kw">crate</span>::metrics::registry(),
+        }
+        .unwrap()
+    });
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">static </span>DISCOVERY_REQUESTS: Lazy&lt;IntCounterVec&gt; = Lazy::new(|| {
-    <span class="macro">prometheus::register_int_counter_vec_with_registry! </span>{
-        <span class="macro">prometheus::opts! </span>{
-            <span class="string">&quot;discovery_requests&quot;</span>,
-            <span class="string">&quot;Total number of xDS discovery requests&quot;</span>,
-        },
-        <span class="kw-2">&amp;</span>[NODE_LABEL, TYPE_LABEL],
-        <span class="kw">crate</span>::metrics::registry(),
-    }
-    .unwrap()
-});
+    ACTIVE_CONTROL_PLANES.with_label_values(<span class="kw-2">&amp;</span>[control_plane])
+}
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">static </span>DISCOVERY_RESPONSES: Lazy&lt;IntCounterVec&gt; = Lazy::new(|| {
-    <span class="macro">prometheus::register_int_counter_vec_with_registry! </span>{
-        <span class="macro">prometheus::opts! </span>{
-            <span class="string">&quot;discovery_responses&quot;</span>,
-            <span class="string">&quot;Total number of xDS discovery responses&quot;</span>,
-        },
-        <span class="kw-2">&amp;</span>[CONTROL_PLANE_LABEL, TYPE_LABEL],
-        <span class="kw">crate</span>::metrics::registry(),
-    }
-    .unwrap()
-});
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>discovery_requests(node: <span class="kw-2">&amp;</span>str, type_url: <span class="kw-2">&amp;</span>str) -&gt; prometheus::IntCounter {
+    <span class="kw">static </span>DISCOVERY_REQUESTS: Lazy&lt;IntCounterVec&gt; = Lazy::new(|| {
+        <span class="macro">prometheus::register_int_counter_vec_with_registry! </span>{
+            <span class="macro">prometheus::opts! </span>{
+                <span class="string">&quot;discovery_requests&quot;</span>,
+                <span class="string">&quot;Total number of xDS discovery requests&quot;</span>,
+            },
+            <span class="kw-2">&amp;</span>[NODE_LABEL, TYPE_LABEL],
+            <span class="kw">crate</span>::metrics::registry(),
+        }
+        .unwrap()
+    });
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">static </span>ACKS: Lazy&lt;IntCounterVec&gt; = Lazy::new(|| {
-    <span class="macro">prometheus::register_int_counter_vec_with_registry! </span>{
-        <span class="macro">prometheus::opts! </span>{
-            <span class="string">&quot;xds_acks&quot;</span>,
-            <span class="string">&quot;Total number of xDS ACKs&quot;</span>,
-        },
-        <span class="kw-2">&amp;</span>[NODE_LABEL, TYPE_LABEL],
-        <span class="kw">crate</span>::metrics::registry(),
-    }
-    .unwrap()
-});
+    DISCOVERY_REQUESTS.with_label_values(<span class="kw-2">&amp;</span>[node, type_url])
+}
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">static </span>NACKS: Lazy&lt;IntCounterVec&gt; = Lazy::new(|| {
-    <span class="macro">prometheus::register_int_counter_vec_with_registry! </span>{
-        <span class="macro">prometheus::opts! </span>{
-            <span class="string">&quot;xds_nacks&quot;</span>,
-            <span class="string">&quot;Total number of xDS NACKs&quot;</span>,
-        },
-        <span class="kw-2">&amp;</span>[NODE_LABEL, TYPE_LABEL],
-        <span class="kw">crate</span>::metrics::registry(),
-    }
-    .unwrap()
-});
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>discovery_responses(control_plane: <span class="kw-2">&amp;</span>str, type_url: <span class="kw-2">&amp;</span>str) -&gt; prometheus::IntCounter {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">static </span>DISCOVERY_RESPONSES: Lazy&lt;IntCounterVec&gt; = Lazy::new(|| {
+        <span class="macro">prometheus::register_int_counter_vec_with_registry! </span>{
+            <span class="macro">prometheus::opts! </span>{
+                <span class="string">&quot;discovery_responses&quot;</span>,
+                <span class="string">&quot;Total number of xDS discovery responses&quot;</span>,
+            },
+            <span class="kw-2">&amp;</span>[CONTROL_PLANE_LABEL, TYPE_LABEL],
+            <span class="kw">crate</span>::metrics::registry(),
+        }
+        .unwrap()
+    });
+
+    DISCOVERY_RESPONSES.with_label_values(<span class="kw-2">&amp;</span>[control_plane, type_url])
+}
+
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>acks(control_plane: <span class="kw-2">&amp;</span>str, type_url: <span class="kw-2">&amp;</span>str) -&gt; prometheus::IntCounter {
+    <span class="kw">static </span>ACKS: Lazy&lt;IntCounterVec&gt; = Lazy::new(|| {
+        <span class="macro">prometheus::register_int_counter_vec_with_registry! </span>{
+            <span class="macro">prometheus::opts! </span>{
+                <span class="string">&quot;xds_acks&quot;</span>,
+                <span class="string">&quot;Total number of xDS ACKs&quot;</span>,
+            },
+            <span class="kw-2">&amp;</span>[CONTROL_PLANE_LABEL, TYPE_LABEL],
+            <span class="kw">crate</span>::metrics::registry(),
+        }
+        .unwrap()
+    });
+
+    ACKS.with_label_values(<span class="kw-2">&amp;</span>[control_plane, type_url])
+}
+
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>nacks(control_plane: <span class="kw-2">&amp;</span>str, type_url: <span class="kw-2">&amp;</span>str) -&gt; prometheus::IntCounter {
+    <span class="kw">static </span>NACKS: Lazy&lt;IntCounterVec&gt; = Lazy::new(|| {
+        <span class="macro">prometheus::register_int_counter_vec_with_registry! </span>{
+            <span class="macro">prometheus::opts! </span>{
+                <span class="string">&quot;xds_nacks&quot;</span>,
+                <span class="string">&quot;Total number of xDS NACKs&quot;</span>,
+            },
+            <span class="kw-2">&amp;</span>[CONTROL_PLANE_LABEL, TYPE_LABEL],
+            <span class="kw">crate</span>::metrics::registry(),
+        }
+        .unwrap()
+    });
+
+    NACKS.with_label_values(<span class="kw-2">&amp;</span>[control_plane, type_url])
+}
 
 <span class="kw">pub struct </span>StreamConnectionMetrics {
-    node: String,
+    control_plane: String,
 }
 
 <span class="kw">impl </span>StreamConnectionMetrics {
-    <span class="kw">pub fn </span>new(node: <span class="kw">impl </span>Into&lt;String&gt;) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>node = node.into();
-        ACTIVE_XDS_CLIENTS.with_label_values(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;*</span>node]).inc();
+    <span class="kw">pub fn </span>new(control_plane: String) -&gt; <span class="self">Self </span>{
+        <span class="self">self</span>::active_control_planes(<span class="kw-2">&amp;</span>control_plane).inc();
 
-        <span class="self">Self </span>{ node }
+        <span class="self">Self </span>{ control_plane }
     }
 }
 
 <span class="kw">impl </span>Drop <span class="kw">for </span>StreamConnectionMetrics {
     <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-        ACTIVE_XDS_CLIENTS.with_label_values(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;*</span><span class="self">self</span>.node]).dec();
+        <span class="self">self</span>::active_control_planes(<span class="kw-2">&amp;</span><span class="self">self</span>.control_plane).dec();
     }
 }
 </code></pre></div>

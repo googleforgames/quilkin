@@ -363,14 +363,6 @@
 <span id="363">363</span>
 <span id="364">364</span>
 <span id="365">365</span>
-<span id="366">366</span>
-<span id="367">367</span>
-<span id="368">368</span>
-<span id="369">369</span>
-<span id="370">370</span>
-<span id="371">371</span>
-<span id="372">372</span>
-<span id="373">373</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -388,11 +380,7 @@
  */
 
 </span><span class="doccomment">/// Common utilities for testing
-</span><span class="kw">use </span>std::{
-    net::{Ipv4Addr, SocketAddr, SocketAddrV4},
-    str::from_utf8,
-    sync::Arc,
-};
+</span><span class="kw">use </span>std::{net::SocketAddr, str::from_utf8, sync::Arc};
 
 <span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>tokio::{
@@ -665,28 +653,24 @@
 
 <span class="doccomment">/// Opens a new socket bound to an ephemeral port
 </span><span class="kw">pub async fn </span>create_socket() -&gt; UdpSocket {
-    <span class="kw">let </span>addr = SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, <span class="number">0</span>);
-    <span class="comment">// Use a standard socket in test utils as we only want to bind sockets to unused ports.
-    </span>UdpSocket::bind(addr).<span class="kw">await</span>.unwrap()
+    <span class="kw">crate</span>::utils::net::socket_with_reuse(<span class="number">0</span>).unwrap()
 }
 
 <span class="kw">pub fn </span>config_with_dummy_endpoint() -&gt; Config {
     <span class="kw">let </span>config = Config::default();
 
-    config.clusters.modify(|map| {
-        <span class="kw">let _ </span>= map.get_default_mut().insert(<span class="kw-2">&amp;mut </span>Cluster {
-            name: <span class="string">&quot;default&quot;</span>.into(),
-            localities: <span class="macro">vec!</span>[LocalityEndpoints {
-                locality: <span class="prelude-val">None</span>,
-                endpoints: [Endpoint {
-                    address: (std::net::Ipv4Addr::LOCALHOST, <span class="number">8080</span>).into(),
-                    ..&lt;<span class="kw">_</span>&gt;::default()
-                }]
-                .into(),
+    config.clusters.value().insert(Cluster {
+        name: <span class="string">&quot;default&quot;</span>.into(),
+        localities: <span class="macro">vec!</span>[LocalityEndpoints {
+            locality: <span class="prelude-val">None</span>,
+            endpoints: [Endpoint {
+                address: (std::net::Ipv4Addr::LOCALHOST, <span class="number">8080</span>).into(),
+                ..&lt;<span class="kw">_</span>&gt;::default()
             }]
-            .into_iter()
-            .collect(),
-        });
+            .into(),
+        }]
+        .into_iter()
+        .collect(),
     });
 
     config

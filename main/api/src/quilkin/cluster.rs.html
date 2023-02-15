@@ -338,6 +338,42 @@
 <span id="338">338</span>
 <span id="339">339</span>
 <span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
+<span id="343">343</span>
+<span id="344">344</span>
+<span id="345">345</span>
+<span id="346">346</span>
+<span id="347">347</span>
+<span id="348">348</span>
+<span id="349">349</span>
+<span id="350">350</span>
+<span id="351">351</span>
+<span id="352">352</span>
+<span id="353">353</span>
+<span id="354">354</span>
+<span id="355">355</span>
+<span id="356">356</span>
+<span id="357">357</span>
+<span id="358">358</span>
+<span id="359">359</span>
+<span id="360">360</span>
+<span id="361">361</span>
+<span id="362">362</span>
+<span id="363">363</span>
+<span id="364">364</span>
+<span id="365">365</span>
+<span id="366">366</span>
+<span id="367">367</span>
+<span id="368">368</span>
+<span id="369">369</span>
+<span id="370">370</span>
+<span id="371">371</span>
+<span id="372">372</span>
+<span id="373">373</span>
+<span id="374">374</span>
+<span id="375">375</span>
+<span id="376">376</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -354,10 +390,12 @@
  * limitations under the License.
  */
 
-</span><span class="kw">use </span>once_cell::sync::Lazy;
+</span><span class="kw">use </span>std::{collections::HashMap, sync::Arc};
+
+<span class="kw">use </span>dashmap::DashMap;
+<span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>schemars::JsonSchema;
 <span class="kw">use </span>serde::{Deserialize, Serialize};
-<span class="kw">use </span>std::collections::HashMap;
 
 <span class="kw">use </span><span class="kw">crate</span>::endpoint::{Endpoint, EndpointAddress, Locality, LocalityEndpoints, LocalitySet};
 
@@ -394,7 +432,7 @@
     <span class="kw-2">&amp;</span>ACTIVE_ENDPOINTS
 }
 
-<span class="attribute">#[derive(Clone, Default, Debug, Eq, PartialEq, Deserialize, Serialize, JsonSchema)]
+<span class="attribute">#[derive(Clone, Default, Debug, Deserialize, Eq, JsonSchema, PartialEq, Serialize)]
 </span><span class="kw">pub struct </span>Cluster {
     <span class="attribute">#[serde(skip, default = <span class="string">&quot;default_cluster_name&quot;</span>)]
     </span><span class="kw">pub </span>name: String,
@@ -433,6 +471,10 @@
             .iter()
             .flat_map(|locality| locality.endpoints.iter())
     }
+
+    <span class="kw">pub fn </span>merge(<span class="kw-2">&amp;mut </span><span class="self">self</span>, cluster: <span class="kw-2">&amp;</span><span class="self">Self</span>) {
+        <span class="self">self</span>.localities.merge(<span class="kw-2">&amp;</span>cluster.localities);
+    }
 }
 
 <span class="kw">fn </span>default_cluster_name() -&gt; String {
@@ -440,8 +482,11 @@
 }
 
 <span class="doccomment">/// Represents a full snapshot of all clusters.
-</span><span class="attribute">#[derive(Clone, Default, Debug, Serialize, PartialEq, Eq, JsonSchema)]
-</span><span class="kw">pub struct </span>ClusterMap(HashMap&lt;String, Cluster&gt;);
+</span><span class="attribute">#[derive(Clone, Default, Debug, Serialize)]
+</span><span class="kw">pub struct </span>ClusterMap(Arc&lt;DashMap&lt;String, Cluster&gt;&gt;);
+
+<span class="kw">type </span>DashMapRef&lt;<span class="lifetime">&#39;inner</span>&gt; = dashmap::mapref::one::Ref&lt;<span class="lifetime">&#39;inner</span>, String, Cluster&gt;;
+<span class="kw">type </span>DashMapRefMut&lt;<span class="lifetime">&#39;inner</span>&gt; = dashmap::mapref::one::RefMut&lt;<span class="lifetime">&#39;inner</span>, String, Cluster&gt;;
 
 <span class="kw">impl </span>ClusterMap {
     <span class="doccomment">/// Creates a new `Cluster` called `name` containing `endpoints`.
@@ -449,59 +494,74 @@
         <span class="self">Self</span>::from_iter([Cluster::new_default(<span class="macro">vec!</span>[localities.into()])])
     }
 
-    <span class="kw">pub fn </span>insert(<span class="kw-2">&amp;mut </span><span class="self">self</span>, cluster: Cluster) -&gt; <span class="prelude-ty">Option</span>&lt;Cluster&gt; {
+    <span class="kw">pub fn </span>insert(<span class="kw-2">&amp;</span><span class="self">self</span>, cluster: Cluster) -&gt; <span class="prelude-ty">Option</span>&lt;Cluster&gt; {
         <span class="self">self</span>.<span class="number">0</span>.insert(cluster.name.clone(), cluster)
     }
 
-    <span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Cluster&gt; {
+    <span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;DashMapRef&gt; {
         <span class="self">self</span>.<span class="number">0</span>.get(key)
     }
 
-    <span class="kw">pub fn </span>get_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>Cluster&gt; {
+    <span class="kw">pub fn </span>get_mut(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;DashMapRefMut&gt; {
         <span class="self">self</span>.<span class="number">0</span>.get_mut(key)
     }
 
-    <span class="kw">pub fn </span>get_default(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Cluster&gt; {
+    <span class="kw">pub fn </span>get_default(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;DashMapRef&gt; {
         <span class="self">self</span>.get(DEFAULT_CLUSTER_NAME)
     }
 
-    <span class="kw">pub fn </span>get_default_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>Cluster&gt; {
+    <span class="kw">pub fn </span>get_default_mut(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;DashMapRefMut&gt; {
         <span class="self">self</span>.get_mut(DEFAULT_CLUSTER_NAME)
     }
 
-    <span class="kw">pub fn </span>insert_default(<span class="kw-2">&amp;mut </span><span class="self">self</span>, cluster: <span class="kw">impl </span>Into&lt;LocalityEndpoints&gt;) {
+    <span class="kw">pub fn </span>insert_default(<span class="kw-2">&amp;</span><span class="self">self</span>, cluster: <span class="kw">impl </span>Into&lt;LocalityEndpoints&gt;) {
         <span class="self">self</span>.<span class="number">0</span>.insert(
             DEFAULT_CLUSTER_NAME.into(),
             Cluster::new_default(<span class="macro">vec!</span>[cluster.into()]),
         );
     }
 
-    <span class="kw">pub fn </span>default_cluster_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>Cluster {
-        <span class="kw">let </span>entry = <span class="self">self</span>.<span class="number">0</span>.entry(DEFAULT_CLUSTER_NAME.into()).or_default();
+    <span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; dashmap::iter::Iter&lt;String, Cluster&gt; {
+        <span class="self">self</span>.<span class="number">0</span>.iter()
+    }
+
+    <span class="kw">pub fn </span>entry(<span class="kw-2">&amp;</span><span class="self">self</span>, key: String) -&gt; dashmap::mapref::entry::Entry&lt;String, Cluster&gt; {
+        <span class="self">self</span>.<span class="number">0</span>.entry(key)
+    }
+
+    <span class="kw">pub fn </span>default_entry(<span class="kw-2">&amp;</span><span class="self">self</span>, key: String) -&gt; DashMapRefMut {
+        <span class="kw">let </span><span class="kw-2">mut </span>entry = <span class="self">self</span>.entry(key.clone()).or_default();
+        entry.name.is_empty().then(|| entry.name = key);
         entry
-            .name
-            .is_empty()
-            .then(|| entry.name = DEFAULT_CLUSTER_NAME.into());
-        entry
+    }
+
+    <span class="kw">pub fn </span>default_cluster_mut(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; DashMapRefMut {
+        <span class="self">self</span>.default_entry(DEFAULT_CLUSTER_NAME.into())
     }
 
     <span class="doccomment">/// Updates the locality of any endpoints which have no locality in any
     /// clusters to `locality`.
-    </span><span class="kw">pub fn </span>update_unlocated_endpoints(<span class="kw-2">&amp;mut </span><span class="self">self</span>, locality: <span class="kw-2">&amp;</span>Locality) {
-        <span class="kw">for </span>cluster <span class="kw">in </span><span class="self">self</span>.values_mut() {
-            cluster.update_locality(locality);
+    </span><span class="kw">pub fn </span>update_unlocated_endpoints(<span class="kw-2">&amp;</span><span class="self">self</span>, locality: <span class="kw-2">&amp;</span>Locality) {
+        <span class="kw">for </span><span class="kw-2">mut </span>entry <span class="kw">in </span><span class="self">self</span>.<span class="number">0</span>.iter_mut() {
+            entry.update_locality(locality);
         }
     }
 
-    <span class="kw">pub fn </span>localities(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw">impl </span>Iterator&lt;Item = <span class="kw-2">&amp;</span>LocalityEndpoints&gt; + <span class="lifetime">&#39;_ </span>{
+    <span class="kw">pub fn </span>localities(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw">impl </span>Iterator&lt;Item = LocalityEndpoints&gt; + <span class="lifetime">&#39;_ </span>{
         <span class="self">self</span>.<span class="number">0
-            </span>.values()
-            .flat_map(|cluster| cluster.localities.iter())
+            </span>.iter()
+            .flat_map(|entry| entry.value().localities.clone().into_iter())
     }
 
     <span class="kw">pub fn </span>endpoints(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw">impl </span>Iterator&lt;Item = Endpoint&gt; + <span class="lifetime">&#39;_ </span>{
-        <span class="self">self</span>.localities()
-            .flat_map(|locality| locality.endpoints.clone())
+        <span class="self">self</span>.localities().flat_map(|locality| locality.endpoints)
+    }
+
+    <span class="kw">pub fn </span>merge(<span class="kw-2">&amp;</span><span class="self">self</span>, map: <span class="self">Self</span>) {
+        <span class="kw">for </span>cluster <span class="kw">in </span>map.iter() {
+            <span class="kw">let </span>cluster = cluster.value();
+            <span class="self">self</span>.default_entry(cluster.name.clone()).merge(cluster);
+        }
     }
 
     <span class="kw">pub fn </span>contains_only_unique_endpoints(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
@@ -512,24 +572,50 @@
     }
 }
 
+<span class="kw">impl </span>PartialEq <span class="kw">for </span>ClusterMap {
+    <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, rhs: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; bool {
+        <span class="kw">for </span>a <span class="kw">in </span><span class="self">self</span>.iter() {
+            <span class="kw">match </span>rhs.get(a.key()).filter(|b| <span class="kw-2">*</span>a.value() == <span class="kw-2">**</span>b) {
+                <span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; {}
+                <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="bool-val">false</span>,
+            }
+        }
+
+        <span class="bool-val">true
+    </span>}
+}
+
+<span class="kw">impl </span>schemars::JsonSchema <span class="kw">for </span>ClusterMap {
+    <span class="kw">fn </span>schema_name() -&gt; String {
+        &lt;HashMap&lt;String, Cluster&gt;&gt;::schema_name()
+    }
+    <span class="kw">fn </span>json_schema(gen: <span class="kw-2">&amp;mut </span>schemars::gen::SchemaGenerator) -&gt; schemars::schema::Schema {
+        &lt;HashMap&lt;String, Cluster&gt;&gt;::json_schema(gen)
+    }
+
+    <span class="kw">fn </span>is_referenceable() -&gt; bool {
+        &lt;HashMap&lt;String, Cluster&gt;&gt;::is_referenceable()
+    }
+}
+
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;de</span>&gt; Deserialize&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>ClusterMap {
     <span class="kw">fn </span>deserialize&lt;D&gt;(deserializer: D) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, D::Error&gt;
     <span class="kw">where
         </span>D: serde::Deserializer&lt;<span class="lifetime">&#39;de</span>&gt;,
     {
-        <span class="kw">let </span><span class="kw-2">mut </span>map = HashMap::&lt;String, Cluster&gt;::deserialize(deserializer)<span class="question-mark">?</span>;
+        <span class="kw">let </span>map = DashMap::&lt;String, Cluster&gt;::deserialize(deserializer)<span class="question-mark">?</span>;
 
-        <span class="kw">for </span>(key, value) <span class="kw">in </span>map.iter_mut() {
-            value.name = key.clone();
+        <span class="kw">for </span><span class="kw-2">mut </span>entry <span class="kw">in </span>map.iter_mut() {
+            entry.name = entry.key().clone();
         }
 
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span>(map))
+        <span class="prelude-val">Ok</span>(<span class="self">Self</span>(Arc::new(map)))
     }
 }
 
-<span class="kw">impl </span>From&lt;HashMap&lt;String, Cluster&gt;&gt; <span class="kw">for </span>ClusterMap {
-    <span class="kw">fn </span>from(value: HashMap&lt;String, Cluster&gt;) -&gt; <span class="self">Self </span>{
-        <span class="self">Self</span>(value)
+<span class="kw">impl </span>From&lt;DashMap&lt;String, Cluster&gt;&gt; <span class="kw">for </span>ClusterMap {
+    <span class="kw">fn </span>from(value: DashMap&lt;String, Cluster&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>(Arc::new(value))
     }
 }
 
@@ -550,31 +636,17 @@
     </span><span class="kw">where
         </span>T: IntoIterator&lt;Item = Cluster&gt;,
     {
-        <span class="self">Self</span>(
+        <span class="self">Self</span>(Arc::new(
             iter.into_iter()
                 .map(|cluster| (cluster.name.clone(), cluster))
                 .collect(),
-        )
+        ))
     }
-}
-
-<span class="kw">impl </span>std::ops::Deref <span class="kw">for </span>ClusterMap {
-    <span class="kw">type </span>Target = HashMap&lt;String, Cluster&gt;;
-
-    <span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Target {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0
-    </span>}
-}
-
-<span class="kw">impl </span>std::ops::DerefMut <span class="kw">for </span>ClusterMap {
-    <span class="kw">fn </span>deref_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span><span class="self">Self</span>::Target {
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>.<span class="number">0
-    </span>}
 }
 
 <span class="kw">impl</span>&lt;<span class="kw">const </span>N: usize&gt; From&lt;[(String, Cluster); N]&gt; <span class="kw">for </span>ClusterMap {
     <span class="kw">fn </span>from(value: [(String, Cluster); N]) -&gt; <span class="self">Self </span>{
-        <span class="self">Self</span>(value.into())
+        <span class="self">Self</span>::from_iter(value)
     }
 }
 
@@ -583,7 +655,7 @@
     </span><span class="kw">where
         </span>T: IntoIterator&lt;Item = (String, Cluster)&gt;,
     {
-        <span class="self">Self</span>(iter.into_iter().collect())
+        <span class="self">Self</span>(Arc::new(iter.into_iter().collect()))
     }
 }
 
