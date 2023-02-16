@@ -20,7 +20,7 @@ define_port!(7800);
 
 /// Runs Quilkin as a xDS management server, using `provider` as
 /// a configuration source.
-#[derive(clap::Args, Clone)]
+#[derive(clap::Args, Clone, Debug)]
 pub struct Manage {
     /// One or more `quilkin relay` endpoints to push configuration changes to.
     #[clap(short, long, env = "QUILKIN_MANAGEMENT_SERVER")]

@@ -27,7 +27,7 @@ use crate::filters::FilterFactory;
 define_port!(7777);
 
 /// Run Quilkin as a UDP reverse proxy.
-#[derive(clap::Args, Clone)]
+#[derive(clap::Args, Clone, Debug)]
 pub struct Proxy {
     /// One or more `quilkin manage` endpoints to listen to for config changes
     #[clap(short, long, env = "QUILKIN_MANAGEMENT_SERVER", conflicts_with("to"))]
