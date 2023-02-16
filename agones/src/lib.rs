@@ -41,7 +41,7 @@ use kube::{
 };
 use tokio::sync::OnceCell;
 
-use quilkin::config::watch::agones::crd::{
+use quilkin::config::providers::k8s::agones::{
     Fleet, FleetSpec, GameServer, GameServerPort, GameServerSpec, GameServerState,
     GameServerTemplateSpec,
 };
