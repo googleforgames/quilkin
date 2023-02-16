@@ -549,7 +549,7 @@
 
 <span class="kw">mod </span>config_type;
 <span class="kw">mod </span>error;
-<span class="kw">pub mod </span>provider;
+<span class="kw">pub mod </span>providers;
 <span class="kw">mod </span>slot;
 <span class="kw">pub mod </span>watch;
 
@@ -564,7 +564,7 @@
 };
 
 <span class="kw">pub use </span><span class="self">self</span>::{
-    config_type::ConfigType, error::ValidationError, provider::Providers, slot::Slot, watch::Watch,
+    config_type::ConfigType, error::ValidationError, providers::Providers, slot::Slot, watch::Watch,
 };
 
 <span class="macro">base64_serde_type!</span>(<span class="kw">pub </span>Base64Standard, base64::STANDARD);

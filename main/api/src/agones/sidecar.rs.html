@@ -158,7 +158,7 @@
     <span class="kw">use crate</span>::{game_server, is_gameserver_ready, quilkin_config_map, quilkin_container, Client};
     <span class="kw">use </span>k8s_openapi::api::core::v1::{ConfigMap, ConfigMapVolumeSource, Volume};
     <span class="kw">use </span>kube::{api::PostParams, runtime::wait::await_condition, Api, ResourceExt};
-    <span class="kw">use </span>quilkin::{config::watch::agones::crd::GameServer, test_utils::TestHelper};
+    <span class="kw">use </span>quilkin::{config::providers::k8s::agones::GameServer, test_utils::TestHelper};
     <span class="kw">use </span>std::time::Duration;
     <span class="kw">use </span>tokio::time::timeout;
 
