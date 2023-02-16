@@ -26,7 +26,7 @@ pub const PORT: u16 = 7900;
 /// (mDS) for accepting cluster and configuration information from xDS
 /// management services, and exposing it as a single merged xDS service for
 /// proxy services.
-#[derive(clap::Args, Clone)]
+#[derive(clap::Args, Clone, Debug)]
 pub struct Relay {
     /// Port for mDS service.
     #[clap(short, long, env = "QUILKIN_MDS_PORT", default_value_t = PORT)]
