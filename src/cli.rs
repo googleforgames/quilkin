@@ -47,7 +47,7 @@ const ETC_CONFIG_PATH: &str = "/etc/quilkin/quilkin.yaml";
 const PORT_ENV_VAR: &str = "QUILKIN_PORT";
 
 /// The Command-Line Interface for Quilkin.
-#[derive(clap::Parser)]
+#[derive(Debug, clap::Parser)]
 #[command(version)]
 #[non_exhaustive]
 pub struct Cli {
@@ -68,7 +68,7 @@ pub struct Cli {
 }
 
 /// The various Quilkin commands.
-#[derive(Clone, clap::Subcommand)]
+#[derive(Clone, Debug, clap::Subcommand)]
 pub enum Commands {
     Proxy(Proxy),
     GenerateConfigSchema(GenerateConfigSchema),
@@ -107,6 +107,8 @@ impl Cli {
             commit = crate::metadata::build::GIT_COMMIT_HASH,
             "Starting Quilkin"
         );
+
+        tracing::debug!(cli = ?self, "config parameters");
 
         let config = Arc::new(Self::read_config(self.config)?);
         let _admin_task = self
