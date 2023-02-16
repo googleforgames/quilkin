@@ -106,7 +106,7 @@
 
 <span class="doccomment">/// Runs Quilkin as a xDS management server, using `provider` as
 /// a configuration source.
-</span><span class="attribute">#[derive(clap::Args, Clone)]
+</span><span class="attribute">#[derive(clap::Args, Clone, Debug)]
 </span><span class="kw">pub struct </span>Manage {
     <span class="doccomment">/// One or more `quilkin relay` endpoints to push configuration changes to.
     </span><span class="attribute">#[clap(short, long, env = <span class="string">&quot;QUILKIN_MANAGEMENT_SERVER&quot;</span>)]

@@ -397,7 +397,7 @@
 <span class="macro">define_port!</span>(<span class="number">7777</span>);
 
 <span class="doccomment">/// Run Quilkin as a UDP reverse proxy.
-</span><span class="attribute">#[derive(clap::Args, Clone)]
+</span><span class="attribute">#[derive(clap::Args, Clone, Debug)]
 </span><span class="kw">pub struct </span>Proxy {
     <span class="doccomment">/// One or more `quilkin manage` endpoints to listen to for config changes
     </span><span class="attribute">#[clap(short, long, env = <span class="string">&quot;QUILKIN_MANAGEMENT_SERVER&quot;</span>, conflicts_with(<span class="string">&quot;to&quot;</span>))]

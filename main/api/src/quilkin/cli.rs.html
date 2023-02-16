@@ -203,6 +203,8 @@
 <span id="203">203</span>
 <span id="204">204</span>
 <span id="205">205</span>
+<span id="206">206</span>
+<span id="207">207</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -252,7 +254,7 @@
 <span class="kw">const </span>PORT_ENV_VAR: <span class="kw-2">&amp;</span>str = <span class="string">&quot;QUILKIN_PORT&quot;</span>;
 
 <span class="doccomment">/// The Command-Line Interface for Quilkin.
-</span><span class="attribute">#[derive(clap::Parser)]
+</span><span class="attribute">#[derive(Debug, clap::Parser)]
 #[command(version)]
 #[non_exhaustive]
 </span><span class="kw">pub struct </span>Cli {
@@ -273,7 +275,7 @@
 }
 
 <span class="doccomment">/// The various Quilkin commands.
-</span><span class="attribute">#[derive(Clone, clap::Subcommand)]
+</span><span class="attribute">#[derive(Clone, Debug, clap::Subcommand)]
 </span><span class="kw">pub enum </span>Commands {
     Proxy(Proxy),
     GenerateConfigSchema(GenerateConfigSchema),
@@ -312,6 +314,8 @@
             commit = <span class="kw">crate</span>::metadata::build::GIT_COMMIT_HASH,
             <span class="string">&quot;Starting Quilkin&quot;
         </span>);
+
+        <span class="macro">tracing::debug!</span>(cli = <span class="question-mark">?</span><span class="self">self</span>, <span class="string">&quot;config parameters&quot;</span>);
 
         <span class="kw">let </span>config = Arc::new(<span class="self">Self</span>::read_config(<span class="self">self</span>.config)<span class="question-mark">?</span>);
         <span class="kw">let </span>_admin_task = <span class="self">self

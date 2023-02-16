@@ -78,7 +78,7 @@
 /// (mDS) for accepting cluster and configuration information from xDS
 /// management services, and exposing it as a single merged xDS service for
 /// proxy services.
-</span><span class="attribute">#[derive(clap::Args, Clone)]
+</span><span class="attribute">#[derive(clap::Args, Clone, Debug)]
 </span><span class="kw">pub struct </span>Relay {
     <span class="doccomment">/// Port for mDS service.
     </span><span class="attribute">#[clap(short, long, env = <span class="string">&quot;QUILKIN_MDS_PORT&quot;</span>, default_value_t = PORT)]

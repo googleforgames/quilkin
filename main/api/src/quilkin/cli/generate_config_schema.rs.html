@@ -80,7 +80,7 @@
  */
 
 </span><span class="doccomment">/// Generates JSON schema files for known filters.
-</span><span class="attribute">#[derive(clap::Args, Clone)]
+</span><span class="attribute">#[derive(clap::Args, Clone, Debug)]
 </span><span class="kw">pub struct </span>GenerateConfigSchema {
     <span class="doccomment">/// The directory to write configuration files.
     </span><span class="attribute">#[clap(short, long, default_value = <span class="string">&quot;.&quot;</span>)]
