@@ -71,6 +71,17 @@
 <span id="71">71</span>
 <span id="72">72</span>
 <span id="73">73</span>
+<span id="74">74</span>
+<span id="75">75</span>
+<span id="76">76</span>
+<span id="77">77</span>
+<span id="78">78</span>
+<span id="79">79</span>
+<span id="80">80</span>
+<span id="81">81</span>
+<span id="82">82</span>
+<span id="83">83</span>
+<span id="84">84</span>
 </pre><pre class="rust"><code><span class="kw">pub mod </span>k8s;
 
 <span class="kw">const </span>RETRIES: u32 = <span class="number">25</span>;
@@ -83,16 +94,27 @@
     /// and for a `ConfigMap` that specifies the filter configuration.
     </span>Agones {
         <span class="doccomment">/// The namespace under which the configmap is stored.
-        </span><span class="attribute">#[clap(short, long, default_value = <span class="string">&quot;default&quot;</span>)]
+        </span><span class="attribute">#[clap(
+            short,
+            long,
+            env = <span class="string">&quot;QUILKIN_AGONES_CONFIG_NAMESPACE&quot;</span>,
+            default_value = <span class="string">&quot;default&quot;
+        </span>)]
         </span>config_namespace: String,
         <span class="doccomment">/// The namespace under which the game servers run.
-        </span><span class="attribute">#[clap(short, long, default_value = <span class="string">&quot;default&quot;</span>)]
+        </span><span class="attribute">#[clap(
+            short,
+            long,
+            env = <span class="string">&quot;QUILKIN_AGONES_GAMESERVERS_NAMESPACE&quot;</span>,
+            default_value = <span class="string">&quot;default&quot;
+        </span>)]
         </span>gameservers_namespace: String,
     },
 
     <span class="doccomment">/// Watches for changes to the file located at `path`.
     </span>File {
         <span class="doccomment">/// The path to the source config.
+        </span><span class="attribute">#[clap(env = <span class="string">&quot;QUILKIN_FS_PATH&quot;</span>)]
         </span>path: std::path::PathBuf,
     },
 }
@@ -104,7 +126,7 @@
         config: std::sync::Arc&lt;<span class="kw">crate</span>::Config&gt;,
         locality: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::endpoint::Locality&gt;,
     ) -&gt; tokio::task::JoinHandle&lt;<span class="kw">crate</span>::Result&lt;()&gt;&gt; {
-        <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self </span>{
+        <span class="kw">match </span><span class="macro">dbg!</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) {
             <span class="self">Self</span>::Agones {
                 gameservers_namespace,
                 config_namespace,
