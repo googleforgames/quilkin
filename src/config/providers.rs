@@ -10,16 +10,27 @@ pub enum Providers {
     /// and for a `ConfigMap` that specifies the filter configuration.
     Agones {
         /// The namespace under which the configmap is stored.
-        #[clap(short, long, default_value = "default")]
+        #[clap(
+            short,
+            long,
+            env = "QUILKIN_AGONES_CONFIG_NAMESPACE",
+            default_value = "default"
+        )]
         config_namespace: String,
         /// The namespace under which the game servers run.
-        #[clap(short, long, default_value = "default")]
+        #[clap(
+            short,
+            long,
+            env = "QUILKIN_AGONES_GAMESERVERS_NAMESPACE",
+            default_value = "default"
+        )]
         gameservers_namespace: String,
     },
 
     /// Watches for changes to the file located at `path`.
     File {
         /// The path to the source config.
+        #[clap(env = "QUILKIN_FS_PATH")]
         path: std::path::PathBuf,
     },
 }
@@ -31,7 +42,7 @@ impl Providers {
         config: std::sync::Arc<crate::Config>,
         locality: Option<crate::endpoint::Locality>,
     ) -> tokio::task::JoinHandle<crate::Result<()>> {
-        match &self {
+        match dbg!(&self) {
             Self::Agones {
                 gameservers_namespace,
                 config_namespace,
