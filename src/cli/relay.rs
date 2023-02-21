@@ -30,12 +30,22 @@ pub const PORT: u16 = 7900;
 pub struct Relay {
     /// Port for mDS service.
     #[clap(short, long, env = "QUILKIN_MDS_PORT", default_value_t = PORT)]
-    mds_port: u16,
+    pub mds_port: u16,
     /// Port for xDS management_server service
     #[clap(short, long, env = super::PORT_ENV_VAR, default_value_t = super::manage::PORT)]
-    xds_port: u16,
+    pub xds_port: u16,
     #[clap(subcommand)]
-    providers: Option<Providers>,
+    pub providers: Option<Providers>,
+}
+
+impl Default for Relay {
+    fn default() -> Self {
+        Self {
+            mds_port: PORT,
+            xds_port: super::manage::PORT,
+            providers: None,
+        }
+    }
 }
 
 impl Relay {
@@ -82,6 +92,14 @@ impl Relay {
                     tracing::info!("configmap stream ending");
                     Ok(())
                 }
+            })))
+        } else if let Some(Providers::File { path }) = &self.providers {
+            let config = config.clone();
+            let path = path.clone();
+            Some(tokio::spawn(Providers::task(move || {
+                let config = config.clone();
+                let path = path.clone();
+                async move { crate::config::watch::fs(config, path, None).await }
             })))
         } else {
             None

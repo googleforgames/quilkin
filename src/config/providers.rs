@@ -42,7 +42,7 @@ impl Providers {
         config: std::sync::Arc<crate::Config>,
         locality: Option<crate::endpoint::Locality>,
     ) -> tokio::task::JoinHandle<crate::Result<()>> {
-        match dbg!(&self) {
+        match &self {
             Self::Agones {
                 gameservers_namespace,
                 config_namespace,

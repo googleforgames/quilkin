@@ -83,6 +83,7 @@ impl Config {
             ($($field:ident),+) => {
                 $(
                     if let Some(value) = map.get(stringify!($field)) {
+                        tracing::trace!(%value, "replacing {}", stringify!($field));
                         self.$field.try_replace(serde_json::from_value(value.clone())?);
                     }
                 )+
@@ -95,6 +96,7 @@ impl Config {
             let clusters = self.clusters.value();
 
             if let Some(value) = map.get("clusters") {
+                tracing::trace!(clusters=%value, "merging new clusters");
                 clusters.merge(serde_json::from_value(value.clone())?);
             }
 
@@ -167,6 +169,8 @@ impl Config {
 
     #[tracing::instrument(skip_all, fields(response = response.type_url()))]
     pub fn apply(&self, response: &Resource) -> crate::Result<()> {
+        tracing::trace!(resource=?response, "applying resource");
+
         let apply_cluster = |cluster: Cluster| {
             tracing::trace!(endpoints = %serde_json::to_value(&cluster).unwrap(), "applying new endpoints");
             self.clusters

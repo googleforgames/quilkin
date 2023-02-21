@@ -28,7 +28,7 @@ pub use self::{
     locality::{Locality, LocalityEndpoints, LocalitySet},
 };
 
-type EndpointMetadata = crate::metadata::MetadataView<Metadata>;
+pub type EndpointMetadata = crate::metadata::MetadataView<Metadata>;
 
 /// A destination endpoint with any associated metadata.
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone, Eq, schemars::JsonSchema)]

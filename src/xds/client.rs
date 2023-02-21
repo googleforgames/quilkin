@@ -202,7 +202,7 @@ impl<C: ServiceClient> Client<C> {
         .with_config(retry_config);
 
         let client = connect_to_server
-            .instrument(tracing::trace_span!("mds_client_connect"))
+            .instrument(tracing::trace_span!("client_connect"))
             .await?;
         tracing::info!("Connected to relay server");
         Ok(client)
