@@ -132,6 +132,10 @@ impl std::fmt::Debug for FilterChain {
 
 impl PartialEq for FilterChain {
     fn eq(&self, rhs: &Self) -> bool {
+        if self.filters.len() != rhs.filters.len() {
+            return false;
+        }
+
         self.filters.iter().zip(&rhs.filters).all(
             |((lhs_name, lhs_instance), (rhs_name, rhs_instance))| {
                 lhs_name == rhs_name && lhs_instance.config == rhs_instance.config

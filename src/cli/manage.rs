@@ -27,19 +27,19 @@ pub struct Manage {
     pub relay: Vec<tonic::transport::Endpoint>,
     /// The TCP port to listen to, to serve discovery responses.
     #[clap(short, long, env = super::PORT_ENV_VAR, default_value_t = PORT)]
-    port: u16,
+    pub port: u16,
     /// The `region` to set in the cluster map for any provider
     /// endpoints discovered.
     #[clap(long, env = "QUILKIN_REGION")]
-    region: Option<String>,
+    pub region: Option<String>,
     /// The `zone` in the `region` to set in the cluster map for any provider
     /// endpoints discovered.
     #[clap(long, env = "QUILKIN_ZONE")]
-    zone: Option<String>,
+    pub zone: Option<String>,
     /// The `sub_zone` in the `zone` in the `region` to set in the cluster map
     /// for any provider endpoints discovered.
     #[clap(long, env = "QUILKIN_SUB_ZONE")]
-    sub_zone: Option<String>,
+    pub sub_zone: Option<String>,
     /// The configuration source for a management server.
     #[clap(subcommand)]
     pub provider: crate::config::Providers,

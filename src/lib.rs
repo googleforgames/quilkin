@@ -17,15 +17,16 @@
 #![deny(unused_must_use)]
 
 mod admin;
-mod cluster;
 mod maxmind_db;
+mod proxy;
+
 pub(crate) mod metrics;
 pub(crate) mod prost;
-mod proxy;
 pub(crate) mod ttl_map;
 pub(crate) mod utils;
 
 pub mod cli;
+pub mod cluster;
 pub mod config;
 pub mod endpoint;
 pub mod filters;

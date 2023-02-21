@@ -205,3 +205,153 @@ impl Cli {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::net::Ipv4Addr;
+
+    use tokio::{
+        net::UdpSocket,
+        time::{timeout, Duration},
+    };
+
+    use crate::{
+        cluster::ClusterMap,
+        config::{Filter, Providers},
+        endpoint::{Endpoint, LocalityEndpoints},
+        filters::{Capture, StaticFilter, TokenRouter},
+    };
+
+    #[tokio::test]
+    async fn relay_routing() {
+        let server_port = crate::test_utils::available_addr().await.port();
+        let server_socket = UdpSocket::bind((Ipv4Addr::UNSPECIFIED, server_port))
+            .await
+            .map(Arc::new)
+            .unwrap();
+        let filters_file = tempfile::NamedTempFile::new().unwrap();
+
+        std::fs::write(filters_file.path(), {
+            let config = Config::default();
+            config.filters.store(
+                vec![
+                    Filter {
+                        name: Capture::factory().name().into(),
+                        config: Some(serde_json::json!({
+                            "suffix": {
+                                "size": 3,
+                                "remove": true,
+                            }
+                        })),
+                    },
+                    Filter {
+                        name: TokenRouter::factory().name().into(),
+                        config: None,
+                    },
+                ]
+                .try_into()
+                .map(Arc::new)
+                .unwrap(),
+            );
+            serde_yaml::to_string(&config).unwrap()
+        })
+        .unwrap();
+
+        let endpoints_file = tempfile::NamedTempFile::new().unwrap();
+        std::fs::write(endpoints_file.path(), {
+            let mut config = Config::default();
+            config.clusters = crate::config::Watch::new(ClusterMap::new_with_default_cluster(
+                LocalityEndpoints::from(vec![Endpoint::with_metadata(
+                    (std::net::Ipv4Addr::LOCALHOST, server_port).into(),
+                    crate::endpoint::Metadata {
+                        tokens: vec!["abc".into()].into_iter().collect(),
+                    },
+                )]),
+            ));
+            serde_yaml::to_string(&config).unwrap()
+        })
+        .unwrap();
+
+        let relay_admin_port = crate::test_utils::available_addr().await.port();
+        let relay = Cli {
+            admin_address: Some((Ipv4Addr::LOCALHOST, relay_admin_port).into()),
+            config: <_>::default(),
+            no_admin: false,
+            quiet: true,
+            command: Commands::Relay(Relay {
+                providers: Some(Providers::File {
+                    path: filters_file.path().to_path_buf(),
+                }),
+                ..<_>::default()
+            }),
+        };
+
+        let control_plane_admin_port = crate::test_utils::available_addr().await.port();
+        let control_plane = Cli {
+            no_admin: false,
+            quiet: true,
+            admin_address: Some((Ipv4Addr::LOCALHOST, control_plane_admin_port).into()),
+            config: <_>::default(),
+            command: Commands::Manage(Manage {
+                relay: vec!["http://localhost:7900".parse().unwrap()],
+                port: 7801,
+                region: None,
+                sub_zone: None,
+                zone: None,
+                provider: Providers::File {
+                    path: endpoints_file.path().to_path_buf(),
+                },
+            }),
+        };
+
+        let proxy_admin_port = crate::test_utils::available_addr().await.port();
+        let proxy = Cli {
+            no_admin: false,
+            quiet: true,
+            admin_address: Some((Ipv4Addr::LOCALHOST, proxy_admin_port).into()),
+            config: <_>::default(),
+            command: Commands::Proxy(Proxy {
+                management_server: vec!["http://localhost:7800".parse().unwrap()],
+                ..<_>::default()
+            }),
+        };
+
+        tokio::spawn(relay.drive());
+        tokio::spawn(control_plane.drive());
+        tokio::time::sleep(Duration::from_millis(500)).await;
+        tokio::spawn(proxy.drive());
+        tokio::time::sleep(Duration::from_millis(500)).await;
+
+        let local_addr = crate::test_utils::available_addr().await;
+        let socket = UdpSocket::bind((Ipv4Addr::UNSPECIFIED, local_addr.port()))
+            .await
+            .map(Arc::new)
+            .unwrap();
+        let msg = b"helloabc";
+        socket
+            .send_to(msg, &(std::net::Ipv4Addr::LOCALHOST, 7777))
+            .await
+            .unwrap();
+
+        let recv = |socket: Arc<UdpSocket>| async move {
+            let mut buf = [0; u16::MAX as usize];
+            let length = socket.recv(&mut buf).await.unwrap();
+            buf[0..length].to_vec()
+        };
+
+        assert_eq!(
+            b"hello",
+            &&*timeout(Duration::from_secs(5), (recv)(server_socket.clone()))
+                .await
+                .expect("should have received a packet")
+        );
+
+        // send an invalid packet
+        let msg = b"helloxyz";
+        socket.send_to(msg, &local_addr).await.unwrap();
+
+        let result = timeout(Duration::from_secs(3), (recv)(server_socket.clone())).await;
+        assert!(result.is_err(), "should not have received a packet");
+    }
+}

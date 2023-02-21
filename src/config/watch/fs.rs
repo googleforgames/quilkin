@@ -17,6 +17,7 @@
 use std::sync::Arc;
 
 use notify::Watcher;
+use tracing::Instrument;
 
 use crate::Config;
 
@@ -26,6 +27,8 @@ pub async fn watch(
     locality: Option<crate::endpoint::Locality>,
 ) -> crate::Result<()> {
     let path = path.into();
+    let span = tracing::info_span!("config_provider", path = %path.display());
+    tracing::info!("discovering configuration through filesystem");
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
     let mut watcher = notify::RecommendedWatcher::new(
         move |res| {
@@ -35,10 +38,14 @@ pub async fn watch(
     )
     .unwrap();
 
+    tracing::trace!("reading file");
+    let buf = tokio::fs::read(&path).await?;
+    tracing::info!("applying initial configuration");
+    config.update_from_json(serde_yaml::from_slice(&buf)?, locality.clone())?;
     watcher.watch(&path, notify::RecursiveMode::Recursive)?;
-    tracing::info!(path = %path.display(), "watching file");
+    tracing::info!("watching file");
 
-    while let Some(event) = rx.recv().await.transpose()? {
+    while let Some(event) = rx.recv().instrument(span.clone()).await.transpose()? {
         tracing::trace!(event = ?event.kind, "new file event");
 
         if !matches!(
@@ -71,7 +78,7 @@ mod tests {
     async fn basic() {
         let source = Arc::new(crate::Config::default());
         let dest = Arc::new(crate::Config::default());
-        let tmp_dir = tempdir::TempDir::new("path").unwrap();
+        let tmp_dir = tempfile::tempdir().unwrap();
         let file_path = tmp_dir.into_path().join("config.yaml");
         tokio::fs::write(&file_path, serde_yaml::to_string(&source).unwrap())
             .await
