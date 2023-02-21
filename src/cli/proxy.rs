@@ -110,7 +110,7 @@ impl Proxy {
             stream
                 .discovery_request(ResourceType::Listener, &[])
                 .await?;
-            Some(stream)
+            Some((client, stream))
         } else {
             None
         };
