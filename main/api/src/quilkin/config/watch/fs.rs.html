@@ -99,6 +99,13 @@
 <span id="99">99</span>
 <span id="100">100</span>
 <span id="101">101</span>
+<span id="102">102</span>
+<span id="103">103</span>
+<span id="104">104</span>
+<span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -118,6 +125,7 @@
 </span><span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use </span>notify::Watcher;
+<span class="kw">use </span>tracing::Instrument;
 
 <span class="kw">use </span><span class="kw">crate</span>::Config;
 
@@ -127,6 +135,8 @@
     locality: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::endpoint::Locality&gt;,
 ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
     <span class="kw">let </span>path = path.into();
+    <span class="kw">let </span>span = <span class="macro">tracing::info_span!</span>(<span class="string">&quot;config_provider&quot;</span>, path = %path.display());
+    <span class="macro">tracing::info!</span>(<span class="string">&quot;discovering configuration through filesystem&quot;</span>);
     <span class="kw">let </span>(tx, <span class="kw-2">mut </span>rx) = tokio::sync::mpsc::unbounded_channel();
     <span class="kw">let </span><span class="kw-2">mut </span>watcher = notify::RecommendedWatcher::new(
         <span class="kw">move </span>|res| {
@@ -136,10 +146,14 @@
     )
     .unwrap();
 
+    <span class="macro">tracing::trace!</span>(<span class="string">&quot;reading file&quot;</span>);
+    <span class="kw">let </span>buf = tokio::fs::read(<span class="kw-2">&amp;</span>path).<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="macro">tracing::info!</span>(<span class="string">&quot;applying initial configuration&quot;</span>);
+    config.update_from_json(serde_yaml::from_slice(<span class="kw-2">&amp;</span>buf)<span class="question-mark">?</span>, locality.clone())<span class="question-mark">?</span>;
     watcher.watch(<span class="kw-2">&amp;</span>path, notify::RecursiveMode::Recursive)<span class="question-mark">?</span>;
-    <span class="macro">tracing::info!</span>(path = %path.display(), <span class="string">&quot;watching file&quot;</span>);
+    <span class="macro">tracing::info!</span>(<span class="string">&quot;watching file&quot;</span>);
 
-    <span class="kw">while let </span><span class="prelude-val">Some</span>(event) = rx.recv().<span class="kw">await</span>.transpose()<span class="question-mark">? </span>{
+    <span class="kw">while let </span><span class="prelude-val">Some</span>(event) = rx.recv().instrument(span.clone()).<span class="kw">await</span>.transpose()<span class="question-mark">? </span>{
         <span class="macro">tracing::trace!</span>(event = <span class="question-mark">?</span>event.kind, <span class="string">&quot;new file event&quot;</span>);
 
         <span class="kw">if </span>!<span class="macro">matches!</span>(
@@ -172,7 +186,7 @@
     </span><span class="kw">async fn </span>basic() {
         <span class="kw">let </span>source = Arc::new(<span class="kw">crate</span>::Config::default());
         <span class="kw">let </span>dest = Arc::new(<span class="kw">crate</span>::Config::default());
-        <span class="kw">let </span>tmp_dir = tempdir::TempDir::new(<span class="string">&quot;path&quot;</span>).unwrap();
+        <span class="kw">let </span>tmp_dir = tempfile::tempdir().unwrap();
         <span class="kw">let </span>file_path = tmp_dir.into_path().join(<span class="string">&quot;config.yaml&quot;</span>);
         tokio::fs::write(<span class="kw-2">&amp;</span>file_path, serde_yaml::to_string(<span class="kw-2">&amp;</span>source).unwrap())
             .<span class="kw">await

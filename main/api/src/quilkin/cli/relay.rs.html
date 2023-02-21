@@ -97,6 +97,24 @@
 <span id="97">97</span>
 <span id="98">98</span>
 <span id="99">99</span>
+<span id="100">100</span>
+<span id="101">101</span>
+<span id="102">102</span>
+<span id="103">103</span>
+<span id="104">104</span>
+<span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
+<span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2023 Google LLC
  *
@@ -129,12 +147,22 @@
 </span><span class="kw">pub struct </span>Relay {
     <span class="doccomment">/// Port for mDS service.
     </span><span class="attribute">#[clap(short, long, env = <span class="string">&quot;QUILKIN_MDS_PORT&quot;</span>, default_value_t = PORT)]
-    </span>mds_port: u16,
+    </span><span class="kw">pub </span>mds_port: u16,
     <span class="doccomment">/// Port for xDS management_server service
     </span><span class="attribute">#[clap(short, long, env = <span class="kw">super</span>::PORT_ENV_VAR, default_value_t = <span class="kw">super</span>::manage::PORT)]
-    </span>xds_port: u16,
+    </span><span class="kw">pub </span>xds_port: u16,
     <span class="attribute">#[clap(subcommand)]
-    </span>providers: <span class="prelude-ty">Option</span>&lt;Providers&gt;,
+    </span><span class="kw">pub </span>providers: <span class="prelude-ty">Option</span>&lt;Providers&gt;,
+}
+
+<span class="kw">impl </span>Default <span class="kw">for </span>Relay {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            mds_port: PORT,
+            xds_port: <span class="kw">super</span>::manage::PORT,
+            providers: <span class="prelude-val">None</span>,
+        }
+    }
 }
 
 <span class="kw">impl </span>Relay {
@@ -181,6 +209,14 @@
                     <span class="macro">tracing::info!</span>(<span class="string">&quot;configmap stream ending&quot;</span>);
                     <span class="prelude-val">Ok</span>(())
                 }
+            })))
+        } <span class="kw">else if let </span><span class="prelude-val">Some</span>(Providers::File { path }) = <span class="kw-2">&amp;</span><span class="self">self</span>.providers {
+            <span class="kw">let </span>config = config.clone();
+            <span class="kw">let </span>path = path.clone();
+            <span class="prelude-val">Some</span>(tokio::spawn(Providers::task(<span class="kw">move </span>|| {
+                <span class="kw">let </span>config = config.clone();
+                <span class="kw">let </span>path = path.clone();
+                <span class="kw">async move </span>{ <span class="kw">crate</span>::config::watch::fs(config, path, <span class="prelude-val">None</span>).<span class="kw">await </span>}
             })))
         } <span class="kw">else </span>{
             <span class="prelude-val">None

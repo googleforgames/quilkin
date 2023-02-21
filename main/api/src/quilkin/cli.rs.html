@@ -205,6 +205,156 @@
 <span id="205">205</span>
 <span id="206">206</span>
 <span id="207">207</span>
+<span id="208">208</span>
+<span id="209">209</span>
+<span id="210">210</span>
+<span id="211">211</span>
+<span id="212">212</span>
+<span id="213">213</span>
+<span id="214">214</span>
+<span id="215">215</span>
+<span id="216">216</span>
+<span id="217">217</span>
+<span id="218">218</span>
+<span id="219">219</span>
+<span id="220">220</span>
+<span id="221">221</span>
+<span id="222">222</span>
+<span id="223">223</span>
+<span id="224">224</span>
+<span id="225">225</span>
+<span id="226">226</span>
+<span id="227">227</span>
+<span id="228">228</span>
+<span id="229">229</span>
+<span id="230">230</span>
+<span id="231">231</span>
+<span id="232">232</span>
+<span id="233">233</span>
+<span id="234">234</span>
+<span id="235">235</span>
+<span id="236">236</span>
+<span id="237">237</span>
+<span id="238">238</span>
+<span id="239">239</span>
+<span id="240">240</span>
+<span id="241">241</span>
+<span id="242">242</span>
+<span id="243">243</span>
+<span id="244">244</span>
+<span id="245">245</span>
+<span id="246">246</span>
+<span id="247">247</span>
+<span id="248">248</span>
+<span id="249">249</span>
+<span id="250">250</span>
+<span id="251">251</span>
+<span id="252">252</span>
+<span id="253">253</span>
+<span id="254">254</span>
+<span id="255">255</span>
+<span id="256">256</span>
+<span id="257">257</span>
+<span id="258">258</span>
+<span id="259">259</span>
+<span id="260">260</span>
+<span id="261">261</span>
+<span id="262">262</span>
+<span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
+<span id="270">270</span>
+<span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
+<span id="343">343</span>
+<span id="344">344</span>
+<span id="345">345</span>
+<span id="346">346</span>
+<span id="347">347</span>
+<span id="348">348</span>
+<span id="349">349</span>
+<span id="350">350</span>
+<span id="351">351</span>
+<span id="352">352</span>
+<span id="353">353</span>
+<span id="354">354</span>
+<span id="355">355</span>
+<span id="356">356</span>
+<span id="357">357</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -410,6 +560,156 @@
             }
             <span class="prelude-val">Err</span>(error) =&gt; <span class="prelude-val">Err</span>(error.into()),
         }
+    }
+}
+
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
+    <span class="kw">use super</span>::<span class="kw-2">*</span>;
+    <span class="kw">use </span>std::net::Ipv4Addr;
+
+    <span class="kw">use </span>tokio::{
+        net::UdpSocket,
+        time::{timeout, Duration},
+    };
+
+    <span class="kw">use crate</span>::{
+        cluster::ClusterMap,
+        config::{Filter, Providers},
+        endpoint::{Endpoint, LocalityEndpoints},
+        filters::{Capture, StaticFilter, TokenRouter},
+    };
+
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>relay_routing() {
+        <span class="kw">let </span>server_port = <span class="kw">crate</span>::test_utils::available_addr().<span class="kw">await</span>.port();
+        <span class="kw">let </span>server_socket = UdpSocket::bind((Ipv4Addr::UNSPECIFIED, server_port))
+            .<span class="kw">await
+            </span>.map(Arc::new)
+            .unwrap();
+        <span class="kw">let </span>filters_file = tempfile::NamedTempFile::new().unwrap();
+
+        std::fs::write(filters_file.path(), {
+            <span class="kw">let </span>config = Config::default();
+            config.filters.store(
+                <span class="macro">vec!</span>[
+                    Filter {
+                        name: Capture::factory().name().into(),
+                        config: <span class="prelude-val">Some</span>(<span class="macro">serde_json::json!</span>({
+                            <span class="string">&quot;suffix&quot;</span>: {
+                                <span class="string">&quot;size&quot;</span>: <span class="number">3</span>,
+                                <span class="string">&quot;remove&quot;</span>: <span class="bool-val">true</span>,
+                            }
+                        })),
+                    },
+                    Filter {
+                        name: TokenRouter::factory().name().into(),
+                        config: <span class="prelude-val">None</span>,
+                    },
+                ]
+                .try_into()
+                .map(Arc::new)
+                .unwrap(),
+            );
+            serde_yaml::to_string(<span class="kw-2">&amp;</span>config).unwrap()
+        })
+        .unwrap();
+
+        <span class="kw">let </span>endpoints_file = tempfile::NamedTempFile::new().unwrap();
+        std::fs::write(endpoints_file.path(), {
+            <span class="kw">let </span><span class="kw-2">mut </span>config = Config::default();
+            config.clusters = <span class="kw">crate</span>::config::Watch::new(ClusterMap::new_with_default_cluster(
+                LocalityEndpoints::from(<span class="macro">vec!</span>[Endpoint::with_metadata(
+                    (std::net::Ipv4Addr::LOCALHOST, server_port).into(),
+                    <span class="kw">crate</span>::endpoint::Metadata {
+                        tokens: <span class="macro">vec!</span>[<span class="string">&quot;abc&quot;</span>.into()].into_iter().collect(),
+                    },
+                )]),
+            ));
+            serde_yaml::to_string(<span class="kw-2">&amp;</span>config).unwrap()
+        })
+        .unwrap();
+
+        <span class="kw">let </span>relay_admin_port = <span class="kw">crate</span>::test_utils::available_addr().<span class="kw">await</span>.port();
+        <span class="kw">let </span>relay = Cli {
+            admin_address: <span class="prelude-val">Some</span>((Ipv4Addr::LOCALHOST, relay_admin_port).into()),
+            config: &lt;<span class="kw">_</span>&gt;::default(),
+            no_admin: <span class="bool-val">false</span>,
+            quiet: <span class="bool-val">true</span>,
+            command: Commands::Relay(Relay {
+                providers: <span class="prelude-val">Some</span>(Providers::File {
+                    path: filters_file.path().to_path_buf(),
+                }),
+                ..&lt;<span class="kw">_</span>&gt;::default()
+            }),
+        };
+
+        <span class="kw">let </span>control_plane_admin_port = <span class="kw">crate</span>::test_utils::available_addr().<span class="kw">await</span>.port();
+        <span class="kw">let </span>control_plane = Cli {
+            no_admin: <span class="bool-val">false</span>,
+            quiet: <span class="bool-val">true</span>,
+            admin_address: <span class="prelude-val">Some</span>((Ipv4Addr::LOCALHOST, control_plane_admin_port).into()),
+            config: &lt;<span class="kw">_</span>&gt;::default(),
+            command: Commands::Manage(Manage {
+                relay: <span class="macro">vec!</span>[<span class="string">&quot;http://localhost:7900&quot;</span>.parse().unwrap()],
+                port: <span class="number">7801</span>,
+                region: <span class="prelude-val">None</span>,
+                sub_zone: <span class="prelude-val">None</span>,
+                zone: <span class="prelude-val">None</span>,
+                provider: Providers::File {
+                    path: endpoints_file.path().to_path_buf(),
+                },
+            }),
+        };
+
+        <span class="kw">let </span>proxy_admin_port = <span class="kw">crate</span>::test_utils::available_addr().<span class="kw">await</span>.port();
+        <span class="kw">let </span>proxy = Cli {
+            no_admin: <span class="bool-val">false</span>,
+            quiet: <span class="bool-val">true</span>,
+            admin_address: <span class="prelude-val">Some</span>((Ipv4Addr::LOCALHOST, proxy_admin_port).into()),
+            config: &lt;<span class="kw">_</span>&gt;::default(),
+            command: Commands::Proxy(Proxy {
+                management_server: <span class="macro">vec!</span>[<span class="string">&quot;http://localhost:7800&quot;</span>.parse().unwrap()],
+                ..&lt;<span class="kw">_</span>&gt;::default()
+            }),
+        };
+
+        tokio::spawn(relay.drive());
+        tokio::spawn(control_plane.drive());
+        tokio::time::sleep(Duration::from_millis(<span class="number">500</span>)).<span class="kw">await</span>;
+        tokio::spawn(proxy.drive());
+        tokio::time::sleep(Duration::from_millis(<span class="number">500</span>)).<span class="kw">await</span>;
+
+        <span class="kw">let </span>local_addr = <span class="kw">crate</span>::test_utils::available_addr().<span class="kw">await</span>;
+        <span class="kw">let </span>socket = UdpSocket::bind((Ipv4Addr::UNSPECIFIED, local_addr.port()))
+            .<span class="kw">await
+            </span>.map(Arc::new)
+            .unwrap();
+        <span class="kw">let </span>msg = <span class="string">b&quot;helloabc&quot;</span>;
+        socket
+            .send_to(msg, <span class="kw-2">&amp;</span>(std::net::Ipv4Addr::LOCALHOST, <span class="number">7777</span>))
+            .<span class="kw">await
+            </span>.unwrap();
+
+        <span class="kw">let </span>recv = |socket: Arc&lt;UdpSocket&gt;| <span class="kw">async move </span>{
+            <span class="kw">let </span><span class="kw-2">mut </span>buf = [<span class="number">0</span>; u16::MAX <span class="kw">as </span>usize];
+            <span class="kw">let </span>length = socket.recv(<span class="kw-2">&amp;mut </span>buf).<span class="kw">await</span>.unwrap();
+            buf[<span class="number">0</span>..length].to_vec()
+        };
+
+        <span class="macro">assert_eq!</span>(
+            <span class="string">b&quot;hello&quot;</span>,
+            &amp;&amp;<span class="kw-2">*</span>timeout(Duration::from_secs(<span class="number">5</span>), (recv)(server_socket.clone()))
+                .<span class="kw">await
+                </span>.expect(<span class="string">&quot;should have received a packet&quot;</span>)
+        );
+
+        <span class="comment">// send an invalid packet
+        </span><span class="kw">let </span>msg = <span class="string">b&quot;helloxyz&quot;</span>;
+        socket.send_to(msg, <span class="kw-2">&amp;</span>local_addr).<span class="kw">await</span>.unwrap();
+
+        <span class="kw">let </span>result = timeout(Duration::from_secs(<span class="number">3</span>), (recv)(server_socket.clone())).<span class="kw">await</span>;
+        <span class="macro">assert!</span>(result.is_err(), <span class="string">&quot;should not have received a packet&quot;</span>);
     }
 }
 </code></pre></div>

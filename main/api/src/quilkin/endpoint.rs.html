@@ -339,7 +339,7 @@
     locality::{Locality, LocalityEndpoints, LocalitySet},
 };
 
-<span class="kw">type </span>EndpointMetadata = <span class="kw">crate</span>::metadata::MetadataView&lt;Metadata&gt;;
+<span class="kw">pub type </span>EndpointMetadata = <span class="kw">crate</span>::metadata::MetadataView&lt;Metadata&gt;;
 
 <span class="doccomment">/// A destination endpoint with any associated metadata.
 </span><span class="attribute">#[derive(Debug, Deserialize, Serialize, PartialEq, Clone, Eq, schemars::JsonSchema)]

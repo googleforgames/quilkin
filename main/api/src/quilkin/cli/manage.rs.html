@@ -113,19 +113,19 @@
     </span><span class="kw">pub </span>relay: Vec&lt;tonic::transport::Endpoint&gt;,
     <span class="doccomment">/// The TCP port to listen to, to serve discovery responses.
     </span><span class="attribute">#[clap(short, long, env = <span class="kw">super</span>::PORT_ENV_VAR, default_value_t = PORT)]
-    </span>port: u16,
+    </span><span class="kw">pub </span>port: u16,
     <span class="doccomment">/// The `region` to set in the cluster map for any provider
     /// endpoints discovered.
     </span><span class="attribute">#[clap(long, env = <span class="string">&quot;QUILKIN_REGION&quot;</span>)]
-    </span>region: <span class="prelude-ty">Option</span>&lt;String&gt;,
+    </span><span class="kw">pub </span>region: <span class="prelude-ty">Option</span>&lt;String&gt;,
     <span class="doccomment">/// The `zone` in the `region` to set in the cluster map for any provider
     /// endpoints discovered.
     </span><span class="attribute">#[clap(long, env = <span class="string">&quot;QUILKIN_ZONE&quot;</span>)]
-    </span>zone: <span class="prelude-ty">Option</span>&lt;String&gt;,
+    </span><span class="kw">pub </span>zone: <span class="prelude-ty">Option</span>&lt;String&gt;,
     <span class="doccomment">/// The `sub_zone` in the `zone` in the `region` to set in the cluster map
     /// for any provider endpoints discovered.
     </span><span class="attribute">#[clap(long, env = <span class="string">&quot;QUILKIN_SUB_ZONE&quot;</span>)]
-    </span>sub_zone: <span class="prelude-ty">Option</span>&lt;String&gt;,
+    </span><span class="kw">pub </span>sub_zone: <span class="prelude-ty">Option</span>&lt;String&gt;,
     <span class="doccomment">/// The configuration source for a management server.
     </span><span class="attribute">#[clap(subcommand)]
     </span><span class="kw">pub </span>provider: <span class="kw">crate</span>::config::Providers,

@@ -126,7 +126,7 @@
         config: std::sync::Arc&lt;<span class="kw">crate</span>::Config&gt;,
         locality: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::endpoint::Locality&gt;,
     ) -&gt; tokio::task::JoinHandle&lt;<span class="kw">crate</span>::Result&lt;()&gt;&gt; {
-        <span class="kw">match </span><span class="macro">dbg!</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) {
+        <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self </span>{
             <span class="self">Self</span>::Agones {
                 gameservers_namespace,
                 config_namespace,

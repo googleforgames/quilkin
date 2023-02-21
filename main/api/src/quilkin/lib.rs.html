@@ -63,6 +63,7 @@
 <span id="63">63</span>
 <span id="64">64</span>
 <span id="65">65</span>
+<span id="66">66</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -82,15 +83,16 @@
 </span><span class="attribute">#![deny(unused_must_use)]
 
 </span><span class="kw">mod </span>admin;
-<span class="kw">mod </span>cluster;
 <span class="kw">mod </span>maxmind_db;
+<span class="kw">mod </span>proxy;
+
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>metrics;
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>prost;
-<span class="kw">mod </span>proxy;
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>ttl_map;
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>utils;
 
 <span class="kw">pub mod </span>cli;
+<span class="kw">pub mod </span>cluster;
 <span class="kw">pub mod </span>config;
 <span class="kw">pub mod </span>endpoint;
 <span class="kw">pub mod </span>filters;

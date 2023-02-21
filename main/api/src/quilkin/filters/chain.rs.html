@@ -473,6 +473,10 @@
 <span id="473">473</span>
 <span id="474">474</span>
 <span id="475">475</span>
+<span id="476">476</span>
+<span id="477">477</span>
+<span id="478">478</span>
+<span id="479">479</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -607,6 +611,10 @@
 
 <span class="kw">impl </span>PartialEq <span class="kw">for </span>FilterChain {
     <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, rhs: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; bool {
+        <span class="kw">if </span><span class="self">self</span>.filters.len() != rhs.filters.len() {
+            <span class="kw">return </span><span class="bool-val">false</span>;
+        }
+
         <span class="self">self</span>.filters.iter().zip(<span class="kw-2">&amp;</span>rhs.filters).all(
             |((lhs_name, lhs_instance), (rhs_name, rhs_instance))| {
                 lhs_name == rhs_name &amp;&amp; lhs_instance.config == rhs_instance.config

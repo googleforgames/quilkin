@@ -726,7 +726,7 @@
         .with_config(retry_config);
 
         <span class="kw">let </span>client = connect_to_server
-            .instrument(<span class="macro">tracing::trace_span!</span>(<span class="string">&quot;mds_client_connect&quot;</span>))
+            .instrument(<span class="macro">tracing::trace_span!</span>(<span class="string">&quot;client_connect&quot;</span>))
             .<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="macro">tracing::info!</span>(<span class="string">&quot;Connected to relay server&quot;</span>);
         <span class="prelude-val">Ok</span>(client)
