@@ -14,10 +14,7 @@
  * limitations under the License.
  */
 
-use std::{
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::sync::Arc;
 
 use clap::crate_version;
 use tokio::{signal, sync::watch};
@@ -45,7 +42,6 @@ pub mod manage;
 pub mod proxy;
 pub mod relay;
 
-const ETC_CONFIG_PATH: &str = "/etc/quilkin/quilkin.yaml";
 const PORT_ENV_VAR: &str = "QUILKIN_PORT";
 
 /// The Command-Line Interface for Quilkin.
@@ -56,9 +52,6 @@ pub struct Cli {
     /// Whether to spawn the admin server or not.
     #[clap(env, long)]
     pub no_admin: bool,
-    /// The path to the configuration file for the Quilkin instance.
-    #[clap(short, long, env = "QUILKIN_CONFIG", default_value = "quilkin.yaml")]
-    pub config: PathBuf,
     /// The port to bind for the admin server
     #[clap(long, env = "QUILKIN_ADMIN_ADDRESS")]
     pub admin_address: Option<std::net::SocketAddr>,
@@ -113,7 +106,7 @@ impl Cli {
 
         tracing::debug!(cli = ?self, "config parameters");
 
-        let config = Arc::new(Self::read_config(self.config)?);
+        let config = Arc::new(Config::default());
         let _admin_task = self
             .command
             .admin_mode()
@@ -192,29 +185,6 @@ impl Cli {
 
         fut.await?
     }
-
-    /// Searches for the configuration file, and panics if not found.
-    fn read_config<A: AsRef<Path>>(path: A) -> Result<Config, eyre::Error> {
-        let path = path.as_ref();
-        let from_reader = |file| Config::from_reader(file).map_err(From::from);
-
-        match std::fs::File::open(path) {
-            Ok(file) => (from_reader)(file),
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-                tracing::debug!(path=%path.display(), "provided path not found");
-                match cfg!(unix).then(|| std::fs::File::open(ETC_CONFIG_PATH)) {
-                    Some(Ok(file)) => (from_reader)(file),
-                    Some(Err(error)) if error.kind() == std::io::ErrorKind::NotFound => {
-                        tracing::debug!(path=%path.display(), "/etc path not found");
-                        Ok(Config::default())
-                    }
-                    Some(Err(error)) => Err(error.into()),
-                    None => Ok(Config::default()),
-                }
-            }
-            Err(error) => Err(error.into()),
-        }
-    }
 }
 
 #[cfg(test)]
@@ -289,7 +259,6 @@ mod tests {
         let relay_admin_port = crate::test_utils::available_addr().await.port();
         let relay = Cli {
             admin_address: Some((Ipv4Addr::LOCALHOST, relay_admin_port).into()),
-            config: <_>::default(),
             no_admin: false,
             quiet: true,
             command: Commands::Relay(Relay {
@@ -305,7 +274,6 @@ mod tests {
             no_admin: false,
             quiet: true,
             admin_address: Some((Ipv4Addr::LOCALHOST, control_plane_admin_port).into()),
-            config: <_>::default(),
             command: Commands::Manage(Manage {
                 relay: vec!["http://localhost:7900".parse().unwrap()],
                 port: 7801,
@@ -323,7 +291,6 @@ mod tests {
             no_admin: false,
             quiet: true,
             admin_address: Some((Ipv4Addr::LOCALHOST, proxy_admin_port).into()),
-            config: <_>::default(),
             command: Commands::Proxy(Proxy {
                 management_server: vec!["http://localhost:7800".parse().unwrap()],
                 ..<_>::default()
