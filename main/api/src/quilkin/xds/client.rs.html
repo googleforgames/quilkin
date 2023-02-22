@@ -522,6 +522,22 @@
 <span id="522">522</span>
 <span id="523">523</span>
 <span id="524">524</span>
+<span id="525">525</span>
+<span id="526">526</span>
+<span id="527">527</span>
+<span id="528">528</span>
+<span id="529">529</span>
+<span id="530">530</span>
+<span id="531">531</span>
+<span id="532">532</span>
+<span id="533">533</span>
+<span id="534">534</span>
+<span id="535">535</span>
+<span id="536">536</span>
+<span id="537">537</span>
+<span id="538">538</span>
+<span id="539">539</span>
+<span id="540">540</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -773,7 +789,7 @@
                 <span class="kw">loop </span>{
                     <span class="kw">let </span>config = config.clone();
                     <span class="macro">tracing::trace!</span>(<span class="string">&quot;connecting to grpc stream&quot;</span>);
-                    <span class="kw">let </span>stream = client
+                    <span class="kw">let </span>result = client
                         .stream_requests(
                             <span class="comment">// Errors only happen if the stream is behind, which
                             // we don&#39;t care about, we only want the latest
@@ -782,8 +798,24 @@
                                 .filter_map(|result| futures::future::ready(result.ok())),
                         )
                         .in_current_span()
-                        .<span class="kw">await</span><span class="question-mark">?
-                        </span>.into_inner();
+                        .<span class="kw">await
+                        </span>.map(|streaming| streaming.into_inner());
+
+                    <span class="kw">let </span>stream = <span class="kw">match </span>result {
+                        <span class="prelude-val">Ok</span>(stream) =&gt; stream,
+                        <span class="prelude-val">Err</span>(error) =&gt; {
+                            <span class="macro">tracing::warn!</span>(%error, <span class="string">&quot;stream broken&quot;</span>);
+                            client = AdsClient::connect_with_backoff(<span class="kw-2">&amp;</span>management_servers).<span class="kw">await</span><span class="question-mark">?</span>;
+                            rx = requests.subscribe();
+                            <span class="self">Self</span>::refresh_resources(
+                                <span class="kw-2">&amp;</span>identifier,
+                                <span class="kw-2">&amp;</span>subscribed_resources,
+                                <span class="kw-2">&amp;mut </span>requests,
+                            )
+                            .<span class="kw">await</span><span class="question-mark">?</span>;
+                            <span class="kw">continue</span>;
+                        }
+                    };
 
                     <span class="macro">tracing::trace!</span>(<span class="string">&quot;creating discovery response handler&quot;</span>);
                     <span class="kw">let </span><span class="kw-2">mut </span>stream = handle_discovery_responses(
