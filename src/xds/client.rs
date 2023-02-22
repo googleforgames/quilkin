@@ -249,7 +249,7 @@ impl AdsStream {
                 loop {
                     let config = config.clone();
                     tracing::trace!("connecting to grpc stream");
-                    let stream = client
+                    let result = client
                         .stream_requests(
                             // Errors only happen if the stream is behind, which
                             // we don't care about, we only want the latest
@@ -258,8 +258,24 @@ impl AdsStream {
                                 .filter_map(|result| futures::future::ready(result.ok())),
                         )
                         .in_current_span()
-                        .await?
-                        .into_inner();
+                        .await
+                        .map(|streaming| streaming.into_inner());
+
+                    let stream = match result {
+                        Ok(stream) => stream,
+                        Err(error) => {
+                            tracing::warn!(%error, "stream broken");
+                            client = AdsClient::connect_with_backoff(&management_servers).await?;
+                            rx = requests.subscribe();
+                            Self::refresh_resources(
+                                &identifier,
+                                &subscribed_resources,
+                                &mut requests,
+                            )
+                            .await?;
+                            continue;
+                        }
+                    };
 
                     tracing::trace!("creating discovery response handler");
                     let mut stream = handle_discovery_responses(
