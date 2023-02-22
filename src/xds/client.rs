@@ -493,6 +493,7 @@ pub fn handle_discovery_responses(
 ) -> std::pin::Pin<Box<dyn futures::Stream<Item = Result<DiscoveryRequest>> + Send>> {
     Box::pin(async_stream::try_stream! {
         let _stream_metrics = super::metrics::StreamConnectionMetrics::new(identifier.clone());
+        let mut version_cache = crate::xds::resource::ResourceMap::default();
         tracing::info!("awaiting response");
         for await response in stream
         {
@@ -507,25 +508,29 @@ pub fn handle_discovery_responses(
             let control_plane_identifier = response.control_plane.as_ref().map(|cp| cp.identifier.clone()).unwrap_or_default();
 
             super::metrics::discovery_responses(&control_plane_identifier, &response.type_url).inc();
+            let version =response.version_info.clone();
+            let ty = response.type_url.parse::<ResourceType>()?;
             tracing::info!(
-                version = &*response.version_info,
-                r#type = &*response.type_url,
+                %version,
+                r#type = %ty,
                 nonce = &*response.nonce,
                 "received response"
             );
 
-            let result = response
-                .resources
-                .iter()
-                .cloned()
-                .map(Resource::try_from)
-                .try_for_each(|resource| {
-                    let resource = resource?;
-                    tracing::info!("applying resource");
-                    (on_new_resource)(&resource)
-                });
-
+            let resources = response.resources.clone();
             let mut request = DiscoveryRequest::try_from(response)?;
+            if version_cache[ty] == version {
+                tracing::trace!(%version, "version has already been applied");
+                yield request;
+                continue;
+            }
+
+            let result = resources.into_iter().map(Resource::try_from).try_for_each(|resource| {
+                let resource = resource?;
+                tracing::info!("applying resource");
+                (on_new_resource)(&resource)
+            });
+
             if let Err(error) = result {
                 super::metrics::nacks(&control_plane_identifier, &request.type_url).inc();
                 request.error_detail = Some(crate::xds::google::rpc::Status {
@@ -534,6 +539,7 @@ pub fn handle_discovery_responses(
                     ..<_>::default()
                 });
             } else {
+                version_cache[ty] = version;
                 super::metrics::acks(&control_plane_identifier, &request.type_url).inc();
             }
 
