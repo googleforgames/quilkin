@@ -156,16 +156,18 @@ fn collect_metrics() -> Response<Body> {
 
 /// Collects profiling information using `prof` for an optional `duration` or
 /// the default if `None`.
-async fn collect_pprof(duration: Option<std::time::Duration>) -> Result<Response<Body>, eyre::Error> {
+async fn collect_pprof(
+    duration: Option<std::time::Duration>,
+) -> Result<Response<Body>, eyre::Error> {
     let duration = duration.unwrap_or_else(|| std::time::Duration::from_secs(2));
     tracing::info!(duration_seconds = duration.as_secs(), "profiling");
 
     let guard = pprof::ProfilerGuardBuilder::default()
-            .frequency(1000)
-            // From the pprof docs, this blocklist helps prevent deadlock with
-            // libgcc's unwind.
-            .blocklist(&["libc", "libgcc", "pthread", "vdso"])
-            .build()?;
+        .frequency(1000)
+        // From the pprof docs, this blocklist helps prevent deadlock with
+        // libgcc's unwind.
+        .blocklist(&["libc", "libgcc", "pthread", "vdso"])
+        .build()?;
 
     tokio::time::sleep(duration).await;
 
@@ -198,7 +200,9 @@ mod tests {
     #[tokio::test]
     async fn collect_pprof() {
         // Custom time to make the test fast.
-        super::collect_pprof(Some(std::time::Duration::from_millis(1))).await.unwrap();
+        super::collect_pprof(Some(std::time::Duration::from_millis(1)))
+            .await
+            .unwrap();
     }
 
     #[test]
