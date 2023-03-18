@@ -13,6 +13,9 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/epicgames/unreal-engine:dev
+      credentials:
+        username: ${{ secrets.GITHUB_ACTOR }}
+        password: ${{ secrets.DOCKER_GITHUB_PAT }}
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
@@ -23,20 +26,18 @@ jobs:
 
     - name: Build Plugin
       run: |
-        # Run the Unreal Automation Tool (UAT) to build the plugin
         "${{ env.UE_PATH }}/Engine/Build/BatchFiles/RunUAT.sh" \
           BuildPlugin \
-          -Plugin="${{ github.workspace }}/sdks/ue4/Quilkin.uplugin" \ # Path to the plugin
-          -Package="${{ github.workspace }}/PluginBuild" \ # Output directory for the built plugin
+          -Plugin="${{ github.workspace }}/sdks/ue4/Quilkin.uplugin" \
+          -Package="${{ github.workspace }}/PluginBuild" \
           -Rocket
 
     - name: Run Tests
       run: |
-        # Run the tests using UE4Editor-Cmd (Command Line) with the Automation framework
         "${{ env.UE_PATH }}/Engine/Binaries/Linux/UE4Editor-Cmd" \
-          -run=Automation \ # Run the Automation framework for testing
-          -Plugin="${{ github.workspace }}/sdks/ue4/Quilkin.uplugin" \ # Path to the plugin
-          -unattended \ # Run in unattended mode (no user interaction)
-          -nopause \ # Do not pause after executing the command
-          -testexit="Automation Test Queue Empty" \ # Exit when the test queue is empty
-          -log # Output log information
+          -run=Automation \
+          -Plugin="${{ github.workspace }}/sdks/ue4/Quilkin.uplugin" \
+          -unattended \
+          -nopause \
+          -testexit="Automation Test Queue Empty" \
+          -log
