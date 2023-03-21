@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+use std::net::ToSocketAddrs;
 use k8s_openapi::{
     apiextensions_apiserver::pkg::apis::apiextensions::v1::{
         CustomResourceDefinition, CustomResourceDefinitionNames, CustomResourceDefinitionSpec,
@@ -272,8 +273,9 @@ impl TryFrom<GameServer> for Endpoint {
             .as_ref()
             .and_then(|ports| ports.first().map(|status| status.port))
             .unwrap_or_default();
+        let socket_address = (address, port).to_socket_addrs()?.next().unwrap();
         let filter_metadata = crate::endpoint::Metadata { tokens };
-        Ok(Self::with_metadata((address, port).into(), filter_metadata))
+        Ok(Self::with_metadata(socket_address.into(), filter_metadata))
     }
 }
 

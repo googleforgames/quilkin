@@ -64,7 +64,7 @@ impl EndpointAddress {
         Ok(if let Some(port) = self.port {
             match &self.host {
                 AddressKind::Ip(ip) => (*ip, port).to_socket_addrs()?.next().unwrap(),
-                AddressKind::Name(name) => (&**name, port).to_socket_addrs()?.next().unwrap(),
+                AddressKind::Name(name) => (&**name, port).to_socket_addrs()?.next().unwrap(), // The real issue originates from here, dns lookup makes proxying slow.
             }
         } else {
             match &self.host {
