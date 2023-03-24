@@ -59,7 +59,7 @@ impl Capture {
 
 impl Filter for Capture {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn read(&self, ctx: &mut ReadContext) -> Option<()> {
+    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         let capture = self.capture.capture(&mut ctx.contents, &self.metrics);
         ctx.metadata.insert(
             self.is_present_key,
@@ -69,10 +69,10 @@ impl Filter for Capture {
         if let Some(value) = capture {
             tracing::trace!(key=%self.metadata_key, %value, "captured value");
             ctx.metadata.insert(self.metadata_key, value);
-            Some(())
+            Ok(())
         } else {
             tracing::trace!(key = %self.metadata_key, "No value captured");
-            None
+            Err(FilterError::new(NoValueCaptured))
         }
     }
 }
@@ -82,13 +82,17 @@ impl StaticFilter for Capture {
     type Configuration = Config;
     type BinaryConfiguration = proto::Capture;
 
-    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, Error> {
+    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, CreationError> {
         Ok(Capture::new(
             Self::ensure_config_exists(config)?,
             Metrics::new()?,
         ))
     }
 }
+
+#[derive(thiserror::Error, Debug)]
+#[error("no value captured")]
+struct NoValueCaptured;
 
 #[cfg(test)]
 mod tests {
@@ -167,7 +171,7 @@ mod tests {
                 (std::net::Ipv4Addr::LOCALHOST, 80).into(),
                 "abc".to_string().into_bytes(),
             ))
-            .is_none());
+            .is_err());
 
         let count = filter.metrics.packets_dropped_total.get();
         assert_eq!(1, count);

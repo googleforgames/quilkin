@@ -114,6 +114,7 @@ async fn test(t: &mut TestHelper, server_port: u16, yaml: &str) -> oneshot::Rece
     server_config.filters.store(
         quilkin::filters::FilterChain::try_from(vec![Filter {
             name: Firewall::factory().name().into(),
+            label: None,
             config: serde_yaml::from_str(yaml.as_str()).unwrap(),
         }])
         .map(std::sync::Arc::new)

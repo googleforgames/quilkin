@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-mod metrics;
-
 use std::convert::TryFrom;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -28,8 +26,6 @@ use crate::{
     filters::prelude::*,
     ttl_map::{Entry, TtlMap},
 };
-
-use metrics::Metrics;
 
 crate::include_proto!("quilkin.filters.local_rate_limit.v1alpha1");
 use self::quilkin::filters::local_rate_limit::v1alpha1 as proto;
@@ -69,16 +65,14 @@ pub struct LocalRateLimit {
     state: TtlMap<EndpointAddress, Bucket>,
     /// Filter configuration.
     config: Config,
-    /// metrics reporter for this filter.
-    metrics: Metrics,
 }
 
 impl LocalRateLimit {
     /// new returns a new LocalRateLimit. It spawns a future in the background
     /// that periodically refills the rate limiter's tokens.
-    fn new(config: Config, metrics: Metrics) -> Result<Self, Error> {
+    fn new(config: Config) -> Result<Self, CreationError> {
         if config.period < 1 {
-            return Err(Error::FieldInvalid {
+            return Err(CreationError::FieldInvalid {
                 field: "period".into(),
                 reason: "value must be at least 1 second".into(),
             });
@@ -87,7 +81,6 @@ impl LocalRateLimit {
         Ok(LocalRateLimit {
             state: TtlMap::new(SESSION_TIMEOUT_SECONDS, SESSION_EXPIRY_POLL_INTERVAL),
             config,
-            metrics,
         })
     }
 
@@ -154,11 +147,9 @@ impl LocalRateLimit {
 }
 
 impl Filter for LocalRateLimit {
-    fn read(&self, ctx: &mut ReadContext) -> Option<()> {
-        self.acquire_token(&ctx.source).or_else(|| {
-            self.metrics.packets_dropped_total.inc();
-            None
-        })
+    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+        self.acquire_token(&ctx.source)
+            .ok_or_else(|| FilterError::new("rate limit exceeded"))
     }
 }
 
@@ -167,8 +158,8 @@ impl StaticFilter for LocalRateLimit {
     type Configuration = Config;
     type BinaryConfiguration = proto::LocalRateLimit;
 
-    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, Error> {
-        Self::new(Self::ensure_config_exists(config)?, Metrics::new()?)
+    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, CreationError> {
+        Self::new(Self::ensure_config_exists(config)?)
     }
 }
 
@@ -218,7 +209,7 @@ mod tests {
     use crate::{config::ConfigType, test_utils::assert_write_no_change};
 
     fn rate_limiter(config: Config) -> LocalRateLimit {
-        LocalRateLimit::new(config, Metrics::new().unwrap()).unwrap()
+        LocalRateLimit::new(config).unwrap()
     }
 
     fn address_pair() -> (EndpointAddress, EndpointAddress) {
@@ -241,7 +232,7 @@ mod tests {
             result.unwrap();
             assert_eq!(context.contents, vec![9]);
         } else {
-            assert!(result.is_none());
+            assert!(result.is_err());
         }
     }
 

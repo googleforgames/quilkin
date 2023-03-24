@@ -35,9 +35,9 @@ struct ConfigInstance {
 }
 
 impl ConfigInstance {
-    fn new(config: config::DirectionalConfig) -> Result<Self, Error> {
+    fn new(config: config::DirectionalConfig) -> Result<Self, CreationError> {
         let map_to_instance =
-            |filter: String, config_type: Option<serde_json::Value>| -> Result<_, Error> {
+            |filter: String, config_type: Option<serde_json::Value>| -> Result<_, CreationError> {
                 let instance = crate::filters::FilterRegistry::get(
                     &filter,
                     CreateFilterArgs::new(config_type.map(From::from)),
@@ -69,12 +69,12 @@ pub struct Match {
 }
 
 impl Match {
-    fn new(config: Config, metrics: Metrics) -> Result<Self, Error> {
+    fn new(config: Config, metrics: Metrics) -> Result<Self, CreationError> {
         let on_read_filters = config.on_read.map(ConfigInstance::new).transpose()?;
         let on_write_filters = config.on_write.map(ConfigInstance::new).transpose()?;
 
         if on_read_filters.is_none() && on_write_filters.is_none() {
-            return Err(Error::MissingConfig(Self::NAME));
+            return Err(CreationError::MissingConfig(Self::NAME));
         }
 
         Ok(Self {
@@ -93,13 +93,15 @@ fn match_filter<'config, 'ctx, Ctx>(
         &'value Ctx,
         &'config metadata::Key,
     ) -> Option<&'value metadata::Value>,
-    and_then: impl Fn(&'ctx mut Ctx, &'config FilterInstance) -> Option<()>,
-) -> Option<()>
+    and_then: impl Fn(&'ctx mut Ctx, &'config FilterInstance) -> Result<(), FilterError>,
+) -> Result<(), FilterError>
 where
 {
     match config {
         Some(config) => {
-            let value = (get_metadata)(ctx, &config.metadata_key)?;
+            let value = (get_metadata)(ctx, &config.metadata_key).ok_or_else(|| {
+                FilterError::new(format!("no metadata found for {}", config.metadata_key))
+            })?;
 
             match config.branches.iter().find(|(key, _)| key == value) {
                 Some((value, instance)) => {
@@ -118,31 +120,31 @@ where
                 }
             }
         }
-        None => Some(()),
+        None => Ok(()),
     }
 }
 
 impl Filter for Match {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn read(&self, ctx: &mut ReadContext) -> Option<()> {
+    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         tracing::trace!(metadata=?ctx.metadata);
         match_filter(
             &self.on_read_filters,
             &self.metrics,
             ctx,
             |ctx, metadata_key| ctx.metadata.get(metadata_key),
-            |ctx, instance| instance.filter.read(ctx),
+            |ctx, instance| instance.filter().read(ctx),
         )
     }
 
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn write(&self, ctx: &mut WriteContext) -> Option<()> {
+    fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
         match_filter(
             &self.on_write_filters,
             &self.metrics,
             ctx,
             |ctx, metadata_key| ctx.metadata.get(metadata_key),
-            |ctx, instance| instance.filter.write(ctx),
+            |ctx, instance| instance.filter().write(ctx),
         )
     }
 }
@@ -152,7 +154,7 @@ impl StaticFilter for Match {
     type Configuration = Config;
     type BinaryConfiguration = proto::Match;
 
-    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, Error> {
+    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, CreationError> {
         Self::new(Self::ensure_config_exists(config)?, Metrics::new()?)
     }
 }
@@ -215,7 +217,7 @@ mod tests {
         ctx.metadata.insert(key, "xyz".into());
 
         let result = filter.read(&mut ctx);
-        assert!(result.is_none());
+        assert!(result.is_err());
         assert_eq!(1, filter.metrics.packets_matched_total.get());
         assert_eq!(1, filter.metrics.packets_fallthrough_total.get());
     }

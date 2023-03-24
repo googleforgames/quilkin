@@ -42,6 +42,7 @@ on_write: COMPRESS
     server_config.filters.store(
         quilkin::filters::FilterChain::try_from(vec![Filter {
             name: Compress::factory().name().into(),
+            label: None,
             config: serde_yaml::from_str(yaml).unwrap(),
         }])
         .map(std::sync::Arc::new)
@@ -67,6 +68,7 @@ on_write: DECOMPRESS
     client_config.filters.store(
         quilkin::filters::FilterChain::try_from(vec![Filter {
             name: Compress::factory().name().into(),
+            label: None,
             config: serde_yaml::from_str(yaml).unwrap(),
         }])
         .map(std::sync::Arc::new)

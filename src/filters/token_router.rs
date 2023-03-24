@@ -14,8 +14,6 @@
  *  limitations under the License.
  */
 
-mod metrics;
-
 crate::include_proto!("quilkin.filters.token_router.v1alpha1");
 
 use std::convert::TryFrom;
@@ -27,20 +25,17 @@ use crate::{
     metadata,
 };
 
-use metrics::Metrics;
-
 use self::quilkin::filters::token_router::v1alpha1 as proto;
 
 /// Filter that only allows packets to be passed to Endpoints that have a matching
 /// connection_id to the token stored in the Filter's dynamic metadata.
 pub struct TokenRouter {
     config: Config,
-    metrics: Metrics,
 }
 
 impl TokenRouter {
-    fn new(config: Config, metrics: Metrics) -> Self {
-        Self { config, metrics }
+    fn new(config: Config) -> Self {
+        Self { config }
     }
 }
 
@@ -49,59 +44,52 @@ impl StaticFilter for TokenRouter {
     type Configuration = Config;
     type BinaryConfiguration = proto::TokenRouter;
 
-    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, Error> {
-        Ok(TokenRouter::new(
-            config.unwrap_or_default(),
-            Metrics::new()?,
-        ))
+    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, CreationError> {
+        Ok(TokenRouter::new(config.unwrap_or_default()))
     }
 }
 
 impl Filter for TokenRouter {
-    fn read(&self, ctx: &mut ReadContext) -> Option<()> {
+    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         match ctx.metadata.get(&self.config.metadata_key) {
-            None => {
-                tracing::trace!(
-                    metadata_key = %self.config.metadata_key,
-                    "Dropping packet, no routing token was found"
-                );
-                self.metrics.packets_dropped_total_no_token_found.inc();
-                None
-            }
-            Some(value) => match value {
-                metadata::Value::Bytes(token) => {
-                    ctx.endpoints.retain(|endpoint| {
-                        if endpoint.metadata.known.tokens.contains(&**token) {
-                            tracing::trace!(%endpoint.address, token = &*base64::encode(token), "Endpoint matched");
-                            true
-                        } else {
-                            false
-                        }
-                    });
-
-                    if ctx.endpoints.is_empty() {
-                        tracing::trace!(
-                            token = &*base64::encode(token),
-                            "No endpoint matched token"
-                        );
-                        self.metrics.packets_dropped_total_no_endpoint_match.inc();
-                        None
+            Some(metadata::Value::Bytes(token)) => {
+                ctx.endpoints.retain(|endpoint| {
+                    if endpoint.metadata.known.tokens.contains(&**token) {
+                        tracing::trace!(%endpoint.address, token = &*base64::encode(token), "Endpoint matched");
+                        true
                     } else {
-                        Some(())
+                        false
                     }
+                });
+
+                if ctx.endpoints.is_empty() {
+                    Err(FilterError::new(Error::NoEndpointMatch(
+                        self.config.metadata_key,
+                        base64::encode(token),
+                    )))
+                } else {
+                    Ok(())
                 }
-                _ => {
-                    tracing::trace!(
-                        count = ?self.metrics.packets_dropped_total_invalid_token.get(),
-                        metadata_key = %self.config.metadata_key,
-                        "Packets are being dropped as routing token has invalid type: expected Value::Bytes"
-                    );
-                    self.metrics.packets_dropped_total_invalid_token.inc();
-                    None
-                }
-            },
+            }
+            Some(value) => Err(FilterError::new(Error::InvalidType(
+                self.config.metadata_key,
+                value.clone(),
+            ))),
+            None => Err(FilterError::new(Error::NoTokenFound(
+                self.config.metadata_key,
+            ))),
         }
     }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    #[error("no routing token found for `{0}`")]
+    NoTokenFound(crate::metadata::Key),
+    #[error("key `{0}` was found but wasn't bytes, found {1:?}")]
+    InvalidType(crate::metadata::Key, crate::metadata::Value),
+    #[error("no endpoint matched token `{1}` from `{0}`")]
+    NoEndpointMatch(crate::metadata::Key, String),
 }
 
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq, schemars::JsonSchema)]
@@ -233,23 +221,17 @@ mod tests {
         ctx.metadata
             .insert(CAPTURED_BYTES.into(), Value::Bytes(b"567".to_vec().into()));
 
-        assert!(filter.read(&mut ctx).is_none());
-        assert_eq!(
-            1,
-            filter.metrics.packets_dropped_total_no_endpoint_match.get()
-        );
+        assert!(filter.read(&mut ctx).is_err());
 
         // no key
         let mut ctx = new_ctx();
-        assert!(filter.read(&mut ctx).is_none());
-        assert_eq!(1, filter.metrics.packets_dropped_total_no_token_found.get());
+        assert!(filter.read(&mut ctx).is_err());
 
         // wrong type key
         let mut ctx = new_ctx();
         ctx.metadata
             .insert(CAPTURED_BYTES.into(), Value::String(String::from("wrong")));
-        assert!(filter.read(&mut ctx).is_none());
-        assert_eq!(1, filter.metrics.packets_dropped_total_invalid_token.get());
+        assert!(filter.read(&mut ctx).is_err());
     }
 
     #[test]

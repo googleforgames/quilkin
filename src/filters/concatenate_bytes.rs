@@ -44,7 +44,7 @@ impl ConcatenateBytes {
 }
 
 impl Filter for ConcatenateBytes {
-    fn read(&self, ctx: &mut ReadContext) -> Option<()> {
+    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         match self.on_read {
             Strategy::Append => {
                 ctx.contents.extend(self.bytes.iter());
@@ -55,10 +55,10 @@ impl Filter for ConcatenateBytes {
             Strategy::DoNothing => {}
         }
 
-        Some(())
+        Ok(())
     }
 
-    fn write(&self, ctx: &mut WriteContext) -> Option<()> {
+    fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
         match self.on_write {
             Strategy::Append => {
                 ctx.contents.extend(self.bytes.iter());
@@ -69,7 +69,7 @@ impl Filter for ConcatenateBytes {
             Strategy::DoNothing => {}
         }
 
-        Some(())
+        Ok(())
     }
 }
 
@@ -78,7 +78,7 @@ impl StaticFilter for ConcatenateBytes {
     type Configuration = Config;
     type BinaryConfiguration = proto::ConcatenateBytes;
 
-    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, Error> {
+    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, CreationError> {
         Ok(ConcatenateBytes::new(Self::ensure_config_exists(config)?))
     }
 }

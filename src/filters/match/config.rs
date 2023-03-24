@@ -33,7 +33,7 @@ pub struct Config {
 }
 
 impl TryFrom<Config> for proto::Match {
-    type Error = crate::filters::Error;
+    type Error = crate::filters::CreationError;
 
     fn try_from(config: Config) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -80,7 +80,7 @@ pub struct DirectionalConfig {
 }
 
 impl TryFrom<DirectionalConfig> for proto::r#match::Config {
-    type Error = crate::filters::Error;
+    type Error = crate::filters::CreationError;
 
     fn try_from(config: DirectionalConfig) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -129,7 +129,7 @@ pub struct Branch {
 }
 
 impl TryFrom<Branch> for proto::r#match::Branch {
-    type Error = crate::filters::Error;
+    type Error = crate::filters::CreationError;
 
     fn try_from(branch: Branch) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -169,7 +169,7 @@ impl Default for Fallthrough {
 }
 
 impl TryFrom<Fallthrough> for crate::xds::config::listener::v3::Filter {
-    type Error = crate::filters::Error;
+    type Error = crate::filters::CreationError;
     fn try_from(fallthrough: Fallthrough) -> Result<Self, Self::Error> {
         fallthrough.0.try_into()
     }

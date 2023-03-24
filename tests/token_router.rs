@@ -61,10 +61,12 @@ quilkin.dev:
         quilkin::filters::FilterChain::try_from(vec![
             Filter {
                 name: Capture::factory().name().into(),
+                label: None,
                 config: serde_yaml::from_str(capture_yaml).unwrap(),
             },
             Filter {
                 name: TokenRouter::factory().name().into(),
+                label: None,
                 config: None,
             },
         ])

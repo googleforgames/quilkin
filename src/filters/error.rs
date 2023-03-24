@@ -19,10 +19,44 @@ use prometheus::Error as MetricsError;
 #[cfg(doc)]
 use crate::filters::{Filter, FilterFactory};
 
+#[derive(thiserror::Error)]
+#[error("{}{} error: {source}", .label.as_deref().map(|label| format!("{}:", label)).unwrap_or_default(), .name.as_deref().unwrap_or_default())]
+pub struct FilterError {
+    name: Option<String>,
+    label: Option<String>,
+    source: Box<dyn std::error::Error + Send + Sync + 'static>,
+}
+
+impl FilterError {
+    pub fn new<D: std::fmt::Display>(error: D) -> Self {
+        Self {
+            name: None,
+            label: None,
+            source: Box::from(error.to_string()),
+        }
+    }
+}
+
+impl From<std::io::Error> for FilterError {
+    fn from(error: std::io::Error) -> Self {
+        Self::new(error)
+    }
+}
+
+impl std::fmt::Debug for FilterError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("FilterError")
+            .field("name", &self.name)
+            .field("label", &self.label)
+            .field("source", &self.source.to_string())
+            .finish()
+    }
+}
+
 /// An error that occurred when attempting to create a [`Filter`] from
 /// a [`FilterFactory`].
 #[derive(Debug, Eq, PartialEq, thiserror::Error)]
-pub enum Error {
+pub enum CreationError {
     #[error("filter `{}` not found", .0)]
     NotFound(String),
     #[error("Expected <{}> message, received <{}> ", expected, actual)]
@@ -41,43 +75,43 @@ pub enum Error {
     Infallible,
 }
 
-impl From<std::convert::Infallible> for Error {
+impl From<std::convert::Infallible> for CreationError {
     fn from(_: std::convert::Infallible) -> Self {
         Self::Infallible
     }
 }
 
-impl From<MetricsError> for Error {
+impl From<MetricsError> for CreationError {
     fn from(error: MetricsError) -> Self {
-        Error::InitializeMetricsFailed(error.to_string())
+        Self::InitializeMetricsFailed(error.to_string())
     }
 }
 
-impl From<serde_yaml::Error> for Error {
+impl From<serde_yaml::Error> for CreationError {
     fn from(error: serde_yaml::Error) -> Self {
         Self::DeserializeFailed(error.to_string())
     }
 }
 
-impl From<serde_json::Error> for Error {
+impl From<serde_json::Error> for CreationError {
     fn from(error: serde_json::Error) -> Self {
         Self::DeserializeFailed(error.to_string())
     }
 }
 
-impl From<prost::EncodeError> for Error {
+impl From<prost::EncodeError> for CreationError {
     fn from(error: prost::EncodeError) -> Self {
         Self::ConvertProtoConfig(ConvertProtoConfigError::new(error, None))
     }
 }
 
-impl From<prost::DecodeError> for Error {
+impl From<prost::DecodeError> for CreationError {
     fn from(error: prost::DecodeError) -> Self {
         Self::ConvertProtoConfig(ConvertProtoConfigError::new(error, None))
     }
 }
 
-impl From<ConvertProtoConfigError> for Error {
+impl From<ConvertProtoConfigError> for CreationError {
     fn from(error: ConvertProtoConfigError) -> Self {
         Self::ConvertProtoConfig(error)
     }

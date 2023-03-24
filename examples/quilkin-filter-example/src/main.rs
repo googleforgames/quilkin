@@ -58,15 +58,15 @@ struct Greet {
 }
 
 impl Filter for Greet {
-    fn read(&self, ctx: &mut ReadContext) -> Option<()> {
+    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         ctx.contents
             .splice(0..0, format!("{} ", self.config.greeting).into_bytes());
-        Some(())
+        Ok(())
     }
-    fn write(&self, ctx: &mut WriteContext) -> Option<()> {
+    fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
         ctx.contents
             .splice(0..0, format!("{} ", self.config.greeting).into_bytes());
-        Some(())
+        Ok(())
     }
 }
 // ANCHOR_END: filter
@@ -79,9 +79,7 @@ impl StaticFilter for Greet {
     type Configuration = Config;
     type BinaryConfiguration = proto::Greet;
 
-    fn try_from_config(
-        config: Option<Self::Configuration>,
-    ) -> Result<Self, quilkin::filters::Error> {
+    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, CreationError> {
         Ok(Self {
             config: Self::ensure_config_exists(config)?,
         })
@@ -100,6 +98,7 @@ async fn main() -> quilkin::Result<()> {
     config.filters.store(std::sync::Arc::new(
         vec![quilkin::config::Filter {
             name: Greet::NAME.into(),
+            label: None,
             config: None,
         }]
         .try_into()?,

@@ -39,9 +39,9 @@ impl LoadBalancer {
 }
 
 impl Filter for LoadBalancer {
-    fn read(&self, ctx: &mut ReadContext) -> Option<()> {
+    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         self.endpoint_chooser.choose_endpoints(ctx);
-        Some(())
+        Ok(())
     }
 }
 
@@ -50,7 +50,7 @@ impl StaticFilter for LoadBalancer {
     type Configuration = Config;
     type BinaryConfiguration = proto::LoadBalancer;
 
-    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, Error> {
+    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, CreationError> {
         Ok(LoadBalancer::new(Self::ensure_config_exists(config)?))
     }
 }

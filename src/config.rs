@@ -45,9 +45,6 @@ pub use self::{
 
 base64_serde_type!(pub Base64Standard, base64::STANDARD);
 
-// For some log messages on the hot path (potentially per-packet), we log 1 out
-// of every `LOG_SAMPLING_RATE` occurrences to avoid spamming the logs.
-pub(crate) const LOG_SAMPLING_RATE: u64 = 1000;
 pub(crate) const BACKOFF_INITIAL_DELAY_MILLISECONDS: u64 = 500;
 pub(crate) const BACKOFF_MAX_DELAY_SECONDS: u64 = 30;
 pub(crate) const BACKOFF_MAX_JITTER_MILLISECONDS: u64 = 2000;
@@ -256,11 +253,12 @@ fn default_proxy_id() -> Slot<String> {
 #[serde(deny_unknown_fields)]
 pub struct Filter {
     pub name: String,
+    pub label: Option<String>,
     pub config: Option<serde_json::Value>,
 }
 
 impl TryFrom<crate::xds::config::listener::v3::Filter> for Filter {
-    type Error = Error;
+    type Error = CreationError;
 
     fn try_from(filter: crate::xds::config::listener::v3::Filter) -> Result<Self, Self::Error> {
         use crate::xds::config::listener::v3::filter::ConfigType;
@@ -269,7 +267,7 @@ impl TryFrom<crate::xds::config::listener::v3::Filter> for Filter {
             let config = match config_type {
                 ConfigType::TypedConfig(any) => any,
                 ConfigType::ConfigDiscovery(_) => {
-                    return Err(Error::FieldInvalid {
+                    return Err(CreationError::FieldInvalid {
                         field: "config_type".into(),
                         reason: "ConfigDiscovery is currently unsupported".into(),
                     })
@@ -277,7 +275,7 @@ impl TryFrom<crate::xds::config::listener::v3::Filter> for Filter {
             };
             Some(
                 crate::filters::FilterRegistry::get_factory(&filter.name)
-                    .ok_or_else(|| Error::NotFound(filter.name.clone()))?
+                    .ok_or_else(|| CreationError::NotFound(filter.name.clone()))?
                     .encode_config_to_json(config)?,
             )
         } else {
@@ -286,13 +284,15 @@ impl TryFrom<crate::xds::config::listener::v3::Filter> for Filter {
 
         Ok(Self {
             name: filter.name,
+            // TODO: keep the label across xDS
+            label: None,
             config,
         })
     }
 }
 
 impl TryFrom<Filter> for crate::xds::config::listener::v3::Filter {
-    type Error = Error;
+    type Error = CreationError;
 
     fn try_from(filter: Filter) -> Result<Self, Self::Error> {
         use crate::xds::config::listener::v3::filter::ConfigType;
@@ -300,7 +300,7 @@ impl TryFrom<Filter> for crate::xds::config::listener::v3::Filter {
         let config = if let Some(config) = filter.config {
             Some(
                 crate::filters::FilterRegistry::get_factory(&filter.name)
-                    .ok_or_else(|| Error::NotFound(filter.name.clone()))?
+                    .ok_or_else(|| CreationError::NotFound(filter.name.clone()))?
                     .encode_config_to_protobuf(config)?,
             )
         } else {
@@ -318,7 +318,8 @@ impl From<(String, FilterInstance)> for Filter {
     fn from((name, instance): (String, FilterInstance)) -> Self {
         Self {
             name,
-            config: Some(serde_json::Value::clone(&instance.config)),
+            label: instance.label().map(String::from),
+            config: Some(serde_json::Value::clone(instance.config())),
         }
     }
 }

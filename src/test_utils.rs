@@ -56,7 +56,7 @@ pub async fn available_addr() -> SocketAddr {
 pub struct TestFilter;
 
 impl Filter for TestFilter {
-    fn read(&self, ctx: &mut ReadContext) -> Option<()> {
+    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         // append values on each run
         ctx.metadata
             .entry("downstream".into())
@@ -65,10 +65,10 @@ impl Filter for TestFilter {
 
         ctx.contents
             .append(&mut format!(":odr:{}", ctx.source).into_bytes());
-        Some(())
+        Ok(())
     }
 
-    fn write(&self, ctx: &mut WriteContext) -> Option<()> {
+    fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
         // append values on each run
         ctx.metadata
             .entry("upstream".into())
@@ -77,7 +77,7 @@ impl Filter for TestFilter {
 
         ctx.contents
             .append(&mut format!(":our:{}:{}", ctx.source, ctx.dest).into_bytes());
-        Some(())
+        Ok(())
     }
 }
 
@@ -86,7 +86,7 @@ impl StaticFilter for TestFilter {
     type Configuration = ();
     type BinaryConfiguration = ();
 
-    fn try_from_config(_: Option<Self::Configuration>) -> Result<Self, Error> {
+    fn try_from_config(_: Option<Self::Configuration>) -> Result<Self, CreationError> {
         Ok(Self)
     }
 }
@@ -323,6 +323,7 @@ pub fn new_test_config() -> crate::Config {
         filters: crate::config::Slot::new(
             crate::filters::FilterChain::try_from(vec![crate::config::Filter {
                 name: "TestFilter".into(),
+                label: None,
                 config: None,
             }])
             .unwrap(),

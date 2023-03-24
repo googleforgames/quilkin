@@ -34,13 +34,13 @@ impl Pass {
 
 impl Filter for Pass {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn read(&self, _: &mut ReadContext) -> Option<()> {
-        Some(())
+    fn read(&self, _: &mut ReadContext) -> Result<(), FilterError> {
+        Ok(())
     }
 
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn write(&self, _: &mut WriteContext) -> Option<()> {
-        Some(())
+    fn write(&self, _: &mut WriteContext) -> Result<(), FilterError> {
+        Ok(())
     }
 }
 
@@ -49,7 +49,7 @@ impl StaticFilter for Pass {
     type Configuration = Config;
     type BinaryConfiguration = proto::Pass;
 
-    fn try_from_config(_config: Option<Self::Configuration>) -> Result<Self, Error> {
+    fn try_from_config(_config: Option<Self::Configuration>) -> Result<Self, CreationError> {
         Ok(Pass::new())
     }
 }

@@ -42,8 +42,8 @@ pub mod token_router;
 /// [`FilterFactory`].
 pub mod prelude {
     pub use super::{
-        ConvertProtoConfigError, CreateFilterArgs, Error, Filter, FilterInstance, ReadContext,
-        StaticFilter, WriteContext,
+        ConvertProtoConfigError, CreateFilterArgs, CreationError, Filter, FilterError,
+        FilterInstance, ReadContext, StaticFilter, WriteContext,
     };
 }
 
@@ -55,7 +55,7 @@ pub use self::{
     concatenate_bytes::ConcatenateBytes,
     debug::Debug,
     drop::Drop,
-    error::{ConvertProtoConfigError, Error},
+    error::{ConvertProtoConfigError, CreationError, FilterError},
     factory::{CreateFilterArgs, DynFilterFactory, FilterFactory, FilterInstance},
     firewall::Firewall,
     load_balancer::LoadBalancer,
@@ -83,13 +83,13 @@ pub use self::chain::FilterChain;
 /// struct Greet;
 ///
 /// impl Filter for Greet {
-///     fn read(&self, ctx: &mut ReadContext) -> Option<()> {
+///     fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
 ///         ctx.contents.splice(0..0, b"Hello ".into_iter().copied());
-///         Some(())
+///         Ok(())
 ///     }
-///     fn write(&self, ctx: &mut WriteContext) -> Option<()> {
+///     fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
 ///         ctx.contents.splice(0..0, b"Goodbye ".into_iter().copied());
-///         Some(())
+///         Ok(())
 ///     }
 /// }
 ///
@@ -98,7 +98,7 @@ pub use self::chain::FilterChain;
 ///     type Configuration = ();
 ///     type BinaryConfiguration = ();
 ///
-///     fn try_from_config(_: Option<Self::Configuration>) -> Result<Self, quilkin::filters::Error> {
+///     fn try_from_config(_: Option<Self::Configuration>) -> Result<Self, CreationError> {
 ///         Ok(Self)
 ///     }
 /// }
@@ -107,7 +107,7 @@ pub trait StaticFilter: Filter + Sized
 // This where clause simply states that `Configuration`'s and
 // `BinaryConfiguration`'s `Error` types are compatible with `filters::Error`.
 where
-    Error: From<<Self::Configuration as TryFrom<Self::BinaryConfiguration>>::Error>
+    CreationError: From<<Self::Configuration as TryFrom<Self::BinaryConfiguration>>::Error>
         + From<<Self::BinaryConfiguration as TryFrom<Self::Configuration>>::Error>,
 {
     /// The globally unique name of the filter.
@@ -131,7 +131,7 @@ where
     /// Instantiates a new [`StaticFilter`] from the given configuration, if any.
     /// # Errors
     /// If the provided configuration is invalid.
-    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, Error>;
+    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, CreationError>;
 
     /// Instantiates a new [`StaticFilter`] from the given configuration, if any.
     /// # Panics
@@ -152,15 +152,16 @@ where
     /// which require a fully initialized [`Self::Configuration`].
     fn ensure_config_exists(
         config: Option<Self::Configuration>,
-    ) -> Result<Self::Configuration, Error> {
-        config.ok_or(Error::MissingConfig(Self::NAME))
+    ) -> Result<Self::Configuration, CreationError> {
+        config.ok_or(CreationError::MissingConfig(Self::NAME))
     }
 
     fn as_filter_config(
         config: impl Into<Option<Self::Configuration>>,
-    ) -> Result<crate::config::Filter, Error> {
+    ) -> Result<crate::config::Filter, CreationError> {
         Ok(crate::config::Filter {
             name: Self::NAME.into(),
+            label: None,
             config: config
                 .into()
                 .map(|config| serde_json::to_value(&config))
@@ -197,8 +198,8 @@ pub trait Filter: Send + Sync {
     /// This function should return an `Some` if the packet processing should
     /// proceed. If the packet should be rejected, it will return [`None`]
     /// instead. By default, the context passes through unchanged.
-    fn read(&self, _: &mut ReadContext) -> Option<()> {
-        Some(())
+    fn read(&self, _: &mut ReadContext) -> Result<(), FilterError> {
+        Ok(())
     }
 
     /// [`Filter::write`] is invoked when the proxy is about to send data to a
@@ -207,7 +208,7 @@ pub trait Filter: Send + Sync {
     ///
     /// This function should return an `Some` if the packet processing should
     /// proceed. If the packet should be rejected, it will return [`None`]
-    fn write(&self, _: &mut WriteContext) -> Option<()> {
-        Some(())
+    fn write(&self, _: &mut WriteContext) -> Result<(), FilterError> {
+        Ok(())
     }
 }

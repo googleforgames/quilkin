@@ -15,32 +15,19 @@
  */
 use prometheus::{
     core::{AtomicU64, GenericCounter},
-    IntCounter, IntCounterVec, Result as MetricsResult,
+    IntCounter, Result as MetricsResult,
 };
 
 use crate::metrics::{filter_opts, CollectorExt};
 
 /// Register and manage metrics for this filter
 pub(super) struct Metrics {
-    pub(super) packets_dropped_total_compress: GenericCounter<AtomicU64>,
-    pub(super) packets_dropped_total_decompress: GenericCounter<AtomicU64>,
     pub(super) compressed_bytes_total: GenericCounter<AtomicU64>,
     pub(super) decompressed_bytes_total: GenericCounter<AtomicU64>,
 }
 
 impl Metrics {
     pub(super) fn new() -> MetricsResult<Self> {
-        let operation_labels = vec!["action"];
-        let dropped_metric = IntCounterVec::new(
-            filter_opts(
-                "packets_dropped_total",
-                "Compress",
-                "Total number of packets dropped as they could not be processed. Labels: operation.",
-            ),
-            &operation_labels,
-        )?
-        .register_if_not_exists()?;
-
         let decompressed_bytes_total = IntCounter::with_opts(filter_opts(
             "decompressed_bytes_total",
             "Compress",
@@ -56,10 +43,6 @@ impl Metrics {
         .register_if_not_exists()?;
 
         Ok(Metrics {
-            packets_dropped_total_compress: dropped_metric
-                .get_metric_with_label_values(vec!["Compress"].as_slice())?,
-            packets_dropped_total_decompress: dropped_metric
-                .get_metric_with_label_values(vec!["Decompress"].as_slice())?,
             compressed_bytes_total,
             decompressed_bytes_total,
         })

@@ -40,13 +40,13 @@ sent to a downstream client.
 use quilkin::filters::prelude::*;
 
 impl Filter for Greet {
-    fn read(&self, ctx: &mut ReadContext) -> Option<()> {
+    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         ctx.contents.extend(b"Hello");
-        Some(())
+        Ok(())
     }
-    fn write(&self, ctx: &mut WriteContext) -> Option<()> {
+    fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
         ctx.contents.extend(b"Goodbye");
-        Some(())
+        Ok(())
     }
 }
 ```
@@ -65,7 +65,7 @@ impl StaticFilter for Greet {
     type Configuration = ();
     type BinaryConfiguration = ();
 
-    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, Error> {
+    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, CreationError> {
         Ok(Self)
     }
 }
