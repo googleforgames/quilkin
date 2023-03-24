@@ -54,7 +54,7 @@ impl Filter for Firewall {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
     fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         for rule in &self.on_read {
-            if rule.contains(ctx.source.to_socket_addr()?) {
+            if rule.contains(ctx.source.to_socket_addr().await?) {
                 return match rule.action {
                     Action::Allow => {
                         debug!(
@@ -82,7 +82,7 @@ impl Filter for Firewall {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
     fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
         for rule in &self.on_write {
-            if rule.contains(ctx.source.to_socket_addr()?) {
+            if rule.contains(ctx.source.to_socket_addr().await?) {
                 return match rule.action {
                     Action::Allow => {
                         debug!(

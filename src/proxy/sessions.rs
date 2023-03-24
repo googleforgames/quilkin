@@ -66,7 +66,6 @@ struct ReceivedPacketContext<'a> {
     endpoint: &'a Endpoint,
     source: EndpointAddress,
     dest: EndpointAddress,
-    timer: HistogramTimer,
 }
 
 pub struct SessionArgs {
@@ -91,11 +90,11 @@ impl Session {
         let addr = (std::net::Ipv4Addr::UNSPECIFIED, 0);
         let upstream_socket = Arc::new(UdpSocket::bind(addr).await?);
         upstream_socket
-            .connect(args.dest.address.to_socket_addr()?)
+            .connect(args.dest.address.to_socket_addr().await?)
             .await?;
         let (shutdown_tx, shutdown_rx) = watch::channel::<()>(());
 
-        let ip = args.source.to_socket_addr().unwrap().ip();
+        let ip = args.source.to_socket_addr().await.unwrap().ip();
         let asn_info = crate::MaxmindDb::lookup(ip);
         let s = Session {
             config: args.config.clone(),
@@ -138,7 +137,9 @@ impl Session {
                             Ok((size, recv_addr)) => {
                                 crate::metrics::bytes_total(crate::metrics::WRITE).inc_by(size as u64);
                                 crate::metrics::packets_total(crate::metrics::WRITE).inc();
-                                Session::process_recv_packet(
+
+                                let timer = crate::metrics::processing_time(crate::metrics::WRITE).start_timer();
+                                let result = Session::process_recv_packet(
                                     &downstream_socket,
                                     ReceivedPacketContext {
                                         config: config.clone(),
@@ -146,8 +147,17 @@ impl Session {
                                         endpoint: &endpoint,
                                         source: recv_addr.into(),
                                         dest: source.clone(),
-                                        timer: crate::metrics::processing_time(crate::metrics::WRITE).start_timer(),
-                                    }).await
+                                    }).await;
+                                timer.stop_and_record();
+                                if let Err(error) = result {
+                                    error.log();
+                                    crate::metrics::packets_dropped_total(
+                                        crate::metrics::WRITE,
+                                        "proxy::Session::process_recv_packet",
+                                    )
+                                        .inc();
+                                    crate::metrics::errors_total(crate::metrics::WRITE).inc();
+                                }
                             }
                         };
                     }
@@ -174,14 +184,13 @@ impl Session {
     async fn process_recv_packet(
         downstream_socket: &Arc<UdpSocket>,
         packet_ctx: ReceivedPacketContext<'_>,
-    ) {
+    ) -> Result<usize, Error> {
         let ReceivedPacketContext {
             packet,
             config,
             endpoint,
             source: from,
             dest,
-            timer,
         } = packet_ctx;
 
         tracing::trace!(%from, dest = %endpoint.address, contents = %debug::bytes_to_string(packet), "received packet from upstream");
@@ -197,34 +206,16 @@ impl Session {
             .filters
             .load()
             .write(&mut context)
-            .map_err(Error::from)
-            .map(|_| context)
-            .and_then(|context| {
-                dest.to_socket_addr()
-                    .map(|addr| (addr, context))
-                    .map_err(Error::ToSocketAddr)
-            });
+            .await
+            .ok_or(Error::FilterDroppedPacket)?;
 
-        let handle_error = |error: Error| {
-            let error = error.to_string();
-            crate::metrics::packets_dropped_total(crate::metrics::WRITE, &error).inc();
-            crate::metrics::errors_total(crate::metrics::WRITE, &error).inc();
-        };
-
-        match result {
-            Ok((addr, context)) => {
-                let packet = context.contents.as_ref();
-                tracing::trace!(%from, dest = %addr, contents = %debug::bytes_to_string(packet), "sending packet downstream");
-                let _ = downstream_socket
-                    .send_to(packet, addr)
-                    .await
-                    .map_err(Error::SendTo)
-                    .map_err(handle_error);
-            }
-            Err(error) => (handle_error)(error),
-        };
-
-        timer.stop_and_record();
+        let addr = dest.to_socket_addr().await.map_err(Error::SendTo)?;
+        let packet = context.contents.as_ref();
+        tracing::trace!(%from, dest = %addr, contents = %debug::bytes_to_string(packet), "sending packet downstream");
+        downstream_socket
+            .send_to(packet, addr)
+            .await
+            .map_err(Error::SendTo)
     }
 
     /// Sends a packet to the Session's dest.
@@ -325,7 +316,6 @@ mod tests {
     #[tokio::test]
     async fn process_recv_packet() {
         crate::test_utils::load_test_filters();
-        let histogram = Histogram::with_opts(HistogramOpts::new("test", "test")).unwrap();
 
         let socket = Arc::new(create_socket().await);
         let endpoint = Endpoint::new("127.0.1.1:80".parse().unwrap());
@@ -341,10 +331,10 @@ mod tests {
                 endpoint: &endpoint,
                 source: endpoint.address.clone(),
                 dest: dest.clone(),
-                timer: histogram.start_timer(),
             },
         )
-        .await;
+        .await
+        .unwrap();
 
         let mut buf = vec![0; 1024];
         let (size, recv_addr) = timeout(Duration::from_secs(5), socket.recv_from(&mut buf))
@@ -364,10 +354,10 @@ mod tests {
                 endpoint: &endpoint,
                 source: endpoint.address.clone(),
                 dest: dest.clone(),
-                timer: histogram.start_timer(),
             },
         )
-        .await;
+        .await
+        .unwrap();
 
         let (size, recv_addr) = timeout(Duration::from_secs(5), socket.recv_from(&mut buf))
             .await
