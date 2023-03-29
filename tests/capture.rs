@@ -43,6 +43,7 @@ async fn token_router() {
         quilkin::filters::FilterChain::try_from(vec![
             Filter {
                 name: Capture::factory().name().into(),
+                label: None,
                 config: serde_json::from_value(serde_json::json!({
                     "regex": {
                         "pattern": ".{3}$"
@@ -52,6 +53,7 @@ async fn token_router() {
             },
             Filter {
                 name: TokenRouter::factory().name().into(),
+                label: None,
                 config: None,
             },
         ])

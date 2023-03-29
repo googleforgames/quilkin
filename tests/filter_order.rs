@@ -67,14 +67,17 @@ on_write: DECOMPRESS
         quilkin::filters::FilterChain::try_from(vec![
             Filter {
                 name: ConcatenateBytes::factory().name().into(),
+                label: None,
                 config: serde_yaml::from_str(yaml_concat_read).unwrap(),
             },
             Filter {
                 name: ConcatenateBytes::factory().name().into(),
+                label: None,
                 config: serde_yaml::from_str(yaml_concat_write).unwrap(),
             },
             Filter {
                 name: Compress::factory().name().into(),
+                label: None,
                 config: serde_yaml::from_str(yaml_compress).unwrap(),
             },
         ])

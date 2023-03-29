@@ -102,7 +102,7 @@ impl Timestamp {
 }
 
 impl Timestamp {
-    fn new(config: Config) -> Result<Self, Error> {
+    fn new(config: Config) -> Result<Self, CreationError> {
         Ok(Self {
             config: Arc::new(config),
         })
@@ -110,7 +110,7 @@ impl Timestamp {
 }
 
 impl TryFrom<Config> for Timestamp {
-    type Error = Error;
+    type Error = CreationError;
 
     fn try_from(config: Config) -> Result<Self, Self::Error> {
         Self::new(config)
@@ -118,14 +118,14 @@ impl TryFrom<Config> for Timestamp {
 }
 
 impl Filter for Timestamp {
-    fn read(&self, ctx: &mut ReadContext) -> Option<()> {
+    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         self.observe(&ctx.metadata, READ_DIRECTION_LABEL);
-        Some(())
+        Ok(())
     }
 
-    fn write(&self, ctx: &mut WriteContext) -> Option<()> {
+    fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
         self.observe(&ctx.metadata, WRITE_DIRECTION_LABEL);
-        Some(())
+        Ok(())
     }
 }
 
@@ -134,7 +134,7 @@ impl StaticFilter for Timestamp {
     type Configuration = Config;
     type BinaryConfiguration = proto::Timestamp;
 
-    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, Error> {
+    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, CreationError> {
         Self::new(Self::ensure_config_exists(config)?)
     }
 }

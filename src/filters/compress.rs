@@ -20,8 +20,7 @@ mod metrics;
 
 crate::include_proto!("quilkin.filters.compress.v1alpha1");
 
-use crate::{config::LOG_SAMPLING_RATE, filters::prelude::*};
-use tracing::warn;
+use crate::filters::prelude::*;
 
 use self::quilkin::filters::compress::v1alpha1 as proto;
 use compressor::Compressor;
@@ -32,6 +31,9 @@ pub use config::{Action, Config, Mode};
 /// Filter for compressing and decompressing packet data
 pub struct Compress {
     metrics: Metrics,
+    // Keeping for now it would be needed for
+    // https://github.com/googleforgames/quilkin/issues/637
+    #[allow(unused)]
     compression_mode: Mode,
     on_read: Action,
     on_write: Action,
@@ -48,31 +50,11 @@ impl Compress {
             on_write: config.on_write,
         }
     }
-
-    /// Track a failed attempt at compression
-    fn failed_compression<T>(&self, err: &dyn std::error::Error) -> Option<T> {
-        if self.metrics.packets_dropped_total_compress.get() % LOG_SAMPLING_RATE == 0 {
-            warn!(mode = ?self.compression_mode, error = %err, count = self.metrics.packets_dropped_total_compress.get(),
-            "Packets are being dropped as they could not be compressed");
-        }
-        self.metrics.packets_dropped_total_compress.inc();
-        None
-    }
-
-    /// Track a failed attempt at decompression
-    fn failed_decompression<T>(&self, err: &dyn std::error::Error) -> Option<T> {
-        if self.metrics.packets_dropped_total_decompress.get() % LOG_SAMPLING_RATE == 0 {
-            warn!(mode = ?self.compression_mode, error = %err, count = ?self.metrics.packets_dropped_total_decompress.get(),
-            "Packets are being dropped as they could not be decompressed");
-        }
-        self.metrics.packets_dropped_total_decompress.inc();
-        None
-    }
 }
 
 impl Filter for Compress {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn read(&self, ctx: &mut ReadContext) -> Option<()> {
+    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         let original_size = ctx.contents.len();
 
         match self.on_read {
@@ -84,9 +66,9 @@ impl Filter for Compress {
                     self.metrics
                         .compressed_bytes_total
                         .inc_by(ctx.contents.len() as u64);
-                    Some(())
+                    Ok(())
                 }
-                Err(err) => self.failed_compression(&err),
+                Err(err) => Err(FilterError::new(err)),
             },
             Action::Decompress => match self.compressor.decode(&mut ctx.contents) {
                 Ok(()) => {
@@ -96,16 +78,16 @@ impl Filter for Compress {
                     self.metrics
                         .decompressed_bytes_total
                         .inc_by(ctx.contents.len() as u64);
-                    Some(())
+                    Ok(())
                 }
-                Err(err) => self.failed_decompression(&err),
+                Err(err) => Err(FilterError::new(err)),
             },
-            Action::DoNothing => Some(()),
+            Action::DoNothing => Ok(()),
         }
     }
 
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn write(&self, ctx: &mut WriteContext) -> Option<()> {
+    fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
         let original_size = ctx.contents.len();
         match self.on_write {
             Action::Compress => match self.compressor.encode(&mut ctx.contents) {
@@ -116,9 +98,9 @@ impl Filter for Compress {
                     self.metrics
                         .compressed_bytes_total
                         .inc_by(ctx.contents.len() as u64);
-                    Some(())
+                    Ok(())
                 }
-                Err(err) => self.failed_compression(&err),
+                Err(err) => Err(FilterError::new(err)),
             },
             Action::Decompress => match self.compressor.decode(&mut ctx.contents) {
                 Ok(()) => {
@@ -128,12 +110,12 @@ impl Filter for Compress {
                     self.metrics
                         .decompressed_bytes_total
                         .inc_by(ctx.contents.len() as u64);
-                    Some(())
+                    Ok(())
                 }
 
-                Err(err) => self.failed_decompression(&err),
+                Err(err) => Err(FilterError::new(err)),
             },
-            Action::DoNothing => Some(()),
+            Action::DoNothing => Ok(()),
         }
     }
 }
@@ -143,7 +125,7 @@ impl StaticFilter for Compress {
     type Configuration = Config;
     type BinaryConfiguration = proto::Compress;
 
-    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, Error> {
+    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, CreationError> {
         Ok(Compress::new(
             Self::ensure_config_exists(config)?,
             Metrics::new()?,
@@ -153,8 +135,6 @@ impl StaticFilter for Compress {
 
 #[cfg(test)]
 mod tests {
-    use tracing_test::traced_test;
-
     use crate::{endpoint::Endpoint, filters::compress::compressor::Snappy};
 
     use super::*;
@@ -232,8 +212,6 @@ mod tests {
 
         assert_eq!(expected, &*write_context.contents);
 
-        assert_eq!(0, compress.metrics.packets_dropped_total_decompress.get());
-        assert_eq!(0, compress.metrics.packets_dropped_total_compress.get());
         // multiply by two, because data was sent both upstream and downstream
         assert_eq!(
             (read_context.contents.len() * 2) as u64,
@@ -267,12 +245,8 @@ mod tests {
             (expected.len() * 2) as u64,
             compress.metrics.decompressed_bytes_total.get()
         );
-
-        assert_eq!(0, compress.metrics.packets_dropped_total_decompress.get());
-        assert_eq!(0, compress.metrics.packets_dropped_total_compress.get());
     }
 
-    #[traced_test]
     #[test]
     fn failed_decompress() {
         let compression = Compress::new(
@@ -291,13 +265,7 @@ mod tests {
                 "127.0.0.1:8081".parse().unwrap(),
                 b"hello".to_vec(),
             ))
-            .is_none());
-
-        assert_eq!(
-            1,
-            compression.metrics.packets_dropped_total_decompress.get()
-        );
-        assert_eq!(0, compression.metrics.packets_dropped_total_compress.get());
+            .is_err());
 
         let compression = Compress::new(
             Config {
@@ -314,18 +282,8 @@ mod tests {
                 "127.0.0.1:8080".parse().unwrap(),
                 b"hello".to_vec(),
             ))
-            .is_none());
+            .is_err());
 
-        assert!(logs_contain(
-            "Packets are being dropped as they could not be decompressed"
-        ));
-        assert!(logs_contain("quilkin::filters::compress")); // the given name to the the logger by tracing
-
-        assert_eq!(
-            1,
-            compression.metrics.packets_dropped_total_decompress.get()
-        );
-        assert_eq!(0, compression.metrics.packets_dropped_total_compress.get());
         assert_eq!(0, compression.metrics.compressed_bytes_total.get());
         assert_eq!(0, compression.metrics.decompressed_bytes_total.get());
     }

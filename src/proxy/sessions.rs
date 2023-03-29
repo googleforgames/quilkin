@@ -79,7 +79,7 @@ pub struct SessionArgs {
 impl SessionArgs {
     /// Creates a new Session, and starts the process of receiving udp sockets
     /// from its ephemeral port from endpoint(s)
-    pub async fn into_session(self) -> std::io::Result<Session> {
+    pub async fn into_session(self) -> Result<Session, super::PipelineError> {
         Session::new(self).await
     }
 }
@@ -87,7 +87,7 @@ impl SessionArgs {
 impl Session {
     /// internal constructor for a Session from SessionArgs
     #[tracing::instrument(skip_all)]
-    async fn new(args: SessionArgs) -> std::io::Result<Self> {
+    async fn new(args: SessionArgs) -> Result<Self, super::PipelineError> {
         let addr = (std::net::Ipv4Addr::UNSPECIFIED, 0);
         let upstream_socket = Arc::new(UdpSocket::bind(addr).await?);
         upstream_socket
@@ -132,7 +132,7 @@ impl Session {
                     received = upstream_socket.recv_from(&mut buf) => {
                         match received {
                             Err(error) => {
-                                crate::metrics::errors_total(crate::metrics::WRITE).inc();
+                                crate::metrics::errors_total(crate::metrics::WRITE, &error.to_string()).inc();
                                 tracing::error!(%error, %source, dest = ?endpoint, "Error receiving packet");
                             },
                             Ok((size, recv_addr)) => {
@@ -197,7 +197,7 @@ impl Session {
             .filters
             .load()
             .write(&mut context)
-            .ok_or(Error::FilterDroppedPacket)
+            .map_err(Error::from)
             .map(|_| context)
             .and_then(|context| {
                 dest.to_socket_addr()
@@ -206,13 +206,9 @@ impl Session {
             });
 
         let handle_error = |error: Error| {
-            error.log();
-            crate::metrics::packets_dropped_total(
-                crate::metrics::WRITE,
-                "proxy::Session::process_recv_packet",
-            )
-            .inc();
-            crate::metrics::errors_total(crate::metrics::WRITE).inc();
+            let error = error.to_string();
+            crate::metrics::packets_dropped_total(crate::metrics::WRITE, &error).inc();
+            crate::metrics::errors_total(crate::metrics::WRITE, &error).inc();
         };
 
         match result {
@@ -235,14 +231,14 @@ impl Session {
     pub fn send<'buf>(
         &self,
         buf: &'buf [u8],
-    ) -> impl std::future::Future<Output = std::io::Result<usize>> + 'buf {
+    ) -> impl std::future::Future<Output = Result<usize, super::PipelineError>> + 'buf {
         tracing::trace!(
         dest_address = %self.dest.address,
         contents = %debug::bytes_to_string(buf),
         "sending packet upstream");
 
         let socket = self.upstream_socket.clone();
-        async move { socket.send(buf).await }
+        async move { socket.send(buf).await.map_err(From::from) }
     }
 }
 
@@ -265,8 +261,8 @@ pub enum Error {
     ToSocketAddr(std::io::Error),
     #[error("failed to send packet downstream: {0}")]
     SendTo(std::io::Error),
-    #[error("filter dropped packet from upstream")]
-    FilterDroppedPacket,
+    #[error("filter {0}")]
+    Filter(#[from] crate::filters::FilterError),
 }
 
 impl Loggable for Error {
@@ -275,8 +271,8 @@ impl Loggable for Error {
             Self::ToSocketAddr(error) | Self::SendTo(error) => {
                 tracing::error!(kind=%error.kind(), "{}", self)
             }
-            Self::FilterDroppedPacket => {
-                tracing::trace!("{}", self)
+            Self::Filter(_) => {
+                tracing::error!("{}", self);
             }
         }
     }

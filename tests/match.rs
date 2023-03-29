@@ -70,10 +70,12 @@ on_read:
         quilkin::filters::FilterChain::try_from(vec![
             Filter {
                 name: Capture::NAME.into(),
+                label: None,
                 config: serde_yaml::from_str(capture_yaml).unwrap(),
             },
             Filter {
                 name: Match::NAME.into(),
+                label: None,
                 config: serde_yaml::from_str(matches_yaml).unwrap(),
             },
         ])

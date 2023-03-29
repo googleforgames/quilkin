@@ -50,7 +50,7 @@ pub struct FilterChain {
 }
 
 impl FilterChain {
-    pub fn new(filters: Vec<(String, FilterInstance)>) -> Result<Self, Error> {
+    pub fn new(filters: Vec<(String, FilterInstance)>) -> Result<Self, CreationError> {
         let subsystem = "filter";
 
         Ok(Self {
@@ -93,7 +93,7 @@ impl FilterChain {
 
     /// Validates the filter configurations in the provided config and constructs
     /// a FilterChain if all configurations are valid.
-    pub fn try_create(filter_configs: &[FilterConfig]) -> Result<Self, Error> {
+    pub fn try_create(filter_configs: &[FilterConfig]) -> Result<Self, CreationError> {
         Self::try_from(filter_configs)
     }
 
@@ -110,7 +110,8 @@ impl FilterChain {
             .iter()
             .map(|(name, instance)| crate::config::Filter {
                 name: name.clone(),
-                config: match &*instance.config {
+                label: instance.label().map(String::from),
+                config: match instance.config() {
                     serde_json::Value::Null => None,
                     value => Some(value.clone()),
                 },
@@ -123,7 +124,7 @@ impl std::fmt::Debug for FilterChain {
         let mut filters = f.debug_struct("Filters");
 
         for (id, instance) in &self.filters {
-            filters.field(id, &*instance.config);
+            filters.field(id, instance.config());
         }
 
         filters.finish()
@@ -138,40 +139,42 @@ impl PartialEq for FilterChain {
 
         self.filters.iter().zip(&rhs.filters).all(
             |((lhs_name, lhs_instance), (rhs_name, rhs_instance))| {
-                lhs_name == rhs_name && lhs_instance.config == rhs_instance.config
+                lhs_name == rhs_name
+                    && lhs_instance.config() == rhs_instance.config()
+                    && lhs_instance.label() == rhs_instance.label()
             },
         )
     }
 }
 
 impl<const N: usize> TryFrom<&[FilterConfig; N]> for FilterChain {
-    type Error = Error;
+    type Error = CreationError;
 
-    fn try_from(filter_configs: &[FilterConfig; N]) -> Result<Self, Error> {
+    fn try_from(filter_configs: &[FilterConfig; N]) -> Result<Self, Self::Error> {
         Self::try_from(&filter_configs[..])
     }
 }
 
 impl<const N: usize> TryFrom<[FilterConfig; N]> for FilterChain {
-    type Error = Error;
+    type Error = CreationError;
 
-    fn try_from(filter_configs: [FilterConfig; N]) -> Result<Self, Error> {
+    fn try_from(filter_configs: [FilterConfig; N]) -> Result<Self, Self::Error> {
         Self::try_from(&filter_configs[..])
     }
 }
 
 impl TryFrom<Vec<FilterConfig>> for FilterChain {
-    type Error = Error;
+    type Error = CreationError;
 
-    fn try_from(filter_configs: Vec<FilterConfig>) -> Result<Self, Error> {
+    fn try_from(filter_configs: Vec<FilterConfig>) -> Result<Self, Self::Error> {
         Self::try_from(&filter_configs[..])
     }
 }
 
 impl TryFrom<&[FilterConfig]> for FilterChain {
-    type Error = Error;
+    type Error = CreationError;
 
-    fn try_from(filter_configs: &[FilterConfig]) -> Result<Self, Error> {
+    fn try_from(filter_configs: &[FilterConfig]) -> Result<Self, Self::Error> {
         let mut filters = Vec::new();
 
         for filter_config in filter_configs {
@@ -188,17 +191,17 @@ impl TryFrom<&[FilterConfig]> for FilterChain {
 }
 
 impl TryFrom<FilterChain> for crate::xds::config::listener::v3::FilterChain {
-    type Error = Error;
+    type Error = CreationError;
 
-    fn try_from(chain: FilterChain) -> Result<Self, Error> {
+    fn try_from(chain: FilterChain) -> Result<Self, Self::Error> {
         Self::try_from(&chain)
     }
 }
 
 impl TryFrom<&'_ FilterChain> for crate::xds::config::listener::v3::FilterChain {
-    type Error = Error;
+    type Error = CreationError;
 
-    fn try_from(chain: &FilterChain) -> Result<Self, Error> {
+    fn try_from(chain: &FilterChain) -> Result<Self, Self::Error> {
         Ok(Self {
             filters: chain
                 .iter()
@@ -232,7 +235,8 @@ impl serde::Serialize for FilterChain {
             .iter()
             .map(|(name, instance)| crate::config::Filter {
                 name: name.clone(),
-                config: Some(serde_json::Value::clone(&instance.config)),
+                label: instance.label().map(String::from),
+                config: Some(serde_json::Value::clone(instance.config())),
             })
             .collect::<Vec<_>>();
 
@@ -254,43 +258,41 @@ impl schemars::JsonSchema for FilterChain {
 }
 
 impl Filter for FilterChain {
-    fn read(&self, ctx: &mut ReadContext) -> Option<()> {
+    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         self.filters
             .iter()
             .zip(self.filter_read_duration_seconds.iter())
             .try_fold((), |_, ((id, instance), histogram)| {
                 tracing::trace!(%id, "read filtering packet");
-                match histogram.observe_closure_duration(|| instance.filter.read(ctx)) {
-                    Some(()) => {
+                match histogram.observe_closure_duration(|| instance.filter().read(ctx)) {
+                    Ok(()) => {
                         tracing::trace!(%id, "read passing packet");
                     }
-                    None => {
+                    Err(error) => {
                         tracing::trace!(%id, "read dropping packet");
-                        crate::metrics::packets_dropped_total(crate::metrics::READ, id).inc();
-                        return None;
+                        return Err(error);
                     }
                 }
 
-                Some(())
+                Ok(())
             })
     }
 
-    fn write(&self, ctx: &mut WriteContext) -> Option<()> {
+    fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
         self.filters
             .iter()
             .rev()
             .zip(self.filter_write_duration_seconds.iter().rev())
             .try_fold((), |_, ((id, instance), histogram)| {
                 tracing::trace!(%id, "write filtering packet");
-                match histogram.observe_closure_duration(|| instance.filter.write(ctx)) {
-                    Some(()) => {
+                match histogram.observe_closure_duration(|| instance.filter().write(ctx)) {
+                    Ok(()) => {
                         tracing::trace!(%id, "write passing packet");
-                        Some(())
+                        Ok(())
                     }
-                    None => {
+                    Err(error) => {
                         tracing::trace!(%id, "write dropping packet");
-                        crate::metrics::packets_dropped_total(crate::metrics::WRITE, id).inc();
-                        None
+                        Err(error)
                     }
                 }
             })
@@ -299,8 +301,6 @@ impl Filter for FilterChain {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-
     use crate::{
         config,
         endpoint::Endpoint,
@@ -317,6 +317,7 @@ mod tests {
         // everything is fine
         let filter_configs = &[config::Filter {
             name: provider.name().into(),
+            label: None,
             config: Some(serde_json::Map::default().into()),
         }];
 
@@ -326,6 +327,7 @@ mod tests {
         // uh oh, something went wrong
         let filter_configs = &[config::Filter {
             name: "this is so wrong".into(),
+            label: None,
             config: Default::default(),
         }];
         let result = FilterChain::try_create(filter_configs);
@@ -380,17 +382,11 @@ mod tests {
         let chain = FilterChain::new(vec![
             (
                 TestFilter::NAME.into(),
-                FilterInstance {
-                    config: Arc::new(serde_json::json!(null)),
-                    filter: Arc::new(TestFilter),
-                },
+                FilterInstance::new(serde_json::json!(null), Box::new(TestFilter)),
             ),
             (
                 TestFilter::NAME.into(),
-                FilterInstance {
-                    config: Arc::new(serde_json::json!(null)),
-                    filter: Arc::new(TestFilter),
-                },
+                FilterInstance::new(serde_json::json!(null), Box::new(TestFilter)),
             ),
         ])
         .unwrap();
@@ -440,20 +436,14 @@ mod tests {
         let filter_chain = FilterChain::new(vec![
             (
                 "TestFilter".into(),
-                FilterInstance {
-                    config: Arc::new(serde_json::json!(null)),
-                    filter: Arc::new(TestFilter),
-                },
+                FilterInstance::new(serde_json::json!(null), Box::new(TestFilter)),
             ),
             (
                 "TestFilter2".into(),
-                FilterInstance {
-                    config: Arc::new(serde_json::json!({
-                        "k1": "v1",
-                        "k2": 2
-                    })),
-                    filter: Arc::new(TestFilter2),
-                },
+                FilterInstance::new(
+                    serde_json::json!({ "k1": "v1", "k2": 2 }),
+                    Box::new(TestFilter2),
+                ),
             ),
         ])
         .unwrap();
@@ -463,10 +453,12 @@ mod tests {
             vec![
                 crate::config::Filter {
                     name: "TestFilter".into(),
+                    label: None,
                     config: None,
                 },
                 crate::config::Filter {
                     name: "TestFilter2".into(),
+                    label: None,
                     config: Some(serde_json::json!({
                         "k1": "v1",
                         "k2": 2

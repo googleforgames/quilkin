@@ -17,7 +17,9 @@
 use arc_swap::ArcSwap;
 use once_cell::sync::Lazy;
 
-use crate::filters::{CreateFilterArgs, DynFilterFactory, Error, FilterInstance, FilterSet};
+use crate::filters::{
+    CreateFilterArgs, CreationError, DynFilterFactory, FilterInstance, FilterSet,
+};
 
 static REGISTRY: Lazy<ArcSwap<FilterSet>> =
     Lazy::new(|| ArcSwap::new(std::sync::Arc::new(FilterSet::default())));
@@ -44,9 +46,9 @@ impl FilterRegistry {
     /// Creates and returns a new dynamic instance of [`Filter`][crate::filters::Filter] for a given
     /// `key`. Errors if the filter cannot be found, or if there is a
     /// configuration issue.
-    pub fn get(key: &str, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
+    pub fn get(key: &str, args: CreateFilterArgs) -> Result<FilterInstance, CreationError> {
         match REGISTRY.load().get(key).map(|p| p.create_filter(args)) {
-            None => Err(Error::NotFound(key.to_owned())),
+            None => Err(CreationError::NotFound(key.to_owned())),
             Some(filter) => filter,
         }
     }
@@ -66,17 +68,17 @@ mod tests {
 
     use super::*;
     use crate::endpoint::{Endpoint, EndpointAddress};
-    use crate::filters::{Filter, FilterRegistry, ReadContext, WriteContext};
+    use crate::filters::{Filter, FilterError, FilterRegistry, ReadContext, WriteContext};
 
     struct TestFilter {}
 
     impl Filter for TestFilter {
-        fn read(&self, _: &mut ReadContext) -> Option<()> {
-            None
+        fn read(&self, _: &mut ReadContext) -> Result<(), FilterError> {
+            Err(FilterError::new("test error"))
         }
 
-        fn write(&self, _: &mut WriteContext) -> Option<()> {
-            None
+        fn write(&self, _: &mut WriteContext) -> Result<(), FilterError> {
+            Err(FilterError::new("test error"))
         }
     }
 
@@ -86,17 +88,17 @@ mod tests {
 
         match FilterRegistry::get(&String::from("not.found"), CreateFilterArgs::fixed(None)) {
             Ok(_) => unreachable!("should not be filter"),
-            Err(err) => assert_eq!(Error::NotFound("not.found".to_string()), err),
+            Err(err) => assert_eq!(CreationError::NotFound("not.found".to_string()), err),
         };
 
         assert!(
             FilterRegistry::get(&String::from("TestFilter"), CreateFilterArgs::fixed(None)).is_ok()
         );
 
-        let filter =
+        let instance =
             FilterRegistry::get(&String::from("TestFilter"), CreateFilterArgs::fixed(None))
-                .unwrap()
-                .filter;
+                .unwrap();
+        let filter = instance.filter();
 
         let addr: EndpointAddress = (Ipv4Addr::LOCALHOST, 8080).into();
         let endpoint = Endpoint::new(addr.clone());
@@ -107,9 +109,9 @@ mod tests {
                 addr.clone(),
                 vec![]
             ))
-            .is_some());
+            .is_ok());
         assert!(filter
             .write(&mut WriteContext::new(endpoint, addr.clone(), addr, vec![],))
-            .is_some());
+            .is_ok());
     }
 }

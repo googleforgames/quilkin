@@ -109,20 +109,20 @@ pub(crate) fn bytes_total(direction: Direction) -> IntCounter {
     BYTES_TOTAL.with_label_values(&[direction.label()])
 }
 
-pub(crate) fn errors_total(direction: Direction) -> IntCounter {
+pub(crate) fn errors_total(direction: Direction, display: &str) -> IntCounter {
     static ERRORS_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
         prometheus::register_int_counter_vec_with_registry! {
             prometheus::opts! {
                 "errors_total",
                 "total number of errors sending packets",
             },
-            &[Direction::LABEL],
+            &[Direction::LABEL, "display"],
             registry(),
         }
         .unwrap()
     });
 
-    ERRORS_TOTAL.with_label_values(&[direction.label()])
+    ERRORS_TOTAL.with_label_values(&[direction.label(), display])
 }
 
 pub(crate) fn packets_total(direction: Direction) -> IntCounter {
@@ -141,20 +141,20 @@ pub(crate) fn packets_total(direction: Direction) -> IntCounter {
     PACKETS_TOTAL.with_label_values(&[direction.label()])
 }
 
-pub(crate) fn packets_dropped_total(direction: Direction, reason: &str) -> IntCounter {
+pub(crate) fn packets_dropped_total(direction: Direction, source: &str) -> IntCounter {
     static PACKETS_DROPPED: Lazy<IntCounterVec> = Lazy::new(|| {
         prometheus::register_int_counter_vec_with_registry! {
             prometheus::opts! {
                 "packets_dropped_total",
                 "Total number of dropped packets",
             },
-            &[Direction::LABEL, "reason"],
+            &[Direction::LABEL, "source"],
             registry(),
         }
         .unwrap()
     });
 
-    PACKETS_DROPPED.with_label_values(&[direction.label(), reason])
+    PACKETS_DROPPED.with_label_values(&[direction.label(), source])
 }
 
 /// Create a generic metrics options.

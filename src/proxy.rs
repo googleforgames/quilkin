@@ -18,7 +18,6 @@ mod sessions;
 
 use std::sync::Arc;
 
-use prometheus::HistogramTimer;
 use tokio::{net::UdpSocket, sync::watch};
 
 use crate::{
@@ -36,7 +35,6 @@ pub use sessions::{Session, SessionArgs, SessionKey, SessionMap};
 struct DownstreamPacket {
     source: EndpointAddress,
     contents: Vec<u8>,
-    timer: HistogramTimer,
 }
 
 /// Represents the required arguments to run a worker task that
@@ -101,7 +99,6 @@ impl DownstreamReceiveWorkerConfig {
         config: &Arc<Config>,
         sessions: &SessionMap,
     ) {
-        let timer = crate::metrics::processing_time(crate::metrics::READ).start_timer();
         let contents = buf[..size].to_vec();
 
         tracing::trace!(
@@ -115,28 +112,27 @@ impl DownstreamReceiveWorkerConfig {
         let packet = DownstreamPacket {
             source: source.into(),
             contents,
-            timer,
         };
         let config = config.clone();
         let sessions = sessions.clone();
         let socket = socket.clone();
 
         tokio::spawn(async move {
+            let timer = crate::metrics::processing_time(crate::metrics::READ).start_timer();
+
             match Self::process_downstream_received_packet(packet, config, socket, sessions).await {
                 Ok(size) => {
                     crate::metrics::packets_total(crate::metrics::READ).inc();
                     crate::metrics::bytes_total(crate::metrics::READ).inc_by(size as u64);
                 }
                 Err(error) => {
-                    crate::metrics::packets_dropped_total(
-                        crate::metrics::READ,
-                        "proxy::Session::send",
-                    )
-                    .inc();
-                    crate::metrics::errors_total(crate::metrics::READ).inc();
-                    tracing::error!(kind=%error.kind(), "{}", error);
+                    let source = error.to_string();
+                    crate::metrics::errors_total(crate::metrics::READ, &source).inc();
+                    crate::metrics::packets_dropped_total(crate::metrics::READ, &source).inc();
                 }
             }
+
+            timer.stop_and_record();
         });
     }
 
@@ -146,35 +142,29 @@ impl DownstreamReceiveWorkerConfig {
         config: Arc<Config>,
         downstream_socket: Arc<UdpSocket>,
         sessions: SessionMap,
-    ) -> std::io::Result<usize> {
+    ) -> Result<usize, PipelineError> {
         let endpoints: Vec<_> = config.clusters.value().endpoints().collect();
         if endpoints.is_empty() {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "dropping packet, no upstream endpoints available",
-            ));
+            return Err(PipelineError::NoUpstreamEndpoints);
         }
 
         let filters = config.filters.load();
         let mut context = ReadContext::new(endpoints, packet.source, packet.contents);
-        let result = filters.read(&mut context);
-
+        filters.read(&mut context)?;
         let mut bytes_written = 0;
-        if let Some(()) = result {
-            for endpoint in context.endpoints.iter() {
-                bytes_written += Self::session_send_packet(
-                    &context.contents,
-                    &context.source,
-                    endpoint,
-                    &downstream_socket,
-                    &config,
-                    &sessions,
-                )
-                .await?;
-            }
+
+        for endpoint in context.endpoints.iter() {
+            bytes_written += Self::session_send_packet(
+                &context.contents,
+                &context.source,
+                endpoint,
+                &downstream_socket,
+                &config,
+                &sessions,
+            )
+            .await?;
         }
 
-        packet.timer.stop_and_record();
         Ok(bytes_written)
     }
 
@@ -187,7 +177,7 @@ impl DownstreamReceiveWorkerConfig {
         downstream_socket: &Arc<UdpSocket>,
         config: &Arc<Config>,
         sessions: &SessionMap,
-    ) -> std::io::Result<usize> {
+    ) -> Result<usize, PipelineError> {
         let session_key = SessionKey {
             source: recv_addr.clone(),
             dest: endpoint.address.clone(),
@@ -209,13 +199,22 @@ impl DownstreamReceiveWorkerConfig {
                 future
             }
             TryResult::Locked => {
-                return Err(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    eyre::eyre!("dropping packet as the session shard is currently locked"),
-                ));
+                return Err(PipelineError::SessionMapLocked);
             }
         };
 
         send_future.await
     }
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum PipelineError {
+    #[error("No upstream endpoints available")]
+    NoUpstreamEndpoints,
+    #[error("session map was locked")]
+    SessionMapLocked,
+    #[error("filter {0}")]
+    Filter(#[from] crate::filters::FilterError),
+    #[error("OS level error: {0}")]
+    Io(#[from] std::io::Error),
 }

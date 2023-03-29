@@ -238,6 +238,7 @@ mod tests {
                 vec![
                     Filter {
                         name: Capture::factory().name().into(),
+                        label: None,
                         config: Some(serde_json::json!({
                             "suffix": {
                                 "size": 3,
@@ -247,6 +248,7 @@ mod tests {
                     },
                     Filter {
                         name: TokenRouter::factory().name().into(),
+                        label: None,
                         config: None,
                     },
                 ]

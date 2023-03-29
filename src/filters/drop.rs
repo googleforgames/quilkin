@@ -35,13 +35,13 @@ impl Drop {
 
 impl Filter for Drop {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn read(&self, _: &mut ReadContext) -> Option<()> {
-        None
+    fn read(&self, _: &mut ReadContext) -> Result<(), FilterError> {
+        Err(FilterError::new("intentionally dropped"))
     }
 
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn write(&self, _: &mut WriteContext) -> Option<()> {
-        None
+    fn write(&self, _: &mut WriteContext) -> Result<(), FilterError> {
+        Err(FilterError::new("intentionally dropped"))
     }
 }
 
@@ -50,7 +50,7 @@ impl StaticFilter for Drop {
     type Configuration = Config;
     type BinaryConfiguration = proto::Drop;
 
-    fn try_from_config(_: Option<Self::Configuration>) -> Result<Self, Error> {
+    fn try_from_config(_: Option<Self::Configuration>) -> Result<Self, CreationError> {
         Ok(Drop::new())
     }
 }

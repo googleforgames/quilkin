@@ -45,6 +45,7 @@ async fn test_filter() {
     server_config.filters.store(
         quilkin::filters::FilterChain::try_from(vec![Filter {
             name: "TestFilter".to_string(),
+            label: None,
             config: None,
         }])
         .map(std::sync::Arc::new)
@@ -72,6 +73,7 @@ async fn test_filter() {
     client_config.filters.store(
         quilkin::filters::FilterChain::try_from(vec![Filter {
             name: "TestFilter".to_string(),
+            label: None,
             config: None,
         }])
         .map(std::sync::Arc::new)
@@ -131,8 +133,9 @@ async fn debug_filter() {
         .clusters
         .modify(|clusters| clusters.insert_default(vec![Endpoint::new(echo.clone())]));
     server_config.filters.store(
-        quilkin::filters::FilterChain::try_from(vec![quilkin::config::Filter {
+        quilkin::filters::FilterChain::try_from(vec![Filter {
             name: factory.name().into(),
+            label: None,
             config: Some(serde_json::json!({ "id":  "server", })),
         }])
         .map(std::sync::Arc::new)
@@ -156,6 +159,7 @@ async fn debug_filter() {
     client_config.filters.store(
         quilkin::filters::FilterChain::try_from(vec![Filter {
             name: factory.name().into(),
+            label: None,
             config: Some(serde_json::json!({ "id":  "client" })),
         }])
         .map(std::sync::Arc::new)

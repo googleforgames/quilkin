@@ -47,6 +47,7 @@ period: 1
     server_config.filters.store(
         quilkin::filters::FilterChain::try_from(vec![Filter {
             name: LocalRateLimit::factory().name().into(),
+            label: None,
             config: serde_yaml::from_str(yaml).unwrap(),
         }])
         .map(std::sync::Arc::new)

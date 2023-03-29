@@ -264,6 +264,7 @@ mod tests {
         config.filters.store(
             crate::filters::FilterChain::try_from(vec![config::Filter {
                 name: "TestFilter".to_string(),
+                label: None,
                 config: None,
             }])
             .map(Arc::new)

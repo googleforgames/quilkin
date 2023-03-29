@@ -18,7 +18,7 @@ use std::sync::Arc;
 
 use crate::{
     config::ConfigType,
-    filters::{Error, Filter, StaticFilter},
+    filters::{CreationError, Filter, StaticFilter},
 };
 
 /// An owned pointer to a dynamic [`FilterFactory`] instance.
@@ -27,20 +27,37 @@ pub type DynFilterFactory = Box<dyn FilterFactory>;
 /// The value returned by [`FilterFactory::create_filter`].
 #[derive(Clone)]
 #[non_exhaustive]
-pub struct FilterInstance {
+pub struct FilterInstance(Arc<FilterInstanceData>);
+
+struct FilterInstanceData {
     /// The configuration used to create the filter.
-    pub config: Arc<serde_json::Value>,
+    pub config: serde_json::Value,
+    /// The configuration used to create the filter.
+    pub label: Option<String>,
     /// The created filter.
-    pub filter: Arc<dyn Filter>,
+    pub filter: Box<dyn Filter>,
 }
 
 impl FilterInstance {
     /// Constructs a [`FilterInstance`].
-    pub fn new(config: serde_json::Value, filter: Arc<dyn Filter>) -> FilterInstance {
-        FilterInstance {
-            config: Arc::new(config),
+    pub fn new(config: serde_json::Value, filter: Box<dyn Filter>) -> Self {
+        Self(Arc::new(FilterInstanceData {
+            config,
+            label: None,
             filter,
-        }
+        }))
+    }
+
+    pub fn config(&self) -> &serde_json::Value {
+        &self.0.config
+    }
+
+    pub fn label(&self) -> Option<&str> {
+        self.0.label.as_deref()
+    }
+
+    pub fn filter(&self) -> &dyn Filter {
+        &*self.0.filter
     }
 }
 
@@ -62,26 +79,31 @@ pub trait FilterFactory: Sync + Send {
     fn config_schema(&self) -> schemars::schema::RootSchema;
 
     /// Returns a filter based on the provided arguments.
-    fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error>;
+    fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, CreationError>;
 
     /// Converts YAML configuration into its Protobuf equivalvent.
-    fn encode_config_to_protobuf(&self, args: serde_json::Value)
-        -> Result<prost_types::Any, Error>;
+    fn encode_config_to_protobuf(
+        &self,
+        args: serde_json::Value,
+    ) -> Result<prost_types::Any, CreationError>;
 
     /// Converts YAML configuration into its Protobuf equivalvent.
-    fn encode_config_to_json(&self, args: prost_types::Any) -> Result<serde_json::Value, Error>;
+    fn encode_config_to_json(
+        &self,
+        args: prost_types::Any,
+    ) -> Result<serde_json::Value, CreationError>;
 
     /// Returns the [`ConfigType`] from the provided Option, otherwise it returns
     /// Error::MissingConfig if the Option is None.
-    fn require_config(&self, config: Option<ConfigType>) -> Result<ConfigType, Error> {
-        config.ok_or_else(|| Error::MissingConfig(self.name()))
+    fn require_config(&self, config: Option<ConfigType>) -> Result<ConfigType, CreationError> {
+        config.ok_or_else(|| CreationError::MissingConfig(self.name()))
     }
 }
 
 impl<F> FilterFactory for std::marker::PhantomData<fn() -> F>
 where
     F: StaticFilter + 'static,
-    Error: From<<F::Configuration as TryFrom<F::BinaryConfiguration>>::Error>
+    CreationError: From<<F::Configuration as TryFrom<F::BinaryConfiguration>>::Error>
         + From<<F::BinaryConfiguration as TryFrom<F::Configuration>>::Error>,
 {
     fn name(&self) -> &'static str {
@@ -93,7 +115,7 @@ where
     }
 
     /// Returns a filter based on the provided arguments.
-    fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, Error> {
+    fn create_filter(&self, args: CreateFilterArgs) -> Result<FilterInstance, CreationError> {
         let (config_json, config): (_, Option<F::Configuration>) = if let Some(config) = args.config
         {
             config
@@ -105,14 +127,14 @@ where
 
         Ok(FilterInstance::new(
             config_json,
-            Arc::from(F::try_from_config(config)?),
+            Box::from(F::try_from_config(config)?),
         ))
     }
 
     fn encode_config_to_protobuf(
         &self,
         config: serde_json::Value,
-    ) -> Result<prost_types::Any, Error> {
+    ) -> Result<prost_types::Any, CreationError> {
         let config: F::Configuration = serde_json::from_value(config)?;
 
         Ok(prost_types::Any {
@@ -121,9 +143,12 @@ where
         })
     }
 
-    fn encode_config_to_json(&self, config: prost_types::Any) -> Result<serde_json::Value, Error> {
+    fn encode_config_to_json(
+        &self,
+        config: prost_types::Any,
+    ) -> Result<serde_json::Value, CreationError> {
         if self.name() != config.type_url {
-            return Err(crate::filters::Error::MismatchedTypes {
+            return Err(crate::filters::CreationError::MismatchedTypes {
                 expected: self.name().into(),
                 actual: config.type_url,
             });

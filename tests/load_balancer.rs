@@ -60,6 +60,7 @@ policy: ROUND_ROBIN
     server_config.filters.store(
         quilkin::filters::FilterChain::try_from(vec![Filter {
             name: LoadBalancer::factory().name().into(),
+            label: None,
             config: serde_yaml::from_str(yaml).unwrap(),
         }])
         .map(std::sync::Arc::new)
