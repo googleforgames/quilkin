@@ -101,7 +101,13 @@ pub fn update_endpoints_from_gameservers(
                         continue;
                     }
 
-                    let endpoint = Endpoint::try_from(server)?;
+                    let endpoint = match Endpoint::try_from(server) {
+                        Ok(endpoint) => endpoint,
+                        Err(error) => {
+                            tracing::warn!(%error, "received invalid gameserver to apply from k8s");
+                            continue;
+                        }
+                    };
                     tracing::trace!(endpoint=%serde_json::to_value(&endpoint).unwrap(), "Adding endpoint");
                     match &locality {
                         Some(locality) => config
@@ -123,14 +129,29 @@ pub fn update_endpoints_from_gameservers(
                         .into_iter()
                         .filter(GameServer::is_allocated)
                         .map(Endpoint::try_from)
-                        .collect::<Result<_, _>>()?;
+                        .filter_map(|result| {
+                            match result {
+                                Ok(endpoint) => Some(endpoint),
+                                Err(error) => {
+                                    tracing::warn!(%error, "received invalid gameserver on restart from k8s");
+                                    None
+                                }
+                            }
+                        })
+                        .collect();
                     let endpoints = LocalityEndpoints::from((servers, locality.clone()));
                     tracing::trace!(?endpoints, "Restarting with endpoints");
                     config.clusters.value().insert_default(endpoints);
                 }
 
                 Event::Deleted(server) => {
-                    let endpoint = Endpoint::try_from(server)?;
+                    let endpoint = match Endpoint::try_from(server) {
+                        Ok(endpoint) => endpoint,
+                        Err(error) => {
+                            tracing::warn!(%error, "received invalid gameserver to delete from k8s");
+                            continue
+                        }
+                    };
                     tracing::trace!(?endpoint, "Deleting endpoint");
                     config.clusters.modify(|clusters| {
                         for locality in clusters.default_cluster_mut().localities.iter_mut() {
