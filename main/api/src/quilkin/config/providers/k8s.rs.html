@@ -145,6 +145,27 @@
 <span id="145">145</span>
 <span id="146">146</span>
 <span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
 </pre><pre class="rust"><code><span class="kw">pub mod </span>agones;
 
 <span class="kw">use </span>std::sync::Arc;
@@ -248,7 +269,13 @@
                         <span class="kw">continue</span>;
                     }
 
-                    <span class="kw">let </span>endpoint = Endpoint::try_from(server)<span class="question-mark">?</span>;
+                    <span class="kw">let </span>endpoint = <span class="kw">match </span>Endpoint::try_from(server) {
+                        <span class="prelude-val">Ok</span>(endpoint) =&gt; endpoint,
+                        <span class="prelude-val">Err</span>(error) =&gt; {
+                            <span class="macro">tracing::warn!</span>(%error, <span class="string">&quot;received invalid gameserver to apply from k8s&quot;</span>);
+                            <span class="kw">continue</span>;
+                        }
+                    };
                     <span class="macro">tracing::trace!</span>(endpoint=%serde_json::to_value(<span class="kw-2">&amp;</span>endpoint).unwrap(), <span class="string">&quot;Adding endpoint&quot;</span>);
                     <span class="kw">match </span><span class="kw-2">&amp;</span>locality {
                         <span class="prelude-val">Some</span>(locality) =&gt; config
@@ -270,14 +297,29 @@
                         .into_iter()
                         .filter(GameServer::is_allocated)
                         .map(Endpoint::try_from)
-                        .collect::&lt;<span class="prelude-ty">Result</span>&lt;<span class="kw">_</span>, <span class="kw">_</span>&gt;&gt;()<span class="question-mark">?</span>;
+                        .filter_map(|result| {
+                            <span class="kw">match </span>result {
+                                <span class="prelude-val">Ok</span>(endpoint) =&gt; <span class="prelude-val">Some</span>(endpoint),
+                                <span class="prelude-val">Err</span>(error) =&gt; {
+                                    <span class="macro">tracing::warn!</span>(%error, <span class="string">&quot;received invalid gameserver on restart from k8s&quot;</span>);
+                                    <span class="prelude-val">None
+                                </span>}
+                            }
+                        })
+                        .collect();
                     <span class="kw">let </span>endpoints = LocalityEndpoints::from((servers, locality.clone()));
                     <span class="macro">tracing::trace!</span>(<span class="question-mark">?</span>endpoints, <span class="string">&quot;Restarting with endpoints&quot;</span>);
                     config.clusters.value().insert_default(endpoints);
                 }
 
                 Event::Deleted(server) =&gt; {
-                    <span class="kw">let </span>endpoint = Endpoint::try_from(server)<span class="question-mark">?</span>;
+                    <span class="kw">let </span>endpoint = <span class="kw">match </span>Endpoint::try_from(server) {
+                        <span class="prelude-val">Ok</span>(endpoint) =&gt; endpoint,
+                        <span class="prelude-val">Err</span>(error) =&gt; {
+                            <span class="macro">tracing::warn!</span>(%error, <span class="string">&quot;received invalid gameserver to delete from k8s&quot;</span>);
+                            <span class="kw">continue
+                        </span>}
+                    };
                     <span class="macro">tracing::trace!</span>(<span class="question-mark">?</span>endpoint, <span class="string">&quot;Deleting endpoint&quot;</span>);
                     config.clusters.modify(|clusters| {
                         <span class="kw">for </span>locality <span class="kw">in </span>clusters.default_cluster_mut().localities.iter_mut() {
