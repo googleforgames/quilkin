@@ -57,13 +57,14 @@ struct Greet {
     config: Config,
 }
 
+#[async_trait::async_trait]
 impl Filter for Greet {
-    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+    async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         ctx.contents
             .splice(0..0, format!("{} ", self.config.greeting).into_bytes());
         Ok(())
     }
-    fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
+    async fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
         ctx.contents
             .splice(0..0, format!("{} ", self.config.greeting).into_bytes());
         Ok(())

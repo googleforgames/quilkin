@@ -57,9 +57,10 @@ impl Capture {
     }
 }
 
+#[async_trait::async_trait]
 impl Filter for Capture {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+    async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         let capture = self.capture.capture(&mut ctx.contents, &self.metrics);
         ctx.metadata.insert(
             self.is_present_key,
@@ -105,8 +106,8 @@ mod tests {
 
     const TOKEN_KEY: &str = "TOKEN";
 
-    #[test]
-    fn factory_valid_config_all() {
+    #[tokio::test]
+    async fn factory_valid_config_all() {
         let config = serde_json::json!({
             "metadataKey": TOKEN_KEY.to_string(),
             "suffix": {
@@ -115,11 +116,11 @@ mod tests {
             }
         });
         let filter = Capture::from_config(Some(serde_json::from_value(config).unwrap()));
-        assert_end_strategy(&filter, TOKEN_KEY.into(), true);
+        assert_end_strategy(&filter, TOKEN_KEY.into(), true).await;
     }
 
-    #[test]
-    fn factory_valid_config_defaults() {
+    #[tokio::test]
+    async fn factory_valid_config_defaults() {
         let config = serde_json::json!({
             "suffix": {
                 "size": 3_i64,
@@ -127,7 +128,7 @@ mod tests {
         });
 
         let filter = Capture::from_config(Some(serde_json::from_value(config).unwrap()));
-        assert_end_strategy(&filter, CAPTURED_BYTES.into(), false);
+        assert_end_strategy(&filter, CAPTURED_BYTES.into(), false).await;
     }
 
     #[test]
@@ -140,8 +141,8 @@ mod tests {
         assert!(serde_json::from_value::<Config>(config).is_err());
     }
 
-    #[test]
-    fn read() {
+    #[tokio::test]
+    async fn read() {
         let config = Config {
             metadata_key: TOKEN_KEY.into(),
             strategy: Strategy::Suffix(Suffix {
@@ -151,11 +152,11 @@ mod tests {
         };
 
         let filter = Capture::from_config(config.into());
-        assert_end_strategy(&filter, TOKEN_KEY.into(), true);
+        assert_end_strategy(&filter, TOKEN_KEY.into(), true).await;
     }
 
-    #[test]
-    fn read_overflow_capture_size() {
+    #[tokio::test]
+    async fn read_overflow_capture_size() {
         let config = Config {
             metadata_key: TOKEN_KEY.into(),
             strategy: Strategy::Suffix(Suffix {
@@ -171,14 +172,15 @@ mod tests {
                 (std::net::Ipv4Addr::LOCALHOST, 80).into(),
                 "abc".to_string().into_bytes(),
             ))
+            .await
             .is_err());
 
         let count = filter.metrics.packets_dropped_total.get();
         assert_eq!(1, count);
     }
 
-    #[test]
-    fn write() {
+    #[tokio::test]
+    async fn write() {
         let config = Config {
             strategy: Strategy::Suffix(Suffix {
                 size: 0,
@@ -187,7 +189,7 @@ mod tests {
             metadata_key: TOKEN_KEY.into(),
         };
         let filter = Capture::from_config(config.into());
-        assert_write_no_change(&filter);
+        assert_write_no_change(&filter).await;
     }
 
     #[test]
@@ -241,7 +243,7 @@ mod tests {
         assert_eq!(b"hello".to_vec(), contents);
     }
 
-    fn assert_end_strategy<F>(filter: &F, key: metadata::Key, remove: bool)
+    async fn assert_end_strategy<F>(filter: &F, key: metadata::Key, remove: bool)
     where
         F: Filter + ?Sized,
     {
@@ -252,7 +254,7 @@ mod tests {
             "helloabc".to_string().into_bytes(),
         );
 
-        filter.read(&mut context).unwrap();
+        filter.read(&mut context).await.unwrap();
 
         if remove {
             assert_eq!(b"hello", &*context.contents);

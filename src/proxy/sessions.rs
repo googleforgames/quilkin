@@ -18,7 +18,6 @@ pub(crate) mod metrics;
 
 use std::sync::Arc;
 
-use prometheus::HistogramTimer;
 use tokio::{net::UdpSocket, select, sync::watch, time::Instant};
 
 use crate::{
@@ -151,12 +150,12 @@ impl Session {
                                 timer.stop_and_record();
                                 if let Err(error) = result {
                                     error.log();
+                                    let label = format!("proxy::Session::process_recv_packet: {error}");
                                     crate::metrics::packets_dropped_total(
                                         crate::metrics::WRITE,
-                                        "proxy::Session::process_recv_packet",
-                                    )
-                                        .inc();
-                                    crate::metrics::errors_total(crate::metrics::WRITE).inc();
+                                        &label
+                                    ).inc();
+                                    crate::metrics::errors_total(crate::metrics::WRITE, &label).inc();
                                 }
                             }
                         };
@@ -202,14 +201,9 @@ impl Session {
             packet.to_vec(),
         );
 
-        let result = config
-            .filters
-            .load()
-            .write(&mut context)
-            .await
-            .ok_or(Error::FilterDroppedPacket)?;
+        config.filters.load().write(&mut context).await?;
 
-        let addr = dest.to_socket_addr().await.map_err(Error::SendTo)?;
+        let addr = dest.to_socket_addr().await.map_err(Error::ToSocketAddr)?;
         let packet = context.contents.as_ref();
         tracing::trace!(%from, dest = %addr, contents = %debug::bytes_to_string(packet), "sending packet downstream");
         downstream_socket
@@ -275,7 +269,6 @@ mod tests {
 
     use super::*;
 
-    use prometheus::{Histogram, HistogramOpts};
     use tokio::time::timeout;
 
     use crate::{

@@ -49,8 +49,9 @@ impl StaticFilter for TokenRouter {
     }
 }
 
+#[async_trait::async_trait]
 impl Filter for TokenRouter {
-    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+    async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         match ctx.metadata.get(&self.config.metadata_key) {
             Some(metadata::Value::Bytes(token)) => {
                 ctx.endpoints.retain(|endpoint| {
@@ -180,8 +181,8 @@ mod tests {
         }
     }
 
-    #[test]
-    fn factory_custom_tokens() {
+    #[tokio::test]
+    async fn factory_custom_tokens() {
         let filter = TokenRouter::from_config(
             Config {
                 metadata_key: TOKEN_KEY.into(),
@@ -191,20 +192,20 @@ mod tests {
         let mut ctx = new_ctx();
         ctx.metadata
             .insert(TOKEN_KEY.into(), Value::Bytes(b"123".to_vec().into()));
-        assert_read(&filter, ctx);
+        assert_read(&filter, ctx).await;
     }
 
-    #[test]
-    fn factory_empty_config() {
+    #[tokio::test]
+    async fn factory_empty_config() {
         let filter = TokenRouter::from_config(None);
         let mut ctx = new_ctx();
         ctx.metadata
             .insert(CAPTURED_BYTES.into(), Value::Bytes(b"123".to_vec().into()));
-        assert_read(&filter, ctx);
+        assert_read(&filter, ctx).await;
     }
 
-    #[test]
-    fn downstream_receive() {
+    #[tokio::test]
+    async fn downstream_receive() {
         // valid key
         let config = Config {
             metadata_key: CAPTURED_BYTES.into(),
@@ -214,33 +215,33 @@ mod tests {
         let mut ctx = new_ctx();
         ctx.metadata
             .insert(CAPTURED_BYTES.into(), Value::Bytes(b"123".to_vec().into()));
-        assert_read(&filter, ctx);
+        assert_read(&filter, ctx).await;
 
         // invalid key
         let mut ctx = new_ctx();
         ctx.metadata
             .insert(CAPTURED_BYTES.into(), Value::Bytes(b"567".to_vec().into()));
 
-        assert!(filter.read(&mut ctx).is_err());
+        assert!(filter.read(&mut ctx).await.is_err());
 
         // no key
         let mut ctx = new_ctx();
-        assert!(filter.read(&mut ctx).is_err());
+        assert!(filter.read(&mut ctx).await.is_err());
 
         // wrong type key
         let mut ctx = new_ctx();
         ctx.metadata
             .insert(CAPTURED_BYTES.into(), Value::String(String::from("wrong")));
-        assert!(filter.read(&mut ctx).is_err());
+        assert!(filter.read(&mut ctx).await.is_err());
     }
 
-    #[test]
-    fn write() {
+    #[tokio::test]
+    async fn write() {
         let config = Config {
             metadata_key: CAPTURED_BYTES.into(),
         };
         let filter = TokenRouter::from_config(config.into());
-        assert_write_no_change(&filter);
+        assert_write_no_change(&filter).await;
     }
 
     fn new_ctx() -> ReadContext {
@@ -264,11 +265,11 @@ mod tests {
         )
     }
 
-    fn assert_read<F>(filter: &F, mut ctx: ReadContext)
+    async fn assert_read<F>(filter: &F, mut ctx: ReadContext)
     where
         F: Filter + ?Sized,
     {
-        filter.read(&mut ctx).unwrap();
+        filter.read(&mut ctx).await.unwrap();
 
         assert_eq!(b"hello", &*ctx.contents);
     }

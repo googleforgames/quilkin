@@ -38,8 +38,9 @@ impl LoadBalancer {
     }
 }
 
+#[async_trait::async_trait]
 impl Filter for LoadBalancer {
-    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+    async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         self.endpoint_chooser.choose_endpoints(ctx);
         Ok(())
     }
@@ -62,7 +63,7 @@ mod tests {
     use super::*;
     use crate::endpoint::{Endpoint, EndpointAddress};
 
-    fn get_response_addresses(
+    async fn get_response_addresses(
         filter: &dyn Filter,
         input_addresses: &[EndpointAddress],
         source: EndpointAddress,
@@ -73,7 +74,7 @@ mod tests {
             vec![],
         );
 
-        filter.read(&mut context).unwrap();
+        filter.read(&mut context).await.unwrap();
 
         context
             .endpoints
@@ -82,8 +83,8 @@ mod tests {
             .collect::<Vec<_>>()
     }
 
-    #[test]
-    fn round_robin_load_balancer_policy() {
+    #[tokio::test]
+    async fn round_robin_load_balancer_policy() {
         let addresses: Vec<EndpointAddress> = vec![
             ([127, 0, 0, 1], 8080).into(),
             ([127, 0, 0, 2], 8080).into(),
@@ -100,21 +101,25 @@ mod tests {
             .collect::<Vec<_>>();
 
         for _ in 0..10 {
-            assert_eq!(
-                expected_sequence,
-                (0..addresses.len())
-                    .map(|_| get_response_addresses(
-                        &filter,
-                        &addresses,
-                        "127.0.0.1:8080".parse().unwrap()
-                    ))
-                    .collect::<Vec<_>>()
-            );
+            assert_eq!(expected_sequence, {
+                let mut responses = Vec::new();
+                for _ in 0..addresses.len() {
+                    responses.push(
+                        get_response_addresses(
+                            &filter,
+                            &addresses,
+                            "127.0.0.1:8080".parse().unwrap(),
+                        )
+                        .await,
+                    );
+                }
+                responses
+            });
         }
     }
 
-    #[test]
-    fn random_load_balancer_policy() {
+    #[tokio::test]
+    async fn random_load_balancer_policy() {
         let addresses = vec![
             "127.0.0.1:8080".parse().unwrap(),
             "127.0.0.2:8080".parse().unwrap(),
@@ -129,12 +134,12 @@ policy: RANDOM
         // Run a few selection rounds through the addresses.
         let mut result_sequences = vec![];
         for _ in 0..10 {
-            let sequence = (0..addresses.len())
-                .map(|_| {
+            for _ in 0..addresses.len() {
+                result_sequences.push(
                     get_response_addresses(&filter, &addresses, "127.0.0.1:8080".parse().unwrap())
-                })
-                .collect::<Vec<_>>();
-            result_sequences.push(sequence);
+                        .await,
+                );
+            }
         }
 
         // Check that every address was chosen at least once.
@@ -143,7 +148,6 @@ policy: RANDOM
             result_sequences
                 .clone()
                 .into_iter()
-                .flatten()
                 .flatten()
                 .collect::<HashSet<_>>(),
         );
@@ -157,8 +161,8 @@ policy: RANDOM
         );
     }
 
-    #[test]
-    fn hash_load_balancer_policy() {
+    #[tokio::test]
+    async fn hash_load_balancer_policy() {
         let addresses: Vec<EndpointAddress> = vec![
             ([127, 0, 0, 1], 8080).into(),
             ([127, 0, 0, 2], 8080).into(),
@@ -173,12 +177,12 @@ policy: RANDOM
         // Run a few selection rounds through the addresses.
         let mut result_sequences = vec![];
         for _ in 0..10 {
-            let sequence = (0..addresses.len())
-                .map(|_| {
+            for _ in 0..addresses.len() {
+                result_sequences.push(
                     get_response_addresses(&filter, &addresses, (Ipv4Addr::LOCALHOST, 8080).into())
-                })
-                .collect::<Vec<_>>();
-            result_sequences.push(sequence);
+                        .await,
+                );
+            }
         }
 
         // Verify that all packets went the same way
@@ -186,7 +190,6 @@ policy: RANDOM
             1,
             result_sequences
                 .into_iter()
-                .flatten()
                 .flatten()
                 .collect::<HashSet<_>>()
                 .len(),
@@ -196,12 +199,15 @@ policy: RANDOM
         // this time vary the port for a single IP
         let mut result_sequences = vec![];
         for port in source_ports.iter().copied() {
-            let sequence = (0..addresses.len())
-                .map(|_| {
-                    get_response_addresses(&filter, &addresses, (Ipv4Addr::LOCALHOST, port).into())
-                })
-                .collect::<Vec<_>>();
-            result_sequences.push(sequence);
+            result_sequences.push(vec![
+                get_response_addresses(
+                    &filter,
+                    &addresses,
+                    (Ipv4Addr::LOCALHOST, port).into()
+                )
+                .await;
+                addresses.len()
+            ]);
         }
 
         // Verify that more than 1 path was picked
@@ -220,10 +226,15 @@ policy: RANDOM
         let mut result_sequences = vec![];
         for ip in source_ips {
             for port in source_ports.iter().copied() {
-                let sequence = (0..addresses.len())
-                    .map(|_| get_response_addresses(&filter, &addresses, (ip, port).into()))
-                    .collect::<Vec<_>>();
-                result_sequences.push(sequence);
+                result_sequences.push(vec![
+                    get_response_addresses(
+                        &filter,
+                        &addresses,
+                        (ip, port).into()
+                    )
+                    .await;
+                    addresses.len()
+                ]);
             }
         }
 

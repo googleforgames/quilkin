@@ -17,7 +17,7 @@
 use std::{
     convert::{TryFrom, TryInto},
     fmt,
-    net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, ToSocketAddrs},
+    net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
     str::FromStr,
 };
 
@@ -69,7 +69,7 @@ impl EndpointAddress {
         > = Lazy::new(|| AsyncResolver::tokio_from_system_conf().unwrap());
 
         let ip = match &self.host {
-            AddressKind::Ip(ip) => ip.clone(),
+            AddressKind::Ip(ip) => *ip,
             AddressKind::Name(name) => {
                 let set = DNS
                     .lookup_ip(&**name)
@@ -79,8 +79,10 @@ impl EndpointAddress {
                 set.iter()
                     .find(|item| matches!(item, IpAddr::V6(_)))
                     .or_else(|| set.iter().find(|item| matches!(item, IpAddr::V4(_))))
-                    .unwrap()
-                    .clone()
+                    .copied()
+                    .ok_or_else(|| {
+                        std::io::Error::new(std::io::ErrorKind::Other, "no ip address found")
+                    })?
             }
         };
 
@@ -95,7 +97,7 @@ impl FromStr for EndpointAddress {
     type Err = ParseError;
 
     fn from_str(input: &str) -> Result<Self, Self::Err> {
-        let mut url = if input.starts_with("udp://") {
+        let url = if input.starts_with("udp://") {
             url::Url::parse(input)?
         } else if input.contains("://") {
             return Err(ParseError::NonUdpScheme);
