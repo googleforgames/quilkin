@@ -71,18 +71,34 @@ impl EndpointAddress {
         let ip = match &self.host {
             AddressKind::Ip(ip) => *ip,
             AddressKind::Name(name) => {
-                let set = DNS
-                    .lookup_ip(&**name)
-                    .await?
-                    .iter()
-                    .collect::<std::collections::HashSet<_>>();
-                set.iter()
-                    .find(|item| matches!(item, IpAddr::V6(_)))
-                    .or_else(|| set.iter().find(|item| matches!(item, IpAddr::V4(_))))
-                    .copied()
-                    .ok_or_else(|| {
-                        std::io::Error::new(std::io::ErrorKind::Other, "no ip address found")
-                    })?
+                static CACHE: Lazy<crate::ttl_map::TtlMap<String, IpAddr>> =
+                    Lazy::new(<_>::default);
+
+                match CACHE.get(name) {
+                    Some(ip) => **ip,
+                    None => {
+                        let set = DNS
+                            .lookup_ip(&**name)
+                            .await?
+                            .iter()
+                            .collect::<std::collections::HashSet<_>>();
+
+                        let ip = set
+                            .iter()
+                            .find(|item| matches!(item, IpAddr::V6(_)))
+                            .or_else(|| set.iter().find(|item| matches!(item, IpAddr::V4(_))))
+                            .copied()
+                            .ok_or_else(|| {
+                                std::io::Error::new(
+                                    std::io::ErrorKind::Other,
+                                    "no ip address found",
+                                )
+                            })?;
+
+                        CACHE.insert(name.clone(), ip);
+                        ip
+                    }
+                }
             }
         };
 
