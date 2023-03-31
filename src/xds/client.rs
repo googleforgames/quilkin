@@ -288,8 +288,11 @@ impl AdsStream {
                         let timeout = tokio::time::sleep(std::time::Duration::from_millis(500));
 
                         let select = tokio::select! {
-                            Some(value) = stream.next() => {
-                                value
+                            value = stream.next() => {
+                                match value {
+                                    Some(value) => value,
+                                    None => break,
+                                }
                             }
                             _ = timeout => {
                                 Self::refresh_resources(&identifier, &subscribed_resources, &mut requests).await?;
