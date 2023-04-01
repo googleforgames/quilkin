@@ -220,6 +220,8 @@
 <span id="220">220</span>
 <span id="221">221</span>
 <span id="222">222</span>
+<span id="223">223</span>
+<span id="224">224</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -257,9 +259,9 @@
 }
 
 <span class="kw">impl </span>ConfigInstance {
-    <span class="kw">fn </span>new(config: config::DirectionalConfig) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+    <span class="kw">fn </span>new(config: config::DirectionalConfig) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, CreationError&gt; {
         <span class="kw">let </span>map_to_instance =
-            |filter: String, config_type: <span class="prelude-ty">Option</span>&lt;serde_json::Value&gt;| -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw">_</span>, Error&gt; {
+            |filter: String, config_type: <span class="prelude-ty">Option</span>&lt;serde_json::Value&gt;| -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw">_</span>, CreationError&gt; {
                 <span class="kw">let </span>instance = <span class="kw">crate</span>::filters::FilterRegistry::get(
                     <span class="kw-2">&amp;</span>filter,
                     CreateFilterArgs::new(config_type.map(From::from)),
@@ -291,12 +293,12 @@
 }
 
 <span class="kw">impl </span>Match {
-    <span class="kw">fn </span>new(config: Config, metrics: Metrics) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+    <span class="kw">fn </span>new(config: Config, metrics: Metrics) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, CreationError&gt; {
         <span class="kw">let </span>on_read_filters = config.on_read.map(ConfigInstance::new).transpose()<span class="question-mark">?</span>;
         <span class="kw">let </span>on_write_filters = config.on_write.map(ConfigInstance::new).transpose()<span class="question-mark">?</span>;
 
         <span class="kw">if </span>on_read_filters.is_none() &amp;&amp; on_write_filters.is_none() {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::MissingConfig(<span class="self">Self</span>::NAME));
+            <span class="kw">return </span><span class="prelude-val">Err</span>(CreationError::MissingConfig(<span class="self">Self</span>::NAME));
         }
 
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
@@ -315,13 +317,15 @@
         <span class="kw-2">&amp;</span><span class="lifetime">&#39;value </span>Ctx,
         <span class="kw-2">&amp;</span><span class="lifetime">&#39;config </span>metadata::Key,
     ) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;value </span>metadata::Value&gt;,
-    and_then: <span class="kw">impl </span>Fn(<span class="kw-2">&amp;</span><span class="lifetime">&#39;ctx </span><span class="kw-2">mut </span>Ctx, <span class="kw-2">&amp;</span><span class="lifetime">&#39;config </span>FilterInstance) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt;,
-) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt;
+    and_then: <span class="kw">impl </span>Fn(<span class="kw-2">&amp;</span><span class="lifetime">&#39;ctx </span><span class="kw-2">mut </span>Ctx, <span class="kw-2">&amp;</span><span class="lifetime">&#39;config </span>FilterInstance) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt;,
+) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt;
 <span class="kw">where
 </span>{
     <span class="kw">match </span>config {
         <span class="prelude-val">Some</span>(config) =&gt; {
-            <span class="kw">let </span>value = (get_metadata)(ctx, <span class="kw-2">&amp;</span>config.metadata_key)<span class="question-mark">?</span>;
+            <span class="kw">let </span>value = (get_metadata)(ctx, <span class="kw-2">&amp;</span>config.metadata_key).ok_or_else(|| {
+                FilterError::new(<span class="macro">format!</span>(<span class="string">&quot;no metadata found for {}&quot;</span>, config.metadata_key))
+            })<span class="question-mark">?</span>;
 
             <span class="kw">match </span>config.branches.iter().find(|(key, <span class="kw">_</span>)| key == value) {
                 <span class="prelude-val">Some</span>((value, instance)) =&gt; {
@@ -340,31 +344,31 @@
                 }
             }
         }
-        <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Some</span>(()),
+        <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(()),
     }
 }
 
 <span class="kw">impl </span>Filter <span class="kw">for </span>Match {
     <span class="attribute">#[cfg_attr(feature = <span class="string">&quot;instrument&quot;</span>, tracing::instrument(skip(<span class="self">self</span>, ctx)))]
-    </span><span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt; {
+    </span><span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="macro">tracing::trace!</span>(metadata=<span class="question-mark">?</span>ctx.metadata);
         match_filter(
             <span class="kw-2">&amp;</span><span class="self">self</span>.on_read_filters,
             <span class="kw-2">&amp;</span><span class="self">self</span>.metrics,
             ctx,
             |ctx, metadata_key| ctx.metadata.get(metadata_key),
-            |ctx, instance| instance.filter.read(ctx),
+            |ctx, instance| instance.filter().read(ctx),
         )
     }
 
     <span class="attribute">#[cfg_attr(feature = <span class="string">&quot;instrument&quot;</span>, tracing::instrument(skip(<span class="self">self</span>, ctx)))]
-    </span><span class="kw">fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt; {
+    </span><span class="kw">fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         match_filter(
             <span class="kw-2">&amp;</span><span class="self">self</span>.on_write_filters,
             <span class="kw-2">&amp;</span><span class="self">self</span>.metrics,
             ctx,
             |ctx, metadata_key| ctx.metadata.get(metadata_key),
-            |ctx, instance| instance.filter.write(ctx),
+            |ctx, instance| instance.filter().write(ctx),
         )
     }
 }
@@ -374,7 +378,7 @@
     <span class="kw">type </span>Configuration = Config;
     <span class="kw">type </span>BinaryConfiguration = proto::Match;
 
-    <span class="kw">fn </span>try_from_config(config: <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Configuration&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+    <span class="kw">fn </span>try_from_config(config: <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Configuration&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, CreationError&gt; {
         <span class="self">Self</span>::new(<span class="self">Self</span>::ensure_config_exists(config)<span class="question-mark">?</span>, Metrics::new()<span class="question-mark">?</span>)
     }
 }
@@ -437,7 +441,7 @@
         ctx.metadata.insert(key, <span class="string">&quot;xyz&quot;</span>.into());
 
         <span class="kw">let </span>result = filter.read(<span class="kw-2">&amp;mut </span>ctx);
-        <span class="macro">assert!</span>(result.is_none());
+        <span class="macro">assert!</span>(result.is_err());
         <span class="macro">assert_eq!</span>(<span class="number">1</span>, filter.metrics.packets_matched_total.get());
         <span class="macro">assert_eq!</span>(<span class="number">1</span>, filter.metrics.packets_fallthrough_total.get());
     }

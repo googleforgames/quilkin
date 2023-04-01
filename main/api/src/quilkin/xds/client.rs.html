@@ -538,6 +538,9 @@
 <span id="538">538</span>
 <span id="539">539</span>
 <span id="540">540</span>
+<span id="541">541</span>
+<span id="542">542</span>
+<span id="543">543</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -828,8 +831,11 @@
                         <span class="kw">let </span>timeout = tokio::time::sleep(std::time::Duration::from_millis(<span class="number">500</span>));
 
                         <span class="kw">let </span>select = <span class="macro">tokio::select! </span>{
-                            <span class="prelude-val">Some</span>(value) = stream.next() =&gt; {
-                                value
+                            value = stream.next() =&gt; {
+                                <span class="kw">match </span>value {
+                                    <span class="prelude-val">Some</span>(value) =&gt; value,
+                                    <span class="prelude-val">None </span>=&gt; <span class="kw">break</span>,
+                                }
                             }
                             <span class="kw">_ </span>= timeout =&gt; {
                                 <span class="self">Self</span>::refresh_resources(<span class="kw-2">&amp;</span>identifier, <span class="kw-2">&amp;</span>subscribed_resources, <span class="kw-2">&amp;mut </span>requests).<span class="kw">await</span><span class="question-mark">?</span>;

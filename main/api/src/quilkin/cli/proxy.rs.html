@@ -368,6 +368,7 @@
 <span id="368">368</span>
 <span id="369">369</span>
 <span id="370">370</span>
+<span id="371">371</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -634,6 +635,7 @@
         config.filters.store(
             <span class="kw">crate</span>::filters::FilterChain::try_from(<span class="macro">vec!</span>[config::Filter {
                 name: <span class="string">&quot;TestFilter&quot;</span>.to_string(),
+                label: <span class="prelude-val">None</span>,
                 config: <span class="prelude-val">None</span>,
             }])
             .map(Arc::new)

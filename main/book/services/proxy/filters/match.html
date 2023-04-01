@@ -210,6 +210,10 @@ definitions:
     - value
     properties:
       config: true
+      label:
+        type:
+        - string
+        - 'null'
       name:
         type: string
       value:
@@ -232,6 +236,7 @@ definitions:
         description: The behaviour for when none of the `branches` match.
         default:
           name: quilkin.filters.drop.v1alpha1.Drop
+          label: null
           config: null
         allOf:
         - $ref: '#/definitions/Filter'
@@ -246,6 +251,10 @@ definitions:
     - name
     properties:
       config: true
+      label:
+        type:
+        - string
+        - 'null'
       name:
         type: string
     additionalProperties: false

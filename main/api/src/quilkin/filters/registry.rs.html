@@ -113,6 +113,8 @@
 <span id="113">113</span>
 <span id="114">114</span>
 <span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -132,7 +134,9 @@
 </span><span class="kw">use </span>arc_swap::ArcSwap;
 <span class="kw">use </span>once_cell::sync::Lazy;
 
-<span class="kw">use </span><span class="kw">crate</span>::filters::{CreateFilterArgs, DynFilterFactory, Error, FilterInstance, FilterSet};
+<span class="kw">use </span><span class="kw">crate</span>::filters::{
+    CreateFilterArgs, CreationError, DynFilterFactory, FilterInstance, FilterSet,
+};
 
 <span class="kw">static </span>REGISTRY: Lazy&lt;ArcSwap&lt;FilterSet&gt;&gt; =
     Lazy::new(|| ArcSwap::new(std::sync::Arc::new(FilterSet::default())));
@@ -159,9 +163,9 @@
     <span class="doccomment">/// Creates and returns a new dynamic instance of [`Filter`][crate::filters::Filter] for a given
     /// `key`. Errors if the filter cannot be found, or if there is a
     /// configuration issue.
-    </span><span class="kw">pub fn </span>get(key: <span class="kw-2">&amp;</span>str, args: CreateFilterArgs) -&gt; <span class="prelude-ty">Result</span>&lt;FilterInstance, Error&gt; {
+    </span><span class="kw">pub fn </span>get(key: <span class="kw-2">&amp;</span>str, args: CreateFilterArgs) -&gt; <span class="prelude-ty">Result</span>&lt;FilterInstance, CreationError&gt; {
         <span class="kw">match </span>REGISTRY.load().get(key).map(|p| p.create_filter(args)) {
-            <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(Error::NotFound(key.to_owned())),
+            <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(CreationError::NotFound(key.to_owned())),
             <span class="prelude-val">Some</span>(filter) =&gt; filter,
         }
     }
@@ -181,18 +185,18 @@
 
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
     <span class="kw">use </span><span class="kw">crate</span>::endpoint::{Endpoint, EndpointAddress};
-    <span class="kw">use </span><span class="kw">crate</span>::filters::{Filter, FilterRegistry, ReadContext, WriteContext};
+    <span class="kw">use </span><span class="kw">crate</span>::filters::{Filter, FilterError, FilterRegistry, ReadContext, WriteContext};
 
     <span class="kw">struct </span>TestFilter {}
 
     <span class="kw">impl </span>Filter <span class="kw">for </span>TestFilter {
-        <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt; {
-            <span class="prelude-val">None
-        </span>}
+        <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+            <span class="prelude-val">Err</span>(FilterError::new(<span class="string">&quot;test error&quot;</span>))
+        }
 
-        <span class="kw">fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt; {
-            <span class="prelude-val">None
-        </span>}
+        <span class="kw">fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+            <span class="prelude-val">Err</span>(FilterError::new(<span class="string">&quot;test error&quot;</span>))
+        }
     }
 
     <span class="attribute">#[test]
@@ -201,17 +205,17 @@
 
         <span class="kw">match </span>FilterRegistry::get(<span class="kw-2">&amp;</span>String::from(<span class="string">&quot;not.found&quot;</span>), CreateFilterArgs::fixed(<span class="prelude-val">None</span>)) {
             <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;should not be filter&quot;</span>),
-            <span class="prelude-val">Err</span>(err) =&gt; <span class="macro">assert_eq!</span>(Error::NotFound(<span class="string">&quot;not.found&quot;</span>.to_string()), err),
+            <span class="prelude-val">Err</span>(err) =&gt; <span class="macro">assert_eq!</span>(CreationError::NotFound(<span class="string">&quot;not.found&quot;</span>.to_string()), err),
         };
 
         <span class="macro">assert!</span>(
             FilterRegistry::get(<span class="kw-2">&amp;</span>String::from(<span class="string">&quot;TestFilter&quot;</span>), CreateFilterArgs::fixed(<span class="prelude-val">None</span>)).is_ok()
         );
 
-        <span class="kw">let </span>filter =
+        <span class="kw">let </span>instance =
             FilterRegistry::get(<span class="kw-2">&amp;</span>String::from(<span class="string">&quot;TestFilter&quot;</span>), CreateFilterArgs::fixed(<span class="prelude-val">None</span>))
-                .unwrap()
-                .filter;
+                .unwrap();
+        <span class="kw">let </span>filter = instance.filter();
 
         <span class="kw">let </span>addr: EndpointAddress = (Ipv4Addr::LOCALHOST, <span class="number">8080</span>).into();
         <span class="kw">let </span>endpoint = Endpoint::new(addr.clone());
@@ -222,10 +226,10 @@
                 addr.clone(),
                 <span class="macro">vec!</span>[]
             ))
-            .is_some());
+            .is_ok());
         <span class="macro">assert!</span>(filter
             .write(<span class="kw-2">&amp;mut </span>WriteContext::new(endpoint, addr.clone(), addr, <span class="macro">vec!</span>[],))
-            .is_some());
+            .is_ok());
     }
 }
 </code></pre></div>

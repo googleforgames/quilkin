@@ -48,23 +48,6 @@
 <span id="48">48</span>
 <span id="49">49</span>
 <span id="50">50</span>
-<span id="51">51</span>
-<span id="52">52</span>
-<span id="53">53</span>
-<span id="54">54</span>
-<span id="55">55</span>
-<span id="56">56</span>
-<span id="57">57</span>
-<span id="58">58</span>
-<span id="59">59</span>
-<span id="60">60</span>
-<span id="61">61</span>
-<span id="62">62</span>
-<span id="63">63</span>
-<span id="64">64</span>
-<span id="65">65</span>
-<span id="66">66</span>
-<span id="67">67</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -82,32 +65,19 @@
  */
 </span><span class="kw">use </span>prometheus::{
     core::{AtomicU64, GenericCounter},
-    IntCounter, IntCounterVec, <span class="prelude-ty">Result </span><span class="kw">as </span>MetricsResult,
+    IntCounter, <span class="prelude-ty">Result </span><span class="kw">as </span>MetricsResult,
 };
 
 <span class="kw">use </span><span class="kw">crate</span>::metrics::{filter_opts, CollectorExt};
 
 <span class="doccomment">/// Register and manage metrics for this filter
 </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>Metrics {
-    <span class="kw">pub</span>(<span class="kw">super</span>) packets_dropped_total_compress: GenericCounter&lt;AtomicU64&gt;,
-    <span class="kw">pub</span>(<span class="kw">super</span>) packets_dropped_total_decompress: GenericCounter&lt;AtomicU64&gt;,
     <span class="kw">pub</span>(<span class="kw">super</span>) compressed_bytes_total: GenericCounter&lt;AtomicU64&gt;,
     <span class="kw">pub</span>(<span class="kw">super</span>) decompressed_bytes_total: GenericCounter&lt;AtomicU64&gt;,
 }
 
 <span class="kw">impl </span>Metrics {
     <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>new() -&gt; MetricsResult&lt;<span class="self">Self</span>&gt; {
-        <span class="kw">let </span>operation_labels = <span class="macro">vec!</span>[<span class="string">&quot;action&quot;</span>];
-        <span class="kw">let </span>dropped_metric = IntCounterVec::new(
-            filter_opts(
-                <span class="string">&quot;packets_dropped_total&quot;</span>,
-                <span class="string">&quot;Compress&quot;</span>,
-                <span class="string">&quot;Total number of packets dropped as they could not be processed. Labels: operation.&quot;</span>,
-            ),
-            <span class="kw-2">&amp;</span>operation_labels,
-        )<span class="question-mark">?
-        </span>.register_if_not_exists()<span class="question-mark">?</span>;
-
         <span class="kw">let </span>decompressed_bytes_total = IntCounter::with_opts(filter_opts(
             <span class="string">&quot;decompressed_bytes_total&quot;</span>,
             <span class="string">&quot;Compress&quot;</span>,
@@ -123,10 +93,6 @@
         </span>.register_if_not_exists()<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(Metrics {
-            packets_dropped_total_compress: dropped_metric
-                .get_metric_with_label_values(<span class="macro">vec!</span>[<span class="string">&quot;Compress&quot;</span>].as_slice())<span class="question-mark">?</span>,
-            packets_dropped_total_decompress: dropped_metric
-                .get_metric_with_label_values(<span class="macro">vec!</span>[<span class="string">&quot;Decompress&quot;</span>].as_slice())<span class="question-mark">?</span>,
             compressed_bytes_total,
             decompressed_bytes_total,
         })

@@ -380,10 +380,6 @@
 <span id="380">380</span>
 <span id="381">381</span>
 <span id="382">382</span>
-<span id="383">383</span>
-<span id="384">384</span>
-<span id="385">385</span>
-<span id="386">386</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -465,7 +461,7 @@
 <span class="kw">impl </span>SessionArgs {
     <span class="doccomment">/// Creates a new Session, and starts the process of receiving udp sockets
     /// from its ephemeral port from endpoint(s)
-    </span><span class="kw">pub async fn </span>into_session(<span class="self">self</span>) -&gt; std::io::Result&lt;Session&gt; {
+    </span><span class="kw">pub async fn </span>into_session(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Session, <span class="kw">super</span>::PipelineError&gt; {
         Session::new(<span class="self">self</span>).<span class="kw">await
     </span>}
 }
@@ -473,7 +469,7 @@
 <span class="kw">impl </span>Session {
     <span class="doccomment">/// internal constructor for a Session from SessionArgs
     </span><span class="attribute">#[tracing::instrument(skip_all)]
-    </span><span class="kw">async fn </span>new(args: SessionArgs) -&gt; std::io::Result&lt;<span class="self">Self</span>&gt; {
+    </span><span class="kw">async fn </span>new(args: SessionArgs) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw">super</span>::PipelineError&gt; {
         <span class="kw">let </span>addr = (std::net::Ipv4Addr::UNSPECIFIED, <span class="number">0</span>);
         <span class="kw">let </span>upstream_socket = Arc::new(UdpSocket::bind(addr).<span class="kw">await</span><span class="question-mark">?</span>);
         upstream_socket
@@ -518,7 +514,7 @@
                     received = upstream_socket.recv_from(<span class="kw-2">&amp;mut </span>buf) =&gt; {
                         <span class="kw">match </span>received {
                             <span class="prelude-val">Err</span>(error) =&gt; {
-                                <span class="kw">crate</span>::metrics::errors_total(<span class="kw">crate</span>::metrics::WRITE).inc();
+                                <span class="kw">crate</span>::metrics::errors_total(<span class="kw">crate</span>::metrics::WRITE, <span class="kw-2">&amp;</span>error.to_string()).inc();
                                 <span class="macro">tracing::error!</span>(%error, %source, dest = <span class="question-mark">?</span>endpoint, <span class="string">&quot;Error receiving packet&quot;</span>);
                             },
                             <span class="prelude-val">Ok</span>((size, recv_addr)) =&gt; {
@@ -583,7 +579,7 @@
             .filters
             .load()
             .write(<span class="kw-2">&amp;mut </span>context)
-            .ok_or(Error::FilterDroppedPacket)
+            .map_err(Error::from)
             .map(|<span class="kw">_</span>| context)
             .and_then(|context| {
                 dest.to_socket_addr()
@@ -592,13 +588,9 @@
             });
 
         <span class="kw">let </span>handle_error = |error: Error| {
-            error.log();
-            <span class="kw">crate</span>::metrics::packets_dropped_total(
-                <span class="kw">crate</span>::metrics::WRITE,
-                <span class="string">&quot;proxy::Session::process_recv_packet&quot;</span>,
-            )
-            .inc();
-            <span class="kw">crate</span>::metrics::errors_total(<span class="kw">crate</span>::metrics::WRITE).inc();
+            <span class="kw">let </span>error = error.to_string();
+            <span class="kw">crate</span>::metrics::packets_dropped_total(<span class="kw">crate</span>::metrics::WRITE, <span class="kw-2">&amp;</span>error).inc();
+            <span class="kw">crate</span>::metrics::errors_total(<span class="kw">crate</span>::metrics::WRITE, <span class="kw-2">&amp;</span>error).inc();
         };
 
         <span class="kw">match </span>result {
@@ -621,14 +613,14 @@
     </span><span class="kw">pub fn </span>send&lt;<span class="lifetime">&#39;buf</span>&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         buf: <span class="kw-2">&amp;</span><span class="lifetime">&#39;buf </span>[u8],
-    ) -&gt; <span class="kw">impl </span>std::future::Future&lt;Output = std::io::Result&lt;usize&gt;&gt; + <span class="lifetime">&#39;buf </span>{
+    ) -&gt; <span class="kw">impl </span>std::future::Future&lt;Output = <span class="prelude-ty">Result</span>&lt;usize, <span class="kw">super</span>::PipelineError&gt;&gt; + <span class="lifetime">&#39;buf </span>{
         <span class="macro">tracing::trace!</span>(
         dest_address = %<span class="self">self</span>.dest.address,
         contents = %debug::bytes_to_string(buf),
         <span class="string">&quot;sending packet upstream&quot;</span>);
 
         <span class="kw">let </span>socket = <span class="self">self</span>.upstream_socket.clone();
-        <span class="kw">async move </span>{ socket.send(buf).<span class="kw">await </span>}
+        <span class="kw">async move </span>{ socket.send(buf).<span class="kw">await</span>.map_err(From::from) }
     }
 }
 
@@ -651,8 +643,8 @@
     </span>ToSocketAddr(std::io::Error),
     <span class="attribute">#[error(<span class="string">&quot;failed to send packet downstream: {0}&quot;</span>)]
     </span>SendTo(std::io::Error),
-    <span class="attribute">#[error(<span class="string">&quot;filter dropped packet from upstream&quot;</span>)]
-    </span>FilterDroppedPacket,
+    <span class="attribute">#[error(<span class="string">&quot;filter {0}&quot;</span>)]
+    </span>Filter(<span class="attribute">#[from] </span><span class="kw">crate</span>::filters::FilterError),
 }
 
 <span class="kw">impl </span>Loggable <span class="kw">for </span>Error {
@@ -661,8 +653,8 @@
             <span class="self">Self</span>::ToSocketAddr(error) | <span class="self">Self</span>::SendTo(error) =&gt; {
                 <span class="macro">tracing::error!</span>(kind=%error.kind(), <span class="string">&quot;{}&quot;</span>, <span class="self">self</span>)
             }
-            <span class="self">Self</span>::FilterDroppedPacket =&gt; {
-                <span class="macro">tracing::trace!</span>(<span class="string">&quot;{}&quot;</span>, <span class="self">self</span>)
+            <span class="self">Self</span>::Filter(<span class="kw">_</span>) =&gt; {
+                <span class="macro">tracing::error!</span>(<span class="string">&quot;{}&quot;</span>, <span class="self">self</span>);
             }
         }
     }

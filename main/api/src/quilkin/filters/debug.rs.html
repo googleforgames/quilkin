@@ -171,16 +171,16 @@
 
 <span class="kw">impl </span>Filter <span class="kw">for </span>Debug {
     <span class="attribute">#[cfg_attr(feature = <span class="string">&quot;instrument&quot;</span>, tracing::instrument(skip(<span class="self">self</span>, ctx)))]
-    </span><span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt; {
+    </span><span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="macro">info!</span>(id = <span class="question-mark">?</span><span class="self">self</span>.config.id, source = <span class="question-mark">?</span><span class="kw-2">&amp;</span>ctx.source, contents = <span class="question-mark">?</span>String::from_utf8_lossy(<span class="kw-2">&amp;</span>ctx.contents), <span class="string">&quot;Read filter event&quot;</span>);
-        <span class="prelude-val">Some</span>(())
+        <span class="prelude-val">Ok</span>(())
     }
 
     <span class="attribute">#[cfg_attr(feature = <span class="string">&quot;instrument&quot;</span>, tracing::instrument(skip(<span class="self">self</span>, ctx)))]
-    </span><span class="kw">fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt; {
+    </span><span class="kw">fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="macro">info!</span>(id = <span class="question-mark">?</span><span class="self">self</span>.config.id, endpoint = <span class="question-mark">?</span>ctx.endpoint.address, source = <span class="question-mark">?</span><span class="kw-2">&amp;</span>ctx.source,
             dest = <span class="question-mark">?</span><span class="kw-2">&amp;</span>ctx.dest, contents = <span class="question-mark">?</span>String::from_utf8_lossy(<span class="kw-2">&amp;</span>ctx.contents), <span class="string">&quot;Write filter event&quot;</span>);
-        <span class="prelude-val">Some</span>(())
+        <span class="prelude-val">Ok</span>(())
     }
 }
 
@@ -189,7 +189,7 @@
     <span class="kw">type </span>Configuration = Config;
     <span class="kw">type </span>BinaryConfiguration = proto::Debug;
 
-    <span class="kw">fn </span>try_from_config(config: <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Configuration&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+    <span class="kw">fn </span>try_from_config(config: <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Configuration&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, CreationError&gt; {
         <span class="prelude-val">Ok</span>(Debug::new(config))
     }
 }

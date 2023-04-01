@@ -175,7 +175,7 @@
 
 <span class="kw">use </span>bytes::Bytes;
 
-<span class="kw">use </span><span class="kw">crate</span>::filters::Error;
+<span class="kw">use </span><span class="kw">crate</span>::filters::CreationError;
 
 <span class="doccomment">/// The configuration of a [`Filter`][crate::filters::Filter] from either a
 /// static or dynamic source.
@@ -208,12 +208,12 @@
     </span><span class="kw">pub fn </span>deserialize&lt;TextConfiguration, BinaryConfiguration&gt;(
         <span class="self">self</span>,
         filter_name: <span class="kw-2">&amp;</span>str,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;(serde_json::Value, TextConfiguration), Error&gt;
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(serde_json::Value, TextConfiguration), CreationError&gt;
     <span class="kw">where
         </span>BinaryConfiguration: prost::Message + Default,
         TextConfiguration:
             serde::Serialize + <span class="kw">for</span>&lt;<span class="lifetime">&#39;de</span>&gt; serde::Deserialize&lt;<span class="lifetime">&#39;de</span>&gt; + TryFrom&lt;BinaryConfiguration&gt;,
-        Error: From&lt;&lt;BinaryConfiguration <span class="kw">as </span>TryInto&lt;TextConfiguration&gt;&gt;::Error&gt;,
+        CreationError: From&lt;&lt;BinaryConfiguration <span class="kw">as </span>TryInto&lt;TextConfiguration&gt;&gt;::Error&gt;,
     {
         <span class="kw">match </span><span class="self">self </span>{
             ConfigType::Static(<span class="kw-2">ref </span>config) =&gt; serde_yaml::to_string(config)
@@ -221,7 +221,7 @@
                     serde_yaml::from_str::&lt;TextConfiguration&gt;(raw_config.as_str())
                 })
                 .map_err(|err| {
-                    Error::DeserializeFailed(<span class="macro">format!</span>(
+                    CreationError::DeserializeFailed(<span class="macro">format!</span>(
                         <span class="string">&quot;filter `{filter_name}`: failed to YAML deserialize config: {err}&quot;</span>,
                     ))
                 })
@@ -231,7 +231,7 @@
                 }),
             ConfigType::Dynamic(config) =&gt; prost::Message::decode(Bytes::from(config.value))
                 .map_err(|err| {
-                    Error::DeserializeFailed(<span class="macro">format!</span>(
+                    CreationError::DeserializeFailed(<span class="macro">format!</span>(
                         <span class="string">&quot;filter `{filter_name}`: config decode error: {err}&quot;</span>,
                     ))
                 })
@@ -244,12 +244,12 @@
     }
 
     <span class="comment">// Returns an equivalent json value for the passed in config.
-    </span><span class="kw">fn </span>get_json_config&lt;T&gt;(filter_name: <span class="kw-2">&amp;</span>str, config: <span class="kw-2">&amp;</span>T) -&gt; <span class="prelude-ty">Result</span>&lt;serde_json::Value, Error&gt;
+    </span><span class="kw">fn </span>get_json_config&lt;T&gt;(filter_name: <span class="kw-2">&amp;</span>str, config: <span class="kw-2">&amp;</span>T) -&gt; <span class="prelude-ty">Result</span>&lt;serde_json::Value, CreationError&gt;
     <span class="kw">where
         </span>T: serde::Serialize + <span class="kw">for</span>&lt;<span class="lifetime">&#39;de</span>&gt; serde::Deserialize&lt;<span class="lifetime">&#39;de</span>&gt;,
     {
         serde_json::to_value(config).map_err(|err| {
-            Error::DeserializeFailed(<span class="macro">format!</span>(
+            CreationError::DeserializeFailed(<span class="macro">format!</span>(
                 <span class="string">&quot;filter `{filter_name}`: failed to serialize config to json: {err}&quot;</span>,
             ))
         })

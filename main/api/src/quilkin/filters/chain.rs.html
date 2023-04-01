@@ -469,14 +469,6 @@
 <span id="469">469</span>
 <span id="470">470</span>
 <span id="471">471</span>
-<span id="472">472</span>
-<span id="473">473</span>
-<span id="474">474</span>
-<span id="475">475</span>
-<span id="476">476</span>
-<span id="477">477</span>
-<span id="478">478</span>
-<span id="479">479</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -529,7 +521,7 @@
 }
 
 <span class="kw">impl </span>FilterChain {
-    <span class="kw">pub fn </span>new(filters: Vec&lt;(String, FilterInstance)&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+    <span class="kw">pub fn </span>new(filters: Vec&lt;(String, FilterInstance)&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, CreationError&gt; {
         <span class="kw">let </span>subsystem = <span class="string">&quot;filter&quot;</span>;
 
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
@@ -572,7 +564,7 @@
 
     <span class="doccomment">/// Validates the filter configurations in the provided config and constructs
     /// a FilterChain if all configurations are valid.
-    </span><span class="kw">pub fn </span>try_create(filter_configs: <span class="kw-2">&amp;</span>[FilterConfig]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+    </span><span class="kw">pub fn </span>try_create(filter_configs: <span class="kw-2">&amp;</span>[FilterConfig]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, CreationError&gt; {
         <span class="self">Self</span>::try_from(filter_configs)
     }
 
@@ -589,7 +581,8 @@
             .iter()
             .map(|(name, instance)| <span class="kw">crate</span>::config::Filter {
                 name: name.clone(),
-                config: <span class="kw">match </span><span class="kw-2">&amp;*</span>instance.config {
+                label: instance.label().map(String::from),
+                config: <span class="kw">match </span>instance.config() {
                     serde_json::Value::Null =&gt; <span class="prelude-val">None</span>,
                     value =&gt; <span class="prelude-val">Some</span>(value.clone()),
                 },
@@ -602,7 +595,7 @@
         <span class="kw">let </span><span class="kw-2">mut </span>filters = f.debug_struct(<span class="string">&quot;Filters&quot;</span>);
 
         <span class="kw">for </span>(id, instance) <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.filters {
-            filters.field(id, <span class="kw-2">&amp;*</span>instance.config);
+            filters.field(id, instance.config());
         }
 
         filters.finish()
@@ -617,40 +610,42 @@
 
         <span class="self">self</span>.filters.iter().zip(<span class="kw-2">&amp;</span>rhs.filters).all(
             |((lhs_name, lhs_instance), (rhs_name, rhs_instance))| {
-                lhs_name == rhs_name &amp;&amp; lhs_instance.config == rhs_instance.config
+                lhs_name == rhs_name
+                    &amp;&amp; lhs_instance.config() == rhs_instance.config()
+                    &amp;&amp; lhs_instance.label() == rhs_instance.label()
             },
         )
     }
 }
 
 <span class="kw">impl</span>&lt;<span class="kw">const </span>N: usize&gt; TryFrom&lt;<span class="kw-2">&amp;</span>[FilterConfig; N]&gt; <span class="kw">for </span>FilterChain {
-    <span class="kw">type </span>Error = Error;
+    <span class="kw">type </span>Error = CreationError;
 
-    <span class="kw">fn </span>try_from(filter_configs: <span class="kw-2">&amp;</span>[FilterConfig; N]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+    <span class="kw">fn </span>try_from(filter_configs: <span class="kw-2">&amp;</span>[FilterConfig; N]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
         <span class="self">Self</span>::try_from(<span class="kw-2">&amp;</span>filter_configs[..])
     }
 }
 
 <span class="kw">impl</span>&lt;<span class="kw">const </span>N: usize&gt; TryFrom&lt;[FilterConfig; N]&gt; <span class="kw">for </span>FilterChain {
-    <span class="kw">type </span>Error = Error;
+    <span class="kw">type </span>Error = CreationError;
 
-    <span class="kw">fn </span>try_from(filter_configs: [FilterConfig; N]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+    <span class="kw">fn </span>try_from(filter_configs: [FilterConfig; N]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
         <span class="self">Self</span>::try_from(<span class="kw-2">&amp;</span>filter_configs[..])
     }
 }
 
 <span class="kw">impl </span>TryFrom&lt;Vec&lt;FilterConfig&gt;&gt; <span class="kw">for </span>FilterChain {
-    <span class="kw">type </span>Error = Error;
+    <span class="kw">type </span>Error = CreationError;
 
-    <span class="kw">fn </span>try_from(filter_configs: Vec&lt;FilterConfig&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+    <span class="kw">fn </span>try_from(filter_configs: Vec&lt;FilterConfig&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
         <span class="self">Self</span>::try_from(<span class="kw-2">&amp;</span>filter_configs[..])
     }
 }
 
 <span class="kw">impl </span>TryFrom&lt;<span class="kw-2">&amp;</span>[FilterConfig]&gt; <span class="kw">for </span>FilterChain {
-    <span class="kw">type </span>Error = Error;
+    <span class="kw">type </span>Error = CreationError;
 
-    <span class="kw">fn </span>try_from(filter_configs: <span class="kw-2">&amp;</span>[FilterConfig]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+    <span class="kw">fn </span>try_from(filter_configs: <span class="kw-2">&amp;</span>[FilterConfig]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>filters = Vec::new();
 
         <span class="kw">for </span>filter_config <span class="kw">in </span>filter_configs {
@@ -667,17 +662,17 @@
 }
 
 <span class="kw">impl </span>TryFrom&lt;FilterChain&gt; <span class="kw">for </span><span class="kw">crate</span>::xds::config::listener::v3::FilterChain {
-    <span class="kw">type </span>Error = Error;
+    <span class="kw">type </span>Error = CreationError;
 
-    <span class="kw">fn </span>try_from(chain: FilterChain) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+    <span class="kw">fn </span>try_from(chain: FilterChain) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
         <span class="self">Self</span>::try_from(<span class="kw-2">&amp;</span>chain)
     }
 }
 
 <span class="kw">impl </span>TryFrom&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span>FilterChain&gt; <span class="kw">for </span><span class="kw">crate</span>::xds::config::listener::v3::FilterChain {
-    <span class="kw">type </span>Error = Error;
+    <span class="kw">type </span>Error = CreationError;
 
-    <span class="kw">fn </span>try_from(chain: <span class="kw-2">&amp;</span>FilterChain) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+    <span class="kw">fn </span>try_from(chain: <span class="kw-2">&amp;</span>FilterChain) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
             filters: chain
                 .iter()
@@ -711,7 +706,8 @@
             .iter()
             .map(|(name, instance)| <span class="kw">crate</span>::config::Filter {
                 name: name.clone(),
-                config: <span class="prelude-val">Some</span>(serde_json::Value::clone(<span class="kw-2">&amp;</span>instance.config)),
+                label: instance.label().map(String::from),
+                config: <span class="prelude-val">Some</span>(serde_json::Value::clone(instance.config())),
             })
             .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 
@@ -733,44 +729,42 @@
 }
 
 <span class="kw">impl </span>Filter <span class="kw">for </span>FilterChain {
-    <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt; {
+    <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="self">self</span>.filters
             .iter()
             .zip(<span class="self">self</span>.filter_read_duration_seconds.iter())
             .try_fold((), |<span class="kw">_</span>, ((id, instance), histogram)| {
                 <span class="macro">tracing::trace!</span>(%id, <span class="string">&quot;read filtering packet&quot;</span>);
-                <span class="kw">match </span>histogram.observe_closure_duration(|| instance.filter.read(ctx)) {
-                    <span class="prelude-val">Some</span>(()) =&gt; {
+                <span class="kw">match </span>histogram.observe_closure_duration(|| instance.filter().read(ctx)) {
+                    <span class="prelude-val">Ok</span>(()) =&gt; {
                         <span class="macro">tracing::trace!</span>(%id, <span class="string">&quot;read passing packet&quot;</span>);
                     }
-                    <span class="prelude-val">None </span>=&gt; {
+                    <span class="prelude-val">Err</span>(error) =&gt; {
                         <span class="macro">tracing::trace!</span>(%id, <span class="string">&quot;read dropping packet&quot;</span>);
-                        <span class="kw">crate</span>::metrics::packets_dropped_total(<span class="kw">crate</span>::metrics::READ, id).inc();
-                        <span class="kw">return </span><span class="prelude-val">None</span>;
+                        <span class="kw">return </span><span class="prelude-val">Err</span>(error);
                     }
                 }
 
-                <span class="prelude-val">Some</span>(())
+                <span class="prelude-val">Ok</span>(())
             })
     }
 
-    <span class="kw">fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt; {
+    <span class="kw">fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="self">self</span>.filters
             .iter()
             .rev()
             .zip(<span class="self">self</span>.filter_write_duration_seconds.iter().rev())
             .try_fold((), |<span class="kw">_</span>, ((id, instance), histogram)| {
                 <span class="macro">tracing::trace!</span>(%id, <span class="string">&quot;write filtering packet&quot;</span>);
-                <span class="kw">match </span>histogram.observe_closure_duration(|| instance.filter.write(ctx)) {
-                    <span class="prelude-val">Some</span>(()) =&gt; {
+                <span class="kw">match </span>histogram.observe_closure_duration(|| instance.filter().write(ctx)) {
+                    <span class="prelude-val">Ok</span>(()) =&gt; {
                         <span class="macro">tracing::trace!</span>(%id, <span class="string">&quot;write passing packet&quot;</span>);
-                        <span class="prelude-val">Some</span>(())
+                        <span class="prelude-val">Ok</span>(())
                     }
-                    <span class="prelude-val">None </span>=&gt; {
+                    <span class="prelude-val">Err</span>(error) =&gt; {
                         <span class="macro">tracing::trace!</span>(%id, <span class="string">&quot;write dropping packet&quot;</span>);
-                        <span class="kw">crate</span>::metrics::packets_dropped_total(<span class="kw">crate</span>::metrics::WRITE, id).inc();
-                        <span class="prelude-val">None
-                    </span>}
+                        <span class="prelude-val">Err</span>(error)
+                    }
                 }
             })
     }
@@ -778,8 +772,6 @@
 
 <span class="attribute">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
-    <span class="kw">use </span>std::sync::Arc;
-
     <span class="kw">use crate</span>::{
         config,
         endpoint::Endpoint,
@@ -796,6 +788,7 @@
         <span class="comment">// everything is fine
         </span><span class="kw">let </span>filter_configs = <span class="kw-2">&amp;</span>[config::Filter {
             name: provider.name().into(),
+            label: <span class="prelude-val">None</span>,
             config: <span class="prelude-val">Some</span>(serde_json::Map::default().into()),
         }];
 
@@ -805,6 +798,7 @@
         <span class="comment">// uh oh, something went wrong
         </span><span class="kw">let </span>filter_configs = <span class="kw-2">&amp;</span>[config::Filter {
             name: <span class="string">&quot;this is so wrong&quot;</span>.into(),
+            label: <span class="prelude-val">None</span>,
             config: Default::default(),
         }];
         <span class="kw">let </span>result = FilterChain::try_create(filter_configs);
@@ -859,17 +853,11 @@
         <span class="kw">let </span>chain = FilterChain::new(<span class="macro">vec!</span>[
             (
                 TestFilter::NAME.into(),
-                FilterInstance {
-                    config: Arc::new(<span class="macro">serde_json::json!</span>(null)),
-                    filter: Arc::new(TestFilter),
-                },
+                FilterInstance::new(<span class="macro">serde_json::json!</span>(null), Box::new(TestFilter)),
             ),
             (
                 TestFilter::NAME.into(),
-                FilterInstance {
-                    config: Arc::new(<span class="macro">serde_json::json!</span>(null)),
-                    filter: Arc::new(TestFilter),
-                },
+                FilterInstance::new(<span class="macro">serde_json::json!</span>(null), Box::new(TestFilter)),
             ),
         ])
         .unwrap();
@@ -919,20 +907,14 @@
         <span class="kw">let </span>filter_chain = FilterChain::new(<span class="macro">vec!</span>[
             (
                 <span class="string">&quot;TestFilter&quot;</span>.into(),
-                FilterInstance {
-                    config: Arc::new(<span class="macro">serde_json::json!</span>(null)),
-                    filter: Arc::new(TestFilter),
-                },
+                FilterInstance::new(<span class="macro">serde_json::json!</span>(null), Box::new(TestFilter)),
             ),
             (
                 <span class="string">&quot;TestFilter2&quot;</span>.into(),
-                FilterInstance {
-                    config: Arc::new(<span class="macro">serde_json::json!</span>({
-                        <span class="string">&quot;k1&quot;</span>: <span class="string">&quot;v1&quot;</span>,
-                        <span class="string">&quot;k2&quot;</span>: <span class="number">2
-                    </span>})),
-                    filter: Arc::new(TestFilter2),
-                },
+                FilterInstance::new(
+                    <span class="macro">serde_json::json!</span>({ <span class="string">&quot;k1&quot;</span>: <span class="string">&quot;v1&quot;</span>, <span class="string">&quot;k2&quot;</span>: <span class="number">2 </span>}),
+                    Box::new(TestFilter2),
+                ),
             ),
         ])
         .unwrap();
@@ -942,10 +924,12 @@
             <span class="macro">vec!</span>[
                 <span class="kw">crate</span>::config::Filter {
                     name: <span class="string">&quot;TestFilter&quot;</span>.into(),
+                    label: <span class="prelude-val">None</span>,
                     config: <span class="prelude-val">None</span>,
                 },
                 <span class="kw">crate</span>::config::Filter {
                     name: <span class="string">&quot;TestFilter2&quot;</span>.into(),
+                    label: <span class="prelude-val">None</span>,
                     config: <span class="prelude-val">Some</span>(<span class="macro">serde_json::json!</span>({
                         <span class="string">&quot;k1&quot;</span>: <span class="string">&quot;v1&quot;</span>,
                         <span class="string">&quot;k2&quot;</span>: <span class="number">2

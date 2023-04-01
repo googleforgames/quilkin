@@ -363,6 +363,7 @@
 <span id="363">363</span>
 <span id="364">364</span>
 <span id="365">365</span>
+<span id="366">366</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -421,7 +422,7 @@
 </span><span class="kw">pub struct </span>TestFilter;
 
 <span class="kw">impl </span>Filter <span class="kw">for </span>TestFilter {
-    <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt; {
+    <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="comment">// append values on each run
         </span>ctx.metadata
             .entry(<span class="string">&quot;downstream&quot;</span>.into())
@@ -430,10 +431,10 @@
 
         ctx.contents
             .append(<span class="kw-2">&amp;mut </span><span class="macro">format!</span>(<span class="string">&quot;:odr:{}&quot;</span>, ctx.source).into_bytes());
-        <span class="prelude-val">Some</span>(())
+        <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt; {
+    <span class="kw">fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="comment">// append values on each run
         </span>ctx.metadata
             .entry(<span class="string">&quot;upstream&quot;</span>.into())
@@ -442,7 +443,7 @@
 
         ctx.contents
             .append(<span class="kw-2">&amp;mut </span><span class="macro">format!</span>(<span class="string">&quot;:our:{}:{}&quot;</span>, ctx.source, ctx.dest).into_bytes());
-        <span class="prelude-val">Some</span>(())
+        <span class="prelude-val">Ok</span>(())
     }
 }
 
@@ -451,7 +452,7 @@
     <span class="kw">type </span>Configuration = ();
     <span class="kw">type </span>BinaryConfiguration = ();
 
-    <span class="kw">fn </span>try_from_config(<span class="kw">_</span>: <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Configuration&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+    <span class="kw">fn </span>try_from_config(<span class="kw">_</span>: <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Configuration&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, CreationError&gt; {
         <span class="prelude-val">Ok</span>(<span class="self">Self</span>)
     }
 }
@@ -688,6 +689,7 @@
         filters: <span class="kw">crate</span>::config::Slot::new(
             <span class="kw">crate</span>::filters::FilterChain::try_from(<span class="macro">vec!</span>[<span class="kw">crate</span>::config::Filter {
                 name: <span class="string">&quot;TestFilter&quot;</span>.into(),
+                label: <span class="prelude-val">None</span>,
                 config: <span class="prelude-val">None</span>,
             }])
             .unwrap(),

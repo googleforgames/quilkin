@@ -355,6 +355,8 @@
 <span id="355">355</span>
 <span id="356">356</span>
 <span id="357">357</span>
+<span id="358">358</span>
+<span id="359">359</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -595,6 +597,7 @@
                 <span class="macro">vec!</span>[
                     Filter {
                         name: Capture::factory().name().into(),
+                        label: <span class="prelude-val">None</span>,
                         config: <span class="prelude-val">Some</span>(<span class="macro">serde_json::json!</span>({
                             <span class="string">&quot;suffix&quot;</span>: {
                                 <span class="string">&quot;size&quot;</span>: <span class="number">3</span>,
@@ -604,6 +607,7 @@
                     },
                     Filter {
                         name: TokenRouter::factory().name().into(),
+                        label: <span class="prelude-val">None</span>,
                         config: <span class="prelude-val">None</span>,
                     },
                 ]

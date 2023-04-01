@@ -396,48 +396,6 @@
 <span id="396">396</span>
 <span id="397">397</span>
 <span id="398">398</span>
-<span id="399">399</span>
-<span id="400">400</span>
-<span id="401">401</span>
-<span id="402">402</span>
-<span id="403">403</span>
-<span id="404">404</span>
-<span id="405">405</span>
-<span id="406">406</span>
-<span id="407">407</span>
-<span id="408">408</span>
-<span id="409">409</span>
-<span id="410">410</span>
-<span id="411">411</span>
-<span id="412">412</span>
-<span id="413">413</span>
-<span id="414">414</span>
-<span id="415">415</span>
-<span id="416">416</span>
-<span id="417">417</span>
-<span id="418">418</span>
-<span id="419">419</span>
-<span id="420">420</span>
-<span id="421">421</span>
-<span id="422">422</span>
-<span id="423">423</span>
-<span id="424">424</span>
-<span id="425">425</span>
-<span id="426">426</span>
-<span id="427">427</span>
-<span id="428">428</span>
-<span id="429">429</span>
-<span id="430">430</span>
-<span id="431">431</span>
-<span id="432">432</span>
-<span id="433">433</span>
-<span id="434">434</span>
-<span id="435">435</span>
-<span id="436">436</span>
-<span id="437">437</span>
-<span id="438">438</span>
-<span id="439">439</span>
-<span id="440">440</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -460,8 +418,7 @@
 
 <span class="macro">crate::include_proto!</span>(<span class="string">&quot;quilkin.filters.compress.v1alpha1&quot;</span>);
 
-<span class="kw">use crate</span>::{config::LOG_SAMPLING_RATE, filters::prelude::<span class="kw-2">*</span>};
-<span class="kw">use </span>tracing::warn;
+<span class="kw">use </span><span class="kw">crate</span>::filters::prelude::<span class="kw-2">*</span>;
 
 <span class="kw">use </span><span class="self">self</span>::quilkin::filters::compress::v1alpha1 <span class="kw">as </span>proto;
 <span class="kw">use </span>compressor::Compressor;
@@ -472,7 +429,10 @@
 <span class="doccomment">/// Filter for compressing and decompressing packet data
 </span><span class="kw">pub struct </span>Compress {
     metrics: Metrics,
-    compression_mode: Mode,
+    <span class="comment">// Keeping for now it would be needed for
+    // https://github.com/googleforgames/quilkin/issues/637
+    </span><span class="attribute">#[allow(unused)]
+    </span>compression_mode: Mode,
     on_read: Action,
     on_write: Action,
     compressor: Box&lt;<span class="kw">dyn </span>Compressor + Sync + Send&gt;,
@@ -488,31 +448,11 @@
             on_write: config.on_write,
         }
     }
-
-    <span class="doccomment">/// Track a failed attempt at compression
-    </span><span class="kw">fn </span>failed_compression&lt;T&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, err: <span class="kw-2">&amp;</span><span class="kw">dyn </span>std::error::Error) -&gt; <span class="prelude-ty">Option</span>&lt;T&gt; {
-        <span class="kw">if </span><span class="self">self</span>.metrics.packets_dropped_total_compress.get() % LOG_SAMPLING_RATE == <span class="number">0 </span>{
-            <span class="macro">warn!</span>(mode = <span class="question-mark">?</span><span class="self">self</span>.compression_mode, error = %err, count = <span class="self">self</span>.metrics.packets_dropped_total_compress.get(),
-            <span class="string">&quot;Packets are being dropped as they could not be compressed&quot;</span>);
-        }
-        <span class="self">self</span>.metrics.packets_dropped_total_compress.inc();
-        <span class="prelude-val">None
-    </span>}
-
-    <span class="doccomment">/// Track a failed attempt at decompression
-    </span><span class="kw">fn </span>failed_decompression&lt;T&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, err: <span class="kw-2">&amp;</span><span class="kw">dyn </span>std::error::Error) -&gt; <span class="prelude-ty">Option</span>&lt;T&gt; {
-        <span class="kw">if </span><span class="self">self</span>.metrics.packets_dropped_total_decompress.get() % LOG_SAMPLING_RATE == <span class="number">0 </span>{
-            <span class="macro">warn!</span>(mode = <span class="question-mark">?</span><span class="self">self</span>.compression_mode, error = %err, count = <span class="question-mark">?</span><span class="self">self</span>.metrics.packets_dropped_total_decompress.get(),
-            <span class="string">&quot;Packets are being dropped as they could not be decompressed&quot;</span>);
-        }
-        <span class="self">self</span>.metrics.packets_dropped_total_decompress.inc();
-        <span class="prelude-val">None
-    </span>}
 }
 
 <span class="kw">impl </span>Filter <span class="kw">for </span>Compress {
     <span class="attribute">#[cfg_attr(feature = <span class="string">&quot;instrument&quot;</span>, tracing::instrument(skip(<span class="self">self</span>, ctx)))]
-    </span><span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt; {
+    </span><span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="kw">let </span>original_size = ctx.contents.len();
 
         <span class="kw">match </span><span class="self">self</span>.on_read {
@@ -524,9 +464,9 @@
                     <span class="self">self</span>.metrics
                         .compressed_bytes_total
                         .inc_by(ctx.contents.len() <span class="kw">as </span>u64);
-                    <span class="prelude-val">Some</span>(())
+                    <span class="prelude-val">Ok</span>(())
                 }
-                <span class="prelude-val">Err</span>(err) =&gt; <span class="self">self</span>.failed_compression(<span class="kw-2">&amp;</span>err),
+                <span class="prelude-val">Err</span>(err) =&gt; <span class="prelude-val">Err</span>(FilterError::new(err)),
             },
             Action::Decompress =&gt; <span class="kw">match </span><span class="self">self</span>.compressor.decode(<span class="kw-2">&amp;mut </span>ctx.contents) {
                 <span class="prelude-val">Ok</span>(()) =&gt; {
@@ -536,16 +476,16 @@
                     <span class="self">self</span>.metrics
                         .decompressed_bytes_total
                         .inc_by(ctx.contents.len() <span class="kw">as </span>u64);
-                    <span class="prelude-val">Some</span>(())
+                    <span class="prelude-val">Ok</span>(())
                 }
-                <span class="prelude-val">Err</span>(err) =&gt; <span class="self">self</span>.failed_decompression(<span class="kw-2">&amp;</span>err),
+                <span class="prelude-val">Err</span>(err) =&gt; <span class="prelude-val">Err</span>(FilterError::new(err)),
             },
-            Action::DoNothing =&gt; <span class="prelude-val">Some</span>(()),
+            Action::DoNothing =&gt; <span class="prelude-val">Ok</span>(()),
         }
     }
 
     <span class="attribute">#[cfg_attr(feature = <span class="string">&quot;instrument&quot;</span>, tracing::instrument(skip(<span class="self">self</span>, ctx)))]
-    </span><span class="kw">fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt; {
+    </span><span class="kw">fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="kw">let </span>original_size = ctx.contents.len();
         <span class="kw">match </span><span class="self">self</span>.on_write {
             Action::Compress =&gt; <span class="kw">match </span><span class="self">self</span>.compressor.encode(<span class="kw-2">&amp;mut </span>ctx.contents) {
@@ -556,9 +496,9 @@
                     <span class="self">self</span>.metrics
                         .compressed_bytes_total
                         .inc_by(ctx.contents.len() <span class="kw">as </span>u64);
-                    <span class="prelude-val">Some</span>(())
+                    <span class="prelude-val">Ok</span>(())
                 }
-                <span class="prelude-val">Err</span>(err) =&gt; <span class="self">self</span>.failed_compression(<span class="kw-2">&amp;</span>err),
+                <span class="prelude-val">Err</span>(err) =&gt; <span class="prelude-val">Err</span>(FilterError::new(err)),
             },
             Action::Decompress =&gt; <span class="kw">match </span><span class="self">self</span>.compressor.decode(<span class="kw-2">&amp;mut </span>ctx.contents) {
                 <span class="prelude-val">Ok</span>(()) =&gt; {
@@ -568,12 +508,12 @@
                     <span class="self">self</span>.metrics
                         .decompressed_bytes_total
                         .inc_by(ctx.contents.len() <span class="kw">as </span>u64);
-                    <span class="prelude-val">Some</span>(())
+                    <span class="prelude-val">Ok</span>(())
                 }
 
-                <span class="prelude-val">Err</span>(err) =&gt; <span class="self">self</span>.failed_decompression(<span class="kw-2">&amp;</span>err),
+                <span class="prelude-val">Err</span>(err) =&gt; <span class="prelude-val">Err</span>(FilterError::new(err)),
             },
-            Action::DoNothing =&gt; <span class="prelude-val">Some</span>(()),
+            Action::DoNothing =&gt; <span class="prelude-val">Ok</span>(()),
         }
     }
 }
@@ -583,7 +523,7 @@
     <span class="kw">type </span>Configuration = Config;
     <span class="kw">type </span>BinaryConfiguration = proto::Compress;
 
-    <span class="kw">fn </span>try_from_config(config: <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Configuration&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+    <span class="kw">fn </span>try_from_config(config: <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Configuration&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, CreationError&gt; {
         <span class="prelude-val">Ok</span>(Compress::new(
             <span class="self">Self</span>::ensure_config_exists(config)<span class="question-mark">?</span>,
             Metrics::new()<span class="question-mark">?</span>,
@@ -593,8 +533,6 @@
 
 <span class="attribute">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
-    <span class="kw">use </span>tracing_test::traced_test;
-
     <span class="kw">use crate</span>::{endpoint::Endpoint, filters::compress::compressor::Snappy};
 
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
@@ -672,8 +610,6 @@
 
         <span class="macro">assert_eq!</span>(expected, <span class="kw-2">&amp;*</span>write_context.contents);
 
-        <span class="macro">assert_eq!</span>(<span class="number">0</span>, compress.metrics.packets_dropped_total_decompress.get());
-        <span class="macro">assert_eq!</span>(<span class="number">0</span>, compress.metrics.packets_dropped_total_compress.get());
         <span class="comment">// multiply by two, because data was sent both upstream and downstream
         </span><span class="macro">assert_eq!</span>(
             (read_context.contents.len() * <span class="number">2</span>) <span class="kw">as </span>u64,
@@ -707,13 +643,9 @@
             (expected.len() * <span class="number">2</span>) <span class="kw">as </span>u64,
             compress.metrics.decompressed_bytes_total.get()
         );
-
-        <span class="macro">assert_eq!</span>(<span class="number">0</span>, compress.metrics.packets_dropped_total_decompress.get());
-        <span class="macro">assert_eq!</span>(<span class="number">0</span>, compress.metrics.packets_dropped_total_compress.get());
     }
 
-    <span class="attribute">#[traced_test]
-    #[test]
+    <span class="attribute">#[test]
     </span><span class="kw">fn </span>failed_decompress() {
         <span class="kw">let </span>compression = Compress::new(
             Config {
@@ -731,13 +663,7 @@
                 <span class="string">&quot;127.0.0.1:8081&quot;</span>.parse().unwrap(),
                 <span class="string">b&quot;hello&quot;</span>.to_vec(),
             ))
-            .is_none());
-
-        <span class="macro">assert_eq!</span>(
-            <span class="number">1</span>,
-            compression.metrics.packets_dropped_total_decompress.get()
-        );
-        <span class="macro">assert_eq!</span>(<span class="number">0</span>, compression.metrics.packets_dropped_total_compress.get());
+            .is_err());
 
         <span class="kw">let </span>compression = Compress::new(
             Config {
@@ -754,18 +680,8 @@
                 <span class="string">&quot;127.0.0.1:8080&quot;</span>.parse().unwrap(),
                 <span class="string">b&quot;hello&quot;</span>.to_vec(),
             ))
-            .is_none());
+            .is_err());
 
-        <span class="macro">assert!</span>(logs_contain(
-            <span class="string">&quot;Packets are being dropped as they could not be decompressed&quot;
-        </span>));
-        <span class="macro">assert!</span>(logs_contain(<span class="string">&quot;quilkin::filters::compress&quot;</span>)); <span class="comment">// the given name to the the logger by tracing
-
-        </span><span class="macro">assert_eq!</span>(
-            <span class="number">1</span>,
-            compression.metrics.packets_dropped_total_decompress.get()
-        );
-        <span class="macro">assert_eq!</span>(<span class="number">0</span>, compression.metrics.packets_dropped_total_compress.get());
         <span class="macro">assert_eq!</span>(<span class="number">0</span>, compression.metrics.compressed_bytes_total.get());
         <span class="macro">assert_eq!</span>(<span class="number">0</span>, compression.metrics.decompressed_bytes_total.get());
     }

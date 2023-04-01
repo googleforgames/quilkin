@@ -288,9 +288,9 @@
 }
 
 <span class="kw">impl </span>Filter <span class="kw">for </span>LoadBalancer {
-    <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt; {
+    <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="self">self</span>.endpoint_chooser.choose_endpoints(ctx);
-        <span class="prelude-val">Some</span>(())
+        <span class="prelude-val">Ok</span>(())
     }
 }
 
@@ -299,7 +299,7 @@
     <span class="kw">type </span>Configuration = Config;
     <span class="kw">type </span>BinaryConfiguration = proto::LoadBalancer;
 
-    <span class="kw">fn </span>try_from_config(config: <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Configuration&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+    <span class="kw">fn </span>try_from_config(config: <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Configuration&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, CreationError&gt; {
         <span class="prelude-val">Ok</span>(LoadBalancer::new(<span class="self">Self</span>::ensure_config_exists(config)<span class="question-mark">?</span>))
     }
 }

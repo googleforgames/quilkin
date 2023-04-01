@@ -332,7 +332,7 @@
 }
 
 <span class="kw">impl </span>Timestamp {
-    <span class="kw">fn </span>new(config: Config) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+    <span class="kw">fn </span>new(config: Config) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, CreationError&gt; {
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
             config: Arc::new(config),
         })
@@ -340,7 +340,7 @@
 }
 
 <span class="kw">impl </span>TryFrom&lt;Config&gt; <span class="kw">for </span>Timestamp {
-    <span class="kw">type </span>Error = Error;
+    <span class="kw">type </span>Error = CreationError;
 
     <span class="kw">fn </span>try_from(config: Config) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
         <span class="self">Self</span>::new(config)
@@ -348,14 +348,14 @@
 }
 
 <span class="kw">impl </span>Filter <span class="kw">for </span>Timestamp {
-    <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt; {
+    <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="self">self</span>.observe(<span class="kw-2">&amp;</span>ctx.metadata, READ_DIRECTION_LABEL);
-        <span class="prelude-val">Some</span>(())
+        <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt; {
+    <span class="kw">fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="self">self</span>.observe(<span class="kw-2">&amp;</span>ctx.metadata, WRITE_DIRECTION_LABEL);
-        <span class="prelude-val">Some</span>(())
+        <span class="prelude-val">Ok</span>(())
     }
 }
 
@@ -364,7 +364,7 @@
     <span class="kw">type </span>Configuration = Config;
     <span class="kw">type </span>BinaryConfiguration = proto::Timestamp;
 
-    <span class="kw">fn </span>try_from_config(config: <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Configuration&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+    <span class="kw">fn </span>try_from_config(config: <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Configuration&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, CreationError&gt; {
         <span class="self">Self</span>::new(<span class="self">Self</span>::ensure_config_exists(config)<span class="question-mark">?</span>)
     }
 }

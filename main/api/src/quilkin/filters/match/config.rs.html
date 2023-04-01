@@ -242,7 +242,7 @@
 }
 
 <span class="kw">impl </span>TryFrom&lt;Config&gt; <span class="kw">for </span>proto::Match {
-    <span class="kw">type </span>Error = <span class="kw">crate</span>::filters::Error;
+    <span class="kw">type </span>Error = <span class="kw">crate</span>::filters::CreationError;
 
     <span class="kw">fn </span>try_from(config: Config) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
@@ -289,7 +289,7 @@
 }
 
 <span class="kw">impl </span>TryFrom&lt;DirectionalConfig&gt; <span class="kw">for </span>proto::r#match::Config {
-    <span class="kw">type </span>Error = <span class="kw">crate</span>::filters::Error;
+    <span class="kw">type </span>Error = <span class="kw">crate</span>::filters::CreationError;
 
     <span class="kw">fn </span>try_from(config: DirectionalConfig) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
@@ -338,7 +338,7 @@
 }
 
 <span class="kw">impl </span>TryFrom&lt;Branch&gt; <span class="kw">for </span>proto::r#match::Branch {
-    <span class="kw">type </span>Error = <span class="kw">crate</span>::filters::Error;
+    <span class="kw">type </span>Error = <span class="kw">crate</span>::filters::CreationError;
 
     <span class="kw">fn </span>try_from(branch: Branch) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
@@ -378,7 +378,7 @@
 }
 
 <span class="kw">impl </span>TryFrom&lt;Fallthrough&gt; <span class="kw">for </span><span class="kw">crate</span>::xds::config::listener::v3::Filter {
-    <span class="kw">type </span>Error = <span class="kw">crate</span>::filters::Error;
+    <span class="kw">type </span>Error = <span class="kw">crate</span>::filters::CreationError;
     <span class="kw">fn </span>try_from(fallthrough: Fallthrough) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
         fallthrough.<span class="number">0</span>.try_into()
     }

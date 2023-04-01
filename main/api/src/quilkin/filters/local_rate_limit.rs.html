@@ -394,15 +394,6 @@
 <span id="394">394</span>
 <span id="395">395</span>
 <span id="396">396</span>
-<span id="397">397</span>
-<span id="398">398</span>
-<span id="399">399</span>
-<span id="400">400</span>
-<span id="401">401</span>
-<span id="402">402</span>
-<span id="403">403</span>
-<span id="404">404</span>
-<span id="405">405</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -419,9 +410,7 @@
  * limitations under the License.
  */
 
-</span><span class="kw">mod </span>metrics;
-
-<span class="kw">use </span>std::convert::TryFrom;
+</span><span class="kw">use </span>std::convert::TryFrom;
 <span class="kw">use </span>std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 <span class="kw">use </span>std::sync::Arc;
 <span class="kw">use </span>std::time::Duration;
@@ -433,8 +422,6 @@
     filters::prelude::<span class="kw-2">*</span>,
     ttl_map::{Entry, TtlMap},
 };
-
-<span class="kw">use </span>metrics::Metrics;
 
 <span class="macro">crate::include_proto!</span>(<span class="string">&quot;quilkin.filters.local_rate_limit.v1alpha1&quot;</span>);
 <span class="kw">use </span><span class="self">self</span>::quilkin::filters::local_rate_limit::v1alpha1 <span class="kw">as </span>proto;
@@ -474,16 +461,14 @@
     </span>state: TtlMap&lt;EndpointAddress, Bucket&gt;,
     <span class="doccomment">/// Filter configuration.
     </span>config: Config,
-    <span class="doccomment">/// metrics reporter for this filter.
-    </span>metrics: Metrics,
 }
 
 <span class="kw">impl </span>LocalRateLimit {
     <span class="doccomment">/// new returns a new LocalRateLimit. It spawns a future in the background
     /// that periodically refills the rate limiter&#39;s tokens.
-    </span><span class="kw">fn </span>new(config: Config, metrics: Metrics) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+    </span><span class="kw">fn </span>new(config: Config) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, CreationError&gt; {
         <span class="kw">if </span>config.period &lt; <span class="number">1 </span>{
-            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::FieldInvalid {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(CreationError::FieldInvalid {
                 field: <span class="string">&quot;period&quot;</span>.into(),
                 reason: <span class="string">&quot;value must be at least 1 second&quot;</span>.into(),
             });
@@ -492,7 +477,6 @@
         <span class="prelude-val">Ok</span>(LocalRateLimit {
             state: TtlMap::new(SESSION_TIMEOUT_SECONDS, SESSION_EXPIRY_POLL_INTERVAL),
             config,
-            metrics,
         })
     }
 
@@ -559,11 +543,9 @@
 }
 
 <span class="kw">impl </span>Filter <span class="kw">for </span>LocalRateLimit {
-    <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt; {
-        <span class="self">self</span>.acquire_token(<span class="kw-2">&amp;</span>ctx.source).or_else(|| {
-            <span class="self">self</span>.metrics.packets_dropped_total.inc();
-            <span class="prelude-val">None
-        </span>})
+    <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+        <span class="self">self</span>.acquire_token(<span class="kw-2">&amp;</span>ctx.source)
+            .ok_or_else(|| FilterError::new(<span class="string">&quot;rate limit exceeded&quot;</span>))
     }
 }
 
@@ -572,8 +554,8 @@
     <span class="kw">type </span>Configuration = Config;
     <span class="kw">type </span>BinaryConfiguration = proto::LocalRateLimit;
 
-    <span class="kw">fn </span>try_from_config(config: <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Configuration&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
-        <span class="self">Self</span>::new(<span class="self">Self</span>::ensure_config_exists(config)<span class="question-mark">?</span>, Metrics::new()<span class="question-mark">?</span>)
+    <span class="kw">fn </span>try_from_config(config: <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Configuration&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, CreationError&gt; {
+        <span class="self">Self</span>::new(<span class="self">Self</span>::ensure_config_exists(config)<span class="question-mark">?</span>)
     }
 }
 
@@ -623,7 +605,7 @@
     <span class="kw">use crate</span>::{config::ConfigType, test_utils::assert_write_no_change};
 
     <span class="kw">fn </span>rate_limiter(config: Config) -&gt; LocalRateLimit {
-        LocalRateLimit::new(config, Metrics::new().unwrap()).unwrap()
+        LocalRateLimit::new(config).unwrap()
     }
 
     <span class="kw">fn </span>address_pair() -&gt; (EndpointAddress, EndpointAddress) {
@@ -646,7 +628,7 @@
             result.unwrap();
             <span class="macro">assert_eq!</span>(context.contents, <span class="macro">vec!</span>[<span class="number">9</span>]);
         } <span class="kw">else </span>{
-            <span class="macro">assert!</span>(result.is_none());
+            <span class="macro">assert!</span>(result.is_err());
         }
     }
 

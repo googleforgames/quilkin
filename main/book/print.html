@@ -219,7 +219,7 @@ your local machine through <a href="installation.html#cargo">Cargo</a>.</p>
 <dl>
   <dt><strong>Source / Method</strong></dt>
   <dd>
-<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.6.0-dev-f8d325c
+<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.6.0-dev-22b8ff8
 </code></pre>
 </dd>
   <dt><strong>Notes</strong></dt>
@@ -1442,6 +1442,10 @@ definitions:
     - value
     properties:
       config: true
+      label:
+        type:
+        - string
+        - 'null'
       name:
         type: string
       value:
@@ -1464,6 +1468,7 @@ definitions:
         description: The behaviour for when none of the `branches` match.
         default:
           name: quilkin.filters.drop.v1alpha1.Drop
+          label: null
           config: null
         allOf:
         - $ref: '#/definitions/Filter'
@@ -1478,6 +1483,10 @@ definitions:
     - name
     properties:
       config: true
+      label:
+        type:
+        - string
+        - 'null'
       name:
         type: string
     additionalProperties: false
@@ -1743,13 +1752,13 @@ sent to a downstream client.</p>
 </span>use quilkin::filters::prelude::*;
 
 impl Filter for Greet {
-    fn read(&amp;self, ctx: &amp;mut ReadContext) -&gt; Option&lt;()&gt; {
+    fn read(&amp;self, ctx: &amp;mut ReadContext) -&gt; Result&lt;(), FilterError&gt; {
         ctx.contents.extend(b&quot;Hello&quot;);
-        Some(())
+        Ok(())
     }
-    fn write(&amp;self, ctx: &amp;mut WriteContext) -&gt; Option&lt;()&gt; {
+    fn write(&amp;self, ctx: &amp;mut WriteContext) -&gt; Result&lt;(), FilterError&gt; {
         ctx.contents.extend(b&quot;Goodbye&quot;);
-        Some(())
+        Ok(())
     }
 }</code></pre>
 <h2 id="staticfilter"><a class="header" href="#staticfilter"><code>StaticFilter</code></a></h2>
@@ -1763,7 +1772,7 @@ configuration, for now we can use <code>()</code> as we have no configuration cu
     type Configuration = ();
     type BinaryConfiguration = ();
 
-    fn try_from_config(config: Option&lt;Self::Configuration&gt;) -&gt; Result&lt;Self, Error&gt; {
+    fn try_from_config(config: Option&lt;Self::Configuration&gt;) -&gt; Result&lt;Self, CreationError&gt; {
         Ok(Self)
     }
 }</code></pre>
@@ -1789,6 +1798,7 @@ async fn main() -&gt; quilkin::Result&lt;()&gt; {
     config.filters.store(std::sync::Arc::new(
         vec![quilkin::config::Filter {
             name: Greet::NAME.into(),
+            label: None,
             config: None,
         }]
         .try_into()?,
@@ -1859,15 +1869,15 @@ struct Greet {
 }
 
 impl Filter for Greet {
-    fn read(&amp;self, ctx: &amp;mut ReadContext) -&gt; Option&lt;()&gt; {
+    fn read(&amp;self, ctx: &amp;mut ReadContext) -&gt; Result&lt;(), FilterError&gt; {
         ctx.contents
             .splice(0..0, format!(&quot;{} &quot;, self.config.greeting).into_bytes());
-        Some(())
+        Ok(())
     }
-    fn write(&amp;self, ctx: &amp;mut WriteContext) -&gt; Option&lt;()&gt; {
+    fn write(&amp;self, ctx: &amp;mut WriteContext) -&gt; Result&lt;(), FilterError&gt; {
         ctx.contents
             .splice(0..0, format!(&quot;{} &quot;, self.config.greeting).into_bytes());
-        Some(())
+        Ok(())
     }
 }</code></pre>
 <h3 id="protobuf-configuration"><a class="header" href="#protobuf-configuration">Protobuf Configuration</a></h3>
@@ -1951,9 +1961,7 @@ impl StaticFilter for Greet {
     type Configuration = Config;
     type BinaryConfiguration = proto::Greet;
 
-    fn try_from_config(
-        config: Option&lt;Self::Configuration&gt;,
-    ) -&gt; Result&lt;Self, quilkin::filters::Error&gt; {
+    fn try_from_config(config: Option&lt;Self::Configuration&gt;) -&gt; Result&lt;Self, CreationError&gt; {
         Ok(Self {
             config: Self::ensure_config_exists(config)?,
         })

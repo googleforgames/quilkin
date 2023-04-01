@@ -113,6 +113,40 @@
 <span id="113">113</span>
 <span id="114">114</span>
 <span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
+<span id="123">123</span>
+<span id="124">124</span>
+<span id="125">125</span>
+<span id="126">126</span>
+<span id="127">127</span>
+<span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
+<span id="131">131</span>
+<span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -134,10 +168,44 @@
 <span class="attribute">#[cfg(doc)]
 </span><span class="kw">use </span><span class="kw">crate</span>::filters::{Filter, FilterFactory};
 
+<span class="attribute">#[derive(thiserror::Error)]
+#[error(<span class="string">&quot;{}{} error: {source}&quot;</span>, .label.as_deref().map(|label| <span class="macro">format!</span>(<span class="string">&quot;{}:&quot;</span>, label)).unwrap_or_default(), .name.as_deref().unwrap_or_default())]
+</span><span class="kw">pub struct </span>FilterError {
+    name: <span class="prelude-ty">Option</span>&lt;String&gt;,
+    label: <span class="prelude-ty">Option</span>&lt;String&gt;,
+    source: Box&lt;<span class="kw">dyn </span>std::error::Error + Send + Sync + <span class="lifetime">&#39;static</span>&gt;,
+}
+
+<span class="kw">impl </span>FilterError {
+    <span class="kw">pub fn </span>new&lt;D: std::fmt::Display&gt;(error: D) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            name: <span class="prelude-val">None</span>,
+            label: <span class="prelude-val">None</span>,
+            source: Box::from(error.to_string()),
+        }
+    }
+}
+
+<span class="kw">impl </span>From&lt;std::io::Error&gt; <span class="kw">for </span>FilterError {
+    <span class="kw">fn </span>from(error: std::io::Error) -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::new(error)
+    }
+}
+
+<span class="kw">impl </span>std::fmt::Debug <span class="kw">for </span>FilterError {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
+        f.debug_struct(<span class="string">&quot;FilterError&quot;</span>)
+            .field(<span class="string">&quot;name&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.name)
+            .field(<span class="string">&quot;label&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.label)
+            .field(<span class="string">&quot;source&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.source.to_string())
+            .finish()
+    }
+}
+
 <span class="doccomment">/// An error that occurred when attempting to create a [`Filter`] from
 /// a [`FilterFactory`].
 </span><span class="attribute">#[derive(Debug, Eq, PartialEq, thiserror::Error)]
-</span><span class="kw">pub enum </span>Error {
+</span><span class="kw">pub enum </span>CreationError {
     <span class="attribute">#[error(<span class="string">&quot;filter `{}` not found&quot;</span>, .<span class="number">0</span>)]
     </span>NotFound(String),
     <span class="attribute">#[error(<span class="string">&quot;Expected &lt;{}&gt; message, received &lt;{}&gt; &quot;</span>, expected, actual)]
@@ -156,43 +224,43 @@
     </span>Infallible,
 }
 
-<span class="kw">impl </span>From&lt;std::convert::Infallible&gt; <span class="kw">for </span>Error {
+<span class="kw">impl </span>From&lt;std::convert::Infallible&gt; <span class="kw">for </span>CreationError {
     <span class="kw">fn </span>from(<span class="kw">_</span>: std::convert::Infallible) -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>::Infallible
     }
 }
 
-<span class="kw">impl </span>From&lt;MetricsError&gt; <span class="kw">for </span>Error {
+<span class="kw">impl </span>From&lt;MetricsError&gt; <span class="kw">for </span>CreationError {
     <span class="kw">fn </span>from(error: MetricsError) -&gt; <span class="self">Self </span>{
-        Error::InitializeMetricsFailed(error.to_string())
+        <span class="self">Self</span>::InitializeMetricsFailed(error.to_string())
     }
 }
 
-<span class="kw">impl </span>From&lt;serde_yaml::Error&gt; <span class="kw">for </span>Error {
+<span class="kw">impl </span>From&lt;serde_yaml::Error&gt; <span class="kw">for </span>CreationError {
     <span class="kw">fn </span>from(error: serde_yaml::Error) -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>::DeserializeFailed(error.to_string())
     }
 }
 
-<span class="kw">impl </span>From&lt;serde_json::Error&gt; <span class="kw">for </span>Error {
+<span class="kw">impl </span>From&lt;serde_json::Error&gt; <span class="kw">for </span>CreationError {
     <span class="kw">fn </span>from(error: serde_json::Error) -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>::DeserializeFailed(error.to_string())
     }
 }
 
-<span class="kw">impl </span>From&lt;prost::EncodeError&gt; <span class="kw">for </span>Error {
+<span class="kw">impl </span>From&lt;prost::EncodeError&gt; <span class="kw">for </span>CreationError {
     <span class="kw">fn </span>from(error: prost::EncodeError) -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>::ConvertProtoConfig(ConvertProtoConfigError::new(error, <span class="prelude-val">None</span>))
     }
 }
 
-<span class="kw">impl </span>From&lt;prost::DecodeError&gt; <span class="kw">for </span>Error {
+<span class="kw">impl </span>From&lt;prost::DecodeError&gt; <span class="kw">for </span>CreationError {
     <span class="kw">fn </span>from(error: prost::DecodeError) -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>::ConvertProtoConfig(ConvertProtoConfigError::new(error, <span class="prelude-val">None</span>))
     }
 }
 
-<span class="kw">impl </span>From&lt;ConvertProtoConfigError&gt; <span class="kw">for </span>Error {
+<span class="kw">impl </span>From&lt;ConvertProtoConfigError&gt; <span class="kw">for </span>CreationError {
     <span class="kw">fn </span>from(error: ConvertProtoConfigError) -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>::ConvertProtoConfig(error)
     }
