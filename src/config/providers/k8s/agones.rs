@@ -250,6 +250,11 @@ impl TryFrom<GameServer> for Endpoint {
             .status
             .as_ref()
             .ok_or_else(|| tonic::Status::internal("No status found for game server"))?;
+        let mut extra_metadata = serde_json::Map::default();
+        extra_metadata.insert(
+            "name".into(),
+            server.metadata.name.clone().unwrap_or_default().into(),
+        );
 
         let tokens = match server.metadata.annotations.as_ref() {
             Some(annotations) => annotations
@@ -273,7 +278,10 @@ impl TryFrom<GameServer> for Endpoint {
             .and_then(|ports| ports.first().map(|status| status.port))
             .unwrap_or_default();
         let filter_metadata = crate::endpoint::Metadata { tokens };
-        Ok(Self::with_metadata((address, port).into(), filter_metadata))
+        Ok(Self::with_metadata(
+            (address, port).into(),
+            crate::metadata::MetadataView::with_unknown(filter_metadata, extra_metadata),
+        ))
     }
 }
 

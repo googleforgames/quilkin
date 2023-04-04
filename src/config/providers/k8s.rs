@@ -145,13 +145,16 @@ pub fn update_endpoints_from_gameservers(
                 }
 
                 Event::Deleted(server) => {
-                    let endpoint = match Endpoint::try_from(server) {
-                        Ok(endpoint) => endpoint,
-                        Err(error) => {
-                            tracing::warn!(%error, "received invalid gameserver to delete from k8s");
-                            continue
-                        }
+                    let result = config.clusters.value().endpoints().find(|endpoint| {
+                        Some(endpoint.address.to_string()) == server.status.as_ref().map(|status| status.address.clone()) ||
+                        endpoint.metadata.unknown.get("name") == server.metadata.name.clone().map(From::from).as_ref()
+                    });
+
+                    let Some(endpoint) = result else {
+                        tracing::warn!("received unknown gameserver to delete from k8s");
+                        continue
                     };
+
                     tracing::trace!(?endpoint, "Deleting endpoint");
                     config.clusters.modify(|clusters| {
                         for locality in clusters.default_cluster_mut().localities.iter_mut() {
