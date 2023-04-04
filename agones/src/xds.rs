@@ -56,6 +56,8 @@ mod tests {
     /// for this test, we should only have single Agones integration test in this suite, since they
     /// could easily collide with each other.
     async fn agones_token_router() {
+        quilkin::test_utils::enable_tracing_log();
+
         let client = Client::new().await;
 
         let deployments: Api<Deployment> = client.namespaced_api();
