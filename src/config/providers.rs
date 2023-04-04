@@ -2,6 +2,7 @@ pub mod k8s;
 
 const RETRIES: u32 = 25;
 const BACKOFF_STEP: std::time::Duration = std::time::Duration::from_millis(250);
+const MAX_DELAY: std::time::Duration = std::time::Duration::from_secs(60 * 5);
 
 /// The available xDS source providers.
 #[derive(Clone, Debug, clap::Subcommand)]
@@ -73,6 +74,7 @@ impl Providers {
         tryhard::retry_fn(task)
             .retries(RETRIES)
             .exponential_backoff(BACKOFF_STEP)
+            .max_delay(MAX_DELAY)
             .on_retry(|attempt, _, error: &eyre::Error| {
                 let error = error.to_string();
                 async move {
