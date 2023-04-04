@@ -126,7 +126,7 @@ impl ControlPlane {
         let watchers = &self.watchers[resource_type];
         watchers
             .version
-            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         tracing::trace!(%resource_type, watchers=watchers.sender.receiver_count(), "pushing update");
         if let Err(error) = watchers.sender.send(()) {
             tracing::warn!(%error, "pushing update failed");
@@ -148,7 +148,7 @@ impl ControlPlane {
         let nonce = uuid::Uuid::new_v4();
         response.version_info = watchers
             .version
-            .load(std::sync::atomic::Ordering::Relaxed)
+            .load(std::sync::atomic::Ordering::SeqCst)
             .to_string();
         response.control_plane = Some(crate::xds::config::core::v3::ControlPlane {
             identifier: (*self.config.id.load()).clone(),
