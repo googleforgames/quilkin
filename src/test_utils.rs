@@ -34,7 +34,7 @@ use crate::{
 static ENABLE_LOG: Lazy<()> = Lazy::new(|| {
     tracing_subscriber::fmt()
         .pretty()
-        .with_max_level(tracing::Level::Debug)
+        .with_max_level(tracing::Level::DEBUG)
         .init()
 });
 
