@@ -594,6 +594,14 @@
 <span id="594">594</span>
 <span id="595">595</span>
 <span id="596">596</span>
+<span id="597">597</span>
+<span id="598">598</span>
+<span id="599">599</span>
+<span id="600">600</span>
+<span id="601">601</span>
+<span id="602">602</span>
+<span id="603">603</span>
+<span id="604">604</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -846,6 +854,11 @@
             .status
             .as_ref()
             .ok_or_else(|| tonic::Status::internal(<span class="string">&quot;No status found for game server&quot;</span>))<span class="question-mark">?</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>extra_metadata = serde_json::Map::default();
+        extra_metadata.insert(
+            <span class="string">&quot;name&quot;</span>.into(),
+            server.metadata.name.clone().unwrap_or_default().into(),
+        );
 
         <span class="kw">let </span>tokens = <span class="kw">match </span>server.metadata.annotations.as_ref() {
             <span class="prelude-val">Some</span>(annotations) =&gt; annotations
@@ -869,7 +882,10 @@
             .and_then(|ports| ports.first().map(|status| status.port))
             .unwrap_or_default();
         <span class="kw">let </span>filter_metadata = <span class="kw">crate</span>::endpoint::Metadata { tokens };
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span>::with_metadata((address, port).into(), filter_metadata))
+        <span class="prelude-val">Ok</span>(<span class="self">Self</span>::with_metadata(
+            (address, port).into(),
+            <span class="kw">crate</span>::metadata::MetadataView::with_unknown(filter_metadata, extra_metadata),
+        ))
     }
 }
 

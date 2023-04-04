@@ -166,6 +166,9 @@
 <span id="166">166</span>
 <span id="167">167</span>
 <span id="168">168</span>
+<span id="169">169</span>
+<span id="170">170</span>
+<span id="171">171</span>
 </pre><pre class="rust"><code><span class="kw">pub mod </span>agones;
 
 <span class="kw">use </span>std::sync::Arc;
@@ -313,13 +316,16 @@
                 }
 
                 Event::Deleted(server) =&gt; {
-                    <span class="kw">let </span>endpoint = <span class="kw">match </span>Endpoint::try_from(server) {
-                        <span class="prelude-val">Ok</span>(endpoint) =&gt; endpoint,
-                        <span class="prelude-val">Err</span>(error) =&gt; {
-                            <span class="macro">tracing::warn!</span>(%error, <span class="string">&quot;received invalid gameserver to delete from k8s&quot;</span>);
-                            <span class="kw">continue
-                        </span>}
-                    };
+                    <span class="kw">let </span>result = config.clusters.value().endpoints().find(|endpoint| {
+                        <span class="prelude-val">Some</span>(endpoint.address.to_string()) == server.status.as_ref().map(|status| status.address.clone()) ||
+                        endpoint.metadata.unknown.get(<span class="string">&quot;name&quot;</span>) == server.metadata.name.clone().map(From::from).as_ref()
+                    });
+
+                    <span class="kw">let </span><span class="prelude-val">Some</span>(endpoint) = result <span class="kw">else </span>{
+                        <span class="macro">tracing::warn!</span>(<span class="string">&quot;received unknown gameserver to delete from k8s&quot;</span>);
+                        <span class="kw">continue
+                    </span>};
+
                     <span class="macro">tracing::trace!</span>(<span class="question-mark">?</span>endpoint, <span class="string">&quot;Deleting endpoint&quot;</span>);
                     config.clusters.modify(|clusters| {
                         <span class="kw">for </span>locality <span class="kw">in </span>clusters.default_cluster_mut().localities.iter_mut() {
