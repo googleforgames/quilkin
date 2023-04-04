@@ -5,6 +5,10 @@
 | ADS | 7800 | gRPC(IPv4) |
 | CPDS | 7900 | gRPC(IPv4) |
 
+> **Note:** This service is currently in active experimentation and development
+  so there may be bugs which cause it to be unusable  for production, as always
+  all bug reports are welcome and appreciated. 
+
 For multi-cluster integration, Quilkin provides a `relay` service, that can be
 used with a multiple [control plane](./xds.md) services in different clusters to
 provide a unified "Aggregated Discovery Service" endpoint for [proxy](./proxy.md)
