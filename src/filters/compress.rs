@@ -52,9 +52,10 @@ impl Compress {
     }
 }
 
+#[async_trait::async_trait]
 impl Filter for Compress {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+    async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         let original_size = ctx.contents.len();
 
         match self.on_read {
@@ -87,7 +88,7 @@ impl Filter for Compress {
     }
 
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
+    async fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
         let original_size = ctx.contents.len();
         match self.on_write {
             Action::Compress => match self.compressor.encode(&mut ctx.contents) {
@@ -139,19 +140,19 @@ mod tests {
 
     use super::*;
 
-    #[test]
-    fn default_mode_factory() {
+    #[tokio::test]
+    async fn default_mode_factory() {
         let config = serde_json::json!({
             "on_read": "DECOMPRESS".to_string(),
             "on_write": "COMPRESS".to_string(),
 
         });
         let filter = Compress::from_config(Some(serde_json::from_value(config).unwrap()));
-        assert_downstream(&filter);
+        assert_downstream(&filter).await;
     }
 
-    #[test]
-    fn config_factory() {
+    #[tokio::test]
+    async fn config_factory() {
         let config = serde_json::json!({
             "mode": "SNAPPY".to_string(),
             "on_read": "DECOMPRESS".to_string(),
@@ -159,11 +160,11 @@ mod tests {
 
         });
         let filter = Compress::from_config(Some(serde_json::from_value(config).unwrap()));
-        assert_downstream(&filter);
+        assert_downstream(&filter).await;
     }
 
-    #[test]
-    fn upstream() {
+    #[tokio::test]
+    async fn upstream() {
         let compress = Compress::new(
             Config {
                 mode: Default::default(),
@@ -180,7 +181,10 @@ mod tests {
             "127.0.0.1:8080".parse().unwrap(),
             expected.clone(),
         );
-        compress.read(&mut read_context).expect("should compress");
+        compress
+            .read(&mut read_context)
+            .await
+            .expect("should compress");
 
         assert_ne!(expected, &*read_context.contents);
         assert!(
@@ -208,6 +212,7 @@ mod tests {
 
         compress
             .write(&mut write_context)
+            .await
             .expect("should decompress");
 
         assert_eq!(expected, &*write_context.contents);
@@ -223,8 +228,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn downstream() {
+    #[tokio::test]
+    async fn downstream() {
         let compress = Compress::new(
             Config {
                 mode: Default::default(),
@@ -234,7 +239,7 @@ mod tests {
             Metrics::new().unwrap(),
         );
 
-        let (expected, compressed) = assert_downstream(&compress);
+        let (expected, compressed) = assert_downstream(&compress).await;
 
         // multiply by two, because data was sent both downstream and upstream
         assert_eq!(
@@ -247,8 +252,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn failed_decompress() {
+    #[tokio::test]
+    async fn failed_decompress() {
         let compression = Compress::new(
             Config {
                 mode: Default::default(),
@@ -265,6 +270,7 @@ mod tests {
                 "127.0.0.1:8081".parse().unwrap(),
                 b"hello".to_vec(),
             ))
+            .await
             .is_err());
 
         let compression = Compress::new(
@@ -282,14 +288,15 @@ mod tests {
                 "127.0.0.1:8080".parse().unwrap(),
                 b"hello".to_vec(),
             ))
+            .await
             .is_err());
 
         assert_eq!(0, compression.metrics.compressed_bytes_total.get());
         assert_eq!(0, compression.metrics.decompressed_bytes_total.get());
     }
 
-    #[test]
-    fn do_nothing() {
+    #[tokio::test]
+    async fn do_nothing() {
         let compression = Compress::new(
             Config {
                 mode: Default::default(),
@@ -304,7 +311,7 @@ mod tests {
             "127.0.0.1:8080".parse().unwrap(),
             b"hello".to_vec(),
         );
-        compression.read(&mut read_context).unwrap();
+        compression.read(&mut read_context).await.unwrap();
         assert_eq!(b"hello", &*read_context.contents);
 
         let mut write_context = WriteContext::new(
@@ -314,7 +321,7 @@ mod tests {
             b"hello".to_vec(),
         );
 
-        compression.write(&mut write_context).unwrap();
+        compression.write(&mut write_context).await.unwrap();
 
         assert_eq!(b"hello".to_vec(), &*write_context.contents)
     }
@@ -360,7 +367,7 @@ mod tests {
 
     /// assert compression work with decompress on read and compress on write
     /// Returns the original data packet, and the compressed version
-    fn assert_downstream<F>(filter: &F) -> (Vec<u8>, Vec<u8>)
+    async fn assert_downstream<F>(filter: &F) -> (Vec<u8>, Vec<u8>)
     where
         F: Filter + ?Sized,
     {
@@ -373,7 +380,10 @@ mod tests {
             expected.clone(),
         );
 
-        filter.write(&mut write_context).expect("should compress");
+        filter
+            .write(&mut write_context)
+            .await
+            .expect("should compress");
 
         assert_ne!(expected, &*write_context.contents);
         assert!(
@@ -390,7 +400,10 @@ mod tests {
             write_context.contents.clone(),
         );
 
-        filter.read(&mut read_context).expect("should decompress");
+        filter
+            .read(&mut read_context)
+            .await
+            .expect("should decompress");
 
         assert_eq!(expected, &*read_context.contents);
         (expected, write_context.contents.to_vec())

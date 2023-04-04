@@ -257,45 +257,51 @@ impl schemars::JsonSchema for FilterChain {
     }
 }
 
+#[async_trait::async_trait]
 impl Filter for FilterChain {
-    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
-        self.filters
+    async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+        for ((id, instance), histogram) in self
+            .filters
             .iter()
             .zip(self.filter_read_duration_seconds.iter())
-            .try_fold((), |_, ((id, instance), histogram)| {
-                tracing::trace!(%id, "read filtering packet");
-                match histogram.observe_closure_duration(|| instance.filter().read(ctx)) {
-                    Ok(()) => {
-                        tracing::trace!(%id, "read passing packet");
-                    }
-                    Err(error) => {
-                        tracing::trace!(%id, "read dropping packet");
-                        return Err(error);
-                    }
+        {
+            tracing::trace!(%id, "read filtering packet");
+            let timer = histogram.start_timer();
+            let result = instance.filter().read(ctx).await;
+            timer.stop_and_record();
+            match result {
+                Ok(()) => tracing::trace!(%id, "read passing packet"),
+                Err(error) => {
+                    tracing::trace!(%id, "read dropping packet");
+                    return Err(error);
                 }
+            }
+        }
 
-                Ok(())
-            })
+        Ok(())
     }
 
-    fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
-        self.filters
+    async fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
+        for ((id, instance), histogram) in self
+            .filters
             .iter()
             .rev()
             .zip(self.filter_write_duration_seconds.iter().rev())
-            .try_fold((), |_, ((id, instance), histogram)| {
-                tracing::trace!(%id, "write filtering packet");
-                match histogram.observe_closure_duration(|| instance.filter().write(ctx)) {
-                    Ok(()) => {
-                        tracing::trace!(%id, "write passing packet");
-                        Ok(())
-                    }
-                    Err(error) => {
-                        tracing::trace!(%id, "write dropping packet");
-                        Err(error)
-                    }
+        {
+            tracing::trace!(%id, "write filtering packet");
+            let timer = histogram.start_timer();
+            let result = instance.filter().write(ctx).await;
+            timer.stop_and_record();
+            match result {
+                Ok(()) => tracing::trace!(%id, "write passing packet"),
+                Err(error) => {
+                    tracing::trace!(%id, "write dropping packet");
+                    return Err(error);
                 }
-            })
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -341,8 +347,8 @@ mod tests {
         ]
     }
 
-    #[test]
-    fn chain_single_test_filter() {
+    #[tokio::test]
+    async fn chain_single_test_filter() {
         crate::test_utils::load_test_filters();
         let config = new_test_config();
         let endpoints_fixture = endpoints();
@@ -352,7 +358,7 @@ mod tests {
             b"hello".to_vec(),
         );
 
-        config.filters.read(&mut context).unwrap();
+        config.filters.read(&mut context).await.unwrap();
         let expected = endpoints_fixture.clone();
 
         assert_eq!(expected, &*context.endpoints);
@@ -368,7 +374,7 @@ mod tests {
             "127.0.0.1:70".parse().unwrap(),
             b"hello".to_vec(),
         );
-        config.filters.write(&mut context).unwrap();
+        config.filters.write(&mut context).await.unwrap();
 
         assert_eq!(
             "receive",
@@ -377,8 +383,8 @@ mod tests {
         assert_eq!(b"hello:our:127.0.0.1:80:127.0.0.1:70", &*context.contents,);
     }
 
-    #[test]
-    fn chain_double_test_filter() {
+    #[tokio::test]
+    async fn chain_double_test_filter() {
         let chain = FilterChain::new(vec![
             (
                 TestFilter::NAME.into(),
@@ -398,7 +404,7 @@ mod tests {
             b"hello".to_vec(),
         );
 
-        chain.read(&mut context).unwrap();
+        chain.read(&mut context).await.unwrap();
         let expected = endpoints_fixture.clone();
         assert_eq!(expected, context.endpoints.to_vec());
         assert_eq!(
@@ -417,7 +423,7 @@ mod tests {
             b"hello".to_vec(),
         );
 
-        chain.write(&mut context).unwrap();
+        chain.write(&mut context).await.unwrap();
         assert_eq!(
             b"hello:our:127.0.0.1:80:127.0.0.1:70:our:127.0.0.1:80:127.0.0.1:70",
             &*context.contents,

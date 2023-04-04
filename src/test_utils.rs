@@ -55,8 +55,9 @@ pub async fn available_addr() -> SocketAddr {
 // TestFilter is useful for testing that commands are executing filters appropriately.
 pub struct TestFilter;
 
+#[async_trait::async_trait]
 impl Filter for TestFilter {
-    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+    async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         // append values on each run
         ctx.metadata
             .entry("downstream".into())
@@ -68,7 +69,7 @@ impl Filter for TestFilter {
         Ok(())
     }
 
-    fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
+    async fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
         // append values on each run
         ctx.metadata
             .entry("upstream".into())
@@ -254,7 +255,7 @@ impl TestHelper {
 }
 
 /// assert that read makes no changes
-pub fn assert_filter_read_no_change<F>(filter: &F)
+pub async fn assert_filter_read_no_change<F>(filter: &F)
 where
     F: Filter,
 {
@@ -263,13 +264,13 @@ where
     let contents = "hello".to_string().into_bytes();
     let mut context = ReadContext::new(endpoints.clone(), source, contents.clone());
 
-    filter.read(&mut context).unwrap();
+    filter.read(&mut context).await.unwrap();
     assert_eq!(endpoints, &*context.endpoints);
     assert_eq!(contents, &*context.contents);
 }
 
 /// assert that write makes no changes
-pub fn assert_write_no_change<F>(filter: &F)
+pub async fn assert_write_no_change<F>(filter: &F)
 where
     F: Filter,
 {
@@ -282,7 +283,7 @@ where
         contents.clone(),
     );
 
-    filter.write(&mut context).unwrap();
+    filter.write(&mut context).await.unwrap();
     assert_eq!(contents, &*context.contents);
 }
 
@@ -352,7 +353,7 @@ mod tests {
         let msg = "hello";
         endpoint
             .socket
-            .send_to(msg.as_bytes(), &echo_addr.to_socket_addr().unwrap())
+            .send_to(msg.as_bytes(), &echo_addr.to_socket_addr().await.unwrap())
             .await
             .unwrap();
         assert_eq!(
