@@ -50,11 +50,12 @@ impl StaticFilter for Firewall {
     }
 }
 
+#[async_trait::async_trait]
 impl Filter for Firewall {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+    async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         for rule in &self.on_read {
-            if rule.contains(ctx.source.to_socket_addr()?) {
+            if rule.contains(ctx.source.to_socket_addr().await?) {
                 return match rule.action {
                     Action::Allow => {
                         debug!(
@@ -80,9 +81,9 @@ impl Filter for Firewall {
     }
 
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
+    async fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
         for rule in &self.on_write {
-            if rule.contains(ctx.source.to_socket_addr()?) {
+            if rule.contains(ctx.source.to_socket_addr().await?) {
                 return match rule.action {
                     Action::Allow => {
                         debug!(
@@ -123,9 +124,9 @@ mod tests {
 
     use super::*;
 
-    #[test]
+    #[tokio::test]
     #[traced_test]
-    fn read() {
+    async fn read() {
         let firewall = Firewall {
             on_read: vec![Rule {
                 action: Action::Allow,
@@ -141,7 +142,7 @@ mod tests {
             (local_ip, 80).into(),
             vec![],
         );
-        assert!(firewall.read(&mut ctx).is_ok());
+        assert!(firewall.read(&mut ctx).await.is_ok());
 
         let mut ctx = ReadContext::new(
             vec![Endpoint::new((Ipv4Addr::LOCALHOST, 8080).into())],
@@ -151,11 +152,11 @@ mod tests {
         assert!(logs_contain("quilkin::filters::firewall")); // the given name to the the logger by tracing
         assert!(logs_contain("Allow"));
 
-        assert!(firewall.read(&mut ctx).is_err());
+        assert!(firewall.read(&mut ctx).await.is_err());
     }
 
-    #[test]
-    fn write() {
+    #[tokio::test]
+    async fn write() {
         let firewall = Firewall {
             on_read: vec![],
             on_write: vec![Rule {
@@ -174,7 +175,7 @@ mod tests {
             local_addr.clone(),
             vec![],
         );
-        assert!(firewall.write(&mut ctx).is_ok());
+        assert!(firewall.write(&mut ctx).await.is_ok());
 
         let mut ctx = WriteContext::new(
             endpoint,
@@ -182,6 +183,6 @@ mod tests {
             local_addr,
             vec![],
         );
-        assert!(firewall.write(&mut ctx).is_err());
+        assert!(firewall.write(&mut ctx).await.is_err());
     }
 }

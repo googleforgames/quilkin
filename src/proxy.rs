@@ -150,7 +150,7 @@ impl DownstreamReceiveWorkerConfig {
 
         let filters = config.filters.load();
         let mut context = ReadContext::new(endpoints, packet.source, packet.contents);
-        filters.read(&mut context)?;
+        filters.read(&mut context).await?;
         let mut bytes_written = 0;
 
         for endpoint in context.endpoints.iter() {

@@ -96,6 +96,8 @@ url = { version = "2.3.1", features = ["serde"] }
 uuid = { version = "1.2.2", default-features = false, features = ["v4"] }
 lasso = { version = "0.6.0", features = ["multi-threaded"] }
 kube.workspace = true
+trust-dns-resolver = { version = "0.22.0", features = ["tokio", "tokio-rustls", "dns-over-https-rustls"] }
+async-trait = "0.1.68"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 sys-info = "0.9.1"
