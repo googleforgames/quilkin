@@ -178,12 +178,13 @@ sent to a downstream client.</p>
 <pre><code class="language-rust no_run noplayground"><span class="boring">struct Greet;
 </span>use quilkin::filters::prelude::*;
 
+#[async_trait::async_trait]
 impl Filter for Greet {
-    fn read(&amp;self, ctx: &amp;mut ReadContext) -&gt; Result&lt;(), FilterError&gt; {
+    async fn read(&amp;self, ctx: &amp;mut ReadContext) -&gt; Result&lt;(), FilterError&gt; {
         ctx.contents.extend(b&quot;Hello&quot;);
         Ok(())
     }
-    fn write(&amp;self, ctx: &amp;mut WriteContext) -&gt; Result&lt;(), FilterError&gt; {
+    async fn write(&amp;self, ctx: &amp;mut WriteContext) -&gt; Result&lt;(), FilterError&gt; {
         ctx.contents.extend(b&quot;Goodbye&quot;);
         Ok(())
     }
@@ -295,13 +296,14 @@ struct Greet {
     config: Config,
 }
 
+#[async_trait::async_trait]
 impl Filter for Greet {
-    fn read(&amp;self, ctx: &amp;mut ReadContext) -&gt; Result&lt;(), FilterError&gt; {
+    async fn read(&amp;self, ctx: &amp;mut ReadContext) -&gt; Result&lt;(), FilterError&gt; {
         ctx.contents
             .splice(0..0, format!(&quot;{} &quot;, self.config.greeting).into_bytes());
         Ok(())
     }
-    fn write(&amp;self, ctx: &amp;mut WriteContext) -&gt; Result&lt;(), FilterError&gt; {
+    async fn write(&amp;self, ctx: &amp;mut WriteContext) -&gt; Result&lt;(), FilterError&gt; {
         ctx.contents
             .splice(0..0, format!(&quot;{} &quot;, self.config.greeting).into_bytes());
         Ok(())

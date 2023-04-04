@@ -222,6 +222,11 @@
 <span id="222">222</span>
 <span id="223">223</span>
 <span id="224">224</span>
+<span id="225">225</span>
+<span id="226">226</span>
+<span id="227">227</span>
+<span id="228">228</span>
+<span id="229">229</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -309,7 +314,7 @@
     }
 }
 
-<span class="kw">fn </span>match_filter&lt;<span class="lifetime">&#39;config</span>, <span class="lifetime">&#39;ctx</span>, Ctx&gt;(
+<span class="kw">async fn </span>match_filter&lt;<span class="lifetime">&#39;config</span>, <span class="lifetime">&#39;ctx</span>, Ctx, F&gt;(
     config: <span class="kw-2">&amp;</span><span class="lifetime">&#39;config </span><span class="prelude-ty">Option</span>&lt;ConfigInstance&gt;,
     metrics: <span class="kw-2">&amp;</span><span class="lifetime">&#39;config </span>Metrics,
     ctx: <span class="kw-2">&amp;</span><span class="lifetime">&#39;ctx </span><span class="kw-2">mut </span>Ctx,
@@ -317,10 +322,11 @@
         <span class="kw-2">&amp;</span><span class="lifetime">&#39;value </span>Ctx,
         <span class="kw-2">&amp;</span><span class="lifetime">&#39;config </span>metadata::Key,
     ) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;value </span>metadata::Value&gt;,
-    and_then: <span class="kw">impl </span>Fn(<span class="kw-2">&amp;</span><span class="lifetime">&#39;ctx </span><span class="kw-2">mut </span>Ctx, <span class="kw-2">&amp;</span><span class="lifetime">&#39;config </span>FilterInstance) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt;,
+    and_then: <span class="kw">impl </span>Fn(<span class="kw-2">&amp;</span><span class="lifetime">&#39;ctx </span><span class="kw-2">mut </span>Ctx, <span class="kw-2">&amp;</span><span class="lifetime">&#39;config </span>FilterInstance) -&gt; F,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt;
 <span class="kw">where
-</span>{
+    </span>F: std::future::Future&lt;Output = <span class="prelude-ty">Result</span>&lt;(), FilterError&gt;&gt;,
+{
     <span class="kw">match </span>config {
         <span class="prelude-val">Some</span>(config) =&gt; {
             <span class="kw">let </span>value = (get_metadata)(ctx, <span class="kw-2">&amp;</span>config.metadata_key).ok_or_else(|| {
@@ -331,8 +337,8 @@
                 <span class="prelude-val">Some</span>((value, instance)) =&gt; {
                     <span class="macro">tracing::trace!</span>(key=%config.metadata_key, %value, filter=%instance.<span class="number">0</span>, <span class="string">&quot;Matched against branch&quot;</span>);
                     metrics.packets_matched_total.inc();
-                    (and_then)(ctx, <span class="kw-2">&amp;</span>instance.<span class="number">1</span>)
-                }
+                    (and_then)(ctx, <span class="kw-2">&amp;</span>instance.<span class="number">1</span>).<span class="kw">await
+                </span>}
                 <span class="prelude-val">None </span>=&gt; {
                     <span class="macro">tracing::trace!</span>(
                         key = %config.metadata_key,
@@ -340,17 +346,18 @@
                         <span class="string">&quot;No match found, calling fallthrough&quot;
                     </span>);
                     metrics.packets_fallthrough_total.inc();
-                    (and_then)(ctx, <span class="kw-2">&amp;</span>config.fallthrough.<span class="number">1</span>)
-                }
+                    (and_then)(ctx, <span class="kw-2">&amp;</span>config.fallthrough.<span class="number">1</span>).<span class="kw">await
+                </span>}
             }
         }
         <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(()),
     }
 }
 
-<span class="kw">impl </span>Filter <span class="kw">for </span>Match {
+<span class="attribute">#[async_trait::async_trait]
+</span><span class="kw">impl </span>Filter <span class="kw">for </span>Match {
     <span class="attribute">#[cfg_attr(feature = <span class="string">&quot;instrument&quot;</span>, tracing::instrument(skip(<span class="self">self</span>, ctx)))]
-    </span><span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+    </span><span class="kw">async fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="macro">tracing::trace!</span>(metadata=<span class="question-mark">?</span>ctx.metadata);
         match_filter(
             <span class="kw-2">&amp;</span><span class="self">self</span>.on_read_filters,
@@ -359,10 +366,11 @@
             |ctx, metadata_key| ctx.metadata.get(metadata_key),
             |ctx, instance| instance.filter().read(ctx),
         )
-    }
+        .<span class="kw">await
+    </span>}
 
     <span class="attribute">#[cfg_attr(feature = <span class="string">&quot;instrument&quot;</span>, tracing::instrument(skip(<span class="self">self</span>, ctx)))]
-    </span><span class="kw">fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+    </span><span class="kw">async fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         match_filter(
             <span class="kw-2">&amp;</span><span class="self">self</span>.on_write_filters,
             <span class="kw-2">&amp;</span><span class="self">self</span>.metrics,
@@ -370,7 +378,8 @@
             |ctx, metadata_key| ctx.metadata.get(metadata_key),
             |ctx, instance| instance.filter().write(ctx),
         )
-    }
+        .<span class="kw">await
+    </span>}
 }
 
 <span class="kw">impl </span>StaticFilter <span class="kw">for </span>Match {
@@ -389,8 +398,8 @@
 
     <span class="kw">use crate</span>::{endpoint::Endpoint, filters::<span class="kw-2">*</span>};
 
-    <span class="attribute">#[test]
-    </span><span class="kw">fn </span>metrics() {
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>metrics() {
         <span class="kw">let </span>metrics = Metrics::new().unwrap();
         <span class="kw">let </span>key = <span class="kw">crate</span>::metadata::Key::from_static(<span class="string">&quot;myapp.com/token&quot;</span>);
         <span class="kw">let </span>config = Config {
@@ -416,7 +425,8 @@
                 <span class="string">&quot;127.0.0.1:70&quot;</span>.parse().unwrap(),
                 contents.clone(),
             ))
-            .unwrap();
+            .<span class="kw">await
+            </span>.unwrap();
 
         <span class="macro">assert_eq!</span>(<span class="number">0</span>, filter.metrics.packets_fallthrough_total.get());
         <span class="macro">assert_eq!</span>(<span class="number">0</span>, filter.metrics.packets_matched_total.get());
@@ -429,7 +439,7 @@
         );
         ctx.metadata.insert(key, <span class="string">&quot;abc&quot;</span>.into());
 
-        filter.read(<span class="kw-2">&amp;mut </span>ctx).unwrap();
+        filter.read(<span class="kw-2">&amp;mut </span>ctx).<span class="kw">await</span>.unwrap();
         <span class="macro">assert_eq!</span>(<span class="number">1</span>, filter.metrics.packets_matched_total.get());
         <span class="macro">assert_eq!</span>(<span class="number">0</span>, filter.metrics.packets_fallthrough_total.get());
 
@@ -440,7 +450,7 @@
         );
         ctx.metadata.insert(key, <span class="string">&quot;xyz&quot;</span>.into());
 
-        <span class="kw">let </span>result = filter.read(<span class="kw-2">&amp;mut </span>ctx);
+        <span class="kw">let </span>result = filter.read(<span class="kw-2">&amp;mut </span>ctx).<span class="kw">await</span>;
         <span class="macro">assert!</span>(result.is_err());
         <span class="macro">assert_eq!</span>(<span class="number">1</span>, filter.metrics.packets_matched_total.get());
         <span class="macro">assert_eq!</span>(<span class="number">1</span>, filter.metrics.packets_fallthrough_total.get());

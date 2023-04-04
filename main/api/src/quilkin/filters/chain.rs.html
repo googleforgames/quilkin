@@ -469,6 +469,12 @@
 <span id="469">469</span>
 <span id="470">470</span>
 <span id="471">471</span>
+<span id="472">472</span>
+<span id="473">473</span>
+<span id="474">474</span>
+<span id="475">475</span>
+<span id="476">476</span>
+<span id="477">477</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -728,45 +734,51 @@
     }
 }
 
-<span class="kw">impl </span>Filter <span class="kw">for </span>FilterChain {
-    <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
-        <span class="self">self</span>.filters
+<span class="attribute">#[async_trait::async_trait]
+</span><span class="kw">impl </span>Filter <span class="kw">for </span>FilterChain {
+    <span class="kw">async fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+        <span class="kw">for </span>((id, instance), histogram) <span class="kw">in </span><span class="self">self
+            </span>.filters
             .iter()
             .zip(<span class="self">self</span>.filter_read_duration_seconds.iter())
-            .try_fold((), |<span class="kw">_</span>, ((id, instance), histogram)| {
-                <span class="macro">tracing::trace!</span>(%id, <span class="string">&quot;read filtering packet&quot;</span>);
-                <span class="kw">match </span>histogram.observe_closure_duration(|| instance.filter().read(ctx)) {
-                    <span class="prelude-val">Ok</span>(()) =&gt; {
-                        <span class="macro">tracing::trace!</span>(%id, <span class="string">&quot;read passing packet&quot;</span>);
-                    }
-                    <span class="prelude-val">Err</span>(error) =&gt; {
-                        <span class="macro">tracing::trace!</span>(%id, <span class="string">&quot;read dropping packet&quot;</span>);
-                        <span class="kw">return </span><span class="prelude-val">Err</span>(error);
-                    }
+        {
+            <span class="macro">tracing::trace!</span>(%id, <span class="string">&quot;read filtering packet&quot;</span>);
+            <span class="kw">let </span>timer = histogram.start_timer();
+            <span class="kw">let </span>result = instance.filter().read(ctx).<span class="kw">await</span>;
+            timer.stop_and_record();
+            <span class="kw">match </span>result {
+                <span class="prelude-val">Ok</span>(()) =&gt; <span class="macro">tracing::trace!</span>(%id, <span class="string">&quot;read passing packet&quot;</span>),
+                <span class="prelude-val">Err</span>(error) =&gt; {
+                    <span class="macro">tracing::trace!</span>(%id, <span class="string">&quot;read dropping packet&quot;</span>);
+                    <span class="kw">return </span><span class="prelude-val">Err</span>(error);
                 }
+            }
+        }
 
-                <span class="prelude-val">Ok</span>(())
-            })
+        <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
-        <span class="self">self</span>.filters
+    <span class="kw">async fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+        <span class="kw">for </span>((id, instance), histogram) <span class="kw">in </span><span class="self">self
+            </span>.filters
             .iter()
             .rev()
             .zip(<span class="self">self</span>.filter_write_duration_seconds.iter().rev())
-            .try_fold((), |<span class="kw">_</span>, ((id, instance), histogram)| {
-                <span class="macro">tracing::trace!</span>(%id, <span class="string">&quot;write filtering packet&quot;</span>);
-                <span class="kw">match </span>histogram.observe_closure_duration(|| instance.filter().write(ctx)) {
-                    <span class="prelude-val">Ok</span>(()) =&gt; {
-                        <span class="macro">tracing::trace!</span>(%id, <span class="string">&quot;write passing packet&quot;</span>);
-                        <span class="prelude-val">Ok</span>(())
-                    }
-                    <span class="prelude-val">Err</span>(error) =&gt; {
-                        <span class="macro">tracing::trace!</span>(%id, <span class="string">&quot;write dropping packet&quot;</span>);
-                        <span class="prelude-val">Err</span>(error)
-                    }
+        {
+            <span class="macro">tracing::trace!</span>(%id, <span class="string">&quot;write filtering packet&quot;</span>);
+            <span class="kw">let </span>timer = histogram.start_timer();
+            <span class="kw">let </span>result = instance.filter().write(ctx).<span class="kw">await</span>;
+            timer.stop_and_record();
+            <span class="kw">match </span>result {
+                <span class="prelude-val">Ok</span>(()) =&gt; <span class="macro">tracing::trace!</span>(%id, <span class="string">&quot;write passing packet&quot;</span>),
+                <span class="prelude-val">Err</span>(error) =&gt; {
+                    <span class="macro">tracing::trace!</span>(%id, <span class="string">&quot;write dropping packet&quot;</span>);
+                    <span class="kw">return </span><span class="prelude-val">Err</span>(error);
                 }
-            })
+            }
+        }
+
+        <span class="prelude-val">Ok</span>(())
     }
 }
 
@@ -812,8 +824,8 @@
         ]
     }
 
-    <span class="attribute">#[test]
-    </span><span class="kw">fn </span>chain_single_test_filter() {
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>chain_single_test_filter() {
         <span class="kw">crate</span>::test_utils::load_test_filters();
         <span class="kw">let </span>config = new_test_config();
         <span class="kw">let </span>endpoints_fixture = endpoints();
@@ -823,7 +835,7 @@
             <span class="string">b&quot;hello&quot;</span>.to_vec(),
         );
 
-        config.filters.read(<span class="kw-2">&amp;mut </span>context).unwrap();
+        config.filters.read(<span class="kw-2">&amp;mut </span>context).<span class="kw">await</span>.unwrap();
         <span class="kw">let </span>expected = endpoints_fixture.clone();
 
         <span class="macro">assert_eq!</span>(expected, <span class="kw-2">&amp;*</span>context.endpoints);
@@ -839,7 +851,7 @@
             <span class="string">&quot;127.0.0.1:70&quot;</span>.parse().unwrap(),
             <span class="string">b&quot;hello&quot;</span>.to_vec(),
         );
-        config.filters.write(<span class="kw-2">&amp;mut </span>context).unwrap();
+        config.filters.write(<span class="kw-2">&amp;mut </span>context).<span class="kw">await</span>.unwrap();
 
         <span class="macro">assert_eq!</span>(
             <span class="string">&quot;receive&quot;</span>,
@@ -848,8 +860,8 @@
         <span class="macro">assert_eq!</span>(<span class="string">b&quot;hello:our:127.0.0.1:80:127.0.0.1:70&quot;</span>, <span class="kw-2">&amp;*</span>context.contents,);
     }
 
-    <span class="attribute">#[test]
-    </span><span class="kw">fn </span>chain_double_test_filter() {
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>chain_double_test_filter() {
         <span class="kw">let </span>chain = FilterChain::new(<span class="macro">vec!</span>[
             (
                 TestFilter::NAME.into(),
@@ -869,7 +881,7 @@
             <span class="string">b&quot;hello&quot;</span>.to_vec(),
         );
 
-        chain.read(<span class="kw-2">&amp;mut </span>context).unwrap();
+        chain.read(<span class="kw-2">&amp;mut </span>context).<span class="kw">await</span>.unwrap();
         <span class="kw">let </span>expected = endpoints_fixture.clone();
         <span class="macro">assert_eq!</span>(expected, context.endpoints.to_vec());
         <span class="macro">assert_eq!</span>(
@@ -888,7 +900,7 @@
             <span class="string">b&quot;hello&quot;</span>.to_vec(),
         );
 
-        chain.write(<span class="kw-2">&amp;mut </span>context).unwrap();
+        chain.write(<span class="kw-2">&amp;mut </span>context).<span class="kw">await</span>.unwrap();
         <span class="macro">assert_eq!</span>(
             <span class="string">b&quot;hello:our:127.0.0.1:80:127.0.0.1:70:our:127.0.0.1:80:127.0.0.1:70&quot;</span>,
             <span class="kw-2">&amp;*</span>context.contents,

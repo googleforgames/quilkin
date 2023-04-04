@@ -370,7 +370,7 @@
 
         <span class="kw">let </span>filters = config.filters.load();
         <span class="kw">let </span><span class="kw-2">mut </span>context = ReadContext::new(endpoints, packet.source, packet.contents);
-        filters.read(<span class="kw-2">&amp;mut </span>context)<span class="question-mark">?</span>;
+        filters.read(<span class="kw-2">&amp;mut </span>context).<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>bytes_written = <span class="number">0</span>;
 
         <span class="kw">for </span>endpoint <span class="kw">in </span>context.endpoints.iter() {

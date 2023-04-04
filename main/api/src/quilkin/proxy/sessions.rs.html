@@ -363,23 +363,6 @@
 <span id="363">363</span>
 <span id="364">364</span>
 <span id="365">365</span>
-<span id="366">366</span>
-<span id="367">367</span>
-<span id="368">368</span>
-<span id="369">369</span>
-<span id="370">370</span>
-<span id="371">371</span>
-<span id="372">372</span>
-<span id="373">373</span>
-<span id="374">374</span>
-<span id="375">375</span>
-<span id="376">376</span>
-<span id="377">377</span>
-<span id="378">378</span>
-<span id="379">379</span>
-<span id="380">380</span>
-<span id="381">381</span>
-<span id="382">382</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -400,7 +383,6 @@
 
 <span class="kw">use </span>std::sync::Arc;
 
-<span class="kw">use </span>prometheus::HistogramTimer;
 <span class="kw">use </span>tokio::{net::UdpSocket, select, sync::watch, time::Instant};
 
 <span class="kw">use crate</span>::{
@@ -448,7 +430,6 @@
     endpoint: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Endpoint,
     source: EndpointAddress,
     dest: EndpointAddress,
-    timer: HistogramTimer,
 }
 
 <span class="kw">pub struct </span>SessionArgs {
@@ -473,11 +454,11 @@
         <span class="kw">let </span>addr = (std::net::Ipv4Addr::UNSPECIFIED, <span class="number">0</span>);
         <span class="kw">let </span>upstream_socket = Arc::new(UdpSocket::bind(addr).<span class="kw">await</span><span class="question-mark">?</span>);
         upstream_socket
-            .connect(args.dest.address.to_socket_addr()<span class="question-mark">?</span>)
+            .connect(args.dest.address.to_socket_addr().<span class="kw">await</span><span class="question-mark">?</span>)
             .<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="kw">let </span>(shutdown_tx, shutdown_rx) = watch::channel::&lt;()&gt;(());
 
-        <span class="kw">let </span>ip = args.source.to_socket_addr().unwrap().ip();
+        <span class="kw">let </span>ip = args.source.to_socket_addr().<span class="kw">await</span>.unwrap().ip();
         <span class="kw">let </span>asn_info = <span class="kw">crate</span>::MaxmindDb::lookup(ip);
         <span class="kw">let </span>s = Session {
             config: args.config.clone(),
@@ -520,7 +501,9 @@
                             <span class="prelude-val">Ok</span>((size, recv_addr)) =&gt; {
                                 <span class="kw">crate</span>::metrics::bytes_total(<span class="kw">crate</span>::metrics::WRITE).inc_by(size <span class="kw">as </span>u64);
                                 <span class="kw">crate</span>::metrics::packets_total(<span class="kw">crate</span>::metrics::WRITE).inc();
-                                Session::process_recv_packet(
+
+                                <span class="kw">let </span>timer = <span class="kw">crate</span>::metrics::processing_time(<span class="kw">crate</span>::metrics::WRITE).start_timer();
+                                <span class="kw">let </span>result = Session::process_recv_packet(
                                     <span class="kw-2">&amp;</span>downstream_socket,
                                     ReceivedPacketContext {
                                         config: config.clone(),
@@ -528,9 +511,18 @@
                                         endpoint: <span class="kw-2">&amp;</span>endpoint,
                                         source: recv_addr.into(),
                                         dest: source.clone(),
-                                        timer: <span class="kw">crate</span>::metrics::processing_time(<span class="kw">crate</span>::metrics::WRITE).start_timer(),
-                                    }).<span class="kw">await
-                            </span>}
+                                    }).<span class="kw">await</span>;
+                                timer.stop_and_record();
+                                <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = result {
+                                    error.log();
+                                    <span class="kw">let </span>label = <span class="macro">format!</span>(<span class="string">&quot;proxy::Session::process_recv_packet: {error}&quot;</span>);
+                                    <span class="kw">crate</span>::metrics::packets_dropped_total(
+                                        <span class="kw">crate</span>::metrics::WRITE,
+                                        <span class="kw-2">&amp;</span>label
+                                    ).inc();
+                                    <span class="kw">crate</span>::metrics::errors_total(<span class="kw">crate</span>::metrics::WRITE, <span class="kw-2">&amp;</span>label).inc();
+                                }
+                            }
                         };
                     }
                     <span class="kw">_ </span>= shutdown_rx.changed() =&gt; {
@@ -556,14 +548,13 @@
     </span><span class="kw">async fn </span>process_recv_packet(
         downstream_socket: <span class="kw-2">&amp;</span>Arc&lt;UdpSocket&gt;,
         packet_ctx: ReceivedPacketContext&lt;<span class="lifetime">&#39;_</span>&gt;,
-    ) {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;usize, Error&gt; {
         <span class="kw">let </span>ReceivedPacketContext {
             packet,
             config,
             endpoint,
             source: from,
             dest,
-            timer,
         } = packet_ctx;
 
         <span class="macro">tracing::trace!</span>(%from, dest = %endpoint.address, contents = %debug::bytes_to_string(packet), <span class="string">&quot;received packet from upstream&quot;</span>);
@@ -575,38 +566,15 @@
             packet.to_vec(),
         );
 
-        <span class="kw">let </span>result = config
-            .filters
-            .load()
-            .write(<span class="kw-2">&amp;mut </span>context)
-            .map_err(Error::from)
-            .map(|<span class="kw">_</span>| context)
-            .and_then(|context| {
-                dest.to_socket_addr()
-                    .map(|addr| (addr, context))
-                    .map_err(Error::ToSocketAddr)
-            });
+        config.filters.load().write(<span class="kw-2">&amp;mut </span>context).<span class="kw">await</span><span class="question-mark">?</span>;
 
-        <span class="kw">let </span>handle_error = |error: Error| {
-            <span class="kw">let </span>error = error.to_string();
-            <span class="kw">crate</span>::metrics::packets_dropped_total(<span class="kw">crate</span>::metrics::WRITE, <span class="kw-2">&amp;</span>error).inc();
-            <span class="kw">crate</span>::metrics::errors_total(<span class="kw">crate</span>::metrics::WRITE, <span class="kw-2">&amp;</span>error).inc();
-        };
-
-        <span class="kw">match </span>result {
-            <span class="prelude-val">Ok</span>((addr, context)) =&gt; {
-                <span class="kw">let </span>packet = context.contents.as_ref();
-                <span class="macro">tracing::trace!</span>(%from, dest = %addr, contents = %debug::bytes_to_string(packet), <span class="string">&quot;sending packet downstream&quot;</span>);
-                <span class="kw">let _ </span>= downstream_socket
-                    .send_to(packet, addr)
-                    .<span class="kw">await
-                    </span>.map_err(Error::SendTo)
-                    .map_err(handle_error);
-            }
-            <span class="prelude-val">Err</span>(error) =&gt; (handle_error)(error),
-        };
-
-        timer.stop_and_record();
+        <span class="kw">let </span>addr = dest.to_socket_addr().<span class="kw">await</span>.map_err(Error::ToSocketAddr)<span class="question-mark">?</span>;
+        <span class="kw">let </span>packet = context.contents.as_ref();
+        <span class="macro">tracing::trace!</span>(%from, dest = %addr, contents = %debug::bytes_to_string(packet), <span class="string">&quot;sending packet downstream&quot;</span>);
+        downstream_socket
+            .send_to(packet, addr)
+            .<span class="kw">await
+            </span>.map_err(Error::SendTo)
     }
 
     <span class="doccomment">/// Sends a packet to the Session&#39;s dest.
@@ -666,7 +634,6 @@
 
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
 
-    <span class="kw">use </span>prometheus::{Histogram, HistogramOpts};
     <span class="kw">use </span>tokio::time::timeout;
 
     <span class="kw">use crate</span>::{
@@ -707,7 +674,6 @@
     <span class="attribute">#[tokio::test]
     </span><span class="kw">async fn </span>process_recv_packet() {
         <span class="kw">crate</span>::test_utils::load_test_filters();
-        <span class="kw">let </span>histogram = Histogram::with_opts(HistogramOpts::new(<span class="string">&quot;test&quot;</span>, <span class="string">&quot;test&quot;</span>)).unwrap();
 
         <span class="kw">let </span>socket = Arc::new(create_socket().<span class="kw">await</span>);
         <span class="kw">let </span>endpoint = Endpoint::new(<span class="string">&quot;127.0.1.1:80&quot;</span>.parse().unwrap());
@@ -723,10 +689,10 @@
                 endpoint: <span class="kw-2">&amp;</span>endpoint,
                 source: endpoint.address.clone(),
                 dest: dest.clone(),
-                timer: histogram.start_timer(),
             },
         )
-        .<span class="kw">await</span>;
+        .<span class="kw">await
+        </span>.unwrap();
 
         <span class="kw">let </span><span class="kw-2">mut </span>buf = <span class="macro">vec!</span>[<span class="number">0</span>; <span class="number">1024</span>];
         <span class="kw">let </span>(size, recv_addr) = timeout(Duration::from_secs(<span class="number">5</span>), socket.recv_from(<span class="kw-2">&amp;mut </span>buf))
@@ -746,10 +712,10 @@
                 endpoint: <span class="kw-2">&amp;</span>endpoint,
                 source: endpoint.address.clone(),
                 dest: dest.clone(),
-                timer: histogram.start_timer(),
             },
         )
-        .<span class="kw">await</span>;
+        .<span class="kw">await
+        </span>.unwrap();
 
         <span class="kw">let </span>(size, recv_addr) = timeout(Duration::from_secs(<span class="number">5</span>), socket.recv_from(<span class="kw-2">&amp;mut </span>buf))
             .<span class="kw">await

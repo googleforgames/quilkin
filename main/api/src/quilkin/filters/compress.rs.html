@@ -396,6 +396,19 @@
 <span id="396">396</span>
 <span id="397">397</span>
 <span id="398">398</span>
+<span id="399">399</span>
+<span id="400">400</span>
+<span id="401">401</span>
+<span id="402">402</span>
+<span id="403">403</span>
+<span id="404">404</span>
+<span id="405">405</span>
+<span id="406">406</span>
+<span id="407">407</span>
+<span id="408">408</span>
+<span id="409">409</span>
+<span id="410">410</span>
+<span id="411">411</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -450,9 +463,10 @@
     }
 }
 
-<span class="kw">impl </span>Filter <span class="kw">for </span>Compress {
+<span class="attribute">#[async_trait::async_trait]
+</span><span class="kw">impl </span>Filter <span class="kw">for </span>Compress {
     <span class="attribute">#[cfg_attr(feature = <span class="string">&quot;instrument&quot;</span>, tracing::instrument(skip(<span class="self">self</span>, ctx)))]
-    </span><span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+    </span><span class="kw">async fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="kw">let </span>original_size = ctx.contents.len();
 
         <span class="kw">match </span><span class="self">self</span>.on_read {
@@ -485,7 +499,7 @@
     }
 
     <span class="attribute">#[cfg_attr(feature = <span class="string">&quot;instrument&quot;</span>, tracing::instrument(skip(<span class="self">self</span>, ctx)))]
-    </span><span class="kw">fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+    </span><span class="kw">async fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="kw">let </span>original_size = ctx.contents.len();
         <span class="kw">match </span><span class="self">self</span>.on_write {
             Action::Compress =&gt; <span class="kw">match </span><span class="self">self</span>.compressor.encode(<span class="kw-2">&amp;mut </span>ctx.contents) {
@@ -537,19 +551,19 @@
 
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
 
-    <span class="attribute">#[test]
-    </span><span class="kw">fn </span>default_mode_factory() {
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>default_mode_factory() {
         <span class="kw">let </span>config = <span class="macro">serde_json::json!</span>({
             <span class="string">&quot;on_read&quot;</span>: <span class="string">&quot;DECOMPRESS&quot;</span>.to_string(),
             <span class="string">&quot;on_write&quot;</span>: <span class="string">&quot;COMPRESS&quot;</span>.to_string(),
 
         });
         <span class="kw">let </span>filter = Compress::from_config(<span class="prelude-val">Some</span>(serde_json::from_value(config).unwrap()));
-        assert_downstream(<span class="kw-2">&amp;</span>filter);
+        assert_downstream(<span class="kw-2">&amp;</span>filter).<span class="kw">await</span>;
     }
 
-    <span class="attribute">#[test]
-    </span><span class="kw">fn </span>config_factory() {
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>config_factory() {
         <span class="kw">let </span>config = <span class="macro">serde_json::json!</span>({
             <span class="string">&quot;mode&quot;</span>: <span class="string">&quot;SNAPPY&quot;</span>.to_string(),
             <span class="string">&quot;on_read&quot;</span>: <span class="string">&quot;DECOMPRESS&quot;</span>.to_string(),
@@ -557,11 +571,11 @@
 
         });
         <span class="kw">let </span>filter = Compress::from_config(<span class="prelude-val">Some</span>(serde_json::from_value(config).unwrap()));
-        assert_downstream(<span class="kw-2">&amp;</span>filter);
+        assert_downstream(<span class="kw-2">&amp;</span>filter).<span class="kw">await</span>;
     }
 
-    <span class="attribute">#[test]
-    </span><span class="kw">fn </span>upstream() {
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>upstream() {
         <span class="kw">let </span>compress = Compress::new(
             Config {
                 mode: Default::default(),
@@ -578,7 +592,10 @@
             <span class="string">&quot;127.0.0.1:8080&quot;</span>.parse().unwrap(),
             expected.clone(),
         );
-        compress.read(<span class="kw-2">&amp;mut </span>read_context).expect(<span class="string">&quot;should compress&quot;</span>);
+        compress
+            .read(<span class="kw-2">&amp;mut </span>read_context)
+            .<span class="kw">await
+            </span>.expect(<span class="string">&quot;should compress&quot;</span>);
 
         <span class="macro">assert_ne!</span>(expected, <span class="kw-2">&amp;*</span>read_context.contents);
         <span class="macro">assert!</span>(
@@ -606,7 +623,8 @@
 
         compress
             .write(<span class="kw-2">&amp;mut </span>write_context)
-            .expect(<span class="string">&quot;should decompress&quot;</span>);
+            .<span class="kw">await
+            </span>.expect(<span class="string">&quot;should decompress&quot;</span>);
 
         <span class="macro">assert_eq!</span>(expected, <span class="kw-2">&amp;*</span>write_context.contents);
 
@@ -621,8 +639,8 @@
         );
     }
 
-    <span class="attribute">#[test]
-    </span><span class="kw">fn </span>downstream() {
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>downstream() {
         <span class="kw">let </span>compress = Compress::new(
             Config {
                 mode: Default::default(),
@@ -632,7 +650,7 @@
             Metrics::new().unwrap(),
         );
 
-        <span class="kw">let </span>(expected, compressed) = assert_downstream(<span class="kw-2">&amp;</span>compress);
+        <span class="kw">let </span>(expected, compressed) = assert_downstream(<span class="kw-2">&amp;</span>compress).<span class="kw">await</span>;
 
         <span class="comment">// multiply by two, because data was sent both downstream and upstream
         </span><span class="macro">assert_eq!</span>(
@@ -645,8 +663,8 @@
         );
     }
 
-    <span class="attribute">#[test]
-    </span><span class="kw">fn </span>failed_decompress() {
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>failed_decompress() {
         <span class="kw">let </span>compression = Compress::new(
             Config {
                 mode: Default::default(),
@@ -663,7 +681,8 @@
                 <span class="string">&quot;127.0.0.1:8081&quot;</span>.parse().unwrap(),
                 <span class="string">b&quot;hello&quot;</span>.to_vec(),
             ))
-            .is_err());
+            .<span class="kw">await
+            </span>.is_err());
 
         <span class="kw">let </span>compression = Compress::new(
             Config {
@@ -680,14 +699,15 @@
                 <span class="string">&quot;127.0.0.1:8080&quot;</span>.parse().unwrap(),
                 <span class="string">b&quot;hello&quot;</span>.to_vec(),
             ))
-            .is_err());
+            .<span class="kw">await
+            </span>.is_err());
 
         <span class="macro">assert_eq!</span>(<span class="number">0</span>, compression.metrics.compressed_bytes_total.get());
         <span class="macro">assert_eq!</span>(<span class="number">0</span>, compression.metrics.decompressed_bytes_total.get());
     }
 
-    <span class="attribute">#[test]
-    </span><span class="kw">fn </span>do_nothing() {
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>do_nothing() {
         <span class="kw">let </span>compression = Compress::new(
             Config {
                 mode: Default::default(),
@@ -702,7 +722,7 @@
             <span class="string">&quot;127.0.0.1:8080&quot;</span>.parse().unwrap(),
             <span class="string">b&quot;hello&quot;</span>.to_vec(),
         );
-        compression.read(<span class="kw-2">&amp;mut </span>read_context).unwrap();
+        compression.read(<span class="kw-2">&amp;mut </span>read_context).<span class="kw">await</span>.unwrap();
         <span class="macro">assert_eq!</span>(<span class="string">b&quot;hello&quot;</span>, <span class="kw-2">&amp;*</span>read_context.contents);
 
         <span class="kw">let </span><span class="kw-2">mut </span>write_context = WriteContext::new(
@@ -712,7 +732,7 @@
             <span class="string">b&quot;hello&quot;</span>.to_vec(),
         );
 
-        compression.write(<span class="kw-2">&amp;mut </span>write_context).unwrap();
+        compression.write(<span class="kw-2">&amp;mut </span>write_context).<span class="kw">await</span>.unwrap();
 
         <span class="macro">assert_eq!</span>(<span class="string">b&quot;hello&quot;</span>.to_vec(), <span class="kw-2">&amp;*</span>write_context.contents)
     }
@@ -758,7 +778,7 @@
 
     <span class="doccomment">/// assert compression work with decompress on read and compress on write
     /// Returns the original data packet, and the compressed version
-    </span><span class="kw">fn </span>assert_downstream&lt;F&gt;(filter: <span class="kw-2">&amp;</span>F) -&gt; (Vec&lt;u8&gt;, Vec&lt;u8&gt;)
+    </span><span class="kw">async fn </span>assert_downstream&lt;F&gt;(filter: <span class="kw-2">&amp;</span>F) -&gt; (Vec&lt;u8&gt;, Vec&lt;u8&gt;)
     <span class="kw">where
         </span>F: Filter + <span class="question-mark">?</span>Sized,
     {
@@ -771,7 +791,10 @@
             expected.clone(),
         );
 
-        filter.write(<span class="kw-2">&amp;mut </span>write_context).expect(<span class="string">&quot;should compress&quot;</span>);
+        filter
+            .write(<span class="kw-2">&amp;mut </span>write_context)
+            .<span class="kw">await
+            </span>.expect(<span class="string">&quot;should compress&quot;</span>);
 
         <span class="macro">assert_ne!</span>(expected, <span class="kw-2">&amp;*</span>write_context.contents);
         <span class="macro">assert!</span>(
@@ -788,7 +811,10 @@
             write_context.contents.clone(),
         );
 
-        filter.read(<span class="kw-2">&amp;mut </span>read_context).expect(<span class="string">&quot;should decompress&quot;</span>);
+        filter
+            .read(<span class="kw-2">&amp;mut </span>read_context)
+            .<span class="kw">await
+            </span>.expect(<span class="string">&quot;should decompress&quot;</span>);
 
         <span class="macro">assert_eq!</span>(expected, <span class="kw-2">&amp;*</span>read_context.contents);
         (expected, write_context.contents.to_vec())

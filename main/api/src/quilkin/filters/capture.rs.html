@@ -264,6 +264,8 @@
 <span id="264">264</span>
 <span id="265">265</span>
 <span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -323,9 +325,10 @@
     }
 }
 
-<span class="kw">impl </span>Filter <span class="kw">for </span>Capture {
+<span class="attribute">#[async_trait::async_trait]
+</span><span class="kw">impl </span>Filter <span class="kw">for </span>Capture {
     <span class="attribute">#[cfg_attr(feature = <span class="string">&quot;instrument&quot;</span>, tracing::instrument(skip(<span class="self">self</span>, ctx)))]
-    </span><span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+    </span><span class="kw">async fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="kw">let </span>capture = <span class="self">self</span>.capture.capture(<span class="kw-2">&amp;mut </span>ctx.contents, <span class="kw-2">&amp;</span><span class="self">self</span>.metrics);
         ctx.metadata.insert(
             <span class="self">self</span>.is_present_key,
@@ -371,8 +374,8 @@
 
     <span class="kw">const </span>TOKEN_KEY: <span class="kw-2">&amp;</span>str = <span class="string">&quot;TOKEN&quot;</span>;
 
-    <span class="attribute">#[test]
-    </span><span class="kw">fn </span>factory_valid_config_all() {
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>factory_valid_config_all() {
         <span class="kw">let </span>config = <span class="macro">serde_json::json!</span>({
             <span class="string">&quot;metadataKey&quot;</span>: TOKEN_KEY.to_string(),
             <span class="string">&quot;suffix&quot;</span>: {
@@ -381,11 +384,11 @@
             }
         });
         <span class="kw">let </span>filter = Capture::from_config(<span class="prelude-val">Some</span>(serde_json::from_value(config).unwrap()));
-        assert_end_strategy(<span class="kw-2">&amp;</span>filter, TOKEN_KEY.into(), <span class="bool-val">true</span>);
+        assert_end_strategy(<span class="kw-2">&amp;</span>filter, TOKEN_KEY.into(), <span class="bool-val">true</span>).<span class="kw">await</span>;
     }
 
-    <span class="attribute">#[test]
-    </span><span class="kw">fn </span>factory_valid_config_defaults() {
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>factory_valid_config_defaults() {
         <span class="kw">let </span>config = <span class="macro">serde_json::json!</span>({
             <span class="string">&quot;suffix&quot;</span>: {
                 <span class="string">&quot;size&quot;</span>: <span class="number">3_i64</span>,
@@ -393,7 +396,7 @@
         });
 
         <span class="kw">let </span>filter = Capture::from_config(<span class="prelude-val">Some</span>(serde_json::from_value(config).unwrap()));
-        assert_end_strategy(<span class="kw-2">&amp;</span>filter, CAPTURED_BYTES.into(), <span class="bool-val">false</span>);
+        assert_end_strategy(<span class="kw-2">&amp;</span>filter, CAPTURED_BYTES.into(), <span class="bool-val">false</span>).<span class="kw">await</span>;
     }
 
     <span class="attribute">#[test]
@@ -406,8 +409,8 @@
         <span class="macro">assert!</span>(serde_json::from_value::&lt;Config&gt;(config).is_err());
     }
 
-    <span class="attribute">#[test]
-    </span><span class="kw">fn </span>read() {
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>read() {
         <span class="kw">let </span>config = Config {
             metadata_key: TOKEN_KEY.into(),
             strategy: Strategy::Suffix(Suffix {
@@ -417,11 +420,11 @@
         };
 
         <span class="kw">let </span>filter = Capture::from_config(config.into());
-        assert_end_strategy(<span class="kw-2">&amp;</span>filter, TOKEN_KEY.into(), <span class="bool-val">true</span>);
+        assert_end_strategy(<span class="kw-2">&amp;</span>filter, TOKEN_KEY.into(), <span class="bool-val">true</span>).<span class="kw">await</span>;
     }
 
-    <span class="attribute">#[test]
-    </span><span class="kw">fn </span>read_overflow_capture_size() {
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>read_overflow_capture_size() {
         <span class="kw">let </span>config = Config {
             metadata_key: TOKEN_KEY.into(),
             strategy: Strategy::Suffix(Suffix {
@@ -437,14 +440,15 @@
                 (std::net::Ipv4Addr::LOCALHOST, <span class="number">80</span>).into(),
                 <span class="string">&quot;abc&quot;</span>.to_string().into_bytes(),
             ))
-            .is_err());
+            .<span class="kw">await
+            </span>.is_err());
 
         <span class="kw">let </span>count = filter.metrics.packets_dropped_total.get();
         <span class="macro">assert_eq!</span>(<span class="number">1</span>, count);
     }
 
-    <span class="attribute">#[test]
-    </span><span class="kw">fn </span>write() {
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>write() {
         <span class="kw">let </span>config = Config {
             strategy: Strategy::Suffix(Suffix {
                 size: <span class="number">0</span>,
@@ -453,7 +457,7 @@
             metadata_key: TOKEN_KEY.into(),
         };
         <span class="kw">let </span>filter = Capture::from_config(config.into());
-        assert_write_no_change(<span class="kw-2">&amp;</span>filter);
+        assert_write_no_change(<span class="kw-2">&amp;</span>filter).<span class="kw">await</span>;
     }
 
     <span class="attribute">#[test]
@@ -507,7 +511,7 @@
         <span class="macro">assert_eq!</span>(<span class="string">b&quot;hello&quot;</span>.to_vec(), contents);
     }
 
-    <span class="kw">fn </span>assert_end_strategy&lt;F&gt;(filter: <span class="kw-2">&amp;</span>F, key: metadata::Key, remove: bool)
+    <span class="kw">async fn </span>assert_end_strategy&lt;F&gt;(filter: <span class="kw-2">&amp;</span>F, key: metadata::Key, remove: bool)
     <span class="kw">where
         </span>F: Filter + <span class="question-mark">?</span>Sized,
     {
@@ -518,7 +522,7 @@
             <span class="string">&quot;helloabc&quot;</span>.to_string().into_bytes(),
         );
 
-        filter.read(<span class="kw-2">&amp;mut </span>context).unwrap();
+        filter.read(<span class="kw-2">&amp;mut </span>context).<span class="kw">await</span>.unwrap();
 
         <span class="kw">if </span>remove {
             <span class="macro">assert_eq!</span>(<span class="string">b&quot;hello&quot;</span>, <span class="kw-2">&amp;*</span>context.contents);

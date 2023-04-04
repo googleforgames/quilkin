@@ -247,6 +247,17 @@
 <span id="247">247</span>
 <span id="248">248</span>
 <span id="249">249</span>
+<span id="250">250</span>
+<span id="251">251</span>
+<span id="252">252</span>
+<span id="253">253</span>
+<span id="254">254</span>
+<span id="255">255</span>
+<span id="256">256</span>
+<span id="257">257</span>
+<span id="258">258</span>
+<span id="259">259</span>
+<span id="260">260</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC All Rights Reserved.
  *
@@ -287,8 +298,9 @@
     }
 }
 
-<span class="kw">impl </span>Filter <span class="kw">for </span>LoadBalancer {
-    <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+<span class="attribute">#[async_trait::async_trait]
+</span><span class="kw">impl </span>Filter <span class="kw">for </span>LoadBalancer {
+    <span class="kw">async fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="self">self</span>.endpoint_chooser.choose_endpoints(ctx);
         <span class="prelude-val">Ok</span>(())
     }
@@ -311,7 +323,7 @@
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
     <span class="kw">use </span><span class="kw">crate</span>::endpoint::{Endpoint, EndpointAddress};
 
-    <span class="kw">fn </span>get_response_addresses(
+    <span class="kw">async fn </span>get_response_addresses(
         filter: <span class="kw-2">&amp;</span><span class="kw">dyn </span>Filter,
         input_addresses: <span class="kw-2">&amp;</span>[EndpointAddress],
         source: EndpointAddress,
@@ -322,7 +334,7 @@
             <span class="macro">vec!</span>[],
         );
 
-        filter.read(<span class="kw-2">&amp;mut </span>context).unwrap();
+        filter.read(<span class="kw-2">&amp;mut </span>context).<span class="kw">await</span>.unwrap();
 
         context
             .endpoints
@@ -331,8 +343,8 @@
             .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
     }
 
-    <span class="attribute">#[test]
-    </span><span class="kw">fn </span>round_robin_load_balancer_policy() {
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>round_robin_load_balancer_policy() {
         <span class="kw">let </span>addresses: Vec&lt;EndpointAddress&gt; = <span class="macro">vec!</span>[
             ([<span class="number">127</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">1</span>], <span class="number">8080</span>).into(),
             ([<span class="number">127</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">2</span>], <span class="number">8080</span>).into(),
@@ -349,21 +361,25 @@
             .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 
         <span class="kw">for _ in </span><span class="number">0</span>..<span class="number">10 </span>{
-            <span class="macro">assert_eq!</span>(
-                expected_sequence,
-                (<span class="number">0</span>..addresses.len())
-                    .map(|<span class="kw">_</span>| get_response_addresses(
-                        <span class="kw-2">&amp;</span>filter,
-                        <span class="kw-2">&amp;</span>addresses,
-                        <span class="string">&quot;127.0.0.1:8080&quot;</span>.parse().unwrap()
-                    ))
-                    .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
-            );
+            <span class="macro">assert_eq!</span>(expected_sequence, {
+                <span class="kw">let </span><span class="kw-2">mut </span>responses = Vec::new();
+                <span class="kw">for _ in </span><span class="number">0</span>..addresses.len() {
+                    responses.push(
+                        get_response_addresses(
+                            <span class="kw-2">&amp;</span>filter,
+                            <span class="kw-2">&amp;</span>addresses,
+                            <span class="string">&quot;127.0.0.1:8080&quot;</span>.parse().unwrap(),
+                        )
+                        .<span class="kw">await</span>,
+                    );
+                }
+                responses
+            });
         }
     }
 
-    <span class="attribute">#[test]
-    </span><span class="kw">fn </span>random_load_balancer_policy() {
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>random_load_balancer_policy() {
         <span class="kw">let </span>addresses = <span class="macro">vec!</span>[
             <span class="string">&quot;127.0.0.1:8080&quot;</span>.parse().unwrap(),
             <span class="string">&quot;127.0.0.2:8080&quot;</span>.parse().unwrap(),
@@ -378,12 +394,12 @@ policy: RANDOM
         <span class="comment">// Run a few selection rounds through the addresses.
         </span><span class="kw">let </span><span class="kw-2">mut </span>result_sequences = <span class="macro">vec!</span>[];
         <span class="kw">for _ in </span><span class="number">0</span>..<span class="number">10 </span>{
-            <span class="kw">let </span>sequence = (<span class="number">0</span>..addresses.len())
-                .map(|<span class="kw">_</span>| {
+            <span class="kw">for _ in </span><span class="number">0</span>..addresses.len() {
+                result_sequences.push(
                     get_response_addresses(<span class="kw-2">&amp;</span>filter, <span class="kw-2">&amp;</span>addresses, <span class="string">&quot;127.0.0.1:8080&quot;</span>.parse().unwrap())
-                })
-                .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
-            result_sequences.push(sequence);
+                        .<span class="kw">await</span>,
+                );
+            }
         }
 
         <span class="comment">// Check that every address was chosen at least once.
@@ -392,7 +408,6 @@ policy: RANDOM
             result_sequences
                 .clone()
                 .into_iter()
-                .flatten()
                 .flatten()
                 .collect::&lt;HashSet&lt;<span class="kw">_</span>&gt;&gt;(),
         );
@@ -406,8 +421,8 @@ policy: RANDOM
         </span>);
     }
 
-    <span class="attribute">#[test]
-    </span><span class="kw">fn </span>hash_load_balancer_policy() {
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>hash_load_balancer_policy() {
         <span class="kw">let </span>addresses: Vec&lt;EndpointAddress&gt; = <span class="macro">vec!</span>[
             ([<span class="number">127</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">1</span>], <span class="number">8080</span>).into(),
             ([<span class="number">127</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">2</span>], <span class="number">8080</span>).into(),
@@ -422,12 +437,12 @@ policy: RANDOM
         <span class="comment">// Run a few selection rounds through the addresses.
         </span><span class="kw">let </span><span class="kw-2">mut </span>result_sequences = <span class="macro">vec!</span>[];
         <span class="kw">for _ in </span><span class="number">0</span>..<span class="number">10 </span>{
-            <span class="kw">let </span>sequence = (<span class="number">0</span>..addresses.len())
-                .map(|<span class="kw">_</span>| {
+            <span class="kw">for _ in </span><span class="number">0</span>..addresses.len() {
+                result_sequences.push(
                     get_response_addresses(<span class="kw-2">&amp;</span>filter, <span class="kw-2">&amp;</span>addresses, (Ipv4Addr::LOCALHOST, <span class="number">8080</span>).into())
-                })
-                .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
-            result_sequences.push(sequence);
+                        .<span class="kw">await</span>,
+                );
+            }
         }
 
         <span class="comment">// Verify that all packets went the same way
@@ -435,7 +450,6 @@ policy: RANDOM
             <span class="number">1</span>,
             result_sequences
                 .into_iter()
-                .flatten()
                 .flatten()
                 .collect::&lt;HashSet&lt;<span class="kw">_</span>&gt;&gt;()
                 .len(),
@@ -445,12 +459,15 @@ policy: RANDOM
         // this time vary the port for a single IP
         </span><span class="kw">let </span><span class="kw-2">mut </span>result_sequences = <span class="macro">vec!</span>[];
         <span class="kw">for </span>port <span class="kw">in </span>source_ports.iter().copied() {
-            <span class="kw">let </span>sequence = (<span class="number">0</span>..addresses.len())
-                .map(|<span class="kw">_</span>| {
-                    get_response_addresses(<span class="kw-2">&amp;</span>filter, <span class="kw-2">&amp;</span>addresses, (Ipv4Addr::LOCALHOST, port).into())
-                })
-                .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
-            result_sequences.push(sequence);
+            result_sequences.push(<span class="macro">vec!</span>[
+                get_response_addresses(
+                    <span class="kw-2">&amp;</span>filter,
+                    <span class="kw-2">&amp;</span>addresses,
+                    (Ipv4Addr::LOCALHOST, port).into()
+                )
+                .<span class="kw">await</span>;
+                addresses.len()
+            ]);
         }
 
         <span class="comment">// Verify that more than 1 path was picked
@@ -469,10 +486,15 @@ policy: RANDOM
         </span><span class="kw">let </span><span class="kw-2">mut </span>result_sequences = <span class="macro">vec!</span>[];
         <span class="kw">for </span>ip <span class="kw">in </span>source_ips {
             <span class="kw">for </span>port <span class="kw">in </span>source_ports.iter().copied() {
-                <span class="kw">let </span>sequence = (<span class="number">0</span>..addresses.len())
-                    .map(|<span class="kw">_</span>| get_response_addresses(<span class="kw-2">&amp;</span>filter, <span class="kw-2">&amp;</span>addresses, (ip, port).into()))
-                    .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
-                result_sequences.push(sequence);
+                result_sequences.push(<span class="macro">vec!</span>[
+                    get_response_addresses(
+                        <span class="kw-2">&amp;</span>filter,
+                        <span class="kw-2">&amp;</span>addresses,
+                        (ip, port).into()
+                    )
+                    .<span class="kw">await</span>;
+                    addresses.len()
+                ]);
             }
         }
 

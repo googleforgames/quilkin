@@ -228,6 +228,7 @@
 <span id="228">228</span>
 <span id="229">229</span>
 <span id="230">230</span>
+<span id="231">231</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -347,13 +348,14 @@
     }
 }
 
-<span class="kw">impl </span>Filter <span class="kw">for </span>Timestamp {
-    <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+<span class="attribute">#[async_trait::async_trait]
+</span><span class="kw">impl </span>Filter <span class="kw">for </span>Timestamp {
+    <span class="kw">async fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="self">self</span>.observe(<span class="kw-2">&amp;</span>ctx.metadata, READ_DIRECTION_LABEL);
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+    <span class="kw">async fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="self">self</span>.observe(<span class="kw-2">&amp;</span>ctx.metadata, WRITE_DIRECTION_LABEL);
         <span class="prelude-val">Ok</span>(())
     }
@@ -411,8 +413,8 @@
 
     <span class="kw">use </span><span class="kw">crate</span>::filters::capture::{<span class="self">self</span>, Capture};
 
-    <span class="attribute">#[test]
-    </span><span class="kw">fn </span>basic() {
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>basic() {
         <span class="kw">const </span>TIMESTAMP_KEY: <span class="kw-2">&amp;</span>str = <span class="string">&quot;BASIC&quot;</span>;
         <span class="kw">let </span>filter = Timestamp::from_config(Config::new(TIMESTAMP_KEY).into());
         <span class="kw">let </span><span class="kw-2">mut </span>ctx = ReadContext::new(
@@ -425,13 +427,13 @@
             Value::Number(Utc::now().timestamp() <span class="kw">as </span>u64),
         );
 
-        filter.read(<span class="kw-2">&amp;mut </span>ctx).unwrap();
+        filter.read(<span class="kw-2">&amp;mut </span>ctx).<span class="kw">await</span>.unwrap();
 
         <span class="macro">assert_eq!</span>(<span class="number">1</span>, filter.metric(READ_DIRECTION_LABEL).get_sample_count());
     }
 
-    <span class="attribute">#[test]
-    </span><span class="kw">fn </span>with_capture() {
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>with_capture() {
         <span class="kw">const </span>TIMESTAMP_KEY: <span class="kw-2">&amp;</span>str = <span class="string">&quot;WITH_CAPTURE&quot;</span>;
         <span class="kw">let </span>capture = Capture::from_config(
             capture::Config {
@@ -452,8 +454,8 @@
             [<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">99</span>, <span class="number">81</span>, <span class="number">55</span>, <span class="number">181</span>].to_vec(),
         );
 
-        capture.read(<span class="kw-2">&amp;mut </span>ctx).unwrap();
-        timestamp.read(<span class="kw-2">&amp;mut </span>ctx).unwrap();
+        capture.read(<span class="kw-2">&amp;mut </span>ctx).<span class="kw">await</span>.unwrap();
+        timestamp.read(<span class="kw-2">&amp;mut </span>ctx).<span class="kw">await</span>.unwrap();
 
         <span class="macro">assert_eq!</span>(<span class="number">1</span>, timestamp.metric(READ_DIRECTION_LABEL).get_sample_count());
     }

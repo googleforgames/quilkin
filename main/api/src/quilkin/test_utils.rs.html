@@ -364,6 +364,7 @@
 <span id="364">364</span>
 <span id="365">365</span>
 <span id="366">366</span>
+<span id="367">367</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -421,8 +422,9 @@
 <span class="comment">// TestFilter is useful for testing that commands are executing filters appropriately.
 </span><span class="kw">pub struct </span>TestFilter;
 
-<span class="kw">impl </span>Filter <span class="kw">for </span>TestFilter {
-    <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+<span class="attribute">#[async_trait::async_trait]
+</span><span class="kw">impl </span>Filter <span class="kw">for </span>TestFilter {
+    <span class="kw">async fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="comment">// append values on each run
         </span>ctx.metadata
             .entry(<span class="string">&quot;downstream&quot;</span>.into())
@@ -434,7 +436,7 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+    <span class="kw">async fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="comment">// append values on each run
         </span>ctx.metadata
             .entry(<span class="string">&quot;upstream&quot;</span>.into())
@@ -620,7 +622,7 @@
 }
 
 <span class="doccomment">/// assert that read makes no changes
-</span><span class="kw">pub fn </span>assert_filter_read_no_change&lt;F&gt;(filter: <span class="kw-2">&amp;</span>F)
+</span><span class="kw">pub async fn </span>assert_filter_read_no_change&lt;F&gt;(filter: <span class="kw-2">&amp;</span>F)
 <span class="kw">where
     </span>F: Filter,
 {
@@ -629,13 +631,13 @@
     <span class="kw">let </span>contents = <span class="string">&quot;hello&quot;</span>.to_string().into_bytes();
     <span class="kw">let </span><span class="kw-2">mut </span>context = ReadContext::new(endpoints.clone(), source, contents.clone());
 
-    filter.read(<span class="kw-2">&amp;mut </span>context).unwrap();
+    filter.read(<span class="kw-2">&amp;mut </span>context).<span class="kw">await</span>.unwrap();
     <span class="macro">assert_eq!</span>(endpoints, <span class="kw-2">&amp;*</span>context.endpoints);
     <span class="macro">assert_eq!</span>(contents, <span class="kw-2">&amp;*</span>context.contents);
 }
 
 <span class="doccomment">/// assert that write makes no changes
-</span><span class="kw">pub fn </span>assert_write_no_change&lt;F&gt;(filter: <span class="kw-2">&amp;</span>F)
+</span><span class="kw">pub async fn </span>assert_write_no_change&lt;F&gt;(filter: <span class="kw-2">&amp;</span>F)
 <span class="kw">where
     </span>F: Filter,
 {
@@ -648,7 +650,7 @@
         contents.clone(),
     );
 
-    filter.write(<span class="kw-2">&amp;mut </span>context).unwrap();
+    filter.write(<span class="kw-2">&amp;mut </span>context).<span class="kw">await</span>.unwrap();
     <span class="macro">assert_eq!</span>(contents, <span class="kw-2">&amp;*</span>context.contents);
 }
 
@@ -718,7 +720,7 @@
         <span class="kw">let </span>msg = <span class="string">&quot;hello&quot;</span>;
         endpoint
             .socket
-            .send_to(msg.as_bytes(), <span class="kw-2">&amp;</span>echo_addr.to_socket_addr().unwrap())
+            .send_to(msg.as_bytes(), <span class="kw-2">&amp;</span>echo_addr.to_socket_addr().<span class="kw">await</span>.unwrap())
             .<span class="kw">await
             </span>.unwrap();
         <span class="macro">assert_eq!</span>(

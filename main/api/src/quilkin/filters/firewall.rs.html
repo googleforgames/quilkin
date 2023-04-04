@@ -185,6 +185,7 @@
 <span id="185">185</span>
 <span id="186">186</span>
 <span id="187">187</span>
+<span id="188">188</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -237,11 +238,12 @@
     }
 }
 
-<span class="kw">impl </span>Filter <span class="kw">for </span>Firewall {
+<span class="attribute">#[async_trait::async_trait]
+</span><span class="kw">impl </span>Filter <span class="kw">for </span>Firewall {
     <span class="attribute">#[cfg_attr(feature = <span class="string">&quot;instrument&quot;</span>, tracing::instrument(skip(<span class="self">self</span>, ctx)))]
-    </span><span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+    </span><span class="kw">async fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="kw">for </span>rule <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.on_read {
-            <span class="kw">if </span>rule.contains(ctx.source.to_socket_addr()<span class="question-mark">?</span>) {
+            <span class="kw">if </span>rule.contains(ctx.source.to_socket_addr().<span class="kw">await</span><span class="question-mark">?</span>) {
                 <span class="kw">return match </span>rule.action {
                     Action::Allow =&gt; {
                         <span class="macro">debug!</span>(
@@ -267,9 +269,9 @@
     }
 
     <span class="attribute">#[cfg_attr(feature = <span class="string">&quot;instrument&quot;</span>, tracing::instrument(skip(<span class="self">self</span>, ctx)))]
-    </span><span class="kw">fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+    </span><span class="kw">async fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="kw">for </span>rule <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.on_write {
-            <span class="kw">if </span>rule.contains(ctx.source.to_socket_addr()<span class="question-mark">?</span>) {
+            <span class="kw">if </span>rule.contains(ctx.source.to_socket_addr().<span class="kw">await</span><span class="question-mark">?</span>) {
                 <span class="kw">return match </span>rule.action {
                     Action::Allow =&gt; {
                         <span class="macro">debug!</span>(
@@ -310,9 +312,9 @@
 
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
 
-    <span class="attribute">#[test]
+    <span class="attribute">#[tokio::test]
     #[traced_test]
-    </span><span class="kw">fn </span>read() {
+    </span><span class="kw">async fn </span>read() {
         <span class="kw">let </span>firewall = Firewall {
             on_read: <span class="macro">vec!</span>[Rule {
                 action: Action::Allow,
@@ -328,7 +330,7 @@
             (local_ip, <span class="number">80</span>).into(),
             <span class="macro">vec!</span>[],
         );
-        <span class="macro">assert!</span>(firewall.read(<span class="kw-2">&amp;mut </span>ctx).is_ok());
+        <span class="macro">assert!</span>(firewall.read(<span class="kw-2">&amp;mut </span>ctx).<span class="kw">await</span>.is_ok());
 
         <span class="kw">let </span><span class="kw-2">mut </span>ctx = ReadContext::new(
             <span class="macro">vec!</span>[Endpoint::new((Ipv4Addr::LOCALHOST, <span class="number">8080</span>).into())],
@@ -338,11 +340,11 @@
         <span class="macro">assert!</span>(logs_contain(<span class="string">&quot;quilkin::filters::firewall&quot;</span>)); <span class="comment">// the given name to the the logger by tracing
         </span><span class="macro">assert!</span>(logs_contain(<span class="string">&quot;Allow&quot;</span>));
 
-        <span class="macro">assert!</span>(firewall.read(<span class="kw-2">&amp;mut </span>ctx).is_err());
+        <span class="macro">assert!</span>(firewall.read(<span class="kw-2">&amp;mut </span>ctx).<span class="kw">await</span>.is_err());
     }
 
-    <span class="attribute">#[test]
-    </span><span class="kw">fn </span>write() {
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>write() {
         <span class="kw">let </span>firewall = Firewall {
             on_read: <span class="macro">vec!</span>[],
             on_write: <span class="macro">vec!</span>[Rule {
@@ -361,7 +363,7 @@
             local_addr.clone(),
             <span class="macro">vec!</span>[],
         );
-        <span class="macro">assert!</span>(firewall.write(<span class="kw-2">&amp;mut </span>ctx).is_ok());
+        <span class="macro">assert!</span>(firewall.write(<span class="kw-2">&amp;mut </span>ctx).<span class="kw">await</span>.is_ok());
 
         <span class="kw">let </span><span class="kw-2">mut </span>ctx = WriteContext::new(
             endpoint,
@@ -369,7 +371,7 @@
             local_addr,
             <span class="macro">vec!</span>[],
         );
-        <span class="macro">assert!</span>(firewall.write(<span class="kw-2">&amp;mut </span>ctx).is_err());
+        <span class="macro">assert!</span>(firewall.write(<span class="kw-2">&amp;mut </span>ctx).<span class="kw">await</span>.is_err());
     }
 }
 </code></pre></div>

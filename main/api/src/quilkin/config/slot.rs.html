@@ -224,6 +224,7 @@
 <span id="224">224</span>
 <span id="225">225</span>
 <span id="226">226</span>
+<span id="227">227</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -418,14 +419,15 @@
     }
 }
 
-<span class="kw">impl</span>&lt;T: <span class="kw">crate</span>::filters::Filter + Default&gt; <span class="kw">crate</span>::filters::Filter <span class="kw">for </span>Slot&lt;T&gt; {
-    <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
-        <span class="self">self</span>.load().read(ctx)
-    }
+<span class="attribute">#[async_trait::async_trait]
+</span><span class="kw">impl</span>&lt;T: <span class="kw">crate</span>::filters::Filter + Default&gt; <span class="kw">crate</span>::filters::Filter <span class="kw">for </span>Slot&lt;T&gt; {
+    <span class="kw">async fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+        <span class="self">self</span>.load().read(ctx).<span class="kw">await
+    </span>}
 
-    <span class="kw">fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
-        <span class="self">self</span>.load().write(ctx)
-    }
+    <span class="kw">async fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+        <span class="self">self</span>.load().write(ctx).<span class="kw">await
+    </span>}
 }
 
 <span class="attribute">#[cfg(test)]
