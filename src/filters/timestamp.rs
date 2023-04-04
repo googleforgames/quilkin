@@ -117,13 +117,14 @@ impl TryFrom<Config> for Timestamp {
     }
 }
 
+#[async_trait::async_trait]
 impl Filter for Timestamp {
-    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+    async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         self.observe(&ctx.metadata, READ_DIRECTION_LABEL);
         Ok(())
     }
 
-    fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
+    async fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
         self.observe(&ctx.metadata, WRITE_DIRECTION_LABEL);
         Ok(())
     }
@@ -181,8 +182,8 @@ mod tests {
 
     use crate::filters::capture::{self, Capture};
 
-    #[test]
-    fn basic() {
+    #[tokio::test]
+    async fn basic() {
         const TIMESTAMP_KEY: &str = "BASIC";
         let filter = Timestamp::from_config(Config::new(TIMESTAMP_KEY).into());
         let mut ctx = ReadContext::new(
@@ -195,13 +196,13 @@ mod tests {
             Value::Number(Utc::now().timestamp() as u64),
         );
 
-        filter.read(&mut ctx).unwrap();
+        filter.read(&mut ctx).await.unwrap();
 
         assert_eq!(1, filter.metric(READ_DIRECTION_LABEL).get_sample_count());
     }
 
-    #[test]
-    fn with_capture() {
+    #[tokio::test]
+    async fn with_capture() {
         const TIMESTAMP_KEY: &str = "WITH_CAPTURE";
         let capture = Capture::from_config(
             capture::Config {
@@ -222,8 +223,8 @@ mod tests {
             [0, 0, 0, 0, 99, 81, 55, 181].to_vec(),
         );
 
-        capture.read(&mut ctx).unwrap();
-        timestamp.read(&mut ctx).unwrap();
+        capture.read(&mut ctx).await.unwrap();
+        timestamp.read(&mut ctx).await.unwrap();
 
         assert_eq!(1, timestamp.metric(READ_DIRECTION_LABEL).get_sample_count());
     }

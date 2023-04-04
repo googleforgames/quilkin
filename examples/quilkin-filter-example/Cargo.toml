@@ -35,6 +35,7 @@ serde = "1.0.147"
 serde_yaml = "0.9.14"
 bytes = "1.2.1"
 schemars = "0.8.11"
+async-trait = "0.1.68"
 
 [build-dependencies]
 prost-build = "0.11.2"

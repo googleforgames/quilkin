@@ -39,12 +39,13 @@ sent to a downstream client.
 # struct Greet;
 use quilkin::filters::prelude::*;
 
+#[async_trait::async_trait]
 impl Filter for Greet {
-    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+    async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         ctx.contents.extend(b"Hello");
         Ok(())
     }
-    fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
+    async fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
         ctx.contents.extend(b"Goodbye");
         Ok(())
     }

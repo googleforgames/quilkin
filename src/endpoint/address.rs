@@ -17,11 +17,16 @@
 use std::{
     convert::{TryFrom, TryInto},
     fmt,
-    net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, ToSocketAddrs},
+    net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
     str::FromStr,
 };
 
+use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
+use trust_dns_resolver::{
+    name_server::{GenericConnection, GenericConnectionProvider, TokioRuntime},
+    AsyncResolver,
+};
 
 use crate::xds::config::core::v3::{
     address::Address as EnvoyAddress, SocketAddress as EnvoySocketAddress,
@@ -35,17 +40,17 @@ pub struct EndpointAddress {
     /// A valid name or IP address that resolves to a address.
     pub host: AddressKind,
     /// The port of the socket address, if present.
-    pub port: Option<u16>,
+    pub port: u16,
 }
 
 impl EndpointAddress {
     pub const UNSPECIFIED: Self = Self {
         host: AddressKind::Ip(IpAddr::V4(Ipv4Addr::UNSPECIFIED)),
-        port: Some(0),
+        port: 0,
     };
     pub const LOCALHOST: Self = Self {
         host: AddressKind::Ip(IpAddr::V4(Ipv4Addr::LOCALHOST)),
-        port: Some(0),
+        port: 0,
     };
 }
 
@@ -53,30 +58,51 @@ impl EndpointAddress {
     /// Returns the port for the endpoint address, or `0` if no port
     /// was specified.
     pub fn port(&self) -> u16 {
-        self.port.unwrap_or(0)
+        self.port
     }
 
     /// Returns the socket address for the endpoint, resolving any DNS entries
     /// if present.
-    pub fn to_socket_addr(&self) -> std::io::Result<SocketAddr> {
-        // These unwraps after `to_socket_addr` are guarenteed not to panic as
-        // all the types we use provide either one address or error.
-        Ok(if let Some(port) = self.port {
-            match &self.host {
-                AddressKind::Ip(ip) => (*ip, port).to_socket_addrs()?.next().unwrap(),
-                AddressKind::Name(name) => (&**name, port).to_socket_addrs()?.next().unwrap(),
-            }
-        } else {
-            match &self.host {
-                AddressKind::Ip(_) => {
-                    return Err(std::io::Error::new(
-                        std::io::ErrorKind::Other,
-                        "no port provided for IP address",
-                    ))
+    pub async fn to_socket_addr(&self) -> std::io::Result<SocketAddr> {
+        static DNS: Lazy<
+            AsyncResolver<GenericConnection, GenericConnectionProvider<TokioRuntime>>,
+        > = Lazy::new(|| AsyncResolver::tokio_from_system_conf().unwrap());
+
+        let ip = match &self.host {
+            AddressKind::Ip(ip) => *ip,
+            AddressKind::Name(name) => {
+                static CACHE: Lazy<crate::ttl_map::TtlMap<String, IpAddr>> =
+                    Lazy::new(<_>::default);
+
+                match CACHE.get(name) {
+                    Some(ip) => **ip,
+                    None => {
+                        let set = DNS
+                            .lookup_ip(&**name)
+                            .await?
+                            .iter()
+                            .collect::<std::collections::HashSet<_>>();
+
+                        let ip = set
+                            .iter()
+                            .find(|item| matches!(item, IpAddr::V6(_)))
+                            .or_else(|| set.iter().find(|item| matches!(item, IpAddr::V4(_))))
+                            .copied()
+                            .ok_or_else(|| {
+                                std::io::Error::new(
+                                    std::io::ErrorKind::Other,
+                                    "no ip address found",
+                                )
+                            })?;
+
+                        CACHE.insert(name.clone(), ip);
+                        ip
+                    }
                 }
-                AddressKind::Name(name) => name.to_socket_addrs()?.next().unwrap(),
             }
-        })
+        };
+
+        Ok(SocketAddr::from((ip, self.port)))
     }
 }
 
@@ -84,37 +110,57 @@ impl EndpointAddress {
 /// [`FromStr`] for validation which allows us to resolve DNS hostnames such as
 /// `localhost` or container network names at parse-time.
 impl FromStr for EndpointAddress {
-    type Err = eyre::Report;
+    type Err = ParseError;
 
-    fn from_str(string: &str) -> Result<Self, Self::Err> {
-        string
-            .to_socket_addrs()?
-            .next()
-            .ok_or_else(|| eyre::eyre!("No valid socket address found."))?;
+    fn from_str(input: &str) -> Result<Self, Self::Err> {
+        let url = if input.starts_with("udp://") {
+            url::Url::parse(input)?
+        } else if input.contains("://") {
+            return Err(ParseError::NonUdpScheme);
+        } else {
+            url::Url::parse(&format!("udp://{}", input))?
+        };
 
-        Ok(match string.split_once(':') {
-            Some((host, port)) => {
-                let host = host.parse().unwrap();
-                let port = port.parse()?;
+        if !matches!(url.scheme(), "" | "udp") {
+            return Err(ParseError::NonUdpScheme);
+        }
 
-                Self {
-                    host,
-                    port: Some(port),
-                }
-            }
-            _ => Self {
-                host: string.parse().unwrap(),
-                port: None,
-            },
-        })
+        // Check if the URL has a path
+        if !url.path().is_empty() && url.path() != "/" {
+            return Err(ParseError::PathsNotAllowed);
+        }
+
+        let host = url
+            .host_str()
+            .map(String::from)
+            .ok_or(ParseError::EmptyHost)?;
+        // Infallible
+        let host = host.parse::<AddressKind>().unwrap();
+        let port = url.port().ok_or(ParseError::EmptyPort)?;
+
+        Ok(Self { host, port })
     }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum ParseError {
+    #[error("non UDP based URLs are not permitted")]
+    NonUdpScheme,
+    #[error("hostname is required")]
+    EmptyHost,
+    #[error("port is required")]
+    EmptyPort,
+    #[error("parser error: {0}")]
+    InvalidUrl(#[from] url::ParseError),
+    #[error("No paths allowed in URLs, it must include only the hostname and port")]
+    PathsNotAllowed,
 }
 
 impl From<SocketAddr> for EndpointAddress {
     fn from(socket: SocketAddr) -> Self {
         Self {
             host: AddressKind::Ip(socket.ip()),
-            port: Some(socket.port()),
+            port: socket.port(),
         }
     }
 }
@@ -123,7 +169,7 @@ impl From<(IpAddr, u16)> for EndpointAddress {
     fn from((ip, port): (IpAddr, u16)) -> Self {
         Self {
             host: AddressKind::Ip(ip),
-            port: Some(port),
+            port,
         }
     }
 }
@@ -132,7 +178,7 @@ impl From<(Ipv4Addr, u16)> for EndpointAddress {
     fn from((ip, port): (Ipv4Addr, u16)) -> Self {
         Self {
             host: AddressKind::Ip(IpAddr::V4(ip)),
-            port: Some(port),
+            port,
         }
     }
 }
@@ -141,7 +187,7 @@ impl From<([u8; 4], u16)> for EndpointAddress {
     fn from((ip, port): ([u8; 4], u16)) -> Self {
         Self {
             host: AddressKind::Ip(IpAddr::V4(ip.into())),
-            port: Some(port),
+            port,
         }
     }
 }
@@ -150,7 +196,7 @@ impl From<(Ipv6Addr, u16)> for EndpointAddress {
     fn from((ip, port): (Ipv6Addr, u16)) -> Self {
         Self {
             host: AddressKind::Ip(IpAddr::V6(ip)),
-            port: Some(port),
+            port,
         }
     }
 }
@@ -159,7 +205,7 @@ impl From<(String, u16)> for EndpointAddress {
     fn from((ip, port): (String, u16)) -> Self {
         Self {
             host: ip.parse().unwrap_or(AddressKind::Name(ip)),
-            port: Some(port),
+            port,
         }
     }
 }
@@ -171,7 +217,7 @@ impl From<EndpointAddress> for EnvoySocketAddress {
         Self {
             protocol: Protocol::Udp as i32,
             address: address.host.to_string(),
-            port_specifier: address.port.map(u32::from).map(PortSpecifier::PortValue),
+            port_specifier: Some(PortSpecifier::PortValue(u32::from(address.port))),
             ..<_>::default()
         }
     }
@@ -186,16 +232,13 @@ impl TryFrom<EnvoySocketAddress> for EndpointAddress {
         let address = Self {
             host: value.address.parse()?,
             port: match value.port_specifier {
-                Some(PortSpecifier::PortValue(value)) => Some(value.try_into()?),
+                Some(PortSpecifier::PortValue(value)) => value.try_into()?,
                 Some(PortSpecifier::NamedPort(_)) => {
-                    return Err(eyre::eyre!("Named ports are not supported."))
+                    return Err(eyre::eyre!("named ports are not supported"))
                 }
-                None => None,
+                None => return Err(eyre::eyre!("ports are required")),
             },
         };
-
-        // Ensure the address from envoy resolves to an address.
-        address.to_socket_addrs()?;
 
         Ok(address)
     }
@@ -250,24 +293,7 @@ impl TryFrom<crate::xds::config::endpoint::v3::Endpoint> for EndpointAddress {
 
 impl fmt::Display for EndpointAddress {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.host)?;
-
-        if let Some(port) = self.port {
-            write!(f, ":{}", port)?;
-        }
-
-        Ok(())
-    }
-}
-
-impl ToSocketAddrs for EndpointAddress {
-    type Iter = <std::net::SocketAddr as std::net::ToSocketAddrs>::Iter;
-
-    fn to_socket_addrs(&self) -> std::io::Result<Self::Iter> {
-        self.to_socket_addr()
-            .map(Some)
-            .map(IntoIterator::into_iter)
-            .map_err(|error| std::io::Error::new(std::io::ErrorKind::Other, error))
+        write!(f, "{}:{}", self.host, self.port)
     }
 }
 

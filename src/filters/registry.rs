@@ -72,18 +72,19 @@ mod tests {
 
     struct TestFilter {}
 
+    #[async_trait::async_trait]
     impl Filter for TestFilter {
-        fn read(&self, _: &mut ReadContext) -> Result<(), FilterError> {
+        async fn read(&self, _: &mut ReadContext) -> Result<(), FilterError> {
             Err(FilterError::new("test error"))
         }
 
-        fn write(&self, _: &mut WriteContext) -> Result<(), FilterError> {
+        async fn write(&self, _: &mut WriteContext) -> Result<(), FilterError> {
             Err(FilterError::new("test error"))
         }
     }
 
-    #[test]
-    fn insert_and_get() {
+    #[tokio::test]
+    async fn insert_and_get() {
         load_test_filters();
 
         match FilterRegistry::get(&String::from("not.found"), CreateFilterArgs::fixed(None)) {
@@ -109,9 +110,11 @@ mod tests {
                 addr.clone(),
                 vec![]
             ))
+            .await
             .is_ok());
         assert!(filter
             .write(&mut WriteContext::new(endpoint, addr.clone(), addr, vec![],))
+            .await
             .is_ok());
     }
 }

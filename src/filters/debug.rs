@@ -40,15 +40,16 @@ impl Debug {
     }
 }
 
+#[async_trait::async_trait]
 impl Filter for Debug {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+    async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         info!(id = ?self.config.id, source = ?&ctx.source, contents = ?String::from_utf8_lossy(&ctx.contents), "Read filter event");
         Ok(())
     }
 
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
+    async fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
         info!(id = ?self.config.id, endpoint = ?ctx.endpoint.address, source = ?&ctx.source,
             dest = ?&ctx.dest, contents = ?String::from_utf8_lossy(&ctx.contents), "Write filter event");
         Ok(())
@@ -94,18 +95,18 @@ mod tests {
     use super::*;
 
     #[traced_test]
-    #[test]
-    fn read() {
+    #[tokio::test]
+    async fn read() {
         let df = Debug::new(None);
-        assert_filter_read_no_change(&df);
+        assert_filter_read_no_change(&df).await;
         assert!(logs_contain("Read filter event"));
     }
 
     #[traced_test]
-    #[test]
-    fn write() {
+    #[tokio::test]
+    async fn write() {
         let df = Debug::new(None);
-        assert_write_no_change(&df);
+        assert_write_no_change(&df).await;
         assert!(logs_contain("Write filter event"));
         assert!(logs_contain("quilkin::filters::debug")); // the given name to the the logger by tracing
     }
