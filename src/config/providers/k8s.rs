@@ -151,7 +151,7 @@ pub fn update_endpoints_from_gameservers(
                     });
 
                     let Some(endpoint) = result else {
-                        tracing::warn!("received unknown gameserver to delete from k8s");
+                        tracing::warn!(?server, "received unknown gameserver to delete from k8s");
                         continue
                     };
 
