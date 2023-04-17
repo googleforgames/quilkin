@@ -45,9 +45,3 @@ To configure a rate limiter, we specify the maximum rate at which the proxy is a
 ```yaml
 {{#include ../../../../../target/quilkin.filters.local_rate_limit.v1alpha1.yaml}}
 ```
-
-
-## Metrics
-
-* `quilkin_filter_LocalRateLimit_packets_dropped_total`
-  A counter over the total number of packets that have exceeded the configured maximum rate limit and have been dropped as a result.

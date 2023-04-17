@@ -1,7 +1,5 @@
 use crate::metadata::Value;
 
-use super::Metrics;
-
 /// Capture from the start of the packet.
 #[derive(serde::Serialize, serde::Deserialize, Debug, schemars::JsonSchema)]
 pub struct Regex {
@@ -12,7 +10,7 @@ pub struct Regex {
 }
 
 impl super::CaptureStrategy for Regex {
-    fn capture(&self, contents: &mut Vec<u8>, _metrics: &Metrics) -> Option<Value> {
+    fn capture(&self, contents: &mut Vec<u8>) -> Option<Value> {
         let matches = self
             .pattern
             .find_iter(contents)

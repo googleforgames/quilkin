@@ -97,6 +97,12 @@ The proxy exposes the following metrics around sessions:
   The duration it took for a `filter`'s `write` implementation to execute.
   * The `filter` label is the name of the filter being executed.
 
+* `filter_int_counter{id, label, help, direction}`
+  Generic filter counter, see help label for more specific info.
+
+* `quilkin_filter_histogram{id, label, help, direction, shared_metadata_1}`
+  generic filter histogram, see help label for more specific info
+
 Each individual Filter can also expose it's own metrics. See the
 [list of build in Filters](./filters.md#built-in-filters) for more details.
 

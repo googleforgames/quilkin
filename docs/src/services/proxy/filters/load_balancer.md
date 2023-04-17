@@ -36,7 +36,3 @@ In the example above, packets will be distributed by selecting endpoints in turn
 ```yaml
 {{#include ../../../../../target/quilkin.filters.load_balancer.v1alpha1.yaml}}
 ```
-
-## Metrics
-
-This filter currently does not expose any metrics.
