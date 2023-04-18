@@ -3,8 +3,8 @@
 Run `make` to submit the `cloudbuild.yaml` to [Google Cloud Build](https://cloud.google.com/build) and build the 
 release:
 
-* arm64 Linux, Windows and macOS executables.
-* arm64 Linux Docker image.
+* amd64 Linux, Windows and macOS executables.
+* amd64 Linux Docker image.
 
 If you need to pass extra arguments to the `make` target, the target comes with an `$(ARGS)` parameter than can be
 used.
