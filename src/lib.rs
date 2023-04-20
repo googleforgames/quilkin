@@ -31,6 +31,7 @@ pub mod config;
 pub mod endpoint;
 pub mod filters;
 pub mod metadata;
+pub mod protocol;
 pub mod xds;
 
 #[doc(hidden)]

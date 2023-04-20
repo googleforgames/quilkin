@@ -9,6 +9,7 @@
 
 # Services
 - [Proxy](./services/proxy.md)
+    - [Control Message Protocol](./services/proxy/qcmp.md)
     - [Filters](./services/proxy/filters.md)
         - [Capture](./services/proxy/filters/capture.md)
         - [Compress](./services/proxy/filters/compress.md)
