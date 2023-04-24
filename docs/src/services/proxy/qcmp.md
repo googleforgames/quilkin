@@ -6,7 +6,7 @@ used by untrusted clients. Currently the API is focuses on providing pings for
 latency measurement but that may change overtime as new features are added.
 
 ## Protocol Data Unit
-The following is a [Kaitai Struct] configuration of the protocol data unit
+The following is a [Kaitai Struct](https://kaitai.io/) configuration of the protocol data unit
 accepted by Quilkin proxies.
 
 ```yaml
