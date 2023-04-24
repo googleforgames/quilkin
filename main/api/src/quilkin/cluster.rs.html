@@ -374,6 +374,35 @@
 <span id="374">374</span>
 <span id="375">375</span>
 <span id="376">376</span>
+<span id="377">377</span>
+<span id="378">378</span>
+<span id="379">379</span>
+<span id="380">380</span>
+<span id="381">381</span>
+<span id="382">382</span>
+<span id="383">383</span>
+<span id="384">384</span>
+<span id="385">385</span>
+<span id="386">386</span>
+<span id="387">387</span>
+<span id="388">388</span>
+<span id="389">389</span>
+<span id="390">390</span>
+<span id="391">391</span>
+<span id="392">392</span>
+<span id="393">393</span>
+<span id="394">394</span>
+<span id="395">395</span>
+<span id="396">396</span>
+<span id="397">397</span>
+<span id="398">398</span>
+<span id="399">399</span>
+<span id="400">400</span>
+<span id="401">401</span>
+<span id="402">402</span>
+<span id="403">403</span>
+<span id="404">404</span>
+<span id="405">405</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -512,6 +541,35 @@
 
     <span class="kw">pub fn </span>get_default_mut(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;DashMapRefMut&gt; {
         <span class="self">self</span>.get_mut(DEFAULT_CLUSTER_NAME)
+    }
+
+    <span class="kw">pub fn </span>remove_endpoint(<span class="kw-2">&amp;</span><span class="self">self</span>, endpoint: <span class="kw-2">&amp;</span>Endpoint) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt; {
+        <span class="self">self</span>.<span class="number">0</span>.iter_mut().find_map(|<span class="kw-2">mut </span>cluster| {
+            <span class="kw">for </span>le <span class="kw">in </span>cluster.localities.iter_mut() {
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(endpoint) = le
+                    .endpoints
+                    .iter()
+                    .find(|rhs| endpoint.address == rhs.address)
+                    .cloned()
+                {
+                    le.endpoints.remove(<span class="kw-2">&amp;</span>endpoint);
+                }
+            }
+
+            <span class="prelude-val">None
+        </span>})
+    }
+
+    <span class="kw">pub fn </span>remove_endpoint_if(<span class="kw-2">&amp;</span><span class="self">self</span>, closure: <span class="kw">impl </span>Fn(<span class="kw-2">&amp;</span>Endpoint) -&gt; bool) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt; {
+        <span class="self">self</span>.<span class="number">0</span>.iter_mut().find_map(|<span class="kw-2">mut </span>cluster| {
+            cluster.localities.iter_mut().find_map(|le| {
+                le.endpoints
+                    .iter()
+                    .find(|endpoint| (closure)(endpoint))
+                    .cloned()
+                    .and_then(|endpoint| le.endpoints.remove(<span class="kw-2">&amp;</span>endpoint).then_some(()))
+            })
+        })
     }
 
     <span class="kw">pub fn </span>insert_default(<span class="kw-2">&amp;</span><span class="self">self</span>, cluster: <span class="kw">impl </span>Into&lt;LocalityEndpoints&gt;) {
