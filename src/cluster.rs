@@ -138,6 +138,35 @@ impl ClusterMap {
         self.get_mut(DEFAULT_CLUSTER_NAME)
     }
 
+    pub fn remove_endpoint(&self, endpoint: &Endpoint) -> Option<()> {
+        self.0.iter_mut().find_map(|mut cluster| {
+            for le in cluster.localities.iter_mut() {
+                if let Some(endpoint) = le
+                    .endpoints
+                    .iter()
+                    .find(|rhs| endpoint.address == rhs.address)
+                    .cloned()
+                {
+                    le.endpoints.remove(&endpoint);
+                }
+            }
+
+            None
+        })
+    }
+
+    pub fn remove_endpoint_if(&self, closure: impl Fn(&Endpoint) -> bool) -> Option<()> {
+        self.0.iter_mut().find_map(|mut cluster| {
+            cluster.localities.iter_mut().find_map(|le| {
+                le.endpoints
+                    .iter()
+                    .find(|endpoint| (closure)(endpoint))
+                    .cloned()
+                    .and_then(|endpoint| le.endpoints.remove(&endpoint).then_some(()))
+            })
+        })
+    }
+
     pub fn insert_default(&self, cluster: impl Into<LocalityEndpoints>) {
         self.0.insert(
             DEFAULT_CLUSTER_NAME.into(),
