@@ -737,6 +737,16 @@
 <span id="737">737</span>
 <span id="738">738</span>
 <span id="739">739</span>
+<span id="740">740</span>
+<span id="741">741</span>
+<span id="742">742</span>
+<span id="743">743</span>
+<span id="744">744</span>
+<span id="745">745</span>
+<span id="746">746</span>
+<span id="747">747</span>
+<span id="748">748</span>
+<span id="749">749</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -920,10 +930,19 @@
         value
     }
 
-    <span class="doccomment">/// Returns the number of entries in the map.
-    /// The value will be reset to expire at the configured TTL after the time of retrieval.
+    <span class="doccomment">/// Returns the number of entries currently in the map.
     </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.<span class="number">0</span>.inner.len()
+    }
+
+    <span class="doccomment">/// Returns whether the map currently contains no entries.
+    </span><span class="kw">pub fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="self">self</span>.len() == <span class="number">0
+    </span>}
+
+    <span class="doccomment">/// Returns whether the map currently contains any entries.
+    </span><span class="kw">pub fn </span>is_not_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        !<span class="self">self</span>.is_empty()
     }
 
     <span class="doccomment">/// Returns true if the map contains a value for the specified key.
@@ -1183,15 +1202,16 @@
     <span class="attribute">#[tokio::test]
     </span><span class="kw">async fn </span>len() {
         <span class="kw">let </span>(one, two) = address_pair();
+        <span class="kw">const </span>TTL: Duration = Duration::from_millis(<span class="number">50</span>);
 
-        <span class="kw">let </span>map = TtlMap::&lt;EndpointAddress, usize&gt;::new(
-            Duration::from_secs(<span class="number">10</span>),
-            Duration::from_millis(<span class="number">10</span>),
-        );
+        <span class="kw">let </span>map = TtlMap::&lt;EndpointAddress, usize&gt;::new(TTL, Duration::from_millis(<span class="number">10</span>));
         map.insert(one, <span class="number">1</span>);
         <span class="macro">assert_eq!</span>(map.len(), <span class="number">1</span>);
         map.insert(two, <span class="number">2</span>);
         <span class="macro">assert_eq!</span>(map.len(), <span class="number">2</span>);
+
+        tokio::time::sleep(TTL).<span class="kw">await</span>;
+        <span class="macro">assert!</span>(map.is_empty());
     }
 
     <span class="attribute">#[tokio::test]

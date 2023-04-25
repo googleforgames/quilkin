@@ -369,6 +369,15 @@
 <span id="369">369</span>
 <span id="370">370</span>
 <span id="371">371</span>
+<span id="372">372</span>
+<span id="373">373</span>
+<span id="374">374</span>
+<span id="375">375</span>
+<span id="376">376</span>
+<span id="377">377</span>
+<span id="378">378</span>
+<span id="379">379</span>
+<span id="380">380</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -486,13 +495,22 @@
             <span class="prelude-val">None
         </span>};
 
-        <span class="self">self</span>.run_recv_from(<span class="kw-2">&amp;</span>config, sessions, shutdown_rx.clone())<span class="question-mark">?</span>;
+        <span class="self">self</span>.run_recv_from(<span class="kw-2">&amp;</span>config, sessions.clone(), shutdown_rx.clone())<span class="question-mark">?</span>;
         <span class="macro">tracing::info!</span>(<span class="string">&quot;Quilkin is ready&quot;</span>);
 
         shutdown_rx
             .changed()
             .<span class="kw">await
-            </span>.map_err(|error| <span class="macro">eyre::eyre!</span>(error))
+            </span>.map_err(|error| <span class="macro">eyre::eyre!</span>(error))<span class="question-mark">?</span>;
+
+        <span class="macro">tracing::info!</span>(sessions=%sessions.len(), <span class="string">&quot;waiting for active sessions to expire&quot;</span>);
+        <span class="kw">while </span>sessions.is_not_empty() {
+            tokio::time::sleep(Duration::from_secs(<span class="number">1</span>)).<span class="kw">await</span>;
+            <span class="macro">tracing::info!</span>(sessions=%sessions.len(), <span class="string">&quot;sessions still active&quot;</span>);
+        }
+        <span class="macro">tracing::info!</span>(<span class="string">&quot;all sessions expired&quot;</span>);
+
+        <span class="prelude-val">Ok</span>(())
     }
 
     <span class="doccomment">/// Spawns a background task that sits in a loop, receiving packets from the passed in socket.

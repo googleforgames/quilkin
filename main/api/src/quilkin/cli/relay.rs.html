@@ -115,6 +115,11 @@
 <span id="115">115</span>
 <span id="116">116</span>
 <span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2023 Google LLC
  *
@@ -166,7 +171,11 @@
 }
 
 <span class="kw">impl </span>Relay {
-    <span class="kw">pub async fn </span>relay(<span class="kw-2">&amp;</span><span class="self">self</span>, config: Arc&lt;Config&gt;) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
+    <span class="kw">pub async fn </span>relay(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        config: Arc&lt;Config&gt;,
+        <span class="kw-2">mut </span>shutdown_rx: tokio::sync::watch::Receiver&lt;()&gt;,
+    ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
         <span class="kw">let </span>xds_server = <span class="kw">crate</span>::xds::server::spawn(<span class="self">self</span>.xds_port, config.clone());
         <span class="kw">let </span>mds_server = tokio::spawn(<span class="kw">crate</span>::xds::server::control_plane_discovery_server(
             <span class="self">self</span>.mds_port,
@@ -229,6 +238,7 @@
             result = mds_server =&gt; {
                 result<span class="question-mark">?
             </span>}
+            result = shutdown_rx.changed() =&gt; result.map_err(From::from),
         }
     }
 }

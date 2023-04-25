@@ -84,6 +84,11 @@
 <span id="84">84</span>
 <span id="85">85</span>
 <span id="86">86</span>
+<span id="87">87</span>
+<span id="88">88</span>
+<span id="89">89</span>
+<span id="90">90</span>
+<span id="91">91</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -132,7 +137,11 @@
 }
 
 <span class="kw">impl </span>Manage {
-    <span class="kw">pub async fn </span>manage(<span class="kw-2">&amp;</span><span class="self">self</span>, config: std::sync::Arc&lt;<span class="kw">crate</span>::Config&gt;) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
+    <span class="kw">pub async fn </span>manage(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        config: std::sync::Arc&lt;<span class="kw">crate</span>::Config&gt;,
+        <span class="kw-2">mut </span>shutdown_rx: tokio::sync::watch::Receiver&lt;()&gt;,
+    ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
         <span class="kw">let </span>locality = (<span class="self">self</span>.region.is_some() || <span class="self">self</span>.zone.is_some() || <span class="self">self</span>.sub_zone.is_some())
             .then(|| <span class="kw">crate</span>::endpoint::Locality {
                 region: <span class="self">self</span>.region.clone().unwrap_or_default(),
@@ -167,6 +176,7 @@
         <span class="macro">tokio::select! </span>{
             result = server_task =&gt; result,
             result = provider_task =&gt; result<span class="question-mark">?</span>,
+            result = shutdown_rx.changed() =&gt; result.map_err(From::from),
         }
     }
 }
