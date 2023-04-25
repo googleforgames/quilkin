@@ -46,7 +46,11 @@ pub struct Manage {
 }
 
 impl Manage {
-    pub async fn manage(&self, config: std::sync::Arc<crate::Config>) -> crate::Result<()> {
+    pub async fn manage(
+        &self,
+        config: std::sync::Arc<crate::Config>,
+        mut shutdown_rx: tokio::sync::watch::Receiver<()>,
+    ) -> crate::Result<()> {
         let locality = (self.region.is_some() || self.zone.is_some() || self.sub_zone.is_some())
             .then(|| crate::endpoint::Locality {
                 region: self.region.clone().unwrap_or_default(),
@@ -81,6 +85,7 @@ impl Manage {
         tokio::select! {
             result = server_task => result,
             result = provider_task => result?,
+            result = shutdown_rx.changed() => result.map_err(From::from),
         }
     }
 }

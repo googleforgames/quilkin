@@ -115,13 +115,22 @@ impl Proxy {
             None
         };
 
-        self.run_recv_from(&config, sessions, shutdown_rx.clone())?;
+        self.run_recv_from(&config, sessions.clone(), shutdown_rx.clone())?;
         tracing::info!("Quilkin is ready");
 
         shutdown_rx
             .changed()
             .await
-            .map_err(|error| eyre::eyre!(error))
+            .map_err(|error| eyre::eyre!(error))?;
+
+        tracing::info!(sessions=%sessions.len(), "waiting for active sessions to expire");
+        while sessions.is_not_empty() {
+            tokio::time::sleep(SESSION_TIMEOUT_SECONDS).await;
+            tracing::info!(sessions=%sessions.len(), "sessions still active");
+        }
+        tracing::info!("all sessions expired");
+
+        Ok(())
     }
 
     /// Spawns a background task that sits in a loop, receiving packets from the passed in socket.
