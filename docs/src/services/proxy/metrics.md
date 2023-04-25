@@ -86,6 +86,22 @@ The proxy exposes the following metrics around sessions:
   The total number of sessions that have been created.
 
 ## Filter Metrics
+Quilkin's filters use a set of generic metric keys, to make it easier to build visualisations that can account for
+a dynamic set of filters that can be added, removed, or updated at runtime with different configurations. All of
+these metrics share a common set of labels.
+
+| Label | Description |
+|-------|-------------|
+| `id` | The ID of the filter that used the metric. |
+| `label` | The name of the metric being measured. |
+| `help` | The description of the filter metric. |
+| `direction` | The direction of packet flow (e.g. read/write). |
+
+* `quilkin_filter_int_counter{id, label, help, direction}`
+  Generic filter counter, see help label for more specific info.
+
+* `quilkin_filter_histogram{id, label, help, direction, shared_metadata_1}`
+  generic filter histogram, see help label for more specific info.
 
 * `quilkin_filter_read_duration_seconds{filter}`
 
@@ -96,14 +112,5 @@ The proxy exposes the following metrics around sessions:
 
   The duration it took for a `filter`'s `write` implementation to execute.
   * The `filter` label is the name of the filter being executed.
-
-* `filter_int_counter{id, label, help, direction}`
-  Generic filter counter, see help label for more specific info.
-
-* `quilkin_filter_histogram{id, label, help, direction, shared_metadata_1}`
-  generic filter histogram, see help label for more specific info
-
-Each individual Filter can also expose it's own metrics. See the
-[list of build in Filters](./filters.md#built-in-filters) for more details.
 
 [session-metrics]: #session-metrics
