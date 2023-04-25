@@ -125,7 +125,7 @@ impl Proxy {
 
         tracing::info!(sessions=%sessions.len(), "waiting for active sessions to expire");
         while sessions.is_not_empty() {
-            tokio::time::sleep(SESSION_TIMEOUT_SECONDS).await;
+            tokio::time::sleep(Duration::from_secs(1)).await;
             tracing::info!(sessions=%sessions.len(), "sessions still active");
         }
         tracing::info!("all sessions expired");
