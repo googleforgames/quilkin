@@ -181,10 +181,19 @@ where
         value
     }
 
-    /// Returns the number of entries in the map.
-    /// The value will be reset to expire at the configured TTL after the time of retrieval.
+    /// Returns the number of entries currently in the map.
     pub fn len(&self) -> usize {
         self.0.inner.len()
+    }
+
+    /// Returns whether the map currently contains no entries.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    /// Returns whether the map currently contains any entries.
+    pub fn is_not_empty(&self) -> bool {
+        !self.is_empty()
     }
 
     /// Returns true if the map contains a value for the specified key.
@@ -444,15 +453,16 @@ mod tests {
     #[tokio::test]
     async fn len() {
         let (one, two) = address_pair();
+        const TTL: Duration = Duration::from_millis(50);
 
-        let map = TtlMap::<EndpointAddress, usize>::new(
-            Duration::from_secs(10),
-            Duration::from_millis(10),
-        );
+        let map = TtlMap::<EndpointAddress, usize>::new(TTL, Duration::from_millis(10));
         map.insert(one, 1);
         assert_eq!(map.len(), 1);
         map.insert(two, 2);
         assert_eq!(map.len(), 2);
+
+        tokio::time::sleep(TTL).await;
+        assert!(map.is_empty());
     }
 
     #[tokio::test]

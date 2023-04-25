@@ -123,7 +123,7 @@ impl Cli {
                 ))
             });
 
-        let (shutdown_tx, mut shutdown_rx) = watch::channel::<()>(());
+        let (shutdown_tx, shutdown_rx) = watch::channel::<()>(());
 
         #[cfg(target_os = "linux")]
         let mut sig_term_fut = signal::unix::signal(signal::unix::SignalKind::terminate())?;
@@ -157,14 +157,18 @@ impl Cli {
                 }
                 Commands::Manage(manager) => {
                     let config = config.clone();
-                    tokio::spawn(async move { manager.manage(config.clone()).await })
+                    let shutdown_rx = shutdown_rx.clone();
+                    tokio::spawn(async move {
+                        manager.manage(config.clone(), shutdown_rx.clone()).await
+                    })
                 }
                 Commands::GenerateConfigSchema(generator) => {
                     tokio::spawn(std::future::ready(generator.generate_config_schema()))
                 }
                 Commands::Relay(relay) => {
                     let config = config.clone();
-                    tokio::spawn(async move { relay.relay(config).await })
+                    let shutdown_rx = shutdown_rx.clone();
+                    tokio::spawn(async move { relay.relay(config, shutdown_rx.clone()).await })
                 }
             }
         })
@@ -176,10 +180,7 @@ impl Cli {
             }
         });
 
-        tokio::select! {
-            result = fut => result?,
-            _ = shutdown_rx.changed() => Ok(())
-        }
+        fut.await?
     }
 
     /// Searches for the configuration file, and panics if not found.
