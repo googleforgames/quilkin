@@ -224,9 +224,6 @@
 <span id="224">224</span>
 <span id="225">225</span>
 <span id="226">226</span>
-<span id="227">227</span>
-<span id="228">228</span>
-<span id="229">229</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -243,19 +240,16 @@
  * limitations under the License.
  */
 
-</span><span class="kw">use </span><span class="kw">crate</span>::xds <span class="kw">as </span>envoy;
-
-<span class="macro">crate::include_proto!</span>(<span class="string">&quot;quilkin.filters.matches.v1alpha1&quot;</span>);
-
-<span class="kw">mod </span>config;
+</span><span class="kw">mod </span>config;
 <span class="kw">mod </span>metrics;
 
-<span class="kw">use crate</span>::{filters::prelude::<span class="kw-2">*</span>, metadata};
+<span class="kw">use crate</span>::{filters::prelude::<span class="kw-2">*</span>, metadata, xds <span class="kw">as </span>envoy};
 
-<span class="kw">use </span><span class="self">self</span>::quilkin::filters::matches::v1alpha1 <span class="kw">as </span>proto;
-<span class="kw">use </span><span class="kw">crate</span>::filters::r#match::metrics::Metrics;
+<span class="kw">use </span><span class="self">self</span>::{metrics::Metrics, quilkin::filters::matches::v1alpha1 <span class="kw">as </span>proto};
 
 <span class="kw">pub use </span><span class="self">self</span>::config::{Branch, Config, DirectionalConfig, Fallthrough};
+
+<span class="macro">crate::include_proto!</span>(<span class="string">&quot;quilkin.filters.matches.v1alpha1&quot;</span>);
 
 <span class="kw">struct </span>ConfigInstance {
     metadata_key: metadata::Key,
@@ -388,7 +382,7 @@
     <span class="kw">type </span>BinaryConfiguration = proto::Match;
 
     <span class="kw">fn </span>try_from_config(config: <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Configuration&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, CreationError&gt; {
-        <span class="self">Self</span>::new(<span class="self">Self</span>::ensure_config_exists(config)<span class="question-mark">?</span>, Metrics::new()<span class="question-mark">?</span>)
+        <span class="self">Self</span>::new(<span class="self">Self</span>::ensure_config_exists(config)<span class="question-mark">?</span>, Metrics::new())
     }
 }
 
@@ -400,7 +394,7 @@
 
     <span class="attribute">#[tokio::test]
     </span><span class="kw">async fn </span>metrics() {
-        <span class="kw">let </span>metrics = Metrics::new().unwrap();
+        <span class="kw">let </span>metrics = Metrics::new();
         <span class="kw">let </span>key = <span class="kw">crate</span>::metadata::Key::from_static(<span class="string">&quot;myapp.com/token&quot;</span>);
         <span class="kw">let </span>config = Config {
             on_read: <span class="prelude-val">Some</span>(DirectionalConfig {

@@ -364,51 +364,6 @@
 <span id="364">364</span>
 <span id="365">365</span>
 <span id="366">366</span>
-<span id="367">367</span>
-<span id="368">368</span>
-<span id="369">369</span>
-<span id="370">370</span>
-<span id="371">371</span>
-<span id="372">372</span>
-<span id="373">373</span>
-<span id="374">374</span>
-<span id="375">375</span>
-<span id="376">376</span>
-<span id="377">377</span>
-<span id="378">378</span>
-<span id="379">379</span>
-<span id="380">380</span>
-<span id="381">381</span>
-<span id="382">382</span>
-<span id="383">383</span>
-<span id="384">384</span>
-<span id="385">385</span>
-<span id="386">386</span>
-<span id="387">387</span>
-<span id="388">388</span>
-<span id="389">389</span>
-<span id="390">390</span>
-<span id="391">391</span>
-<span id="392">392</span>
-<span id="393">393</span>
-<span id="394">394</span>
-<span id="395">395</span>
-<span id="396">396</span>
-<span id="397">397</span>
-<span id="398">398</span>
-<span id="399">399</span>
-<span id="400">400</span>
-<span id="401">401</span>
-<span id="402">402</span>
-<span id="403">403</span>
-<span id="404">404</span>
-<span id="405">405</span>
-<span id="406">406</span>
-<span id="407">407</span>
-<span id="408">408</span>
-<span id="409">409</span>
-<span id="410">410</span>
-<span id="411">411</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -473,10 +428,10 @@
             Action::Compress =&gt; <span class="kw">match </span><span class="self">self</span>.compressor.encode(<span class="kw-2">&amp;mut </span>ctx.contents) {
                 <span class="prelude-val">Ok</span>(()) =&gt; {
                     <span class="self">self</span>.metrics
-                        .decompressed_bytes_total
+                        .read_decompressed_bytes_total
                         .inc_by(original_size <span class="kw">as </span>u64);
                     <span class="self">self</span>.metrics
-                        .compressed_bytes_total
+                        .read_compressed_bytes_total
                         .inc_by(ctx.contents.len() <span class="kw">as </span>u64);
                     <span class="prelude-val">Ok</span>(())
                 }
@@ -485,10 +440,10 @@
             Action::Decompress =&gt; <span class="kw">match </span><span class="self">self</span>.compressor.decode(<span class="kw-2">&amp;mut </span>ctx.contents) {
                 <span class="prelude-val">Ok</span>(()) =&gt; {
                     <span class="self">self</span>.metrics
-                        .compressed_bytes_total
+                        .read_compressed_bytes_total
                         .inc_by(original_size <span class="kw">as </span>u64);
                     <span class="self">self</span>.metrics
-                        .decompressed_bytes_total
+                        .read_decompressed_bytes_total
                         .inc_by(ctx.contents.len() <span class="kw">as </span>u64);
                     <span class="prelude-val">Ok</span>(())
                 }
@@ -505,10 +460,10 @@
             Action::Compress =&gt; <span class="kw">match </span><span class="self">self</span>.compressor.encode(<span class="kw-2">&amp;mut </span>ctx.contents) {
                 <span class="prelude-val">Ok</span>(()) =&gt; {
                     <span class="self">self</span>.metrics
-                        .decompressed_bytes_total
+                        .write_decompressed_bytes_total
                         .inc_by(original_size <span class="kw">as </span>u64);
                     <span class="self">self</span>.metrics
-                        .compressed_bytes_total
+                        .write_compressed_bytes_total
                         .inc_by(ctx.contents.len() <span class="kw">as </span>u64);
                     <span class="prelude-val">Ok</span>(())
                 }
@@ -517,10 +472,10 @@
             Action::Decompress =&gt; <span class="kw">match </span><span class="self">self</span>.compressor.decode(<span class="kw-2">&amp;mut </span>ctx.contents) {
                 <span class="prelude-val">Ok</span>(()) =&gt; {
                     <span class="self">self</span>.metrics
-                        .compressed_bytes_total
+                        .write_compressed_bytes_total
                         .inc_by(original_size <span class="kw">as </span>u64);
                     <span class="self">self</span>.metrics
-                        .decompressed_bytes_total
+                        .write_decompressed_bytes_total
                         .inc_by(ctx.contents.len() <span class="kw">as </span>u64);
                     <span class="prelude-val">Ok</span>(())
                 }
@@ -540,7 +495,7 @@
     <span class="kw">fn </span>try_from_config(config: <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Configuration&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, CreationError&gt; {
         <span class="prelude-val">Ok</span>(Compress::new(
             <span class="self">Self</span>::ensure_config_exists(config)<span class="question-mark">?</span>,
-            Metrics::new()<span class="question-mark">?</span>,
+            Metrics::new(),
         ))
     }
 }
@@ -582,7 +537,7 @@
                 on_read: Action::Compress,
                 on_write: Action::Decompress,
             },
-            Metrics::new().unwrap(),
+            Metrics::new(),
         );
         <span class="kw">let </span>expected = contents_fixture();
 
@@ -604,14 +559,6 @@
             expected.len(),
             read_context.contents.len()
         );
-        <span class="macro">assert_eq!</span>(
-            expected.len() <span class="kw">as </span>u64,
-            compress.metrics.decompressed_bytes_total.get()
-        );
-        <span class="macro">assert_eq!</span>(
-            read_context.contents.len() <span class="kw">as </span>u64,
-            compress.metrics.compressed_bytes_total.get()
-        );
 
         <span class="comment">// write decompress
         </span><span class="kw">let </span><span class="kw-2">mut </span>write_context = WriteContext::new(
@@ -627,40 +574,6 @@
             </span>.expect(<span class="string">&quot;should decompress&quot;</span>);
 
         <span class="macro">assert_eq!</span>(expected, <span class="kw-2">&amp;*</span>write_context.contents);
-
-        <span class="comment">// multiply by two, because data was sent both upstream and downstream
-        </span><span class="macro">assert_eq!</span>(
-            (read_context.contents.len() * <span class="number">2</span>) <span class="kw">as </span>u64,
-            compress.metrics.compressed_bytes_total.get()
-        );
-        <span class="macro">assert_eq!</span>(
-            (expected.len() * <span class="number">2</span>) <span class="kw">as </span>u64,
-            compress.metrics.decompressed_bytes_total.get()
-        );
-    }
-
-    <span class="attribute">#[tokio::test]
-    </span><span class="kw">async fn </span>downstream() {
-        <span class="kw">let </span>compress = Compress::new(
-            Config {
-                mode: Default::default(),
-                on_read: Action::Decompress,
-                on_write: Action::Compress,
-            },
-            Metrics::new().unwrap(),
-        );
-
-        <span class="kw">let </span>(expected, compressed) = assert_downstream(<span class="kw-2">&amp;</span>compress).<span class="kw">await</span>;
-
-        <span class="comment">// multiply by two, because data was sent both downstream and upstream
-        </span><span class="macro">assert_eq!</span>(
-            (compressed.len() * <span class="number">2</span>) <span class="kw">as </span>u64,
-            compress.metrics.compressed_bytes_total.get()
-        );
-        <span class="macro">assert_eq!</span>(
-            (expected.len() * <span class="number">2</span>) <span class="kw">as </span>u64,
-            compress.metrics.decompressed_bytes_total.get()
-        );
     }
 
     <span class="attribute">#[tokio::test]
@@ -671,7 +584,7 @@
                 on_read: Action::Compress,
                 on_write: Action::Decompress,
             },
-            Metrics::new().unwrap(),
+            Metrics::new(),
         );
 
         <span class="macro">assert!</span>(compression
@@ -690,7 +603,7 @@
                 on_read: Action::Decompress,
                 on_write: Action::Compress,
             },
-            Metrics::new().unwrap(),
+            Metrics::new(),
         );
 
         <span class="macro">assert!</span>(compression
@@ -701,9 +614,6 @@
             ))
             .<span class="kw">await
             </span>.is_err());
-
-        <span class="macro">assert_eq!</span>(<span class="number">0</span>, compression.metrics.compressed_bytes_total.get());
-        <span class="macro">assert_eq!</span>(<span class="number">0</span>, compression.metrics.decompressed_bytes_total.get());
     }
 
     <span class="attribute">#[tokio::test]
@@ -714,7 +624,7 @@
                 on_read: Action::default(),
                 on_write: Action::default(),
             },
-            Metrics::new().unwrap(),
+            Metrics::new(),
         );
 
         <span class="kw">let </span><span class="kw-2">mut </span>read_context = ReadContext::new(

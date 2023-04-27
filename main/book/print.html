@@ -219,7 +219,7 @@ your local machine through <a href="installation.html#cargo">Cargo</a>.</p>
 <dl>
   <dt><strong>Source / Method</strong></dt>
   <dd>
-<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.6.0-dev-f922de4
+<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.6.0-dev-c9d435a
 </code></pre>
 </dd>
   <dt><strong>Notes</strong></dt>
@@ -905,12 +905,6 @@ definitions:
           description: The regular expression to use for capture.
           type: string
 </code></pre>
-<h2 id="metrics"><a class="header" href="#metrics">Metrics</a></h2>
-<ul>
-<li><code>quilkin_filter_Capture_packets_dropped_total</code>
-A counter of the total number of packets that have been dropped due to their length being less than the configured
-<code>size</code>.</li>
-</ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="compress"><a class="header" href="#compress">Compress</a></h1>
 <p>The <code>Compress</code> filter's job is to provide a variety of compression implementations for compression
 and subsequent decompression of UDP data when sent between systems, such as a game client and game server.</p>
@@ -984,27 +978,12 @@ other compression library; instead, it aims for very high speeds and reasonable 
 <p>Currently, this filter only provides the <a href="https://github.com/google/snappy/">Snappy</a> compression format via the
 <a href="https://github.com/BurntSushi/rust-snappy">rust-snappy</a> crate, but more will be
 provided in the future.</p>
-<h3 id="metrics-1"><a class="header" href="#metrics-1">Metrics</a></h3>
+<h3 id="metrics"><a class="header" href="#metrics">Metrics</a></h3>
 <ul>
-<li><code>quilkin_filter_Compress_packets_dropped_total</code>
-Total number of packets dropped as they could not be processed.
-<ul>
-<li>Labels:
-<ul>
-<li><code>action</code>: The action that could not be completed successfully, thereby causing the packet to be dropped.
-<ul>
-<li><code>Compress</code>: Compressing the packet with the configured <code>mode</code> was attempted.</li>
-<li><code>Decompress</code> Decompressing the packet with the configured <code>mode</code> was attempted.</li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-</li>
-<li><code>quilkin_filter_Compress_decompressed_bytes_total</code>
-Total number of decompressed bytes either received or sent.</li>
-<li><code>quilkin_filter_Compress_compressed_bytes_total</code>
+<li><code>quilkin_filter_int_counter{label=&quot;compressed_bytes_total&quot;}</code>
 Total number of compressed bytes either received or sent.</li>
+<li><code>quilkin_filter_int_counter{label=&quot;decompressed_bytes_total&quot;}</code>
+Total number of decompressed bytes either received or sent.</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="concatenatebytes"><a class="header" href="#concatenatebytes">ConcatenateBytes</a></h1>
 <p>The <code>ConcatenateBytes</code> filter's job is to add a byte packet to either the beginning or end of each UDP packet that passes
@@ -1064,8 +1043,6 @@ definitions:
     - PREPEND
     - DO_NOTHING
 </code></pre>
-<h2 id="metrics-2"><a class="header" href="#metrics-2">Metrics</a></h2>
-<p>This filter currently exports no metrics.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="debug"><a class="header" href="#debug">Debug</a></h1>
 <p>The Debug filter logs all incoming and outgoing packets to standard output.</p>
 <p>This filter is useful in debugging deployments where the packets strictly contain valid <code>UTF-8</code> encoded strings. A generic error message is instead logged if conversion from bytes to <code>UTF-8</code> fails.</p>
@@ -1102,8 +1079,6 @@ properties:
     - string
     - 'null'
 </code></pre>
-<h2 id="metrics-3"><a class="header" href="#metrics-3">Metrics</a></h2>
-<p>This filter currently exports no metrics.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="drop"><a class="header" href="#drop">Drop</a></h1>
 <p>The <code>Drop</code> filter always drops any packet passed through it. This is useful in
 combination with conditional flow filters like <a href="services/proxy/filters/match.html"><code>Matches</code></a></p>
@@ -1143,8 +1118,6 @@ filters:
 </span><span class="boring">}</span></code></pre></pre>
 <h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
 <p>No defined configuration options.</p>
-<h2 id="metrics-4"><a class="header" href="#metrics-4">Metrics</a></h2>
-<p>This filter currently exports no metrics.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="firewall"><a class="header" href="#firewall">Firewall</a></h1>
 <p>The <code>Firewall</code> filter's job is to allow or block traffic depending on if the incoming traffic's IP and port matches
 the rules set on the Firewall filter.</p>
@@ -1165,7 +1138,7 @@ filters:
           ports:
              - 10
              - 1000-7000
-      on_write: 
+      on_write:
         - action: DENY
           source: 192.168.51.0/24
           ports:
@@ -1245,21 +1218,14 @@ definitions:
         type: string
 </code></pre>
 <h3 id="rule-evaluation"><a class="header" href="#rule-evaluation">Rule Evaluation</a></h3>
-<p>The Firewall filter supports DENY and ALLOW actions for access control. When multiple DENY and ALLOW actions are used 
-for a workload at the same time, the evaluation is processed in the order it is configured, with the first matching 
+<p>The Firewall filter supports DENY and ALLOW actions for access control. When multiple DENY and ALLOW actions are used
+for a workload at the same time, the evaluation is processed in the order it is configured, with the first matching
 rule deciding if the request is allowed or denied:</p>
 <ol>
 <li>If a rule action is ALLOW, and it matches the request, then the entire request is allowed.</li>
 <li>If a rule action is DENY and it matches the request, then the entire request is denied.</li>
 <li>If none of the configured rules match, then the request is denied.</li>
 </ol>
-<h2 id="metrics-5"><a class="header" href="#metrics-5">Metrics</a></h2>
-<ul>
-<li><code>quilkin_filter_Firewall_packets_denied_total</code> Total number of packets denied.</li>
-<li><code>quilkin_filter_Firewall_packets_allowed_total</code> Total number of packets allowed.</li>
-</ul>
-<p>Both metrics have the label <code>event</code>, with a value of <code>read</code> or <code>write</code> which corresponds to either <code>on_read</code> or 
-<code>on_write</code> events within the Filter.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="loadbalancer"><a class="header" href="#loadbalancer">LoadBalancer</a></h1>
 <p>The <code>LoadBalancer</code> filter distributes packets received downstream among all upstream endpoints.</p>
 <h2 id="filter-name-6"><a class="header" href="#filter-name-6">Filter name</a></h2>
@@ -1312,8 +1278,6 @@ definitions:
       enum:
       - HASH
 </code></pre>
-<h2 id="metrics-6"><a class="header" href="#metrics-6">Metrics</a></h2>
-<p>This filter currently does not expose any metrics.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="localratelimit"><a class="header" href="#localratelimit">LocalRateLimit</a></h1>
 <p>The LocalRateLimit filter controls the frequency at which packets received downstream are forwarded upstream by the proxy.
 Rate limiting is done independently per source (IP, Port) combination.</p>
@@ -1371,11 +1335,6 @@ properties:
     format: uint32
     minimum: 0.0
 </code></pre>
-<h2 id="metrics-7"><a class="header" href="#metrics-7">Metrics</a></h2>
-<ul>
-<li><code>quilkin_filter_LocalRateLimit_packets_dropped_total</code>
-A counter over the total number of packets that have exceeded the configured maximum rate limit and have been dropped as a result.</li>
-</ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="match"><a class="header" href="#match">Match</a></h1>
 <p>The <code>Match</code> filter's job is to provide a mechanism to change behaviour based
 on dynamic metadata. This filter behaves similarly to the <code>match</code> expression
@@ -1510,11 +1469,11 @@ definitions:
         minimum: 0.0
 </code></pre>
 <p>View the <a href="services/proxy/filters/../../../../api/quilkin/filters/match/struct.Config.html">Match</a> filter documentation for more details.</p>
-<h2 id="metrics-8"><a class="header" href="#metrics-8">Metrics</a></h2>
+<h2 id="metrics-1"><a class="header" href="#metrics-1">Metrics</a></h2>
 <ul>
-<li><code>quilkin_filter_Match_packets_matched_total</code>
+<li><code>quilkin_filter_int_counter{label=&quot;packets_matched_total&quot;}</code>
 A counter of the total number of packets where the dynamic metadata matches a branch value.</li>
-<li><code>quilkin_filter_Match_packets_fallthrough_total</code>
+<li><code>quilkin_filter_int_counter{label=&quot;packets_fallthrough_total&quot;}</code>
 A counter of the total number of packets that are processed by the fallthrough configuration.</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="pass"><a class="header" href="#pass">Pass</a></h1>
@@ -1556,8 +1515,6 @@ filters:
 </span><span class="boring">}</span></code></pre></pre>
 <h2 id="configuration-1"><a class="header" href="#configuration-1">Configuration</a></h2>
 <p>No defined configuration options.</p>
-<h2 id="metrics-9"><a class="header" href="#metrics-9">Metrics</a></h2>
-<p>This filter currently exports no metrics.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="timestamp"><a class="header" href="#timestamp">Timestamp</a></h1>
 <p>The <code>Timestamp</code> filter accepts a UNIX timestamp from metadata and observes the
 duration between that timestamp and now. Mostly useful in combination with other
@@ -1605,9 +1562,9 @@ definitions:
     description: A key in the metadata table.
     type: string
 </code></pre>
-<h2 id="metrics-10"><a class="header" href="#metrics-10">Metrics</a></h2>
+<h2 id="metrics-2"><a class="header" href="#metrics-2">Metrics</a></h2>
 <ul>
-<li><code>quilkin_filter_timestamp_seconds{metadata_key, direction}</code>
+<li><code>quilkin_filter_histogram{label=&quot;duration&quot;}</code>
 A histogram of durations from <code>metadata_key</code> to now in the packet <code>direction</code>.</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="tokenrouter"><a class="header" href="#tokenrouter">TokenRouter</a></h1>
@@ -1627,7 +1584,7 @@ filters:
   - name: quilkin.filters.token_router.v1alpha1.TokenRouter
     config:
         metadataKey: myapp.com/myownkey
-clusters: 
+clusters:
   default:
     localities:
       - endpoints:
@@ -1662,7 +1619,7 @@ definitions:
     description: A key in the metadata table.
     type: string
 </code></pre>
-<h2 id="metrics-11"><a class="header" href="#metrics-11">Metrics</a></h2>
+<h2 id="metrics-3"><a class="header" href="#metrics-3">Metrics</a></h2>
 <ul>
 <li><code>quilkin_filter_TokenRouter_packets_dropped_total</code>
 A counter of the total number of packets that have been dropped. This is also provided with a <code>Reason</code> label, as there
@@ -1696,7 +1653,7 @@ filters:
           size: 3
           remove: true
   - name: quilkin.filters.token_router.v1alpha1.TokenRouter
-clusters: 
+clusters:
   default:
     localities:
       - endpoints:
@@ -2088,7 +2045,25 @@ client.</li>
 </li>
 </ul>
 <h2 id="filter-metrics"><a class="header" href="#filter-metrics">Filter Metrics</a></h2>
+<p>Quilkin's filters use a set of generic metric keys, to make it easier to build visualisations that can account for
+a dynamic set of filters that can be added, removed, or updated at runtime with different configurations. All of
+these metrics share a common set of labels.</p>
+<div class="table-wrapper"><table><thead><tr><th>Label</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>id</code></td><td>The ID of the filter that used the metric.</td></tr>
+<tr><td><code>label</code></td><td>The name of the metric being measured.</td></tr>
+<tr><td><code>help</code></td><td>The description of the filter metric.</td></tr>
+<tr><td><code>direction</code></td><td>The direction of packet flow (e.g. read/write).</td></tr>
+</tbody></table>
+</div>
 <ul>
+<li>
+<p><code>quilkin_filter_int_counter{id, label, help, direction}</code>
+Generic filter counter, see help label for more specific info.</p>
+</li>
+<li>
+<p><code>quilkin_filter_histogram{id, label, help, direction, shared_metadata_1}</code>
+generic filter histogram, see help label for more specific info.</p>
+</li>
 <li>
 <p><code>quilkin_filter_read_duration_seconds{filter}</code></p>
 <p>The duration it took for a <code>filter</code>'s <code>read</code> implementation to execute.</p>
@@ -2104,8 +2079,6 @@ client.</li>
 </ul>
 </li>
 </ul>
-<p>Each individual Filter can also expose it's own metrics. See the
-<a href="services/proxy/./filters.html#built-in-filters">list of build in Filters</a> for more details.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="xds-control-plane"><a class="header" href="#xds-control-plane">xDS Control Plane</a></h1>
 <div class="table-wrapper"><table><thead><tr><th>services</th><th>ports</th><th>Protocol</th></tr></thead><tbody>
 <tr><td>xDS</td><td>7800</td><td>gRPC(IPv4)</td></tr>
@@ -2484,7 +2457,7 @@ that new proxies that have yet to get configuration information from an <a href=
 until they are fully populated.</p>
 <h4 id="xds-provider-mode-1"><a class="header" href="#xds-provider-mode-1">xDS Provider Mode</a></h4>
 <p>Will return an HTTP status of 200 when all health checks pass.</p>
-<h3 id="metrics-12"><a class="header" href="#metrics-12">/metrics</a></h3>
+<h3 id="metrics-4"><a class="header" href="#metrics-4">/metrics</a></h3>
 <p>Outputs <a href="https://prometheus.io/">Prometheus</a> formatted metrics for this instance.</p>
 <p>See the <a href="deployment/../services/proxy/metrics.html">Proxy Metrics</a> documentation for what proxy metrics are available.</p>
 <p>See the <a href="deployment/../services/xds/metrics.html">xDS Metrics</a> documentation for what xDS metrics are available.</p>

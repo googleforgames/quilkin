@@ -44,6 +44,15 @@
 <span id="44">44</span>
 <span id="45">45</span>
 <span id="46">46</span>
+<span id="47">47</span>
+<span id="48">48</span>
+<span id="49">49</span>
+<span id="50">50</span>
+<span id="51">51</span>
+<span id="52">52</span>
+<span id="53">53</span>
+<span id="54">54</span>
+<span id="55">55</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -60,34 +69,43 @@
  * limitations under the License.
  */
 
-</span><span class="kw">use </span><span class="kw">crate</span>::metrics::{filter_opts, CollectorExt};
-<span class="kw">use </span>prometheus::{
-    core::{AtomicU64, GenericCounter},
-    IntCounter,
+</span><span class="kw">use </span>prometheus::IntCounter;
+
+<span class="kw">use crate</span>::{
+    filters::{metrics, StaticFilter},
+    metrics::Direction,
 };
+
+<span class="kw">fn </span>packets_matched_total(direction: Direction) -&gt; IntCounter {
+    metrics::counter(
+        <span class="kw">super</span>::Match::NAME,
+        <span class="string">&quot;packets_matched_total&quot;</span>,
+        <span class="string">&quot;Total number of packets where the dynamic metadata matches a branch value&quot;</span>,
+        direction,
+    )
+}
+
+<span class="kw">fn </span>packets_fallthrough_total(direction: Direction) -&gt; IntCounter {
+    metrics::counter(
+        <span class="kw">super</span>::Match::NAME,
+        <span class="string">&quot;packets_fallthrough_total&quot;</span>,
+        <span class="string">&quot;Total number of packets that are processed by the fallthrough configuration&quot;</span>,
+        direction,
+    )
+}
 
 <span class="doccomment">/// Register and manage metrics for this filter
 </span><span class="kw">pub struct </span>Metrics {
-    <span class="kw">pub </span>packets_matched_total: GenericCounter&lt;AtomicU64&gt;,
-    <span class="kw">pub </span>packets_fallthrough_total: GenericCounter&lt;AtomicU64&gt;,
+    <span class="kw">pub </span>packets_matched_total: IntCounter,
+    <span class="kw">pub </span>packets_fallthrough_total: IntCounter,
 }
 
 <span class="kw">impl </span>Metrics {
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>new() -&gt; prometheus::Result&lt;<span class="self">Self</span>&gt; {
-        <span class="prelude-val">Ok</span>(Metrics {
-            packets_matched_total: IntCounter::with_opts(filter_opts(
-                <span class="string">&quot;packets_matched_total&quot;</span>,
-                <span class="string">&quot;Match&quot;</span>,
-                <span class="string">&quot;Total number of packets where the dynamic metadata matches a branch value.&quot;</span>,
-            ))<span class="question-mark">?
-            </span>.register_if_not_exists()<span class="question-mark">?</span>,
-            packets_fallthrough_total: IntCounter::with_opts(filter_opts(
-                <span class="string">&quot;packets_fallthrough_total&quot;</span>,
-                <span class="string">&quot;Match&quot;</span>,
-                <span class="string">&quot;Total number of packets that are processed by the fallthrough configuration&quot;</span>,
-            ))<span class="question-mark">?
-            </span>.register_if_not_exists()<span class="question-mark">?</span>,
-        })
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>new() -&gt; <span class="self">Self </span>{
+        Metrics {
+            packets_matched_total: packets_matched_total(Direction::Read),
+            packets_fallthrough_total: packets_fallthrough_total(Direction::Read),
+        }
     }
 }
 </code></pre></div>

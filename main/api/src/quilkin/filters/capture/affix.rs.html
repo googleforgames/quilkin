@@ -50,35 +50,11 @@
 <span id="50">50</span>
 <span id="51">51</span>
 <span id="52">52</span>
-<span id="53">53</span>
-<span id="54">54</span>
-<span id="55">55</span>
-<span id="56">56</span>
-<span id="57">57</span>
-<span id="58">58</span>
-<span id="59">59</span>
-<span id="60">60</span>
-<span id="61">61</span>
-<span id="62">62</span>
-<span id="63">63</span>
-<span id="64">64</span>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::metadata::Value;
 
-<span class="kw">use </span><span class="kw">super</span>::Metrics;
-
-<span class="kw">fn </span>is_valid_size(contents: <span class="kw-2">&amp;</span>[u8], size: u32, metrics: <span class="kw-2">&amp;</span>Metrics) -&gt; bool {
-    <span class="comment">// if the capture size is bigger than the packet size, then we drop the packet,
-    // and occasionally warn
-    </span><span class="kw">if </span>contents.len() &lt; size <span class="kw">as </span>usize {
-        <span class="kw">if </span>metrics.packets_dropped_total.get() % <span class="number">1000 </span>== <span class="number">0 </span>{
-            <span class="macro">tracing::warn!</span>(count = <span class="question-mark">?</span>metrics.packets_dropped_total.get(), <span class="string">&quot;Packets are being dropped due to their length being less than {} bytes&quot;</span>, size);
-        }
-        metrics.packets_dropped_total.inc();
-
-        <span class="bool-val">false
-    </span>} <span class="kw">else </span>{
-        <span class="bool-val">true
-    </span>}
+<span class="doccomment">/// Returns whether the capture size is bigger than the packet size.
+</span><span class="kw">fn </span>is_valid_size(contents: <span class="kw-2">&amp;</span>[u8], size: u32) -&gt; bool {
+    contents.len() &gt;= size <span class="kw">as </span>usize
 }
 
 <span class="doccomment">/// Capture from the start of the packet.
@@ -92,8 +68,8 @@
 }
 
 <span class="kw">impl </span><span class="kw">super</span>::CaptureStrategy <span class="kw">for </span>Prefix {
-    <span class="kw">fn </span>capture(<span class="kw-2">&amp;</span><span class="self">self</span>, contents: <span class="kw-2">&amp;mut </span>Vec&lt;u8&gt;, metrics: <span class="kw-2">&amp;</span>Metrics) -&gt; <span class="prelude-ty">Option</span>&lt;Value&gt; {
-        is_valid_size(contents, <span class="self">self</span>.size, metrics).then(|| {
+    <span class="kw">fn </span>capture(<span class="kw-2">&amp;</span><span class="self">self</span>, contents: <span class="kw-2">&amp;mut </span>Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;Value&gt; {
+        is_valid_size(contents, <span class="self">self</span>.size).then(|| {
             <span class="kw">if </span><span class="self">self</span>.remove {
                 Value::Bytes(contents.drain(..<span class="self">self</span>.size <span class="kw">as </span>usize).collect())
             } <span class="kw">else </span>{
@@ -114,8 +90,8 @@
 }
 
 <span class="kw">impl </span><span class="kw">super</span>::CaptureStrategy <span class="kw">for </span>Suffix {
-    <span class="kw">fn </span>capture(<span class="kw-2">&amp;</span><span class="self">self</span>, contents: <span class="kw-2">&amp;mut </span>Vec&lt;u8&gt;, metrics: <span class="kw-2">&amp;</span>Metrics) -&gt; <span class="prelude-ty">Option</span>&lt;Value&gt; {
-        is_valid_size(contents, <span class="self">self</span>.size, metrics).then(|| {
+    <span class="kw">fn </span>capture(<span class="kw-2">&amp;</span><span class="self">self</span>, contents: <span class="kw-2">&amp;mut </span>Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;Value&gt; {
+        is_valid_size(contents, <span class="self">self</span>.size).then(|| {
             <span class="kw">let </span>index = contents.len() - <span class="self">self</span>.size <span class="kw">as </span>usize;
 
             <span class="kw">if </span><span class="self">self</span>.remove {

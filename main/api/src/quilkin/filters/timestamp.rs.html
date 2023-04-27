@@ -206,29 +206,6 @@
 <span id="206">206</span>
 <span id="207">207</span>
 <span id="208">208</span>
-<span id="209">209</span>
-<span id="210">210</span>
-<span id="211">211</span>
-<span id="212">212</span>
-<span id="213">213</span>
-<span id="214">214</span>
-<span id="215">215</span>
-<span id="216">216</span>
-<span id="217">217</span>
-<span id="218">218</span>
-<span id="219">219</span>
-<span id="220">220</span>
-<span id="221">221</span>
-<span id="222">222</span>
-<span id="223">223</span>
-<span id="224">224</span>
-<span id="225">225</span>
-<span id="226">226</span>
-<span id="227">227</span>
-<span id="228">228</span>
-<span id="229">229</span>
-<span id="230">230</span>
-<span id="231">231</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -248,36 +225,11 @@
 </span><span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use </span>chrono::prelude::<span class="kw-2">*</span>;
-<span class="kw">use </span>once_cell::sync::Lazy;
-<span class="kw">use </span>prometheus::HistogramVec;
 
-<span class="kw">use crate</span>::{
-    filters::prelude::<span class="kw-2">*</span>,
-    metadata::Value,
-    metrics::{
-        histogram_opts, registry, BUCKET_COUNT, BUCKET_FACTOR, BUCKET_START, DIRECTION_LABEL,
-        METADATA_KEY_LABEL, READ_DIRECTION_LABEL, WRITE_DIRECTION_LABEL,
-    },
-};
+<span class="kw">use crate</span>::{filters::prelude::<span class="kw-2">*</span>, metadata::Value, metrics::Direction};
 
 <span class="macro">crate::include_proto!</span>(<span class="string">&quot;quilkin.filters.timestamp.v1alpha1&quot;</span>);
 <span class="kw">use </span><span class="self">self</span>::quilkin::filters::timestamp::v1alpha1 <span class="kw">as </span>proto;
-
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">static </span>METRIC: Lazy&lt;HistogramVec&gt; = Lazy::new(|| {
-    <span class="macro">prometheus::register_histogram_vec_with_registry! </span>{
-        histogram_opts(
-            <span class="string">&quot;seconds&quot;</span>,
-            SUBSYSTEM,
-            <span class="string">&quot;The duration of seconds of the `metadata_key` metric&quot;</span>,
-            prometheus::exponential_buckets(BUCKET_START, BUCKET_FACTOR, BUCKET_COUNT).unwrap(),
-        ),
-        <span class="kw-2">&amp;</span>[METADATA_KEY_LABEL, DIRECTION_LABEL],
-        registry(),
-    }
-    .unwrap()
-});
-
-<span class="kw">const </span>SUBSYSTEM: <span class="kw-2">&amp;</span>str = <span class="string">&quot;filters_timestamp&quot;</span>;
 
 <span class="doccomment">/// A filter that reads a metadata value as a timestamp to be observed in
 /// a histogram.
@@ -289,11 +241,7 @@
 <span class="kw">impl </span>Timestamp {
     <span class="doccomment">/// Observes the duration since a timestamp stored in `metadata` and now,
     /// if present.
-    </span><span class="kw">pub fn </span>observe(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        metadata: <span class="kw-2">&amp;</span><span class="kw">crate</span>::metadata::DynamicMetadata,
-        direction_label: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
-    ) {
+    </span><span class="kw">pub fn </span>observe(<span class="kw-2">&amp;</span><span class="self">self</span>, metadata: <span class="kw-2">&amp;</span><span class="kw">crate</span>::metadata::DynamicMetadata, direction: Direction) {
         <span class="kw">let </span>value = metadata
             .get(<span class="kw-2">&amp;</span><span class="self">self</span>.config.metadata_key)
             .and_then(|item| <span class="kw">match </span>item {
@@ -324,11 +272,17 @@
 
         <span class="kw">let </span>now = Utc::now();
         <span class="kw">let </span>seconds = now.signed_duration_since(datetime).num_seconds();
-        <span class="self">self</span>.metric(direction_label).observe(seconds <span class="kw">as </span>f64);
+        <span class="self">self</span>.metric(direction).observe(seconds <span class="kw">as </span>f64);
     }
 
-    <span class="kw">fn </span>metric(<span class="kw-2">&amp;</span><span class="self">self</span>, direction_label: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str) -&gt; prometheus::Histogram {
-        METRIC.with_label_values(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="self">self</span>.config.metadata_key.to_string(), direction_label])
+    <span class="kw">fn </span>metric(<span class="kw-2">&amp;</span><span class="self">self</span>, direction: Direction) -&gt; prometheus::Histogram {
+        <span class="kw">crate</span>::filters::metrics::histogram(
+            Timestamp::NAME,
+            <span class="string">&quot;duration&quot;</span>,
+            <span class="string">&quot;duration in seconds of time since the timestamp in metadata compared to now&quot;</span>,
+            direction,
+            <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;*</span><span class="self">self</span>.config.metadata_key.to_string()],
+        )
     }
 }
 
@@ -351,12 +305,12 @@
 <span class="attribute">#[async_trait::async_trait]
 </span><span class="kw">impl </span>Filter <span class="kw">for </span>Timestamp {
     <span class="kw">async fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
-        <span class="self">self</span>.observe(<span class="kw-2">&amp;</span>ctx.metadata, READ_DIRECTION_LABEL);
+        <span class="self">self</span>.observe(<span class="kw-2">&amp;</span>ctx.metadata, Direction::Read);
         <span class="prelude-val">Ok</span>(())
     }
 
     <span class="kw">async fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
-        <span class="self">self</span>.observe(<span class="kw-2">&amp;</span>ctx.metadata, WRITE_DIRECTION_LABEL);
+        <span class="self">self</span>.observe(<span class="kw-2">&amp;</span>ctx.metadata, Direction::Write);
         <span class="prelude-val">Ok</span>(())
     }
 }
@@ -429,7 +383,7 @@
 
         filter.read(<span class="kw-2">&amp;mut </span>ctx).<span class="kw">await</span>.unwrap();
 
-        <span class="macro">assert_eq!</span>(<span class="number">1</span>, filter.metric(READ_DIRECTION_LABEL).get_sample_count());
+        <span class="macro">assert_eq!</span>(<span class="number">1</span>, filter.metric(Direction::Read).get_sample_count());
     }
 
     <span class="attribute">#[tokio::test]
@@ -457,7 +411,7 @@
         capture.read(<span class="kw-2">&amp;mut </span>ctx).<span class="kw">await</span>.unwrap();
         timestamp.read(<span class="kw-2">&amp;mut </span>ctx).<span class="kw">await</span>.unwrap();
 
-        <span class="macro">assert_eq!</span>(<span class="number">1</span>, timestamp.metric(READ_DIRECTION_LABEL).get_sample_count());
+        <span class="macro">assert_eq!</span>(<span class="number">1</span>, timestamp.metric(Direction::Read).get_sample_count());
     }
 }
 </code></pre></div>

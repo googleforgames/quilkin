@@ -251,7 +251,25 @@ client.</li>
 </li>
 </ul>
 <h2 id="filter-metrics"><a class="header" href="#filter-metrics">Filter Metrics</a></h2>
+<p>Quilkin's filters use a set of generic metric keys, to make it easier to build visualisations that can account for
+a dynamic set of filters that can be added, removed, or updated at runtime with different configurations. All of
+these metrics share a common set of labels.</p>
+<div class="table-wrapper"><table><thead><tr><th>Label</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>id</code></td><td>The ID of the filter that used the metric.</td></tr>
+<tr><td><code>label</code></td><td>The name of the metric being measured.</td></tr>
+<tr><td><code>help</code></td><td>The description of the filter metric.</td></tr>
+<tr><td><code>direction</code></td><td>The direction of packet flow (e.g. read/write).</td></tr>
+</tbody></table>
+</div>
 <ul>
+<li>
+<p><code>quilkin_filter_int_counter{id, label, help, direction}</code>
+Generic filter counter, see help label for more specific info.</p>
+</li>
+<li>
+<p><code>quilkin_filter_histogram{id, label, help, direction, shared_metadata_1}</code>
+generic filter histogram, see help label for more specific info.</p>
+</li>
 <li>
 <p><code>quilkin_filter_read_duration_seconds{filter}</code></p>
 <p>The duration it took for a <code>filter</code>'s <code>read</code> implementation to execute.</p>
@@ -267,8 +285,6 @@ client.</li>
 </ul>
 </li>
 </ul>
-<p>Each individual Filter can also expose it's own metrics. See the
-<a href="./filters.html#built-in-filters">list of build in Filters</a> for more details.</p>
 
                     </main>
 

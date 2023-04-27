@@ -48,6 +48,15 @@
 <span id="48">48</span>
 <span id="49">49</span>
 <span id="50">50</span>
+<span id="51">51</span>
+<span id="52">52</span>
+<span id="53">53</span>
+<span id="54">54</span>
+<span id="55">55</span>
+<span id="56">56</span>
+<span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -63,39 +72,48 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-</span><span class="kw">use </span>prometheus::{
-    core::{AtomicU64, GenericCounter},
-    IntCounter, <span class="prelude-ty">Result </span><span class="kw">as </span>MetricsResult,
-};
 
-<span class="kw">use </span><span class="kw">crate</span>::metrics::{filter_opts, CollectorExt};
+</span><span class="kw">use </span>prometheus::IntCounter;
+
+<span class="kw">use crate</span>::{
+    filters::{metrics, StaticFilter},
+    metrics::Direction,
+};
 
 <span class="doccomment">/// Register and manage metrics for this filter
 </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>Metrics {
-    <span class="kw">pub</span>(<span class="kw">super</span>) compressed_bytes_total: GenericCounter&lt;AtomicU64&gt;,
-    <span class="kw">pub</span>(<span class="kw">super</span>) decompressed_bytes_total: GenericCounter&lt;AtomicU64&gt;,
+    <span class="kw">pub</span>(<span class="kw">super</span>) read_compressed_bytes_total: IntCounter,
+    <span class="kw">pub</span>(<span class="kw">super</span>) read_decompressed_bytes_total: IntCounter,
+    <span class="kw">pub</span>(<span class="kw">super</span>) write_compressed_bytes_total: IntCounter,
+    <span class="kw">pub</span>(<span class="kw">super</span>) write_decompressed_bytes_total: IntCounter,
+}
+
+<span class="kw">fn </span>compressed_bytes_total(direction: Direction) -&gt; IntCounter {
+    metrics::counter(
+        <span class="kw">super</span>::Compress::NAME,
+        <span class="string">&quot;compressed_bytes_total&quot;</span>,
+        <span class="string">&quot;Total number of compressed bytes either received or sent.&quot;</span>,
+        direction,
+    )
+}
+
+<span class="kw">fn </span>decompressed_bytes_total(direction: Direction) -&gt; IntCounter {
+    metrics::counter(
+        <span class="kw">super</span>::Compress::NAME,
+        <span class="string">&quot;decompressed_bytes_total&quot;</span>,
+        <span class="string">&quot;Total number of decompressed bytes either received or sent.&quot;</span>,
+        direction,
+    )
 }
 
 <span class="kw">impl </span>Metrics {
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>new() -&gt; MetricsResult&lt;<span class="self">Self</span>&gt; {
-        <span class="kw">let </span>decompressed_bytes_total = IntCounter::with_opts(filter_opts(
-            <span class="string">&quot;decompressed_bytes_total&quot;</span>,
-            <span class="string">&quot;Compress&quot;</span>,
-            <span class="string">&quot;Total number of decompressed bytes either received or sent.&quot;</span>,
-        ))<span class="question-mark">?
-        </span>.register_if_not_exists()<span class="question-mark">?</span>;
-
-        <span class="kw">let </span>compressed_bytes_total = IntCounter::with_opts(filter_opts(
-            <span class="string">&quot;compressed_bytes_total&quot;</span>,
-            <span class="string">&quot;Compress&quot;</span>,
-            <span class="string">&quot;Total number of compressed bytes either received or sent.&quot;</span>,
-        ))<span class="question-mark">?
-        </span>.register_if_not_exists()<span class="question-mark">?</span>;
-
-        <span class="prelude-val">Ok</span>(Metrics {
-            compressed_bytes_total,
-            decompressed_bytes_total,
-        })
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>new() -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            read_compressed_bytes_total: compressed_bytes_total(Direction::Read),
+            read_decompressed_bytes_total: decompressed_bytes_total(Direction::Read),
+            write_compressed_bytes_total: compressed_bytes_total(Direction::Write),
+            write_decompressed_bytes_total: decompressed_bytes_total(Direction::Write),
+        }
     }
 }
 </code></pre></div>
