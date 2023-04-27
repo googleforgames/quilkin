@@ -62,10 +62,10 @@ impl Filter for Compress {
             Action::Compress => match self.compressor.encode(&mut ctx.contents) {
                 Ok(()) => {
                     self.metrics
-                        .decompressed_bytes_total
+                        .read_decompressed_bytes_total
                         .inc_by(original_size as u64);
                     self.metrics
-                        .compressed_bytes_total
+                        .read_compressed_bytes_total
                         .inc_by(ctx.contents.len() as u64);
                     Ok(())
                 }
@@ -74,10 +74,10 @@ impl Filter for Compress {
             Action::Decompress => match self.compressor.decode(&mut ctx.contents) {
                 Ok(()) => {
                     self.metrics
-                        .compressed_bytes_total
+                        .read_compressed_bytes_total
                         .inc_by(original_size as u64);
                     self.metrics
-                        .decompressed_bytes_total
+                        .read_decompressed_bytes_total
                         .inc_by(ctx.contents.len() as u64);
                     Ok(())
                 }
@@ -94,10 +94,10 @@ impl Filter for Compress {
             Action::Compress => match self.compressor.encode(&mut ctx.contents) {
                 Ok(()) => {
                     self.metrics
-                        .decompressed_bytes_total
+                        .write_decompressed_bytes_total
                         .inc_by(original_size as u64);
                     self.metrics
-                        .compressed_bytes_total
+                        .write_compressed_bytes_total
                         .inc_by(ctx.contents.len() as u64);
                     Ok(())
                 }
@@ -106,10 +106,10 @@ impl Filter for Compress {
             Action::Decompress => match self.compressor.decode(&mut ctx.contents) {
                 Ok(()) => {
                     self.metrics
-                        .compressed_bytes_total
+                        .write_compressed_bytes_total
                         .inc_by(original_size as u64);
                     self.metrics
-                        .decompressed_bytes_total
+                        .write_decompressed_bytes_total
                         .inc_by(ctx.contents.len() as u64);
                     Ok(())
                 }
@@ -129,7 +129,7 @@ impl StaticFilter for Compress {
     fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, CreationError> {
         Ok(Compress::new(
             Self::ensure_config_exists(config)?,
-            Metrics::new()?,
+            Metrics::new(),
         ))
     }
 }
@@ -171,7 +171,7 @@ mod tests {
                 on_read: Action::Compress,
                 on_write: Action::Decompress,
             },
-            Metrics::new().unwrap(),
+            Metrics::new(),
         );
         let expected = contents_fixture();
 
@@ -193,14 +193,6 @@ mod tests {
             expected.len(),
             read_context.contents.len()
         );
-        assert_eq!(
-            expected.len() as u64,
-            compress.metrics.decompressed_bytes_total.get()
-        );
-        assert_eq!(
-            read_context.contents.len() as u64,
-            compress.metrics.compressed_bytes_total.get()
-        );
 
         // write decompress
         let mut write_context = WriteContext::new(
@@ -216,40 +208,6 @@ mod tests {
             .expect("should decompress");
 
         assert_eq!(expected, &*write_context.contents);
-
-        // multiply by two, because data was sent both upstream and downstream
-        assert_eq!(
-            (read_context.contents.len() * 2) as u64,
-            compress.metrics.compressed_bytes_total.get()
-        );
-        assert_eq!(
-            (expected.len() * 2) as u64,
-            compress.metrics.decompressed_bytes_total.get()
-        );
-    }
-
-    #[tokio::test]
-    async fn downstream() {
-        let compress = Compress::new(
-            Config {
-                mode: Default::default(),
-                on_read: Action::Decompress,
-                on_write: Action::Compress,
-            },
-            Metrics::new().unwrap(),
-        );
-
-        let (expected, compressed) = assert_downstream(&compress).await;
-
-        // multiply by two, because data was sent both downstream and upstream
-        assert_eq!(
-            (compressed.len() * 2) as u64,
-            compress.metrics.compressed_bytes_total.get()
-        );
-        assert_eq!(
-            (expected.len() * 2) as u64,
-            compress.metrics.decompressed_bytes_total.get()
-        );
     }
 
     #[tokio::test]
@@ -260,7 +218,7 @@ mod tests {
                 on_read: Action::Compress,
                 on_write: Action::Decompress,
             },
-            Metrics::new().unwrap(),
+            Metrics::new(),
         );
 
         assert!(compression
@@ -279,7 +237,7 @@ mod tests {
                 on_read: Action::Decompress,
                 on_write: Action::Compress,
             },
-            Metrics::new().unwrap(),
+            Metrics::new(),
         );
 
         assert!(compression
@@ -290,9 +248,6 @@ mod tests {
             ))
             .await
             .is_err());
-
-        assert_eq!(0, compression.metrics.compressed_bytes_total.get());
-        assert_eq!(0, compression.metrics.decompressed_bytes_total.get());
     }
 
     #[tokio::test]
@@ -303,7 +258,7 @@ mod tests {
                 on_read: Action::default(),
                 on_write: Action::default(),
             },
-            Metrics::new().unwrap(),
+            Metrics::new(),
         );
 
         let mut read_context = ReadContext::new(

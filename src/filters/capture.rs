@@ -16,14 +16,13 @@
 
 mod affix;
 mod config;
-mod metrics;
 mod regex;
 
 crate::include_proto!("quilkin.filters.capture.v1alpha1");
 
 use crate::{filters::prelude::*, metadata};
 
-use self::{metrics::Metrics, quilkin::filters::capture::v1alpha1 as proto};
+use self::quilkin::filters::capture::v1alpha1 as proto;
 
 pub use self::{
     affix::{Prefix, Suffix},
@@ -35,22 +34,19 @@ pub use self::{
 pub trait CaptureStrategy {
     /// Capture packet data from the contents, and optionally returns a value if
     /// anything was captured.
-    fn capture(&self, contents: &mut Vec<u8>, metrics: &Metrics) -> Option<metadata::Value>;
+    fn capture(&self, contents: &mut Vec<u8>) -> Option<metadata::Value>;
 }
 
 pub struct Capture {
     capture: Box<dyn CaptureStrategy + Sync + Send>,
-    /// metrics reporter for this filter.
-    metrics: Metrics,
     metadata_key: metadata::Key,
     is_present_key: metadata::Key,
 }
 
 impl Capture {
-    fn new(config: Config, metrics: Metrics) -> Self {
+    fn new(config: Config) -> Self {
         Self {
             capture: config.strategy.into_capture(),
-            metrics,
             is_present_key: (config.metadata_key.to_string() + "/is_present").into(),
             metadata_key: config.metadata_key,
         }
@@ -61,7 +57,7 @@ impl Capture {
 impl Filter for Capture {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
     async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
-        let capture = self.capture.capture(&mut ctx.contents, &self.metrics);
+        let capture = self.capture.capture(&mut ctx.contents);
         ctx.metadata.insert(
             self.is_present_key,
             metadata::Value::Bool(capture.is_some()),
@@ -84,10 +80,7 @@ impl StaticFilter for Capture {
     type BinaryConfiguration = proto::Capture;
 
     fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, CreationError> {
-        Ok(Capture::new(
-            Self::ensure_config_exists(config)?,
-            Metrics::new()?,
-        ))
+        Ok(Capture::new(Self::ensure_config_exists(config)?))
     }
 }
 
@@ -174,9 +167,6 @@ mod tests {
             ))
             .await
             .is_err());
-
-        let count = filter.metrics.packets_dropped_total.get();
-        assert_eq!(1, count);
     }
 
     #[tokio::test]
@@ -194,51 +184,48 @@ mod tests {
 
     #[test]
     fn regex_capture() {
-        let metrics = Metrics::new().unwrap();
         let end = Regex {
             pattern: ::regex::bytes::Regex::new(".{3}$").unwrap(),
         };
         let mut contents = b"helloabc".to_vec();
-        let result = end.capture(&mut contents, &metrics).unwrap();
+        let result = end.capture(&mut contents).unwrap();
         assert_eq!(Value::Bytes(b"abc".to_vec().into()), result);
         assert_eq!(b"helloabc".to_vec(), contents);
     }
 
     #[test]
     fn end_capture() {
-        let metrics = Metrics::new().unwrap();
         let mut end = Suffix {
             size: 3,
             remove: false,
         };
         let mut contents = b"helloabc".to_vec();
-        let result = end.capture(&mut contents, &metrics).unwrap();
+        let result = end.capture(&mut contents).unwrap();
         assert_eq!(Value::Bytes(b"abc".to_vec().into()), result);
         assert_eq!(b"helloabc".to_vec(), contents);
 
         end.remove = true;
 
-        let result = end.capture(&mut contents, &metrics).unwrap();
+        let result = end.capture(&mut contents).unwrap();
         assert_eq!(Value::Bytes(b"abc".to_vec().into()), result);
         assert_eq!(b"hello".to_vec(), contents);
     }
 
     #[test]
     fn beginning_capture() {
-        let metrics = Metrics::new().unwrap();
         let mut beg = Prefix {
             size: 3,
             remove: false,
         };
         let mut contents = b"abchello".to_vec();
 
-        let result = beg.capture(&mut contents, &metrics);
+        let result = beg.capture(&mut contents);
         assert_eq!(Some(Value::Bytes(b"abc".to_vec().into())), result);
         assert_eq!(b"abchello".to_vec(), contents);
 
         beg.remove = true;
 
-        let result = beg.capture(&mut contents, &metrics);
+        let result = beg.capture(&mut contents);
         assert_eq!(Some(Value::Bytes(b"abc".to_vec().into())), result);
         assert_eq!(b"hello".to_vec(), contents);
     }

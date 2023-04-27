@@ -13,38 +13,47 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-use prometheus::{
-    core::{AtomicU64, GenericCounter},
-    IntCounter, Result as MetricsResult,
-};
 
-use crate::metrics::{filter_opts, CollectorExt};
+use prometheus::IntCounter;
+
+use crate::{
+    filters::{metrics, StaticFilter},
+    metrics::Direction,
+};
 
 /// Register and manage metrics for this filter
 pub(super) struct Metrics {
-    pub(super) compressed_bytes_total: GenericCounter<AtomicU64>,
-    pub(super) decompressed_bytes_total: GenericCounter<AtomicU64>,
+    pub(super) read_compressed_bytes_total: IntCounter,
+    pub(super) read_decompressed_bytes_total: IntCounter,
+    pub(super) write_compressed_bytes_total: IntCounter,
+    pub(super) write_decompressed_bytes_total: IntCounter,
+}
+
+fn compressed_bytes_total(direction: Direction) -> IntCounter {
+    metrics::counter(
+        super::Compress::NAME,
+        "compressed_bytes_total",
+        "Total number of compressed bytes either received or sent.",
+        direction,
+    )
+}
+
+fn decompressed_bytes_total(direction: Direction) -> IntCounter {
+    metrics::counter(
+        super::Compress::NAME,
+        "decompressed_bytes_total",
+        "Total number of decompressed bytes either received or sent.",
+        direction,
+    )
 }
 
 impl Metrics {
-    pub(super) fn new() -> MetricsResult<Self> {
-        let decompressed_bytes_total = IntCounter::with_opts(filter_opts(
-            "decompressed_bytes_total",
-            "Compress",
-            "Total number of decompressed bytes either received or sent.",
-        ))?
-        .register_if_not_exists()?;
-
-        let compressed_bytes_total = IntCounter::with_opts(filter_opts(
-            "compressed_bytes_total",
-            "Compress",
-            "Total number of compressed bytes either received or sent.",
-        ))?
-        .register_if_not_exists()?;
-
-        Ok(Metrics {
-            compressed_bytes_total,
-            decompressed_bytes_total,
-        })
+    pub(super) fn new() -> Self {
+        Self {
+            read_compressed_bytes_total: compressed_bytes_total(Direction::Read),
+            read_decompressed_bytes_total: decompressed_bytes_total(Direction::Read),
+            write_compressed_bytes_total: compressed_bytes_total(Direction::Write),
+            write_decompressed_bytes_total: decompressed_bytes_total(Direction::Write),
+        }
     }
 }

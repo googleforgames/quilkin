@@ -17,36 +17,11 @@
 use std::sync::Arc;
 
 use chrono::prelude::*;
-use once_cell::sync::Lazy;
-use prometheus::HistogramVec;
 
-use crate::{
-    filters::prelude::*,
-    metadata::Value,
-    metrics::{
-        histogram_opts, registry, BUCKET_COUNT, BUCKET_FACTOR, BUCKET_START, DIRECTION_LABEL,
-        METADATA_KEY_LABEL, READ_DIRECTION_LABEL, WRITE_DIRECTION_LABEL,
-    },
-};
+use crate::{filters::prelude::*, metadata::Value, metrics::Direction};
 
 crate::include_proto!("quilkin.filters.timestamp.v1alpha1");
 use self::quilkin::filters::timestamp::v1alpha1 as proto;
-
-pub(crate) static METRIC: Lazy<HistogramVec> = Lazy::new(|| {
-    prometheus::register_histogram_vec_with_registry! {
-        histogram_opts(
-            "seconds",
-            SUBSYSTEM,
-            "The duration of seconds of the `metadata_key` metric",
-            prometheus::exponential_buckets(BUCKET_START, BUCKET_FACTOR, BUCKET_COUNT).unwrap(),
-        ),
-        &[METADATA_KEY_LABEL, DIRECTION_LABEL],
-        registry(),
-    }
-    .unwrap()
-});
-
-const SUBSYSTEM: &str = "filters_timestamp";
 
 /// A filter that reads a metadata value as a timestamp to be observed in
 /// a histogram.
@@ -58,11 +33,7 @@ pub struct Timestamp {
 impl Timestamp {
     /// Observes the duration since a timestamp stored in `metadata` and now,
     /// if present.
-    pub fn observe(
-        &self,
-        metadata: &crate::metadata::DynamicMetadata,
-        direction_label: &'static str,
-    ) {
+    pub fn observe(&self, metadata: &crate::metadata::DynamicMetadata, direction: Direction) {
         let value = metadata
             .get(&self.config.metadata_key)
             .and_then(|item| match item {
@@ -93,11 +64,17 @@ impl Timestamp {
 
         let now = Utc::now();
         let seconds = now.signed_duration_since(datetime).num_seconds();
-        self.metric(direction_label).observe(seconds as f64);
+        self.metric(direction).observe(seconds as f64);
     }
 
-    fn metric(&self, direction_label: &'static str) -> prometheus::Histogram {
-        METRIC.with_label_values(&[&self.config.metadata_key.to_string(), direction_label])
+    fn metric(&self, direction: Direction) -> prometheus::Histogram {
+        crate::filters::metrics::histogram(
+            Timestamp::NAME,
+            "duration",
+            "duration in seconds of time since the timestamp in metadata compared to now",
+            direction,
+            &[&*self.config.metadata_key.to_string()],
+        )
     }
 }
 
@@ -120,12 +97,12 @@ impl TryFrom<Config> for Timestamp {
 #[async_trait::async_trait]
 impl Filter for Timestamp {
     async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
-        self.observe(&ctx.metadata, READ_DIRECTION_LABEL);
+        self.observe(&ctx.metadata, Direction::Read);
         Ok(())
     }
 
     async fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
-        self.observe(&ctx.metadata, WRITE_DIRECTION_LABEL);
+        self.observe(&ctx.metadata, Direction::Write);
         Ok(())
     }
 }
@@ -198,7 +175,7 @@ mod tests {
 
         filter.read(&mut ctx).await.unwrap();
 
-        assert_eq!(1, filter.metric(READ_DIRECTION_LABEL).get_sample_count());
+        assert_eq!(1, filter.metric(Direction::Read).get_sample_count());
     }
 
     #[tokio::test]
@@ -226,6 +203,6 @@ mod tests {
         capture.read(&mut ctx).await.unwrap();
         timestamp.read(&mut ctx).await.unwrap();
 
-        assert_eq!(1, timestamp.metric(READ_DIRECTION_LABEL).get_sample_count());
+        assert_eq!(1, timestamp.metric(Direction::Read).get_sample_count());
     }
 }

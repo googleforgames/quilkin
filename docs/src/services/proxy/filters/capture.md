@@ -56,10 +56,4 @@ clusters:
 {{#include ../../../../../target/quilkin.filters.capture.v1alpha1.yaml}}
 ```
 
-## Metrics
-
-* `quilkin_filter_Capture_packets_dropped_total`
-  A counter of the total number of packets that have been dropped due to their length being less than the configured
-  `size`.
-
 [filter-dynamic-metadata]: ../filters.md#filter-dynamic-metadata

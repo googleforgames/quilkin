@@ -14,19 +14,16 @@
  * limitations under the License.
  */
 
-use crate::xds as envoy;
-
-crate::include_proto!("quilkin.filters.matches.v1alpha1");
-
 mod config;
 mod metrics;
 
-use crate::{filters::prelude::*, metadata};
+use crate::{filters::prelude::*, metadata, xds as envoy};
 
-use self::quilkin::filters::matches::v1alpha1 as proto;
-use crate::filters::r#match::metrics::Metrics;
+use self::{metrics::Metrics, quilkin::filters::matches::v1alpha1 as proto};
 
 pub use self::config::{Branch, Config, DirectionalConfig, Fallthrough};
+
+crate::include_proto!("quilkin.filters.matches.v1alpha1");
 
 struct ConfigInstance {
     metadata_key: metadata::Key,
@@ -159,7 +156,7 @@ impl StaticFilter for Match {
     type BinaryConfiguration = proto::Match;
 
     fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, CreationError> {
-        Self::new(Self::ensure_config_exists(config)?, Metrics::new()?)
+        Self::new(Self::ensure_config_exists(config)?, Metrics::new())
     }
 }
 
@@ -171,7 +168,7 @@ mod tests {
 
     #[tokio::test]
     async fn metrics() {
-        let metrics = Metrics::new().unwrap();
+        let metrics = Metrics::new();
         let key = crate::metadata::Key::from_static("myapp.com/token");
         let config = Config {
             on_read: Some(DirectionalConfig {
