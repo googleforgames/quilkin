@@ -49,7 +49,11 @@ impl Default for Relay {
 }
 
 impl Relay {
-    pub async fn relay(&self, config: Arc<Config>) -> crate::Result<()> {
+    pub async fn relay(
+        &self,
+        config: Arc<Config>,
+        mut shutdown_rx: tokio::sync::watch::Receiver<()>,
+    ) -> crate::Result<()> {
         let xds_server = crate::xds::server::spawn(self.xds_port, config.clone());
         let mds_server = tokio::spawn(crate::xds::server::control_plane_discovery_server(
             self.mds_port,
@@ -112,6 +116,7 @@ impl Relay {
             result = mds_server => {
                 result?
             }
+            result = shutdown_rx.changed() => result.map_err(From::from),
         }
     }
 }
