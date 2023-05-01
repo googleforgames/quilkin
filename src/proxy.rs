@@ -23,6 +23,7 @@ use tokio::{net::UdpSocket, sync::watch};
 use crate::{
     endpoint::{Endpoint, EndpointAddress},
     filters::{Filter, ReadContext},
+    protocol::Protocol,
     ttl_map::TryResult,
     utils::debug,
     Config,
@@ -34,6 +35,7 @@ pub use sessions::{Session, SessionArgs, SessionKey, SessionMap};
 #[derive(Debug)]
 struct DownstreamPacket {
     source: EndpointAddress,
+    received_at: i64,
     contents: Vec<u8>,
 }
 
@@ -73,7 +75,15 @@ impl DownstreamReceiveWorkerConfig {
                 tokio::select! {
                     result = socket.recv_from(&mut buf) => {
                         match result {
-                            Ok((size, source)) => Self::spawn_process_task(&buf, size, source, worker_id, &socket, &config, &sessions),
+                            Ok((size, source)) => {
+                                let packet = DownstreamPacket {
+                                    received_at: chrono::Utc::now().timestamp_nanos(),
+                                    source: source.into(),
+                                    contents: buf[..size].to_vec(),
+                                };
+
+                                Self::spawn_process_task(packet, source, worker_id, &socket, &config, &sessions)
+                            }
                             Err(error) => {
                                 tracing::error!(%error, "error receiving packet");
                                 return;
@@ -91,48 +101,45 @@ impl DownstreamReceiveWorkerConfig {
 
     #[inline]
     fn spawn_process_task(
-        buf: &[u8],
-        size: usize,
+        packet: DownstreamPacket,
         source: std::net::SocketAddr,
         worker_id: usize,
         socket: &Arc<UdpSocket>,
         config: &Arc<Config>,
         sessions: &SessionMap,
     ) {
-        let contents = buf[..size].to_vec();
-
         tracing::trace!(
             id = worker_id,
-            size = size,
+            size = packet.contents.len(),
             source = %source,
-            contents=&*debug::bytes_to_string(&contents),
+            contents=&*debug::bytes_to_string(&packet.contents),
             "received packet from downstream"
         );
 
-        let packet = DownstreamPacket {
-            source: source.into(),
-            contents,
-        };
-        let config = config.clone();
-        let sessions = sessions.clone();
-        let socket = socket.clone();
+        tokio::spawn({
+            let config = config.clone();
+            let sessions = sessions.clone();
+            let socket = socket.clone();
 
-        tokio::spawn(async move {
-            let timer = crate::metrics::processing_time(crate::metrics::READ).start_timer();
+            async move {
+                let timer = crate::metrics::processing_time(crate::metrics::READ).start_timer();
 
-            match Self::process_downstream_received_packet(packet, config, socket, sessions).await {
-                Ok(size) => {
-                    crate::metrics::packets_total(crate::metrics::READ).inc();
-                    crate::metrics::bytes_total(crate::metrics::READ).inc_by(size as u64);
+                match Self::process_downstream_received_packet(packet, config, socket, sessions)
+                    .await
+                {
+                    Ok(size) => {
+                        crate::metrics::packets_total(crate::metrics::READ).inc();
+                        crate::metrics::bytes_total(crate::metrics::READ).inc_by(size as u64);
+                    }
+                    Err(error) => {
+                        let source = error.to_string();
+                        crate::metrics::errors_total(crate::metrics::READ, &source).inc();
+                        crate::metrics::packets_dropped_total(crate::metrics::READ, &source).inc();
+                    }
                 }
-                Err(error) => {
-                    let source = error.to_string();
-                    crate::metrics::errors_total(crate::metrics::READ, &source).inc();
-                    crate::metrics::packets_dropped_total(crate::metrics::READ, &source).inc();
-                }
+
+                timer.stop_and_record();
             }
-
-            timer.stop_and_record();
         });
     }
 
@@ -143,6 +150,10 @@ impl DownstreamReceiveWorkerConfig {
         downstream_socket: Arc<UdpSocket>,
         sessions: SessionMap,
     ) -> Result<usize, PipelineError> {
+        if let Some(command) = Protocol::parse(&packet.contents)? {
+            return Self::process_control_packet(packet, command, downstream_socket).await;
+        }
+
         let endpoints: Vec<_> = config.clusters.value().endpoints().collect();
         if endpoints.is_empty() {
             return Err(PipelineError::NoUpstreamEndpoints);
@@ -166,6 +177,29 @@ impl DownstreamReceiveWorkerConfig {
         }
 
         Ok(bytes_written)
+    }
+
+    async fn process_control_packet(
+        packet: DownstreamPacket,
+        command: Protocol,
+        downstream_socket: Arc<UdpSocket>,
+    ) -> Result<usize, PipelineError> {
+        match command {
+            Protocol::Ping {
+                client_timestamp,
+                nonce,
+            } => downstream_socket
+                .send_to(
+                    &Protocol::ping_reply(nonce, client_timestamp, packet.received_at).encode(),
+                    packet.source.to_socket_addr().await?,
+                )
+                .await
+                .map_err(From::from),
+            Protocol::PingReply { .. } => {
+                tracing::warn!("received unsupported ping reply");
+                Ok(0)
+            }
+        }
     }
 
     /// Send a packet received from `recv_addr` to an endpoint.
@@ -215,6 +249,8 @@ pub enum PipelineError {
     SessionMapLocked,
     #[error("filter {0}")]
     Filter(#[from] crate::filters::FilterError),
+    #[error("qcmp: {0}")]
+    Qcmp(#[from] crate::protocol::Error),
     #[error("OS level error: {0}")]
     Io(#[from] std::io::Error),
 }
