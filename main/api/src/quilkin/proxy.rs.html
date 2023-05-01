@@ -218,6 +218,42 @@
 <span id="218">218</span>
 <span id="219">219</span>
 <span id="220">220</span>
+<span id="221">221</span>
+<span id="222">222</span>
+<span id="223">223</span>
+<span id="224">224</span>
+<span id="225">225</span>
+<span id="226">226</span>
+<span id="227">227</span>
+<span id="228">228</span>
+<span id="229">229</span>
+<span id="230">230</span>
+<span id="231">231</span>
+<span id="232">232</span>
+<span id="233">233</span>
+<span id="234">234</span>
+<span id="235">235</span>
+<span id="236">236</span>
+<span id="237">237</span>
+<span id="238">238</span>
+<span id="239">239</span>
+<span id="240">240</span>
+<span id="241">241</span>
+<span id="242">242</span>
+<span id="243">243</span>
+<span id="244">244</span>
+<span id="245">245</span>
+<span id="246">246</span>
+<span id="247">247</span>
+<span id="248">248</span>
+<span id="249">249</span>
+<span id="250">250</span>
+<span id="251">251</span>
+<span id="252">252</span>
+<span id="253">253</span>
+<span id="254">254</span>
+<span id="255">255</span>
+<span id="256">256</span>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -243,6 +279,7 @@
 <span class="kw">use crate</span>::{
     endpoint::{Endpoint, EndpointAddress},
     filters::{Filter, ReadContext},
+    protocol::Protocol,
     ttl_map::TryResult,
     utils::debug,
     Config,
@@ -254,6 +291,7 @@
 </span><span class="attribute">#[derive(Debug)]
 </span><span class="kw">struct </span>DownstreamPacket {
     source: EndpointAddress,
+    received_at: i64,
     contents: Vec&lt;u8&gt;,
 }
 
@@ -293,7 +331,15 @@
                 <span class="macro">tokio::select! </span>{
                     result = socket.recv_from(<span class="kw-2">&amp;mut </span>buf) =&gt; {
                         <span class="kw">match </span>result {
-                            <span class="prelude-val">Ok</span>((size, source)) =&gt; <span class="self">Self</span>::spawn_process_task(<span class="kw-2">&amp;</span>buf, size, source, worker_id, <span class="kw-2">&amp;</span>socket, <span class="kw-2">&amp;</span>config, <span class="kw-2">&amp;</span>sessions),
+                            <span class="prelude-val">Ok</span>((size, source)) =&gt; {
+                                <span class="kw">let </span>packet = DownstreamPacket {
+                                    received_at: chrono::Utc::now().timestamp_nanos(),
+                                    source: source.into(),
+                                    contents: buf[..size].to_vec(),
+                                };
+
+                                <span class="self">Self</span>::spawn_process_task(packet, source, worker_id, <span class="kw-2">&amp;</span>socket, <span class="kw-2">&amp;</span>config, <span class="kw-2">&amp;</span>sessions)
+                            }
                             <span class="prelude-val">Err</span>(error) =&gt; {
                                 <span class="macro">tracing::error!</span>(%error, <span class="string">&quot;error receiving packet&quot;</span>);
                                 <span class="kw">return</span>;
@@ -311,48 +357,45 @@
 
     <span class="attribute">#[inline]
     </span><span class="kw">fn </span>spawn_process_task(
-        buf: <span class="kw-2">&amp;</span>[u8],
-        size: usize,
+        packet: DownstreamPacket,
         source: std::net::SocketAddr,
         worker_id: usize,
         socket: <span class="kw-2">&amp;</span>Arc&lt;UdpSocket&gt;,
         config: <span class="kw-2">&amp;</span>Arc&lt;Config&gt;,
         sessions: <span class="kw-2">&amp;</span>SessionMap,
     ) {
-        <span class="kw">let </span>contents = buf[..size].to_vec();
-
         <span class="macro">tracing::trace!</span>(
             id = worker_id,
-            size = size,
+            size = packet.contents.len(),
             source = %source,
-            contents=<span class="kw-2">&amp;*</span>debug::bytes_to_string(<span class="kw-2">&amp;</span>contents),
+            contents=<span class="kw-2">&amp;*</span>debug::bytes_to_string(<span class="kw-2">&amp;</span>packet.contents),
             <span class="string">&quot;received packet from downstream&quot;
         </span>);
 
-        <span class="kw">let </span>packet = DownstreamPacket {
-            source: source.into(),
-            contents,
-        };
-        <span class="kw">let </span>config = config.clone();
-        <span class="kw">let </span>sessions = sessions.clone();
-        <span class="kw">let </span>socket = socket.clone();
+        tokio::spawn({
+            <span class="kw">let </span>config = config.clone();
+            <span class="kw">let </span>sessions = sessions.clone();
+            <span class="kw">let </span>socket = socket.clone();
 
-        tokio::spawn(<span class="kw">async move </span>{
-            <span class="kw">let </span>timer = <span class="kw">crate</span>::metrics::processing_time(<span class="kw">crate</span>::metrics::READ).start_timer();
+            <span class="kw">async move </span>{
+                <span class="kw">let </span>timer = <span class="kw">crate</span>::metrics::processing_time(<span class="kw">crate</span>::metrics::READ).start_timer();
 
-            <span class="kw">match </span><span class="self">Self</span>::process_downstream_received_packet(packet, config, socket, sessions).<span class="kw">await </span>{
-                <span class="prelude-val">Ok</span>(size) =&gt; {
-                    <span class="kw">crate</span>::metrics::packets_total(<span class="kw">crate</span>::metrics::READ).inc();
-                    <span class="kw">crate</span>::metrics::bytes_total(<span class="kw">crate</span>::metrics::READ).inc_by(size <span class="kw">as </span>u64);
+                <span class="kw">match </span><span class="self">Self</span>::process_downstream_received_packet(packet, config, socket, sessions)
+                    .<span class="kw">await
+                </span>{
+                    <span class="prelude-val">Ok</span>(size) =&gt; {
+                        <span class="kw">crate</span>::metrics::packets_total(<span class="kw">crate</span>::metrics::READ).inc();
+                        <span class="kw">crate</span>::metrics::bytes_total(<span class="kw">crate</span>::metrics::READ).inc_by(size <span class="kw">as </span>u64);
+                    }
+                    <span class="prelude-val">Err</span>(error) =&gt; {
+                        <span class="kw">let </span>source = error.to_string();
+                        <span class="kw">crate</span>::metrics::errors_total(<span class="kw">crate</span>::metrics::READ, <span class="kw-2">&amp;</span>source).inc();
+                        <span class="kw">crate</span>::metrics::packets_dropped_total(<span class="kw">crate</span>::metrics::READ, <span class="kw-2">&amp;</span>source).inc();
+                    }
                 }
-                <span class="prelude-val">Err</span>(error) =&gt; {
-                    <span class="kw">let </span>source = error.to_string();
-                    <span class="kw">crate</span>::metrics::errors_total(<span class="kw">crate</span>::metrics::READ, <span class="kw-2">&amp;</span>source).inc();
-                    <span class="kw">crate</span>::metrics::packets_dropped_total(<span class="kw">crate</span>::metrics::READ, <span class="kw-2">&amp;</span>source).inc();
-                }
+
+                timer.stop_and_record();
             }
-
-            timer.stop_and_record();
         });
     }
 
@@ -363,6 +406,10 @@
         downstream_socket: Arc&lt;UdpSocket&gt;,
         sessions: SessionMap,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;usize, PipelineError&gt; {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(command) = Protocol::parse(<span class="kw-2">&amp;</span>packet.contents)<span class="question-mark">? </span>{
+            <span class="kw">return </span><span class="self">Self</span>::process_control_packet(packet, command, downstream_socket).<span class="kw">await</span>;
+        }
+
         <span class="kw">let </span>endpoints: Vec&lt;<span class="kw">_</span>&gt; = config.clusters.value().endpoints().collect();
         <span class="kw">if </span>endpoints.is_empty() {
             <span class="kw">return </span><span class="prelude-val">Err</span>(PipelineError::NoUpstreamEndpoints);
@@ -386,6 +433,29 @@
         }
 
         <span class="prelude-val">Ok</span>(bytes_written)
+    }
+
+    <span class="kw">async fn </span>process_control_packet(
+        packet: DownstreamPacket,
+        command: Protocol,
+        downstream_socket: Arc&lt;UdpSocket&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;usize, PipelineError&gt; {
+        <span class="kw">match </span>command {
+            Protocol::Ping {
+                client_timestamp,
+                nonce,
+            } =&gt; downstream_socket
+                .send_to(
+                    <span class="kw-2">&amp;</span>Protocol::ping_reply(nonce, client_timestamp, packet.received_at).encode(),
+                    packet.source.to_socket_addr().<span class="kw">await</span><span class="question-mark">?</span>,
+                )
+                .<span class="kw">await
+                </span>.map_err(From::from),
+            Protocol::PingReply { .. } =&gt; {
+                <span class="macro">tracing::warn!</span>(<span class="string">&quot;received unsupported ping reply&quot;</span>);
+                <span class="prelude-val">Ok</span>(<span class="number">0</span>)
+            }
+        }
     }
 
     <span class="doccomment">/// Send a packet received from `recv_addr` to an endpoint.
@@ -435,6 +505,8 @@
     </span>SessionMapLocked,
     <span class="attribute">#[error(<span class="string">&quot;filter {0}&quot;</span>)]
     </span>Filter(<span class="attribute">#[from] </span><span class="kw">crate</span>::filters::FilterError),
+    <span class="attribute">#[error(<span class="string">&quot;qcmp: {0}&quot;</span>)]
+    </span>Qcmp(<span class="attribute">#[from] </span><span class="kw">crate</span>::protocol::Error),
     <span class="attribute">#[error(<span class="string">&quot;OS level error: {0}&quot;</span>)]
     </span>Io(<span class="attribute">#[from] </span>std::io::Error),
 }
