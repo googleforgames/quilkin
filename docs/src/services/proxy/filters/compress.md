@@ -54,13 +54,7 @@ Currently, this filter only provides the [Snappy](https://github.com/google/snap
 provided in the future.
 
 ### Metrics
-* `quilkin_filter_Compress_packets_dropped_total`
-  Total number of packets dropped as they could not be processed.
-    * Labels:
-      * `action`: The action that could not be completed successfully, thereby causing the packet to be dropped.
-        * `Compress`: Compressing the packet with the configured `mode` was attempted.
-        * `Decompress` Decompressing the packet with the configured `mode` was attempted.
-* `quilkin_filter_Compress_decompressed_bytes_total`
-  Total number of decompressed bytes either received or sent.
-* `quilkin_filter_Compress_compressed_bytes_total`
+* `quilkin_filter_int_counter{label="compressed_bytes_total"}`
   Total number of compressed bytes either received or sent.
+* `quilkin_filter_int_counter{label="decompressed_bytes_total"}`
+  Total number of decompressed bytes either received or sent.

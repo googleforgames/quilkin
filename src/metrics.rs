@@ -22,10 +22,6 @@ use prometheus::{
 
 pub use prometheus::Result;
 
-/// "metadata_key" is used as a label for metrics that can apply metrics based
-/// on specific metadata.
-pub const METADATA_KEY_LABEL: &str = "metadata_key";
-
 /// "event" is used as a label for Metrics that can apply to both Filter
 /// `read` and `write` executions.
 pub const DIRECTION_LABEL: &str = "event";
@@ -175,11 +171,6 @@ pub fn histogram_opts(
             .into()
             .unwrap_or_else(|| Vec::from(DEFAULT_BUCKETS as &'static [f64])),
     }
-}
-
-/// Create a generic metrics options for a filter.
-pub fn filter_opts(name: &str, filter_name: &str, description: &str) -> Opts {
-    opts(name, &format!("filter_{filter_name}"), description)
 }
 
 /// Registers the current metric collector with the provided registry.

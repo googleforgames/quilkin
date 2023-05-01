@@ -32,8 +32,3 @@ clusters:
 ```yaml
 {{#include ../../../../../target/quilkin.filters.debug.v1alpha1.yaml}}
 ```
-
-
-## Metrics
-
-This filter currently exports no metrics.

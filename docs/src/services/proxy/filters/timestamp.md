@@ -40,6 +40,6 @@ clusters:
 
 ## Metrics
 
-* `quilkin_filter_timestamp_seconds{metadata_key, direction}`
+* `quilkin_filter_histogram{label="duration"}`
   A histogram of durations from `metadata_key` to now in the packet `direction`.
 

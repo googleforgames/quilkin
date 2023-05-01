@@ -19,7 +19,7 @@ filters:
   - name: quilkin.filters.token_router.v1alpha1.TokenRouter
     config:
         metadataKey: myapp.com/myownkey
-clusters: 
+clusters:
   default:
     localities:
       - endpoints:
@@ -83,7 +83,7 @@ filters:
           size: 3
           remove: true
   - name: quilkin.filters.token_router.v1alpha1.TokenRouter
-clusters: 
+clusters:
   default:
     localities:
       - endpoints:
