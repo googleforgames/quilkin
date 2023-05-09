@@ -1,8 +1,9 @@
 # Proxy
 
-| services | ports | Protocol   |
-|----------|-------|------------|
-| proxy    | 7777  | UDP (IPv4) |
+| Services | Ports | Protocol           |
+|----------|-------|--------------------|
+| Proxy    | 7777  | UDP (IPv4)         |
+| QCMP     | 7600  | UDP (IPv4 && IPv6) |
 
 "Proxy" is the primary Quilkin service, which acts as a non-transparent UDP
 proxy.

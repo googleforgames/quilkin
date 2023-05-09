@@ -1,5 +1,9 @@
 # Quilkin Control Message Protocol (QCMP)
 
+| services | ports | Protocol |
+|----------|-------|-----------|
+| QCMP | 7600 | UDP (IPv4 && IPv6) |
+
 In addition to the TCP based administration API, Quilkin provides a meta API
 over UDP. The purpose of this API is to provide meta operations that can be
 used by untrusted clients. Currently the API is focuses on providing pings for
