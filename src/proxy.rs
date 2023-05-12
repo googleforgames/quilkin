@@ -18,7 +18,7 @@ mod sessions;
 
 use std::sync::Arc;
 
-use tokio::{net::UdpSocket, sync::watch};
+use tokio::net::UdpSocket;
 
 use crate::{
     endpoint::{Endpoint, EndpointAddress},
@@ -48,8 +48,6 @@ pub(crate) struct DownstreamReceiveWorkerConfig {
     pub socket: Arc<UdpSocket>,
     pub config: Arc<Config>,
     pub sessions: SessionMap,
-    /// The worker task exits when a value is received from this shutdown channel.
-    pub shutdown_rx: watch::Receiver<()>,
 }
 
 impl DownstreamReceiveWorkerConfig {
@@ -59,7 +57,6 @@ impl DownstreamReceiveWorkerConfig {
             socket,
             config,
             sessions,
-            mut shutdown_rx,
         } = self;
 
         tokio::spawn(async move {
@@ -72,26 +69,20 @@ impl DownstreamReceiveWorkerConfig {
                     addr = ?socket.local_addr(),
                     "Awaiting packet"
                 );
-                tokio::select! {
-                    result = socket.recv_from(&mut buf) => {
-                        match result {
-                            Ok((size, source)) => {
-                                let packet = DownstreamPacket {
-                                    received_at: chrono::Utc::now().timestamp_nanos(),
-                                    source: source.into(),
-                                    contents: buf[..size].to_vec(),
-                                };
+                match socket.recv_from(&mut buf).await {
+                    Ok((size, source)) => {
+                        let packet = DownstreamPacket {
+                            received_at: chrono::Utc::now().timestamp_nanos(),
+                            source: source.into(),
+                            contents: buf[..size].to_vec(),
+                        };
 
-                                Self::spawn_process_task(packet, source, worker_id, &socket, &config, &sessions)
-                            }
-                            Err(error) => {
-                                tracing::error!(%error, "error receiving packet");
-                                return;
-                            }
-                        }
+                        Self::spawn_process_task(
+                            packet, source, worker_id, &socket, &config, &sessions,
+                        )
                     }
-                    _ = shutdown_rx.changed() => {
-                        tracing::debug!(id = worker_id, "Received shutdown signal");
+                    Err(error) => {
+                        tracing::error!(%error, "error receiving packet");
                         return;
                     }
                 }
