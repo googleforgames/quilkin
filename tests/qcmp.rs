@@ -21,7 +21,7 @@ use tokio::time::Duration;
 use quilkin::{protocol::Protocol, test_utils::TestHelper};
 
 #[tokio::test]
-async fn ping() {
+async fn proxy_ping() {
     let mut t = TestHelper::default();
     let server_port = 12348;
     let server_proxy = quilkin::cli::Proxy {
@@ -31,11 +31,27 @@ async fn ping() {
     };
     let server_config = std::sync::Arc::new(quilkin::Config::default());
     t.run_server(server_config, server_proxy, None);
+    ping(server_port).await;
+}
 
+#[tokio::test]
+async fn agent_ping() {
+    let qcmp_port = quilkin::test_utils::available_addr().await.port();
+    let agent = quilkin::cli::Agent {
+        qcmp_port,
+        ..<_>::default()
+    };
+    let server_config = std::sync::Arc::new(quilkin::Config::default());
+    let (_, rx) = tokio::sync::watch::channel(());
+    tokio::spawn(async move { agent.run(server_config, rx).await });
+    ping(qcmp_port).await;
+}
+
+async fn ping(port: u16) {
     let socket = tokio::net::UdpSocket::bind((Ipv4Addr::UNSPECIFIED, 0))
         .await
         .unwrap();
-    let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), server_port);
+    let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), port);
     let ping = Protocol::ping();
 
     socket.send_to(&ping.encode(), &local_addr).await.unwrap();
