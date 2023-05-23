@@ -145,12 +145,7 @@ pub fn update_endpoints_from_gameservers(
                 }
 
                 Event::Deleted(server) => {
-                    let found = if let Some(status) = &server.status {
-                        let port = status.ports.as_ref()
-                            .and_then(|ports| ports.first().map(|status| status.port))
-                            .unwrap_or_default();
-
-                        let endpoint = Endpoint::from((status.address.clone(), port));
+                    let found = if let Some(endpoint) = server.endpoint() {
                         config.clusters.value().remove_endpoint(&endpoint)
                     } else {
                         config.clusters.value().remove_endpoint_if(|endpoint| {
@@ -159,7 +154,10 @@ pub fn update_endpoints_from_gameservers(
                     };
 
                     if found.is_none() {
-                        tracing::warn!(?server, "received unknown gameserver to delete from k8s");
+                        tracing::warn!(
+                            endpoint=%serde_json::to_value(server.endpoint()).unwrap(),
+                            "received unknown gameserver to delete from k8s"
+                        );
                     }
                 }
             };
