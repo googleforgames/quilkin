@@ -156,6 +156,7 @@ pub fn update_endpoints_from_gameservers(
                     if found.is_none() {
                         tracing::warn!(
                             endpoint=%serde_json::to_value(server.endpoint()).unwrap(),
+                            name=%serde_json::to_value(server.metadata.name).unwrap(),
                             "received unknown gameserver to delete from k8s"
                         );
                     }
