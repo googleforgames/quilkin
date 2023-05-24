@@ -23,7 +23,7 @@ use quilkin::{protocol::Protocol, test_utils::TestHelper};
 #[tokio::test]
 async fn proxy_ping() {
     let mut t = TestHelper::default();
-    let server_port = 12348;
+    let server_port = quilkin::test_utils::available_addr().await.port();
     let server_proxy = quilkin::cli::Proxy {
         port: server_port,
         to: vec![(Ipv4Addr::UNSPECIFIED, 0).into()],
