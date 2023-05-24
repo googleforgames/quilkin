@@ -263,7 +263,7 @@ impl TryFrom<GameServer> for Endpoint {
                     value
                         .split(',')
                         .map(String::from)
-                        .map(base64::decode)
+                        .map(crate::utils::base64_decode)
                         .filter_map(Result::ok)
                         .collect::<std::collections::BTreeSet<_>>()
                 })

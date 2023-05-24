@@ -120,7 +120,10 @@ filters:
         gs.metadata
             .annotations
             .get_or_insert(Default::default())
-            .insert(token_key.into(), base64::encode(token));
+            .insert(
+                token_key.into(),
+                base64::Engine::encode(&base64::engine::general_purpose::STANDARD, token),
+            );
         gameservers
             .replace(gs.name_unchecked().as_str(), &pp, &gs)
             .await
