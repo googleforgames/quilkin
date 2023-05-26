@@ -76,7 +76,7 @@ impl GameServer {
                     value
                         .split(',')
                         .map(String::from)
-                        .map(base64::decode)
+                        .map(crate::utils::base64_decode)
                         .filter_map(Result::ok)
                         .collect()
                 })

@@ -147,7 +147,7 @@ impl std::ops::DerefMut for MaxmindDb {
     }
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Clone, Debug, serde::Deserialize)]
 pub struct IpNetEntry {
     #[serde(default)]
     pub allocation: String,
