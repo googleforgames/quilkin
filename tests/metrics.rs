@@ -79,5 +79,6 @@ async fn metrics_server() {
         .unwrap();
 
     let response = String::from_utf8(resp.to_vec()).unwrap();
-    assert!(response.contains(r#"quilkin_packets_total{event="read"} 2"#));
+    let regex = regex::Regex::new(r#"quilkin_packets_total\{.*event="read".*\} 2"#).unwrap();
+    assert!(regex.is_match(&response));
 }
