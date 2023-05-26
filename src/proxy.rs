@@ -34,9 +34,10 @@ pub use sessions::{Session, SessionArgs, SessionKey, SessionMap};
 /// Packet received from local port
 #[derive(Debug)]
 struct DownstreamPacket {
-    source: EndpointAddress,
-    received_at: i64,
+    asn_info: Option<crate::maxmind_db::IpNetEntry>,
     contents: Vec<u8>,
+    received_at: i64,
+    source: std::net::SocketAddr,
 }
 
 /// Represents the required arguments to run a worker task that
@@ -66,6 +67,7 @@ impl DownstreamReceiveWorkerConfig {
             // Initialize a buffer for the UDP packet. We use the maximum size of a UDP
             // packet, which is the maximum value of 16 a bit integer.
             let mut buf = vec![0; 1 << 16];
+            let mut last_received_at = None;
             loop {
                 tracing::debug!(
                     id = worker_id,
@@ -78,9 +80,19 @@ impl DownstreamReceiveWorkerConfig {
                             Ok((size, source)) => {
                                 let packet = DownstreamPacket {
                                     received_at: chrono::Utc::now().timestamp_nanos(),
-                                    source: source.into(),
+                                    asn_info: crate::maxmind_db::MaxmindDb::lookup(source.ip()),
                                     contents: buf[..size].to_vec(),
+                                    source,
                                 };
+
+                                if let Some(last_received_at) = last_received_at {
+                                    crate::metrics::packet_jitter(
+                                        crate::metrics::READ,
+                                        packet.asn_info.as_ref(),
+                                    )
+                                        .set(packet.received_at - last_received_at);
+                                }
+                                last_received_at = Some(packet.received_at);
 
                                 Self::spawn_process_task(packet, source, worker_id, &socket, &config, &sessions)
                             }
@@ -124,17 +136,25 @@ impl DownstreamReceiveWorkerConfig {
             async move {
                 let timer = crate::metrics::processing_time(crate::metrics::READ).start_timer();
 
+                let asn_info = packet.asn_info.clone();
+                let asn_info = asn_info.as_ref();
                 match Self::process_downstream_received_packet(packet, config, socket, sessions)
                     .await
                 {
                     Ok(size) => {
-                        crate::metrics::packets_total(crate::metrics::READ).inc();
-                        crate::metrics::bytes_total(crate::metrics::READ).inc_by(size as u64);
+                        crate::metrics::packets_total(crate::metrics::READ, asn_info).inc();
+                        crate::metrics::bytes_total(crate::metrics::READ, asn_info)
+                            .inc_by(size as u64);
                     }
                     Err(error) => {
                         let source = error.to_string();
-                        crate::metrics::errors_total(crate::metrics::READ, &source).inc();
-                        crate::metrics::packets_dropped_total(crate::metrics::READ, &source).inc();
+                        crate::metrics::errors_total(crate::metrics::READ, &source, asn_info).inc();
+                        crate::metrics::packets_dropped_total(
+                            crate::metrics::READ,
+                            &source,
+                            asn_info,
+                        )
+                        .inc();
                     }
                 }
 
@@ -160,7 +180,7 @@ impl DownstreamReceiveWorkerConfig {
         }
 
         let filters = config.filters.load();
-        let mut context = ReadContext::new(endpoints, packet.source, packet.contents);
+        let mut context = ReadContext::new(endpoints, packet.source.into(), packet.contents);
         filters.read(&mut context).await?;
         let mut bytes_written = 0;
 
@@ -172,6 +192,7 @@ impl DownstreamReceiveWorkerConfig {
                 &downstream_socket,
                 &config,
                 &sessions,
+                packet.asn_info.clone(),
             )
             .await?;
         }
@@ -191,7 +212,7 @@ impl DownstreamReceiveWorkerConfig {
             } => downstream_socket
                 .send_to(
                     &Protocol::ping_reply(nonce, client_timestamp, packet.received_at).encode(),
-                    packet.source.to_socket_addr().await?,
+                    packet.source,
                 )
                 .await
                 .map_err(From::from),
@@ -211,6 +232,7 @@ impl DownstreamReceiveWorkerConfig {
         downstream_socket: &Arc<UdpSocket>,
         config: &Arc<Config>,
         sessions: &SessionMap,
+        asn_info: Option<crate::maxmind_db::IpNetEntry>,
     ) -> Result<usize, PipelineError> {
         let session_key = SessionKey {
             source: recv_addr.clone(),
@@ -225,6 +247,7 @@ impl DownstreamReceiveWorkerConfig {
                     source: session_key.source.clone(),
                     downstream_socket: downstream_socket.clone(),
                     dest: endpoint.clone(),
+                    asn_info,
                 };
 
                 let session = session_args.into_session().await?;

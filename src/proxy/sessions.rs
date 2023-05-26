@@ -23,6 +23,7 @@ use tokio::{net::UdpSocket, select, sync::watch, time::Instant};
 use crate::{
     endpoint::{Endpoint, EndpointAddress},
     filters::{Filter, WriteContext},
+    maxmind_db::IpNetEntry,
     utils::{debug, Loggable},
 };
 
@@ -42,7 +43,7 @@ pub struct Session {
     /// a channel to broadcast on if we are shutting down this Session
     shutdown_tx: watch::Sender<()>,
     /// The ASN information.
-    asn_info: Option<crate::maxmind_db::IpNetEntry>,
+    asn_info: Option<IpNetEntry>,
 }
 
 // A (source, destination) address pair that uniquely identifies a session.
@@ -72,6 +73,7 @@ pub struct SessionArgs {
     pub source: EndpointAddress,
     pub downstream_socket: Arc<UdpSocket>,
     pub dest: Endpoint,
+    pub asn_info: Option<IpNetEntry>,
 }
 
 impl SessionArgs {
@@ -93,8 +95,6 @@ impl Session {
             .await?;
         let (shutdown_tx, shutdown_rx) = watch::channel::<()>(());
 
-        let ip = args.source.to_socket_addr().await.unwrap().ip();
-        let asn_info = crate::MaxmindDb::lookup(ip);
         let s = Session {
             config: args.config.clone(),
             upstream_socket,
@@ -102,7 +102,7 @@ impl Session {
             dest: args.dest,
             created_at: Instant::now(),
             shutdown_tx,
-            asn_info,
+            asn_info: args.asn_info,
         };
 
         tracing::debug!(source = %s.source, dest = ?s.dest, "Session created");
@@ -120,22 +120,31 @@ impl Session {
         let config = self.config.clone();
         let endpoint = self.dest.clone();
         let upstream_socket = self.upstream_socket.clone();
+        let asn_info = self.asn_info.clone();
 
         tokio::spawn(async move {
             let mut buf: Vec<u8> = vec![0; 65535];
+            let mut last_received_at = None;
             loop {
                 tracing::debug!(source = %source, dest = ?endpoint, "Awaiting incoming packet");
+                let asn_info = asn_info.as_ref();
 
                 select! {
                     received = upstream_socket.recv_from(&mut buf) => {
                         match received {
                             Err(error) => {
-                                crate::metrics::errors_total(crate::metrics::WRITE, &error.to_string()).inc();
+                                crate::metrics::errors_total(crate::metrics::WRITE, &error.to_string(), asn_info).inc();
                                 tracing::error!(%error, %source, dest = ?endpoint, "Error receiving packet");
                             },
                             Ok((size, recv_addr)) => {
-                                crate::metrics::bytes_total(crate::metrics::WRITE).inc_by(size as u64);
-                                crate::metrics::packets_total(crate::metrics::WRITE).inc();
+                                let received_at = chrono::Utc::now().timestamp_nanos();
+                                if let Some(last_received_at) = last_received_at {
+                                    crate::metrics::packet_jitter(crate::metrics::WRITE, asn_info).set(received_at - last_received_at);
+                                }
+                                last_received_at = Some(received_at);
+
+                                crate::metrics::packets_total(crate::metrics::WRITE, asn_info).inc();
+                                crate::metrics::bytes_total(crate::metrics::WRITE, asn_info).inc_by(size as u64);
 
                                 let timer = crate::metrics::processing_time(crate::metrics::WRITE).start_timer();
                                 let result = Session::process_recv_packet(
@@ -153,9 +162,10 @@ impl Session {
                                     let label = format!("proxy::Session::process_recv_packet: {error}");
                                     crate::metrics::packets_dropped_total(
                                         crate::metrics::WRITE,
-                                        &label
+                                        &label,
+                                        asn_info
                                     ).inc();
-                                    crate::metrics::errors_total(crate::metrics::WRITE, &label).inc();
+                                    crate::metrics::errors_total(crate::metrics::WRITE, &label, asn_info).inc();
                                 }
                             }
                         };
@@ -290,6 +300,7 @@ mod tests {
             source: addr.clone(),
             downstream_socket: socket.clone(),
             dest: endpoint,
+            asn_info: None,
         })
         .await
         .unwrap();
