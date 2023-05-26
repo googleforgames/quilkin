@@ -33,6 +33,8 @@ pub const DIRECTION_LABEL: &str = "event";
 
 pub(crate) const READ: Direction = Direction::Read;
 pub(crate) const WRITE: Direction = Direction::Write;
+pub(crate) const ASN_LABEL: &str = "asn";
+pub(crate) const PREFIX_LABEL: &str = "ip_prefix";
 
 /// Label value for [DIRECTION_LABEL] for `read` events
 pub const READ_DIRECTION_LABEL: &str = "read";

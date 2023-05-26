@@ -180,13 +180,7 @@ impl Session {
     }
 
     fn active_session_metric(&self) -> prometheus::IntGauge {
-        let (asn_number, ip_prefix) = self
-            .asn_info
-            .as_ref()
-            .map(|asn| (asn.r#as, &*asn.prefix))
-            .unwrap_or_else(|| (<_>::default(), <_>::default()));
-
-        metrics::active_sessions(asn_number as u16, ip_prefix)
+        metrics::active_sessions(self.asn_info.as_ref())
     }
 
     /// process_recv_packet processes a packet that is received by this session.
