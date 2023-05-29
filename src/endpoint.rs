@@ -161,7 +161,7 @@ impl From<Metadata> for prost_types::Struct {
                     values: metadata
                         .tokens
                         .into_iter()
-                        .map(base64::encode)
+                        .map(crate::utils::base64_encode)
                         .map(prost_types::value::Kind::StringValue)
                         .map(|k| prost_types::Value { kind: Some(k) })
                         .collect(),
@@ -190,7 +190,8 @@ impl std::convert::TryFrom<prost_types::Struct> for Metadata {
                     .filter_map(|v| v.kind)
                     .map(|kind| {
                         if let Kind::StringValue(string) = kind {
-                            base64::decode(string).map_err(MetadataError::InvalidBase64)
+                            crate::utils::base64_decode(string)
+                                .map_err(MetadataError::InvalidBase64)
                         } else {
                             Err(MetadataError::InvalidType {
                                 key: "quilkin.dev.tokens",
@@ -200,7 +201,8 @@ impl std::convert::TryFrom<prost_types::Struct> for Metadata {
                     })
                     .collect::<Result<_, _>>()?,
                 Kind::StringValue(string) => {
-                    <_>::from([base64::decode(string).map_err(MetadataError::InvalidBase64)?])
+                    <_>::from([crate::utils::base64_decode(string)
+                        .map_err(MetadataError::InvalidBase64)?])
                 }
                 _ => return Err(MetadataError::MissingKey(TOKENS)),
             }
@@ -238,7 +240,12 @@ mod base64_set {
     where
         S: serde::Serializer,
     {
-        serde::Serialize::serialize(&set.iter().map(base64::encode).collect::<Vec<_>>(), ser)
+        serde::Serialize::serialize(
+            &set.iter()
+                .map(crate::utils::base64_encode)
+                .collect::<Vec<_>>(),
+            ser,
+        )
     }
 
     pub fn deserialize<'de, D>(de: D) -> Result<Set, D::Error>
@@ -254,7 +261,7 @@ mod base64_set {
             ))
         } else {
             set.into_iter()
-                .map(|string| base64::decode(string).map_err(D::Error::custom))
+                .map(|string| crate::utils::base64_decode(string).map_err(D::Error::custom))
                 .collect()
         }
     }

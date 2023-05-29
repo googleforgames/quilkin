@@ -56,7 +56,7 @@ impl Filter for TokenRouter {
             Some(metadata::Value::Bytes(token)) => {
                 ctx.endpoints.retain(|endpoint| {
                     if endpoint.metadata.known.tokens.contains(&**token) {
-                        tracing::trace!(%endpoint.address, token = &*base64::encode(token), "Endpoint matched");
+                        tracing::trace!(%endpoint.address, token = &*crate::utils::base64_encode(token), "Endpoint matched");
                         true
                     } else {
                         false
@@ -66,7 +66,7 @@ impl Filter for TokenRouter {
                 if ctx.endpoints.is_empty() {
                     Err(FilterError::new(Error::NoEndpointMatch(
                         self.config.metadata_key,
-                        base64::encode(token),
+                        crate::utils::base64_encode(token),
                     )))
                 } else {
                     Ok(())

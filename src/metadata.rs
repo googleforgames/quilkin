@@ -79,7 +79,7 @@ impl std::fmt::Display for Value {
             Self::Bool(value) => value.fmt(f),
             Self::Number(value) => value.fmt(f),
             Self::String(value) => value.fmt(f),
-            Self::Bytes(value) => base64::encode(value).fmt(f),
+            Self::Bytes(value) => crate::utils::base64_encode(value).fmt(f),
             Self::List(values) => {
                 write!(f, "[")?;
                 let mut first = true;

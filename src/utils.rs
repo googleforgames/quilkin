@@ -14,8 +14,17 @@
  *  limitations under the License.
  */
 
-pub(crate) mod debug;
 pub(crate) mod net;
+
+use base64::Engine;
+
+pub(crate) fn base64_encode<A: AsRef<[u8]>>(bytes: A) -> String {
+    base64::engine::general_purpose::STANDARD.encode(bytes.as_ref())
+}
+
+pub(crate) fn base64_decode<A: AsRef<str>>(input: A) -> Result<Vec<u8>, base64::DecodeError> {
+    base64::engine::general_purpose::STANDARD.decode(input.as_ref())
+}
 
 /// A type which can be logged, usually error types.
 pub(crate) trait Loggable {

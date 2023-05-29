@@ -70,7 +70,7 @@ fn configmap_events(
     let config_writer = kube::runtime::reflector::store::Writer::<ConfigMap>::default();
     let configmap_stream = kube::runtime::watcher(
         configmap,
-        kube::api::ListParams::default().labels("quilkin.dev/configmap=true"),
+        kube::runtime::watcher::Config::default().labels("quilkin.dev/configmap=true"),
     );
     kube::runtime::reflector(config_writer, configmap_stream)
 }
@@ -82,7 +82,7 @@ fn gameserver_events(
     let gameservers_namespace = namespace.as_ref();
     let gameservers: kube::Api<GameServer> = kube::Api::namespaced(client, gameservers_namespace);
     let gs_writer = kube::runtime::reflector::store::Writer::<GameServer>::default();
-    let gameserver_stream = kube::runtime::watcher(gameservers, kube::api::ListParams::default());
+    let gameserver_stream = kube::runtime::watcher(gameservers, <_>::default());
     kube::runtime::reflector(gs_writer, gameserver_stream)
 }
 
