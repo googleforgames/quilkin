@@ -86,7 +86,7 @@ test-quilkin: ensure-build-image
 	docker run --rm $(common_rust_args) \
 		--entrypoint=cargo $(BUILD_IMAGE_TAG) fmt -- --check
 	docker run --rm $(common_rust_args) \
-			--entrypoint=cargo $(BUILD_IMAGE_TAG) test
+			-e RUST_BACKTRACE=1 --entrypoint=cargo $(BUILD_IMAGE_TAG) test -- --nocapture
 
 # Run tests against the examples
 test-examples: ensure-build-image
