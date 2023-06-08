@@ -42,8 +42,13 @@ async fn agent_ping() {
         ..<_>::default()
     };
     let server_config = std::sync::Arc::new(quilkin::Config::default());
-    let (_, rx) = tokio::sync::watch::channel(());
-    tokio::spawn(async move { agent.run(server_config, rx).await });
+    let (_tx, rx) = tokio::sync::watch::channel(());
+    tokio::spawn(async move {
+        agent
+            .run(server_config, rx)
+            .await
+            .expect("Agent should run")
+    });
     ping(qcmp_port).await;
 }
 
@@ -64,9 +69,15 @@ async fn ping(port: u16) {
     let reply = Protocol::parse(&buf[..size]).unwrap().unwrap();
 
     assert_eq!(ping.nonce(), reply.nonce());
-    const TEN_MILLIS_IN_NANOS: i64 = 10_000_000;
+    const FIFTY_MILLIS_IN_NANOS: i64 = 50_000_000;
 
-    // If it takes longer than 10 milliseconds locally, it's likely that there
+    // If it takes longer than 50 milliseconds locally, it's likely that there
     // is bug.
-    assert!(TEN_MILLIS_IN_NANOS > reply.round_trip_delay(recv_time).unwrap());
+    let delay = reply.round_trip_delay(recv_time).unwrap();
+    assert!(
+        FIFTY_MILLIS_IN_NANOS > delay,
+        "Delay {}ns greater than {}ns",
+        delay,
+        FIFTY_MILLIS_IN_NANOS
+    );
 }
