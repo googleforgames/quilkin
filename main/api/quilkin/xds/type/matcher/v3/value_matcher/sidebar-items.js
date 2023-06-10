@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["MatchPattern",""]],"struct":[["NullMatch",""]]};
+window.SIDEBAR_ITEMS = {"enum":["MatchPattern"],"struct":["NullMatch"]};

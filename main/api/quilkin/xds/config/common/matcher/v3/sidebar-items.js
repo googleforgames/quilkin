@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":[["http_generic_body_match","Nested message and enum types in `HttpGenericBodyMatch`."],["match_predicate","Nested message and enum types in `MatchPredicate`."],["matcher","Nested message and enum types in `Matcher`."]],"struct":[["HttpGenericBodyMatch",""],["HttpHeadersMatch",""],["MatchPredicate",""],["Matcher",""]]};
+window.SIDEBAR_ITEMS = {"mod":["http_generic_body_match","match_predicate","matcher"],"struct":["HttpGenericBodyMatch","HttpHeadersMatch","MatchPredicate","Matcher"]};

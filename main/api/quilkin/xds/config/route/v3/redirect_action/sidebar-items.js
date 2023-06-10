@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["PathRewriteSpecifier",""],["RedirectResponseCode",""],["SchemeRewriteSpecifier",""]]};
+window.SIDEBAR_ITEMS = {"enum":["PathRewriteSpecifier","RedirectResponseCode","SchemeRewriteSpecifier"]};

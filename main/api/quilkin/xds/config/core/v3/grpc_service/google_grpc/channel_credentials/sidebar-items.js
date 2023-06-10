@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["CredentialSpecifier",""]]};
+window.SIDEBAR_ITEMS = {"enum":["CredentialSpecifier"]};

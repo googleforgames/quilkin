@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["HashFunction",""]]};
+window.SIDEBAR_ITEMS = {"enum":["HashFunction"]};

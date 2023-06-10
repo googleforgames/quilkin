@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["Providers","The available xDS source providers."]],"mod":[["k8s",""]]};
+window.SIDEBAR_ITEMS = {"enum":["Providers"],"mod":["k8s"]};

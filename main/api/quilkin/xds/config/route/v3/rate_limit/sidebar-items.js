@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":[["action","Nested message and enum types in `Action`."],["override","Nested message and enum types in `Override`."]],"struct":[["Action",""],["Override",""]]};
+window.SIDEBAR_ITEMS = {"mod":["action","override"],"struct":["Action","Override"]};

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["HostRewriteSpecifier",""]]};
+window.SIDEBAR_ITEMS = {"enum":["HostRewriteSpecifier"]};

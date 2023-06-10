@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["DenominatorType",""]]};
+window.SIDEBAR_ITEMS = {"enum":["DenominatorType"]};

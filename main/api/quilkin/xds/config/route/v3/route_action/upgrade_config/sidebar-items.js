@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["ConnectConfig",""]]};
+window.SIDEBAR_ITEMS = {"struct":["ConnectConfig"]};

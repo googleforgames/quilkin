@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["Config","Config represents a [self]’s configuration."],["Timestamp","A filter that reads a metadata value as a timestamp to be observed in a histogram."]]};
+window.SIDEBAR_ITEMS = {"struct":["Config","Timestamp"]};

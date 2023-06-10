@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["AddressNameSpecifier",""]]};
+window.SIDEBAR_ITEMS = {"enum":["AddressNameSpecifier"]};

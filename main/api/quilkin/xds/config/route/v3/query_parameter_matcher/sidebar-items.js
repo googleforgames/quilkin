@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["QueryParameterMatchSpecifier",""]]};
+window.SIDEBAR_ITEMS = {"enum":["QueryParameterMatchSpecifier"]};

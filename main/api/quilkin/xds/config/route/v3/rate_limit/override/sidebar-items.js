@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["OverrideSpecifier",""]],"struct":[["DynamicMetadata",""]]};
+window.SIDEBAR_ITEMS = {"enum":["OverrideSpecifier"],"struct":["DynamicMetadata"]};

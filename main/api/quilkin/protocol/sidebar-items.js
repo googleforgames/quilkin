@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["Error",""],["Protocol","The set of possible QCMP commands."]]};
+window.SIDEBAR_ITEMS = {"enum":["Error","Protocol"]};

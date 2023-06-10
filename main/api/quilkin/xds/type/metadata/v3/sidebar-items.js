@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":[["metadata_key","Nested message and enum types in `MetadataKey`."],["metadata_kind","Nested message and enum types in `MetadataKind`."]],"struct":[["MetadataKey",""],["MetadataKind",""]]};
+window.SIDEBAR_ITEMS = {"mod":["metadata_key","metadata_kind"],"struct":["MetadataKey","MetadataKind"]};

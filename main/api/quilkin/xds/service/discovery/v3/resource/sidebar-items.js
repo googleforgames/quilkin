@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["CacheControl",""]]};
+window.SIDEBAR_ITEMS = {"struct":["CacheControl"]};

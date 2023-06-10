@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["DropOverload",""]]};
+window.SIDEBAR_ITEMS = {"struct":["DropOverload"]};

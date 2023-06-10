@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":[["predicate","Nested message and enum types in `Predicate`."]],"struct":[["FieldMatcher",""],["Predicate",""]]};
+window.SIDEBAR_ITEMS = {"mod":["predicate"],"struct":["FieldMatcher","Predicate"]};

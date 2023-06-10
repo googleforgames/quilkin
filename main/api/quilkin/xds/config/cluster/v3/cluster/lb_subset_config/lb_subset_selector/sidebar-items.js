@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["LbSubsetSelectorFallbackPolicy",""]]};
+window.SIDEBAR_ITEMS = {"enum":["LbSubsetSelectorFallbackPolicy"]};

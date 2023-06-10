@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["HeadersWithUnderscoresAction",""]]};
+window.SIDEBAR_ITEMS = {"enum":["HeadersWithUnderscoresAction"]};

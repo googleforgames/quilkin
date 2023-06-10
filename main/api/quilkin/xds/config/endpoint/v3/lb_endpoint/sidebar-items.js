@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["HostIdentifier",""]]};
+window.SIDEBAR_ITEMS = {"enum":["HostIdentifier"]};

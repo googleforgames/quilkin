@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":[["matcher",""],["metadata",""],["tracing",""],["v3",""]]};
+window.SIDEBAR_ITEMS = {"mod":["matcher","metadata","tracing","v3"]};

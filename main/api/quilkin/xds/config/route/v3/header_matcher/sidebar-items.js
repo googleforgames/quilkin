@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["HeaderMatchSpecifier",""]]};
+window.SIDEBAR_ITEMS = {"enum":["HeaderMatchSpecifier"]};

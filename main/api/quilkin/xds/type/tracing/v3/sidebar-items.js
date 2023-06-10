@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":[["custom_tag","Nested message and enum types in `CustomTag`."]],"struct":[["CustomTag",""]]};
+window.SIDEBAR_ITEMS = {"mod":["custom_tag"],"struct":["CustomTag"]};

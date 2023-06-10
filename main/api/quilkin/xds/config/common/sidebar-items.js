@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":[["matcher",""]]};
+window.SIDEBAR_ITEMS = {"mod":["matcher"]};

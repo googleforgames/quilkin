@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["ApiType",""]]};
+window.SIDEBAR_ITEMS = {"enum":["ApiType"]};

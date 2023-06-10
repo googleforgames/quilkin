@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["Strategy",""]],"struct":[["ConcatenateBytes","The `ConcatenateBytes` filter’s job is to add a byte packet to either the beginning or end of each UDP packet that passes through. This is commonly used to provide an auth token to each packet, so they can be routed appropriately."],["Config","Config represents a `ConcatenateBytes` filter configuration."]]};
+window.SIDEBAR_ITEMS = {"enum":["Strategy"],"struct":["ConcatenateBytes","Config"]};

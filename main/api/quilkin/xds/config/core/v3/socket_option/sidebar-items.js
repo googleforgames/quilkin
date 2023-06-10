@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["SocketState",""],["Value",""]]};
+window.SIDEBAR_ITEMS = {"enum":["SocketState","Value"]};

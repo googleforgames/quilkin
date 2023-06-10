@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["HeaderAppendAction",""]]};
+window.SIDEBAR_ITEMS = {"enum":["HeaderAppendAction"]};

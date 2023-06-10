@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["LbSubsetFallbackPolicy",""]],"mod":[["lb_subset_selector","Nested message and enum types in `LbSubsetSelector`."]],"struct":[["LbSubsetSelector",""]]};
+window.SIDEBAR_ITEMS = {"enum":["LbSubsetFallbackPolicy"],"mod":["lb_subset_selector"],"struct":["LbSubsetSelector"]};

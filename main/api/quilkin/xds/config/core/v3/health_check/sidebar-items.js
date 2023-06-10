@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["HealthChecker",""]],"mod":[["custom_health_check","Nested message and enum types in `CustomHealthCheck`."],["payload","Nested message and enum types in `Payload`."]],"struct":[["CustomHealthCheck",""],["GrpcHealthCheck",""],["HttpHealthCheck",""],["Payload",""],["RedisHealthCheck",""],["TcpHealthCheck",""],["TlsOptions",""]]};
+window.SIDEBAR_ITEMS = {"enum":["HealthChecker"],"mod":["custom_health_check","payload"],"struct":["CustomHealthCheck","GrpcHealthCheck","HttpHealthCheck","Payload","RedisHealthCheck","TcpHealthCheck","TlsOptions"]};

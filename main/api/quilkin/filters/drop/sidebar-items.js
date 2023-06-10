@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":[["NAME",""]],"struct":[["Config","`pass` filter’s configuration."],["Drop","Always drops a packet, mostly useful in combination with other filters."]]};
+window.SIDEBAR_ITEMS = {"constant":["NAME"],"struct":["Config","Drop"]};

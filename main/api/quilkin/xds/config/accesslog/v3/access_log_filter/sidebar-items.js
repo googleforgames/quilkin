@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["FilterSpecifier",""]]};
+window.SIDEBAR_ITEMS = {"enum":["FilterSpecifier"]};

@@ -269,7 +269,7 @@ prints <code>Hello Quilkin</code> on the server.</p>
 <p>Let's extend the <code>Greet</code> filter to have a configuration that contains what
 greeting to use.</p>
 <p>The <a href="https://docs.serde.rs/serde_yaml/index.html">Serde</a> crate is used to describe static YAML configuration in code while
-<a href="https://docs.rs/tonic">Tonic</a>/<a href="https://docs.rs/prost">Prost</a> is used to describe dynamic configuration as <a href="https://developers.google.com/protocol-buffers">Protobuf</a> messages
+<a href="https://docs.rs/tonic">Tonic</a>/<a href="https://docs.rs/prost">Prost</a> is used to describe dynamic configuration as <a href="https://protobuf.dev">Protobuf</a> messages
 when talking to a <a href="../../xds.html">management server</a>.</p>
 <h3 id="yaml-configuration"><a class="header" href="#yaml-configuration">YAML Configuration</a></h3>
 <p>First let's create the type for our configuration:</p>
@@ -311,7 +311,7 @@ impl Filter for Greet {
 }</code></pre>
 <h3 id="protobuf-configuration"><a class="header" href="#protobuf-configuration">Protobuf Configuration</a></h3>
 <p>Quilkin comes with out-of-the-box support for xDS management, and as such needs
-to communicate filter configuration over <a href="https://developers.google.com/protocol-buffers">Protobuf</a> with management servers and
+to communicate filter configuration over <a href="https://protobuf.dev">Protobuf</a> with management servers and
 clients to synchronise state across the network. So let's add the binary version
 of our <code>Greet</code> configuration.</p>
 <ol>
@@ -324,7 +324,7 @@ prost = &quot;0.7&quot;
 prost-types = &quot;0.7&quot;
 </code></pre>
 <ol start="2">
-<li>Create a <a href="https://developers.google.com/protocol-buffers">Protobuf</a> equivalent of our YAML configuration.</li>
+<li>Create a <a href="https://protobuf.dev">Protobuf</a> equivalent of our YAML configuration.</li>
 </ol>
 <pre><code class="language-plaintext no_run noplayground ignore">// src/greet.proto
 syntax = &quot;proto3&quot;;

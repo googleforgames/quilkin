@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["MatchType",""]],"mod":[["single_predicate","Nested message and enum types in `SinglePredicate`."]],"struct":[["PredicateList",""],["SinglePredicate",""]]};
+window.SIDEBAR_ITEMS = {"enum":["MatchType"],"mod":["single_predicate"],"struct":["PredicateList","SinglePredicate"]};

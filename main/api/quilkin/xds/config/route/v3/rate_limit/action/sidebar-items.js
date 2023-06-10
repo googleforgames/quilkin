@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["ActionSpecifier",""]],"mod":[["meta_data","Nested message and enum types in `MetaData`."]],"struct":[["DestinationCluster",""],["DynamicMetaData",""],["GenericKey",""],["HeaderValueMatch",""],["MetaData",""],["RemoteAddress",""],["RequestHeaders",""],["SourceCluster",""]]};
+window.SIDEBAR_ITEMS = {"enum":["ActionSpecifier"],"mod":["meta_data"],"struct":["DestinationCluster","DynamicMetaData","GenericKey","HeaderValueMatch","MetaData","RemoteAddress","RequestHeaders","SourceCluster"]};

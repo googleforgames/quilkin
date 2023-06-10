@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["EngineType",""]],"struct":[["GoogleRe2",""]]};
+window.SIDEBAR_ITEMS = {"enum":["EngineType"],"struct":["GoogleRe2"]};

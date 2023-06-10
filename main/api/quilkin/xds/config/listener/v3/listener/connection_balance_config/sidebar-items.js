@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["BalanceType",""]],"struct":[["ExactBalance",""]]};
+window.SIDEBAR_ITEMS = {"enum":["BalanceType"],"struct":["ExactBalance"]};
