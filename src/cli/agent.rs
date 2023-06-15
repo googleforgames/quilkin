@@ -95,8 +95,7 @@ impl Agent {
             None
         };
 
-        let _qcmp_task = crate::protocol::spawn(self.qcmp_port).await?;
-
+        crate::protocol::spawn(self.qcmp_port).await?;
         shutdown_rx.changed().await.map_err(From::from)
     }
 }

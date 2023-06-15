@@ -16,10 +16,11 @@
 
 //! Logic for parsing and generating Quilkin Control Message Protocol (QCMP) messages.
 
-use std::net::SocketAddr;
-
 use nom::bytes::complete;
+use std::net::SocketAddr;
 use tracing::Instrument;
+
+use crate::utils::net;
 
 // Magic number to distinguish control packets from regular traffic.
 const MAGIC_NUMBER: &[u8] = b"QLKN";
@@ -32,65 +33,62 @@ const DISCRIMINANT_LEN: usize = 1;
 
 type Result<T, E = Error> = std::result::Result<T, E>;
 
-pub async fn spawn(port: u16) -> std::io::Result<Vec<tokio::task::JoinHandle<()>>> {
-    let ipv4: SocketAddr = (std::net::Ipv4Addr::UNSPECIFIED, port).into();
-    let ipv6: SocketAddr = (std::net::Ipv6Addr::UNSPECIFIED, port).into();
-    let mut tasks = Vec::new();
+pub async fn spawn(port: u16) -> crate::Result<()> {
+    let socket = net::DualStackLocalSocket::new(port)?;
+    let v4_addr = socket.local_ipv4_addr()?;
+    let v6_addr = socket.local_ip6_addr()?;
+    tokio::spawn(
+        async move {
+            // Initialize a buffer for the UDP packet. We use the maximum size of a UDP
+            // packet, which is the maximum value of 16 a bit integer.
+            let mut v4_buf = vec![0; 1 << 16];
+            let mut v6_buf = vec![0; 1 << 16];
+            let mut output_buf = Vec::new();
 
-    tracing::info!(%port, "spawning IPv4 and IPv6 QCMP sockets");
-    for (address, socket) in [
-        (ipv4, tokio::net::UdpSocket::bind(ipv4).await?),
-        (ipv6, tokio::net::UdpSocket::bind(ipv6).await?),
-    ] {
-        tasks.push(tokio::spawn(
-            async move {
-                // Initialize a buffer for the UDP packet. We use the maximum size of a UDP
-                // packet, which is the maximum value of 16 a bit integer.
-                let mut input_buf = vec![0; 1 << 16];
-                let mut output_buf = Vec::new();
-                loop {
-                    tracing::debug!(%address, "awaiting qcmp packets");
+            loop {
+                tracing::debug!(%v4_addr, %v6_addr, "awaiting qcmp packets");
 
-                    match socket.recv_from(&mut input_buf).await {
-                        Ok((size, source)) => {
-                            let received_at = chrono::Utc::now().timestamp_nanos();
-                            let contents = &input_buf[..size];
+                match socket.recv_from(&mut v4_buf, &mut v6_buf).await {
+                    Ok((size, source)) => {
+                        let received_at = chrono::Utc::now().timestamp_nanos();
+                        let contents = match source {
+                            SocketAddr::V4(_) => &v4_buf[..size],
+                            SocketAddr::V6(_) => &v6_buf[..size],
+                        };
 
-                            let command = match Protocol::parse(contents) {
-                                Ok(Some(command)) => command,
-                                Ok(None) => {
-                                    tracing::debug!("rejected non-qcmp packet");
-                                    continue;
-                                }
-                                Err(error) => {
-                                    tracing::debug!(%error, "rejected malformed packet");
-                                    continue;
-                                }
-                            };
+                        let command = match Protocol::parse(contents) {
+                            Ok(Some(command)) => command,
+                            Ok(None) => {
+                                tracing::debug!("rejected non-qcmp packet");
+                                continue;
+                            }
+                            Err(error) => {
+                                tracing::debug!(%error, "rejected malformed packet");
+                                continue;
+                            }
+                        };
 
-                            let Protocol::Ping { client_timestamp, nonce, } = command else {
+                        let Protocol::Ping { client_timestamp, nonce, } = command else {
                             tracing::warn!("rejected unsupported QCMP packet");
                             continue;
                         };
 
-                            Protocol::ping_reply(nonce, client_timestamp, received_at)
-                                .encode_into_buffer(&mut output_buf);
+                        Protocol::ping_reply(nonce, client_timestamp, received_at)
+                            .encode_into_buffer(&mut output_buf);
 
-                            if let Err(error) = socket.send_to(&output_buf, source).await {
-                                tracing::warn!(%error, "error responsing to ping");
-                            }
-
-                            output_buf.clear();
+                        if let Err(error) = socket.send_to(&output_buf, &source).await {
+                            tracing::warn!(%error, "error responding to ping");
                         }
-                        Err(error) => tracing::warn!(%error, "error receiving packet"),
+
+                        output_buf.clear();
                     }
+                    Err(error) => tracing::warn!(%error, "error receiving packet"),
                 }
             }
-            .instrument(tracing::info_span!("qcmp_task", %address)),
-        ));
-    }
-
-    Ok(tasks)
+        }
+        .instrument(tracing::info_span!("qcmp_task", %v4_addr, %v6_addr)),
+    );
+    Ok(())
 }
 
 /// The set of possible QCMP commands.
