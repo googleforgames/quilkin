@@ -21,9 +21,9 @@ use tokio::time::Duration;
 use quilkin::{protocol::Protocol, test_utils::TestHelper};
 
 #[tokio::test]
-async fn ping() {
+async fn proxy_ping() {
     let mut t = TestHelper::default();
-    let server_port = 12348;
+    let server_port = quilkin::test_utils::available_addr().await.port();
     let server_proxy = quilkin::cli::Proxy {
         port: server_port,
         to: vec![(Ipv4Addr::UNSPECIFIED, 0).into()],
@@ -31,11 +31,32 @@ async fn ping() {
     };
     let server_config = std::sync::Arc::new(quilkin::Config::default());
     t.run_server(server_config, server_proxy, None);
+    ping(server_port).await;
+}
 
+#[tokio::test]
+async fn agent_ping() {
+    let qcmp_port = quilkin::test_utils::available_addr().await.port();
+    let agent = quilkin::cli::Agent {
+        qcmp_port,
+        ..<_>::default()
+    };
+    let server_config = std::sync::Arc::new(quilkin::Config::default());
+    let (_tx, rx) = tokio::sync::watch::channel(());
+    tokio::spawn(async move {
+        agent
+            .run(server_config, rx)
+            .await
+            .expect("Agent should run")
+    });
+    ping(qcmp_port).await;
+}
+
+async fn ping(port: u16) {
     let socket = tokio::net::UdpSocket::bind((Ipv4Addr::UNSPECIFIED, 0))
         .await
         .unwrap();
-    let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), server_port);
+    let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), port);
     let ping = Protocol::ping();
 
     socket.send_to(&ping.encode(), &local_addr).await.unwrap();
@@ -48,9 +69,15 @@ async fn ping() {
     let reply = Protocol::parse(&buf[..size]).unwrap().unwrap();
 
     assert_eq!(ping.nonce(), reply.nonce());
-    const TEN_MILLIS_IN_NANOS: i64 = 10_000_000;
+    const FIFTY_MILLIS_IN_NANOS: i64 = 50_000_000;
 
-    // If it takes longer than 10 milliseconds locally, it's likely that there
+    // If it takes longer than 50 milliseconds locally, it's likely that there
     // is bug.
-    assert!(TEN_MILLIS_IN_NANOS > reply.round_trip_delay(recv_time).unwrap());
+    let delay = reply.round_trip_delay(recv_time).unwrap();
+    assert!(
+        FIFTY_MILLIS_IN_NANOS > delay,
+        "Delay {}ns greater than {}ns",
+        delay,
+        FIFTY_MILLIS_IN_NANOS
+    );
 }

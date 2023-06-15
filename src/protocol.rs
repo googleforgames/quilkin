@@ -17,6 +17,11 @@
 //! Logic for parsing and generating Quilkin Control Message Protocol (QCMP) messages.
 
 use nom::bytes::complete;
+use std::net::SocketAddr;
+use tracing::Instrument;
+
+use crate::utils::net;
+
 // Magic number to distinguish control packets from regular traffic.
 const MAGIC_NUMBER: &[u8] = b"QLKN";
 const TIMESTAMP_LEN: usize = (i64::BITS / 8) as usize;
@@ -27,6 +32,64 @@ const LENGTH_LEN: usize = 2;
 const DISCRIMINANT_LEN: usize = 1;
 
 type Result<T, E = Error> = std::result::Result<T, E>;
+
+pub async fn spawn(port: u16) -> crate::Result<()> {
+    let socket = net::DualStackLocalSocket::new(port)?;
+    let v4_addr = socket.local_ipv4_addr()?;
+    let v6_addr = socket.local_ip6_addr()?;
+    tokio::spawn(
+        async move {
+            // Initialize a buffer for the UDP packet. We use the maximum size of a UDP
+            // packet, which is the maximum value of 16 a bit integer.
+            let mut v4_buf = vec![0; 1 << 16];
+            let mut v6_buf = vec![0; 1 << 16];
+            let mut output_buf = Vec::new();
+
+            loop {
+                tracing::debug!(%v4_addr, %v6_addr, "awaiting qcmp packets");
+
+                match socket.recv_from(&mut v4_buf, &mut v6_buf).await {
+                    Ok((size, source)) => {
+                        let received_at = chrono::Utc::now().timestamp_nanos();
+                        let contents = match source {
+                            SocketAddr::V4(_) => &v4_buf[..size],
+                            SocketAddr::V6(_) => &v6_buf[..size],
+                        };
+
+                        let command = match Protocol::parse(contents) {
+                            Ok(Some(command)) => command,
+                            Ok(None) => {
+                                tracing::debug!("rejected non-qcmp packet");
+                                continue;
+                            }
+                            Err(error) => {
+                                tracing::debug!(%error, "rejected malformed packet");
+                                continue;
+                            }
+                        };
+
+                        let Protocol::Ping { client_timestamp, nonce, } = command else {
+                            tracing::warn!("rejected unsupported QCMP packet");
+                            continue;
+                        };
+
+                        Protocol::ping_reply(nonce, client_timestamp, received_at)
+                            .encode_into_buffer(&mut output_buf);
+
+                        if let Err(error) = socket.send_to(&output_buf, &source).await {
+                            tracing::warn!(%error, "error responding to ping");
+                        }
+
+                        output_buf.clear();
+                    }
+                    Err(error) => tracing::warn!(%error, "error receiving packet"),
+                }
+            }
+        }
+        .instrument(tracing::info_span!("qcmp_task", %v4_addr, %v6_addr)),
+    );
+    Ok(())
+}
 
 /// The set of possible QCMP commands.
 #[derive(Clone, Copy, Debug)]
@@ -84,21 +147,25 @@ impl Protocol {
 
     /// Encodes the protocol command into a buffer of bytes for network transmission.
     pub fn encode(&self) -> Vec<u8> {
-        let mut buffer = Vec::from(MAGIC_NUMBER);
+        let mut buffer = Vec::new();
+        self.encode_into_buffer(&mut buffer);
+        buffer
+    }
+    /// Encodes the protocol command into a buffer of bytes for network transmission.
+    pub fn encode_into_buffer(&self, buffer: &mut Vec<u8>) {
+        buffer.extend(MAGIC_NUMBER);
         buffer.push(VERSION);
         buffer.push(self.discriminant());
         buffer.extend_from_slice(&self.discriminant_length().to_be_bytes());
 
         let length = buffer.len();
 
-        self.encode_payload(&mut buffer);
+        self.encode_payload(buffer);
 
         debug_assert_eq!(
             buffer.len(),
             length + usize::from(self.discriminant_length())
         );
-
-        buffer
     }
 
     /// Returns the packet's nonce.
