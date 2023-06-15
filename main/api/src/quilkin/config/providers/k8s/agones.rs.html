@@ -602,6 +602,20 @@
 <a href="#602" id="602">602</a>
 <a href="#603" id="603">603</a>
 <a href="#604" id="604">604</a>
+<a href="#605" id="605">605</a>
+<a href="#606" id="606">606</a>
+<a href="#607" id="607">607</a>
+<a href="#608" id="608">608</a>
+<a href="#609" id="609">609</a>
+<a href="#610" id="610">610</a>
+<a href="#611" id="611">611</a>
+<a href="#612" id="612">612</a>
+<a href="#613" id="613">613</a>
+<a href="#614" id="614">614</a>
+<a href="#615" id="615">615</a>
+<a href="#616" id="616">616</a>
+<a href="#617" id="617">617</a>
+<a href="#618" id="618">618</a>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -641,6 +655,53 @@
     </span><span class="kw">pub </span>metadata: ObjectMeta,
     <span class="kw">pub </span>spec: GameServerSpec,
     <span class="kw">pub </span>status: <span class="prelude-ty">Option</span>&lt;GameServerStatus&gt;,
+}
+
+<span class="kw">impl </span>GameServer {
+    <span class="kw">pub fn </span>endpoint(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Endpoint&gt; {
+        <span class="self">self</span>.status.as_ref().map(|status| {
+            <span class="kw">let </span>port = status
+                .ports
+                .as_ref()
+                .and_then(|ports| ports.first().map(|status| status.port))
+                .unwrap_or_default();
+
+            <span class="kw">let </span>tokens = <span class="self">self</span>.tokens();
+            <span class="kw">let </span>extra_metadata = {
+                <span class="kw">let </span><span class="kw-2">mut </span>map = serde_json::Map::default();
+                map.insert(
+                    <span class="string">&quot;name&quot;</span>.into(),
+                    <span class="self">self</span>.metadata.name.clone().unwrap_or_default().into(),
+                );
+                map
+            };
+
+            Endpoint::with_metadata(
+                (status.address.clone(), port).into(),
+                <span class="kw">crate</span>::metadata::MetadataView::with_unknown(
+                    <span class="kw">crate</span>::endpoint::Metadata { tokens },
+                    extra_metadata,
+                ),
+            )
+        })
+    }
+
+    <span class="kw">pub fn </span>tokens(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; std::collections::BTreeSet&lt;Vec&lt;u8&gt;&gt; {
+        <span class="kw">match </span><span class="self">self</span>.metadata.annotations.as_ref() {
+            <span class="prelude-val">Some</span>(annotations) =&gt; annotations
+                .get(QUILKIN_TOKEN_LABEL)
+                .map(|value| {
+                    value
+                        .split(<span class="string">&#39;,&#39;</span>)
+                        .map(String::from)
+                        .map(<span class="kw">crate</span>::utils::base64_decode)
+                        .filter_map(Result::ok)
+                        .collect()
+                })
+                .unwrap_or_default(),
+            <span class="prelude-val">None </span>=&gt; &lt;<span class="kw">_</span>&gt;::default(),
+        }
+    }
 }
 
 <span class="attr">#[derive(Clone, Debug, Deserialize, schemars::JsonSchema)]
@@ -850,42 +911,9 @@
     <span class="kw">type </span>Error = tonic::Status;
 
     <span class="kw">fn </span>try_from(server: GameServer) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
-        <span class="kw">let </span>status = server
-            .status
-            .as_ref()
-            .ok_or_else(|| tonic::Status::internal(<span class="string">&quot;No status found for game server&quot;</span>))<span class="question-mark">?</span>;
-        <span class="kw">let </span><span class="kw-2">mut </span>extra_metadata = serde_json::Map::default();
-        extra_metadata.insert(
-            <span class="string">&quot;name&quot;</span>.into(),
-            server.metadata.name.clone().unwrap_or_default().into(),
-        );
-
-        <span class="kw">let </span>tokens = <span class="kw">match </span>server.metadata.annotations.as_ref() {
-            <span class="prelude-val">Some</span>(annotations) =&gt; annotations
-                .get(QUILKIN_TOKEN_LABEL)
-                .map(|value| {
-                    value
-                        .split(<span class="string">&#39;,&#39;</span>)
-                        .map(String::from)
-                        .map(<span class="kw">crate</span>::utils::base64_decode)
-                        .filter_map(Result::ok)
-                        .collect::&lt;std::collections::BTreeSet&lt;<span class="kw">_</span>&gt;&gt;()
-                })
-                .unwrap_or_default(),
-            <span class="prelude-val">None </span>=&gt; &lt;<span class="kw">_</span>&gt;::default(),
-        };
-
-        <span class="kw">let </span>address = status.address.clone();
-        <span class="kw">let </span>port = status
-            .ports
-            .as_ref()
-            .and_then(|ports| ports.first().map(|status| status.port))
-            .unwrap_or_default();
-        <span class="kw">let </span>filter_metadata = <span class="kw">crate</span>::endpoint::Metadata { tokens };
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span>::with_metadata(
-            (address, port).into(),
-            <span class="kw">crate</span>::metadata::MetadataView::with_unknown(filter_metadata, extra_metadata),
-        ))
+        server
+            .endpoint()
+            .ok_or_else(|| tonic::Status::internal(<span class="string">&quot;No status found for game server&quot;</span>))
     }
 }
 

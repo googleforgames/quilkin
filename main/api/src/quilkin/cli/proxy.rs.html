@@ -366,18 +366,6 @@
 <a href="#366" id="366">366</a>
 <a href="#367" id="367">367</a>
 <a href="#368" id="368">368</a>
-<a href="#369" id="369">369</a>
-<a href="#370" id="370">370</a>
-<a href="#371" id="371">371</a>
-<a href="#372" id="372">372</a>
-<a href="#373" id="373">373</a>
-<a href="#374" id="374">374</a>
-<a href="#375" id="375">375</a>
-<a href="#376" id="376">376</a>
-<a href="#377" id="377">377</a>
-<a href="#378" id="378">378</a>
-<a href="#379" id="379">379</a>
-<a href="#380" id="380">380</a>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -394,9 +382,8 @@
  * limitations under the License.
  */
 
-</span><span class="kw">use </span>std::{net::SocketAddr, sync::Arc};
+</span><span class="kw">use </span>std::{net::SocketAddr, sync::Arc, time::Duration};
 
-<span class="kw">use </span>tokio::{sync::watch, time::Duration};
 <span class="kw">use </span>tonic::transport::Endpoint;
 
 <span class="kw">use crate</span>::{proxy::SessionMap, utils::net, xds::ResourceType, Config, <span class="prelude-ty">Result</span>};
@@ -495,7 +482,7 @@
             <span class="prelude-val">None
         </span>};
 
-        <span class="self">self</span>.run_recv_from(<span class="kw-2">&amp;</span>config, sessions.clone(), shutdown_rx.clone())<span class="question-mark">?</span>;
+        <span class="self">self</span>.run_recv_from(<span class="kw-2">&amp;</span>config, sessions.clone())<span class="question-mark">?</span>;
         <span class="macro">tracing::info!</span>(<span class="string">&quot;Quilkin is ready&quot;</span>);
 
         shutdown_rx
@@ -518,12 +505,7 @@
     /// This function also spawns the set of worker tasks responsible for consuming packets
     /// off the aforementioned queue and processing them through the filter chain and session
     /// pipeline.
-    </span><span class="kw">fn </span>run_recv_from(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        config: <span class="kw-2">&amp;</span>Arc&lt;Config&gt;,
-        sessions: SessionMap,
-        shutdown_rx: watch::Receiver&lt;()&gt;,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+    </span><span class="kw">fn </span>run_recv_from(<span class="kw-2">&amp;</span><span class="self">self</span>, config: <span class="kw-2">&amp;</span>Arc&lt;Config&gt;, sessions: SessionMap) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
         <span class="comment">// The number of worker tasks to spawn. Each task gets a dedicated queue to
         // consume packets off.
         </span><span class="kw">let </span>num_workers = num_cpus::get();
@@ -535,7 +517,6 @@
             workers.push(<span class="kw">crate</span>::proxy::DownstreamReceiveWorkerConfig {
                 worker_id,
                 socket: socket.clone(),
-                shutdown_rx: shutdown_rx.clone(),
                 config: config.clone(),
                 sessions: sessions.clone(),
             })
@@ -695,7 +676,6 @@
 
         <span class="kw">let </span>socket = Arc::new(create_socket().<span class="kw">await</span>);
         <span class="kw">let </span>addr = socket.local_addr().unwrap();
-        <span class="kw">let </span>(_shutdown_tx, shutdown_rx) = watch::channel(());
         <span class="kw">let </span>endpoint = t.open_socket_and_recv_single_packet().<span class="kw">await</span>;
         <span class="kw">let </span>msg = <span class="string">&quot;hello&quot;</span>;
         <span class="kw">let </span>config = Arc::new(Config::default());
@@ -709,7 +689,6 @@
             socket: socket.clone(),
             config,
             sessions: &lt;<span class="kw">_</span>&gt;::default(),
-            shutdown_rx,
         }
         .spawn();
 
@@ -728,7 +707,6 @@
     <span class="attr">#[tokio::test]
     </span><span class="kw">async fn </span>run_recv_from() {
         <span class="kw">let </span>t = TestHelper::default();
-        <span class="kw">let </span>(_shutdown_tx, shutdown_rx) = watch::channel(());
 
         <span class="kw">let </span>msg = <span class="string">&quot;hello&quot;</span>;
         <span class="kw">let </span>endpoint = t.open_socket_and_recv_single_packet().<span class="kw">await</span>;
@@ -743,9 +721,7 @@
             clusters.insert_default(<span class="macro">vec!</span>[endpoint.socket.local_addr().unwrap()])
         });
 
-        proxy
-            .run_recv_from(<span class="kw-2">&amp;</span>config, &lt;<span class="kw">_</span>&gt;::default(), shutdown_rx)
-            .unwrap();
+        proxy.run_recv_from(<span class="kw-2">&amp;</span>config, &lt;<span class="kw">_</span>&gt;::default()).unwrap();
 
         <span class="kw">let </span>socket = create_socket().<span class="kw">await</span>;
         socket.send_to(msg.as_bytes(), <span class="kw-2">&amp;</span>local_addr).<span class="kw">await</span>.unwrap();

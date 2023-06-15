@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["Error","Protocol"]};
+window.SIDEBAR_ITEMS = {"enum":["Error","Protocol"],"fn":["spawn"]};
