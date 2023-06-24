@@ -493,7 +493,7 @@
         <span class="macro">tracing::info!</span>(sessions=%sessions.len(), <span class="string">&quot;waiting for active sessions to expire&quot;</span>);
         <span class="kw">while </span>sessions.is_not_empty() {
             tokio::time::sleep(Duration::from_secs(<span class="number">1</span>)).<span class="kw">await</span>;
-            <span class="macro">tracing::info!</span>(sessions=%sessions.len(), <span class="string">&quot;sessions still active&quot;</span>);
+            <span class="macro">tracing::debug!</span>(sessions=%sessions.len(), <span class="string">&quot;sessions still active&quot;</span>);
         }
         <span class="macro">tracing::info!</span>(<span class="string">&quot;all sessions expired&quot;</span>);
 
