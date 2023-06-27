@@ -25,4 +25,4 @@ clusters:
   default:
     localities:
       - endpoints:
-          - address: ${LOADBALANCER_IP}:7000
+          - address: ${LOADBALANCER_IP}:7777
