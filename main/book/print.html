@@ -84,16 +84,38 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="introduction.html">Introduction</a></li><li class="chapter-item expanded affix "><a href="installation.html">Installation</a></li><li class="chapter-item expanded affix "><a href="faq.html">FAQ</a></li><li class="chapter-item expanded affix "><li class="part-title">Quickstart Guides</li><li class="chapter-item expanded "><a href="deployment/quickstarts/netcat.html"><strong aria-hidden="true">1.</strong> Netcat</a></li><li class="chapter-item expanded "><a href="deployment/quickstarts/agones-xonotic-sidecar.html"><strong aria-hidden="true">2.</strong> Agones + Xonotic (Sidecar)</a></li><li class="chapter-item expanded "><a href="deployment/quickstarts/agones-xonotic-xds.html"><strong aria-hidden="true">3.</strong> Agones + Xonotic (xDS)</a></li><li class="chapter-item expanded affix "><li class="part-title">Services</li><li class="chapter-item expanded "><a href="services/proxy.html"><strong aria-hidden="true">4.</strong> Proxy</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="services/proxy/qcmp.html"><strong aria-hidden="true">4.1.</strong> Control Message Protocol</a></li><li class="chapter-item expanded "><a href="services/proxy/filters.html"><strong aria-hidden="true">4.2.</strong> Filters</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="services/proxy/filters/capture.html"><strong aria-hidden="true">4.2.1.</strong> Capture</a></li><li class="chapter-item expanded "><a href="services/proxy/filters/compress.html"><strong aria-hidden="true">4.2.2.</strong> Compress</a></li><li class="chapter-item expanded "><a href="services/proxy/filters/concatenate_bytes.html"><strong aria-hidden="true">4.2.3.</strong> Concatenate Bytes</a></li><li class="chapter-item expanded "><a href="services/proxy/filters/debug.html"><strong aria-hidden="true">4.2.4.</strong> Debug</a></li><li class="chapter-item expanded "><a href="services/proxy/filters/drop.html"><strong aria-hidden="true">4.2.5.</strong> Drop</a></li><li class="chapter-item expanded "><a href="services/proxy/filters/firewall.html"><strong aria-hidden="true">4.2.6.</strong> Firewall</a></li><li class="chapter-item expanded "><a href="services/proxy/filters/load_balancer.html"><strong aria-hidden="true">4.2.7.</strong> Load Balancer</a></li><li class="chapter-item expanded "><a href="services/proxy/filters/local_rate_limit.html"><strong aria-hidden="true">4.2.8.</strong> Local Rate Limit</a></li><li class="chapter-item expanded "><a href="services/proxy/filters/match.html"><strong aria-hidden="true">4.2.9.</strong> Match</a></li><li class="chapter-item expanded "><a href="services/proxy/filters/pass.html"><strong aria-hidden="true">4.2.10.</strong> Pass</a></li><li class="chapter-item expanded "><a href="services/proxy/filters/timestamp.html"><strong aria-hidden="true">4.2.11.</strong> Timestamp</a></li><li class="chapter-item expanded "><a href="services/proxy/filters/token_router.html"><strong aria-hidden="true">4.2.12.</strong> Token Router</a></li><li class="chapter-item expanded "><a href="services/proxy/filters/writing_custom_filters.html"><strong aria-hidden="true">4.2.13.</strong> Writing Custom Filters</a></li></ol></li><li class="chapter-item expanded "><a href="services/proxy/metrics.html"><strong aria-hidden="true">4.3.</strong> Metrics</a></li><li class="spacer"></li></ol></li><li class="chapter-item expanded "><a href="services/xds.html"><strong aria-hidden="true">5.</strong> Control Plane</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="services/xds/metrics.html"><strong aria-hidden="true">5.1.</strong> Metrics</a></li><li class="chapter-item expanded "><div><strong aria-hidden="true">5.2.</strong> Providers</div></li><li><ol class="section"><li class="chapter-item expanded "><a href="services/xds/providers/agones.html"><strong aria-hidden="true">5.2.1.</strong> Agones</a></li><li class="chapter-item expanded "><a href="services/xds/providers/filesystem.html"><strong aria-hidden="true">5.2.2.</strong> Filesystem</a></li><li class="spacer"></li></ol></li></ol></li><li class="chapter-item expanded "><a href="services/relay.html"><strong aria-hidden="true">6.</strong> Relay</a></li><li><ol class="section"><li class="chapter-item expanded "><div><strong aria-hidden="true">6.1.</strong> Metrics</div></li><li class="chapter-item expanded "><div><strong aria-hidden="true">6.2.</strong> Providers</div></li></ol></li><li class="chapter-item expanded "><li class="part-title">SDKs</li><li class="chapter-item expanded "><a href="sdks/unreal-engine.html"><strong aria-hidden="true">7.</strong> Unreal Engine</a></li><li class="chapter-item expanded affix "><li class="part-title">Deployment</li><li class="chapter-item expanded "><a href="deployment/admin.html"><strong aria-hidden="true">8.</strong> Administration</a></li><li class="chapter-item expanded "><a href="deployment/examples.html"><strong aria-hidden="true">9.</strong> Architecture Examples</a></li><li class="chapter-item expanded "><a href="deployment/configuration.html"><strong aria-hidden="true">10.</strong> Configuration</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="introduction.html">Introduction</a></li><li class="chapter-item expanded affix "><a href="installation.html">Installation</a></li><li class="chapter-item expanded affix "><a href="faq.html">FAQ</a></li><li class="chapter-item expanded affix "><li class="part-title">Quickstart Guides</li><li class="chapter-item expanded "><a href="deployment/quickstarts/netcat.html"><strong aria-hidden="true">1.</strong> Netcat</a></li><li class="chapter-item expanded "><a href="deployment/quickstarts/agones-xonotic-sidecar.html"><strong aria-hidden="true">2.</strong> Agones + Xonotic (Sidecar)</a></li><li class="chapter-item expanded "><a href="deployment/quickstarts/agones-xonotic-xds.html"><strong aria-hidden="true">3.</strong> Agones + Xonotic (xDS)</a></li><li class="chapter-item expanded affix "><li class="part-title">Services</li><li class="chapter-item expanded "><a href="services/proxy.html"><strong aria-hidden="true">4.</strong> Proxy</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="services/proxy/configuration.html"><strong aria-hidden="true">4.1.</strong> Configuration File</a></li><li class="chapter-item expanded "><a href="services/proxy/filters.html"><strong aria-hidden="true">4.2.</strong> Filters</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="services/proxy/filters/capture.html"><strong aria-hidden="true">4.2.1.</strong> Capture</a></li><li class="chapter-item expanded "><a href="services/proxy/filters/compress.html"><strong aria-hidden="true">4.2.2.</strong> Compress</a></li><li class="chapter-item expanded "><a href="services/proxy/filters/concatenate_bytes.html"><strong aria-hidden="true">4.2.3.</strong> Concatenate Bytes</a></li><li class="chapter-item expanded "><a href="services/proxy/filters/debug.html"><strong aria-hidden="true">4.2.4.</strong> Debug</a></li><li class="chapter-item expanded "><a href="services/proxy/filters/drop.html"><strong aria-hidden="true">4.2.5.</strong> Drop</a></li><li class="chapter-item expanded "><a href="services/proxy/filters/firewall.html"><strong aria-hidden="true">4.2.6.</strong> Firewall</a></li><li class="chapter-item expanded "><a href="services/proxy/filters/load_balancer.html"><strong aria-hidden="true">4.2.7.</strong> Load Balancer</a></li><li class="chapter-item expanded "><a href="services/proxy/filters/local_rate_limit.html"><strong aria-hidden="true">4.2.8.</strong> Local Rate Limit</a></li><li class="chapter-item expanded "><a href="services/proxy/filters/match.html"><strong aria-hidden="true">4.2.9.</strong> Match</a></li><li class="chapter-item expanded "><a href="services/proxy/filters/pass.html"><strong aria-hidden="true">4.2.10.</strong> Pass</a></li><li class="chapter-item expanded "><a href="services/proxy/filters/timestamp.html"><strong aria-hidden="true">4.2.11.</strong> Timestamp</a></li><li class="chapter-item expanded "><a href="services/proxy/filters/token_router.html"><strong aria-hidden="true">4.2.12.</strong> Token Router</a></li><li class="chapter-item expanded "><a href="services/proxy/filters/writing_custom_filters.html"><strong aria-hidden="true">4.2.13.</strong> Writing Custom Filters</a></li></ol></li><li class="chapter-item expanded "><a href="services/proxy/qcmp.html"><strong aria-hidden="true">4.3.</strong> Control Message Protocol</a></li><li class="chapter-item expanded "><a href="services/proxy/metrics.html"><strong aria-hidden="true">4.4.</strong> Metrics</a></li><li class="spacer"></li></ol></li><li class="chapter-item expanded "><a href="services/xds.html"><strong aria-hidden="true">5.</strong> Control Plane</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="services/xds/metrics.html"><strong aria-hidden="true">5.1.</strong> Metrics</a></li><li class="chapter-item expanded "><div><strong aria-hidden="true">5.2.</strong> Providers</div></li><li><ol class="section"><li class="chapter-item expanded "><a href="services/xds/providers/agones.html"><strong aria-hidden="true">5.2.1.</strong> Agones</a></li><li class="chapter-item expanded "><a href="services/xds/providers/filesystem.html"><strong aria-hidden="true">5.2.2.</strong> Filesystem</a></li><li class="spacer"></li></ol></li></ol></li><li class="chapter-item expanded "><a href="services/relay.html"><strong aria-hidden="true">6.</strong> Relay</a></li><li><ol class="section"><li class="chapter-item expanded "><div><strong aria-hidden="true">6.1.</strong> Metrics</div></li><li class="chapter-item expanded "><div><strong aria-hidden="true">6.2.</strong> Providers</div></li></ol></li><li class="chapter-item expanded "><li class="part-title">SDKs</li><li class="chapter-item expanded "><a href="sdks/unreal-engine.html"><strong aria-hidden="true">7.</strong> Unreal Engine</a></li><li class="chapter-item expanded affix "><li class="part-title">Deployment</li><li class="chapter-item expanded "><a href="deployment/admin.html"><strong aria-hidden="true">8.</strong> Administration</a></li><li class="chapter-item expanded "><a href="deployment/examples.html"><strong aria-hidden="true">9.</strong> Architecture Examples</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
 
         <div id="page-wrapper" class="page-wrapper">
 
             <div class="page">
                                 <div id="menu-bar-hover-placeholder"></div>
-                <div id="menu-bar" class="menu-bar sticky bordered">
+                <div id="menu-bar" class="menu-bar sticky">
                     <div class="left-buttons">
                         <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
                             <i class="fa fa-bars"></i>
@@ -220,7 +242,7 @@ your local machine through <a href="installation.html#cargo">Cargo</a>.</p>
 <dl>
   <dt><strong>Source / Method</strong></dt>
   <dd>
-<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.6.0-dev-15be84e
+<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.6.0-dev-3093b05
 </code></pre>
 </dd>
   <dt><strong>Notes</strong></dt>
@@ -630,21 +652,21 @@ Options:
           Print help
 </code></pre>
 <h2 id="endpoints"><a class="header" href="#endpoints">Endpoints</a></h2>
-<p>An Endpoint represents an address that Quilkin forwards packets to that it has recieved from the 
+<p>An Endpoint represents an address that Quilkin forwards packets to that it has received from the 
 source port.</p>
 <p>It is represented by an IP address and port. An Endpoint can optionally be associated with an arbitrary set of 
 <a href="services/proxy.html#endpoint-metadata">metadata</a> as well.</p>
 <h2 id="proxy-filters"><a class="header" href="#proxy-filters">Proxy Filters</a></h2>
 <p>Filters are the way for a Quilkin proxy to intercept UDP packet traffic from the
-source and <a href="services/proxy.html#endpoints">Endpoints</a> in either direction, and be able to inpsect,
+source and <a href="services/proxy.html#endpoints">Endpoints</a> in either direction, and be able to inspect,
 manipulate, and route the packets as desired. </p>
-<p>See [Filters][filters-doc]  for a deeper dive into Filters, as well as the list of build in Filters that come with 
+<p>See <a href="services/./proxy/filters.html">Filters</a>  for a deeper dive into Filters, as well as the list of build in Filters that come with 
 Quilkin.</p>
 <h2 id="endpoint-metadata"><a class="header" href="#endpoint-metadata">Endpoint Metadata</a></h2>
-<p>Enpoint metadata is an arbitrary set of key value pairs that are associated with an Endpoint.</p>
+<p>Endpoint metadata is an arbitrary set of key value pairs that are associated with an Endpoint.</p>
 <p>These are visible to Filters when processing packets and can be used to provide more context about endpoints (e.g 
 whether or not to route a packet to an endpoint). Keys must be of type string otherwise the configuration is rejected.</p>
-<p>Metadata associated with an endpoint contain arbitrary key value pairs which [Filters][filters-doc] can consult when processing packets (e.g they can contain information that determine whether or not to route a particular packet to an endpoint).</p>
+<p>Metadata associated with an endpoint contain arbitrary key value pairs which <a href="services/./proxy/filters.html">Filters</a> can consult when processing packets (e.g they can contain information that determine whether or not to route a particular packet to an endpoint).</p>
 <h3 id="specialist-endpoint-metadata"><a class="header" href="#specialist-endpoint-metadata">Specialist Endpoint Metadata</a></h3>
 <p>Access tokens that can be associated with an endpoint are simply a special piece of metadata well known to Quilkin 
 and utilised by the built-in <a href="services/./proxy/filters/token_router.html">TokenRouter</a> filter to route packets.</p>
@@ -663,14 +685,14 @@ Currently, only the <code>tokens</code> key is in use.</p>
                 - MXg3aWp5Ng== # base64 for 1x7ijy6
                 - OGdqM3YyaQ== # base64 for 8gj3v2i
 </code></pre>
-<p>An endpoint's metadata can be specified alongside the endpoint in <a href="services/../deployment/configuration.html">static configuration</a> or using the <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint_components.proto#envoy-v3-api-field-config-endpoint-v3-lbendpoint-metadata">xDS endpoint metadata</a> field when using <a href="services/./xds.html">dynamic configuration</a> via xDS.</p>
+<p>An endpoint's metadata can be specified alongside the endpoint in <a href="services/./proxy/configuration.html">static configuration</a> or using the <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint_components.proto#envoy-v3-api-field-config-endpoint-v3-lbendpoint-metadata">xDS endpoint metadata</a> field when using <a href="services/./xds.html">dynamic configuration</a> via xDS.</p>
 <h2 id="session"><a class="header" href="#session">Session</a></h2>
 <p>A session represents ongoing communication flow between a client on a [Local Port] and an <a href="services/proxy.html#endpoints">Endpoint</a>.</p>
 <p>Quilkin uses the &quot;Session&quot; concept to track traffic flowing through the proxy between any client-server pair. A
 Session serves the same purpose, and can be thought of as a lightweight version of a <code>TCP</code> session in that, while a
 TCP session requires a protocol to establish and teardown:</p>
 <ul>
-<li>A Quilkin session is automatically created upon receiving the first packet from a client via the [Local Port], to be 
+<li>A Quilkin session is automatically created upon receiving the first packet from a client via the [Local Port] to be 
 sent to an upstream <a href="services/proxy.html#endpoints">Endpoint</a>.</li>
 <li>The session is automatically deleted after a period of inactivity (where no packet was sent between either 
 party) - currently 60 seconds.</li>
@@ -679,62 +701,133 @@ party) - currently 60 seconds.</li>
 downstream endpoint which initiated the communication with Quilkin and the server is one of the upstream Endpoints 
 that Quilkin proxies traffic to.</p>
 <p>Sessions are established <em>after</em> the filter chain completes. The destination Endpoint of a packet is determined by 
-the [filter chain][filter-doc], so a Session can only be created after filter chain completion. For example, if the 
+the <a href="services/./proxy/filters.html">filter chain</a>, so a Session can only be created after filter chain completion. For example, if the 
 filter chain drops all packets, then no session will ever be created.</p>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="quilkin-control-message-protocol-qcmp"><a class="header" href="#quilkin-control-message-protocol-qcmp">Quilkin Control Message Protocol (QCMP)</a></h1>
-<p>In addition to the TCP based administration API, Quilkin provides a meta API
-over UDP. The purpose of this API is to provide meta operations that can be
-used by untrusted clients. Currently the API is focuses on providing pings for
-latency measurement but that may change overtime as new features are added.</p>
-<h2 id="protocol-data-unit"><a class="header" href="#protocol-data-unit">Protocol Data Unit</a></h2>
-<p>The following is a <a href="https://kaitai.io/">Kaitai Struct</a> configuration of the protocol data unit
-accepted by Quilkin proxies.</p>
-<pre><code class="language-yaml">meta:
-  id: quilkin_packet
-  endian: be
-seq:
-  - id: magic_header
-    contents: &quot;QLKN&quot;
-  - id: protocol_version
-    type: u1
-  - id: packet_type
-    type: u1
-  - id: packet_length
-    type: u2
-  - id: packet
-    size: packet_length
-    type:
-      switch-on: packet_type
-      cases:
-        0: ping_packet
-        1: ping_reply_packet
+<div style="break-before: page; page-break-before: always;"></div><h1 id="configuration-file"><a class="header" href="#configuration-file">Configuration File</a></h1>
+<p>While much of Quilkin's proxy configuration can be configured via its
+<a href="services/proxy/../proxy.html">command line interface</a>, if you have a larger or more complex configuration
+it might be useful to use a configuration file instead.</p>
+<p>The following is the schema and reference for Quilkin's proxy configuration
+file. See the <a href="https://github.com/googleforgames/quilkin/blob/main/examples">examples</a> folder for example configuration files.</p>
+<p>By default, Quilkin will look for a configuration file named <code>quilkin.yaml</code> in
+its current running directory first, then if not present, in
+<code>/etc/quilkin/quilkin.yaml</code> on UNIX systems. This can be overridden with the
+<code>-c/--config</code> command-line argument, or the <code>QUILKIN_FILENAME</code>
+environment variable.</p>
+<h2 id="static-configuration"><a class="header" href="#static-configuration">Static Configuration</a></h2>
+<p>Example of a full configuration for <code>quilkin proxy</code> that utlisies a static
+endpoint configuration to specify two endpoints with <code>token</code> metadata attached to each:</p>
+<pre><code class="language-yaml">#
+# Example configuration for a Quilkin Proxy with static Endpoints
+#
 
-types:
-  ping_packet:
-    doc: |
-        Sent by a client to a proxy containing the time when the client sent the
-        packet along with a unique nonce. The timestamp should be a UTC unix
-        timestamp in **nanoseconds**.
-    seq:
-      - id: nonce
-        type: u1
-      - id: client_sent_timestamp
-        type: u8
-
-  ping_reply_packet:
-    doc: |
-        A reply from a proxy containing the ping's nonce, the client sent time,
-        the server's receive time, and the server's sent time. The timestamps
-        should be UTC unix timestamps in **nanoseconds**.
-    seq:
-      - id: nonce
-        type: u1
-      - id: client_sent_timestamp
-        type: u8
-      - id: server_receive_timestamp
-        type: u8
-      - id: server_sent_timestamp
-        type: u8
+version: v1alpha1
+id: my-proxy # An identifier for the proxy instance.
+clusters: # grouping of clusters
+  default:
+    localities: # grouping of endpoints within a cluster
+      - endpoints: # array of potential endpoints to send on traffic to
+          - address: 127.0.0.1:26000
+            metadata: # Metadata associated with the endpoint
+              quilkin.dev:
+                tokens:
+                  - MXg3aWp5Ng== # the connection byte array to route to, encoded as base64 (string value: 1x7ijy6)
+                  - OGdqM3YyaQ== # (string value: 8gj3v2i)
+          - address: 127.0.0.1:26001
+            metadata: # Metadata associated with the endpoint
+              quilkin.dev:
+                tokens:
+                  - bmt1eTcweA== # (string value: nkuy70x)
+</code></pre>
+<p>This is a great use of a static configuration file, as we only get a singular <code>--to</code> endpoint address via the 
+command line arguments.</p>
+<p>We can also configure <a href="services/proxy/./filters.html">Filters</a> via the configuration file. See that section for documentation.</p>
+<h2 id="dynamic-configuration"><a class="header" href="#dynamic-configuration">Dynamic Configuration</a></h2>
+<p>If you need to dynamically change either Filters and/or Endpoints at runtime, see the <a href="services/proxy/../xds.html">Control Plane</a> 
+documentation on the configuration API surface, and built in dynamic management providers.</p>
+<h2 id="json-schema"><a class="header" href="#json-schema">Json Schema</a></h2>
+<p>The full <a href="https://json-schema.org/">JSON Schema</a> for the YAML configuration file.</p>
+<pre><code class="language-yaml">type: object
+properties:
+  version:
+    type: string
+    description: |
+      The configuration file version to use.
+    enum:
+      - v1alpha1
+  id:
+      type: string
+      description: |
+          An identifier for the proxy instance.
+      default: On linux, the machine hostname is used as default. On all other platforms a UUID is generated for the proxy.
+  port:
+      type: integer
+      description: |
+          The listening port. In &quot;proxy&quot; mode, the port for traffic to be sent to. In &quot;manage&quot; mode, the port to connect to the xDS API.
+      default: 7000
+  maxmind_db:
+    type: string
+    description: |
+      The remote URL or local file path to retrieve the Maxmind database (requires licence).
+  filters:
+    type: array
+    description: |
+      A filter chain.
+    items:
+      '$ref': {} # Refer to the Filter documentation for a filter configuration schema.
+  clusters:
+    type: object
+    description: |
+      grouping of clusters, each with a key for a name
+    additionalProperties:
+      type: object
+      description: |
+        An individual cluster
+      properties:
+        localities:          
+          type: array
+          description: |
+            grouping of endpoints, per cluster.
+          items:
+            type: object
+            properties:
+              endpoints:
+                type: array
+                description: |
+                  A list of upstream endpoints to forward packets to.
+                items:
+                  type: object
+                  description: |
+                    An upstream endpoint
+                  properties:
+                    address:
+                      type: string
+                      description: |
+                        Socket address of the endpoint. This must be of the ´IP:Port` form e.g `192.168.1.1:7001`
+                      metadata:
+                        type: object
+                        description: |
+                          Arbitrary key value pairs that is associated with the endpoint.
+                          These are visible to Filters when processing packets and can be used to provide more context about endpoints (e.g whether or not to route a packet to an endpoint).
+                          Keys must be of type string otherwise the configuration is rejected.
+                  required:
+                    - address
+  management_servers:
+    type: array
+    description: |
+      A list of XDS management servers to fetch configuration from.
+      Multiple servers can be provided for redundancy for the proxy to
+      fall back to upon error.
+    items:
+      type: object
+      description: |
+        Configuration for a management server.
+    properties:
+      address:
+        type: string
+        description: |
+          Address of the management server. This must have the `http(s)` scheme prefix.
+          Example: `http://example.com`
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="packet-filters"><a class="header" href="#packet-filters">Packet Filters</a></h1>
 <p>In most cases, we would like Quilkin to do some preprocessing of received packets before sending them off to their destination. Because this stage is entirely specific to the use case at hand and differs between Quilkin deployments, we must have a say over what tweaks to perform - this is where filters come in.</p>
@@ -1994,6 +2087,61 @@ filters:
 endpoints:
 - address: 127.0.0.1:4321
 </code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="quilkin-control-message-protocol-qcmp"><a class="header" href="#quilkin-control-message-protocol-qcmp">Quilkin Control Message Protocol (QCMP)</a></h1>
+<p>In addition to the TCP based administration API, Quilkin provides a meta API
+over UDP. The purpose of this API is to provide meta operations that can be
+used by untrusted clients. Currently the API is focuses on providing pings for
+latency measurement but that may change overtime as new features are added.</p>
+<h2 id="protocol-data-unit"><a class="header" href="#protocol-data-unit">Protocol Data Unit</a></h2>
+<p>The following is a <a href="https://kaitai.io/">Kaitai Struct</a> configuration of the protocol data unit
+accepted by Quilkin proxies.</p>
+<pre><code class="language-yaml">meta:
+  id: quilkin_packet
+  endian: be
+seq:
+  - id: magic_header
+    contents: &quot;QLKN&quot;
+  - id: protocol_version
+    type: u1
+  - id: packet_type
+    type: u1
+  - id: packet_length
+    type: u2
+  - id: packet
+    size: packet_length
+    type:
+      switch-on: packet_type
+      cases:
+        0: ping_packet
+        1: ping_reply_packet
+
+types:
+  ping_packet:
+    doc: |
+        Sent by a client to a proxy containing the time when the client sent the
+        packet along with a unique nonce. The timestamp should be a UTC unix
+        timestamp in **nanoseconds**.
+    seq:
+      - id: nonce
+        type: u1
+      - id: client_sent_timestamp
+        type: u8
+
+  ping_reply_packet:
+    doc: |
+        A reply from a proxy containing the ping's nonce, the client sent time,
+        the server's receive time, and the server's sent time. The timestamps
+        should be UTC unix timestamps in **nanoseconds**.
+    seq:
+      - id: nonce
+        type: u1
+      - id: client_sent_timestamp
+        type: u8
+      - id: server_receive_timestamp
+        type: u8
+      - id: server_sent_timestamp
+        type: u8
+</code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="proxy-metrics"><a class="header" href="#proxy-metrics">Proxy Metrics</a></h1>
 <p>The following are metrics that Quilkin provides while in Proxy Mode.</p>
 <h1 id="asn-maxmind-information"><a class="header" href="#asn-maxmind-information">ASN Maxmind Information</a></h1>
@@ -2142,7 +2290,7 @@ generic filter histogram, see help label for more specific info.</p>
 </div>
 <p>For multi-cluster integration, Quilkin provides a <code>manage</code> service, that can be
 used with a number of configuration discovery providers to provide cluster
-configuration multiple <a href="services/./proxy.html"><code>proxy</code>s</a>. With each provider automationing the
+configuration multiple <a href="services/./proxy.html"><code>proxy</code>s</a>. With each provider automating the
 complexity of a full xDS management control plane via integrations with popular
 projects and common architecture patterns.</p>
 <p>To view all the providers and options for the <code>manage</code> subcommand, run:</p>
@@ -2202,8 +2350,7 @@ Quilkin implements the <strong>Aggregated Discovery Service (ADS)</strong> <em>S
 </ul>
 <h2 id="connecting-to-an-xds-management-server"><a class="header" href="#connecting-to-an-xds-management-server">Connecting to an xDS management server</a></h2>
 <p>Connecting a Quilkin proxy to an xDS management server can be implemented via providing one or more URLs to
-the <code>management_servers</code> <a href="services/../../api/quilkin/struct.Proxy.html#structfield.management_server">command line</a> or
-<a href="services/../deployment/configuration.html#dynamic-configuration">file configuration</a>.</p>
+the <code>management_servers</code> <a href="services/../../api/quilkin/struct.Proxy.html#structfield.management_server">command line</a>.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="xds-metrics"><a class="header" href="#xds-metrics">xDS Metrics</a></h1>
 <h2 id="proxy-mode"><a class="header" href="#proxy-mode">Proxy Mode</a></h2>
 <p>Quilkin exposes the following metrics around the management servers and its resources when running as a
@@ -2308,10 +2455,11 @@ set by adding a comma separated standard base64 encoded strings. This must be ad
    quilkin.dev/tokens: MXg3aWp5Ng==,OGdqM3YyaQ==
 </code></pre>
 <h2 id="filter-configuration"><a class="header" href="#filter-configuration">Filter Configuration</a></h2>
-<p>The Agones provider watches for a singular <a href="https://kubernetes.io/docs/concepts/configuration/configmap/"><code>ConfigMap</code></a>
-that has the label of <code>quilkin.dev/configmap: &quot;true&quot;</code>, and any changes that happen to it, and use its contents to
-send Filter configuration to any connected Quilkin proxies.</p>
-<p>The <code>ConfigMap</code> contents should be a valid Quilkin <a href="services/xds/providers/../../../deployment/configuration.html">file configuration</a>, but with no Endpoint data.</p>
+<p>The Agones provider watches for a singular <a href="https://kubernetes.io/docs/concepts/configuration/configmap/"><code>ConfigMap</code></a> 
+that has the label of <code>quilkin.dev/configmap: &quot;true&quot;</code>, and any changes that happen to it, and use its contents to 
+send <a href="services/xds/providers/../../../services/proxy/filters.html">Filter</a> configuration to any connected Quilkin proxies.</p>
+<p>The <code>ConfigMap</code> contents should be a valid Quilkin <a href="services/xds/providers/../../../services/proxy/configuration.html">file configuration</a>, but with no 
+Endpoint data.</p>
 <p>For example:</p>
 <pre><code class="language-yaml">apiVersion: v1
 kind: ConfigMap
@@ -2349,7 +2497,7 @@ and <a href="https://kubernetes.io/docs/reference/access-authn-authz/rbac/">RBAC
 default port is taken up by an existing Quilkin proxy.</p>
 <p>After running this command, any proxy that connects to port 18000 will receive updates as configured in <code>config.yaml</code>
 file.</p>
-<p>You can find the configuration file schema in <a href="services/xds/providers/../../../deployment/configuration.html">Configuration</a>.</p>
+<p>You can find the configuration file schema in <a href="services/xds/providers/../../../services/proxy/configuration.html">Configuration File</a>.</p>
 <p>Example:</p>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -2662,128 +2810,6 @@ balanced via the Client Proxy to multiple Server Proxies for even greater redund
 </ul>
 <hr />
 <p>Diagrams powered by <a href="http://asciiflow.com/" target="_blank">asciiflow.com</a></p>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="configuration-3"><a class="header" href="#configuration-3">Configuration</a></h1>
-<p>The following is the schema and reference for a Quilkin configuration
-file. See the <a href="https://github.com/googleforgames/quilkin/blob/main/examples">examples</a> folder for example configuration files.</p>
-<p>By default Quilkin will look for a configuration file named <code>quilkin.yaml</code> in
-its current running directory first, then if not present, in
-<code>/etc/quilkin/quilkin.yaml</code> on UNIX systems. This can be overridden with the
-<code>-c/--config</code> command-line argument, or the <code>QUILKIN_FILENAME</code>
-environment variable.</p>
-<h2 id="static-configuration"><a class="header" href="#static-configuration">Static Configuration</a></h2>
-<p>Example of a full configuration for <code>quilkin proxy</code> that utlisies a static
-endpoint configuration:</p>
-<pre><code class="language-yaml">#
-# Example configuration for a Quilkin Proxy with static Endpoints
-#
-
-version: v1alpha1
-id: my-proxy # An identifier for the proxy instance.
-clusters: # grouping of clusters
-  default:
-    localities: # grouping of endpoints within a cluster
-      - endpoints: # array of potential endpoints to send on traffic to
-          - address: 127.0.0.1:26000
-            metadata: # Metadata associated with the endpoint
-              quilkin.dev:
-                tokens:
-                  - MXg3aWp5Ng== # the connection byte array to route to, encoded as base64 (string value: 1x7ijy6)
-                  - OGdqM3YyaQ== # (string value: 8gj3v2i)
-          - address: 127.0.0.1:26001
-            metadata: # Metadata associated with the endpoint
-              quilkin.dev:
-                tokens:
-                  - bmt1eTcweA== # (string value: nkuy70x)
-</code></pre>
-<h2 id="dynamic-configuration"><a class="header" href="#dynamic-configuration">Dynamic Configuration</a></h2>
-<p>Example of a full configuration for <code>quilkin proxy</code> that utlisies a dynamic
-Endpoint configuration through an <a href="deployment/../services/xds.html">xDS management endpoint</a>:</p>
-<pre><code class="language-yaml">{{#include ../../../examples/control-plane.yaml:17:100}}
-</code></pre>
-<h2 id="json-schema"><a class="header" href="#json-schema">Json Schema</a></h2>
-<p>The full <a href="https://json-schema.org/">JSON Schema</a> for the YAML configuration file.</p>
-<pre><code class="language-yaml">type: object
-properties:
-  version:
-    type: string
-    description: |
-      The configuration file version to use.
-    enum:
-      - v1alpha1
-  id:
-      type: string
-      description: |
-          An identifier for the proxy instance.
-      default: On linux, the machine hostname is used as default. On all other platforms a UUID is generated for the proxy.
-  port:
-      type: integer
-      description: |
-          The listening port. In &quot;proxy&quot; mode, the port for traffic to be sent to. In &quot;manage&quot; mode, the port to connect to the xDS API.
-      default: 7000
-  maxmind_db:
-    type: string
-    description: |
-      The remote URL or local file path to retrieve the Maxmind database (requires licence).
-  filters:
-    type: array
-    description: |
-      A filter chain.
-    items:
-      '$ref': {} # Refer to the Filter documentation for a filter configuration schema.
-  clusters:
-    type: object
-    description: |
-      grouping of clusters, each with a key for a name
-    additionalProperties:
-      type: object
-      description: |
-        An individual cluster
-      properties:
-        localities:          
-          type: array
-          description: |
-            grouping of endpoints, per cluster.
-          items:
-            type: object
-            properties:
-              endpoints:
-                type: array
-                description: |
-                  A list of upstream endpoints to forward packets to.
-                items:
-                  type: object
-                  description: |
-                    An upstream endpoint
-                  properties:
-                    address:
-                      type: string
-                      description: |
-                        Socket address of the endpoint. This must be of the ´IP:Port` form e.g `192.168.1.1:7001`
-                      metadata:
-                        type: object
-                        description: |
-                          Arbitrary key value pairs that is associated with the endpoint.
-                          These are visible to Filters when processing packets and can be used to provide more context about endpoints (e.g whether or not to route a packet to an endpoint).
-                          Keys must be of type string otherwise the configuration is rejected.
-                  required:
-                    - address
-  management_servers:
-    type: array
-    description: |
-      A list of XDS management servers to fetch configuration from.
-      Multiple servers can be provided for redundancy for the proxy to
-      fall back to upon error.
-    items:
-      type: object
-      description: |
-        Configuration for a management server.
-    properties:
-      address:
-        type: string
-        description: |
-          Address of the management server. This must have the `http(s)` scheme prefix.
-          Example: `http://example.com`
-</code></pre>
 
                     </main>
 

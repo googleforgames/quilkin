@@ -83,16 +83,38 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../introduction.html">Introduction</a></li><li class="chapter-item expanded affix "><a href="../installation.html">Installation</a></li><li class="chapter-item expanded affix "><a href="../faq.html">FAQ</a></li><li class="chapter-item expanded affix "><li class="part-title">Quickstart Guides</li><li class="chapter-item expanded "><a href="../deployment/quickstarts/netcat.html"><strong aria-hidden="true">1.</strong> Netcat</a></li><li class="chapter-item expanded "><a href="../deployment/quickstarts/agones-xonotic-sidecar.html"><strong aria-hidden="true">2.</strong> Agones + Xonotic (Sidecar)</a></li><li class="chapter-item expanded "><a href="../deployment/quickstarts/agones-xonotic-xds.html"><strong aria-hidden="true">3.</strong> Agones + Xonotic (xDS)</a></li><li class="chapter-item expanded affix "><li class="part-title">Services</li><li class="chapter-item expanded "><a href="../services/proxy.html" class="active"><strong aria-hidden="true">4.</strong> Proxy</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../services/proxy/qcmp.html"><strong aria-hidden="true">4.1.</strong> Control Message Protocol</a></li><li class="chapter-item expanded "><a href="../services/proxy/filters.html"><strong aria-hidden="true">4.2.</strong> Filters</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../services/proxy/filters/capture.html"><strong aria-hidden="true">4.2.1.</strong> Capture</a></li><li class="chapter-item expanded "><a href="../services/proxy/filters/compress.html"><strong aria-hidden="true">4.2.2.</strong> Compress</a></li><li class="chapter-item expanded "><a href="../services/proxy/filters/concatenate_bytes.html"><strong aria-hidden="true">4.2.3.</strong> Concatenate Bytes</a></li><li class="chapter-item expanded "><a href="../services/proxy/filters/debug.html"><strong aria-hidden="true">4.2.4.</strong> Debug</a></li><li class="chapter-item expanded "><a href="../services/proxy/filters/drop.html"><strong aria-hidden="true">4.2.5.</strong> Drop</a></li><li class="chapter-item expanded "><a href="../services/proxy/filters/firewall.html"><strong aria-hidden="true">4.2.6.</strong> Firewall</a></li><li class="chapter-item expanded "><a href="../services/proxy/filters/load_balancer.html"><strong aria-hidden="true">4.2.7.</strong> Load Balancer</a></li><li class="chapter-item expanded "><a href="../services/proxy/filters/local_rate_limit.html"><strong aria-hidden="true">4.2.8.</strong> Local Rate Limit</a></li><li class="chapter-item expanded "><a href="../services/proxy/filters/match.html"><strong aria-hidden="true">4.2.9.</strong> Match</a></li><li class="chapter-item expanded "><a href="../services/proxy/filters/pass.html"><strong aria-hidden="true">4.2.10.</strong> Pass</a></li><li class="chapter-item expanded "><a href="../services/proxy/filters/timestamp.html"><strong aria-hidden="true">4.2.11.</strong> Timestamp</a></li><li class="chapter-item expanded "><a href="../services/proxy/filters/token_router.html"><strong aria-hidden="true">4.2.12.</strong> Token Router</a></li><li class="chapter-item expanded "><a href="../services/proxy/filters/writing_custom_filters.html"><strong aria-hidden="true">4.2.13.</strong> Writing Custom Filters</a></li></ol></li><li class="chapter-item expanded "><a href="../services/proxy/metrics.html"><strong aria-hidden="true">4.3.</strong> Metrics</a></li><li class="spacer"></li></ol></li><li class="chapter-item expanded "><a href="../services/xds.html"><strong aria-hidden="true">5.</strong> Control Plane</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../services/xds/metrics.html"><strong aria-hidden="true">5.1.</strong> Metrics</a></li><li class="chapter-item expanded "><div><strong aria-hidden="true">5.2.</strong> Providers</div></li><li><ol class="section"><li class="chapter-item expanded "><a href="../services/xds/providers/agones.html"><strong aria-hidden="true">5.2.1.</strong> Agones</a></li><li class="chapter-item expanded "><a href="../services/xds/providers/filesystem.html"><strong aria-hidden="true">5.2.2.</strong> Filesystem</a></li><li class="spacer"></li></ol></li></ol></li><li class="chapter-item expanded "><a href="../services/relay.html"><strong aria-hidden="true">6.</strong> Relay</a></li><li><ol class="section"><li class="chapter-item expanded "><div><strong aria-hidden="true">6.1.</strong> Metrics</div></li><li class="chapter-item expanded "><div><strong aria-hidden="true">6.2.</strong> Providers</div></li></ol></li><li class="chapter-item expanded "><li class="part-title">SDKs</li><li class="chapter-item expanded "><a href="../sdks/unreal-engine.html"><strong aria-hidden="true">7.</strong> Unreal Engine</a></li><li class="chapter-item expanded affix "><li class="part-title">Deployment</li><li class="chapter-item expanded "><a href="../deployment/admin.html"><strong aria-hidden="true">8.</strong> Administration</a></li><li class="chapter-item expanded "><a href="../deployment/examples.html"><strong aria-hidden="true">9.</strong> Architecture Examples</a></li><li class="chapter-item expanded "><a href="../deployment/configuration.html"><strong aria-hidden="true">10.</strong> Configuration</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../introduction.html">Introduction</a></li><li class="chapter-item expanded affix "><a href="../installation.html">Installation</a></li><li class="chapter-item expanded affix "><a href="../faq.html">FAQ</a></li><li class="chapter-item expanded affix "><li class="part-title">Quickstart Guides</li><li class="chapter-item expanded "><a href="../deployment/quickstarts/netcat.html"><strong aria-hidden="true">1.</strong> Netcat</a></li><li class="chapter-item expanded "><a href="../deployment/quickstarts/agones-xonotic-sidecar.html"><strong aria-hidden="true">2.</strong> Agones + Xonotic (Sidecar)</a></li><li class="chapter-item expanded "><a href="../deployment/quickstarts/agones-xonotic-xds.html"><strong aria-hidden="true">3.</strong> Agones + Xonotic (xDS)</a></li><li class="chapter-item expanded affix "><li class="part-title">Services</li><li class="chapter-item expanded "><a href="../services/proxy.html" class="active"><strong aria-hidden="true">4.</strong> Proxy</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../services/proxy/configuration.html"><strong aria-hidden="true">4.1.</strong> Configuration File</a></li><li class="chapter-item expanded "><a href="../services/proxy/filters.html"><strong aria-hidden="true">4.2.</strong> Filters</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../services/proxy/filters/capture.html"><strong aria-hidden="true">4.2.1.</strong> Capture</a></li><li class="chapter-item expanded "><a href="../services/proxy/filters/compress.html"><strong aria-hidden="true">4.2.2.</strong> Compress</a></li><li class="chapter-item expanded "><a href="../services/proxy/filters/concatenate_bytes.html"><strong aria-hidden="true">4.2.3.</strong> Concatenate Bytes</a></li><li class="chapter-item expanded "><a href="../services/proxy/filters/debug.html"><strong aria-hidden="true">4.2.4.</strong> Debug</a></li><li class="chapter-item expanded "><a href="../services/proxy/filters/drop.html"><strong aria-hidden="true">4.2.5.</strong> Drop</a></li><li class="chapter-item expanded "><a href="../services/proxy/filters/firewall.html"><strong aria-hidden="true">4.2.6.</strong> Firewall</a></li><li class="chapter-item expanded "><a href="../services/proxy/filters/load_balancer.html"><strong aria-hidden="true">4.2.7.</strong> Load Balancer</a></li><li class="chapter-item expanded "><a href="../services/proxy/filters/local_rate_limit.html"><strong aria-hidden="true">4.2.8.</strong> Local Rate Limit</a></li><li class="chapter-item expanded "><a href="../services/proxy/filters/match.html"><strong aria-hidden="true">4.2.9.</strong> Match</a></li><li class="chapter-item expanded "><a href="../services/proxy/filters/pass.html"><strong aria-hidden="true">4.2.10.</strong> Pass</a></li><li class="chapter-item expanded "><a href="../services/proxy/filters/timestamp.html"><strong aria-hidden="true">4.2.11.</strong> Timestamp</a></li><li class="chapter-item expanded "><a href="../services/proxy/filters/token_router.html"><strong aria-hidden="true">4.2.12.</strong> Token Router</a></li><li class="chapter-item expanded "><a href="../services/proxy/filters/writing_custom_filters.html"><strong aria-hidden="true">4.2.13.</strong> Writing Custom Filters</a></li></ol></li><li class="chapter-item expanded "><a href="../services/proxy/qcmp.html"><strong aria-hidden="true">4.3.</strong> Control Message Protocol</a></li><li class="chapter-item expanded "><a href="../services/proxy/metrics.html"><strong aria-hidden="true">4.4.</strong> Metrics</a></li><li class="spacer"></li></ol></li><li class="chapter-item expanded "><a href="../services/xds.html"><strong aria-hidden="true">5.</strong> Control Plane</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../services/xds/metrics.html"><strong aria-hidden="true">5.1.</strong> Metrics</a></li><li class="chapter-item expanded "><div><strong aria-hidden="true">5.2.</strong> Providers</div></li><li><ol class="section"><li class="chapter-item expanded "><a href="../services/xds/providers/agones.html"><strong aria-hidden="true">5.2.1.</strong> Agones</a></li><li class="chapter-item expanded "><a href="../services/xds/providers/filesystem.html"><strong aria-hidden="true">5.2.2.</strong> Filesystem</a></li><li class="spacer"></li></ol></li></ol></li><li class="chapter-item expanded "><a href="../services/relay.html"><strong aria-hidden="true">6.</strong> Relay</a></li><li><ol class="section"><li class="chapter-item expanded "><div><strong aria-hidden="true">6.1.</strong> Metrics</div></li><li class="chapter-item expanded "><div><strong aria-hidden="true">6.2.</strong> Providers</div></li></ol></li><li class="chapter-item expanded "><li class="part-title">SDKs</li><li class="chapter-item expanded "><a href="../sdks/unreal-engine.html"><strong aria-hidden="true">7.</strong> Unreal Engine</a></li><li class="chapter-item expanded affix "><li class="part-title">Deployment</li><li class="chapter-item expanded "><a href="../deployment/admin.html"><strong aria-hidden="true">8.</strong> Administration</a></li><li class="chapter-item expanded "><a href="../deployment/examples.html"><strong aria-hidden="true">9.</strong> Architecture Examples</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
 
         <div id="page-wrapper" class="page-wrapper">
 
             <div class="page">
                                 <div id="menu-bar-hover-placeholder"></div>
-                <div id="menu-bar" class="menu-bar sticky bordered">
+                <div id="menu-bar" class="menu-bar sticky">
                     <div class="left-buttons">
                         <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
                             <i class="fa fa-bars"></i>
@@ -170,21 +192,21 @@ Options:
           Print help
 </code></pre>
 <h2 id="endpoints"><a class="header" href="#endpoints">Endpoints</a></h2>
-<p>An Endpoint represents an address that Quilkin forwards packets to that it has recieved from the 
+<p>An Endpoint represents an address that Quilkin forwards packets to that it has received from the 
 source port.</p>
 <p>It is represented by an IP address and port. An Endpoint can optionally be associated with an arbitrary set of 
 <a href="#endpoint-metadata">metadata</a> as well.</p>
 <h2 id="proxy-filters"><a class="header" href="#proxy-filters">Proxy Filters</a></h2>
 <p>Filters are the way for a Quilkin proxy to intercept UDP packet traffic from the
-source and <a href="#endpoints">Endpoints</a> in either direction, and be able to inpsect,
+source and <a href="#endpoints">Endpoints</a> in either direction, and be able to inspect,
 manipulate, and route the packets as desired. </p>
-<p>See [Filters][filters-doc]  for a deeper dive into Filters, as well as the list of build in Filters that come with 
+<p>See <a href="./proxy/filters.html">Filters</a>  for a deeper dive into Filters, as well as the list of build in Filters that come with 
 Quilkin.</p>
 <h2 id="endpoint-metadata"><a class="header" href="#endpoint-metadata">Endpoint Metadata</a></h2>
-<p>Enpoint metadata is an arbitrary set of key value pairs that are associated with an Endpoint.</p>
+<p>Endpoint metadata is an arbitrary set of key value pairs that are associated with an Endpoint.</p>
 <p>These are visible to Filters when processing packets and can be used to provide more context about endpoints (e.g 
 whether or not to route a packet to an endpoint). Keys must be of type string otherwise the configuration is rejected.</p>
-<p>Metadata associated with an endpoint contain arbitrary key value pairs which [Filters][filters-doc] can consult when processing packets (e.g they can contain information that determine whether or not to route a particular packet to an endpoint).</p>
+<p>Metadata associated with an endpoint contain arbitrary key value pairs which <a href="./proxy/filters.html">Filters</a> can consult when processing packets (e.g they can contain information that determine whether or not to route a particular packet to an endpoint).</p>
 <h3 id="specialist-endpoint-metadata"><a class="header" href="#specialist-endpoint-metadata">Specialist Endpoint Metadata</a></h3>
 <p>Access tokens that can be associated with an endpoint are simply a special piece of metadata well known to Quilkin 
 and utilised by the built-in <a href="./proxy/filters/token_router.html">TokenRouter</a> filter to route packets.</p>
@@ -203,14 +225,14 @@ Currently, only the <code>tokens</code> key is in use.</p>
                 - MXg3aWp5Ng== # base64 for 1x7ijy6
                 - OGdqM3YyaQ== # base64 for 8gj3v2i
 </code></pre>
-<p>An endpoint's metadata can be specified alongside the endpoint in <a href="../deployment/configuration.html">static configuration</a> or using the <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint_components.proto#envoy-v3-api-field-config-endpoint-v3-lbendpoint-metadata">xDS endpoint metadata</a> field when using <a href="./xds.html">dynamic configuration</a> via xDS.</p>
+<p>An endpoint's metadata can be specified alongside the endpoint in <a href="./proxy/configuration.html">static configuration</a> or using the <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint_components.proto#envoy-v3-api-field-config-endpoint-v3-lbendpoint-metadata">xDS endpoint metadata</a> field when using <a href="./xds.html">dynamic configuration</a> via xDS.</p>
 <h2 id="session"><a class="header" href="#session">Session</a></h2>
 <p>A session represents ongoing communication flow between a client on a [Local Port] and an <a href="#endpoints">Endpoint</a>.</p>
 <p>Quilkin uses the &quot;Session&quot; concept to track traffic flowing through the proxy between any client-server pair. A
 Session serves the same purpose, and can be thought of as a lightweight version of a <code>TCP</code> session in that, while a
 TCP session requires a protocol to establish and teardown:</p>
 <ul>
-<li>A Quilkin session is automatically created upon receiving the first packet from a client via the [Local Port], to be 
+<li>A Quilkin session is automatically created upon receiving the first packet from a client via the [Local Port] to be 
 sent to an upstream <a href="#endpoints">Endpoint</a>.</li>
 <li>The session is automatically deleted after a period of inactivity (where no packet was sent between either 
 party) - currently 60 seconds.</li>
@@ -219,7 +241,7 @@ party) - currently 60 seconds.</li>
 downstream endpoint which initiated the communication with Quilkin and the server is one of the upstream Endpoints 
 that Quilkin proxies traffic to.</p>
 <p>Sessions are established <em>after</em> the filter chain completes. The destination Endpoint of a packet is determined by 
-the [filter chain][filter-doc], so a Session can only be created after filter chain completion. For example, if the 
+the <a href="./proxy/filters.html">filter chain</a>, so a Session can only be created after filter chain completion. For example, if the 
 filter chain drops all packets, then no session will ever be created.</p>
 
                     </main>
@@ -230,7 +252,7 @@ filter chain drops all packets, then no session will ever be created.</p>
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next" href="../services/proxy/qcmp.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="../services/proxy/configuration.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -244,7 +266,7 @@ filter chain drops all packets, then no session will ever be created.</p>
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next" href="../services/proxy/qcmp.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next" href="../services/proxy/configuration.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
