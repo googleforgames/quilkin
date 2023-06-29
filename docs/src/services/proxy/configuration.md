@@ -1,9 +1,13 @@
-# Configuration
+# Configuration File
 
-The following is the schema and reference for a Quilkin configuration
+While much of Quilkin's proxy configuration can be configured via its
+[command line interface](../proxy.md), if you have a larger or more complex configuration
+it might be useful to use a configuration file instead.
+
+The following is the schema and reference for Quilkin's proxy configuration
 file. See the [examples] folder for example configuration files.
 
-By default Quilkin will look for a configuration file named `quilkin.yaml` in
+By default, Quilkin will look for a configuration file named `quilkin.yaml` in
 its current running directory first, then if not present, in
 `/etc/quilkin/quilkin.yaml` on UNIX systems. This can be overridden with the
 `-c/--config` command-line argument, or the `QUILKIN_FILENAME`
@@ -12,20 +16,21 @@ environment variable.
 ## Static Configuration
 
 Example of a full configuration for `quilkin proxy` that utlisies a static
-endpoint configuration:
+endpoint configuration to specify two endpoints with `token` metadata attached to each:
 
 ```yaml
-{{#include ../../../examples/proxy.yaml:17:100}}
+{{#include ../../../../examples/proxy.yaml:17:100}}
 ```
+
+This is a great use of a static configuration file, as we only get a singular `--to` endpoint address via the 
+command line arguments.
+
+We can also configure [Filters](./filters.md) via the configuration file. See that section for documentation.
 
 ## Dynamic Configuration
 
-Example of a full configuration for `quilkin proxy` that utlisies a dynamic
-Endpoint configuration through an [xDS management endpoint](../services/xds.md):
-
-```yaml
-{{#include ../../../examples/control-plane.yaml:17:100}}
-```
+If you need to dynamically change either Filters and/or Endpoints at runtime, see the [Control Plane](../xds.md) 
+documentation on the configuration API surface, and built in dynamic management providers.
 
 ## Json Schema
 
