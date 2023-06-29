@@ -13,7 +13,7 @@ default port is taken up by an existing Quilkin proxy.
 After running this command, any proxy that connects to port 18000 will receive updates as configured in `config.yaml`
 file.
 
-You can find the configuration file schema in [Configuration][configuration].
+You can find the configuration file schema in [Configuration File][configuration].
 
 Example:
 
@@ -38,4 +38,4 @@ clusters:
 # assert_eq!(config.filters.load().len(), 1);
 ```
 
-[configuration]: ../../../deployment/configuration.md
+[configuration]: ../../../services/proxy/configuration.md

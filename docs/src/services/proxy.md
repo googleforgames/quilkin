@@ -1,8 +1,8 @@
 # Proxy
 
-| services | ports | Protocol |
-|----------|-------|-----------|
-| proxy | 7777 | UDP (IPv4) |
+| services | ports | Protocol   |
+|----------|-------|------------|
+| proxy    | 7777  | UDP (IPv4) |
 
 "Proxy" is the primary Quilkin service, which acts as a non-transparent UDP
 proxy.
@@ -16,7 +16,7 @@ $ quilkin proxy --help
 
 ## Endpoints
 
-An Endpoint represents an address that Quilkin forwards packets to that it has recieved from the 
+An Endpoint represents an address that Quilkin forwards packets to that it has received from the 
 source port.
 
 It is represented by an IP address and port. An Endpoint can optionally be associated with an arbitrary set of 
@@ -25,20 +25,20 @@ It is represented by an IP address and port. An Endpoint can optionally be assoc
 ## Proxy Filters
 
 Filters are the way for a Quilkin proxy to intercept UDP packet traffic from the
-source and [Endpoints][Endpoint] in either direction, and be able to inpsect,
+source and [Endpoints][Endpoint] in either direction, and be able to inspect,
 manipulate, and route the packets as desired. 
 
-See [Filters][filters-doc]  for a deeper dive into Filters, as well as the list of build in Filters that come with 
+See [Filters]  for a deeper dive into Filters, as well as the list of build in Filters that come with 
 Quilkin.
 
 ## Endpoint Metadata
 
-Enpoint metadata is an arbitrary set of key value pairs that are associated with an Endpoint.
+Endpoint metadata is an arbitrary set of key value pairs that are associated with an Endpoint.
 
 These are visible to Filters when processing packets and can be used to provide more context about endpoints (e.g 
 whether or not to route a packet to an endpoint). Keys must be of type string otherwise the configuration is rejected.
 
-Metadata associated with an endpoint contain arbitrary key value pairs which [Filters][filters-doc] can consult when processing packets (e.g they can contain information that determine whether or not to route a particular packet to an endpoint).
+Metadata associated with an endpoint contain arbitrary key value pairs which [Filters] can consult when processing packets (e.g they can contain information that determine whether or not to route a particular packet to an endpoint).
 
 ### Specialist Endpoint Metadata
 
@@ -73,7 +73,7 @@ Quilkin uses the "Session" concept to track traffic flowing through the proxy be
 Session serves the same purpose, and can be thought of as a lightweight version of a `TCP` session in that, while a
 TCP session requires a protocol to establish and teardown:
 
-- A Quilkin session is automatically created upon receiving the first packet from a client via the [Local Port], to be 
+- A Quilkin session is automatically created upon receiving the first packet from a client via the [Local Port] to be 
   sent to an upstream [Endpoint].
 - The session is automatically deleted after a period of inactivity (where no packet was sent between either 
   party) - currently 60 seconds.
@@ -83,11 +83,12 @@ downstream endpoint which initiated the communication with Quilkin and the serve
 that Quilkin proxies traffic to.
 
 Sessions are established *after* the filter chain completes. The destination Endpoint of a packet is determined by 
-the [filter chain][filter-doc], so a Session can only be created after filter chain completion. For example, if the 
+the [filter chain][Filters], so a Session can only be created after filter chain completion. For example, if the 
 filter chain drops all packets, then no session will ever be created.
 
 [Endpoint]: #endpoints
-[file-configuration]: ../deployment/configuration.md
+[file-configuration]: ./proxy/configuration.md
 [xds-endpoint-metadata]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint_components.proto#envoy-v3-api-field-config-endpoint-v3-lbendpoint-metadata
 [dynamic-configuration-doc]: ./xds.md
 [TokenRouter]: ./proxy/filters/token_router.md
+[Filters]: ./proxy/filters.md
