@@ -29,11 +29,11 @@ BANDWIDTH="${BANDWIDTH:-10M}"
 MTU="${MTU:-512}"
 # The port for the iperf client, useful for comparing direct connections with
 # proxied connections.
-PORT="${PORT:-8000}"
+PORT="${PORT:-7777}"
 
 # This tunnel is needed because iperf3 requires a tcp handshake before starting the UDP load test
 echo "Starting socat tcp tunnel..."
-socat tcp-listen:8000,reuseaddr,fork tcp:localhost:8001 > /quilkin/socat.log &
+socat tcp-listen:$PORT,reuseaddr,fork tcp:localhost:8001 > /quilkin/socat.log &
 
 echo "Starting iperf3 server..."
 iperf3 --server --interval 10 --port 8001 > /quilkin/server.log &
@@ -50,4 +50,4 @@ iperf3 --client 127.0.0.1 --port $PORT -l $MTU --interval 10 --parallel $PARALLE
 set +x
 
 echo "Taking a snapshot of Quilkin metrics..."
-wget -q -O /quilkin/metrics.json http://localhost:9091/metrics
+wget -q -O /quilkin/metrics.json http://localhost:8000/metrics

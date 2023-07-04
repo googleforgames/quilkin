@@ -20,7 +20,6 @@
 
 version: v1alpha1
 id: iperf3
-port: 8000
 clusters:
   default:
     localities:
