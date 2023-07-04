@@ -99,10 +99,6 @@ impl DownstreamReceiveWorkerConfig {
                             }
                         }
                     }
-                    Err(error) => {
-                        tracing::error!(%error, "error receiving packet");
-                        return;
-                    }
                 }
             }
         });

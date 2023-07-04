@@ -24,9 +24,6 @@ use crate::maxmind_db::IpNetEntry;
 
 pub use prometheus::Result;
 
-const ASN_LABEL: &str = "asn";
-const PREFIX_LABEL: &str = "ip_prefix";
-
 /// "event" is used as a label for Metrics that can apply to both Filter
 /// `read` and `write` executions.
 pub const DIRECTION_LABEL: &str = "event";
