@@ -24,12 +24,13 @@ use super::quilkin::filters::compress::v1alpha1::{
 };
 
 /// The library to use when compressing.
-#[derive(Clone, Copy, Deserialize, Debug, Eq, PartialEq, Serialize, JsonSchema)]
+#[derive(Clone, Copy, Default, Deserialize, Debug, Eq, PartialEq, Serialize, JsonSchema)]
 #[non_exhaustive]
 pub enum Mode {
     // we only support one mode for now, but adding in the config option to
     // provide the option to expand for later.
     #[serde(rename = "SNAPPY")]
+    #[default]
     Snappy,
 }
 
@@ -38,12 +39,6 @@ impl Mode {
         match self {
             Self::Snappy => Box::from(Snappy {}),
         }
-    }
-}
-
-impl Default for Mode {
-    fn default() -> Self {
-        Mode::Snappy
     }
 }
 
@@ -72,20 +67,15 @@ impl From<Mode> for ModeValue {
 }
 
 /// Whether to do nothing, compress or decompress the packet.
-#[derive(Clone, Copy, Deserialize, Debug, Eq, PartialEq, Serialize, JsonSchema)]
+#[derive(Clone, Copy, Deserialize, Debug, Default, Eq, PartialEq, Serialize, JsonSchema)]
 pub enum Action {
     #[serde(rename = "DO_NOTHING")]
+    #[default]
     DoNothing,
     #[serde(rename = "COMPRESS")]
     Compress,
     #[serde(rename = "DECOMPRESS")]
     Decompress,
-}
-
-impl Default for Action {
-    fn default() -> Self {
-        Action::DoNothing
-    }
 }
 
 impl From<Action> for ProtoAction {

@@ -18,14 +18,13 @@ mod sessions;
 
 use std::sync::Arc;
 
-use tokio::{net::UdpSocket, sync::watch};
+use tokio::net::UdpSocket;
 
 use crate::{
     endpoint::{Endpoint, EndpointAddress},
     filters::{Filter, ReadContext},
     protocol::Protocol,
     ttl_map::TryResult,
-    utils::debug,
     Config,
 };
 
@@ -49,8 +48,6 @@ pub(crate) struct DownstreamReceiveWorkerConfig {
     pub socket: Arc<UdpSocket>,
     pub config: Arc<Config>,
     pub sessions: SessionMap,
-    /// The worker task exits when a value is received from this shutdown channel.
-    pub shutdown_rx: watch::Receiver<()>,
 }
 
 impl DownstreamReceiveWorkerConfig {
@@ -60,7 +57,6 @@ impl DownstreamReceiveWorkerConfig {
             socket,
             config,
             sessions,
-            mut shutdown_rx,
         } = self;
 
         tokio::spawn(async move {
@@ -74,6 +70,7 @@ impl DownstreamReceiveWorkerConfig {
                     addr = ?socket.local_addr(),
                     "Awaiting packet"
                 );
+
                 tokio::select! {
                     result = socket.recv_from(&mut buf) => {
                         match result {
@@ -102,8 +99,8 @@ impl DownstreamReceiveWorkerConfig {
                             }
                         }
                     }
-                    _ = shutdown_rx.changed() => {
-                        tracing::debug!(id = worker_id, "Received shutdown signal");
+                    Err(error) => {
+                        tracing::error!(%error, "error receiving packet");
                         return;
                     }
                 }
@@ -124,7 +121,7 @@ impl DownstreamReceiveWorkerConfig {
             id = worker_id,
             size = packet.contents.len(),
             source = %source,
-            contents=&*debug::bytes_to_string(&packet.contents),
+            contents=&*crate::utils::base64_encode(&packet.contents),
             "received packet from downstream"
         );
 

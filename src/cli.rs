@@ -25,7 +25,8 @@ use tokio::{signal, sync::watch};
 use crate::{admin::Mode, Config};
 
 pub use self::{
-    generate_config_schema::GenerateConfigSchema, manage::Manage, proxy::Proxy, relay::Relay,
+    agent::Agent, generate_config_schema::GenerateConfigSchema, manage::Manage, proxy::Proxy,
+    relay::Relay,
 };
 
 macro_rules! define_port {
@@ -38,6 +39,7 @@ macro_rules! define_port {
     };
 }
 
+pub mod agent;
 pub mod generate_config_schema;
 pub mod manage;
 pub mod proxy;
@@ -70,16 +72,17 @@ pub struct Cli {
 /// The various Quilkin commands.
 #[derive(Clone, Debug, clap::Subcommand)]
 pub enum Commands {
-    Proxy(Proxy),
+    Agent(Agent),
     GenerateConfigSchema(GenerateConfigSchema),
     Manage(Manage),
+    Proxy(Proxy),
     Relay(Relay),
 }
 
 impl Commands {
     pub fn admin_mode(&self) -> Option<Mode> {
         match self {
-            Self::Proxy(_) => Some(Mode::Proxy),
+            Self::Proxy(_) | Self::Agent(_) => Some(Mode::Proxy),
             Self::Relay(_) | Self::Manage(_) => Some(Mode::Xds),
             Self::GenerateConfigSchema(_) => None,
         }
@@ -148,6 +151,13 @@ impl Cli {
         let fut = tryhard::retry_fn({
             let shutdown_rx = shutdown_rx.clone();
             move || match self.command.clone() {
+                Commands::Agent(agent) => {
+                    let config = config.clone();
+                    let shutdown_rx = shutdown_rx.clone();
+                    tokio::spawn(
+                        async move { agent.run(config.clone(), shutdown_rx.clone()).await },
+                    )
+                }
                 Commands::Proxy(runner) => {
                     let config = config.clone();
                     let shutdown_rx = shutdown_rx.clone();

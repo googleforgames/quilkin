@@ -38,11 +38,11 @@ spec:
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/path: /metrics
-        prometheus.io/port: "9091"
+        prometheus.io/port: "8000"
     spec:
       containers:
         - name: quilkin
-          image: us-docker.pkg.dev/quilkin/release/quilkin:0.5.0
+          image: us-docker.pkg.dev/quilkin/release/quilkin:0.6.0
           args: ["proxy", "--management-server", "http://quilkin-manage-agones:80"]
           env:
             - name: RUST_LOG
@@ -51,10 +51,10 @@ spec:
             failureThreshold: 3
             httpGet:
               path: /live
-              port: 9091
+              port: 8000
               scheme: HTTP
           ports:
-            - containerPort: 7000
+            - containerPort: 7777
               protocol: UDP
 
 ---
@@ -64,9 +64,9 @@ metadata:
   name: quilkin-proxies
 spec:
   ports:
-    - port: 7000
+    - port: 7777
       protocol: UDP
-      targetPort: 7000
+      targetPort: 7777
   selector:
     role: proxy
   type: LoadBalancer

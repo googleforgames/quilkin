@@ -86,7 +86,7 @@ test-quilkin: ensure-build-image
 	docker run --rm $(common_rust_args) \
 		--entrypoint=cargo $(BUILD_IMAGE_TAG) fmt -- --check
 	docker run --rm $(common_rust_args) \
-			--entrypoint=cargo $(BUILD_IMAGE_TAG) test
+			-e RUST_BACKTRACE=1 --entrypoint=cargo $(BUILD_IMAGE_TAG) test -- --nocapture
 
 # Run tests against the examples
 test-examples: ensure-build-image
@@ -153,7 +153,7 @@ else
 		-e "CARGO_TARGET_DIR=$(CARGO_TARGET_DIR)" \
 		-e "CC=o64-clang" -e "CXX=o64-clang++" \
 		-e "PROTOC=/opt/protoc/bin/protoc" \
-		us-docker.pkg.dev/quilkin/ci/rust-linux-darwin-builder:$(rust_toolchain) \
+		joseluisq/rust-linux-darwin-builder:$(rust_toolchain) \
 			sh -c "/workspace/build/darwin-builder/setup.sh && cargo $(cargo_build_x86_64_apple) --no-default-features"
 endif
 

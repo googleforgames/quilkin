@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
-use std::{net::SocketAddr, sync::Arc};
+use std::{net::SocketAddr, sync::Arc, time::Duration};
 
-use tokio::{sync::watch, time::Duration};
 use tonic::transport::Endpoint;
 
 use crate::{proxy::SessionMap, utils::net, xds::ResourceType, Config, Result};
@@ -115,7 +114,7 @@ impl Proxy {
             None
         };
 
-        self.run_recv_from(&config, sessions.clone(), shutdown_rx.clone())?;
+        self.run_recv_from(&config, sessions.clone())?;
         tracing::info!("Quilkin is ready");
 
         shutdown_rx
@@ -126,7 +125,7 @@ impl Proxy {
         tracing::info!(sessions=%sessions.len(), "waiting for active sessions to expire");
         while sessions.is_not_empty() {
             tokio::time::sleep(Duration::from_secs(1)).await;
-            tracing::info!(sessions=%sessions.len(), "sessions still active");
+            tracing::debug!(sessions=%sessions.len(), "sessions still active");
         }
         tracing::info!("all sessions expired");
 
@@ -138,12 +137,7 @@ impl Proxy {
     /// This function also spawns the set of worker tasks responsible for consuming packets
     /// off the aforementioned queue and processing them through the filter chain and session
     /// pipeline.
-    fn run_recv_from(
-        &self,
-        config: &Arc<Config>,
-        sessions: SessionMap,
-        shutdown_rx: watch::Receiver<()>,
-    ) -> Result<()> {
+    fn run_recv_from(&self, config: &Arc<Config>, sessions: SessionMap) -> Result<()> {
         // The number of worker tasks to spawn. Each task gets a dedicated queue to
         // consume packets off.
         let num_workers = num_cpus::get();
@@ -155,7 +149,6 @@ impl Proxy {
             workers.push(crate::proxy::DownstreamReceiveWorkerConfig {
                 worker_id,
                 socket: socket.clone(),
-                shutdown_rx: shutdown_rx.clone(),
                 config: config.clone(),
                 sessions: sessions.clone(),
             })
@@ -315,7 +308,6 @@ mod tests {
 
         let socket = Arc::new(create_socket().await);
         let addr = socket.local_addr().unwrap();
-        let (_shutdown_tx, shutdown_rx) = watch::channel(());
         let endpoint = t.open_socket_and_recv_single_packet().await;
         let msg = "hello";
         let config = Arc::new(Config::default());
@@ -329,7 +321,6 @@ mod tests {
             socket: socket.clone(),
             config,
             sessions: <_>::default(),
-            shutdown_rx,
         }
         .spawn();
 
@@ -348,7 +339,6 @@ mod tests {
     #[tokio::test]
     async fn run_recv_from() {
         let t = TestHelper::default();
-        let (_shutdown_tx, shutdown_rx) = watch::channel(());
 
         let msg = "hello";
         let endpoint = t.open_socket_and_recv_single_packet().await;
@@ -363,9 +353,7 @@ mod tests {
             clusters.insert_default(vec![endpoint.socket.local_addr().unwrap()])
         });
 
-        proxy
-            .run_recv_from(&config, <_>::default(), shutdown_rx)
-            .unwrap();
+        proxy.run_recv_from(&config, <_>::default()).unwrap();
 
         let socket = create_socket().await;
         socket.send_to(msg.as_bytes(), &local_addr).await.unwrap();

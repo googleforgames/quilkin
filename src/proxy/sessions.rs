@@ -24,7 +24,7 @@ use crate::{
     endpoint::{Endpoint, EndpointAddress},
     filters::{Filter, WriteContext},
     maxmind_db::IpNetEntry,
-    utils::{debug, Loggable},
+    utils::Loggable,
 };
 
 pub type SessionMap = crate::ttl_map::TtlMap<SessionKey, Session>;
@@ -202,7 +202,7 @@ impl Session {
             dest,
         } = packet_ctx;
 
-        tracing::trace!(%from, dest = %endpoint.address, contents = %debug::bytes_to_string(packet), "received packet from upstream");
+        tracing::trace!(%from, dest = %endpoint.address, contents = %crate::utils::base64_encode(packet), "received packet from upstream");
 
         let mut context = WriteContext::new(
             endpoint.clone(),
@@ -215,7 +215,7 @@ impl Session {
 
         let addr = dest.to_socket_addr().await.map_err(Error::ToSocketAddr)?;
         let packet = context.contents.as_ref();
-        tracing::trace!(%from, dest = %addr, contents = %debug::bytes_to_string(packet), "sending packet downstream");
+        tracing::trace!(%from, dest = %addr, contents = %crate::utils::base64_encode(packet), "sending packet downstream");
         downstream_socket
             .send_to(packet, addr)
             .await
@@ -229,7 +229,7 @@ impl Session {
     ) -> impl std::future::Future<Output = Result<usize, super::PipelineError>> + 'buf {
         tracing::trace!(
         dest_address = %self.dest.address,
-        contents = %debug::bytes_to_string(buf),
+        contents = %crate::utils::base64_encode(buf),
         "sending packet upstream");
 
         let socket = self.upstream_socket.clone();
