@@ -257,7 +257,7 @@ filter. Try it out with the following configuration:
 [tokio]: https://docs.rs/tokio
 [tonic]: https://docs.rs/tonic
 [prost]: https://docs.rs/prost
-[Protobuf]: https://developers.google.com/protocol-buffers
+[Protobuf]: https://protobuf.dev
 [Serde]: https://docs.serde.rs/serde_yaml/index.html
 [prost-any]: https://docs.rs/prost-types/0.7.0/prost_types/struct.Any.html
 [prost_build]: https://docs.rs/prost-build/0.7.0/prost_build/

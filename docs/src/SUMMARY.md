@@ -3,13 +3,15 @@
 [FAQ](./faq.md)
 
 # Quickstart Guides
+
 - [Netcat](./deployment/quickstarts/netcat.md)
 - [Agones + Xonotic (Sidecar)](./deployment/quickstarts/agones-xonotic-sidecar.md)
 - [Agones + Xonotic (xDS)](./deployment/quickstarts/agones-xonotic-xds.md)
 
 # Services
+
 - [Proxy](./services/proxy.md)
-    - [Control Message Protocol](./services/proxy/qcmp.md)
+    - [Configuration File](./services/proxy/configuration.md)
     - [Filters](./services/proxy/filters.md)
         - [Capture](./services/proxy/filters/capture.md)
         - [Compress](./services/proxy/filters/compress.md)
@@ -24,6 +26,7 @@
         - [Timestamp](./services/proxy/filters/timestamp.md)
         - [Token Router](./services/proxy/filters/token_router.md)
         - [Writing Custom Filters](./services/proxy/filters/writing_custom_filters.md)
+    - [Control Message Protocol](./services/proxy/qcmp.md)
     - [Metrics](./services/proxy/metrics.md)
 
 ---
@@ -41,9 +44,10 @@
     - [Providers]()
 
 # SDKs
+
 - [Unreal Engine](./sdks/unreal-engine.md)
 
 # Deployment
+
 - [Administration](./deployment/admin.md)
 - [Architecture Examples](./deployment/examples.md)
-- [Configuration](./deployment/configuration.md)

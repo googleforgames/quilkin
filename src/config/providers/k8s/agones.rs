@@ -39,6 +39,53 @@ pub struct GameServer {
     pub status: Option<GameServerStatus>,
 }
 
+impl GameServer {
+    pub fn endpoint(&self) -> Option<Endpoint> {
+        self.status.as_ref().map(|status| {
+            let port = status
+                .ports
+                .as_ref()
+                .and_then(|ports| ports.first().map(|status| status.port))
+                .unwrap_or_default();
+
+            let tokens = self.tokens();
+            let extra_metadata = {
+                let mut map = serde_json::Map::default();
+                map.insert(
+                    "name".into(),
+                    self.metadata.name.clone().unwrap_or_default().into(),
+                );
+                map
+            };
+
+            Endpoint::with_metadata(
+                (status.address.clone(), port).into(),
+                crate::metadata::MetadataView::with_unknown(
+                    crate::endpoint::Metadata { tokens },
+                    extra_metadata,
+                ),
+            )
+        })
+    }
+
+    pub fn tokens(&self) -> std::collections::BTreeSet<Vec<u8>> {
+        match self.metadata.annotations.as_ref() {
+            Some(annotations) => annotations
+                .get(QUILKIN_TOKEN_LABEL)
+                .map(|value| {
+                    value
+                        .split(',')
+                        .map(String::from)
+                        .map(crate::utils::base64_decode)
+                        .filter_map(Result::ok)
+                        .collect()
+                })
+                .unwrap_or_default(),
+            None => <_>::default(),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Inner {
@@ -246,42 +293,9 @@ impl TryFrom<GameServer> for Endpoint {
     type Error = tonic::Status;
 
     fn try_from(server: GameServer) -> Result<Self, Self::Error> {
-        let status = server
-            .status
-            .as_ref()
-            .ok_or_else(|| tonic::Status::internal("No status found for game server"))?;
-        let mut extra_metadata = serde_json::Map::default();
-        extra_metadata.insert(
-            "name".into(),
-            server.metadata.name.clone().unwrap_or_default().into(),
-        );
-
-        let tokens = match server.metadata.annotations.as_ref() {
-            Some(annotations) => annotations
-                .get(QUILKIN_TOKEN_LABEL)
-                .map(|value| {
-                    value
-                        .split(',')
-                        .map(String::from)
-                        .map(crate::utils::base64_decode)
-                        .filter_map(Result::ok)
-                        .collect::<std::collections::BTreeSet<_>>()
-                })
-                .unwrap_or_default(),
-            None => <_>::default(),
-        };
-
-        let address = status.address.clone();
-        let port = status
-            .ports
-            .as_ref()
-            .and_then(|ports| ports.first().map(|status| status.port))
-            .unwrap_or_default();
-        let filter_metadata = crate::endpoint::Metadata { tokens };
-        Ok(Self::with_metadata(
-            (address, port).into(),
-            crate::metadata::MetadataView::with_unknown(filter_metadata, extra_metadata),
-        ))
+        server
+            .endpoint()
+            .ok_or_else(|| tonic::Status::internal("No status found for game server"))
     }
 }
 
