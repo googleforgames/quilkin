@@ -38,11 +38,12 @@ annotations:
 
 ## Filter Configuration
 
-The Agones provider watches for a singular [`ConfigMap`](https://kubernetes.io/docs/concepts/configuration/configmap/)
-that has the label of `quilkin.dev/configmap: "true"`, and any changes that happen to it, and use its contents to
-send Filter configuration to any connected Quilkin proxies.
+The Agones provider watches for a singular [`ConfigMap`](https://kubernetes.io/docs/concepts/configuration/configmap/) 
+that has the label of `quilkin.dev/configmap: "true"`, and any changes that happen to it, and use its contents to 
+send [Filter] configuration to any connected Quilkin proxies.
 
-The `ConfigMap` contents should be a valid Quilkin [file configuration](../../../deployment/configuration.md), but with no Endpoint data.
+The `ConfigMap` contents should be a valid Quilkin [file configuration][configuration], but with no 
+Endpoint data.
 
 For example:
 
@@ -72,3 +73,5 @@ and [RBAC] Rules, there is an [Agones, xDS and Xonotic example][example].
 [Services]: https://kubernetes.io/docs/concepts/services-networking/service/
 [RBAC]: https://kubernetes.io/docs/reference/access-authn-authz/rbac/
 [example]: https://github.com/googleforgames/quilkin/tree/{{GITHUB_REF_NAME}}/examples/agones-xonotic-xds
+[Filter]: ../../../services/proxy/filters.md
+[configuration]: ../../../services/proxy/configuration.md

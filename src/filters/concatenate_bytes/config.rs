@@ -20,20 +20,15 @@ use serde::{Deserialize, Serialize};
 use super::proto;
 use crate::config::Base64Standard;
 
-#[derive(Serialize, Deserialize, Debug, Eq, PartialEq, JsonSchema)]
+#[derive(Debug, Default, Deserialize, Eq, JsonSchema, PartialEq, Serialize)]
 pub enum Strategy {
     #[serde(rename = "APPEND")]
     Append,
     #[serde(rename = "PREPEND")]
     Prepend,
     #[serde(rename = "DO_NOTHING")]
+    #[default]
     DoNothing,
-}
-
-impl Default for Strategy {
-    fn default() -> Self {
-        Strategy::DoNothing
-    }
 }
 
 impl From<Strategy> for proto::concatenate_bytes::Strategy {

@@ -25,7 +25,6 @@ use crate::{
     filters::{Filter, ReadContext},
     protocol::Protocol,
     ttl_map::TryResult,
-    utils::debug,
     Config,
 };
 
@@ -103,7 +102,7 @@ impl DownstreamReceiveWorkerConfig {
             id = worker_id,
             size = packet.contents.len(),
             source = %source,
-            contents=&*debug::bytes_to_string(&packet.contents),
+            contents=&*crate::utils::base64_encode(&packet.contents),
             "received packet from downstream"
         );
 

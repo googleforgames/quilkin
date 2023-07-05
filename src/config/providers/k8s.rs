@@ -70,7 +70,7 @@ fn configmap_events(
     let config_writer = kube::runtime::reflector::store::Writer::<ConfigMap>::default();
     let configmap_stream = kube::runtime::watcher(
         configmap,
-        kube::api::ListParams::default().labels("quilkin.dev/configmap=true"),
+        kube::runtime::watcher::Config::default().labels("quilkin.dev/configmap=true"),
     );
     kube::runtime::reflector(config_writer, configmap_stream)
 }
@@ -82,7 +82,7 @@ fn gameserver_events(
     let gameservers_namespace = namespace.as_ref();
     let gameservers: kube::Api<GameServer> = kube::Api::namespaced(client, gameservers_namespace);
     let gs_writer = kube::runtime::reflector::store::Writer::<GameServer>::default();
-    let gameserver_stream = kube::runtime::watcher(gameservers, kube::api::ListParams::default());
+    let gameserver_stream = kube::runtime::watcher(gameservers, <_>::default());
     kube::runtime::reflector(gs_writer, gameserver_stream)
 }
 
@@ -145,12 +145,7 @@ pub fn update_endpoints_from_gameservers(
                 }
 
                 Event::Deleted(server) => {
-                    let found = if let Some(status) = &server.status {
-                        let port = status.ports.as_ref()
-                            .and_then(|ports| ports.first().map(|status| status.port))
-                            .unwrap_or_default();
-
-                        let endpoint = Endpoint::from((status.address.clone(), port));
+                    let found = if let Some(endpoint) = server.endpoint() {
                         config.clusters.value().remove_endpoint(&endpoint)
                     } else {
                         config.clusters.value().remove_endpoint_if(|endpoint| {
@@ -159,7 +154,11 @@ pub fn update_endpoints_from_gameservers(
                     };
 
                     if found.is_none() {
-                        tracing::warn!(?server, "received unknown gameserver to delete from k8s");
+                        tracing::warn!(
+                            endpoint=%serde_json::to_value(server.endpoint()).unwrap(),
+                            name=%serde_json::to_value(server.metadata.name).unwrap(),
+                            "received unknown gameserver to delete from k8s"
+                        );
                     }
                 }
             };

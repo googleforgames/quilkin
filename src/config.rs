@@ -43,7 +43,7 @@ pub use self::{
     config_type::ConfigType, error::ValidationError, providers::Providers, slot::Slot, watch::Watch,
 };
 
-base64_serde_type!(pub Base64Standard, base64::STANDARD);
+base64_serde_type!(pub Base64Standard, base64::engine::general_purpose::STANDARD);
 
 pub(crate) const BACKOFF_INITIAL_DELAY_MILLISECONDS: u64 = 500;
 pub(crate) const BACKOFF_MAX_DELAY_SECONDS: u64 = 30;
