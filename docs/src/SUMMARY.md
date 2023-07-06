@@ -51,3 +51,7 @@
 
 - [Administration](./deployment/admin.md)
 - [Architecture Examples](./deployment/examples.md)
+
+# Third Party
+
+- [Videos and Presentations](./third-party/presentations.md)
