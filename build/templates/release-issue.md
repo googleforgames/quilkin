@@ -27,7 +27,8 @@
 - [ ] Run `cargo clippy` in the root directory, and ensure there are no issues.
 - [ ] Add a release item to README.md "Documentation" > "Releases" list with related links in reverse chronological 
   order.
-- [ ] Remove any `data-proofer-ignore` attributes from links in the documentation in `./docs`.
+- [ ] Review any `data-proofer-ignore` attributes from links in the documentation in `./docs`, and remove any no 
+  longer needed.
 - [ ] Create a draft [Github release](https://github.com/googleforgames/quilkin/releases/new)
     - [ ] Populate the tag with `v{version}`
     - [ ] Click `Generate release notes` to generate the change log for this release.
