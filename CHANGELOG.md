@@ -1,5 +1,61 @@
 # Changelog
 
+## v0.6.0 (2023-07-7)
+
+## What's Changed
+### Breaking changes
+* Refactor documentation layout and define default ports by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/688
+* Refactor filter metrics into a single vector of metrics with labels by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/736
+### Implemented enhancements
+* Add region parameters for control planes by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/696
+* Add initial implementation of relay service by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/698
+* Add environment variables to config providers by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/707
+* Add test for relay proxy routing (and support for file providers) by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/710
+* Resolve DNS asynchronously by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/721
+* Update termination code to allow proxies to wait until all sessions expire by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/740
+* Implement Agent service by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/744
+* Remove shutdown_rx from downstream loop by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/742
+### Fixed bugs
+* Add hotfix around xDS stream sometimes not responding with changes by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/683
+* Refactor provider task retrying and move providers to their own module by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/702
+* Workaround for mdbook-variables by @markmandel in https://github.com/googleforgames/quilkin/pull/705
+* Don't drop the stream client until the function completes by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/709
+* Recover when stream channel breaks by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/713
+* Fix proxy not retrying from received xDS error by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/727
+* Find the endpoint to delete using partial information from the server in case some information is missing by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/729
+* Clamp provider retry delay to five minutes by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/733
+* Improve server delete logic by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/738
+### Security fixes
+* Migrate image to supported distroless tag by @markmandel in https://github.com/googleforgames/quilkin/pull/693
+### Other
+* Updates for 0.6.0-dev by @markmandel in https://github.com/googleforgames/quilkin/pull/681
+* Add warning when watcher fails to send an update by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/684
+* Remove unneeded pin requirement by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/692
+* Strip Config of all service specific configuration for now by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/694
+* Add debug line for cli parameters by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/706
+* Add filter chain discovery to the relay by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/703
+* Bump golang.org/x/net from 0.4.0 to 0.7.0 in /build/ci/github-bot by @dependabot in https://github.com/googleforgames/quilkin/pull/708
+* Bump golang.org/x/crypto from 0.0.0-20210921155107-089bfa567519 to 0.1.0 in /build/ci/github-bot by @dependabot in https://github.com/googleforgames/quilkin/pull/715
+* `continue` rather than `return` upon receiving invalid gameserver by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/724
+* Refactor drop into a single metric, change filters to return a result by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/722
+* Include debug info on unknown server in warning by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/732
+* Add experimental notification in the docs by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/730
+* Use GitHub's Changelog Generation by @markmandel in https://github.com/googleforgames/quilkin/pull/735
+* Add initial implementation of QCMP by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/676
+* Update Rust to 1.69.0 and update dependencies by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/745
+* Fix probuf link in docs by @markmandel in https://github.com/googleforgames/quilkin/pull/753
+* Move session expiry to debug logging. by @markmandel in https://github.com/googleforgames/quilkin/pull/754
+* Update examples to work with upcoming 0.6.0 by @markmandel in https://github.com/googleforgames/quilkin/pull/755
+* Update Docs for 0.6.0 Release by @markmandel in https://github.com/googleforgames/quilkin/pull/756
+* Downgrade trust-dns-resolver by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/748
+* Improve missing gameserver warning by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/743
+* Add GDC presentation to documentation. by @markmandel in https://github.com/googleforgames/quilkin/pull/757
+
+## New Contributors
+* @dependabot made their first contribution in https://github.com/googleforgames/quilkin/pull/708
+
+**Full Changelog**: https://github.com/googleforgames/quilkin/compare/v0.5.0...v0.6.0
+
 ## [v0.5.0](https://github.com/googleforgames/quilkin/tree/v0.5.0) (2023-01-11)
 
 [Full Changelog](https://github.com/googleforgames/quilkin/compare/v0.4.0...v0.5.0)
