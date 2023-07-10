@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Resource","ResourceType"],"mod":["config","core","service","type"],"struct":["AggregatedDiscoveryServiceClient","Client","ControlPlane"],"type":["AdsClient"]};

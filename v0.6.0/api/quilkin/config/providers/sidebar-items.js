@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Providers"],"mod":["k8s"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["generic_text_match"],"struct":["GenericTextMatch"]};

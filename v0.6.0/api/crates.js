@@ -1,0 +1,1 @@
+window.ALL_CRATES = ["agones","quilkin","quilkin_macros"];
