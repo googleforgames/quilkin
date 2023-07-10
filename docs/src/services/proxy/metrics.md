@@ -5,15 +5,15 @@ The following are metrics that Quilkin provides while in Proxy Mode.
 # ASN Maxmind Information
 
 If Quilkin is provided a a MaxmindDB GeoIP database, Quilkin will log the
-following information in the `maxmind information` log, as well provide metrics
-that use the following fields as labels.
+following information in the `maxmind information` log, as well as populate
+the following fields in any metrics with matching labels.
 
 | Field           | Description                                   |
 |-----------------|-----------------------------------------------|
-| `number`        | ASN Number                                    |
+| `asn`           | ASN Number                                    |
 | `organization`  | The organisation responsible for the ASN      |
 | `country_code`  | The corresponding country code                |
-| `prefix`        | The IP prefix CIDR address                    |
+| `ip_prefix`     | The IP prefix CIDR address                    |
 | `prefix_entity` | The name of the entity for the prefix address |
 | `prefix_name`   | The name of the prefix address                |
 
@@ -24,14 +24,14 @@ that use the following fields as labels.
 
 The proxy exposes the following general metrics:
 
-* `quilkin_packets_processing_duration_seconds{event}` (Histogram)
+* `quilkin_packets_processing_duration_seconds{event, asn, ip_prefix}` (Histogram)
 
   The total duration of time in seconds that it took to process a packet.
     * The `event` label is either:
         * `read`: when the proxy receives data from a downstream connection on the listening port.
         * `write`: when the proxy sends data to a downstream connection via the listening port.
 
-* `quilkin_packets_dropped_total{reason}` (Counter)
+* `quilkin_packets_dropped_total{reason, asn, ip_prefix}` (Counter)
 
   The total number of packets (not associated with any session) that were dropped by proxy.
   Not that packets reflected by this metric were dropped at an earlier stage before they were associated with any session. For session based metrics, see the list of [session metrics][session-metrics] instead.
@@ -47,21 +47,25 @@ The proxy exposes the following general metrics:
   The number of currently active upstream endpoints. Note that this tracks the number of endpoints that the proxy
   knows of rather than those that it is connected to (see [Session Metrics][session-metrics] instead for those)
 
-* `quilkin_bytes_total{event}`
+* `quilkin_bytes_total{event, asn, ip_prefix}`
 
    The total number of bytes sent or recieved
   * The `event` label is either:
     * `read`: when the proxy receives data from a downstream connection on the listening port.
     * `write`: when the proxy sends data to a downstream connection via the listening port.
 
-* `quilkin_packets_total{event}`
+* `quilkin_packets_total{event, asn, ip_prefix}`
 
   The total number of packets sent or recieved.
   * The `event` label is either:
     * `read`: when the proxy receives data from a downstream connection on the listening port.
     * `write`: when the proxy sends data to a downstream connection via the listening port.
 
-* `quilkin_errors_total{event}`
+* `quilkin_packet_jitter{event, asn, ip_prefix}`
+
+  The time between receiving new packets.
+
+* `quilkin_errors_total{event, asn, ip_prefix}`
 
   The total number of errors encountered while reading a packet from the upstream endpoint.
 
@@ -69,7 +73,7 @@ The proxy exposes the following general metrics:
 
 The proxy exposes the following metrics around sessions:
 
-* `quilkin_session_active{asn}{ip_prefix}`
+* `quilkin_session_active{asn, organization, cc, ip_prefix, prefix_entity, prefix_name}`
 
   The number of currently active sessions. If a maxmind database has been
   provided, the labels are populated:
