@@ -242,7 +242,7 @@ your local machine through <a href="installation.html#cargo">Cargo</a>.</p>
 <dl>
   <dt><strong>Source / Method</strong></dt>
   <dd>
-<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.7.0-dev-75a85b0
+<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.7.0-dev-8aef34b
 </code></pre>
 </dd>
   <dt><strong>Notes</strong></dt>
@@ -2153,13 +2153,13 @@ types:
 <p>The following are metrics that Quilkin provides while in Proxy Mode.</p>
 <h1 id="asn-maxmind-information"><a class="header" href="#asn-maxmind-information">ASN Maxmind Information</a></h1>
 <p>If Quilkin is provided a a MaxmindDB GeoIP database, Quilkin will log the
-following information in the <code>maxmind information</code> log, as well provide metrics
-that use the following fields as labels.</p>
+following information in the <code>maxmind information</code> log, as well as populate
+the following fields in any metrics with matching labels.</p>
 <div class="table-wrapper"><table><thead><tr><th>Field</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>number</code></td><td>ASN Number</td></tr>
+<tr><td><code>asn</code></td><td>ASN Number</td></tr>
 <tr><td><code>organization</code></td><td>The organisation responsible for the ASN</td></tr>
 <tr><td><code>country_code</code></td><td>The corresponding country code</td></tr>
-<tr><td><code>prefix</code></td><td>The IP prefix CIDR address</td></tr>
+<tr><td><code>ip_prefix</code></td><td>The IP prefix CIDR address</td></tr>
 <tr><td><code>prefix_entity</code></td><td>The name of the entity for the prefix address</td></tr>
 <tr><td><code>prefix_name</code></td><td>The name of the prefix address</td></tr>
 </tbody></table>
@@ -2172,7 +2172,7 @@ by default with Quilkin.</p>
 <p>The proxy exposes the following general metrics:</p>
 <ul>
 <li>
-<p><code>quilkin_packets_processing_duration_seconds{event}</code> (Histogram)</p>
+<p><code>quilkin_packets_processing_duration_seconds{event, asn, ip_prefix}</code> (Histogram)</p>
 <p>The total duration of time in seconds that it took to process a packet.</p>
 <ul>
 <li>The <code>event</code> label is either:
@@ -2184,7 +2184,7 @@ by default with Quilkin.</p>
 </ul>
 </li>
 <li>
-<p><code>quilkin_packets_dropped_total{reason}</code> (Counter)</p>
+<p><code>quilkin_packets_dropped_total{reason, asn, ip_prefix}</code> (Counter)</p>
 <p>The total number of packets (not associated with any session) that were dropped by proxy.
 Not that packets reflected by this metric were dropped at an earlier stage before they were associated with any session. For session based metrics, see the list of <a href="services/proxy/metrics.html#session-metrics">session metrics</a> instead.</p>
 <ul>
@@ -2205,7 +2205,7 @@ Not that packets reflected by this metric were dropped at an earlier stage befor
 knows of rather than those that it is connected to (see <a href="services/proxy/metrics.html#session-metrics">Session Metrics</a> instead for those)</p>
 </li>
 <li>
-<p><code>quilkin_bytes_total{event}</code></p>
+<p><code>quilkin_bytes_total{event, asn, ip_prefix}</code></p>
 <p>The total number of bytes sent or recieved</p>
 <ul>
 <li>The <code>event</code> label is either:
@@ -2217,7 +2217,7 @@ knows of rather than those that it is connected to (see <a href="services/proxy/
 </ul>
 </li>
 <li>
-<p><code>quilkin_packets_total{event}</code></p>
+<p><code>quilkin_packets_total{event, asn, ip_prefix}</code></p>
 <p>The total number of packets sent or recieved.</p>
 <ul>
 <li>The <code>event</code> label is either:
@@ -2229,7 +2229,11 @@ knows of rather than those that it is connected to (see <a href="services/proxy/
 </ul>
 </li>
 <li>
-<p><code>quilkin_errors_total{event}</code></p>
+<p><code>quilkin_packet_jitter{event, asn, ip_prefix}</code></p>
+<p>The time between receiving new packets.</p>
+</li>
+<li>
+<p><code>quilkin_errors_total{event, asn, ip_prefix}</code></p>
 <p>The total number of errors encountered while reading a packet from the upstream endpoint.</p>
 </li>
 </ul>
@@ -2237,7 +2241,7 @@ knows of rather than those that it is connected to (see <a href="services/proxy/
 <p>The proxy exposes the following metrics around sessions:</p>
 <ul>
 <li>
-<p><code>quilkin_session_active{asn}{ip_prefix}</code></p>
+<p><code>quilkin_session_active{asn, organization, country_code, ip_prefix, prefix_entity, prefix_name}</code></p>
 <p>The number of currently active sessions. If a maxmind database has been
 provided, the labels are populated:</p>
 <ul>

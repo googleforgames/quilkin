@@ -212,6 +212,36 @@
 <a href="#212" id="212">212</a>
 <a href="#213" id="213">213</a>
 <a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
+<a href="#240" id="240">240</a>
+<a href="#241" id="241">241</a>
+<a href="#242" id="242">242</a>
+<a href="#243" id="243">243</a>
+<a href="#244" id="244">244</a>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -246,8 +276,10 @@
 <span class="doccomment">/// Packet received from local port
 </span><span class="attr">#[derive(Debug)]
 </span><span class="kw">struct </span>DownstreamPacket {
-    source: EndpointAddress,
+    asn_info: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::maxmind_db::IpNetEntry&gt;,
     contents: Vec&lt;u8&gt;,
+    received_at: i64,
+    source: std::net::SocketAddr,
 }
 
 <span class="doccomment">/// Represents the required arguments to run a worker task that
@@ -274,6 +306,7 @@
             <span class="comment">// Initialize a buffer for the UDP packet. We use the maximum size of a UDP
             // packet, which is the maximum value of 16 a bit integer.
             </span><span class="kw">let </span><span class="kw-2">mut </span>buf = <span class="macro">vec!</span>[<span class="number">0</span>; <span class="number">1 </span>&lt;&lt; <span class="number">16</span>];
+            <span class="kw">let </span><span class="kw-2">mut </span>last_received_at = <span class="prelude-val">None</span>;
             <span class="kw">loop </span>{
                 <span class="macro">tracing::debug!</span>(
                     id = worker_id,
@@ -281,18 +314,34 @@
                     <span class="string">&quot;Awaiting packet&quot;
                 </span>);
 
-                <span class="kw">match </span>socket.recv_from(<span class="kw-2">&amp;mut </span>buf).<span class="kw">await </span>{
-                    <span class="prelude-val">Ok</span>((size, source)) =&gt; {
-                        <span class="kw">let </span>packet = DownstreamPacket {
-                            source: source.into(),
-                            contents: buf[..size].to_vec(),
-                        };
+                <span class="macro">tokio::select! </span>{
+                    result = socket.recv_from(<span class="kw-2">&amp;mut </span>buf) =&gt; {
+                        <span class="kw">match </span>result {
+                            <span class="prelude-val">Ok</span>((size, source)) =&gt; {
+                                <span class="kw">let </span>packet = DownstreamPacket {
+                                    received_at: chrono::Utc::now().timestamp_nanos(),
+                                    asn_info: <span class="kw">crate</span>::maxmind_db::MaxmindDb::lookup(source.ip()),
+                                    contents: buf[..size].to_vec(),
+                                    source,
+                                };
 
-                        <span class="self">Self</span>::spawn_process_task(
-                            packet, source, worker_id, <span class="kw-2">&amp;</span>socket, <span class="kw-2">&amp;</span>config, <span class="kw-2">&amp;</span>sessions,
-                        )
+                                <span class="kw">if let </span><span class="prelude-val">Some</span>(last_received_at) = last_received_at {
+                                    <span class="kw">crate</span>::metrics::packet_jitter(
+                                        <span class="kw">crate</span>::metrics::READ,
+                                        packet.asn_info.as_ref(),
+                                    )
+                                        .set(packet.received_at - last_received_at);
+                                }
+                                last_received_at = <span class="prelude-val">Some</span>(packet.received_at);
+
+                                <span class="self">Self</span>::spawn_process_task(packet, source, worker_id, <span class="kw-2">&amp;</span>socket, <span class="kw-2">&amp;</span>config, <span class="kw-2">&amp;</span>sessions)
+                            }
+                            <span class="prelude-val">Err</span>(error) =&gt; {
+                                <span class="macro">tracing::error!</span>(%error, <span class="string">&quot;error receiving packet&quot;</span>);
+                                <span class="kw">return</span>;
+                            }
+                        }
                     }
-                    <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">tracing::error!</span>(%error, <span class="string">&quot;error receiving packet&quot;</span>),
                 }
             }
         });
@@ -323,17 +372,25 @@
             <span class="kw">async move </span>{
                 <span class="kw">let </span>timer = <span class="kw">crate</span>::metrics::processing_time(<span class="kw">crate</span>::metrics::READ).start_timer();
 
+                <span class="kw">let </span>asn_info = packet.asn_info.clone();
+                <span class="kw">let </span>asn_info = asn_info.as_ref();
                 <span class="kw">match </span><span class="self">Self</span>::process_downstream_received_packet(packet, config, socket, sessions)
                     .<span class="kw">await
                 </span>{
                     <span class="prelude-val">Ok</span>(size) =&gt; {
-                        <span class="kw">crate</span>::metrics::packets_total(<span class="kw">crate</span>::metrics::READ).inc();
-                        <span class="kw">crate</span>::metrics::bytes_total(<span class="kw">crate</span>::metrics::READ).inc_by(size <span class="kw">as </span>u64);
+                        <span class="kw">crate</span>::metrics::packets_total(<span class="kw">crate</span>::metrics::READ, asn_info).inc();
+                        <span class="kw">crate</span>::metrics::bytes_total(<span class="kw">crate</span>::metrics::READ, asn_info)
+                            .inc_by(size <span class="kw">as </span>u64);
                     }
                     <span class="prelude-val">Err</span>(error) =&gt; {
                         <span class="kw">let </span>source = error.to_string();
-                        <span class="kw">crate</span>::metrics::errors_total(<span class="kw">crate</span>::metrics::READ, <span class="kw-2">&amp;</span>source).inc();
-                        <span class="kw">crate</span>::metrics::packets_dropped_total(<span class="kw">crate</span>::metrics::READ, <span class="kw-2">&amp;</span>source).inc();
+                        <span class="kw">crate</span>::metrics::errors_total(<span class="kw">crate</span>::metrics::READ, <span class="kw-2">&amp;</span>source, asn_info).inc();
+                        <span class="kw">crate</span>::metrics::packets_dropped_total(
+                            <span class="kw">crate</span>::metrics::READ,
+                            <span class="kw-2">&amp;</span>source,
+                            asn_info,
+                        )
+                        .inc();
                     }
                 }
 
@@ -355,7 +412,7 @@
         }
 
         <span class="kw">let </span>filters = config.filters.load();
-        <span class="kw">let </span><span class="kw-2">mut </span>context = ReadContext::new(endpoints, packet.source, packet.contents);
+        <span class="kw">let </span><span class="kw-2">mut </span>context = ReadContext::new(endpoints, packet.source.into(), packet.contents);
         filters.read(<span class="kw-2">&amp;mut </span>context).<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>bytes_written = <span class="number">0</span>;
 
@@ -367,6 +424,7 @@
                 <span class="kw-2">&amp;</span>downstream_socket,
                 <span class="kw-2">&amp;</span>config,
                 <span class="kw-2">&amp;</span>sessions,
+                packet.asn_info.clone(),
             )
             .<span class="kw">await</span><span class="question-mark">?</span>;
         }
@@ -383,6 +441,7 @@
         downstream_socket: <span class="kw-2">&amp;</span>Arc&lt;UdpSocket&gt;,
         config: <span class="kw-2">&amp;</span>Arc&lt;Config&gt;,
         sessions: <span class="kw-2">&amp;</span>SessionMap,
+        asn_info: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::maxmind_db::IpNetEntry&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;usize, PipelineError&gt; {
         <span class="kw">let </span>session_key = SessionKey {
             source: recv_addr.clone(),
@@ -397,6 +456,7 @@
                     source: session_key.source.clone(),
                     downstream_socket: downstream_socket.clone(),
                     dest: endpoint.clone(),
+                    asn_info,
                 };
 
                 <span class="kw">let </span>session = session_args.into_session().<span class="kw">await</span><span class="question-mark">?</span>;

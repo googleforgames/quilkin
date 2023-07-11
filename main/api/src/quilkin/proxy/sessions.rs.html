@@ -363,6 +363,11 @@
 <a href="#363" id="363">363</a>
 <a href="#364" id="364">364</a>
 <a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -388,6 +393,7 @@
 <span class="kw">use crate</span>::{
     endpoint::{Endpoint, EndpointAddress},
     filters::{Filter, WriteContext},
+    maxmind_db::IpNetEntry,
     utils::Loggable,
 };
 
@@ -407,7 +413,7 @@
     <span class="doccomment">/// a channel to broadcast on if we are shutting down this Session
     </span>shutdown_tx: watch::Sender&lt;()&gt;,
     <span class="doccomment">/// The ASN information.
-    </span>asn_info: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::maxmind_db::IpNetEntry&gt;,
+    </span>asn_info: <span class="prelude-ty">Option</span>&lt;IpNetEntry&gt;,
 }
 
 <span class="comment">// A (source, destination) address pair that uniquely identifies a session.
@@ -437,6 +443,7 @@
     <span class="kw">pub </span>source: EndpointAddress,
     <span class="kw">pub </span>downstream_socket: Arc&lt;UdpSocket&gt;,
     <span class="kw">pub </span>dest: Endpoint,
+    <span class="kw">pub </span>asn_info: <span class="prelude-ty">Option</span>&lt;IpNetEntry&gt;,
 }
 
 <span class="kw">impl </span>SessionArgs {
@@ -458,8 +465,6 @@
             .<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="kw">let </span>(shutdown_tx, shutdown_rx) = watch::channel::&lt;()&gt;(());
 
-        <span class="kw">let </span>ip = args.source.to_socket_addr().<span class="kw">await</span>.unwrap().ip();
-        <span class="kw">let </span>asn_info = <span class="kw">crate</span>::MaxmindDb::lookup(ip);
         <span class="kw">let </span>s = Session {
             config: args.config.clone(),
             upstream_socket,
@@ -467,7 +472,7 @@
             dest: args.dest,
             created_at: Instant::now(),
             shutdown_tx,
-            asn_info,
+            asn_info: args.asn_info,
         };
 
         <span class="macro">tracing::debug!</span>(source = %s.source, dest = <span class="question-mark">?</span>s.dest, <span class="string">&quot;Session created&quot;</span>);
@@ -485,22 +490,31 @@
         <span class="kw">let </span>config = <span class="self">self</span>.config.clone();
         <span class="kw">let </span>endpoint = <span class="self">self</span>.dest.clone();
         <span class="kw">let </span>upstream_socket = <span class="self">self</span>.upstream_socket.clone();
+        <span class="kw">let </span>asn_info = <span class="self">self</span>.asn_info.clone();
 
         tokio::spawn(<span class="kw">async move </span>{
             <span class="kw">let </span><span class="kw-2">mut </span>buf: Vec&lt;u8&gt; = <span class="macro">vec!</span>[<span class="number">0</span>; <span class="number">65535</span>];
+            <span class="kw">let </span><span class="kw-2">mut </span>last_received_at = <span class="prelude-val">None</span>;
             <span class="kw">loop </span>{
                 <span class="macro">tracing::debug!</span>(source = %source, dest = <span class="question-mark">?</span>endpoint, <span class="string">&quot;Awaiting incoming packet&quot;</span>);
+                <span class="kw">let </span>asn_info = asn_info.as_ref();
 
                 <span class="macro">select! </span>{
                     received = upstream_socket.recv_from(<span class="kw-2">&amp;mut </span>buf) =&gt; {
                         <span class="kw">match </span>received {
                             <span class="prelude-val">Err</span>(error) =&gt; {
-                                <span class="kw">crate</span>::metrics::errors_total(<span class="kw">crate</span>::metrics::WRITE, <span class="kw-2">&amp;</span>error.to_string()).inc();
+                                <span class="kw">crate</span>::metrics::errors_total(<span class="kw">crate</span>::metrics::WRITE, <span class="kw-2">&amp;</span>error.to_string(), asn_info).inc();
                                 <span class="macro">tracing::error!</span>(%error, %source, dest = <span class="question-mark">?</span>endpoint, <span class="string">&quot;Error receiving packet&quot;</span>);
                             },
                             <span class="prelude-val">Ok</span>((size, recv_addr)) =&gt; {
-                                <span class="kw">crate</span>::metrics::bytes_total(<span class="kw">crate</span>::metrics::WRITE).inc_by(size <span class="kw">as </span>u64);
-                                <span class="kw">crate</span>::metrics::packets_total(<span class="kw">crate</span>::metrics::WRITE).inc();
+                                <span class="kw">let </span>received_at = chrono::Utc::now().timestamp_nanos();
+                                <span class="kw">if let </span><span class="prelude-val">Some</span>(last_received_at) = last_received_at {
+                                    <span class="kw">crate</span>::metrics::packet_jitter(<span class="kw">crate</span>::metrics::WRITE, asn_info).set(received_at - last_received_at);
+                                }
+                                last_received_at = <span class="prelude-val">Some</span>(received_at);
+
+                                <span class="kw">crate</span>::metrics::packets_total(<span class="kw">crate</span>::metrics::WRITE, asn_info).inc();
+                                <span class="kw">crate</span>::metrics::bytes_total(<span class="kw">crate</span>::metrics::WRITE, asn_info).inc_by(size <span class="kw">as </span>u64);
 
                                 <span class="kw">let </span>timer = <span class="kw">crate</span>::metrics::processing_time(<span class="kw">crate</span>::metrics::WRITE).start_timer();
                                 <span class="kw">let </span>result = Session::process_recv_packet(
@@ -518,9 +532,10 @@
                                     <span class="kw">let </span>label = <span class="macro">format!</span>(<span class="string">&quot;proxy::Session::process_recv_packet: {error}&quot;</span>);
                                     <span class="kw">crate</span>::metrics::packets_dropped_total(
                                         <span class="kw">crate</span>::metrics::WRITE,
-                                        <span class="kw-2">&amp;</span>label
+                                        <span class="kw-2">&amp;</span>label,
+                                        asn_info
                                     ).inc();
-                                    <span class="kw">crate</span>::metrics::errors_total(<span class="kw">crate</span>::metrics::WRITE, <span class="kw-2">&amp;</span>label).inc();
+                                    <span class="kw">crate</span>::metrics::errors_total(<span class="kw">crate</span>::metrics::WRITE, <span class="kw-2">&amp;</span>label, asn_info).inc();
                                 }
                             }
                         };
@@ -535,13 +550,7 @@
     }
 
     <span class="kw">fn </span>active_session_metric(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; prometheus::IntGauge {
-        <span class="kw">let </span>(asn_number, ip_prefix) = <span class="self">self
-            </span>.asn_info
-            .as_ref()
-            .map(|asn| (asn.r#as, <span class="kw-2">&amp;*</span>asn.prefix))
-            .unwrap_or_else(|| (&lt;<span class="kw">_</span>&gt;::default(), &lt;<span class="kw">_</span>&gt;::default()));
-
-        metrics::active_sessions(asn_number <span class="kw">as </span>u16, ip_prefix)
+        metrics::active_sessions(<span class="self">self</span>.asn_info.as_ref())
     }
 
     <span class="doccomment">/// process_recv_packet processes a packet that is received by this session.
@@ -655,6 +664,7 @@
             source: addr.clone(),
             downstream_socket: socket.clone(),
             dest: endpoint,
+            asn_info: <span class="prelude-val">None</span>,
         })
         .<span class="kw">await
         </span>.unwrap();

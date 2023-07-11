@@ -66,6 +66,16 @@
 <a href="#66" id="66">66</a>
 <a href="#67" id="67">67</a>
 <a href="#68" id="68">68</a>
+<a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
+<a href="#72" id="72">72</a>
+<a href="#73" id="73">73</a>
+<a href="#74" id="74">74</a>
+<a href="#75" id="75">75</a>
+<a href="#76" id="76">76</a>
+<a href="#77" id="77">77</a>
+<a href="#78" id="78">78</a>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -88,20 +98,30 @@
 <span class="kw">use </span><span class="kw">crate</span>::metrics::{histogram_opts, register};
 
 <span class="kw">const </span>SUBSYSTEM: <span class="kw-2">&amp;</span>str = <span class="string">&quot;session&quot;</span>;
-<span class="kw">const </span>ASN_NUMBER_LABEL: <span class="kw-2">&amp;</span>str = <span class="string">&quot;asn&quot;</span>;
-<span class="kw">const </span>IP_PREFIX_LABEL: <span class="kw-2">&amp;</span>str = <span class="string">&quot;ip_prefix&quot;</span>;
+<span class="kw">const </span>AS_NAME_LABEL: <span class="kw-2">&amp;</span>str = <span class="string">&quot;organization&quot;</span>;
+<span class="kw">const </span>COUNTRY_CODE_LABEL: <span class="kw-2">&amp;</span>str = <span class="string">&quot;country_code&quot;</span>;
+<span class="kw">const </span>PREFIX_ENTITY_LABEL: <span class="kw-2">&amp;</span>str = <span class="string">&quot;prefix_entity&quot;</span>;
+<span class="kw">const </span>PREFIX_NAME_LABEL: <span class="kw-2">&amp;</span>str = <span class="string">&quot;prefix_name&quot;</span>;
+<span class="kw">use </span><span class="kw">crate</span>::metrics::{ASN_LABEL, PREFIX_LABEL};
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>active_sessions(asn_number: u16, ip_prefix: <span class="kw-2">&amp;</span>str) -&gt; IntGauge {
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>active_sessions(asn: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="kw">crate</span>::maxmind_db::IpNetEntry&gt;) -&gt; IntGauge {
     <span class="kw">static </span>ACTIVE_SESSIONS: Lazy&lt;IntGaugeVec&gt; = Lazy::new(|| {
         <span class="macro">prometheus::register_int_gauge_vec_with_registry! </span>{
             Opts::new(<span class="string">&quot;active&quot;</span>, <span class="string">&quot;number of sessions currently active&quot;</span>).subsystem(SUBSYSTEM),
-            <span class="kw-2">&amp;</span>[ASN_NUMBER_LABEL, IP_PREFIX_LABEL],
+            <span class="kw-2">&amp;</span>[ASN_LABEL, AS_NAME_LABEL, COUNTRY_CODE_LABEL, PREFIX_LABEL, PREFIX_ENTITY_LABEL, PREFIX_NAME_LABEL],
             <span class="kw">crate</span>::metrics::registry(),
         }
         .unwrap()
     });
 
-    ACTIVE_SESSIONS.with_label_values(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>asn_number.to_string(), ip_prefix])
+    ACTIVE_SESSIONS.with_label_values(<span class="kw-2">&amp;</span>[
+        <span class="kw-2">&amp;*</span>asn.map(|asn| asn.r#as).unwrap_or_default().to_string(),
+        asn.map(|asn| <span class="kw-2">&amp;*</span>asn.as_name).unwrap_or_default(),
+        asn.map(|asn| <span class="kw-2">&amp;*</span>asn.as_cc).unwrap_or_default(),
+        asn.map(|asn| <span class="kw-2">&amp;*</span>asn.prefix).unwrap_or_default(),
+        asn.map(|asn| <span class="kw-2">&amp;*</span>asn.prefix_entity).unwrap_or_default(),
+        asn.map(|asn| <span class="kw-2">&amp;*</span>asn.prefix_name).unwrap_or_default(),
+    ])
 }
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>total_sessions() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>IntCounter {
