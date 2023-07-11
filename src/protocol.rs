@@ -151,6 +151,7 @@ impl Protocol {
         self.encode_into_buffer(&mut buffer);
         buffer
     }
+
     /// Encodes the protocol command into a buffer of bytes for network transmission.
     pub fn encode_into_buffer(&self, buffer: &mut Vec<u8>) {
         buffer.extend(MAGIC_NUMBER);

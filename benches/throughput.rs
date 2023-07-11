@@ -34,6 +34,9 @@ fn run_quilkin(port: u16, endpoint: SocketAddr) {
 
         let proxy = quilkin::cli::Proxy {
             port,
+            qcmp_port: runtime
+                .block_on(quilkin::test_utils::available_addr())
+                .port(),
             ..<_>::default()
         };
 
