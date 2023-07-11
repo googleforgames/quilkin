@@ -33,7 +33,6 @@ pub use sessions::{Session, SessionArgs, SessionKey, SessionMap};
 #[derive(Debug)]
 struct DownstreamPacket {
     asn_info: Option<crate::maxmind_db::IpNetEntry>,
-    source: EndpointAddress,
     contents: Vec<u8>,
     received_at: i64,
     source: std::net::SocketAddr,
