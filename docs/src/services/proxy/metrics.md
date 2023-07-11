@@ -73,7 +73,7 @@ The proxy exposes the following general metrics:
 
 The proxy exposes the following metrics around sessions:
 
-* `quilkin_session_active{asn, organization, cc, ip_prefix, prefix_entity, prefix_name}`
+* `quilkin_session_active{asn, organization, country_code, ip_prefix, prefix_entity, prefix_name}`
 
   The number of currently active sessions. If a maxmind database has been
   provided, the labels are populated:

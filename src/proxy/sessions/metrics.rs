@@ -21,7 +21,7 @@ use crate::metrics::{histogram_opts, register};
 
 const SUBSYSTEM: &str = "session";
 const AS_NAME_LABEL: &str = "organization";
-const COUNTRY_CODE_LABEL: &str = "cc";
+const COUNTRY_CODE_LABEL: &str = "country_code";
 const PREFIX_ENTITY_LABEL: &str = "prefix_entity";
 const PREFIX_NAME_LABEL: &str = "prefix_name";
 use crate::metrics::{ASN_LABEL, PREFIX_LABEL};
