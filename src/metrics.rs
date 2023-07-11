@@ -16,9 +16,11 @@
 
 use once_cell::sync::Lazy;
 use prometheus::{
-    core::Collector, Histogram, HistogramOpts, HistogramVec, IntCounter, IntCounterVec, Opts,
-    Registry, DEFAULT_BUCKETS,
+    core::Collector, Histogram, HistogramOpts, HistogramVec, IntCounter, IntCounterVec, IntGauge,
+    IntGaugeVec, Opts, Registry, DEFAULT_BUCKETS,
 };
+
+use crate::maxmind_db::IpNetEntry;
 
 pub use prometheus::Result;
 
@@ -28,6 +30,8 @@ pub const DIRECTION_LABEL: &str = "event";
 
 pub(crate) const READ: Direction = Direction::Read;
 pub(crate) const WRITE: Direction = Direction::Write;
+pub(crate) const ASN_LABEL: &str = "asn";
+pub(crate) const PREFIX_LABEL: &str = "ip_prefix";
 
 /// Label value for [DIRECTION_LABEL] for `read` events
 pub const READ_DIRECTION_LABEL: &str = "read";
@@ -89,68 +93,114 @@ pub(crate) fn processing_time(direction: Direction) -> Histogram {
     PROCESSING_TIME.with_label_values(&[direction.label()])
 }
 
-pub(crate) fn bytes_total(direction: Direction) -> IntCounter {
+pub(crate) fn bytes_total(direction: Direction, asn: Option<&IpNetEntry>) -> IntCounter {
     static BYTES_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
         prometheus::register_int_counter_vec_with_registry! {
             prometheus::opts! {
                 "bytes_total",
                 "total number of bytes",
             },
-            &[Direction::LABEL],
+            &[Direction::LABEL, ASN_LABEL, PREFIX_LABEL],
             registry(),
         }
         .unwrap()
     });
 
-    BYTES_TOTAL.with_label_values(&[direction.label()])
+    BYTES_TOTAL.with_label_values(&[
+        direction.label(),
+        &asn.map(|asn| asn.r#as.to_string()).unwrap_or_default(),
+        asn.map(|asn| &*asn.prefix).unwrap_or_default(),
+    ])
 }
 
-pub(crate) fn errors_total(direction: Direction, display: &str) -> IntCounter {
+pub(crate) fn errors_total(
+    direction: Direction,
+    display: &str,
+    asn: Option<&IpNetEntry>,
+) -> IntCounter {
     static ERRORS_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
         prometheus::register_int_counter_vec_with_registry! {
             prometheus::opts! {
                 "errors_total",
                 "total number of errors sending packets",
             },
-            &[Direction::LABEL, "display"],
+            &[Direction::LABEL, "display", ASN_LABEL, PREFIX_LABEL],
             registry(),
         }
         .unwrap()
     });
 
-    ERRORS_TOTAL.with_label_values(&[direction.label(), display])
+    ERRORS_TOTAL.with_label_values(&[
+        direction.label(),
+        display,
+        &asn.map(|asn| asn.r#as.to_string()).unwrap_or_default(),
+        asn.map(|asn| &*asn.prefix).unwrap_or_default(),
+    ])
 }
 
-pub(crate) fn packets_total(direction: Direction) -> IntCounter {
+pub(crate) fn packet_jitter(direction: Direction, asn: Option<&IpNetEntry>) -> IntGauge {
+    static PACKET_JITTER: Lazy<IntGaugeVec> = Lazy::new(|| {
+        prometheus::register_int_gauge_vec_with_registry! {
+            prometheus::opts! {
+                "packet_jitter",
+                "The time between new packets",
+            },
+            &[Direction::LABEL, ASN_LABEL, PREFIX_LABEL],
+            registry(),
+        }
+        .unwrap()
+    });
+
+    PACKET_JITTER.with_label_values(&[
+        direction.label(),
+        &asn.map(|asn| asn.r#as.to_string()).unwrap_or_default(),
+        asn.map(|asn| &*asn.prefix).unwrap_or_default(),
+    ])
+}
+
+pub(crate) fn packets_total(direction: Direction, asn: Option<&IpNetEntry>) -> IntCounter {
     static PACKETS_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
         prometheus::register_int_counter_vec_with_registry! {
             prometheus::opts! {
                 "packets_total",
                 "Total number of packets",
             },
-            &[Direction::LABEL],
+            &[Direction::LABEL, ASN_LABEL, PREFIX_LABEL],
             registry(),
         }
         .unwrap()
     });
 
-    PACKETS_TOTAL.with_label_values(&[direction.label()])
+    PACKETS_TOTAL.with_label_values(&[
+        direction.label(),
+        &asn.map(|asn| asn.r#as.to_string()).unwrap_or_default(),
+        asn.map(|asn| &*asn.prefix).unwrap_or_default(),
+    ])
 }
 
-pub(crate) fn packets_dropped_total(direction: Direction, source: &str) -> IntCounter {
+pub(crate) fn packets_dropped_total(
+    direction: Direction,
+    source: &str,
+    asn: Option<&IpNetEntry>,
+) -> IntCounter {
     static PACKETS_DROPPED: Lazy<IntCounterVec> = Lazy::new(|| {
         prometheus::register_int_counter_vec_with_registry! {
             prometheus::opts! {
                 "packets_dropped_total",
                 "Total number of dropped packets",
             },
-            &[Direction::LABEL, "source"],
+            &[Direction::LABEL, "source", ASN_LABEL, PREFIX_LABEL],
             registry(),
         }
         .unwrap()
     });
 
-    PACKETS_DROPPED.with_label_values(&[direction.label(), source])
+    PACKETS_DROPPED.with_label_values(&[
+        direction.label(),
+        source,
+        &asn.map(|asn| asn.r#as.to_string()).unwrap_or_default(),
+        asn.map(|asn| &*asn.prefix).unwrap_or_default(),
+    ])
 }
 
 /// Create a generic metrics options.

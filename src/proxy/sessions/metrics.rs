@@ -20,20 +20,30 @@ use prometheus::{Histogram, IntCounter, IntGauge, IntGaugeVec, Opts};
 use crate::metrics::{histogram_opts, register};
 
 const SUBSYSTEM: &str = "session";
-const ASN_NUMBER_LABEL: &str = "asn";
-const IP_PREFIX_LABEL: &str = "ip_prefix";
+const AS_NAME_LABEL: &str = "organization";
+const COUNTRY_CODE_LABEL: &str = "country_code";
+const PREFIX_ENTITY_LABEL: &str = "prefix_entity";
+const PREFIX_NAME_LABEL: &str = "prefix_name";
+use crate::metrics::{ASN_LABEL, PREFIX_LABEL};
 
-pub(crate) fn active_sessions(asn_number: u16, ip_prefix: &str) -> IntGauge {
+pub(crate) fn active_sessions(asn: Option<&crate::maxmind_db::IpNetEntry>) -> IntGauge {
     static ACTIVE_SESSIONS: Lazy<IntGaugeVec> = Lazy::new(|| {
         prometheus::register_int_gauge_vec_with_registry! {
             Opts::new("active", "number of sessions currently active").subsystem(SUBSYSTEM),
-            &[ASN_NUMBER_LABEL, IP_PREFIX_LABEL],
+            &[ASN_LABEL, AS_NAME_LABEL, COUNTRY_CODE_LABEL, PREFIX_LABEL, PREFIX_ENTITY_LABEL, PREFIX_NAME_LABEL],
             crate::metrics::registry(),
         }
         .unwrap()
     });
 
-    ACTIVE_SESSIONS.with_label_values(&[&asn_number.to_string(), ip_prefix])
+    ACTIVE_SESSIONS.with_label_values(&[
+        &*asn.map(|asn| asn.r#as).unwrap_or_default().to_string(),
+        asn.map(|asn| &*asn.as_name).unwrap_or_default(),
+        asn.map(|asn| &*asn.as_cc).unwrap_or_default(),
+        asn.map(|asn| &*asn.prefix).unwrap_or_default(),
+        asn.map(|asn| &*asn.prefix_entity).unwrap_or_default(),
+        asn.map(|asn| &*asn.prefix_name).unwrap_or_default(),
+    ])
 }
 
 pub(crate) fn total_sessions() -> &'static IntCounter {
