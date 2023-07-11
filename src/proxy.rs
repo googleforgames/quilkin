@@ -23,7 +23,6 @@ use tokio::net::UdpSocket;
 use crate::{
     endpoint::{Endpoint, EndpointAddress},
     filters::{Filter, ReadContext},
-    protocol::Protocol,
     ttl_map::TryResult,
     Config,
 };
@@ -34,6 +33,7 @@ pub use sessions::{Session, SessionArgs, SessionKey, SessionMap};
 #[derive(Debug)]
 struct DownstreamPacket {
     asn_info: Option<crate::maxmind_db::IpNetEntry>,
+    source: EndpointAddress,
     contents: Vec<u8>,
     received_at: i64,
     source: std::net::SocketAddr,
@@ -163,10 +163,6 @@ impl DownstreamReceiveWorkerConfig {
         downstream_socket: Arc<UdpSocket>,
         sessions: SessionMap,
     ) -> Result<usize, PipelineError> {
-        if let Some(command) = Protocol::parse(&packet.contents)? {
-            return Self::process_control_packet(packet, command, downstream_socket).await;
-        }
-
         let endpoints: Vec<_> = config.clusters.value().endpoints().collect();
         if endpoints.is_empty() {
             return Err(PipelineError::NoUpstreamEndpoints);
@@ -191,29 +187,6 @@ impl DownstreamReceiveWorkerConfig {
         }
 
         Ok(bytes_written)
-    }
-
-    async fn process_control_packet(
-        packet: DownstreamPacket,
-        command: Protocol,
-        downstream_socket: Arc<UdpSocket>,
-    ) -> Result<usize, PipelineError> {
-        match command {
-            Protocol::Ping {
-                client_timestamp,
-                nonce,
-            } => downstream_socket
-                .send_to(
-                    &Protocol::ping_reply(nonce, client_timestamp, packet.received_at).encode(),
-                    packet.source,
-                )
-                .await
-                .map_err(From::from),
-            Protocol::PingReply { .. } => {
-                tracing::warn!("received unsupported ping reply");
-                Ok(0)
-            }
-        }
     }
 
     /// Send a packet received from `recv_addr` to an endpoint.

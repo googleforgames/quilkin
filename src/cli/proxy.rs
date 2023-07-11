@@ -25,6 +25,8 @@ use crate::filters::FilterFactory;
 
 define_port!(7777);
 
+const QCMP_PORT: u16 = 7600;
+
 /// Run Quilkin as a UDP reverse proxy.
 #[derive(clap::Args, Clone, Debug)]
 pub struct Proxy {
@@ -37,6 +39,9 @@ pub struct Proxy {
     /// The port to listen on.
     #[clap(short, long, env = super::PORT_ENV_VAR, default_value_t = PORT)]
     pub port: u16,
+    /// The port to listen on.
+    #[clap(short, long, env = "QUILKIN_QCMP_PORT", default_value_t = QCMP_PORT)]
+    pub qcmp_port: u16,
     /// One or more socket addresses to forward packets to.
     #[clap(short, long, env = "QUILKIN_DEST")]
     pub to: Vec<SocketAddr>,
@@ -48,6 +53,7 @@ impl Default for Proxy {
             management_server: <_>::default(),
             mmdb: <_>::default(),
             port: PORT,
+            qcmp_port: QCMP_PORT,
             to: <_>::default(),
         }
     }
@@ -115,6 +121,7 @@ impl Proxy {
         };
 
         self.run_recv_from(&config, sessions.clone())?;
+        crate::protocol::spawn(self.qcmp_port).await?;
         tracing::info!("Quilkin is ready");
 
         shutdown_rx
