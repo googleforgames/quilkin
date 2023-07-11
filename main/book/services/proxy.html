@@ -167,8 +167,9 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="proxy"><a class="header" href="#proxy">Proxy</a></h1>
-<div class="table-wrapper"><table><thead><tr><th>services</th><th>ports</th><th>Protocol</th></tr></thead><tbody>
-<tr><td>proxy</td><td>7777</td><td>UDP (IPv4)</td></tr>
+<div class="table-wrapper"><table><thead><tr><th>Services</th><th>Ports</th><th>Protocol</th></tr></thead><tbody>
+<tr><td>Proxy</td><td>7777</td><td>UDP (IPv4)</td></tr>
+<tr><td>QCMP</td><td>7600</td><td>UDP (IPv4 &amp;&amp; IPv6)</td></tr>
 </tbody></table>
 </div>
 <p>&quot;Proxy&quot; is the primary Quilkin service, which acts as a non-transparent UDP
@@ -186,6 +187,8 @@ Options:
           The remote URL or local file path to retrieve the Maxmind database [env: MMDB=]
   -p, --port &lt;PORT&gt;
           The port to listen on [env: QUILKIN_PORT=] [default: 7777]
+  -q, --qcmp-port &lt;QCMP_PORT&gt;
+          The port to listen on [env: QUILKIN_QCMP_PORT=] [default: 7600]
   -t, --to &lt;TO&gt;
           One or more socket addresses to forward packets to [env: QUILKIN_DEST=]
   -h, --help

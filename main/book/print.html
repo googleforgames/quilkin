@@ -242,7 +242,7 @@ your local machine through <a href="installation.html#cargo">Cargo</a>.</p>
 <dl>
   <dt><strong>Source / Method</strong></dt>
   <dd>
-<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.7.0-dev-8a3aa37
+<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.7.0-dev-75a85b0
 </code></pre>
 </dd>
   <dt><strong>Notes</strong></dt>
@@ -627,8 +627,9 @@ proxies will route to the Allocated GameServer, and you can play a gamee!</p>
 <li>Read into the <a href="deployment/quickstarts/../../services/xds.html">xDS Managment API</a>.</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="proxy"><a class="header" href="#proxy">Proxy</a></h1>
-<div class="table-wrapper"><table><thead><tr><th>services</th><th>ports</th><th>Protocol</th></tr></thead><tbody>
-<tr><td>proxy</td><td>7777</td><td>UDP (IPv4)</td></tr>
+<div class="table-wrapper"><table><thead><tr><th>Services</th><th>Ports</th><th>Protocol</th></tr></thead><tbody>
+<tr><td>Proxy</td><td>7777</td><td>UDP (IPv4)</td></tr>
+<tr><td>QCMP</td><td>7600</td><td>UDP (IPv4 &amp;&amp; IPv6)</td></tr>
 </tbody></table>
 </div>
 <p>&quot;Proxy&quot; is the primary Quilkin service, which acts as a non-transparent UDP
@@ -646,6 +647,8 @@ Options:
           The remote URL or local file path to retrieve the Maxmind database [env: MMDB=]
   -p, --port &lt;PORT&gt;
           The port to listen on [env: QUILKIN_PORT=] [default: 7777]
+  -q, --qcmp-port &lt;QCMP_PORT&gt;
+          The port to listen on [env: QUILKIN_QCMP_PORT=] [default: 7600]
   -t, --to &lt;TO&gt;
           One or more socket addresses to forward packets to [env: QUILKIN_DEST=]
   -h, --help
@@ -2088,6 +2091,10 @@ endpoints:
 - address: 127.0.0.1:4321
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="quilkin-control-message-protocol-qcmp"><a class="header" href="#quilkin-control-message-protocol-qcmp">Quilkin Control Message Protocol (QCMP)</a></h1>
+<div class="table-wrapper"><table><thead><tr><th>services</th><th>ports</th><th>Protocol</th></tr></thead><tbody>
+<tr><td>QCMP</td><td>7600</td><td>UDP (IPv4 &amp;&amp; IPv6)</td></tr>
+</tbody></table>
+</div>
 <p>In addition to the TCP based administration API, Quilkin provides a meta API
 over UDP. The purpose of this API is to provide meta operations that can be
 used by untrusted clients. Currently the API is focuses on providing pings for

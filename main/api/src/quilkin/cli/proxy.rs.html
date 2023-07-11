@@ -366,6 +366,13 @@
 <a href="#366" id="366">366</a>
 <a href="#367" id="367">367</a>
 <a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -393,6 +400,8 @@
 
 <span class="macro">define_port!</span>(<span class="number">7777</span>);
 
+<span class="kw">const </span>QCMP_PORT: u16 = <span class="number">7600</span>;
+
 <span class="doccomment">/// Run Quilkin as a UDP reverse proxy.
 </span><span class="attr">#[derive(clap::Args, Clone, Debug)]
 </span><span class="kw">pub struct </span>Proxy {
@@ -405,6 +414,9 @@
     <span class="doccomment">/// The port to listen on.
     </span><span class="attr">#[clap(short, long, env = <span class="kw">super</span>::PORT_ENV_VAR, default_value_t = PORT)]
     </span><span class="kw">pub </span>port: u16,
+    <span class="doccomment">/// The port to listen on.
+    </span><span class="attr">#[clap(short, long, env = <span class="string">&quot;QUILKIN_QCMP_PORT&quot;</span>, default_value_t = QCMP_PORT)]
+    </span><span class="kw">pub </span>qcmp_port: u16,
     <span class="doccomment">/// One or more socket addresses to forward packets to.
     </span><span class="attr">#[clap(short, long, env = <span class="string">&quot;QUILKIN_DEST&quot;</span>)]
     </span><span class="kw">pub </span>to: Vec&lt;SocketAddr&gt;,
@@ -416,6 +428,7 @@
             management_server: &lt;<span class="kw">_</span>&gt;::default(),
             mmdb: &lt;<span class="kw">_</span>&gt;::default(),
             port: PORT,
+            qcmp_port: QCMP_PORT,
             to: &lt;<span class="kw">_</span>&gt;::default(),
         }
     }
@@ -483,6 +496,7 @@
         </span>};
 
         <span class="self">self</span>.run_recv_from(<span class="kw-2">&amp;</span>config, sessions.clone())<span class="question-mark">?</span>;
+        <span class="kw">crate</span>::protocol::spawn(<span class="self">self</span>.qcmp_port).<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="macro">tracing::info!</span>(<span class="string">&quot;Quilkin is ready&quot;</span>);
 
         shutdown_rx
