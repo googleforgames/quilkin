@@ -25,7 +25,7 @@ base64 = "0.21.0"
 
 [package]
 name = "quilkin"
-version = "0.6.0-dev"
+version = "0.7.0-dev"
 authors = ["Mark Mandel <markmandel@google.com>", "Ifeanyi Ubah <ifeanyi.ubah@embark-studios.com>", "Erin Power <erin.power@embark-studios.com>"]
 license = "Apache-2.0"
 description = "Quilkin is a non-transparent UDP proxy specifically designed for use with large scale multiplayer dedicated game server deployments, to ensure security, access control, telemetry data, metrics and more."
@@ -44,7 +44,7 @@ test = true
 
 [dependencies]
 # Local
-quilkin-macros = { version = "0.6.0-dev", path = "./macros" }
+quilkin-macros = { version = "0.7.0-dev", path = "./macros" }
 
 # Crates.io
 arc-swap = { version = "1.6.0", features = ["serde"] }

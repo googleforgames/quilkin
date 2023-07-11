@@ -27,7 +27,8 @@
 - [ ] Run `cargo clippy` in the root directory, and ensure there are no issues.
 - [ ] Add a release item to README.md "Documentation" > "Releases" list with related links in reverse chronological 
   order.
-- [ ] Remove any `data-proofer-ignore` attributes from links in the documentation in `./docs`.
+- [ ] Review any `data-proofer-ignore` attributes from links in the documentation in `./docs`, and remove any no 
+  longer needed.
 - [ ] Create a draft [Github release](https://github.com/googleforgames/quilkin/releases/new)
     - [ ] Populate the tag with `v{version}`
     - [ ] Click `Generate release notes` to generate the change log for this release.
@@ -43,8 +44,10 @@
 - [ ] Publish to [crates.io/crates/quilkin-macros](https://crates.io/crates/quilkin-macros): run `cd macros && cargo publish`
 - [ ] Publish to [crates.io/crates/quilkin](https://crates.io/crates/quilkin): run `cargo publish`
 - [ ] Submit the release.
-- [ ] Post an announcement to the [mailing list](https://groups.google.com/g/quilkin-discuss).
-- [ ] Post to the [Twitter account](https://twitter.com/quilkindev).
+- [ ] Post announcemnts
+  - [ ] [mailing list](https://groups.google.com/g/quilkin-discuss).
+  - [ ] [Discord #announcement](https://discord.com/channels/773975408265134100/879794098721140786) 
+  - [ ] [Twitter account](https://twitter.com/quilkindev).
 - [ ] Update Cargo version for development
     - [ ] Edit `Cargo.toml` and increment the [minor version](https://semver.org/) and apply the `-dev` suffix to the
        `version`.
