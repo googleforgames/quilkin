@@ -18,7 +18,7 @@ terraform {
   required_version = ">= 1.0.0"
   required_providers {
     google = {
-      version = "~> 3.88"
+      version = "~> 4.70"
     }
   }
 }
@@ -54,7 +54,7 @@ variable "node_count" {
 
 // Create a GKE cluster with the appropriate structure
 module "agones_cluster" {
-  source = "git::https://github.com/googleforgames/agones.git//install/terraform/modules/gke/?ref=release-1.24.0"
+  source = "git::https://github.com/googleforgames/agones.git//install/terraform/modules/gke/?ref=release-1.33.0"
 
   cluster = {
     "name"             = var.name
@@ -66,12 +66,13 @@ module "agones_cluster" {
 
 // Install Agones via Helm
 module "helm_agones" {
-  source = "git::https://github.com/googleforgames/agones.git//install/terraform/modules/helm3/?ref=release-1.24.0"
+  source = "git::https://github.com/googleforgames/agones.git//install/terraform/modules/helm3/?ref=release-1.33.0"
 
-  agones_version         = "1.24.0"
-  values_file            = ""
+  agones_version         = "1.33.0"
+  values_file            = "./helm.yaml"
   chart                  = "agones"
   host                   = module.agones_cluster.host
   token                  = module.agones_cluster.token
   cluster_ca_certificate = module.agones_cluster.cluster_ca_certificate
+
 }
