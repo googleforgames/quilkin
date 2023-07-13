@@ -15,13 +15,13 @@
  */
 
 /// Common utilities for testing
-use std::{net::SocketAddr, str::from_utf8, sync::Arc};
+use std::{net::SocketAddr, str::from_utf8, sync::Arc, sync::Once};
 
-use once_cell::sync::Lazy;
 use tokio::{
     net::UdpSocket,
     sync::{mpsc, oneshot, watch},
 };
+use tracing_subscriber::EnvFilter;
 
 use crate::{
     cluster::Cluster,
@@ -31,17 +31,17 @@ use crate::{
     metadata::Value,
 };
 
-static ENABLE_LOG: Lazy<()> = Lazy::new(|| {
-    tracing_subscriber::fmt()
-        .pretty()
-        .with_max_level(tracing::Level::DEBUG)
-        .init()
-});
+static LOG_ONCE: Once = Once::new();
 
-/// Call to safely enable `tracing` logging calls, at the TRACE level.
+/// Call to safely enable logging calls with a given tracing env filter, e.g. "quilkin=debug"
 /// This can be very useful when attempting to debug unit and integration tests.
-pub fn enable_tracing_log() {
-    Lazy::force(&ENABLE_LOG);
+pub fn enable_log(filter: impl Into<EnvFilter>) {
+    LOG_ONCE.call_once(|| {
+        tracing_subscriber::fmt()
+            .pretty()
+            .with_env_filter(filter)
+            .init()
+    });
 }
 
 /// Returns a local address on a port that is not assigned to another test.

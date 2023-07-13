@@ -29,3 +29,4 @@ k8s-openapi.workspace = true
 kube = { workspace = true, features = ["openssl-tls", "client", "derive", "runtime"] }
 quilkin = { path = "../" }
 tokio.workspace = true
+tracing.workspace = true
