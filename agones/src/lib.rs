@@ -20,6 +20,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
+use futures::{AsyncBufReadExt, TryStreamExt};
 use k8s_openapi::{
     api::{
         apps::v1::Deployment,
@@ -454,7 +455,14 @@ pub async fn debug_pods(client: &Client, labels: String) {
         }
 
         debug!(pod = name, "📃 Pod Logs");
-        let log = pods.logs(name.as_str(), &params).await.unwrap();
-        debug!(pod = name, log);
+        let mut logs = pods
+            .log_stream(name.as_str(), &params)
+            .await
+            .unwrap()
+            .lines();
+
+        while let Some(line) = logs.try_next().await.unwrap() {
+            debug!(pod = name, line);
+        }
     }
 }
