@@ -411,6 +411,61 @@
 <a href="#411" id="411">411</a>
 <a href="#412" id="412">412</a>
 <a href="#413" id="413">413</a>
+<a href="#414" id="414">414</a>
+<a href="#415" id="415">415</a>
+<a href="#416" id="416">416</a>
+<a href="#417" id="417">417</a>
+<a href="#418" id="418">418</a>
+<a href="#419" id="419">419</a>
+<a href="#420" id="420">420</a>
+<a href="#421" id="421">421</a>
+<a href="#422" id="422">422</a>
+<a href="#423" id="423">423</a>
+<a href="#424" id="424">424</a>
+<a href="#425" id="425">425</a>
+<a href="#426" id="426">426</a>
+<a href="#427" id="427">427</a>
+<a href="#428" id="428">428</a>
+<a href="#429" id="429">429</a>
+<a href="#430" id="430">430</a>
+<a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
+<a href="#433" id="433">433</a>
+<a href="#434" id="434">434</a>
+<a href="#435" id="435">435</a>
+<a href="#436" id="436">436</a>
+<a href="#437" id="437">437</a>
+<a href="#438" id="438">438</a>
+<a href="#439" id="439">439</a>
+<a href="#440" id="440">440</a>
+<a href="#441" id="441">441</a>
+<a href="#442" id="442">442</a>
+<a href="#443" id="443">443</a>
+<a href="#444" id="444">444</a>
+<a href="#445" id="445">445</a>
+<a href="#446" id="446">446</a>
+<a href="#447" id="447">447</a>
+<a href="#448" id="448">448</a>
+<a href="#449" id="449">449</a>
+<a href="#450" id="450">450</a>
+<a href="#451" id="451">451</a>
+<a href="#452" id="452">452</a>
+<a href="#453" id="453">453</a>
+<a href="#454" id="454">454</a>
+<a href="#455" id="455">455</a>
+<a href="#456" id="456">456</a>
+<a href="#457" id="457">457</a>
+<a href="#458" id="458">458</a>
+<a href="#459" id="459">459</a>
+<a href="#460" id="460">460</a>
+<a href="#461" id="461">461</a>
+<a href="#462" id="462">462</a>
+<a href="#463" id="463">463</a>
+<a href="#464" id="464">464</a>
+<a href="#465" id="465">465</a>
+<a href="#466" id="466">466</a>
+<a href="#467" id="467">467</a>
+<a href="#468" id="468">468</a>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -433,12 +488,13 @@
     time::{SystemTime, UNIX_EPOCH},
 };
 
+<span class="kw">use </span>futures::{AsyncBufReadExt, TryStreamExt};
 <span class="kw">use </span>k8s_openapi::{
     api::{
         apps::v1::Deployment,
         core::v1::{
-            ConfigMap, Container, EnvVar, HTTPGetAction, Namespace, Pod, PodSpec, PodTemplateSpec,
-            Probe, ResourceRequirements, ServiceAccount, VolumeMount,
+            ConfigMap, Container, EnvVar, Event, HTTPGetAction, Namespace, Pod, PodSpec,
+            PodTemplateSpec, Probe, ResourceRequirements, ServiceAccount, VolumeMount,
         },
         rbac::v1::{RoleBinding, RoleRef, Subject},
     },
@@ -448,11 +504,12 @@
     chrono,
 };
 <span class="kw">use </span>kube::{
-    api::{DeleteParams, ListParams, PostParams},
+    api::{DeleteParams, ListParams, LogParams, PostParams},
     runtime::wait::Condition,
     Api, Resource, ResourceExt,
 };
 <span class="kw">use </span>tokio::sync::OnceCell;
+<span class="kw">use </span>tracing::debug;
 
 <span class="kw">use </span>quilkin::config::providers::k8s::agones::{
     Fleet, FleetSpec, GameServer, GameServerPort, GameServerSpec, GameServerState,
@@ -823,6 +880,59 @@
         status.ports.as_ref().unwrap()[<span class="number">0</span>].port
     );
     address
+}
+
+<span class="comment">// Output the events and logs for each pod that matches this label selector.
+// Useful for determining why something is failing in CI without having to run a cluster.
+// Requires quilkin::test_utils::enable_log(&quot;agones=debug&quot;); to enable debug logging within
+// the test
+</span><span class="kw">pub async fn </span>debug_pods(client: <span class="kw-2">&amp;</span>Client, labels: String) {
+    <span class="macro">debug!</span>(labels, <span class="string">&quot;🪓 Debug output for Selector&quot;</span>);
+    <span class="kw">let </span>pods: Api&lt;Pod&gt; = client.namespaced_api();
+    <span class="kw">let </span>events: Api&lt;Event&gt; = client.namespaced_api();
+
+    <span class="kw">let </span>params = ListParams::default();
+    <span class="kw">let </span>event_list = events.list(<span class="kw-2">&amp;</span>params).<span class="kw">await</span>.unwrap();
+    <span class="kw">let </span>pod_list = pods
+        .list(<span class="kw-2">&amp;</span>ListParams {
+            label_selector: <span class="prelude-val">Some</span>(labels),
+            ..Default::default()
+        })
+        .<span class="kw">await
+        </span>.unwrap();
+
+    <span class="kw">let </span>params = LogParams::default();
+    <span class="kw">for </span>pod <span class="kw">in </span>pod_list {
+        <span class="kw">let </span>name = pod.name_unchecked();
+        <span class="kw">let </span>pod_events: Vec&lt;<span class="kw-2">&amp;</span>Event&gt; = event_list
+            .iter()
+            .filter(|item| {
+                item.involved_object.kind == <span class="prelude-val">Some</span>(<span class="string">&quot;Pod&quot;</span>.into())
+                    &amp;&amp; item.involved_object.name == <span class="prelude-val">Some</span>(name.clone())
+            })
+            .collect();
+        <span class="macro">debug!</span>(pod = name, <span class="string">&quot;🗓️  Pod Events&quot;</span>);
+        <span class="kw">for </span>event <span class="kw">in </span>pod_events {
+            <span class="macro">debug!</span>(
+                pod = name,
+                type_ = event.type_,
+                reason = event.reason,
+                message = event.message,
+                count = event.count
+            );
+        }
+
+        <span class="macro">debug!</span>(pod = name, <span class="string">&quot;📃 Pod Logs&quot;</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>logs = pods
+            .log_stream(name.as_str(), <span class="kw-2">&amp;</span>params)
+            .<span class="kw">await
+            </span>.unwrap()
+            .lines();
+
+        <span class="kw">while let </span><span class="prelude-val">Some</span>(line) = logs.try_next().<span class="kw">await</span>.unwrap() {
+            <span class="macro">debug!</span>(pod = name, line);
+        }
+    }
 }
 </code></pre></div>
 </section></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="agones" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0 (84c898d65 2023-04-16)" data-search-js="search-8a59a8356673ec1f.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

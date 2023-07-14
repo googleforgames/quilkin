@@ -382,13 +382,13 @@
  */
 
 </span><span class="doccomment">/// Common utilities for testing
-</span><span class="kw">use </span>std::{net::SocketAddr, str::from_utf8, sync::Arc};
+</span><span class="kw">use </span>std::{net::SocketAddr, str::from_utf8, sync::Arc, sync::Once};
 
-<span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>tokio::{
     net::UdpSocket,
     sync::{mpsc, oneshot, watch},
 };
+<span class="kw">use </span>tracing_subscriber::EnvFilter;
 
 <span class="kw">use crate</span>::{
     cluster::Cluster,
@@ -398,17 +398,17 @@
     metadata::Value,
 };
 
-<span class="kw">static </span>ENABLE_LOG: Lazy&lt;()&gt; = Lazy::new(|| {
-    tracing_subscriber::fmt()
-        .pretty()
-        .with_max_level(tracing::Level::TRACE)
-        .init()
-});
+<span class="kw">static </span>LOG_ONCE: Once = Once::new();
 
-<span class="doccomment">/// Call to safely enable `tracing` logging calls, at the TRACE level.
+<span class="doccomment">/// Call to safely enable logging calls with a given tracing env filter, e.g. &quot;quilkin=debug&quot;
 /// This can be very useful when attempting to debug unit and integration tests.
-</span><span class="kw">pub fn </span>enable_tracing_log() {
-    Lazy::force(<span class="kw-2">&amp;</span>ENABLE_LOG);
+</span><span class="kw">pub fn </span>enable_log(filter: <span class="kw">impl </span>Into&lt;EnvFilter&gt;) {
+    LOG_ONCE.call_once(|| {
+        tracing_subscriber::fmt()
+            .pretty()
+            .with_env_filter(filter)
+            .init()
+    });
 }
 
 <span class="doccomment">/// Returns a local address on a port that is not assigned to another test.
