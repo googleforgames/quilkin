@@ -20,12 +20,13 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
+use futures::{AsyncBufReadExt, TryStreamExt};
 use k8s_openapi::{
     api::{
         apps::v1::Deployment,
         core::v1::{
-            ConfigMap, Container, EnvVar, HTTPGetAction, Namespace, Pod, PodSpec, PodTemplateSpec,
-            Probe, ResourceRequirements, ServiceAccount, VolumeMount,
+            ConfigMap, Container, EnvVar, Event, HTTPGetAction, Namespace, Pod, PodSpec,
+            PodTemplateSpec, Probe, ResourceRequirements, ServiceAccount, VolumeMount,
         },
         rbac::v1::{RoleBinding, RoleRef, Subject},
     },
@@ -35,11 +36,12 @@ use k8s_openapi::{
     chrono,
 };
 use kube::{
-    api::{DeleteParams, ListParams, PostParams},
+    api::{DeleteParams, ListParams, LogParams, PostParams},
     runtime::wait::Condition,
     Api, Resource, ResourceExt,
 };
 use tokio::sync::OnceCell;
+use tracing::debug;
 
 use quilkin::config::providers::k8s::agones::{
     Fleet, FleetSpec, GameServer, GameServerPort, GameServerSpec, GameServerState,
@@ -410,4 +412,57 @@ pub fn gameserver_address(gs: &GameServer) -> String {
         status.ports.as_ref().unwrap()[0].port
     );
     address
+}
+
+// Output the events and logs for each pod that matches this label selector.
+// Useful for determining why something is failing in CI without having to run a cluster.
+// Requires quilkin::test_utils::enable_log("agones=debug"); to enable debug logging within
+// the test
+pub async fn debug_pods(client: &Client, labels: String) {
+    debug!(labels, "🪓 Debug output for Selector");
+    let pods: Api<Pod> = client.namespaced_api();
+    let events: Api<Event> = client.namespaced_api();
+
+    let params = ListParams::default();
+    let event_list = events.list(&params).await.unwrap();
+    let pod_list = pods
+        .list(&ListParams {
+            label_selector: Some(labels),
+            ..Default::default()
+        })
+        .await
+        .unwrap();
+
+    let params = LogParams::default();
+    for pod in pod_list {
+        let name = pod.name_unchecked();
+        let pod_events: Vec<&Event> = event_list
+            .iter()
+            .filter(|item| {
+                item.involved_object.kind == Some("Pod".into())
+                    && item.involved_object.name == Some(name.clone())
+            })
+            .collect();
+        debug!(pod = name, "🗓️  Pod Events");
+        for event in pod_events {
+            debug!(
+                pod = name,
+                type_ = event.type_,
+                reason = event.reason,
+                message = event.message,
+                count = event.count
+            );
+        }
+
+        debug!(pod = name, "📃 Pod Logs");
+        let mut logs = pods
+            .log_stream(name.as_str(), &params)
+            .await
+            .unwrap()
+            .lines();
+
+        while let Some(line) = logs.try_next().await.unwrap() {
+            debug!(pod = name, line);
+        }
+    }
 }

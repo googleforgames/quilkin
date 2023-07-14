@@ -46,7 +46,8 @@ mod tests {
     };
 
     use crate::{
-        fleet, is_deployment_ready, is_fleet_ready, quilkin_config_map, quilkin_container, Client,
+        debug_pods, fleet, is_deployment_ready, is_fleet_ready, quilkin_config_map,
+        quilkin_container, Client,
     };
 
     const PROXY_DEPLOYMENT: &str = "quilkin-proxies";
@@ -141,13 +142,16 @@ filters:
         assert_eq!("ACK: ALLOCATE\n", response);
 
         // Proxy Deployment should be ready, since there is now an endpoint
-        timeout(
+        if timeout(
             Duration::from_secs(30),
             await_condition(deployments.clone(), PROXY_DEPLOYMENT, is_deployment_ready()),
         )
         .await
-        .expect("Quilkin proxy deployment should be ready")
-        .unwrap();
+        .is_err()
+        {
+            debug_pods(&client, "role=proxy".into()).await;
+            panic!("Quilkin proxy deployment should be ready");
+        }
 
         // keep trying to send the packet to the proxy until it works, since distributed systems are eventually consistent.
         let mut response: String = "not-found".into();
