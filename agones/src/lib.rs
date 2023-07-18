@@ -60,7 +60,8 @@ const DELETE_DELAY_SECONDS: &str = "DELETE_DELAY_SECONDS";
 /// A simple udp server that returns packets that are sent to it.
 /// See: <https://github.com/googleforgames/agones/tree/main/examples/simple-game-server>
 /// for more details.
-pub const GAMESERVER_IMAGE: &str = "gcr.io/agones-images/simple-game-server:0.13";
+pub const GAMESERVER_IMAGE: &str =
+    "us-docker.pkg.dev/agones-images/examples/simple-game-server:0.16";
 
 #[derive(Clone)]
 pub struct Client {
