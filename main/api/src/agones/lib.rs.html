@@ -466,6 +466,7 @@
 <a href="#466" id="466">466</a>
 <a href="#467" id="467">467</a>
 <a href="#468" id="468">468</a>
+<a href="#469" id="469">469</a>
 </pre><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -528,7 +529,8 @@
 <span class="doccomment">/// A simple udp server that returns packets that are sent to it.
 /// See: &lt;https://github.com/googleforgames/agones/tree/main/examples/simple-game-server&gt;
 /// for more details.
-</span><span class="kw">pub const </span>GAMESERVER_IMAGE: <span class="kw-2">&amp;</span>str = <span class="string">&quot;gcr.io/agones-images/simple-game-server:0.13&quot;</span>;
+</span><span class="kw">pub const </span>GAMESERVER_IMAGE: <span class="kw-2">&amp;</span>str =
+    <span class="string">&quot;us-docker.pkg.dev/agones-images/examples/simple-game-server:0.16&quot;</span>;
 
 <span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>Client {
