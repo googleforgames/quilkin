@@ -14,17 +14,12 @@
  * limitations under the License.
  */
 
-use std::{io, net::SocketAddr};
+use std::{io, net::SocketAddr, net::ToSocketAddrs};
 
 use socket2::{Protocol, Socket, Type};
 use tokio::{net::UdpSocket, select};
 
 use crate::Result;
-
-/// returns a UdpSocket with address and port reuse.
-pub fn socket_with_reuse(port: u16) -> Result<UdpSocket> {
-    socket_with_reuse_and_address((std::net::Ipv4Addr::UNSPECIFIED, port).into())
-}
 
 fn socket_with_reuse_and_address(addr: SocketAddr) -> Result<UdpSocket> {
     let domain = match addr {
@@ -76,6 +71,16 @@ impl DualStackLocalSocket {
         })
     }
 
+    ///  Returns &[u8] from either of the buffers, depending on which address type (v4 vs v6) is
+    /// used for communications.
+    pub fn contents<'a>(v4_buf: &'a [u8], v6_buf: &'a [u8], recv: (usize, SocketAddr)) -> &'a [u8] {
+        let (size, addr) = recv;
+        match addr {
+            SocketAddr::V4(_) => &v4_buf[..size],
+            SocketAddr::V6(_) => &v6_buf[..size],
+        }
+    }
+
     // Receives datagrams from either an ipv4 address or ipv6. Match on the returned [`SocketAddr`] to
     // determine if the received data is in the ipv4_buf or ipv6_buf on a successful result.
     pub async fn recv_from(
@@ -97,81 +102,96 @@ impl DualStackLocalSocket {
         self.v4.local_addr()
     }
 
-    pub fn local_ip6_addr(&self) -> io::Result<SocketAddr> {
+    pub fn local_ipv6_addr(&self) -> io::Result<SocketAddr> {
         self.v6.local_addr()
     }
 
-    pub async fn send_to(&self, buf: &[u8], target: &SocketAddr) -> io::Result<usize> {
-        match target {
-            SocketAddr::V4(_) => self.v4.send_to(buf, target).await,
-            SocketAddr::V6(_) => self.v6.send_to(buf, target).await,
+    pub async fn send_to<A: ToSocketAddrs>(&self, buf: &[u8], target: A) -> io::Result<usize> {
+        let mut addrs = target.to_socket_addrs()?;
+        match addrs.next() {
+            Some(target) => match target {
+                SocketAddr::V4(_) => self.v4.send_to(buf, target).await,
+                SocketAddr::V6(_) => self.v6.send_to(buf, target).await,
+            },
+            None => Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "no addresses to send data to",
+            )),
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::test_utils::{available_addr, TestHelper};
-    use crate::utils::net::DualStackLocalSocket;
-    use std::net::SocketAddr;
-    use std::str::from_utf8;
-    use std::sync::Arc;
-    use std::time::Duration;
-    use tokio::sync::oneshot;
+    use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+    use std::{net::SocketAddr, time::Duration};
+
     use tokio::time::timeout;
 
-    #[tokio::test]
-    async fn socket_with_reuse() {
-        let expected = available_addr().await;
-        let socket = super::socket_with_reuse(expected.port()).unwrap();
-        let addr = socket.local_addr().unwrap();
+    use crate::endpoint::address::AddressKind;
+    use crate::test_utils::{available_addr, AddressType, TestHelper};
 
-        assert_eq!(expected, socket.local_addr().unwrap());
+    #[tokio::test]
+    async fn dual_stack_socket_reusable() {
+        let expected = available_addr(&AddressType::Random).await;
+        let socket = super::DualStackLocalSocket::new(expected.port()).unwrap();
+        let addr = socket.local_ipv4_addr().unwrap();
+
+        match expected {
+            SocketAddr::V4(_) => assert_eq!(expected, socket.local_ipv4_addr().unwrap()),
+            SocketAddr::V6(_) => assert_eq!(expected, socket.local_ipv6_addr().unwrap()),
+        }
+
+        assert_eq!(expected.port(), socket.local_ipv4_addr().unwrap().port());
+        assert_eq!(expected.port(), socket.local_ipv6_addr().unwrap().port());
 
         // should be able to do it a second time, since we are reusing the address.
-        let socket = super::socket_with_reuse(expected.port()).unwrap();
-        let addr2 = socket.local_addr().unwrap();
-        assert_eq!(addr, addr2);
+        let socket = super::DualStackLocalSocket::new(expected.port()).unwrap();
+
+        match expected {
+            SocketAddr::V4(_) => assert_eq!(expected, socket.local_ipv4_addr().unwrap()),
+            SocketAddr::V6(_) => assert_eq!(expected, socket.local_ipv6_addr().unwrap()),
+        }
+        assert_eq!(addr.port(), socket.local_ipv4_addr().unwrap().port());
+        assert_eq!(addr.port(), socket.local_ipv6_addr().unwrap().port());
     }
 
     #[tokio::test]
-    async fn dual_domain_socket() {
+    async fn dual_stack_socket() {
+        // Since the TestHelper uses the DualStackSocket, we can use it to test ourselves.
         let mut t = TestHelper::default();
 
-        let expected = available_addr().await;
-        let socket = Arc::new(DualStackLocalSocket::new(expected.port()).unwrap());
-
-        // TODO: when DualStackSocket is used everywhere, add a test for Ipv6 as well.
-        let echo_addr = t.run_echo_server().await;
-
-        let (packet_tx, packet_rx) = oneshot::channel::<String>();
-        let socket_recv = socket.clone();
-        tokio::spawn(async move {
-            let mut v4_buf = vec![0; 1024];
-            let mut v6_buf = vec![0; 1024];
-            let (size, addr) = socket_recv
-                .recv_from(&mut v4_buf, &mut v6_buf)
-                .await
-                .unwrap();
-
-            let contents = match addr {
-                SocketAddr::V4(_) => &v4_buf[..size],
-                SocketAddr::V6(_) => &v6_buf[..size],
-            };
-
-            packet_tx
-                .send(from_utf8(contents).unwrap().to_string())
-                .unwrap();
-        });
+        let echo_addr = t.run_echo_server(&AddressType::Random).await;
+        let (mut rx, socket) = t.open_socket_and_recv_multiple_packets().await;
 
         let msg = "hello";
         socket
             .send_to(msg.as_bytes(), &echo_addr.to_socket_addr().await.unwrap())
             .await
             .unwrap();
+
         assert_eq!(
             msg,
-            timeout(Duration::from_secs(5), packet_rx)
+            timeout(Duration::from_secs(5), rx.recv())
+                .await
+                .expect("should not timeout")
+                .unwrap()
+        );
+
+        // try again, but from the opposite type of IP Address
+        let opp_addr: SocketAddr = match echo_addr.host {
+            AddressKind::Ip(ip) => match ip {
+                IpAddr::V4(_) => (Ipv6Addr::UNSPECIFIED, echo_addr.port).into(),
+                IpAddr::V6(_) => (Ipv4Addr::UNSPECIFIED, echo_addr.port).into(),
+            },
+            // we're not testing this, since DNS resolves to IP.
+            AddressKind::Name(_) => unreachable!(),
+        };
+
+        socket.send_to(msg.as_bytes(), &opp_addr).await.unwrap();
+        assert_eq!(
+            msg,
+            timeout(Duration::from_secs(5), rx.recv())
                 .await
                 .expect("should not timeout")
                 .unwrap()

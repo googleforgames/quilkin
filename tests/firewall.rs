@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-use std::net::SocketAddr;
+use std::net::{Ipv6Addr, SocketAddr};
 
 use tokio::{
     sync::oneshot,
@@ -25,12 +25,14 @@ use quilkin::{
     config::Filter,
     endpoint::Endpoint,
     filters::{Firewall, StaticFilter},
-    test_utils::TestHelper,
+    test_utils::{available_addr, AddressType, TestHelper},
 };
 
 #[tokio::test]
-async fn firewall_allow() {
+async fn ipv4_firewall_allow() {
     let mut t = TestHelper::default();
+    let address_type = AddressType::Ipv4;
+    let port = available_addr(&address_type).await.port();
     let yaml = "
 on_read:
   - action: ALLOW
@@ -43,7 +45,7 @@ on_write:
     ports:
        - %2
 ";
-    let recv = test(&mut t, 12354, yaml).await;
+    let recv = test(&mut t, port, yaml, &address_type).await;
 
     assert_eq!(
         "hello",
@@ -55,8 +57,38 @@ on_write:
 }
 
 #[tokio::test]
-async fn firewall_read_deny() {
+async fn ipv6_firewall_allow() {
     let mut t = TestHelper::default();
+    let address_type = AddressType::Ipv6;
+    let port = available_addr(&address_type).await.port();
+    let yaml = "
+on_read:
+  - action: ALLOW
+    source: ::1/128
+    ports:
+       - %1
+on_write:
+  - action: ALLOW
+    source: ::1/64
+    ports:
+       - %2
+";
+    let recv = test(&mut t, port, yaml, &address_type).await;
+
+    assert_eq!(
+        "hello",
+        timeout(Duration::from_secs(5), recv)
+            .await
+            .expect("should have received a packet")
+            .unwrap()
+    );
+}
+
+#[tokio::test]
+async fn ipv4_firewall_read_deny() {
+    let mut t = TestHelper::default();
+    let address_type = AddressType::Ipv4;
+    let port = available_addr(&address_type).await.port();
     let yaml = "
 on_read:
   - action: DENY
@@ -69,15 +101,40 @@ on_write:
     ports:
        - %2
 ";
-    let recv = test(&mut t, 12355, yaml).await;
+    let recv = test(&mut t, port, yaml, &address_type).await;
 
     let result = timeout(Duration::from_secs(3), recv).await;
     assert!(result.is_err(), "should not have received a packet");
 }
 
 #[tokio::test]
-async fn firewall_write_deny() {
+async fn ipv6_firewall_read_deny() {
     let mut t = TestHelper::default();
+    let address_type = AddressType::Ipv6;
+    let port = available_addr(&address_type).await.port();
+    let yaml = "
+on_read:
+  - action: DENY
+    source: ::1/128
+    ports:
+       - %1
+on_write:
+  - action: ALLOW
+    source: ::1/64
+    ports:
+       - %2
+";
+    let recv = test(&mut t, port, yaml, &address_type).await;
+
+    let result = timeout(Duration::from_secs(3), recv).await;
+    assert!(result.is_err(), "should not have received a packet");
+}
+
+#[tokio::test]
+async fn ipv4_firewall_write_deny() {
+    let mut t = TestHelper::default();
+    let address_type = AddressType::Ipv4;
+    let port = available_addr(&address_type).await.port();
     let yaml = "
 on_read:
   - action: ALLOW
@@ -90,17 +147,50 @@ on_write:
     ports:
        - %2
 ";
-    let recv = test(&mut t, 12356, yaml).await;
+    let recv = test(&mut t, port, yaml, &address_type).await;
 
     let result = timeout(Duration::from_secs(3), recv).await;
     assert!(result.is_err(), "should not have received a packet");
 }
 
-async fn test(t: &mut TestHelper, server_port: u16, yaml: &str) -> oneshot::Receiver<String> {
-    let echo = t.run_echo_server().await;
+#[tokio::test]
+async fn ipv6_firewall_write_deny() {
+    let mut t = TestHelper::default();
+    let address_type = AddressType::Ipv6;
+    let port = available_addr(&address_type).await.port();
+    let yaml = "
+on_read:
+  - action: ALLOW
+    source: ::1/128
+    ports:
+       - %1
+on_write:
+  - action: DENY
+    source: ::1/64
+    ports:
+       - %2
+";
+    let recv = test(&mut t, port, yaml, &address_type).await;
+
+    let result = timeout(Duration::from_secs(3), recv).await;
+    assert!(result.is_err(), "should not have received a packet");
+}
+
+async fn test(
+    t: &mut TestHelper,
+    server_port: u16,
+    yaml: &str,
+    address_type: &AddressType,
+) -> oneshot::Receiver<String> {
+    let echo = t.run_echo_server(address_type).await;
 
     let recv = t.open_socket_and_recv_single_packet().await;
-    let client_addr = recv.socket.local_addr().unwrap();
+    let client_addr = match address_type {
+        AddressType::Ipv4 => recv.socket.local_ipv4_addr().unwrap(),
+        AddressType::Ipv6 => recv.socket.local_ipv6_addr().unwrap(),
+        AddressType::Random => unreachable!(),
+    };
+
     let yaml = yaml
         .replace("%1", client_addr.port().to_string().as_str())
         .replace("%2", echo.port().to_string().as_str());
@@ -127,7 +217,11 @@ async fn test(t: &mut TestHelper, server_port: u16, yaml: &str) -> oneshot::Rece
 
     t.run_server(server_config, server_proxy, None);
 
-    let local_addr: SocketAddr = (std::net::Ipv4Addr::LOCALHOST, server_port).into();
+    let local_addr: SocketAddr = match address_type {
+        AddressType::Ipv4 => (std::net::Ipv4Addr::LOCALHOST, server_port).into(),
+        AddressType::Ipv6 => (Ipv6Addr::LOCALHOST, server_port).into(),
+        AddressType::Random => unreachable!(), // don't do this.
+    };
     tracing::info!(source = %client_addr, address = %local_addr, "Sending hello");
     recv.socket.send_to(b"hello", &local_addr).await.unwrap();
 

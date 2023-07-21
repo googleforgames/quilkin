@@ -2,7 +2,7 @@
 
 | services | ports | Protocol |
 |----------|-------|-----------|
-| QCMP | 7600 | UDP (IPv4 && IPv6) |
+| QCMP | 7600 | UDP (IPv4 OR IPv6) |
 
 In addition to the TCP based administration API, Quilkin provides a meta API
 over UDP. The purpose of this API is to provide meta operations that can be

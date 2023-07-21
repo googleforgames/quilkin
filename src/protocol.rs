@@ -17,10 +17,9 @@
 //! Logic for parsing and generating Quilkin Control Message Protocol (QCMP) messages.
 
 use nom::bytes::complete;
-use std::net::SocketAddr;
 use tracing::Instrument;
 
-use crate::utils::net;
+use crate::utils::net::DualStackLocalSocket;
 
 // Magic number to distinguish control packets from regular traffic.
 const MAGIC_NUMBER: &[u8] = b"QLKN";
@@ -34,9 +33,9 @@ const DISCRIMINANT_LEN: usize = 1;
 type Result<T, E = Error> = std::result::Result<T, E>;
 
 pub async fn spawn(port: u16) -> crate::Result<()> {
-    let socket = net::DualStackLocalSocket::new(port)?;
+    let socket = DualStackLocalSocket::new(port)?;
     let v4_addr = socket.local_ipv4_addr()?;
-    let v6_addr = socket.local_ip6_addr()?;
+    let v6_addr = socket.local_ipv6_addr()?;
     tokio::spawn(
         async move {
             // Initialize a buffer for the UDP packet. We use the maximum size of a UDP
@@ -49,13 +48,10 @@ pub async fn spawn(port: u16) -> crate::Result<()> {
                 tracing::debug!(%v4_addr, %v6_addr, "awaiting qcmp packets");
 
                 match socket.recv_from(&mut v4_buf, &mut v6_buf).await {
-                    Ok((size, source)) => {
+                    Ok(recv) => {
                         let received_at = chrono::Utc::now().timestamp_nanos();
-                        let contents = match source {
-                            SocketAddr::V4(_) => &v4_buf[..size],
-                            SocketAddr::V6(_) => &v6_buf[..size],
-                        };
-
+                        let contents = DualStackLocalSocket::contents(&v4_buf, &v6_buf, recv);
+                        let (_, source) = recv;
                         let command = match Protocol::parse(contents) {
                             Ok(Some(command)) => command,
                             Ok(None) => {

@@ -14,13 +14,11 @@
  * limitations under the License.
  */
 
+use rand::{thread_rng, Rng};
 /// Common utilities for testing
 use std::{net::SocketAddr, str::from_utf8, sync::Arc, sync::Once};
 
-use tokio::{
-    net::UdpSocket,
-    sync::{mpsc, oneshot, watch},
-};
+use tokio::sync::{mpsc, oneshot, watch};
 use tracing_subscriber::EnvFilter;
 
 use crate::{
@@ -29,6 +27,7 @@ use crate::{
     endpoint::{Endpoint, EndpointAddress, LocalityEndpoints},
     filters::{prelude::*, FilterRegistry},
     metadata::Value,
+    utils::net::DualStackLocalSocket,
 };
 
 static LOG_ONCE: Once = Once::new();
@@ -44,11 +43,38 @@ pub fn enable_log(filter: impl Into<EnvFilter>) {
     });
 }
 
+/// Which type of Address do you want? Random may give ipv4 or ipv6
+pub enum AddressType {
+    Random,
+    Ipv4,
+    Ipv6,
+}
+
 /// Returns a local address on a port that is not assigned to another test.
-pub async fn available_addr() -> SocketAddr {
+/// If Random address tye is used, it might be v4, Might be v6. It's random.
+pub async fn available_addr(address_type: &AddressType) -> SocketAddr {
     let socket = create_socket().await;
-    let addr = socket.local_addr().unwrap();
+    let addr = get_address(address_type, &socket);
+
     tracing::debug!(addr = ?addr, "test_util::available_addr");
+    addr
+}
+
+fn get_address(address_type: &AddressType, socket: &DualStackLocalSocket) -> SocketAddr {
+    let addr = match address_type {
+        AddressType::Random => {
+            let mut rng = thread_rng();
+            // sometimes give ipv6, sometimes ipv4.
+            match rng.gen_range(0..2) {
+                0 => socket.local_ipv6_addr().unwrap(),
+                1 => socket.local_ipv4_addr().unwrap(),
+                _ => unreachable!(),
+            }
+        }
+        AddressType::Ipv4 => socket.local_ipv4_addr().unwrap(),
+        AddressType::Ipv6 => socket.local_ipv6_addr().unwrap(),
+    };
+    tracing::debug!(addr = ?addr, "test_util::get_address");
     addr
 }
 
@@ -102,7 +128,7 @@ pub struct TestHelper {
 /// Returned from [creating a socket](TestHelper::open_socket_and_recv_single_packet)
 pub struct OpenSocketRecvPacket {
     /// The opened socket
-    pub socket: Arc<UdpSocket>,
+    pub socket: Arc<DualStackLocalSocket>,
     /// A channel on which the received packet will be forwarded.
     pub packet_rx: oneshot::Receiver<String>,
 }
@@ -135,10 +161,15 @@ impl TestHelper {
         let (packet_tx, packet_rx) = oneshot::channel::<String>();
         let socket_recv = socket.clone();
         tokio::spawn(async move {
-            let mut buf = vec![0; 1024];
-            let size = socket_recv.recv(&mut buf).await.unwrap();
+            let mut v4_buf = vec![0; 1024];
+            let mut v6_buf = vec![0; 1024];
+            let result = socket_recv
+                .recv_from(&mut v4_buf, &mut v6_buf)
+                .await
+                .unwrap();
+            let contents = DualStackLocalSocket::contents(&v4_buf, &v6_buf, result);
             packet_tx
-                .send(from_utf8(&buf[..size]).unwrap().to_string())
+                .send(from_utf8(contents).unwrap().to_string())
                 .unwrap();
         });
         OpenSocketRecvPacket { socket, packet_rx }
@@ -148,18 +179,19 @@ impl TestHelper {
     /// returned channel.
     pub async fn open_socket_and_recv_multiple_packets(
         &mut self,
-    ) -> (mpsc::Receiver<String>, Arc<UdpSocket>) {
+    ) -> (mpsc::Receiver<String>, Arc<DualStackLocalSocket>) {
         let (packet_tx, packet_rx) = mpsc::channel::<String>(10);
         let socket = Arc::new(create_socket().await);
         let mut shutdown_rx = self.get_shutdown_subscriber().await;
         let socket_recv = socket.clone();
         tokio::spawn(async move {
-            let mut buf = vec![0; 1024];
+            let mut v4_buf = vec![0; 1024];
+            let mut v6_buf = vec![0; 1024];
             loop {
                 tokio::select! {
-                    received = socket_recv.recv_from(&mut buf) => {
-                        let (size, _) = received.unwrap();
-                        let str = from_utf8(&buf[..size]).unwrap().to_string();
+                    received = socket_recv.recv_from(&mut v4_buf, &mut v6_buf) => {
+                        let contents = DualStackLocalSocket::contents(&v4_buf, &v6_buf, received.unwrap());
+                        let str = from_utf8(contents).unwrap().to_string();
                         match packet_tx.send(str).await {
                             Ok(_) => {}
                             Err(error) => {
@@ -179,30 +211,38 @@ impl TestHelper {
 
     /// Runs a simple UDP server that echos back payloads.
     /// Returns the server's address.
-    pub async fn run_echo_server(&mut self) -> EndpointAddress {
-        self.run_echo_server_with_tap(|_, _, _| {}).await
+    pub async fn run_echo_server(&mut self, address_type: &AddressType) -> EndpointAddress {
+        self.run_echo_server_with_tap(address_type, |_, _, _| {})
+            .await
     }
 
     /// Runs a simple UDP server that echos back payloads.
     /// The provided function is invoked for each received payload.
     /// Returns the server's address.
-    pub async fn run_echo_server_with_tap<F>(&mut self, tap: F) -> EndpointAddress
+    pub async fn run_echo_server_with_tap<F>(
+        &mut self,
+        address_type: &AddressType,
+        tap: F,
+    ) -> EndpointAddress
     where
         F: Fn(SocketAddr, &[u8], SocketAddr) + Send + 'static,
     {
         let socket = create_socket().await;
-        let addr = socket.local_addr().unwrap();
+        // sometimes give ipv6, sometimes ipv4.
+        let addr = get_address(address_type, &socket);
         let mut shutdown = self.get_shutdown_subscriber().await;
         let local_addr = addr;
         tokio::spawn(async move {
             loop {
-                let mut buf = vec![0; 1024];
+                let mut v4_buf = vec![0; 1024];
+                let mut v6_buf = vec![0; 1024];
                 tokio::select! {
-                    recvd = socket.recv_from(&mut buf) => {
-                        let (size, sender) = recvd.unwrap();
-                        let packet = &buf[..size];
-                        tap(sender, packet, local_addr);
-                        socket.send_to(packet, sender).await.unwrap();
+                    recvd = socket.recv_from(&mut v4_buf, &mut v6_buf) => {
+                        let recv = recvd.unwrap();
+                        let contents = DualStackLocalSocket::contents(&v4_buf, &v6_buf, recv);
+                        let (_, sender) = recv;
+                        tap(sender, contents, local_addr);
+                        socket.send_to(contents, &sender).await.unwrap();
                     },
                     _ = shutdown.changed() => {
                         return;
@@ -288,8 +328,8 @@ where
 }
 
 /// Opens a new socket bound to an ephemeral port
-pub async fn create_socket() -> UdpSocket {
-    crate::utils::net::socket_with_reuse(0).unwrap()
+pub async fn create_socket() -> DualStackLocalSocket {
+    DualStackLocalSocket::new(0).unwrap()
 }
 
 pub fn config_with_dummy_endpoint() -> Config {
@@ -343,12 +383,12 @@ mod tests {
 
     use tokio::time::timeout;
 
-    use crate::test_utils::TestHelper;
+    use crate::test_utils::{AddressType, TestHelper};
 
     #[tokio::test]
     async fn test_echo_server() {
         let mut t = TestHelper::default();
-        let echo_addr = t.run_echo_server().await;
+        let echo_addr = t.run_echo_server(&AddressType::Random).await;
         let endpoint = t.open_socket_and_recv_single_packet().await;
         let msg = "hello";
         endpoint

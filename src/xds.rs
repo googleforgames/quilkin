@@ -149,21 +149,27 @@ mod tests {
 
     use std::sync::Arc;
 
+    use crate::test_utils::AddressType;
     use crate::{config::Config, endpoint::Endpoint, filters::*};
 
     #[tokio::test]
     async fn token_routing() {
         let mut helper = crate::test_utils::TestHelper::default();
-        let token = uuid::Uuid::new_v4().into_bytes();
+        let token = "mytoken";
         let address = {
-            let mut addr = Endpoint::new(helper.run_echo_server().await);
+            let mut addr = Endpoint::new(helper.run_echo_server(&AddressType::Random).await);
             addr.metadata.known.tokens.insert(token.into());
             addr
         };
         let localities = crate::endpoint::LocalityEndpoints::from(address.clone());
 
-        let xds_port = crate::test_utils::available_addr().await.port();
-        let xds_config: Arc<Config> = serde_json::from_value(serde_json::json!({
+        tracing::debug!(?address);
+        tracing::debug!(?localities);
+
+        let xds_port = crate::test_utils::available_addr(&AddressType::Random)
+            .await
+            .port();
+        let json = serde_json::json!({
             "version": "v1alpha1",
             "id": "test-proxy",
             "clusters": {
@@ -171,11 +177,12 @@ mod tests {
                     "localities": [localities]
                 }
             },
-        }))
-        .map(Arc::new)
-        .unwrap();
+        });
 
-        let client_addr = crate::test_utils::available_addr().await;
+        tracing::debug!(%json);
+        let xds_config: Arc<Config> = serde_json::from_value(json).map(Arc::new).unwrap();
+
+        let client_addr = crate::test_utils::available_addr(&AddressType::Random).await;
         let client_config = serde_json::from_value(serde_json::json!({
             "version": "v1alpha1",
             "id": "test-proxy",
@@ -191,7 +198,7 @@ mod tests {
         tokio::spawn(server::spawn(xds_port, xds_config.clone()));
         let client_proxy = crate::cli::Proxy {
             port: client_addr.port(),
-            management_server: vec![format!("http://0.0.0.0:{}", xds_port).parse().unwrap()],
+            management_server: vec![format!("http://[::1]:{}", xds_port).parse().unwrap()],
             ..<_>::default()
         };
 
@@ -258,32 +265,27 @@ mod tests {
             .unwrap(),
         ));
 
-        let client = tokio::net::UdpSocket::bind((std::net::Ipv4Addr::UNSPECIFIED, 0))
-            .await
-            .unwrap();
-
-        let data = "Hello World!".as_bytes();
+        let fixture = "Hello World!";
+        let data = fixture.as_bytes();
         let mut packet = data.to_vec();
-        packet.extend(token);
-        packet.push(1);
+        packet.extend(token.as_bytes());
+
+        let client = helper.open_socket_and_recv_single_packet().await;
 
         client
+            .socket
             .send_to(
                 &packet,
                 (std::net::Ipv4Addr::UNSPECIFIED, client_addr.port()),
             )
             .await
             .unwrap();
-        let mut buf = vec![0; 12];
-        tokio::time::timeout(
-            std::time::Duration::from_secs(1),
-            client.recv_from(&mut buf),
-        )
-        .await
-        .unwrap()
-        .unwrap();
+        let response = tokio::time::timeout(std::time::Duration::from_secs(1), client.packet_rx)
+            .await
+            .unwrap()
+            .unwrap();
 
-        assert_eq!(data, buf);
+        assert_eq!(format!("{}{}", fixture, token), response);
     }
 
     #[tokio::test]

@@ -17,19 +17,21 @@
 use tokio::time::timeout;
 use tokio::time::Duration;
 
-use quilkin::test_utils::available_addr;
-use quilkin::{endpoint::Endpoint, test_utils::TestHelper};
+use quilkin::{
+    endpoint::Endpoint,
+    test_utils::{available_addr, AddressType, TestHelper},
+};
 
 #[tokio::test]
 async fn echo() {
     let mut t = TestHelper::default();
 
     // create two echo servers as endpoints
-    let server1 = t.run_echo_server().await;
-    let server2 = t.run_echo_server().await;
+    let server1 = t.run_echo_server(&AddressType::Random).await;
+    let server2 = t.run_echo_server(&AddressType::Random).await;
 
     // create server configuration
-    let local_addr = available_addr().await;
+    let local_addr = available_addr(&AddressType::Random).await;
     let server_proxy = quilkin::cli::Proxy {
         port: local_addr.port(),
         ..<_>::default()

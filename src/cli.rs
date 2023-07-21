@@ -220,26 +220,21 @@ impl Cli {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::net::Ipv4Addr;
+    use std::net::{Ipv4Addr, SocketAddr};
 
-    use tokio::{
-        net::UdpSocket,
-        time::{timeout, Duration},
-    };
+    use tokio::time::{timeout, Duration};
 
     use crate::{
         config::{Filter, Providers},
         endpoint::{Endpoint, LocalityEndpoints},
         filters::{Capture, StaticFilter, TokenRouter},
+        test_utils::{create_socket, AddressType, TestHelper},
     };
 
     #[tokio::test]
     async fn relay_routing() {
-        let server_port = crate::test_utils::available_addr().await.port();
-        let server_socket = UdpSocket::bind((Ipv4Addr::UNSPECIFIED, server_port))
-            .await
-            .map(Arc::new)
-            .unwrap();
+        let mut t = TestHelper::default();
+        let (mut rx, server_socket) = t.open_socket_and_recv_multiple_packets().await;
         let filters_file = tempfile::NamedTempFile::new().unwrap();
         let config = Config::default();
 
@@ -278,7 +273,11 @@ mod tests {
                 .write()
                 .default_cluster_mut()
                 .insert(LocalityEndpoints::from(vec![Endpoint::with_metadata(
-                    (std::net::Ipv4Addr::LOCALHOST, server_port).into(),
+                    (
+                        std::net::Ipv4Addr::LOCALHOST,
+                        server_socket.local_ipv4_addr().unwrap().port(),
+                    )
+                        .into(),
                     crate::endpoint::Metadata {
                         tokens: vec!["abc".into()].into_iter().collect(),
                     },
@@ -287,7 +286,9 @@ mod tests {
         })
         .unwrap();
 
-        let relay_admin_port = crate::test_utils::available_addr().await.port();
+        let relay_admin_port = crate::test_utils::available_addr(&AddressType::Random)
+            .await
+            .port();
         let relay = Cli {
             admin_address: Some((Ipv4Addr::LOCALHOST, relay_admin_port).into()),
             config: <_>::default(),
@@ -301,7 +302,9 @@ mod tests {
             }),
         };
 
-        let control_plane_admin_port = crate::test_utils::available_addr().await.port();
+        let control_plane_admin_port = crate::test_utils::available_addr(&AddressType::Random)
+            .await
+            .port();
         let control_plane = Cli {
             no_admin: false,
             quiet: true,
@@ -319,7 +322,9 @@ mod tests {
             }),
         };
 
-        let proxy_admin_port = crate::test_utils::available_addr().await.port();
+        let proxy_admin_port = crate::test_utils::available_addr(&AddressType::Random)
+            .await
+            .port();
         let proxy = Cli {
             no_admin: false,
             quiet: true,
@@ -336,12 +341,9 @@ mod tests {
         tokio::time::sleep(Duration::from_millis(500)).await;
         tokio::spawn(proxy.drive());
         tokio::time::sleep(Duration::from_millis(500)).await;
-        let local_addr = crate::test_utils::available_addr().await;
-        let socket = UdpSocket::bind((Ipv4Addr::UNSPECIFIED, local_addr.port()))
-            .await
-            .map(Arc::new)
-            .unwrap();
+        let socket = create_socket().await;
         let config = Config::default();
+        let proxy_address: SocketAddr = (std::net::Ipv4Addr::LOCALHOST, 7777).into();
 
         for _ in 0..5 {
             let token = random_three_characters();
@@ -353,7 +355,11 @@ mod tests {
                     .write()
                     .default_cluster_mut()
                     .insert(LocalityEndpoints::from(vec![Endpoint::with_metadata(
-                        (std::net::Ipv4Addr::LOCALHOST, server_port).into(),
+                        (
+                            std::net::Ipv4Addr::LOCALHOST,
+                            server_socket.local_ipv4_addr().unwrap().port(),
+                        )
+                            .into(),
                         crate::endpoint::Metadata {
                             tokens: vec![token.clone()].into_iter().collect(),
                         },
@@ -365,22 +371,14 @@ mod tests {
             let mut msg = Vec::from(*b"hello");
             msg.extend_from_slice(&token);
             tracing::info!(?token, "sending packet");
-            socket
-                .send_to(&msg, &(std::net::Ipv4Addr::LOCALHOST, 7777))
-                .await
-                .unwrap();
-
-            let recv = |socket: Arc<UdpSocket>| async move {
-                let mut buf = [0; u16::MAX as usize];
-                let length = socket.recv(&mut buf).await.unwrap();
-                buf[0..length].to_vec()
-            };
+            socket.send_to(&msg, &proxy_address).await.unwrap();
 
             assert_eq!(
-                b"hello",
-                &&*timeout(Duration::from_secs(5), (recv)(server_socket.clone()))
+                "hello",
+                timeout(Duration::from_secs(5), rx.recv())
                     .await
                     .expect("should have received a packet")
+                    .unwrap()
             );
 
             tracing::info!(?token, "received packet");
@@ -388,9 +386,9 @@ mod tests {
             tracing::info!(?token, "sending bad packet");
             // send an invalid packet
             let msg = b"hello\xFF\xFF\xFF";
-            socket.send_to(msg, &local_addr).await.unwrap();
+            socket.send_to(msg, &proxy_address).await.unwrap();
 
-            let result = timeout(Duration::from_secs(3), (recv)(server_socket.clone())).await;
+            let result = timeout(Duration::from_secs(3), rx.recv()).await;
             assert!(result.is_err(), "should not have received a packet");
             tracing::info!(?token, "didn't receive bad packet");
         }

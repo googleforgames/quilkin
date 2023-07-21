@@ -1,8 +1,8 @@
 # xDS Control Plane
 
-| services | ports | Protocol   |
-|----------|-------|------------|
-| xDS      | 7800  | gRPC(IPv4) |
+| services | ports | Protocol            |
+|----------|-------|---------------------|
+| xDS      | 7800  | gRPC (IPv4 OR IPv6) |
 
 For multi-cluster integration, Quilkin provides a `manage` service, that can be
 used with a number of configuration discovery providers to provide cluster

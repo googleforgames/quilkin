@@ -133,7 +133,16 @@ impl FromStr for EndpointAddress {
         let host = url
             .host_str()
             .map(String::from)
+            .map(|value| {
+                // Strip ipv6 brackets
+                let len = value.len();
+                if len > 2 && value.starts_with('[') && value.ends_with(']') {
+                    return value[1..len - 1].to_string();
+                }
+                value
+            })
             .ok_or(ParseError::EmptyHost)?;
+
         // Infallible
         let host = host.parse::<AddressKind>().unwrap();
         let port = url.port().ok_or(ParseError::EmptyPort)?;
@@ -293,7 +302,11 @@ impl TryFrom<crate::xds::config::endpoint::v3::Endpoint> for EndpointAddress {
 
 impl fmt::Display for EndpointAddress {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}:{}", self.host, self.port)
+        if let AddressKind::Ip(IpAddr::V6(ip)) = self.host {
+            write!(f, "[{}]:{}", ip, self.port)
+        } else {
+            write!(f, "{}:{}", self.host, self.port)
+        }
     }
 }
 

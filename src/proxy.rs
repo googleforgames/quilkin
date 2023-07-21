@@ -14,20 +14,19 @@
  * limitations under the License.
  */
 
-mod sessions;
+use std::{net::SocketAddr, sync::Arc};
 
-use std::sync::Arc;
-
-use tokio::net::UdpSocket;
+pub use sessions::{Session, SessionArgs, SessionKey, SessionMap};
 
 use crate::{
     endpoint::{Endpoint, EndpointAddress},
     filters::{Filter, ReadContext},
     ttl_map::TryResult,
+    utils::net::DualStackLocalSocket,
     Config,
 };
 
-pub use sessions::{Session, SessionArgs, SessionKey, SessionMap};
+mod sessions;
 
 /// Packet received from local port
 #[derive(Debug)]
@@ -35,7 +34,7 @@ struct DownstreamPacket {
     asn_info: Option<crate::maxmind_db::IpNetEntry>,
     contents: Vec<u8>,
     received_at: i64,
-    source: std::net::SocketAddr,
+    source: SocketAddr,
 }
 
 /// Represents the required arguments to run a worker task that
@@ -44,7 +43,7 @@ pub(crate) struct DownstreamReceiveWorkerConfig {
     /// ID of the worker.
     pub worker_id: usize,
     /// Socket with reused port from which the worker receives packets.
-    pub socket: Arc<UdpSocket>,
+    pub socket: Arc<DualStackLocalSocket>,
     pub config: Arc<Config>,
     pub sessions: SessionMap,
 }
@@ -61,23 +60,28 @@ impl DownstreamReceiveWorkerConfig {
         tokio::spawn(async move {
             // Initialize a buffer for the UDP packet. We use the maximum size of a UDP
             // packet, which is the maximum value of 16 a bit integer.
-            let mut buf = vec![0; 1 << 16];
+            let mut v4_buf = vec![0; 1024];
+            let mut v6_buf = vec![0; 1024];
             let mut last_received_at = None;
+
             loop {
                 tracing::debug!(
                     id = worker_id,
-                    addr = ?socket.local_addr(),
+                    port = ?socket.local_ipv4_addr().map(|addr| addr.port()),
                     "Awaiting packet"
                 );
 
                 tokio::select! {
-                    result = socket.recv_from(&mut buf) => {
-                        match result {
-                            Ok((size, source)) => {
+                    recv = socket.recv_from(&mut v4_buf, &mut v6_buf) => {
+                        match recv {
+                            Ok(recv) => {
+                                let contents = DualStackLocalSocket::contents(&v4_buf, &v6_buf, recv);
+                                let (_, source) = recv;
+
                                 let packet = DownstreamPacket {
                                     received_at: chrono::Utc::now().timestamp_nanos(),
                                     asn_info: crate::maxmind_db::MaxmindDb::lookup(source.ip()),
-                                    contents: buf[..size].to_vec(),
+                                    contents: contents.to_vec(),
                                     source,
                                 };
 
@@ -108,7 +112,7 @@ impl DownstreamReceiveWorkerConfig {
         packet: DownstreamPacket,
         source: std::net::SocketAddr,
         worker_id: usize,
-        socket: &Arc<UdpSocket>,
+        socket: &Arc<DualStackLocalSocket>,
         config: &Arc<Config>,
         sessions: &SessionMap,
     ) {
@@ -159,7 +163,7 @@ impl DownstreamReceiveWorkerConfig {
     async fn process_downstream_received_packet(
         packet: DownstreamPacket,
         config: Arc<Config>,
-        downstream_socket: Arc<UdpSocket>,
+        downstream_socket: Arc<DualStackLocalSocket>,
         sessions: SessionMap,
     ) -> Result<usize, PipelineError> {
         let endpoints: Vec<_> = config.clusters.read().endpoints().collect();
@@ -194,7 +198,7 @@ impl DownstreamReceiveWorkerConfig {
         packet: &[u8],
         recv_addr: &EndpointAddress,
         endpoint: &Endpoint,
-        downstream_socket: &Arc<UdpSocket>,
+        downstream_socket: &Arc<DualStackLocalSocket>,
         config: &Arc<Config>,
         sessions: &SessionMap,
         asn_info: Option<crate::maxmind_db::IpNetEntry>,

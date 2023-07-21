@@ -22,13 +22,13 @@ use quilkin::{
     config::Filter,
     endpoint::Endpoint,
     filters::{Capture, Match, StaticFilter},
-    test_utils::TestHelper,
+    test_utils::{AddressType, TestHelper},
 };
 
 #[tokio::test]
 async fn r#match() {
     let mut t = TestHelper::default();
-    let echo = t.run_echo_server().await;
+    let echo = t.run_echo_server(&AddressType::Random).await;
 
     let capture_yaml = "
 suffix:
