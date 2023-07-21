@@ -68,11 +68,9 @@ RUN set -eux; \
     chmod -R a+w $RUSTUP_HOME $CARGO_HOME && \
     rustup component add rustfmt clippy && \
     rustup target add x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu x86_64-pc-windows-gnu && \
-    cargo install cargo-watch mdbook && \
-    cargo install mdbook-variables --version=0.2.0 && \
-    cargo install cargo-about && \
+    cargo install mdbook cargo-watch cargo-about && \
+    cargo install --locked mdbook-variables && \
     cargo install --locked cargo-deny && \
     rustup --version && \
     cargo --version && \
     rustc --version
-
