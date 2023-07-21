@@ -22,7 +22,7 @@ use quilkin::{
     config::Filter,
     endpoint::Endpoint,
     filters::{Compress, ConcatenateBytes, StaticFilter},
-    test_utils::TestHelper,
+    test_utils::{AddressType, TestHelper},
 };
 
 #[tokio::test]
@@ -45,7 +45,7 @@ on_write: DECOMPRESS
 ";
 
     let echo = t
-        .run_echo_server_with_tap(move |_, bytes, _| {
+        .run_echo_server_with_tap(&AddressType::Random, move |_, bytes, _| {
             assert!(
                 from_utf8(bytes).is_err(),
                 "Should be compressed, and therefore unable to be turned into a string"

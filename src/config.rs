@@ -23,12 +23,6 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-mod config_type;
-mod error;
-pub mod providers;
-mod slot;
-pub mod watch;
-
 use crate::{
     cluster::{Cluster, ClusterMap},
     filters::prelude::*,
@@ -42,6 +36,12 @@ use crate::{
 pub use self::{
     config_type::ConfigType, error::ValidationError, providers::Providers, slot::Slot, watch::Watch,
 };
+
+mod config_type;
+mod error;
+pub mod providers;
+mod slot;
+pub mod watch;
 
 base64_serde_type!(pub Base64Standard, base64::engine::general_purpose::STANDARD);
 
@@ -325,10 +325,13 @@ impl From<(String, FilterInstance)> for Filter {
 
 #[cfg(test)]
 mod tests {
+    use std::net::Ipv6Addr;
+
     use serde_json::json;
 
-    use super::*;
     use crate::endpoint::{Endpoint, Metadata};
+
+    use super::*;
 
     fn parse_config(yaml: &str) -> Config {
         Config::from_reader(yaml.as_bytes()).unwrap()
@@ -406,6 +409,37 @@ id: server-proxy
     }
 
     #[test]
+    fn parse_ipv6_endpoint() {
+        let config: Config = serde_json::from_value(json!({
+            "version": "v1alpha1",
+            "clusters":{
+                "default":{
+                    "localities": [{
+                        "endpoints": [{
+                            "address": "[2345:0425:2CA1:0000:0000:0567:5673:24b5]:25999"
+                        }],
+                    }]
+                }
+            }
+        }))
+        .unwrap();
+
+        let value = config.clusters.read();
+        assert_eq!(
+            &*value,
+            &ClusterMap::new_with_default_cluster(vec![Endpoint::new(
+                (
+                    "2345:0425:2CA1:0000:0000:0567:5673:24b5"
+                        .parse::<Ipv6Addr>()
+                        .unwrap(),
+                    25999
+                )
+                    .into()
+            )])
+        )
+    }
+
+    #[test]
     fn parse_server() {
         let config: Config = serde_json::from_value(json!({
             "version": "v1alpha1",
@@ -422,7 +456,7 @@ id: server-proxy
                                 }
                             },
                             {
-                                "address" : "127.0.0.1:26001",
+                                "address" : "[2345:0425:2CA1:0000:0000:0567:5673:24b5]:25999",
                                 "metadata": {
                                     "quilkin.dev": {
                                         "tokens": ["bmt1eTcweA=="],
@@ -450,7 +484,9 @@ id: server-proxy
                     },
                 ),
                 Endpoint::with_metadata(
-                    "127.0.0.1:26001".parse().unwrap(),
+                    "[2345:0425:2CA1:0000:0000:0567:5673:24b5]:25999"
+                        .parse()
+                        .unwrap(),
                     Metadata {
                         tokens: vec!["nkuy70x"].into_iter().map(From::from).collect(),
                     },

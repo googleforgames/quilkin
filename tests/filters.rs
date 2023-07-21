@@ -24,7 +24,7 @@ use quilkin::{
     config::Filter,
     endpoint::Endpoint,
     filters::{Debug, StaticFilter},
-    test_utils::{load_test_filters, TestHelper},
+    test_utils::{load_test_filters, AddressType, TestHelper},
 };
 
 #[tokio::test]
@@ -33,7 +33,7 @@ async fn test_filter() {
     load_test_filters();
 
     // create an echo server as an endpoint.
-    let echo = t.run_echo_server().await;
+    let echo = t.run_echo_server(&AddressType::Random).await;
 
     // create server configuration
     let server_port = 12346;
@@ -120,7 +120,7 @@ async fn debug_filter() {
     let factory = Debug::factory();
 
     // create an echo server as an endpoint.
-    let echo = t.run_echo_server().await;
+    let echo = t.run_echo_server(&AddressType::Random).await;
 
     // create server configuration
     let server_port = 12247;

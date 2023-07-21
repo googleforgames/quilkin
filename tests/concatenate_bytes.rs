@@ -22,7 +22,7 @@ use quilkin::{
     config::Filter,
     endpoint::Endpoint,
     filters::{ConcatenateBytes, StaticFilter},
-    test_utils::TestHelper,
+    test_utils::{AddressType, TestHelper},
 };
 
 #[tokio::test]
@@ -32,7 +32,7 @@ async fn concatenate_bytes() {
 on_read: APPEND
 bytes: YWJj #abc
 ";
-    let echo = t.run_echo_server().await;
+    let echo = t.run_echo_server(&AddressType::Random).await;
 
     let server_port = 12346;
     let server_proxy = quilkin::cli::Proxy {

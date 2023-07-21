@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-pub(crate) mod metrics;
-
-use std::sync::Arc;
+use std::{net::SocketAddr, sync::Arc};
 
 use tokio::{
     net::UdpSocket,
@@ -29,8 +27,10 @@ use crate::{
     endpoint::{Endpoint, EndpointAddress},
     filters::{Filter, WriteContext},
     maxmind_db::IpNetEntry,
-    utils::Loggable,
+    utils::{net::DualStackLocalSocket, Loggable},
 };
+
+pub(crate) mod metrics;
 
 pub type SessionMap = crate::ttl_map::TtlMap<SessionKey, Session>;
 
@@ -79,7 +79,7 @@ impl Session {
     pub fn new(
         config: Arc<crate::Config>,
         source: EndpointAddress,
-        downstream_socket: Arc<UdpSocket>,
+        downstream_socket: Arc<DualStackLocalSocket>,
         dest: Endpoint,
         asn_info: Option<IpNetEntry>,
     ) -> Result<Self, super::PipelineError> {
@@ -110,13 +110,16 @@ impl Session {
         let address = self.dest.address.clone();
 
         async move {
+            let connect_addr = address.to_socket_addr().await?;
+            let bind_addr: SocketAddr = match connect_addr {
+                SocketAddr::V4(_) => (std::net::Ipv4Addr::UNSPECIFIED, 0).into(),
+                SocketAddr::V6(_) => (std::net::Ipv6Addr::UNSPECIFIED, 0).into(),
+            };
+
             upstream_socket
                 .get_or_try_init(|| async {
-                    let upstream_socket =
-                        UdpSocket::bind((std::net::Ipv4Addr::UNSPECIFIED, 0)).await?;
-                    upstream_socket
-                        .connect(address.to_socket_addr().await?)
-                        .await?;
+                    let upstream_socket = UdpSocket::bind(bind_addr).await?;
+                    upstream_socket.connect(connect_addr).await?;
                     Ok(Arc::new(upstream_socket))
                 })
                 .await
@@ -126,7 +129,11 @@ impl Session {
 
     /// run starts processing receiving upstream udp packets
     /// and sending them back downstream
-    fn run(&self, downstream_socket: Arc<UdpSocket>, mut shutdown_rx: watch::Receiver<()>) {
+    fn run(
+        &self,
+        downstream_socket: Arc<DualStackLocalSocket>,
+        mut shutdown_rx: watch::Receiver<()>,
+    ) {
         let source = self.source.clone();
         let config = self.config.clone();
         let endpoint = self.dest.clone();
@@ -204,7 +211,7 @@ impl Session {
 
     /// process_recv_packet processes a packet that is received by this session.
     async fn process_recv_packet(
-        downstream_socket: &Arc<UdpSocket>,
+        downstream_socket: &Arc<DualStackLocalSocket>,
         packet_ctx: ReceivedPacketContext<'_>,
     ) -> Result<usize, Error> {
         let ReceivedPacketContext {
@@ -230,7 +237,7 @@ impl Session {
         let packet = context.contents.as_ref();
         tracing::trace!(%from, dest = %addr, contents = %crate::utils::base64_encode(packet), "sending packet downstream");
         downstream_socket
-            .send_to(packet, addr)
+            .send_to(packet, &addr)
             .await
             .map_err(Error::SendTo)
     }
@@ -290,20 +297,20 @@ impl Loggable for Error {
 mod tests {
     use std::{str::from_utf8, sync::Arc, time::Duration};
 
-    use super::*;
-
     use tokio::time::timeout;
 
     use crate::{
         endpoint::{Endpoint, EndpointAddress},
         proxy::sessions::ReceivedPacketContext,
-        test_utils::{create_socket, new_test_config, TestHelper},
+        test_utils::{create_socket, new_test_config, AddressType, TestHelper},
     };
+
+    use super::*;
 
     #[tokio::test]
     async fn session_send_and_receive() {
         let mut t = TestHelper::default();
-        let addr = t.run_echo_server().await;
+        let addr = t.run_echo_server(&AddressType::Random).await;
         let endpoint = Endpoint::new(addr.clone());
         let socket = Arc::new(create_socket().await);
         let msg = "hello";
@@ -334,7 +341,7 @@ mod tests {
 
         let socket = Arc::new(create_socket().await);
         let endpoint = Endpoint::new("127.0.1.1:80".parse().unwrap());
-        let dest: EndpointAddress = socket.local_addr().unwrap().into();
+        let dest: EndpointAddress = socket.local_ipv4_addr().unwrap().into();
 
         // first test with no filtering
         let msg = "hello";

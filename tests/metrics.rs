@@ -16,18 +16,23 @@
 
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
-use quilkin::{endpoint::Endpoint, test_utils::TestHelper};
+use quilkin::{
+    endpoint::Endpoint,
+    test_utils::{AddressType, TestHelper},
+};
 
 #[tokio::test]
 async fn metrics_server() {
     let mut t = TestHelper::default();
 
     // create an echo server as an endpoint.
-    let echo = t.run_echo_server().await;
-    let metrics_port = quilkin::test_utils::available_addr().await.port();
+    let echo = t.run_echo_server(&AddressType::Random).await;
+    let metrics_port = quilkin::test_utils::available_addr(&AddressType::Random)
+        .await
+        .port();
 
     // create server configuration
-    let server_addr = quilkin::test_utils::available_addr().await;
+    let server_addr = quilkin::test_utils::available_addr(&AddressType::Random).await;
     let server_proxy = quilkin::cli::Proxy {
         port: server_addr.port(),
         ..<_>::default()
