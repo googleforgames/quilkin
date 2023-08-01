@@ -65,16 +65,16 @@ pub struct Cluster {
 
 impl Cluster {
     /// Creates a new `Cluster` called `name` containing `localities`.
-    pub fn new(name: String, localities: impl Into<LocalitySet>) -> Self {
+    pub fn new(name: impl Into<String>, localities: impl Into<LocalitySet>) -> Self {
         Self {
-            name,
+            name: name.into(),
             localities: localities.into(),
         }
     }
 
     /// Creates a new `Cluster` called `"default"` containing `endpoints`.
     pub fn new_default(endpoints: impl Into<LocalitySet>) -> Self {
-        Self::new("default".into(), endpoints)
+        Self::new("default", endpoints)
     }
 
     /// Adds a new set of endpoints to the cluster.
@@ -401,5 +401,65 @@ impl TryFrom<crate::xds::config::endpoint::v3::ClusterLoadAssignment> for Cluste
             name: cla.cluster_name,
             localities,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::net::Ipv4Addr;
+
+    use super::*;
+
+    #[test]
+    fn merge() {
+        let nl1 = Locality::region("nl-1");
+        let de1 = Locality::region("de-1");
+
+        let mut endpoint = Endpoint::new((Ipv4Addr::LOCALHOST, 7777).into());
+
+        let mut cluster1 = Cluster::new_default(vec![LocalityEndpoints::from((
+            endpoint.clone(),
+            nl1.clone(),
+        ))]);
+
+        let cluster2 = Cluster::new_default(vec![LocalityEndpoints::from((
+            endpoint.clone(),
+            de1.clone(),
+        ))]);
+
+        cluster1.merge(&cluster2);
+
+        assert_eq!(cluster1.localities[&Some(nl1.clone())].endpoints.len(), 1);
+        assert!(cluster1.localities[&Some(nl1.clone())]
+            .endpoints
+            .contains(&endpoint));
+        assert_eq!(cluster1.localities[&Some(de1.clone())].endpoints.len(), 1);
+        assert!(cluster1.localities[&Some(de1.clone())]
+            .endpoints
+            .contains(&endpoint));
+
+        endpoint.address.port = 8080;
+        let cluster3 = Cluster::new_default(vec![LocalityEndpoints::from((
+            endpoint.clone(),
+            de1.clone(),
+        ))]);
+
+        cluster1.merge(&cluster3);
+
+        assert_eq!(cluster1.localities[&Some(nl1.clone())].endpoints.len(), 1);
+        assert_eq!(cluster1.localities[&Some(de1.clone())].endpoints.len(), 1);
+        assert!(cluster1.localities[&Some(de1.clone())]
+            .endpoints
+            .contains(&endpoint));
+
+        let cluster4 = Cluster::new_default(vec![LocalityEndpoints {
+            locality: Some(de1.clone()),
+            endpoints: <_>::default(),
+        }]);
+
+        cluster1.merge(&cluster4);
+
+        assert_eq!(cluster1.localities[&Some(nl1)].endpoints.len(), 1);
+        assert!(cluster1.localities[&Some(de1)].endpoints.is_empty());
     }
 }

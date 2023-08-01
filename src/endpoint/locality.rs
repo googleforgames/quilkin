@@ -47,6 +47,37 @@ pub struct Locality {
     pub sub_zone: String,
 }
 
+impl Locality {
+    pub fn new(
+        region: impl Into<String>,
+        zone: impl Into<String>,
+        sub_zone: impl Into<String>,
+    ) -> Self {
+        Self {
+            region: region.into(),
+            zone: zone.into(),
+            sub_zone: sub_zone.into(),
+        }
+    }
+
+    pub fn region(region: impl Into<String>) -> Self {
+        Self {
+            region: region.into(),
+            ..Self::default()
+        }
+    }
+
+    pub fn zone(mut self, zone: impl Into<String>) -> Self {
+        self.zone = zone.into();
+        self
+    }
+
+    pub fn sub_zone(mut self, sub_zone: impl Into<String>) -> Self {
+        self.sub_zone = sub_zone.into();
+        self
+    }
+}
+
 /// A set of endpoints optionally grouped by a [`Locality`].
 #[derive(
     Clone,
@@ -199,6 +230,16 @@ impl LocalitySet {
         entry.endpoints.append(&mut locality.endpoints);
     }
 
+    /// Returns a reference to endpoints associated with the specified locality.
+    pub fn get(&self, key: &Option<Locality>) -> Option<&LocalityEndpoints> {
+        self.0.get(key)
+    }
+
+    /// Returns a mutable reference to endpoints associated with the specified locality.
+    pub fn get_mut(&mut self, key: &Option<Locality>) -> Option<&mut LocalityEndpoints> {
+        self.0.get_mut(key)
+    }
+
     /// Removes the specified locality or all endpoints with no locality.
     pub fn remove(&mut self, key: &Option<Locality>) -> Option<LocalityEndpoints> {
         self.0.remove(key)
@@ -255,6 +296,20 @@ impl schemars::JsonSchema for LocalitySet {
 
     fn is_referenceable() -> bool {
         <Vec<LocalityEndpoints>>::is_referenceable()
+    }
+}
+
+impl std::ops::Index<&Option<Locality>> for LocalitySet {
+    type Output = LocalityEndpoints;
+
+    fn index(&self, index: &Option<Locality>) -> &Self::Output {
+        self.get(index).unwrap()
+    }
+}
+
+impl std::ops::IndexMut<&Option<Locality>> for LocalitySet {
+    fn index_mut(&mut self, index: &Option<Locality>) -> &mut Self::Output {
+        self.get_mut(index).unwrap()
     }
 }
 
