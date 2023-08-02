@@ -172,9 +172,8 @@ impl Config {
             tracing::trace!(endpoints = %serde_json::to_value(&cluster).unwrap(), "applying new endpoints");
             self.clusters
                 .value()
-                .default_entry(cluster.name)
-                .localities
-                .merge(&cluster.localities);
+                .default_entry(cluster.name.clone())
+                .merge(&cluster);
         };
 
         match response {
