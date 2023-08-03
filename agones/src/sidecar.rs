@@ -94,7 +94,7 @@ clusters:
         gs.spec.ports[0].container = Some("quilkin".into());
 
         // set the gameserver container to the simple-game-server container.
-        let mut template = gs.spec.template.spec.as_mut().unwrap();
+        let template = gs.spec.template.spec.as_mut().unwrap();
         gs.spec.container = Some(template.containers[0].name.clone());
 
         let mount_name = "config".to_string();
