@@ -225,7 +225,7 @@ impl LocalitySet {
 
     /// Inserts a new locality of endpoints.
     pub fn insert(&mut self, mut locality: LocalityEndpoints) {
-        let mut entry = self.0.entry(locality.locality.clone()).or_default();
+        let entry = self.0.entry(locality.locality.clone()).or_default();
         entry.locality = locality.locality;
         entry.endpoints.append(&mut locality.endpoints);
     }

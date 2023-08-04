@@ -14,7 +14,6 @@
  *  limitations under the License.
  */
 
-///! Complex integration tests that incorporate multiple elements
 use std::{net::Ipv4Addr, str::from_utf8};
 
 use tokio::time::{timeout, Duration};
