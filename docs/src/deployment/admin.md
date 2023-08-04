@@ -5,12 +5,15 @@
 | Administration | 8000 | HTTP (IPv4 OR IPv6) |
 
 ## Logging
-By default Quilkin will log `INFO` level events, you can change this by setting
+By default, Quilkin will log `INFO` level events, you can change this by setting
 the `RUST_LOG` environment variable. See [`log` documentation][log-docs] for
 more advanced usage.
 
-> If you are debugging Quilkin set the `RUST_LOG` environemnt variable to `quilkin=trace`, to filter trace level
+> If you are debugging Quilkin set the `RUST_LOG` environment variable to `quilkin=trace`, to filter trace level
 > logging to only Quilkin components.
+
+>  Verbose logging in Quilkin will affect performance considerably, so we recommend only 
+> turning it on for debugging purposes.
 
 ## HTTP API
 
@@ -63,3 +66,5 @@ See the [xDS Metrics](../services/xds/metrics.md) documentation for what xDS met
 
 Returns a JSON representation of the cluster and filterchain configuration that the instance is running
 with at the time of invocation.
+
+[log-docs]: https://docs.rs/env_logger/latest/env_logger/#enabling-logging
