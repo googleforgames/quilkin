@@ -172,12 +172,16 @@
 </tbody></table>
 </div>
 <h2 id="logging"><a class="header" href="#logging">Logging</a></h2>
-<p>By default Quilkin will log <code>INFO</code> level events, you can change this by setting
-the <code>RUST_LOG</code> environment variable. See [<code>log</code> documentation][log-docs] for
+<p>By default, Quilkin will log <code>INFO</code> level events, you can change this by setting
+the <code>RUST_LOG</code> environment variable. See <a href="https://docs.rs/env_logger/latest/env_logger/#enabling-logging"><code>log</code> documentation</a> for
 more advanced usage.</p>
 <blockquote>
-<p>If you are debugging Quilkin set the <code>RUST_LOG</code> environemnt variable to <code>quilkin=trace</code>, to filter trace level
+<p>If you are debugging Quilkin set the <code>RUST_LOG</code> environment variable to <code>quilkin=trace</code>, to filter trace level
 logging to only Quilkin components.</p>
+</blockquote>
+<blockquote>
+<p>Verbose logging in Quilkin will affect performance considerably, so we recommend only 
+turning it on for debugging purposes.</p>
 </blockquote>
 <h2 id="http-api"><a class="header" href="#http-api">HTTP API</a></h2>
 <p>Quilkin exposes an HTTP interface to query different aspects of the server.</p>
