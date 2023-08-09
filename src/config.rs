@@ -169,6 +169,11 @@ impl Config {
         tracing::trace!(resource=?response, "applying resource");
 
         let apply_cluster = |cluster: Cluster| {
+            if cluster.endpoints().count() == 0 {
+                tracing::warn!(?response, "empty endpoints");
+                return;
+            }
+
             tracing::trace!(endpoints = %serde_json::to_value(&cluster).unwrap(), "applying new endpoints");
             self.clusters
                 .value()
