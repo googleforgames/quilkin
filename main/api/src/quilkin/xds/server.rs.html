@@ -471,13 +471,6 @@
 <a href="#471" id="471">471</a>
 <a href="#472" id="472">472</a>
 <a href="#473" id="473">473</a>
-<a href="#474" id="474">474</a>
-<a href="#475" id="475">475</a>
-<a href="#476" id="476">476</a>
-<a href="#477" id="477">477</a>
-<a href="#478" id="478">478</a>
-<a href="#479" id="479">479</a>
-<a href="#480" id="480">480</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -581,13 +574,14 @@
         tokio::spawn({
             <span class="kw">let </span>this = this.clone();
             <span class="kw">async move </span>{
+                <span class="kw">let </span><span class="kw-2">mut </span>watcher = this.config.clusters.watch();
                 <span class="kw">loop </span>{
-                    <span class="macro">tokio::select! </span>{
-                        <span class="kw">_ </span>= this.config.clusters.has_changed() =&gt; {
-                            this.push_update(ResourceType::Endpoint);
-                            this.push_update(ResourceType::Cluster);
-                        }
+                    <span class="macro">tracing::debug!</span>(<span class="question-mark">?</span>watcher, <span class="string">&quot;waiting for changes&quot;</span>);
+                    <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = watcher.changed().<span class="kw">await </span>{
+                        <span class="macro">tracing::error!</span>(%error, <span class="string">&quot;error watching changes&quot;</span>);
                     }
+                    this.push_update(ResourceType::Endpoint);
+                    this.push_update(ResourceType::Cluster);
                 }
             }
         });
@@ -607,7 +601,7 @@
         watchers
             .version
             .fetch_add(<span class="number">1</span>, std::sync::atomic::Ordering::Relaxed);
-        <span class="macro">tracing::trace!</span>(%resource_type, watchers=watchers.sender.receiver_count(), <span class="string">&quot;pushing update&quot;</span>);
+        <span class="macro">tracing::debug!</span>(%resource_type, watchers=watchers.sender.receiver_count(), <span class="string">&quot;pushing update&quot;</span>);
         <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = watchers.sender.send(()) {
             <span class="macro">tracing::warn!</span>(%error, <span class="string">&quot;pushing update failed&quot;</span>);
         }
@@ -805,17 +799,9 @@
                 );
 
                 <span class="kw">loop </span>{
-                    <span class="kw">let </span>timeout = tokio::time::sleep(std::time::Duration::from_secs(<span class="number">1</span>));
-                    <span class="macro">tokio::select! </span>{
-                        <span class="kw">_ </span>= timeout =&gt; {
-                            <span class="macro">tracing::info!</span>(<span class="string">&quot;sending discovery request&quot;</span>);
-                            <span class="kw">crate</span>::xds::client::MdsStream::discovery_request_without_cache(<span class="kw-2">&amp;</span>identifier, <span class="kw-2">&amp;mut </span>requests, <span class="kw">crate</span>::xds::ResourceType::Cluster, <span class="kw-2">&amp;</span>[])
-                                .map_err(|error| tonic::Status::internal(error.to_string()))<span class="question-mark">?</span>;
-                        }
-                        <span class="prelude-val">Some</span>(ack) = response_handler.next() =&gt; {
-                            <span class="macro">tracing::info!</span>(<span class="string">&quot;sending ack request&quot;</span>);
-                            requests.send(ack<span class="question-mark">?</span>)<span class="question-mark">?</span>;
-                        }
+                    <span class="kw">if let </span><span class="prelude-val">Some</span>(ack) = response_handler.next().<span class="kw">await </span>{
+                        <span class="macro">tracing::info!</span>(<span class="string">&quot;sending ack request&quot;</span>);
+                        requests.send(ack<span class="question-mark">?</span>)<span class="question-mark">?</span>;
                     }
                 }
             },

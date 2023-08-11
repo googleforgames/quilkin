@@ -662,7 +662,7 @@
 <span class="kw">pub fn </span>config_with_dummy_endpoint() -&gt; Config {
     <span class="kw">let </span>config = Config::default();
 
-    config.clusters.value().insert(Cluster {
+    config.clusters.write().insert(Cluster {
         name: <span class="string">&quot;default&quot;</span>.into(),
         localities: <span class="macro">vec!</span>[LocalityEndpoints {
             locality: <span class="prelude-val">None</span>,

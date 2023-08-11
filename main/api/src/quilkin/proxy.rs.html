@@ -406,7 +406,7 @@
         downstream_socket: Arc&lt;UdpSocket&gt;,
         sessions: SessionMap,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;usize, PipelineError&gt; {
-        <span class="kw">let </span>endpoints: Vec&lt;<span class="kw">_</span>&gt; = config.clusters.value().endpoints().collect();
+        <span class="kw">let </span>endpoints: Vec&lt;<span class="kw">_</span>&gt; = config.clusters.read().endpoints().collect();
         <span class="kw">if </span>endpoints.is_empty() {
             <span class="kw">return </span><span class="prelude-val">Err</span>(PipelineError::NoUpstreamEndpoints);
         }

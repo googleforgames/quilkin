@@ -368,6 +368,42 @@
 <a href="#368" id="368">368</a>
 <a href="#369" id="369">369</a>
 <a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -598,7 +634,6 @@
     };
 
     <span class="kw">use crate</span>::{
-        cluster::ClusterMap,
         config::{Filter, Providers},
         endpoint::{Endpoint, LocalityEndpoints},
         filters::{Capture, StaticFilter, TokenRouter},
@@ -612,9 +647,9 @@
             </span>.map(Arc::new)
             .unwrap();
         <span class="kw">let </span>filters_file = tempfile::NamedTempFile::new().unwrap();
+        <span class="kw">let </span>config = Config::default();
 
         std::fs::write(filters_file.path(), {
-            <span class="kw">let </span>config = Config::default();
             config.filters.store(
                 <span class="macro">vec!</span>[
                     Filter {
@@ -642,16 +677,18 @@
         .unwrap();
 
         <span class="kw">let </span>endpoints_file = tempfile::NamedTempFile::new().unwrap();
+        <span class="kw">let </span>config = Config::default();
         std::fs::write(endpoints_file.path(), {
-            <span class="kw">let </span><span class="kw-2">mut </span>config = Config::default();
-            config.clusters = <span class="kw">crate</span>::config::Watch::new(ClusterMap::new_with_default_cluster(
-                LocalityEndpoints::from(<span class="macro">vec!</span>[Endpoint::with_metadata(
+            config
+                .clusters
+                .write()
+                .default_cluster_mut()
+                .insert(LocalityEndpoints::from(<span class="macro">vec!</span>[Endpoint::with_metadata(
                     (std::net::Ipv4Addr::LOCALHOST, server_port).into(),
                     <span class="kw">crate</span>::endpoint::Metadata {
                         tokens: <span class="macro">vec!</span>[<span class="string">&quot;abc&quot;</span>.into()].into_iter().collect(),
                     },
-                )]),
-            ));
+                )]));
             serde_yaml::to_string(<span class="kw-2">&amp;</span>config).unwrap()
         })
         .unwrap();
@@ -705,37 +742,72 @@
         tokio::time::sleep(Duration::from_millis(<span class="number">500</span>)).<span class="kw">await</span>;
         tokio::spawn(proxy.drive());
         tokio::time::sleep(Duration::from_millis(<span class="number">500</span>)).<span class="kw">await</span>;
-
         <span class="kw">let </span>local_addr = <span class="kw">crate</span>::test_utils::available_addr().<span class="kw">await</span>;
         <span class="kw">let </span>socket = UdpSocket::bind((Ipv4Addr::UNSPECIFIED, local_addr.port()))
             .<span class="kw">await
             </span>.map(Arc::new)
             .unwrap();
-        <span class="kw">let </span>msg = <span class="string">b&quot;helloabc&quot;</span>;
-        socket
-            .send_to(msg, <span class="kw-2">&amp;</span>(std::net::Ipv4Addr::LOCALHOST, <span class="number">7777</span>))
-            .<span class="kw">await
-            </span>.unwrap();
+        <span class="kw">let </span>config = Config::default();
 
-        <span class="kw">let </span>recv = |socket: Arc&lt;UdpSocket&gt;| <span class="kw">async move </span>{
-            <span class="kw">let </span><span class="kw-2">mut </span>buf = [<span class="number">0</span>; u16::MAX <span class="kw">as </span>usize];
-            <span class="kw">let </span>length = socket.recv(<span class="kw-2">&amp;mut </span>buf).<span class="kw">await</span>.unwrap();
-            buf[<span class="number">0</span>..length].to_vec()
-        };
+        <span class="kw">for _ in </span><span class="number">0</span>..<span class="number">5 </span>{
+            <span class="kw">let </span>token = random_three_characters();
 
-        <span class="macro">assert_eq!</span>(
-            <span class="string">b&quot;hello&quot;</span>,
-            &amp;&amp;<span class="kw-2">*</span>timeout(Duration::from_secs(<span class="number">5</span>), (recv)(server_socket.clone()))
+            <span class="macro">tracing::info!</span>(<span class="question-mark">?</span>token, <span class="string">&quot;writing new config&quot;</span>);
+            std::fs::write(endpoints_file.path(), {
+                config
+                    .clusters
+                    .write()
+                    .default_cluster_mut()
+                    .insert(LocalityEndpoints::from(<span class="macro">vec!</span>[Endpoint::with_metadata(
+                        (std::net::Ipv4Addr::LOCALHOST, server_port).into(),
+                        <span class="kw">crate</span>::endpoint::Metadata {
+                            tokens: <span class="macro">vec!</span>[token.clone()].into_iter().collect(),
+                        },
+                    )]));
+                serde_yaml::to_string(<span class="kw-2">&amp;</span>config).unwrap()
+            })
+            .unwrap();
+            tokio::time::sleep(Duration::from_millis(<span class="number">80</span>)).<span class="kw">await</span>;
+            <span class="kw">let </span><span class="kw-2">mut </span>msg = Vec::from(<span class="kw-2">*</span><span class="string">b&quot;hello&quot;</span>);
+            msg.extend_from_slice(<span class="kw-2">&amp;</span>token);
+            <span class="macro">tracing::info!</span>(<span class="question-mark">?</span>token, <span class="string">&quot;sending packet&quot;</span>);
+            socket
+                .send_to(<span class="kw-2">&amp;</span>msg, <span class="kw-2">&amp;</span>(std::net::Ipv4Addr::LOCALHOST, <span class="number">7777</span>))
                 .<span class="kw">await
-                </span>.expect(<span class="string">&quot;should have received a packet&quot;</span>)
-        );
+                </span>.unwrap();
 
-        <span class="comment">// send an invalid packet
-        </span><span class="kw">let </span>msg = <span class="string">b&quot;helloxyz&quot;</span>;
-        socket.send_to(msg, <span class="kw-2">&amp;</span>local_addr).<span class="kw">await</span>.unwrap();
+            <span class="kw">let </span>recv = |socket: Arc&lt;UdpSocket&gt;| <span class="kw">async move </span>{
+                <span class="kw">let </span><span class="kw-2">mut </span>buf = [<span class="number">0</span>; u16::MAX <span class="kw">as </span>usize];
+                <span class="kw">let </span>length = socket.recv(<span class="kw-2">&amp;mut </span>buf).<span class="kw">await</span>.unwrap();
+                buf[<span class="number">0</span>..length].to_vec()
+            };
 
-        <span class="kw">let </span>result = timeout(Duration::from_secs(<span class="number">3</span>), (recv)(server_socket.clone())).<span class="kw">await</span>;
-        <span class="macro">assert!</span>(result.is_err(), <span class="string">&quot;should not have received a packet&quot;</span>);
+            <span class="macro">assert_eq!</span>(
+                <span class="string">b&quot;hello&quot;</span>,
+                &amp;&amp;<span class="kw-2">*</span>timeout(Duration::from_secs(<span class="number">5</span>), (recv)(server_socket.clone()))
+                    .<span class="kw">await
+                    </span>.expect(<span class="string">&quot;should have received a packet&quot;</span>)
+            );
+
+            <span class="macro">tracing::info!</span>(<span class="question-mark">?</span>token, <span class="string">&quot;received packet&quot;</span>);
+
+            <span class="macro">tracing::info!</span>(<span class="question-mark">?</span>token, <span class="string">&quot;sending bad packet&quot;</span>);
+            <span class="comment">// send an invalid packet
+            </span><span class="kw">let </span>msg = <span class="string">b&quot;hello\xFF\xFF\xFF&quot;</span>;
+            socket.send_to(msg, <span class="kw-2">&amp;</span>local_addr).<span class="kw">await</span>.unwrap();
+
+            <span class="kw">let </span>result = timeout(Duration::from_secs(<span class="number">3</span>), (recv)(server_socket.clone())).<span class="kw">await</span>;
+            <span class="macro">assert!</span>(result.is_err(), <span class="string">&quot;should not have received a packet&quot;</span>);
+            <span class="macro">tracing::info!</span>(<span class="question-mark">?</span>token, <span class="string">&quot;didn&#39;t receive bad packet&quot;</span>);
+        }
+    }
+
+    <span class="kw">fn </span>random_three_characters() -&gt; Vec&lt;u8&gt; {
+        <span class="kw">use </span>rand::prelude::SliceRandom;
+        <span class="kw">let </span>chars: Vec&lt;u8&gt; = (<span class="kw-2">*</span><span class="string">b&quot;abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ&quot;</span>).into();
+        <span class="kw">let </span><span class="kw-2">mut </span>rng = rand::thread_rng();
+
+        (<span class="number">0</span>..<span class="number">3</span>).map(|<span class="kw">_</span>| <span class="kw-2">*</span>chars.choose(<span class="kw-2">&amp;mut </span>rng).unwrap()).collect()
     }
 }
 </code></pre></div></section></main></body></html>

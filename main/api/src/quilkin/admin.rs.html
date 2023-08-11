@@ -258,7 +258,7 @@
 }
 
 <span class="kw">fn </span>check_proxy_readiness(config: <span class="kw-2">&amp;</span>Config) -&gt; Response&lt;Body&gt; {
-    <span class="kw">if </span>config.clusters.value().endpoints().count() &gt; <span class="number">0 </span>{
+    <span class="kw">if </span>config.clusters.read().endpoints().count() &gt; <span class="number">0 </span>{
         <span class="kw">return </span>Response::new(<span class="string">&quot;ok&quot;</span>.into());
     }
 
@@ -306,7 +306,7 @@
     <span class="attr">#[test]
     </span><span class="kw">fn </span>check_proxy_readiness() {
         <span class="kw">let </span>config = Config::default();
-        <span class="macro">assert_eq!</span>(config.clusters.value().endpoints().count(), <span class="number">0</span>);
+        <span class="macro">assert_eq!</span>(config.clusters.read().endpoints().count(), <span class="number">0</span>);
 
         <span class="kw">let </span>response = <span class="kw">super</span>::check_proxy_readiness(<span class="kw-2">&amp;</span>config);
         <span class="macro">assert_eq!</span>(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
@@ -316,7 +316,7 @@
         )]
         .into()]);
 
-        config.clusters.value().insert(cluster);
+        config.clusters.write().insert(cluster);
 
         <span class="kw">let </span>response = <span class="kw">super</span>::check_proxy_readiness(<span class="kw-2">&amp;</span>config);
         <span class="macro">assert_eq!</span>(response.status(), StatusCode::OK);

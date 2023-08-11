@@ -530,17 +530,6 @@
 <a href="#530" id="530">530</a>
 <a href="#531" id="531">531</a>
 <a href="#532" id="532">532</a>
-<a href="#533" id="533">533</a>
-<a href="#534" id="534">534</a>
-<a href="#535" id="535">535</a>
-<a href="#536" id="536">536</a>
-<a href="#537" id="537">537</a>
-<a href="#538" id="538">538</a>
-<a href="#539" id="539">539</a>
-<a href="#540" id="540">540</a>
-<a href="#541" id="541">541</a>
-<a href="#542" id="542">542</a>
-<a href="#543" id="543">543</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -828,29 +817,18 @@
                     );
 
                     <span class="kw">loop </span>{
-                        <span class="kw">let </span>timeout = tokio::time::sleep(std::time::Duration::from_millis(<span class="number">500</span>));
-
-                        <span class="kw">let </span>select = <span class="macro">tokio::select! </span>{
-                            value = stream.next() =&gt; {
-                                <span class="kw">match </span>value {
-                                    <span class="prelude-val">Some</span>(value) =&gt; value,
-                                    <span class="prelude-val">None </span>=&gt; <span class="kw">break</span>,
-                                }
-                            }
-                            <span class="kw">_ </span>= timeout =&gt; {
-                                <span class="self">Self</span>::refresh_resources(<span class="kw-2">&amp;</span>identifier, <span class="kw-2">&amp;</span>subscribed_resources, <span class="kw-2">&amp;mut </span>requests).<span class="kw">await</span><span class="question-mark">?</span>;
-                                <span class="kw">continue</span>;
-                            }
-                        };
-                        <span class="macro">tracing::trace!</span>(<span class="string">&quot;received ack&quot;</span>);
-
-                        <span class="kw">match </span>select {
-                            <span class="prelude-val">Ok</span>(ack) =&gt; {
+                        <span class="kw">match </span>stream.next().<span class="kw">await </span>{
+                            <span class="prelude-val">Some</span>(<span class="prelude-val">Ok</span>(ack)) =&gt; {
+                                <span class="macro">tracing::trace!</span>(<span class="string">&quot;received ack&quot;</span>);
                                 requests.send(ack)<span class="question-mark">?</span>;
                                 <span class="kw">continue</span>;
                             }
-                            <span class="prelude-val">Err</span>(error) =&gt; {
+                            <span class="prelude-val">Some</span>(<span class="prelude-val">Err</span>(error)) =&gt; {
                                 <span class="macro">tracing::warn!</span>(%error, <span class="string">&quot;xds stream error&quot;</span>);
+                                <span class="kw">break</span>;
+                            }
+                            <span class="prelude-val">None </span>=&gt; {
+                                <span class="macro">tracing::warn!</span>(<span class="string">&quot;xDS stream terminated&quot;</span>);
                                 <span class="kw">break</span>;
                             }
                         }
