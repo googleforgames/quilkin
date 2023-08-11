@@ -101,13 +101,14 @@ impl ControlPlane {
         tokio::spawn({
             let this = this.clone();
             async move {
+                let mut watcher = this.config.clusters.watch();
                 loop {
-                    tokio::select! {
-                        _ = this.config.clusters.has_changed() => {
-                            this.push_update(ResourceType::Endpoint);
-                            this.push_update(ResourceType::Cluster);
-                        }
+                    tracing::debug!(?watcher, "waiting for changes");
+                    if let Err(error) = watcher.changed().await {
+                        tracing::error!(%error, "error watching changes");
                     }
+                    this.push_update(ResourceType::Endpoint);
+                    this.push_update(ResourceType::Cluster);
                 }
             }
         });
@@ -127,7 +128,7 @@ impl ControlPlane {
         watchers
             .version
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        tracing::trace!(%resource_type, watchers=watchers.sender.receiver_count(), "pushing update");
+        tracing::debug!(%resource_type, watchers=watchers.sender.receiver_count(), "pushing update");
         if let Err(error) = watchers.sender.send(()) {
             tracing::warn!(%error, "pushing update failed");
         }
@@ -325,17 +326,9 @@ impl AggregatedControlPlaneDiscoveryService for ControlPlane {
                 );
 
                 loop {
-                    let timeout = tokio::time::sleep(std::time::Duration::from_secs(1));
-                    tokio::select! {
-                        _ = timeout => {
-                            tracing::info!("sending discovery request");
-                            crate::xds::client::MdsStream::discovery_request_without_cache(&identifier, &mut requests, crate::xds::ResourceType::Cluster, &[])
-                                .map_err(|error| tonic::Status::internal(error.to_string()))?;
-                        }
-                        Some(ack) = response_handler.next() => {
-                            tracing::info!("sending ack request");
-                            requests.send(ack?)?;
-                        }
+                    if let Some(ack) = response_handler.next().await {
+                        tracing::info!("sending ack request");
+                        requests.send(ack?)?;
                     }
                 }
             },

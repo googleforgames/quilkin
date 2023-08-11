@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
 use dashmap::DashMap;
 use once_cell::sync::Lazy;
@@ -107,7 +107,7 @@ fn default_cluster_name() -> String {
 
 /// Represents a full snapshot of all clusters.
 #[derive(Clone, Default, Debug, Serialize)]
-pub struct ClusterMap(Arc<DashMap<String, Cluster>>);
+pub struct ClusterMap(DashMap<String, Cluster>);
 
 type DashMapRef<'inner> = dashmap::mapref::one::Ref<'inner, String, Cluster>;
 type DashMapRefMut<'inner> = dashmap::mapref::one::RefMut<'inner, String, Cluster>;
@@ -262,13 +262,13 @@ impl<'de> Deserialize<'de> for ClusterMap {
             entry.name = entry.key().clone();
         }
 
-        Ok(Self(Arc::new(map)))
+        Ok(Self(map))
     }
 }
 
 impl From<DashMap<String, Cluster>> for ClusterMap {
     fn from(value: DashMap<String, Cluster>) -> Self {
-        Self(Arc::new(value))
+        Self(value)
     }
 }
 
@@ -289,11 +289,11 @@ impl FromIterator<Cluster> for ClusterMap {
     where
         T: IntoIterator<Item = Cluster>,
     {
-        Self(Arc::new(
+        Self(
             iter.into_iter()
                 .map(|cluster| (cluster.name.clone(), cluster))
                 .collect(),
-        ))
+        )
     }
 }
 
@@ -308,7 +308,7 @@ impl FromIterator<(String, Cluster)> for ClusterMap {
     where
         T: IntoIterator<Item = (String, Cluster)>,
     {
-        Self(Arc::new(iter.into_iter().collect()))
+        Self(iter.into_iter().collect())
     }
 }
 

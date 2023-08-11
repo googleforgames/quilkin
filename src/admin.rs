@@ -96,7 +96,7 @@ fn handle_request(
 }
 
 fn check_proxy_readiness(config: &Config) -> Response<Body> {
-    if config.clusters.value().endpoints().count() > 0 {
+    if config.clusters.read().endpoints().count() > 0 {
         return Response::new("ok".into());
     }
 
@@ -144,7 +144,7 @@ mod tests {
     #[test]
     fn check_proxy_readiness() {
         let config = Config::default();
-        assert_eq!(config.clusters.value().endpoints().count(), 0);
+        assert_eq!(config.clusters.read().endpoints().count(), 0);
 
         let response = super::check_proxy_readiness(&config);
         assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
@@ -154,7 +154,7 @@ mod tests {
         )]
         .into()]);
 
-        config.clusters.value().insert(cluster);
+        config.clusters.write().insert(cluster);
 
         let response = super::check_proxy_readiness(&config);
         assert_eq!(response.status(), StatusCode::OK);
