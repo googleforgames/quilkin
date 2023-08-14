@@ -170,7 +170,6 @@ impl Config {
         tracing::trace!(resource=?response, "applying resource");
 
         let apply_cluster = |cluster: Cluster| {
-            tracing::trace!(endpoints = %serde_json::to_value(&cluster).unwrap(), "applying new endpoints");
             self.clusters
                 .write()
                 .default_entry(cluster.name.clone())

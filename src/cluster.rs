@@ -212,6 +212,9 @@ impl ClusterMap {
 
     pub fn merge(&self, map: Self) {
         for cluster in map.iter() {
+            let span = tracing::info_span!("applied_cluster", cluster = cluster.name,);
+            let _entered = span.enter();
+
             let cluster = cluster.value();
             self.default_entry(cluster.name.clone()).merge(cluster);
         }
