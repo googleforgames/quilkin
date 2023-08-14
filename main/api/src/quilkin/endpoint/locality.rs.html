@@ -344,6 +344,47 @@
 <a href="#344" id="344">344</a>
 <a href="#345" id="345">345</a>
 <a href="#346" id="346">346</a>
+<a href="#347" id="347">347</a>
+<a href="#348" id="348">348</a>
+<a href="#349" id="349">349</a>
+<a href="#350" id="350">350</a>
+<a href="#351" id="351">351</a>
+<a href="#352" id="352">352</a>
+<a href="#353" id="353">353</a>
+<a href="#354" id="354">354</a>
+<a href="#355" id="355">355</a>
+<a href="#356" id="356">356</a>
+<a href="#357" id="357">357</a>
+<a href="#358" id="358">358</a>
+<a href="#359" id="359">359</a>
+<a href="#360" id="360">360</a>
+<a href="#361" id="361">361</a>
+<a href="#362" id="362">362</a>
+<a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -417,6 +458,22 @@
         <span class="self">self</span>.zone = zone.into();
         <span class="self">self
     </span>}
+
+    <span class="kw">pub fn </span>colon_separated_string(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
+        <span class="kw">let </span><span class="kw-2">mut </span>string = String::from(<span class="kw-2">&amp;*</span><span class="self">self</span>.region);
+
+        <span class="kw">if </span>!<span class="self">self</span>.zone.is_empty() {
+            string += <span class="string">&quot;:&quot;</span>;
+            string += <span class="kw-2">&amp;*</span><span class="self">self</span>.zone;
+        }
+
+        <span class="kw">if </span>!<span class="self">self</span>.sub_zone.is_empty() {
+            string += <span class="string">&quot;:&quot;</span>;
+            string += <span class="kw-2">&amp;*</span><span class="self">self</span>.sub_zone;
+        }
+
+        string
+    }
 
     <span class="kw">pub fn </span>sub_zone(<span class="kw-2">mut </span><span class="self">self</span>, sub_zone: <span class="kw">impl </span>Into&lt;String&gt;) -&gt; <span class="self">Self </span>{
         <span class="self">self</span>.sub_zone = sub_zone.into();
@@ -608,6 +665,31 @@
 
     <span class="kw">pub fn </span>merge(<span class="kw-2">&amp;mut </span><span class="self">self</span>, cluster: <span class="kw-2">&amp;</span><span class="self">Self</span>) {
         <span class="kw">for </span>(key, value) <span class="kw">in </span><span class="kw-2">&amp;</span>cluster.<span class="number">0 </span>{
+            <span class="kw">if </span><span class="macro">tracing::enabled!</span>(tracing::Level::INFO) {
+                <span class="kw">let </span>span = <span class="macro">tracing::info_span!</span>(
+                    <span class="string">&quot;applied_locality&quot;</span>,
+                    locality = <span class="kw-2">&amp;*</span>key
+                        .as_ref()
+                        .map(|locality| locality.colon_separated_string())
+                        .unwrap_or_else(|| String::from(<span class="string">&quot;&lt;none&gt;&quot;</span>))
+                );
+
+                <span class="kw">let </span>_entered = span.enter();
+                <span class="kw">if </span>value.endpoints.is_empty() {
+                    <span class="macro">tracing::info!</span>(<span class="string">&quot;removing all endpoints&quot;</span>);
+                } <span class="kw">else if let </span><span class="prelude-val">Some</span>(original_endpoints) = <span class="self">self</span>.<span class="number">0</span>.get(key) {
+                    <span class="kw">for </span>endpoint <span class="kw">in </span><span class="kw-2">&amp;</span>original_endpoints.endpoints {
+                        <span class="kw">if </span>!value.endpoints.contains(endpoint) {
+                            <span class="macro">tracing::info!</span>(%endpoint.address, <span class="question-mark">?</span>endpoint.metadata.known.tokens, <span class="string">&quot;removing endpoint&quot;</span>);
+                        }
+                    }
+                }
+
+                <span class="kw">for </span>endpoint <span class="kw">in </span><span class="kw-2">&amp;</span>value.endpoints {
+                    <span class="macro">tracing::info!</span>(%endpoint.address, <span class="question-mark">?</span>endpoint.metadata.known.tokens, <span class="string">&quot;applying endpoint&quot;</span>);
+                }
+            }
+
             <span class="kw">let </span>entry = <span class="self">self</span>.<span class="number">0</span>.entry(key.clone()).or_default();
             <span class="kw-2">*</span>entry = value.clone();
         }

@@ -526,7 +526,6 @@
 <a href="#526" id="526">526</a>
 <a href="#527" id="527">527</a>
 <a href="#528" id="528">528</a>
-<a href="#529" id="529">529</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -699,7 +698,6 @@
         <span class="macro">tracing::trace!</span>(resource=<span class="question-mark">?</span>response, <span class="string">&quot;applying resource&quot;</span>);
 
         <span class="kw">let </span>apply_cluster = |cluster: Cluster| {
-            <span class="macro">tracing::trace!</span>(endpoints = %serde_json::to_value(<span class="kw-2">&amp;</span>cluster).unwrap(), <span class="string">&quot;applying new endpoints&quot;</span>);
             <span class="self">self</span>.clusters
                 .write()
                 .default_entry(cluster.name.clone())
