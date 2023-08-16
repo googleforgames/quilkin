@@ -36,8 +36,12 @@ pub struct Ping {
 impl Ping {
     pub async fn run(&self) -> crate::Result<()> {
         tracing::info!("starting ping task");
-        let socket = tokio::net::UdpSocket::bind((std::net::Ipv4Addr::UNSPECIFIED, 0)).await?;
+        let addr: SocketAddr = match self.endpoint {
+            SocketAddr::V4(_) => (std::net::Ipv4Addr::UNSPECIFIED, 0).into(),
+            SocketAddr::V6(_) => (std::net::Ipv6Addr::UNSPECIFIED, 0).into(),
+        };
 
+        let socket = tokio::net::UdpSocket::bind(addr).await?;
         let mut results = Vec::new();
         let mut buf = [0; u16::MAX as usize];
 
@@ -113,5 +117,30 @@ fn median(numbers: &mut [i64]) -> Option<i64> {
         let mid1 = numbers[(len - 1) / 2];
         let mid2 = numbers[len / 2];
         Some((mid1 + mid2) / 2)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn empty() {
+        assert_eq!(median(&mut []), None);
+    }
+
+    #[test]
+    fn single() {
+        assert_eq!(median(&mut [42]), Some(42));
+    }
+
+    #[test]
+    fn odd() {
+        assert_eq!(median(&mut [3, 1, 2]), Some(2));
+    }
+
+    #[test]
+    fn even() {
+        assert_eq!(median(&mut [4, 3, 1, 2]), Some(2));
     }
 }
