@@ -20,7 +20,7 @@ members = [".", "./macros", "./agones"]
 [workspace.dependencies]
 kube = { version = "0.84.0", features = ["derive", "runtime", "rustls-tls", "client"], default-features = false }
 k8s-openapi = { version = "0.18.0", features = ["v1_25", "schemars"] }
-tokio = { version = "1.28.1", features = ["rt-multi-thread", "fs", "signal", "test-util", "parking_lot", "tracing"] }
+tokio = { version = "1.32.0", features = ["rt-multi-thread", "fs", "signal", "test-util", "parking_lot", "tracing"] }
 base64 = "0.21.0"
 tracing = "0.1.37"
 futures = "0.3.28"
