@@ -80,7 +80,7 @@ impl Config {
             ($($field:ident),+) => {
                 $(
                     if let Some(value) = map.get(stringify!($field)) {
-                        tracing::trace!(%value, "replacing {}", stringify!($field));
+                        tracing::debug!(%value, "replacing {}", stringify!($field));
                         self.$field.try_replace(serde_json::from_value(value.clone())?);
                     }
                 )+
@@ -89,17 +89,18 @@ impl Config {
 
         replace_if_present!(filters, id);
 
+        if let Some(new_clusters) = map
+            .get("clusters")
+            .map(|value| serde_json::from_value(value.clone()))
+            .transpose()?
         {
-            let clusters = self.clusters.value();
-
-            if let Some(value) = map.get("clusters") {
-                tracing::trace!(clusters=%value, "merging new clusters");
-                clusters.merge(serde_json::from_value(value.clone())?);
-            }
-
-            if let Some(locality) = locality {
-                clusters.update_unlocated_endpoints(&locality);
-            }
+            tracing::debug!(?new_clusters, old_clusters=?self.clusters, "merging new clusters");
+            self.clusters.modify(|clusters| {
+                clusters.merge(new_clusters);
+                if let Some(locality) = locality {
+                    clusters.update_unlocated_endpoints(&locality);
+                }
+            });
         }
 
         self.apply_metrics();
@@ -116,7 +117,7 @@ impl Config {
         let mut resources = Vec::new();
         match resource_type {
             ResourceType::Endpoint => {
-                for entry in self.clusters.value().iter() {
+                for entry in self.clusters.read().iter() {
                     resources.push(
                         resource_type
                             .encode_to_any(&ClusterLoadAssignment::try_from(entry.value())?)?,
@@ -132,7 +133,7 @@ impl Config {
             ResourceType::Cluster => {
                 let clusters: Vec<_> = if names.is_empty() {
                     self.clusters
-                        .value()
+                        .read()
                         .iter()
                         .map(|entry| entry.value().clone())
                         .collect()
@@ -141,7 +142,7 @@ impl Config {
                         .iter()
                         .filter_map(|name| {
                             self.clusters
-                                .value()
+                                .read()
                                 .get(name)
                                 .map(|entry| entry.value().clone())
                         })
@@ -169,9 +170,8 @@ impl Config {
         tracing::trace!(resource=?response, "applying resource");
 
         let apply_cluster = |cluster: Cluster| {
-            tracing::trace!(endpoints = %serde_json::to_value(&cluster).unwrap(), "applying new endpoints");
             self.clusters
-                .value()
+                .write()
                 .default_entry(cluster.name.clone())
                 .merge(&cluster);
         };
@@ -208,7 +208,7 @@ impl Config {
     }
 
     pub fn apply_metrics(&self) {
-        let clusters = self.clusters.value();
+        let clusters = self.clusters.read();
         crate::cluster::active_clusters().set(clusters.localities().count() as i64);
         crate::cluster::active_endpoints().set(clusters.endpoints().count() as i64);
     }
@@ -396,7 +396,7 @@ id: server-proxy
         }))
         .unwrap();
 
-        let value = config.clusters.value();
+        let value = config.clusters.read();
         assert_eq!(
             &*value,
             &ClusterMap::new_with_default_cluster(vec![Endpoint::new(
@@ -436,7 +436,7 @@ id: server-proxy
         }))
         .unwrap_or_default();
 
-        let value = config.clusters.value();
+        let value = config.clusters.read();
         assert_eq!(
             &*value,
             &ClusterMap::new_with_default_cluster(vec![

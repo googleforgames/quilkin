@@ -112,12 +112,12 @@ pub fn update_endpoints_from_gameservers(
                     match &locality {
                         Some(locality) => config
                             .clusters
-                            .value()
+                            .write()
                             .default_cluster_mut()
                             .insert((endpoint, locality.clone())),
                         None => config
                             .clusters
-                            .value()
+                            .write()
                             .default_cluster_mut()
                             .insert(endpoint),
                     };
@@ -141,14 +141,14 @@ pub fn update_endpoints_from_gameservers(
                         .collect();
                     let endpoints = LocalityEndpoints::from((servers, locality.clone()));
                     tracing::trace!(?endpoints, "Restarting with endpoints");
-                    config.clusters.value().insert_default(endpoints);
+                    config.clusters.write().insert_default(endpoints);
                 }
 
                 Event::Deleted(server) => {
                     let found = if let Some(endpoint) = server.endpoint() {
-                        config.clusters.value().remove_endpoint(&endpoint)
+                        config.clusters.write().remove_endpoint(&endpoint)
                     } else {
-                        config.clusters.value().remove_endpoint_if(|endpoint| {
+                        config.clusters.write().remove_endpoint_if(|endpoint| {
                             endpoint.metadata.unknown.get("name") == server.metadata.name.clone().map(From::from).as_ref()
                         })
                     };

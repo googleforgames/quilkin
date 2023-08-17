@@ -345,7 +345,7 @@ mod tests {
                 local_addr,
                 config
                     .clusters
-                    .value()
+                    .read()
                     .get_default()
                     .unwrap()
                     .endpoints()

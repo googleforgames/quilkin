@@ -285,29 +285,18 @@ impl AdsStream {
                     );
 
                     loop {
-                        let timeout = tokio::time::sleep(std::time::Duration::from_millis(500));
-
-                        let select = tokio::select! {
-                            value = stream.next() => {
-                                match value {
-                                    Some(value) => value,
-                                    None => break,
-                                }
-                            }
-                            _ = timeout => {
-                                Self::refresh_resources(&identifier, &subscribed_resources, &mut requests).await?;
-                                continue;
-                            }
-                        };
-                        tracing::trace!("received ack");
-
-                        match select {
-                            Ok(ack) => {
+                        match stream.next().await {
+                            Some(Ok(ack)) => {
+                                tracing::trace!("received ack");
                                 requests.send(ack)?;
                                 continue;
                             }
-                            Err(error) => {
+                            Some(Err(error)) => {
                                 tracing::warn!(%error, "xds stream error");
+                                break;
+                            }
+                            None => {
+                                tracing::warn!("xDS stream terminated");
                                 break;
                             }
                         }

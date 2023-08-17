@@ -162,7 +162,7 @@ impl DownstreamReceiveWorkerConfig {
         downstream_socket: Arc<UdpSocket>,
         sessions: SessionMap,
     ) -> Result<usize, PipelineError> {
-        let endpoints: Vec<_> = config.clusters.value().endpoints().collect();
+        let endpoints: Vec<_> = config.clusters.read().endpoints().collect();
         if endpoints.is_empty() {
             return Err(PipelineError::NoUpstreamEndpoints);
         }

@@ -236,7 +236,6 @@ mod tests {
     };
 
     use crate::{
-        cluster::ClusterMap,
         config::{Filter, Providers},
         endpoint::{Endpoint, LocalityEndpoints},
         filters::{Capture, StaticFilter, TokenRouter},
@@ -250,9 +249,9 @@ mod tests {
             .map(Arc::new)
             .unwrap();
         let filters_file = tempfile::NamedTempFile::new().unwrap();
+        let config = Config::default();
 
         std::fs::write(filters_file.path(), {
-            let config = Config::default();
             config.filters.store(
                 vec![
                     Filter {
@@ -280,16 +279,18 @@ mod tests {
         .unwrap();
 
         let endpoints_file = tempfile::NamedTempFile::new().unwrap();
+        let config = Config::default();
         std::fs::write(endpoints_file.path(), {
-            let mut config = Config::default();
-            config.clusters = crate::config::Watch::new(ClusterMap::new_with_default_cluster(
-                LocalityEndpoints::from(vec![Endpoint::with_metadata(
+            config
+                .clusters
+                .write()
+                .default_cluster_mut()
+                .insert(LocalityEndpoints::from(vec![Endpoint::with_metadata(
                     (std::net::Ipv4Addr::LOCALHOST, server_port).into(),
                     crate::endpoint::Metadata {
                         tokens: vec!["abc".into()].into_iter().collect(),
                     },
-                )]),
-            ));
+                )]));
             serde_yaml::to_string(&config).unwrap()
         })
         .unwrap();
@@ -343,36 +344,71 @@ mod tests {
         tokio::time::sleep(Duration::from_millis(500)).await;
         tokio::spawn(proxy.drive());
         tokio::time::sleep(Duration::from_millis(500)).await;
-
         let local_addr = crate::test_utils::available_addr().await;
         let socket = UdpSocket::bind((Ipv4Addr::UNSPECIFIED, local_addr.port()))
             .await
             .map(Arc::new)
             .unwrap();
-        let msg = b"helloabc";
-        socket
-            .send_to(msg, &(std::net::Ipv4Addr::LOCALHOST, 7777))
-            .await
+        let config = Config::default();
+
+        for _ in 0..5 {
+            let token = random_three_characters();
+
+            tracing::info!(?token, "writing new config");
+            std::fs::write(endpoints_file.path(), {
+                config
+                    .clusters
+                    .write()
+                    .default_cluster_mut()
+                    .insert(LocalityEndpoints::from(vec![Endpoint::with_metadata(
+                        (std::net::Ipv4Addr::LOCALHOST, server_port).into(),
+                        crate::endpoint::Metadata {
+                            tokens: vec![token.clone()].into_iter().collect(),
+                        },
+                    )]));
+                serde_yaml::to_string(&config).unwrap()
+            })
             .unwrap();
-
-        let recv = |socket: Arc<UdpSocket>| async move {
-            let mut buf = [0; u16::MAX as usize];
-            let length = socket.recv(&mut buf).await.unwrap();
-            buf[0..length].to_vec()
-        };
-
-        assert_eq!(
-            b"hello",
-            &&*timeout(Duration::from_secs(5), (recv)(server_socket.clone()))
+            tokio::time::sleep(Duration::from_millis(80)).await;
+            let mut msg = Vec::from(*b"hello");
+            msg.extend_from_slice(&token);
+            tracing::info!(?token, "sending packet");
+            socket
+                .send_to(&msg, &(std::net::Ipv4Addr::LOCALHOST, 7777))
                 .await
-                .expect("should have received a packet")
-        );
+                .unwrap();
 
-        // send an invalid packet
-        let msg = b"helloxyz";
-        socket.send_to(msg, &local_addr).await.unwrap();
+            let recv = |socket: Arc<UdpSocket>| async move {
+                let mut buf = [0; u16::MAX as usize];
+                let length = socket.recv(&mut buf).await.unwrap();
+                buf[0..length].to_vec()
+            };
 
-        let result = timeout(Duration::from_secs(3), (recv)(server_socket.clone())).await;
-        assert!(result.is_err(), "should not have received a packet");
+            assert_eq!(
+                b"hello",
+                &&*timeout(Duration::from_secs(5), (recv)(server_socket.clone()))
+                    .await
+                    .expect("should have received a packet")
+            );
+
+            tracing::info!(?token, "received packet");
+
+            tracing::info!(?token, "sending bad packet");
+            // send an invalid packet
+            let msg = b"hello\xFF\xFF\xFF";
+            socket.send_to(msg, &local_addr).await.unwrap();
+
+            let result = timeout(Duration::from_secs(3), (recv)(server_socket.clone())).await;
+            assert!(result.is_err(), "should not have received a packet");
+            tracing::info!(?token, "didn't receive bad packet");
+        }
+    }
+
+    fn random_three_characters() -> Vec<u8> {
+        use rand::prelude::SliceRandom;
+        let chars: Vec<u8> = (*b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ").into();
+        let mut rng = rand::thread_rng();
+
+        (0..3).map(|_| *chars.choose(&mut rng).unwrap()).collect()
     }
 }

@@ -295,7 +295,7 @@ pub async fn create_socket() -> UdpSocket {
 pub fn config_with_dummy_endpoint() -> Config {
     let config = Config::default();
 
-    config.clusters.value().insert(Cluster {
+    config.clusters.write().insert(Cluster {
         name: "default".into(),
         localities: vec![LocalityEndpoints {
             locality: None,

@@ -72,6 +72,22 @@ impl Locality {
         self
     }
 
+    pub fn colon_separated_string(&self) -> String {
+        let mut string = String::from(&*self.region);
+
+        if !self.zone.is_empty() {
+            string += ":";
+            string += &*self.zone;
+        }
+
+        if !self.sub_zone.is_empty() {
+            string += ":";
+            string += &*self.sub_zone;
+        }
+
+        string
+    }
+
     pub fn sub_zone(mut self, sub_zone: impl Into<String>) -> Self {
         self.sub_zone = sub_zone.into();
         self
@@ -262,6 +278,31 @@ impl LocalitySet {
 
     pub fn merge(&mut self, cluster: &Self) {
         for (key, value) in &cluster.0 {
+            if tracing::enabled!(tracing::Level::INFO) {
+                let span = tracing::info_span!(
+                    "applied_locality",
+                    locality = &*key
+                        .as_ref()
+                        .map(|locality| locality.colon_separated_string())
+                        .unwrap_or_else(|| String::from("<none>"))
+                );
+
+                let _entered = span.enter();
+                if value.endpoints.is_empty() {
+                    tracing::info!("removing all endpoints");
+                } else if let Some(original_endpoints) = self.0.get(key) {
+                    for endpoint in &original_endpoints.endpoints {
+                        if !value.endpoints.contains(endpoint) {
+                            tracing::info!(%endpoint.address, ?endpoint.metadata.known.tokens, "removing endpoint");
+                        }
+                    }
+                }
+
+                for endpoint in &value.endpoints {
+                    tracing::info!(%endpoint.address, ?endpoint.metadata.known.tokens, "applying endpoint");
+                }
+            }
+
             let entry = self.0.entry(key.clone()).or_default();
             *entry = value.clone();
         }
