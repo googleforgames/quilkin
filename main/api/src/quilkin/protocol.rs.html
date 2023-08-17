@@ -502,7 +502,7 @@
             <span class="kw">let </span><span class="kw-2">mut </span>output_buf = Vec::new();
 
             <span class="kw">loop </span>{
-                <span class="macro">tracing::debug!</span>(%v4_addr, %v6_addr, <span class="string">&quot;awaiting qcmp packets&quot;</span>);
+                <span class="macro">tracing::info!</span>(%v4_addr, %v6_addr, <span class="string">&quot;awaiting qcmp packets&quot;</span>);
 
                 <span class="kw">match </span>socket.recv_from(<span class="kw-2">&amp;mut </span>v4_buf, <span class="kw-2">&amp;mut </span>v6_buf).<span class="kw">await </span>{
                     <span class="prelude-val">Ok</span>((size, source)) =&gt; {

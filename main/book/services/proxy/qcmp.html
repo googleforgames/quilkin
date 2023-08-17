@@ -175,6 +175,12 @@
 over UDP. The purpose of this API is to provide meta operations that can be
 used by untrusted clients. Currently the API is focuses on providing pings for
 latency measurement but that may change overtime as new features are added.</p>
+<h2 id="ping"><a class="header" href="#ping">Ping</a></h2>
+<p>The main functionality currently in QCMP is pinging, measuring the latency from
+one service to another over UDP. You can also measure the distance locally using
+the <code>quilkin qcmp ping</code> command.</p>
+<pre><code>quilkin qcmp ping 127.0.0.1:7600
+</code></pre>
 <h2 id="protocol-data-unit"><a class="header" href="#protocol-data-unit">Protocol Data Unit</a></h2>
 <p>The following is a <a href="https://kaitai.io/">Kaitai Struct</a> configuration of the protocol data unit
 accepted by Quilkin proxies.</p>
