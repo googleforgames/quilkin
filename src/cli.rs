@@ -26,7 +26,7 @@ use crate::{admin::Mode, Config};
 
 pub use self::{
     agent::Agent, generate_config_schema::GenerateConfigSchema, manage::Manage, proxy::Proxy,
-    relay::Relay,
+    qcmp::Qcmp, relay::Relay,
 };
 
 macro_rules! define_port {
@@ -43,6 +43,7 @@ pub mod agent;
 pub mod generate_config_schema;
 pub mod manage;
 pub mod proxy;
+pub mod qcmp;
 pub mod relay;
 
 const ETC_CONFIG_PATH: &str = "/etc/quilkin/quilkin.yaml";
@@ -75,6 +76,8 @@ pub enum Commands {
     Agent(Agent),
     GenerateConfigSchema(GenerateConfigSchema),
     Manage(Manage),
+    #[clap(subcommand)]
+    Qcmp(Qcmp),
     Proxy(Proxy),
     Relay(Relay),
 }
@@ -84,7 +87,7 @@ impl Commands {
         match self {
             Self::Proxy(_) | Self::Agent(_) => Some(Mode::Proxy),
             Self::Relay(_) | Self::Manage(_) => Some(Mode::Xds),
-            Self::GenerateConfigSchema(_) => None,
+            Self::GenerateConfigSchema(_) | Self::Qcmp(_) => None,
         }
     }
 }
@@ -110,6 +113,10 @@ impl Cli {
             commit = crate::metadata::build::GIT_COMMIT_HASH,
             "Starting Quilkin"
         );
+
+        if let Commands::Qcmp(Qcmp::Ping(ping)) = self.command {
+            return ping.run().await;
+        }
 
         tracing::debug!(cli = ?self, "config parameters");
 
@@ -180,6 +187,7 @@ impl Cli {
                     let shutdown_rx = shutdown_rx.clone();
                     tokio::spawn(async move { relay.relay(config, shutdown_rx.clone()).await })
                 }
+                Commands::Qcmp(_) => unreachable!(),
             }
         })
         .retries(3)
