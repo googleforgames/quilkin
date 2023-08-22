@@ -341,10 +341,6 @@
 <a href="#341" id="341">341</a>
 <a href="#342" id="342">342</a>
 <a href="#343" id="343">343</a>
-<a href="#344" id="344">344</a>
-<a href="#345" id="345">345</a>
-<a href="#346" id="346">346</a>
-<a href="#347" id="347">347</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -370,10 +366,7 @@
 
 <span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>serde::{Deserialize, Serialize};
-<span class="kw">use </span>trust_dns_resolver::{
-    name_server::{GenericConnection, GenericConnectionProvider, TokioRuntime},
-    AsyncResolver,
-};
+<span class="kw">use </span>trust_dns_resolver::{AsyncResolver, TokioAsyncResolver};
 
 <span class="kw">use </span><span class="kw">crate</span>::xds::config::core::v3::{
     address::Address <span class="kw">as </span>EnvoyAddress, SocketAddress <span class="kw">as </span>EnvoySocketAddress,
@@ -411,9 +404,8 @@
     <span class="doccomment">/// Returns the socket address for the endpoint, resolving any DNS entries
     /// if present.
     </span><span class="kw">pub async fn </span>to_socket_addr(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; std::io::Result&lt;SocketAddr&gt; {
-        <span class="kw">static </span>DNS: Lazy&lt;
-            AsyncResolver&lt;GenericConnection, GenericConnectionProvider&lt;TokioRuntime&gt;&gt;,
-        &gt; = Lazy::new(|| AsyncResolver::tokio_from_system_conf().unwrap());
+        <span class="kw">static </span>DNS: Lazy&lt;TokioAsyncResolver&gt; =
+            Lazy::new(|| AsyncResolver::tokio_from_system_conf().unwrap());
 
         <span class="kw">let </span>ip = <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.host {
             AddressKind::Ip(ip) =&gt; <span class="kw-2">*</span>ip,
