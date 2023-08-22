@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Google LLC
+ * Copyright 2023 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +14,10 @@
  * limitations under the License.
  */
 
-#include "QuilkinPacketHandler.h"
 #include "QuilkinDelegates.h"
 
-
-FQuilkinPacketHandler::FQuilkinPacketHandler()
-{
-	if (FQuilkinDelegates::GetQuilkinRoutingToken.IsBound())
-	{
-		RoutingToken = FQuilkinDelegates::GetQuilkinRoutingToken.Execute();
-	}
-}
-
-bool FQuilkinPacketHandler::IsEnabled()
-{
-	return RoutingToken.Num() > 0;
-}
+FQuilkinDelegates::FGetQuilkinEndpointMeasurements FQuilkinDelegates::GetQuilkinEndpointMeasurements;
+FQuilkinDelegates::FGetLowestLatencyEndpoint FQuilkinDelegates::GetLowestLatencyEndpoint;
+FQuilkinDelegates::FGetLowestLatencyEndpointInRegion FQuilkinDelegates::GetLowestLatencyEndpointInRegion;
+FQuilkinDelegates::FGetLowestLatencyEndpointInEachRegion FQuilkinDelegates::GetLowestLatencyEndpointInEachRegion;
+FQuilkinDelegates::FGetLowestLatencyToDatacenters FQuilkinDelegates::GetLowestLatencyToDatacenters;

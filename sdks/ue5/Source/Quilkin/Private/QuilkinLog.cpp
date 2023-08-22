@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Google LLC
+ * Copyright 2023 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-#pragma once
+#include "QuilkinLog.h"
 
-#include "CoreMinimal.h"
-
-DECLARE_LOG_CATEGORY_EXTERN(LogQuilkin, VeryVerbose, All);
+DEFINE_LOG_CATEGORY(LogQuilkin);

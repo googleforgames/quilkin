@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Google LLC
+ * Copyright 2023 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,23 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #pragma once
 
 #include "CoreMinimal.h"
-#include "UObject/ObjectMacros.h"
-#include "UObject/UObjectGlobals.h"
-#include "UObject/Object.h"
 
-class QUILKIN_API FQuilkinDelegates
+inline constexpr uint64_t MillisToNanos(uint64_t milliseconds) {
+    return milliseconds * 1000000;
+}
+
+constexpr int64 DefaultLatencyThreshold = MillisToNanos(150);
+constexpr int64 DefaultPenaltyLatency = MillisToNanos(200);
+
+inline int64 NanosToMillis(int64 Nanoseconds)
 {
-public:
-	/**
-	 * Delegate used to retrieve the client's proxy routing token if
-	 * connection takes place via a proxy.
-	 *
-	 * @return The client's routing token to use.
-	 */
-	DECLARE_DELEGATE_RetVal(TArray<uint8>, FGetQuilkinRoutingToken);
-	static FGetQuilkinRoutingToken GetQuilkinRoutingToken;
-};
+    return Nanoseconds / 1'000'000;
+}

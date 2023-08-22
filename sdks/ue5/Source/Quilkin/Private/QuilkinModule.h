@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Google LLC
+ * Copyright 2023 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,8 @@
 #include "CoreMinimal.h"
 #include "Modules/ModuleInterface.h"
 #include "QuilkinSocketSubsystem.h"
+#include "QuilkinEndpoint.h"
+#include "QuilkinConcurrentMap.h"
 
 class FQuilkinModule : public IModuleInterface
 {
@@ -31,5 +33,5 @@ public:
 	//~ End IModuleInterface Interface
 
 private:
-	TUniquePtr<FQuilkinSocketSubsystem> QuilkinSocketSubsystem;
+	TSharedPtr<FQuilkinSocketSubsystem> QuilkinSocketSubsystem;
 };
