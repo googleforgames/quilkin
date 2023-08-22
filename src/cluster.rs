@@ -21,6 +21,7 @@ use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
 use crate::endpoint::{Endpoint, Locality};
+use itertools::Itertools;
 
 const SUBSYSTEM: &str = "cluster";
 
@@ -150,11 +151,77 @@ impl ClusterMap {
         }
     }
 
-    pub fn merge(&self, locality: Option<Locality>, endpoints: BTreeSet<Endpoint>) {
-        if let Some(mut set) = self.get_mut(&locality) {
-            *set = endpoints;
-        } else {
-            self.insert(locality, endpoints);
+    pub fn merge(&self, locality: Option<Locality>, mut endpoints: BTreeSet<Endpoint>) {
+        use dashmap::mapref::entry::Entry;
+
+        let span = tracing::info_span!(
+            "applied_locality",
+            locality = &*locality
+                .as_ref()
+                .map(|locality| locality.colon_separated_string())
+                .unwrap_or_else(|| String::from("<none>"))
+        );
+
+        let _entered = span.enter();
+
+        match self.0.entry(locality.clone()) {
+            // The eviction logic is as follows:
+            //
+            // If an endpoint already exists:
+            // - If `sessions` is zero then it is dropped.
+            // If that endpoint exists in the new set:
+            // - Its metadata is replaced with the new set.
+            // Else the endpoint remains.
+            //
+            // This will mean that updated metadata such as new tokens
+            // will be respected, but we will still retain older
+            // endpoints that are currently actively used in a session.
+            Entry::Occupied(entry) => {
+                let (key, original_locality) = entry.remove_entry();
+
+                if tracing::enabled!(tracing::Level::INFO) {
+                    for endpoint in endpoints.iter() {
+                        tracing::info!(
+                            %endpoint.address,
+                            endpoint.tokens=%endpoint.metadata.known.tokens.iter().map(crate::utils::base64_encode).join(", "),
+                            "applying endpoint"
+                        );
+                    }
+                }
+
+                let (retained, dropped): (Vec<_>, _) =
+                    original_locality.into_iter().partition(|endpoint| {
+                        crate::proxy::sessions::ADDRESS_MAP
+                            .get(&endpoint.address)
+                            .is_some()
+                    });
+
+                if tracing::enabled!(tracing::Level::INFO) {
+                    for endpoint in dropped {
+                        tracing::info!(
+                            %endpoint.address,
+                            endpoint.tokens=%endpoint.metadata.known.tokens.iter().map(crate::utils::base64_encode).join(", "),
+                            "dropping endpoint"
+                        );
+                    }
+                }
+
+                for endpoint in retained {
+                    tracing::info!(
+                        %endpoint.address,
+                        endpoint.tokens=%endpoint.metadata.known.tokens.iter().map(crate::utils::base64_encode).join(", "),
+                        "retaining endpoint"
+                    );
+
+                    endpoints.insert(endpoint);
+                }
+
+                self.0.insert(key, endpoints);
+            }
+            Entry::Vacant(entry) => {
+                tracing::info!("adding new locality");
+                entry.insert(endpoints);
+            }
         }
     }
 }

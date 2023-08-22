@@ -25,7 +25,7 @@ use crate::{
     Config,
 };
 
-mod sessions;
+pub(crate) mod sessions;
 
 /// Packet received from local port
 #[derive(Debug)]
@@ -171,6 +171,7 @@ impl DownstreamReceiveWorkerConfig {
         let mut bytes_written = 0;
 
         for endpoint in context.endpoints.iter() {
+            crate::proxy::sessions::ADDRESS_MAP.get(&endpoint.address);
             bytes_written += Self::session_send_packet(
                 &context.contents,
                 &context.source,

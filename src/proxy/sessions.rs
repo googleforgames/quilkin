@@ -16,6 +16,7 @@
 
 use std::{net::SocketAddr, sync::Arc};
 
+use once_cell::sync::Lazy;
 use tokio::{
     net::UdpSocket,
     select,
@@ -29,6 +30,9 @@ use crate::{
     maxmind_db::IpNetEntry,
     utils::{net::DualStackLocalSocket, Loggable},
 };
+
+pub(crate) static ADDRESS_MAP: Lazy<crate::ttl_map::TtlMap<EndpointAddress, ()>> =
+    Lazy::new(<_>::default);
 
 pub(crate) mod metrics;
 
@@ -84,6 +88,7 @@ impl Session {
         asn_info: Option<IpNetEntry>,
     ) -> Result<Self, super::PipelineError> {
         let (shutdown_tx, shutdown_rx) = watch::channel::<()>(());
+        ADDRESS_MAP.insert(dest.address.clone(), ());
 
         let s = Session {
             config: config.clone(),
@@ -261,6 +266,9 @@ impl Drop for Session {
     fn drop(&mut self) {
         self.active_session_metric().dec();
         metrics::duration_secs().observe(self.created_at.elapsed().as_secs() as f64);
+        self.dest
+            .sessions
+            .fetch_sub(1, std::sync::atomic::Ordering::SeqCst);
 
         if let Err(error) = self.shutdown_tx.send(()) {
             tracing::warn!(%error, "Error sending session shutdown signal");

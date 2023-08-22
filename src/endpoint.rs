@@ -26,7 +26,7 @@ pub use self::{address::EndpointAddress, locality::Locality};
 pub type EndpointMetadata = crate::metadata::MetadataView<Metadata>;
 
 /// A destination endpoint with any associated metadata.
-#[derive(Debug, Deserialize, Serialize, PartialEq, Clone, Eq, schemars::JsonSchema)]
+#[derive(Debug, Deserialize, Serialize, Clone, schemars::JsonSchema)]
 #[non_exhaustive]
 #[serde(deny_unknown_fields)]
 pub struct Endpoint {
@@ -34,6 +34,8 @@ pub struct Endpoint {
     pub address: EndpointAddress,
     #[serde(default)]
     pub metadata: EndpointMetadata,
+    #[serde(skip, default)]
+    pub sessions: std::sync::Arc<std::sync::atomic::AtomicUsize>,
 }
 
 impl Endpoint {
@@ -60,6 +62,7 @@ impl Default for Endpoint {
         Self {
             address: EndpointAddress::UNSPECIFIED,
             metadata: <_>::default(),
+            sessions: <_>::default(),
         }
     }
 }
@@ -96,6 +99,7 @@ impl TryFrom<crate::cluster::proto::Endpoint> for Endpoint {
 
         Ok(Self {
             address: (host, endpoint.port as u16).into(),
+            sessions: <_>::default(),
             metadata: endpoint
                 .metadata
                 .map(TryFrom::try_from)
@@ -116,6 +120,14 @@ impl<T: Into<EndpointAddress>> From<T> for Endpoint {
         Self::new(value.into())
     }
 }
+
+impl PartialEq for Endpoint {
+    fn eq(&self, other: &Self) -> bool {
+        self.address.eq(&other.address) && self.metadata.eq(&other.metadata)
+    }
+}
+
+impl Eq for Endpoint {}
 
 impl Ord for Endpoint {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
