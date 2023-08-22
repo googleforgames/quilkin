@@ -23,10 +23,7 @@ use std::{
 
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
-use trust_dns_resolver::{
-    name_server::{GenericConnection, GenericConnectionProvider, TokioRuntime},
-    AsyncResolver,
-};
+use trust_dns_resolver::{AsyncResolver, TokioAsyncResolver};
 
 use crate::xds::config::core::v3::{
     address::Address as EnvoyAddress, SocketAddress as EnvoySocketAddress,
@@ -64,9 +61,8 @@ impl EndpointAddress {
     /// Returns the socket address for the endpoint, resolving any DNS entries
     /// if present.
     pub async fn to_socket_addr(&self) -> std::io::Result<SocketAddr> {
-        static DNS: Lazy<
-            AsyncResolver<GenericConnection, GenericConnectionProvider<TokioRuntime>>,
-        > = Lazy::new(|| AsyncResolver::tokio_from_system_conf().unwrap());
+        static DNS: Lazy<TokioAsyncResolver> =
+            Lazy::new(|| AsyncResolver::tokio_from_system_conf().unwrap());
 
         let ip = match &self.host {
             AddressKind::Ip(ip) => *ip,
