@@ -31,7 +31,8 @@ exceptions = [
     # Each entry is the crate and version constraint, and its specific allow
     # list
     { name ="webpki-roots", version = "0.25.0", allow = ["MPL-2.0"] },
-    { name ="webpki-roots", version = "0.23.0", allow = ["MPL-2.0"] }
+    { name ="webpki-roots", version = "0.23.0", allow = ["MPL-2.0"] },
+    { name ="option-ext", version = "0.2.0", allow = ["MPL-2.0"] }
 ]
 
 [[licenses.clarify]]
