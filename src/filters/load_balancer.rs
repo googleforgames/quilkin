@@ -169,7 +169,7 @@ policy: RANDOM
             ([127, 0, 0, 3], 8080).into(),
         ];
         let source_ips = vec![[127u8, 1, 1, 1], [127, 2, 2, 2], [127, 3, 3, 3]];
-        let source_ports = vec![11111u16, 22222, 33333, 44444, 55555];
+        let source_ports = [11111u16, 22222, 33333, 44444, 55555];
 
         let yaml = "policy: HASH";
         let filter = LoadBalancer::from_config(serde_yaml::from_str(yaml).unwrap());

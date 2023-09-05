@@ -51,7 +51,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     .map(|name| std::env::current_dir().unwrap().join(name))
     .collect::<Vec<_>>();
 
-    let include_dirs = vec![
+    let include_dirs = [
         "proto/data-plane-api",
         "proto/udpa",
         "proto/googleapis",
@@ -83,7 +83,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // This tells cargo to re-run this build script only when the proto files
     // we're interested in change or the any of the proto directories were updated.
-    for path in vec![proto_files, include_dirs].concat() {
+    for path in [proto_files, include_dirs].concat() {
         println!("cargo:rerun-if-changed={}", path.to_str().unwrap());
     }
 
