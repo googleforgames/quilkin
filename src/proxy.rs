@@ -23,11 +23,10 @@ use tokio::net::UdpSocket;
 use crate::{
     endpoint::{Endpoint, EndpointAddress},
     filters::{Filter, ReadContext},
-    ttl_map::TryResult,
     Config,
 };
 
-pub use sessions::{Session, SessionArgs, SessionKey, SessionMap};
+pub use sessions::{Session, SessionKey, SessionMap};
 
 /// Packet received from local port
 #[derive(Debug)]
@@ -204,24 +203,20 @@ impl DownstreamReceiveWorkerConfig {
             dest: endpoint.address.clone(),
         };
 
-        let send_future = match sessions.try_get(&session_key) {
-            TryResult::Present(entry) => entry.send(packet),
-            TryResult::Absent => {
-                let session_args = SessionArgs {
-                    config: config.clone(),
-                    source: session_key.source.clone(),
-                    downstream_socket: downstream_socket.clone(),
-                    dest: endpoint.clone(),
+        let send_future = match sessions.get(&session_key) {
+            Some(entry) => entry.send(packet),
+            None => {
+                let session = Session::new(
+                    config.clone(),
+                    session_key.source.clone(),
+                    downstream_socket.clone(),
+                    endpoint.clone(),
                     asn_info,
-                };
+                )?;
 
-                let session = session_args.into_session().await?;
                 let future = session.send(packet);
                 sessions.insert(session_key, session);
                 future
-            }
-            TryResult::Locked => {
-                return Err(PipelineError::SessionMapLocked);
             }
         };
 
@@ -233,8 +228,6 @@ impl DownstreamReceiveWorkerConfig {
 pub enum PipelineError {
     #[error("No upstream endpoints available")]
     NoUpstreamEndpoints,
-    #[error("session map was locked")]
-    SessionMapLocked,
     #[error("filter {0}")]
     Filter(#[from] crate::filters::FilterError),
     #[error("qcmp: {0}")]
